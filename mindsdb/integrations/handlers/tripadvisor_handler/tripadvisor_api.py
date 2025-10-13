@@ -56,16 +56,11 @@ class TripAdvisorAPI:
         for idx, (queryParam, value) in enumerate(params_dict.items()):
             if value is not None or value != "":
                 if value != "" and any(
-                    next_value != "" or value is not None
-                    for next_value in list(params_dict.values())[idx + 1:]
+                    next_value != "" or value is not None for next_value in list(params_dict.values())[idx + 1 :]
                 ):
-                    url += "{queryParam}={value}&".format(
-                        queryParam=queryParam, value=value
-                    )
+                    url += "{queryParam}={value}&".format(queryParam=queryParam, value=value)
                 else:
-                    url += "{queryParam}={value}".format(
-                        queryParam=queryParam, value=value
-                    )
+                    url += "{queryParam}={value}".format(queryParam=queryParam, value=value)
         return url
 
     def location_search(
@@ -92,18 +87,14 @@ class TripAdvisorAPI:
             response: Response object with response data as application/json
         """
 
-        url = url + "search?language={language}&key={api_key}&".format(
-            api_key=self.api_key, language=language
-        )
+        url = url + "search?language={language}&key={api_key}&".format(api_key=self.api_key, language=language)
 
         url = self.getURLQuery(url, params_dict)
         response = self.getResponse(url)
 
         return response
 
-    def location_details(
-        self, url: str, params_dict: dict, locationId: str, language: str = "en"
-    ) -> Response:
+    def location_details(self, url: str, params_dict: dict, locationId: str, language: str = "en") -> Response:
         """
         A Location Details request returns comprehensive information about a location (hotel, restaurant, or an attraction) such as name, address, rating, and URLs for the listing
         on Tripadvisor.
@@ -123,9 +114,7 @@ class TripAdvisorAPI:
         response = self.getResponse(url)
         return response
 
-    def location_reviews(
-        self, url: str, locationId: str, language: str = "en"
-    ) -> Response:
+    def location_reviews(self, url: str, locationId: str, language: str = "en") -> Response:
         """
         The Location Reviews request returns up to 5 of the most recent reviews for a specific location. Please note that the limits are different for the beta subscribers.
 
@@ -155,7 +144,9 @@ class TripAdvisorAPI:
         Returns:
             response: Response object with response data as application/json
         """
-        url = url + "{locationId}/photos?language={language}&key={api_key}".format(locationId=locationId, language=language, api_key=self.api_key)
+        url = url + "{locationId}/photos?language={language}&key={api_key}".format(
+            locationId=locationId, language=language, api_key=self.api_key
+        )
         response = self.getResponse(url)
         return response
 
@@ -177,9 +168,7 @@ class TripAdvisorAPI:
             response: Response object with response data as application/json
         """
 
-        url = url + "nearby_search?language={language}&key={api_key}&".format(
-            api_key=self.api_key, language=language
-        )
+        url = url + "nearby_search?language={language}&key={api_key}&".format(api_key=self.api_key, language=language)
 
         url = self.getURLQuery(url, params_dict)
         response = self.getResponse(url)
@@ -197,9 +186,7 @@ class TripAdvisorAPI:
             return response.json()["data"]
 
         elif apiCall == TripAdvisorAPICall.LOCATION_DETAILS:
-            response = self.location_details(
-                url, params_dict, params_dict["locationId"]
-            )
+            response = self.location_details(url, params_dict, params_dict["locationId"])
             return response.json()
 
         elif apiCall == TripAdvisorAPICall.REVIEWS:

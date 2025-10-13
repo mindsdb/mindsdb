@@ -7,7 +7,7 @@ from mindsdb.integrations.handlers.postgres_handler.tests.test_postgres_handler 
     TestPostgresQuery,
     TestPostgresTables,
     TestPostgresColumns,
-    TestPostgresDisconnect
+    TestPostgresDisconnect,
 )
 
 from mindsdb.integrations.handlers.redshift_handler.redshift_handler import RedshiftHandler
@@ -19,7 +19,7 @@ HANDLER_KWARGS = {
         "port": os.environ.get("MDB_TEST_REDSHIFT_PORT", "5439"),
         "user": os.environ.get("MDB_TEST_REDSHIFT_USER", "redshift"),
         "password": os.environ.get("MDB_TEST_REDSHIFT_PASSWORD", "supersecret"),
-        "database": os.environ.get("MDB_TEST_REDSHIFT_DATABASE", "redshift_db_handler_test").lower()
+        "database": os.environ.get("MDB_TEST_REDSHIFT_DATABASE", "redshift_db_handler_test").lower(),
     }
 }
 
@@ -55,7 +55,7 @@ def seed_db():
     cursor.execute(f"CREATE DATABASE {HANDLER_KWARGS['connection_data']['database']}")
 
     # Reconnect to the new database
-    conn_info["dbname"] = HANDLER_KWARGS['connection_data']['database']
+    conn_info["dbname"] = HANDLER_KWARGS["connection_data"]["database"]
     db = psycopg.connect(**conn_info)
     db.autocommit = True
     cursor = db.cursor()
@@ -94,9 +94,7 @@ class TestRedshiftHandlerQuery(TestPostgresQuery):
         assert "datname" in dbs, f"Expected to get 'datname' column in response:\n{dbs}"
         dbs = list(dbs["datname"])
         expected_db = HANDLER_KWARGS["connection_data"]["database"]
-        assert (
-            expected_db in dbs
-        ), f"expected to have {expected_db} db in response: {dbs}"
+        assert expected_db in dbs, f"expected to have {expected_db} db in response: {dbs}"
 
     def test_select_query(self, handler):
         """

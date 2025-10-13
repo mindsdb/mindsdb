@@ -16,7 +16,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
 
@@ -27,12 +27,13 @@ class ScyllaHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Scylla statements.
     """
-    name = 'scylla'
+
+    name = "scylla"
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.connection_args = kwargs.get('connection_data')
+        self.connection_args = kwargs.get("connection_data")
         self.session = None
         self.is_connected = False
 
@@ -52,7 +53,7 @@ class ScyllaHandler(DatabaseHandler):
         response = requests.get(url, stream=True, timeout=10)
         response.raise_for_status()
 
-        content_length = int(response.headers.get('content-length', 0))
+        content_length = int(response.headers.get("content-length", 0))
         if content_length > max_size:
             raise ValueError("Secure bundle is larger than the allowed size!")
 
@@ -73,33 +74,29 @@ class ScyllaHandler(DatabaseHandler):
             return self.session
 
         auth_provider = None
-        if any(key in self.connection_args for key in ('user', 'password')):
-            if all(key in self.connection_args for key in ('user', 'password')):
+        if any(key in self.connection_args for key in ("user", "password")):
+            if all(key in self.connection_args for key in ("user", "password")):
                 auth_provider = PlainTextAuthProvider(
-                    username=self.connection_args['user'], password=self.connection_args['password']
+                    username=self.connection_args["user"], password=self.connection_args["password"]
                 )
             else:
                 raise ValueError("If authentication is required, both 'user' and 'password' must be provided!")
 
-        connection_props = {
-            'auth_provider': auth_provider
-        }
-        connection_props['protocol_version'] = self.connection_args.get('protocol_version', 4)
-        secure_connect_bundle = self.connection_args.get('secure_connect_bundle')
+        connection_props = {"auth_provider": auth_provider}
+        connection_props["protocol_version"] = self.connection_args.get("protocol_version", 4)
+        secure_connect_bundle = self.connection_args.get("secure_connect_bundle")
 
         if secure_connect_bundle:
             # Check if the secure bundle is a URL
-            if secure_connect_bundle.startswith(('http://', 'https://')):
+            if secure_connect_bundle.startswith(("http://", "https://")):
                 secure_connect_bundle = self.download_secure_bundle(secure_connect_bundle)
-            connection_props['cloud'] = {
-                'secure_connect_bundle': secure_connect_bundle
-            }
+            connection_props["cloud"] = {"secure_connect_bundle": secure_connect_bundle}
         else:
-            connection_props['contact_points'] = [self.connection_args['host']]
-            connection_props['port'] = int(self.connection_args['port'])
+            connection_props["contact_points"] = [self.connection_args["host"]]
+            connection_props["port"] = int(self.connection_args["port"])
 
         cluster = Cluster(**connection_props)
-        session = cluster.connect(self.connection_args.get('keyspace'))
+        session = cluster.connect(self.connection_args.get("keyspace"))
 
         self.is_connected = True
         self.session = session
@@ -115,10 +112,10 @@ class ScyllaHandler(DatabaseHandler):
         try:
             session = self.connect()
             # TODO: change the healthcheck
-            session.execute('SELECT release_version FROM system.local').one()
+            session.execute("SELECT release_version FROM system.local").one()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Scylla {self.connection_args["keyspace"]}, {e}!')
+            logger.error(f"Error connecting to Scylla {self.connection_args['keyspace']}, {e}!")
             response.error_message = e
 
         if response.success is False and self.is_connected is True:
@@ -149,20 +146,12 @@ class ScyllaHandler(DatabaseHandler):
             resp = session.execute(query).all()
             resp = self.prepare_response(resp)
             if resp:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    pd.DataFrame(
-                        resp
-                    )
-                )
+                response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(resp))
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_args["keyspace"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.connection_args['keyspace']}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
         return response
 
     def query(self, query: ASTNode) -> Response:
@@ -183,7 +172,7 @@ class ScyllaHandler(DatabaseHandler):
                     if target.parts[0] == table_name:
                         target.parts.pop(0)
 
-        renderer = SqlalchemyRender('mysql')
+        renderer = SqlalchemyRender("mysql")
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
@@ -194,7 +183,7 @@ class ScyllaHandler(DatabaseHandler):
         q = "DESCRIBE TABLES;"
         result = self.native_query(q)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name) -> Response:

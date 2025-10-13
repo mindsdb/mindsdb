@@ -4,7 +4,7 @@ from mindsdb.integrations.handlers.aqicn_handler.aqicn_tables import (
     AQByUserLocationTable,
     AQByCityTable,
     AQByLatLngTable,
-    AQByNetworkStationTable
+    AQByNetworkStationTable,
 )
 from mindsdb.integrations.handlers.aqicn_handler.aqicn import AQIClient
 from mindsdb.integrations.libs.api_handler import APIHandler

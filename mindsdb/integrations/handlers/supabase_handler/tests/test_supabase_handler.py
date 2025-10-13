@@ -12,10 +12,10 @@ class SupabaseHandlerTest(unittest.TestCase):
                 "user": "root",
                 "password": "root",
                 "database": "test",
-                "ssl": False
+                "ssl": False,
             }
         }
-        cls.handler = SupabaseHandler('test_supabase_handler', **cls.kwargs)
+        cls.handler = SupabaseHandler("test_supabase_handler", **cls.kwargs)
 
     def test_0_connect(self):
         self.handler.connect()

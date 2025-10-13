@@ -4,7 +4,7 @@ from mindsdb.integrations.handlers.zendesk_handler.zendesk_tables import (
     ZendeskUsersTable,
     ZendeskTicketsTable,
     ZendeskTriggersTable,
-    ZendeskActivitiesTable
+    ZendeskActivitiesTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -49,7 +49,11 @@ class ZendeskHandler(APIHandler):
             connection object
         """
         resp = StatusResponse(False)
-        self.zen_client = zenpy.Zenpy(subdomain=self.connection_data["sub_domain"], email=self.connection_data["email"], token=self.connection_data["api_key"])
+        self.zen_client = zenpy.Zenpy(
+            subdomain=self.connection_data["sub_domain"],
+            email=self.connection_data["email"],
+            token=self.connection_data["api_key"],
+        )
         try:
             self.zen_client.users()
             self.is_connected = True

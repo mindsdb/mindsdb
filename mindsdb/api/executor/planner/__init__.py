@@ -1,4 +1,4 @@
-from .query_planner import QueryPlanner
+from .query_planner import QueryPlanner as QueryPlanner
 
 
 def plan_query(query, *args, **kwargs):

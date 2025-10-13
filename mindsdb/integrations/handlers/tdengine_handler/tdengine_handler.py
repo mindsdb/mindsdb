@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 
@@ -24,13 +24,13 @@ class TDEngineHandler(DatabaseHandler):
     This handler handles connection and execution of the TDEngine statements.
     """
 
-    name = 'tdengine'
+    name = "tdengine"
 
     def __init__(self, name, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
 
         self.parser = parse_sql
-        self.dialect = 'tdengine'
+        self.dialect = "tdengine"
         self.kwargs = kwargs
         self.connection_data = connection_data
 
@@ -42,11 +42,11 @@ class TDEngineHandler(DatabaseHandler):
             return self.connection
 
         config = {
-            'url': self.connection_data.get('url', "http://localhost:6041"),
-            'token': self.connection_data.get('token'),
-            'user': self.connection_data.get('user', 'root'),
-            'password': self.connection_data.get('password', 'taosdata'),
-            'database': self.connection_data.get('database')
+            "url": self.connection_data.get("url", "http://localhost:6041"),
+            "token": self.connection_data.get("token"),
+            "user": self.connection_data.get("user", "root"),
+            "password": self.connection_data.get("password", "taosdata"),
+            "database": self.connection_data.get("database"),
         }
 
         connection = td.connect(**config)
@@ -62,7 +62,6 @@ class TDEngineHandler(DatabaseHandler):
         return
 
     def check_connection(self) -> StatusResponse:
-
         result = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -70,7 +69,7 @@ class TDEngineHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection is not None
         except Exception as e:
-            logger.error(f'Error connecting to TDEngine {self.connection_data["database"]}, {e}!')
+            logger.error(f"Error connecting to TDEngine {self.connection_data['database']}, {e}!")
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -96,22 +95,13 @@ class TDEngineHandler(DatabaseHandler):
 
             if cur.rowcount != 0:
                 result = cur.fetchall()
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cur.description]
-                    )
-                )
+                response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(result, columns=[x[0] for x in cur.description]))
             else:
                 response = Response(RESPONSE_TYPE.OK)
             connection.commit()
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
             # connection.rollback()
         cur.close()
         if need_to_close is True:
@@ -131,7 +121,7 @@ class TDEngineHandler(DatabaseHandler):
         """
         Get a list with all of the tabels in TDEngine
         """
-        q = 'SHOW TABLES;'
+        q = "SHOW TABLES;"
 
         return self.native_query(q)
 
@@ -139,6 +129,6 @@ class TDEngineHandler(DatabaseHandler):
         """
         Show details about the table
         """
-        q = f'DESCRIBE {table_name};'
+        q = f"DESCRIBE {table_name};"
 
         return self.native_query(q)

@@ -6,6 +6,7 @@ from .model_using_args import model_using_args
 
 try:
     from .togetherai_handler import TogetherAIHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None
@@ -17,4 +18,15 @@ type = HANDLER_TYPE.ML
 icon_path = "icon.svg"
 permanent = False
 
-__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path", "creation_args", "model_using_args"]
+__all__ = [
+    "Handler",
+    "version",
+    "name",
+    "type",
+    "title",
+    "description",
+    "import_error",
+    "icon_path",
+    "creation_args",
+    "model_using_args",
+]

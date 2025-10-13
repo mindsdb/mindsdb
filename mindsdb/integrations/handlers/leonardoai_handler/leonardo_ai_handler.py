@@ -13,7 +13,7 @@ from mindsdb.utilities.config import Config
 
 logger = log.getLogger(__name__)
 
-LEONARDO_API_BASE = 'https://cloud.leonardo.ai/api/rest/v1'
+LEONARDO_API_BASE = "https://cloud.leonardo.ai/api/rest/v1"
 
 
 class LeonardoAIHandler(BaseMLEngine):
@@ -25,24 +25,22 @@ class LeonardoAIHandler(BaseMLEngine):
     models for creative content production. From realistic images to artistic text, Leonardo
     AI opens up new possibilities for content creators.
     """
+
     name = "leonardo_ai"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.all_models = []
-        self.default_model = '6bef9f1b-29cb-40c7-b9df-32b51c1f67d3'
+        self.default_model = "6bef9f1b-29cb-40c7-b9df-32b51c1f67d3"
         self.base_api = LEONARDO_API_BASE
         self.rate_limit = 50
         self.max_batch_size = 5  # default value
 
     def create(self, target: str, args=None, **kwargs):
-
-        args['target'] = target
+        args["target"] = target
 
         if "using" not in args:
-            raise Exception(
-                "Leornardo Engine requires a USING clause!"
-            )
+            raise Exception("Leornardo Engine requires a USING clause!")
 
         self.model_storage.json_set("args", args)
         api_key = self._get_leonardo_api_key(args, self.engine_storage)  # fetch api key
@@ -50,20 +48,17 @@ class LeonardoAIHandler(BaseMLEngine):
         # check if API key is valid
         self.connection = requests.get(
             "https://cloud.leonardo.ai/api/rest/v1/me",
-            headers={
-                "accept": "application/json",
-                "authorization": f"Bearer {api_key}"
-            }
+            headers={"accept": "application/json", "authorization": f"Bearer {api_key}"},
         )
 
         # if valid, check if the model is valid
         try:
-            if (self.connection.status_code == 200):
+            if self.connection.status_code == 200:
                 # get all the available models
                 available_models = self._get_platform_model(args)
-                if not args['using']['model']:
-                    args['using']['model'] = self.default_model
-                elif args['using']['model'] not in available_models:    # if invalid model_id is provided
+                if not args["using"]["model"]:
+                    args["using"]["model"] = self.default_model
+                elif args["using"]["model"] not in available_models:  # if invalid model_id is provided
                     raise Exception("Invalid Model ID. Please use a valid Model")
             else:
                 raise Exception("Unable to make connection, please verify the API key.")
@@ -71,15 +66,16 @@ class LeonardoAIHandler(BaseMLEngine):
             raise Exception("Auth Connection Error, please the modelId or API key")
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None, **kwargs) -> pd.DataFrame:
-
-        pred_args = args['predict_params'] if args else {}
+        pred_args = args["predict_params"] if args else {}
         args = self.model_storage.json_get("args")
 
-        prompt_template = pred_args.get('prompt_template', args.get('prompt_template', 'Generate a picture of {{{{text}}}}'))
+        prompt_template = pred_args.get(
+            "prompt_template", args.get("prompt_template", "Generate a picture of {{{{text}}}}")
+        )
 
         # prepare prompts
         prompts, empty_prompt_id = get_completed_prompts(prompt_template, df)
-        df['__mdb_prompt'] = prompts
+        df["__mdb_prompt"] = prompts
 
         # generate picture based on the given prompt
         result_df = pd.DataFrame(self.predict_answer(prompts))
@@ -123,21 +119,18 @@ class LeonardoAIHandler(BaseMLEngine):
         """
         model_ids = []
 
-        args = self.model_storage.json_get('args')
+        args = self.model_storage.json_get("args")
         api_key = self._get_leonardo_api_key(args, self.engine_storage)
 
         self.connection = requests.get(
             "https://cloud.leonardo.ai/api/rest/v1/platformModels",
-            headers={
-                "accept": "application/json",
-                "authorization": f"Bearer {api_key}"
-            }
+            headers={"accept": "application/json", "authorization": f"Bearer {api_key}"},
         )
 
         models = self.connection.json()
 
         # extract the model ids from the response
-        model_ids = [model['id'] for model in models['custom_models']]
+        model_ids = [model["id"] for model in models["custom_models"]]
 
         return model_ids
 
@@ -151,12 +144,12 @@ class LeonardoAIHandler(BaseMLEngine):
             - POST request will take couple of seconds to generate the picture, till then the process will be kept busy with a simple math calculation.
             - New GET request with the `generation_id` will fetch the generated pictures as URLs
         """
-        args = self.model_storage.json_get('args')
-        tmp_args = args['using']
-        height = tmp_args.get('height', 512)
-        width = tmp_args.get('width', 512)
+        args = self.model_storage.json_get("args")
+        tmp_args = args["using"]
+        height = tmp_args.get("height", 512)
+        width = tmp_args.get("width", 512)
         api_key = self._get_leonardo_api_key(args, self.engine_storage)  # fetch API key
-        generation_id = ''
+        generation_id = ""
 
         # Endpoint URL
         generation_url = "https://cloud.leonardo.ai/api/rest/v1/generations"
@@ -164,18 +157,15 @@ class LeonardoAIHandler(BaseMLEngine):
         post_headers = {
             "accept": "application/json",
             "content-type": "application/json",
-            "authorization": f"Bearer {api_key}"
+            "authorization": f"Bearer {api_key}",
         }
 
-        get_headers = {
-            "accept": "application/json",
-            "authorization": f"Bearer {api_key}"
-        }
+        get_headers = {"accept": "application/json", "authorization": f"Bearer {api_key}"}
 
         # payload
         generation_payload = {
             "height": height,
-            "modelId": args['using']['model'],
+            "modelId": args["using"]["model"],
             "prompt": f"{prompts}",
             "width": width,
         }
@@ -189,7 +179,7 @@ class LeonardoAIHandler(BaseMLEngine):
         time.sleep(15)
 
         # extract generationID from the response
-        generation_id = generation_data['sdGenerationJob']['generationId']
+        generation_id = generation_data["sdGenerationJob"]["generationId"]
 
         # ENDPOINT GET URL
         retrieve_url = f"https://cloud.leonardo.ai/api/rest/v1/generations/{generation_id}"
@@ -205,21 +195,21 @@ class LeonardoAIHandler(BaseMLEngine):
         url_dicts = []
 
         for url in image_urls:
-            url_dicts.append({'url': url})
+            url_dicts.append({"url": url})
 
-        img_urls = pd.DataFrame(url_dicts, columns=['url'])
+        img_urls = pd.DataFrame(url_dicts, columns=["url"])
         return img_urls
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        args = self.model_storage.json_get('args')
-        model, target = args['using']['model'], args['target']
-        prompt_template = args.get('prompt_template', 'Generate a picture of {{{{text}}}}')
+        args = self.model_storage.json_get("args")
+        model, target = args["using"]["model"], args["target"]
+        prompt_template = args.get("prompt_template", "Generate a picture of {{{{text}}}}")
 
         if attribute == "features":
-            return pd.DataFrame([[target, prompt_template]], columns=['target_column', 'mindsdb_prompt_template'])
+            return pd.DataFrame([[target, prompt_template]], columns=["target_column", "mindsdb_prompt_template"])
         elif attribute == "metadata":
             api_key = self._get_leonardo_api_key(args, self.engine_storage)
-            return pd.DataFrame([[target, api_key, model]], columns=['target', 'api_key', 'model_name'])
+            return pd.DataFrame([[target, api_key, model]], columns=["target", "api_key", "model_name"])
         else:
-            tables = ['args', 'api_key']
-            return pd.DataFrame(tables, columns=['tables'])
+            tables = ["args", "api_key"]
+            return pd.DataFrame(tables, columns=["tables"])

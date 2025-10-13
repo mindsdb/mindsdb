@@ -1,21 +1,18 @@
 import unittest
-from mindsdb.integrations.handlers.google_content_shopping_handler.google_content_shopping_handler import \
-    GoogleContentShoppingHandler
+from mindsdb.integrations.handlers.google_content_shopping_handler.google_content_shopping_handler import (
+    GoogleContentShoppingHandler,
+)
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class GoogleSearchConsoleHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "connection_data": {
-                "merchant_id": "1234567890",
-                "credentials": "/path/to/credentials.json"
-            },
-            "file_storage": "/path/to/file_storage"
+            "connection_data": {"merchant_id": "1234567890", "credentials": "/path/to/credentials.json"},
+            "file_storage": "/path/to/file_storage",
         }
-        cls.handler = GoogleContentShoppingHandler('test_google_content_shopping_handler', **cls.kwargs)
+        cls.handler = GoogleContentShoppingHandler("test_google_content_shopping_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -60,5 +57,5 @@ class GoogleSearchConsoleHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.TABLE
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

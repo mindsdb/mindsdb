@@ -1,6 +1,5 @@
 POSTGRES_ERROR_CODES = {
-    "CLASS_00": {
-        "successful_completion": "00000"},
+    "CLASS_00": {"successful_completion": "00000"},
     "CLASS_01": {
         "warning": "01000",
         "dynamic_result_sets_returned": "0100C",
@@ -9,11 +8,9 @@ POSTGRES_ERROR_CODES = {
         "privilege_not_granted": "01007",
         "privilege_not_revoked": "01006",
         "string_data_right_truncation": "01004",
-        "deprecated_feature": "01P01"},
-    "CLASS_02": {
-        "no_data": "02000",
-        "no_additional_dynamic_result_sets_returned": "02001"
+        "deprecated_feature": "01P01",
     },
+    "CLASS_02": {"no_data": "02000", "no_additional_dynamic_result_sets_returned": "02001"},
     "CLASS_03": {
         "sql_statement_not_yet_complete": "03000",
     },
@@ -24,15 +21,13 @@ POSTGRES_ERROR_CODES = {
         "sqlclient_unable_to_establish_sqlconnection": "08001",
         "sqlserver_rejected_establishment_of_sqlconnection": "08004",
         "transaction_resolution_unknown": "08007",
-        "protocol_violation": "08P01"},
+        "protocol_violation": "08P01",
+    },
     "CLASS_09": {
-
         "triggered_action_exception": "09000",
     },
-    "CLASS_0A": {
-        "feature_not_supported": "0A000"},
-    "CLASS_0B": {
-        "invalid_transaction_initiation": "0B000"},
+    "CLASS_0A": {"feature_not_supported": "0A000"},
+    "CLASS_0B": {"invalid_transaction_initiation": "0B000"},
     "CLASS_0F": {
         "locator_exception": "0F000",
         "invalid_locator_specification": "0F001",
@@ -44,14 +39,9 @@ POSTGRES_ERROR_CODES = {
     "CLASS_0P": {
         "invalid_role_specification": "0P000",
     },
-    "CLASS_0Z": {
-        "diagnostics_exception": "0Z000",
-        "stacked_diagnostics_accessed_without_active_handler": "0Z002"},
-    "CLASS_20": {
-        "case_not_found": "20000"},
-
-    "CLASS_21": {
-        "cardinality_violation": "21000"},
+    "CLASS_0Z": {"diagnostics_exception": "0Z000", "stacked_diagnostics_accessed_without_active_handler": "0Z002"},
+    "CLASS_20": {"case_not_found": "20000"},
+    "CLASS_21": {"cardinality_violation": "21000"},
     "CLASS_22": {
         "data_exception": "22000",
         "array_subscript_error": "2202E",
@@ -120,7 +110,7 @@ POSTGRES_ERROR_CODES = {
         "too_many_json_array_elements": "2203D",
         "too_many_json_object_members": "2203E",
         "sql_json_scalar_required": "2203F",
-        "sql_json_item_cannot_be_cast_to_target_type": "2203G"
+        "sql_json_item_cannot_be_cast_to_target_type": "2203G",
     },
     "CLASS_23": {
         "integrity_constraint_violation": "23000",
@@ -129,9 +119,9 @@ POSTGRES_ERROR_CODES = {
         "foreign_key_violation": "23503",
         "unique_violation": "23505",
         "check_violation": "23514",
-        "exclusion_violation": "23P01"},
-    "CLASS_24": {
-        "invalid_cursor_state": "24000"},
+        "exclusion_violation": "23P01",
+    },
+    "CLASS_24": {"invalid_cursor_state": "24000"},
     "CLASS_25": {
         "invalid_transaction_state": "25000",
         "active_sql_transaction": "25001",
@@ -144,55 +134,50 @@ POSTGRES_ERROR_CODES = {
         "schema_and_data_statement_mixing_not_supported": "25007",
         "no_active_sql_transaction": "25P01",
         "in_failed_sql_transaction": "25P02",
-        "idle_in_transaction_session_timeout": "25P03"},
-    "CLASS_26": {
-        "invalid_sql_statement_name": "26000"},
-    "CLASS_27": {
-        "triggered_data_change_violation": "27000"},
+        "idle_in_transaction_session_timeout": "25P03",
+    },
+    "CLASS_26": {"invalid_sql_statement_name": "26000"},
+    "CLASS_27": {"triggered_data_change_violation": "27000"},
     "CLASS_28": {
         "invalid_authorization_specification": "28000",
         "invalid_password": "28P01",
         "dependent_privilege_descriptors_still_exist": "2B000",
-        "dependent_objects_still_exist": "2BP01"},
-    "CLASS_2D": {
-
-        "invalid_transaction_termination": "2D000"},
+        "dependent_objects_still_exist": "2BP01",
+    },
+    "CLASS_2D": {"invalid_transaction_termination": "2D000"},
     "CLASS_2F": {
-
         "sql_routine_exception": "2F000",
         "function_executed_no_return_statement": "2F005",
         "modifying_sql_data_not_permitted": "2F002",
         "prohibited_sql_statement_attempted": "2F003",
-        "reading_sql_data_not_permitted": "2F004"},
-    "CLASS_34": {
-        "invalid_cursor_name": "34000"},
+        "reading_sql_data_not_permitted": "2F004",
+    },
+    "CLASS_34": {"invalid_cursor_name": "34000"},
     "CLASS_38": {
         "external_routine_exception": "38000",
         "containing_sql_not_permitted": "38001",
         "modifying_sql_data_not_permitted": "38002",
         "prohibited_sql_statement_attempted": "38003",
-        "reading_sql_data_not_permitted": "38004"},
+        "reading_sql_data_not_permitted": "38004",
+    },
     "CLASS_39": {
         "external_routine_invocation_exception": "39000",
         "invalid_sqlstate_returned": "39001",
         "null_value_not_allowed": "39004",
         "trigger_protocol_violated": "39P01",
         "srf_protocol_violated": "39P02",
-        "event_trigger_protocol_violated": "39P03"},
-    "CLASS_3B": {
-        "savepoint_exception": "3B000",
-        "invalid_savepoint_specification": "3B001"
+        "event_trigger_protocol_violated": "39P03",
     },
-    "CLASS_3D": {
-        "invalid_catalog_name": "3D000"},
-    "CLASS_3F": {
-        "invalid_schema_name": "3F000"},
+    "CLASS_3B": {"savepoint_exception": "3B000", "invalid_savepoint_specification": "3B001"},
+    "CLASS_3D": {"invalid_catalog_name": "3D000"},
+    "CLASS_3F": {"invalid_schema_name": "3F000"},
     "CLASS_40": {
         "transaction_rollback": "40000",
         "transaction_integrity_constraint_violation": "40002",
         "serialization_failure": "40001",
         "statement_completion_unknown": "40003",
-        "deadlock_detected": "40P01"},
+        "deadlock_detected": "40P01",
+    },
     "CLASS_42": {  # Syntax Errors
         "syntax_error_or_access_rule_violation": "42000",
         # DEFAULTS to here:
@@ -238,29 +223,29 @@ POSTGRES_ERROR_CODES = {
         "invalid_prepared_statement_definition": "42P14",
         "invalid_schema_definition": "42P15",
         "invalid_table_definition": "42P16",
-        "invalid_object_definition": "42P17"},
-
-    "CLASS_44": {
-        "with_check_option_violation": "44000"},
-
+        "invalid_object_definition": "42P17",
+    },
+    "CLASS_44": {"with_check_option_violation": "44000"},
     "CLASS_53": {
         "insufficient_resources": "53000",
         "disk_full": "53100",
         "out_of_memory": "53200",
         "too_many_connections": "53300",
-        "configuration_limit_exceeded": "53400", },
-
+        "configuration_limit_exceeded": "53400",
+    },
     "CLASS_54": {
         "program_limit_exceeded": "54000",
         "statement_too_complex": "54001",
         "too_many_columns": "54011",
-        "too_many_arguments": "54023"},
+        "too_many_arguments": "54023",
+    },
     "CLASS_55": {
         "object_not_in_prerequisite_state": "55000",
         "object_in_use": "55006",
         "cant_change_runtime_param": "55P02",
         "lock_not_available": "55P03",
-        "unsafe_new_enum_value_usage": "55P04"},
+        "unsafe_new_enum_value_usage": "55P04",
+    },
     "CLASS_57": {
         "operator_intervention": "57000",
         "query_canceled": "57014",
@@ -268,17 +253,11 @@ POSTGRES_ERROR_CODES = {
         "crash_shutdown": "57P02",
         "cannot_connect_now": "57P03",
         "database_dropped": "57P04",
-        "idle_session_timeout": "57P05"},
-    "CLASS_58": {
-        "system_error": "58000",
-        "io_error": "58030",
-        "undefined_file": "58P01",
-        "duplicate_file": "58P02"},
-    "CLASS_72": {
-        "snapshot_too_old": "72000"},
-    "CLASS_F0": {
-        "config_file_error": "F0000",
-        "lock_file_exists": "F0001"},
+        "idle_session_timeout": "57P05",
+    },
+    "CLASS_58": {"system_error": "58000", "io_error": "58030", "undefined_file": "58P01", "duplicate_file": "58P02"},
+    "CLASS_72": {"snapshot_too_old": "72000"},
+    "CLASS_F0": {"config_file_error": "F0000", "lock_file_exists": "F0001"},
     "CLASS_HV": {
         "fdw_error": "HV000",
         "fdw_column_name_not_found": "HV005",
@@ -306,17 +285,15 @@ POSTGRES_ERROR_CODES = {
         "fdw_table_not_found": "HV00R",
         "fdw_unable_to_create_execution": "HV00L",
         "fdw_unable_to_create_reply": "HV00M",
-        "fdw_unable_to_establish_connection": "HV00N"},
+        "fdw_unable_to_establish_connection": "HV00N",
+    },
     "CLASS_P0": {
         "plpgsql_error": "P0000",
         "raise_exception": "P0001",
         "no_data_found": "P0002",
         "too_many_rows": "P0003",
-        "assert_failure": "P0004"},
-    "CLASS_XX": {
-        "internal_error": "XX000",
-        "data_corrupted": "XX001",
-        "index_corrupted": "XX002"
-    }
+        "assert_failure": "P0004",
+    },
+    "CLASS_XX": {"internal_error": "XX000", "data_corrupted": "XX001", "index_corrupted": "XX002"},
 }
 POSTGRES_SYNTAX_ERROR_CODE = POSTGRES_ERROR_CODES["CLASS_42"]["syntax_error"]

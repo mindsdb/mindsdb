@@ -26,5 +26,5 @@ __all__ = [
     "import_error",
     "icon_path",
     "connection_args",
-    "connection_args_example"
+    "connection_args_example",
 ]

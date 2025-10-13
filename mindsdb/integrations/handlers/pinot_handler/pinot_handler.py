@@ -17,7 +17,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 
@@ -29,7 +29,7 @@ class PinotHandler(DatabaseHandler):
     This handler handles connection and execution of the Apache Pinot statements.
     """
 
-    name = 'pinot'
+    name = "pinot"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -41,18 +41,18 @@ class PinotHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'pinot'
+        self.dialect = "pinot"
 
-        optional_parameters = ['username', 'password']
+        optional_parameters = ["username", "password"]
         for parameter in optional_parameters:
             if parameter not in connection_data:
                 connection_data[parameter] = None
 
-        if 'verify_ssl' not in connection_data:
-            connection_data['verify_ssl'] = 'False'
+        if "verify_ssl" not in connection_data:
+            connection_data["verify_ssl"] = "False"
 
-        if 'scheme' not in connection_data:
-            connection_data['scheme'] = 'http'
+        if "scheme" not in connection_data:
+            connection_data["scheme"] = "http"
 
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -75,20 +75,20 @@ class PinotHandler(DatabaseHandler):
             return self.connection
 
         self.connection = pinotdb.connect(
-            host=self.connection_data['host'],
-            port=self.connection_data['broker_port'],
-            path=self.connection_data['path'],
-            scheme=self.connection_data['scheme'],
-            username=self.connection_data['username'],
-            password=self.connection_data['password'],
-            verify_ssl=json.loads(self.connection_data['verify_ssl'].lower())
+            host=self.connection_data["host"],
+            port=self.connection_data["broker_port"],
+            path=self.connection_data["path"],
+            scheme=self.connection_data["scheme"],
+            username=self.connection_data["username"],
+            password=self.connection_data["password"],
+            verify_ssl=json.loads(self.connection_data["verify_ssl"].lower()),
         )
         self.is_connected = True
 
         return self.connection
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
 
         Should switch self.is_connected.
         """
@@ -109,7 +109,7 @@ class PinotHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Pinot, {e}!')
+            logger.error(f"Error connecting to Pinot, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -138,21 +138,14 @@ class PinotHandler(DatabaseHandler):
             result = cursor.fetchall()
             if result:
                 response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
+                    RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description])
                 )
             else:
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on Pinot!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on Pinot!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:
@@ -188,11 +181,7 @@ class PinotHandler(DatabaseHandler):
             result = requests.get(api_url)
 
         response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                json.loads(result.content)['tables'],
-                columns=['table_name']
-            )
+            RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(json.loads(result.content)["tables"], columns=["table_name"])
         )
 
         return response
@@ -213,12 +202,9 @@ class PinotHandler(DatabaseHandler):
             api_url = f"{self.connection_data['scheme']}://{api_url}"
             result = requests.get(api_url)
 
-        df = pd.DataFrame(json.loads(result.content)['dimensionFieldSpecs'])
-        df = df.rename(columns={'name': 'column_name', 'dataType': 'data_type'})
+        df = pd.DataFrame(json.loads(result.content)["dimensionFieldSpecs"])
+        df = df.rename(columns={"name": "column_name", "dataType": "data_type"})
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
         return response

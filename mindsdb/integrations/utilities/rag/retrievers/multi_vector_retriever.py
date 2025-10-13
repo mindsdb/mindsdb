@@ -7,8 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
 from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, \
-    MultiVectorRetrieverMode, RAGPipelineModel
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, MultiVectorRetrieverMode, RAGPipelineModel
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
 from mindsdb.interfaces.agents.safe_output_parser import SafeOutputParser
 
@@ -50,26 +49,25 @@ class MultiVectorRetriever(BaseRetriever):
         split_docs = [doc for sublist in split_docs_lists for doc in sublist]
         return split_docs, list(doc_ids)
 
-    def _create_retriever_and_vs_operator(self, docs: List[Document]) \
-            -> Tuple[LangChainMultiVectorRetriever, VectorStoreOperator]:
+    def _create_retriever_and_vs_operator(
+        self, docs: List[Document]
+    ) -> Tuple[LangChainMultiVectorRetriever, VectorStoreOperator]:
         vstore_operator = VectorStoreOperator(
             vector_store=self.vectorstore,
             documents=docs,
             embedding_model=self.embedding_model,
         )
         retriever = LangChainMultiVectorRetriever(
-            vectorstore=vstore_operator.vector_store,
-            byte_store=self.parent_store,
-            id_key=self.id_key
+            vectorstore=vstore_operator.vector_store, byte_store=self.parent_store, id_key=self.id_key
         )
         return retriever, vstore_operator
 
     def _get_document_summaries(self) -> List[str]:
         chain = (
-                {"doc": lambda x: x.page_content}  # noqa: E126, E122
-                | ChatPromptTemplate.from_template("Summarize the following document:\n\n{doc}")
-                | ChatOpenAI(max_retries=0, model_name=DEFAULT_LLM_MODEL)
-                | SafeOutputParser()
+            {"doc": lambda x: x.page_content}  # noqa: E126, E122
+            | ChatPromptTemplate.from_template("Summarize the following document:\n\n{doc}")
+            | ChatOpenAI(max_retries=0, model_name=DEFAULT_LLM_MODEL)
+            | SafeOutputParser()
         )
         return chain.batch(self.documents, {"max_concurrency": self.max_concurrency})
 
@@ -79,8 +77,7 @@ class MultiVectorRetriever(BaseRetriever):
             retriever, vstore_operator = self._create_retriever_and_vs_operator(split_docs)
             summaries = self._get_document_summaries()
             summary_docs = [
-                Document(page_content=s, metadata={self.id_key: doc_ids[i]})
-                for i, s in enumerate(summaries)
+                Document(page_content=s, metadata={self.id_key: doc_ids[i]}) for i, s in enumerate(summaries)
             ]
             vstore_operator.add_documents(summary_docs)
             retriever.docstore.mset(list(zip(doc_ids, self.documents)))
@@ -90,8 +87,7 @@ class MultiVectorRetriever(BaseRetriever):
             summaries = self._get_document_summaries()
             doc_ids = [str(uuid.uuid4()) for _ in self.documents]
             summary_docs = [
-                Document(page_content=s, metadata={self.id_key: doc_ids[i]})
-                for i, s in enumerate(summaries)
+                Document(page_content=s, metadata={self.id_key: doc_ids[i]}) for i, s in enumerate(summaries)
             ]
             retriever, vstore_operator = self._create_retriever_and_vs_operator(summary_docs)
             retriever.docstore.mset(list(zip(doc_ids, self.documents)))

@@ -1,1 +1,1 @@
-from .session_controller import SessionController
+from .session_controller import SessionController as SessionController

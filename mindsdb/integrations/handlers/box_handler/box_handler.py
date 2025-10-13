@@ -1,6 +1,12 @@
 import io
 import pandas as pd
-from box_sdk_gen import BoxClient, BoxDeveloperTokenAuth, CreateFolderParent, UploadFileAttributes, UploadFileAttributesParentField
+from box_sdk_gen import (
+    BoxClient,
+    BoxDeveloperTokenAuth,
+    CreateFolderParent,
+    UploadFileAttributes,
+    UploadFileAttributesParentField,
+)
 from box_sdk_gen.internal import utils
 from typing import Dict, Optional, Text
 
@@ -17,7 +23,6 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APIResource
 
 
 class ListFilesTable(APIResource):
-
     def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
         files = self.handler._list_files()
         data = []
@@ -36,7 +41,6 @@ class ListFilesTable(APIResource):
 
 
 class FileTable(APIResource):
-
     def _get_file_df(self):
         try:
             df = self.handler._read_file(self.table_name)
@@ -64,7 +68,6 @@ class FileTable(APIResource):
 
 
 class BoxHandler(APIHandler):
-
     name = "box"
     supported_file_formats = ["csv", "tsv", "json", "parquet"]
 
@@ -116,7 +119,7 @@ class BoxHandler(APIHandler):
         try:
             id = "0"  # Root folder id. The value is always "0".
 
-            items = file_path.strip('/').split('/')
+            items = file_path.strip("/").split("/")
 
             for item in items:
                 item_id = None
@@ -136,7 +139,6 @@ class BoxHandler(APIHandler):
             self.logger.error(f"Error when downloading a file from Box: {e}")
 
     def query(self, query: ASTNode) -> Response:
-
         if isinstance(query, Select):
             table_name = query.from_table.parts[-1]
             if table_name == "files":
@@ -144,10 +146,7 @@ class BoxHandler(APIHandler):
                 df = table.select(query)
                 has_content = False
                 for target in query.targets:
-                    if (
-                        isinstance(target, Identifier)
-                        and target.parts[-1].lower() == "content"
-                    ):
+                    if isinstance(target, Identifier) and target.parts[-1].lower() == "content":
                         has_content = True
                         break
                 if has_content:
@@ -163,9 +162,7 @@ class BoxHandler(APIHandler):
             table.insert(query)
             return Response(RESPONSE_TYPE.OK)
         else:
-            raise NotImplementedError(
-                "Only SELECT and INSERT operations are supported."
-            )
+            raise NotImplementedError("Only SELECT and INSERT operations are supported.")
 
     def get_tables(self) -> Response:
         table_names = list(self._tables.keys())
@@ -181,9 +178,9 @@ class BoxHandler(APIHandler):
     def list_files_in_folder(self, folder_id, files=[]):
         items = self.client.folders.get_folder_items(folder_id).entries
         for item in items:
-            if item.type == 'folder':
+            if item.type == "folder":
                 self.list_files_in_folder(item.id, files)
-            elif item.type == 'file':
+            elif item.type == "file":
                 extension = item.name.split(".")[-1].lower()
                 if extension in self.supported_file_formats:
                     file = self.client.files.get_file_by_id(item.id)
@@ -223,7 +220,7 @@ class BoxHandler(APIHandler):
     def upload_file(self, path, buffer):
         parent_folder_id = "0"
 
-        directories = path.strip('/').split('/')
+        directories = path.strip("/").split("/")
 
         for direc in directories[:-1]:
             sub_folder_id = None
@@ -238,7 +235,10 @@ class BoxHandler(APIHandler):
                 parent_folder_id = new_sub_folder.id
                 self.logger.debug(f"folder {direc} not available in path. Creating {direc}...")
 
-        self.client.uploads.upload_file(UploadFileAttributes(name=directories[-1], parent=UploadFileAttributesParentField(id=parent_folder_id)), buffer)
+        self.client.uploads.upload_file(
+            UploadFileAttributes(name=directories[-1], parent=UploadFileAttributesParentField(id=parent_folder_id)),
+            buffer,
+        )
 
     def _write_file(self, path, df: pd.DataFrame):
         extension = path.split(".")[-1].lower()

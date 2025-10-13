@@ -9,12 +9,12 @@ class GoogleAnalyticsTest(unittest.TestCase):
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
-                "credentials_file": '/home/talaat/Downloads/credentials.json',
-                "property_id": '<YOUR_PROPERTY_ID>'
+                "credentials_file": "/home/talaat/Downloads/credentials.json",
+                "property_id": "<YOUR_PROPERTY_ID>",
             }
         }
 
-        cls.handler = GoogleAnalyticsHandler('test_google_analytics_handler', **cls.kwargs)
+        cls.handler = GoogleAnalyticsHandler("test_google_analytics_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -24,7 +24,7 @@ class GoogleAnalyticsTest(unittest.TestCase):
         assert tables.type is RESPONSE_TYPE.TABLE
 
     def test_2_native_query_select(self):
-        query = 'SELECT * FROM conversion_events'
+        query = "SELECT * FROM conversion_events"
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 
@@ -44,5 +44,5 @@ class GoogleAnalyticsTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.OK
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

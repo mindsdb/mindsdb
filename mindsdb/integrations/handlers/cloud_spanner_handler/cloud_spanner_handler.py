@@ -24,16 +24,16 @@ logger = log.getLogger(__name__)
 class CloudSpannerHandler(DatabaseHandler):
     """This handler handles connection and execution of the Cloud Spanner statements."""
 
-    name = 'cloud_spanner'
+    name = "cloud_spanner"
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.connection_data = kwargs.get('connection_data')
-        self.dialect = self.connection_data.get('dialect', 'googlesql')
+        self.connection_data = kwargs.get("connection_data")
+        self.dialect = self.connection_data.get("dialect", "googlesql")
 
-        if self.dialect == 'postgres':
-            self.renderer = SqlalchemyRender('postgres')
+        if self.dialect == "postgres":
+            self.renderer = SqlalchemyRender("postgres")
         else:
             self.renderer = SqlalchemyRender(SpannerDialect)
 
@@ -55,15 +55,13 @@ class CloudSpannerHandler(DatabaseHandler):
             return self.connection
 
         args = {
-            'database_id': self.connection_data.get('database_id'),
-            'instance_id': self.connection_data.get('instance_id'),
-            'project': self.connection_data.get('project'),
-            'credentials': self.connection_data.get('credentials'),
+            "database_id": self.connection_data.get("database_id"),
+            "instance_id": self.connection_data.get("instance_id"),
+            "project": self.connection_data.get("project"),
+            "credentials": self.connection_data.get("credentials"),
         }
 
-        args['credentials'] = service_account.Credentials.from_service_account_info(
-            json.loads(args['credentials'])
-        )
+        args["credentials"] = service_account.Credentials.from_service_account_info(json.loads(args["credentials"]))
         self.connection = connect(**args)
         self.is_connected = True
 
@@ -91,9 +89,7 @@ class CloudSpannerHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(
-                f'Error connecting to Cloud Spanner {self.connection_data["database_id"]}, {e}!'
-            )
+            logger.error(f"Error connecting to Cloud Spanner {self.connection_data['database_id']}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and self.is_connected:
@@ -125,18 +121,14 @@ class CloudSpannerHandler(DatabaseHandler):
                 result = cursor.fetchall()
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result, columns=[x[0] for x in cursor.description]
-                    ),
+                    data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description]),
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
 
             connection.commit()
         except Exception as e:
-            logger.error(
-                f'Error running query: {query} on {self.connection_data["database_id"]}!'
-            )
+            logger.error(f"Error running query: {query} on {self.connection_data['database_id']}!")
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
@@ -160,14 +152,14 @@ class CloudSpannerHandler(DatabaseHandler):
             id_col = None
             has_primary = False
             for col in query.columns:
-                if col.name.lower() == 'id':
+                if col.name.lower() == "id":
                     id_col = col
                 if col.is_primary_key:
                     has_primary = True
             # if no other primary keys use id
             if not has_primary and id_col:
                 id_col.is_primary_key = True
-                id_col.default = Function('GENERATE_UUID', args=[])
+                id_col.default = Function("GENERATE_UUID", args=[])
 
         query_str = self.renderer.get_string(query, with_failback=True)
 
@@ -180,19 +172,19 @@ class CloudSpannerHandler(DatabaseHandler):
             Response: Names of the tables in the database.
         """
 
-        query = '''
+        query = """
             SELECT
               t.table_name
             FROM
               information_schema.tables AS t
             WHERE
               t.table_schema = ''
-        '''
+        """
         result = self.native_query(query)
         df = result.data_frame
 
         if df is not None:
-            result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+            result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
 
         return result
 
@@ -206,7 +198,7 @@ class CloudSpannerHandler(DatabaseHandler):
             Response: Details of the table.
         """
 
-        query = f'''
+        query = f"""
             SELECT
               t.column_name,
               t.spanner_type,
@@ -215,5 +207,5 @@ class CloudSpannerHandler(DatabaseHandler):
               information_schema.columns AS t
             WHERE
               t.table_name = '{table_name}'
-        '''
+        """
         return self.native_query(query)

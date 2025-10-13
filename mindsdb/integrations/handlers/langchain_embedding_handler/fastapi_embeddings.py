@@ -37,10 +37,7 @@ class FastAPIEmbeddings(Embeddings):
 
         headers = {"accept": "application/json", "Content-Type": "application/json"}
 
-        data = {
-            "input": texts,
-            "model": self.model
-        }
+        data = {"input": texts, "model": self.model}
 
         response = requests.post(self.api_base, headers=headers, json=data)
 

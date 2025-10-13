@@ -29,13 +29,16 @@ class TwelveLabsAPIClient:
         """
 
         self.api_key = api_key
-        self.headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': self.api_key
-        }
+        self.headers = {"Content-Type": "application/json", "x-api-key": self.api_key}
         self.base_url = base_url if base_url else twelve_labs_handler_config.BASE_URL
 
-    def create_index(self, index_name: str, index_options: List[str], engine_id: Optional[str] = None, addons: Optional[List[str]] = None) -> str:
+    def create_index(
+        self,
+        index_name: str,
+        index_options: List[str],
+        engine_id: Optional[str] = None,
+        addons: Optional[List[str]] = None,
+    ) -> str:
         """
         Create an index.
 
@@ -63,10 +66,12 @@ class TwelveLabsAPIClient:
         # TODO: support multiple engines per index?
         body = {
             "index_name": index_name,
-            "engines": [{
-                "engine_name": engine_id if engine_id else twelve_labs_handler_config.DEFAULT_ENGINE,
-                "engine_options": index_options
-            }],
+            "engines": [
+                {
+                    "engine_name": engine_id if engine_id else twelve_labs_handler_config.DEFAULT_ENGINE,
+                    "engine_options": index_options,
+                }
+            ],
             "addons": addons,
         }
 
@@ -77,7 +82,7 @@ class TwelveLabsAPIClient:
         )
 
         logger.info(f"Index {index_name} successfully created.")
-        return result['_id']
+        return result["_id"]
 
     def get_index_by_name(self, index_name: str) -> str:
         """
@@ -104,8 +109,8 @@ class TwelveLabsAPIClient:
             data=params,
         )
 
-        data = result['data']
-        return data[0]['_id'] if data else None
+        data = result["data"]
+        return data[0]["_id"] if data else None
 
     def list_videos_in_index(self, index_name: str) -> List[Dict]:
         """
@@ -129,20 +134,22 @@ class TwelveLabsAPIClient:
             method="GET",
             endpoint=f"/indexes/{index_id}/videos",
         )
-        data.extend(result['data'])
+        data.extend(result["data"])
 
-        while result['page_info']['page'] < result['page_info']['total_page']:
+        while result["page_info"]["page"] < result["page_info"]["total_page"]:
             result = self._submit_request(
                 method="GET",
                 endpoint=f"/indexes/{index_id}/videos?page_token={result['page_info']['next_page_token']}",
             )
-            data.extend(result['data'])
+            data.extend(result["data"])
 
         logger.info(f"Retrieved videos in index {index_id} successfully.")
 
         return data
 
-    def _update_video_metadata(self, index_id: str, video_id: str, video_title: str = None, metadata: Dict = None) -> None:
+    def _update_video_metadata(
+        self, index_id: str, video_id: str, video_title: str = None, metadata: Dict = None
+    ) -> None:
         """
         Update the metadata of a video that has already been indexed.
 
@@ -165,10 +172,10 @@ class TwelveLabsAPIClient:
         body = {}
 
         if video_title:
-            body['video_title'] = video_title
+            body["video_title"] = video_title
 
         if metadata:
-            body['metadata'] = metadata
+            body["metadata"] = metadata
 
         self._submit_request(
             method="PUT",
@@ -178,7 +185,9 @@ class TwelveLabsAPIClient:
 
         logger.info(f"Updated metadata for video {video_id} successfully.")
 
-    def create_video_indexing_tasks(self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None) -> List[str]:
+    def create_video_indexing_tasks(
+        self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None
+    ) -> List[str]:
         """
         Create video indexing tasks.
 
@@ -206,23 +215,13 @@ class TwelveLabsAPIClient:
             logger.info("Creating video indexing tasks for video urls.")
 
             for video_url in video_urls:
-                task_ids.append(
-                    self._create_video_indexing_task(
-                        index_id=index_id,
-                        video_url=video_url
-                    )
-                )
+                task_ids.append(self._create_video_indexing_task(index_id=index_id, video_url=video_url))
 
         elif video_files:
             logger.info("video_urls has not been set, therefore, video_files will be used.")
             logger.info("Creating video indexing tasks for video files.")
             for video_file in video_files:
-                task_ids.append(
-                    self._create_video_indexing_task(
-                        index_id=index_id,
-                        video_file=video_file
-                    )
-                )
+                task_ids.append(self._create_video_indexing_task(index_id=index_id, video_file=video_file))
 
         return task_ids
 
@@ -253,14 +252,15 @@ class TwelveLabsAPIClient:
 
         file_to_close = None
         if video_url:
-            body['video_url'] = video_url
+            body["video_url"] = video_url
 
         elif video_file:
             import mimetypes
+
             # WE need the file open for the duration of the request. Maybe simplify it with context manager later, but needs _create_video_indexing_task re-written
-            file_to_close = open(video_file, 'rb')
+            file_to_close = open(video_file, "rb")
             mime_type, _ = mimetypes.guess_type(video_file)
-            body['video_file'] = (file_to_close.name, file_to_close, mime_type)
+            body["video_file"] = (file_to_close.name, file_to_close, mime_type)
 
         result = self._submit_multi_part_request(
             method="POST",
@@ -271,18 +271,14 @@ class TwelveLabsAPIClient:
         if file_to_close:
             file_to_close.close()
 
-        task_id = result['_id']
+        task_id = result["_id"]
         logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
 
         # update the video title
         video_reference = video_url if video_url else video_file
         task = self._get_video_indexing_task(task_id=task_id)
         self._update_video_metadata(
-            index_id=index_id,
-            video_id=task['video_id'],
-            metadata={
-                "video_reference": video_reference
-            }
+            index_id=index_id, video_id=task["video_id"], metadata={"video_reference": video_reference}
         )
 
         return task_id
@@ -307,16 +303,20 @@ class TwelveLabsAPIClient:
 
             while is_task_running:
                 task = self._get_video_indexing_task(task_id=task_id)
-                status = task['status']
+                status = task["status"]
                 logger.info(f"Task {task_id} is in the {status} state.")
 
-                wait_durtion = task['process']['remain_seconds'] if 'process' in task else twelve_labs_handler_config.DEFAULT_WAIT_DURATION
+                wait_durtion = (
+                    task["process"]["remain_seconds"]
+                    if "process" in task
+                    else twelve_labs_handler_config.DEFAULT_WAIT_DURATION
+                )
 
-                if status in ('pending', 'indexing', 'validating'):
+                if status in ("pending", "indexing", "validating"):
                     logger.info(f"Task {task_id} will be polled again in {wait_durtion} seconds.")
                     time.sleep(wait_durtion)
 
-                elif status == 'ready':
+                elif status == "ready":
                     logger.info(f"Task {task_id} completed successfully.")
                     is_task_running = False
 
@@ -371,11 +371,7 @@ class TwelveLabsAPIClient:
             Search results.
         """
 
-        body = {
-            "index_id": index_id,
-            "query": query,
-            "search_options": search_options
-        }
+        body = {"index_id": index_id, "query": query, "search_options": search_options}
 
         data = []
         result = self._submit_request(
@@ -383,14 +379,11 @@ class TwelveLabsAPIClient:
             endpoint="/search",
             data=body,
         )
-        data.extend(result['data'])
+        data.extend(result["data"])
 
-        while 'next_page_token' in result['page_info']:
-            result = self._submit_request(
-                method="GET",
-                endpoint=f"/search/{result['page_info']['next_page_token']}"
-            )
-            data.extend(result['data'])
+        while "next_page_token" in result["page_info"]:
+            result = self._submit_request(method="GET", endpoint=f"/search/{result['page_info']['next_page_token']}")
+            data.extend(result["data"])
 
         logger.info(f"Search for index {index_id} completed successfully.")
         return data
@@ -442,11 +435,7 @@ class TwelveLabsAPIClient:
         Dict
             Summary of the video.
         """
-        body = {
-            "video_id": video_id,
-            "type": summarization_type,
-            "prompt": prompt
-        }
+        body = {"video_id": video_id, "type": summarization_type, "prompt": prompt}
 
         result = self._submit_request(
             method="POST",
@@ -509,7 +498,9 @@ class TwelveLabsAPIClient:
 
         return self._handle_response(response)
 
-    def _submit_multi_part_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "POST") -> Dict:
+    def _submit_multi_part_request(
+        self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "POST"
+    ) -> Dict:
         """
         Submit a multi-part request to the Twelve Labs API.
 
@@ -536,12 +527,10 @@ class TwelveLabsAPIClient:
         headers = headers = headers if headers else self.headers
 
         multipart_data = MultipartEncoder(fields=data)
-        headers['Content-Type'] = multipart_data.content_type
+        headers["Content-Type"] = multipart_data.content_type
         if method == "POST":
             response = requests.post(
-                url=self.base_url + endpoint,
-                headers=headers,
-                data=multipart_data if multipart_data else {}
+                url=self.base_url + endpoint, headers=headers, data=multipart_data if multipart_data else {}
             )
 
         else:

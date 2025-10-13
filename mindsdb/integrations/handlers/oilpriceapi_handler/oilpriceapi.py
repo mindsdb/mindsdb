@@ -9,15 +9,15 @@ class OilPriceAPIClient:
         self.valid_values_by_code = ["BRENT_CRUDE_USD", "WTI_USD"]
 
     def make_request(self, url, params={}):
-        headers = {'Content-type': 'application/json'}
+        headers = {"Content-type": "application/json"}
         if self.api_key:
-            headers['Authorization'] = 'Token ' + self.api_key
+            headers["Authorization"] = "Token " + self.api_key
         resp = requests.get(url, headers=headers, params=params)
         content = {}
         if resp.status_code == 200:
-            content = {'content': resp.json(), 'code': 200}
+            content = {"content": resp.json(), "code": 200}
         else:
-            content = {'content': {}, 'code': resp.status_code, 'error': resp.text}
+            content = {"content": {}, "code": resp.status_code, "error": resp.text}
         return content
 
     def _is_valid_by_type(self, val):
@@ -35,11 +35,11 @@ class OilPriceAPIClient:
         return params
 
     def get_latest_price(self, by_type=None, by_code=None):
-        url = f'{self.base_endpoint}/latest/'
+        url = f"{self.base_endpoint}/latest/"
         params = self.create_params_dict(by_type=by_type, by_code=by_code)
         return self.make_request(url, params=params)
 
     def get_price_past_day(self, by_type=None, by_code=None):
-        url = f'{self.base_endpoint}/past_day/'
+        url = f"{self.base_endpoint}/past_day/"
         params = self.create_params_dict(by_type=by_type, by_code=by_code)
         return self.make_request(url, params=params)

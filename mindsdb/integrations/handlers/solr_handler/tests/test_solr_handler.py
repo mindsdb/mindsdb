@@ -14,26 +14,26 @@ class SolrHandlerTest(unittest.TestCase):
             "port": 8983,
             "server_path": "solr",
             "collection": "gettingstarted",
-            "use_ssl": False
+            "use_ssl": False,
         }
-        cls.handler = SolrHandler('test_solr_handler', **cls.kwargs)
+        cls.handler = SolrHandler("test_solr_handler", **cls.kwargs)
 
     def test_0_connect(self):
         self.handler.check_connection()
 
     def test_2_get_tables(self):
         tbls = self.handler.get_tables()
-        assert tbls['type'] is not RESPONSE_TYPE.ERROR
+        assert tbls["type"] is not RESPONSE_TYPE.ERROR
 
     def test_6_describe_table(self):
         described = self.handler.get_columns("gettingstarted")
-        assert described['type'] is RESPONSE_TYPE.TABLE
+        assert described["type"] is RESPONSE_TYPE.TABLE
 
     def test_7_select_query(self):
         query = "SELECT * FROM gettingstarted WHERE id='apple' limit 1000"
         result = self.handler.query(query)
-        assert result['type'] is RESPONSE_TYPE.TABLE
+        assert result["type"] is RESPONSE_TYPE.TABLE
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

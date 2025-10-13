@@ -3,9 +3,7 @@ from typing import Optional
 from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse
-)
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
@@ -16,7 +14,8 @@ class CloudSQLHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Google Cloud SQL statements.
     """
-    name = 'cloud_sql'
+
+    name = "cloud_sql"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -28,24 +27,24 @@ class CloudSQLHandler(DatabaseHandler):
         """
         super().__init__(name)
 
-        self.dialect = 'cloud_sql'
+        self.dialect = "cloud_sql"
         self.connection_data = connection_data
         self.kwargs = kwargs
 
-        if self.connection_data['db_engine'] == 'mysql':
+        if self.connection_data["db_engine"] == "mysql":
             self.db = MySQLHandler(
-                name=name + 'mysql',
-                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
+                name=name + "mysql",
+                connection_data={key: self.connection_data[key] for key in self.connection_data if key != "db_engine"},
             )
-        elif self.connection_data['db_engine'] == 'postgresql':
+        elif self.connection_data["db_engine"] == "postgresql":
             self.db = PostgresHandler(
-                name=name + 'postgresql',
-                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
+                name=name + "postgresql",
+                connection_data={key: self.connection_data[key] for key in self.connection_data if key != "db_engine"},
             )
-        elif self.connection_data['db_engine'] == 'mssql':
+        elif self.connection_data["db_engine"] == "mssql":
             self.db = SqlServerHandler(
-                name=name + 'mssql',
-                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
+                name=name + "mssql",
+                connection_data={key: self.connection_data[key] for key in self.connection_data if key != "db_engine"},
             )
         else:
             raise Exception("The database engine should be either MySQL, PostgreSQL or SQL Server!")

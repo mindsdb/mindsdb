@@ -1,6 +1,10 @@
 import pandas as pd
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor, INSERTQueryParser
+from mindsdb.integrations.utilities.handlers.query_utilities import (
+    SELECTQueryParser,
+    SELECTQueryExecutor,
+    INSERTQueryParser,
+)
 from mindsdb_sql_parser import ast
 
 
@@ -26,11 +30,7 @@ class LumaEventsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'events',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "events", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -38,8 +38,8 @@ class LumaEventsTable(APITable):
         subset_where_conditions = []
         filter_flag = False
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'event_id':
-                if op == '=':
+            if arg1 == "event_id":
+                if op == "=":
                     search_params["event_id"] = arg2
                     filter_flag = True
                 else:
@@ -60,11 +60,7 @@ class LumaEventsTable(APITable):
             df = pd.json_normalize(events_only)
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -72,32 +68,34 @@ class LumaEventsTable(APITable):
         return df
 
     def get_columns(self) -> list:
-        return ["api_id",
-                "cover_url",
-                "name",
-                "description",
-                "series_api_id",
-                "start_at",
-                "duration_interval",
-                "end_at",
-                "geo_latitude",
-                "geo_longitude",
-                "url",
-                "timezone",
-                "event_type",
-                "user_api_id",
-                "visibility",
-                "geo_address_json.city",
-                "geo_address_json.type",
-                "geo_address_json.region",
-                "geo_address_json.address",
-                "geo_address_json.country",
-                "geo_address_json.latitude",
-                "geo_address_json.place_id",
-                "geo_address_json.longitude",
-                "geo_address_json.city_state",
-                "geo_address_json.description",
-                "geo_address_json.full_address"]
+        return [
+            "api_id",
+            "cover_url",
+            "name",
+            "description",
+            "series_api_id",
+            "start_at",
+            "duration_interval",
+            "end_at",
+            "geo_latitude",
+            "geo_longitude",
+            "url",
+            "timezone",
+            "event_type",
+            "user_api_id",
+            "visibility",
+            "geo_address_json.city",
+            "geo_address_json.type",
+            "geo_address_json.region",
+            "geo_address_json.address",
+            "geo_address_json.country",
+            "geo_address_json.latitude",
+            "geo_address_json.place_id",
+            "geo_address_json.longitude",
+            "geo_address_json.city_state",
+            "geo_address_json.description",
+            "geo_address_json.full_address",
+        ]
 
     def _parse_event_insert_data(self, event):
         data = {}
@@ -152,9 +150,21 @@ class LumaEventsTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=["name", "start_at", "timezone", "end_at", "require_rsvp_approval", "geo_address_json_type", "geo_address_json_place_id", "geo_address_json_description", "geo_latitude", "geo_longitude", "meeting_url"],
+            supported_columns=[
+                "name",
+                "start_at",
+                "timezone",
+                "end_at",
+                "require_rsvp_approval",
+                "geo_address_json_type",
+                "geo_address_json_place_id",
+                "geo_address_json_description",
+                "geo_latitude",
+                "geo_longitude",
+                "meeting_url",
+            ],
             mandatory_columns=["name", "start_at", "timezone"],
-            all_mandatory=False
+            all_mandatory=False,
         )
 
         event_data = insert_statement_parser.parse_query()

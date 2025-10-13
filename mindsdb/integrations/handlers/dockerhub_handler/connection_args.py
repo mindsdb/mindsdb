@@ -15,11 +15,8 @@ connection_args = OrderedDict(
         "description": "DockerHub password",
         "required": True,
         "label": "Api key",
-        'secret': True
-    }
+        "secret": True,
+    },
 )
 
-connection_args_example = OrderedDict(
-    username="username",
-    password="password"
-)
+connection_args_example = OrderedDict(username="username", password="password")

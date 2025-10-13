@@ -14,7 +14,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -24,7 +24,8 @@ class DatabendHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Databend statements.
     """
-    name = 'databend'
+
+    name = "databend"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -36,7 +37,7 @@ class DatabendHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'databend'
+        self.dialect = "databend"
 
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -58,10 +59,10 @@ class DatabendHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        if self.connection_data['host'] == 'localhost' or self.connection_data['host'] == '127.0.0.1':
-            ssl_mode = 'disable'
+        if self.connection_data["host"] == "localhost" or self.connection_data["host"] == "127.0.0.1":
+            ssl_mode = "disable"
         else:
-            ssl_mode = 'require'
+            ssl_mode = "require"
 
         self.connection = connector.connect(
             f"databend://{self.connection_data['user']}:{self.connection_data['password']}@{self.connection_data['host']}:{self.connection_data['port']}/{self.connection_data['database']}?sslmode={ssl_mode}"
@@ -96,7 +97,7 @@ class DatabendHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Databend, {e}!')
+            logger.error(f"Error connecting to Databend, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -125,21 +126,14 @@ class DatabendHandler(DatabaseHandler):
             result = cursor.fetchall()
             if result:
                 response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
+                    RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description])
                 )
             else:
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on Databend!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on Databend!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:
@@ -174,8 +168,8 @@ class DatabendHandler(DatabaseHandler):
         df = result.data_frame
 
         if df is not None:
-            df = df[[f'Tables_in_{self.connection_data["database"]}']]
-            result.data_frame = df.rename(columns={f'Tables_in_{self.connection_data["database"]}': 'table_name'})
+            df = df[[f"Tables_in_{self.connection_data['database']}"]]
+            result.data_frame = df.rename(columns={f"Tables_in_{self.connection_data['database']}": "table_name"})
 
         return result
 
@@ -194,6 +188,14 @@ class DatabendHandler(DatabaseHandler):
         result = self.native_query(query)
         df = result.data_frame
 
-        result.data_frame = df.rename(columns={'Field': 'column_name', 'Type': 'data_type', 'Null': 'is_nullable', 'Default': 'default_value', 'Extra': 'extra'})
+        result.data_frame = df.rename(
+            columns={
+                "Field": "column_name",
+                "Type": "data_type",
+                "Null": "is_nullable",
+                "Default": "default_value",
+                "Extra": "extra",
+            }
+        )
 
         return result

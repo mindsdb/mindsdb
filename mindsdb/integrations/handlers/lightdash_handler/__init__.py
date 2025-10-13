@@ -5,6 +5,7 @@ from .__about__ import __version__ as version
 
 try:
     from .lightdash_handler import LightdashHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None

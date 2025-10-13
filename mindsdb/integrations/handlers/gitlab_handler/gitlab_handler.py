@@ -16,7 +16,7 @@ class GitlabHandler(APIHandler):
     """The GitLab handler implementation"""
 
     def __init__(self, name: str, **kwargs):
-        """ constructor
+        """constructor
         Args:
             name (str): the handler name
         """
@@ -36,7 +36,7 @@ class GitlabHandler(APIHandler):
         self._register_table("merge_requests", gitlab_merge_requests_data)
 
     def connect(self) -> StatusResponse:
-        """ Set up the connections required by the handler
+        """Set up the connections required by the handler
         Returns:
             HandlerStatusResponse
         """

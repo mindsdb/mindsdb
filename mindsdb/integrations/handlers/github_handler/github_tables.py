@@ -3,8 +3,7 @@ from typing import List
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition, FilterOperator, SortColumn)
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 from mindsdb.utilities import log
 
 
@@ -14,11 +13,13 @@ logger = log.getLogger(__name__)
 class GithubIssuesTable(APIResource):
     """The GitHub Issue Table implementation"""
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None) -> pd.DataFrame:
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
         """Pulls data from the GitHub "List repository issues" API
 
         Returns
@@ -35,57 +36,49 @@ class GithubIssuesTable(APIResource):
         if limit is None:
             limit = 20
 
-        issues_kwargs = {'state': 'all'}
+        issues_kwargs = {"state": "all"}
 
         if sort is not None:
             for col in sort:
-                if col.column in ('created', 'updated', 'comments'):
-                    issues_kwargs['sort'] = col.column
-                    issues_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                if col.column in ("created", "updated", "comments"):
+                    issues_kwargs["sort"] = col.column
+                    issues_kwargs["direction"] = "asc" if col.ascending else "desc"
                     sort.applied = True
 
                     # supported only 1 column
                     break
 
         for condition in conditions:
-            if (condition.column in ('state', 'assignee', 'creator', 'mentioned', 'milestone')
-                    and condition.op == FilterOperator.EQUAL):
-
+            if (
+                condition.column in ("state", "assignee", "creator", "mentioned", "milestone")
+                and condition.op == FilterOperator.EQUAL
+            ):
                 issues_kwargs[condition.column] = condition.value
                 condition.applied = True
 
-            elif condition.column == 'labels':
+            elif condition.column == "labels":
                 if condition.op == FilterOperator.IN:
-                    issues_kwargs['labels'] = condition.value
+                    issues_kwargs["labels"] = condition.value
                 elif condition.op == FilterOperator.EQUAL:
-                    issues_kwargs['labels'] = condition.value.split(",")
+                    issues_kwargs["labels"] = condition.value.split(",")
                 condition.applied = True
 
-            elif condition.column == 'updated' and condition.op == FilterOperator.GREATER_THAN:
-                issues_kwargs['since'] = condition.value
+            elif condition.column == "updated" and condition.op == FilterOperator.GREATER_THAN:
+                issues_kwargs["since"] = condition.value
                 condition.applied = True
 
         self.handler.connect()
 
         data = []
         count = 0
-        for an_issue in self.handler.connection\
-                .get_repo(self.handler.repository) \
-                .get_issues(**issues_kwargs):
+        for an_issue in self.handler.connection.get_repo(self.handler.repository).get_issues(**issues_kwargs):
             item = {
                 "number": an_issue.number,
                 "title": an_issue.title,
                 "state": an_issue.state,
                 "creator": an_issue.user.login,
-                "labels": ",".join(
-                    [label.name for label in an_issue.labels]
-                ),
-                "assignees": ",".join(
-                    [
-                        assignee.login
-                        for assignee in an_issue.assignees
-                    ]
-                ),
+                "labels": ",".join([label.name for label in an_issue.labels]),
+                "assignees": ",".join([assignee.login for assignee in an_issue.assignees]),
                 "comments": an_issue.comments,
                 "body": an_issue.body,
                 "created": an_issue.created_at,
@@ -93,8 +86,8 @@ class GithubIssuesTable(APIResource):
                 "closed": an_issue.closed_at,
             }
 
-            if 'closed_by' in targets:
-                item['closed_by'] = an_issue.closed_by.login if an_issue.closed_by else None
+            if "closed_by" in targets:
+                item["closed_by"] = an_issue.closed_by.login if an_issue.closed_by else None
 
             data.append(item)
 
@@ -118,9 +111,7 @@ class GithubIssuesTable(APIResource):
         """
 
         if self.handler.connection_data.get("api_key", None) is None:
-            raise ValueError(
-                "Need an authenticated connection in order to insert a GitHub issue"
-            )
+            raise ValueError("Need an authenticated connection in order to insert a GitHub issue")
 
         self.handler.connect()
         for issue in issues:
@@ -162,14 +153,10 @@ class GithubIssuesTable(APIResource):
                     break
 
             if not found_existing_milestone:
-                logger.debug(
-                    f"Milestone \"{issue['milestone']}\" not found, creating it"
-                )
-                insert_kwargs["milestone"] = current_repo.create_milestone(
-                    issue["milestone"]
-                )
+                logger.debug(f'Milestone "{issue["milestone"]}" not found, creating it')
+                insert_kwargs["milestone"] = current_repo.create_milestone(issue["milestone"])
             else:
-                logger.debug(f"Milestone \"{issue['milestone']}\" already exists")
+                logger.debug(f'Milestone "{issue["milestone"]}" already exists')
 
         if issue.get("labels", None):
             insert_kwargs["labels"] = []
@@ -184,12 +171,8 @@ class GithubIssuesTable(APIResource):
             existing_labels_set = set([label.name for label in existing_labels])
 
             if not set(inserted_labels).issubset(existing_labels_set):
-                new_inserted_labels = set(inserted_labels).difference(
-                    existing_labels_set
-                )
-                logger.debug(
-                    "Inserting new labels: " + ", ".join(new_inserted_labels)
-                )
+                new_inserted_labels = set(inserted_labels).difference(existing_labels_set)
+                logger.debug("Inserting new labels: " + ", ".join(new_inserted_labels))
                 for a_new_label in new_inserted_labels:
                     current_repo.create_label(a_new_label, "000000")
 
@@ -200,10 +183,7 @@ class GithubIssuesTable(APIResource):
         try:
             current_repo.create_issue(issue["title"], **insert_kwargs)
         except Exception as e:
-            raise ValueError(
-                f"Encountered an exception creating an issue in GitHub: "
-                f"{type(e).__name__} - {e}"
-            )
+            raise ValueError(f"Encountered an exception creating an issue in GitHub: {type(e).__name__} - {e}")
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
@@ -232,11 +212,13 @@ class GithubIssuesTable(APIResource):
 class GithubPullRequestsTable(APIResource):
     """The GitHub Issue Table implementation"""
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None) -> pd.DataFrame:
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
         """Pulls data from the GitHub "List repository pull requests" API
 
         Native filters:
@@ -262,22 +244,20 @@ class GithubPullRequestsTable(APIResource):
         if limit is None:
             limit = 20
 
-        issues_kwargs = {'state': 'all'}
+        issues_kwargs = {"state": "all"}
 
         if sort is not None:
             for col in sort:
-                if col.column in ('created', 'updated', 'popularity'):
-                    issues_kwargs['sort'] = col.column
-                    issues_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                if col.column in ("created", "updated", "popularity"):
+                    issues_kwargs["sort"] = col.column
+                    issues_kwargs["direction"] = "asc" if col.ascending else "desc"
                     sort.applied = True
 
                     # supported only 1 column
                     break
 
         for condition in conditions:
-            if (condition.column in ('state', 'head', 'base')
-                    and condition.op == FilterOperator.EQUAL):
-
+            if condition.column in ("state", "head", "base") and condition.op == FilterOperator.EQUAL:
                 issues_kwargs[condition.column] = condition.value
                 condition.applied = True
 
@@ -285,37 +265,17 @@ class GithubPullRequestsTable(APIResource):
 
         data = []
         count = 0
-        for a_pull in self.handler.connection\
-                .get_repo(self.handler.repository) \
-                .get_pulls(**issues_kwargs):
-
+        for a_pull in self.handler.connection.get_repo(self.handler.repository).get_pulls(**issues_kwargs):
             item = {
                 "number": a_pull.number,
                 "title": a_pull.title,
                 "state": a_pull.state,
                 "creator": a_pull.user.login,
-                "labels": ",".join(
-                    [label.name for label in a_pull.labels]
-                ),
+                "labels": ",".join([label.name for label in a_pull.labels]),
                 "milestone": a_pull.milestone.title if a_pull.milestone else None,
-                "assignees": ",".join(
-                    [
-                        assignee.login
-                        for assignee in a_pull.assignees
-                    ]
-                ),
-                "reviewers": ",".join(
-                    [
-                        reviewer.login
-                        for reviewer in a_pull.requested_reviewers
-                    ]
-                ),
-                "teams": ",".join(
-                    [
-                        team.name
-                        for team in a_pull.requested_teams
-                    ]
-                ),
+                "assignees": ",".join([assignee.login for assignee in a_pull.assignees]),
+                "reviewers": ",".join([reviewer.login for reviewer in a_pull.requested_reviewers]),
+                "teams": ",".join([team.name for team in a_pull.requested_teams]),
                 "draft": a_pull.draft,
                 "body": a_pull.body,
                 "base": a_pull.base.ref if a_pull.base else None,
@@ -327,14 +287,23 @@ class GithubPullRequestsTable(APIResource):
             }
 
             # downloaded columns, use them only if explicitly requested
-            for field in ('comments', 'review_comments', 'mergeable', 'mergeable_state', 'rebaseable',
-                          'commits', 'additions', 'deletions', 'changed_files'):
+            for field in (
+                "comments",
+                "review_comments",
+                "mergeable",
+                "mergeable_state",
+                "rebaseable",
+                "commits",
+                "additions",
+                "deletions",
+                "changed_files",
+            ):
                 if field in targets:
                     item[field] = getattr(a_pull, field)
-            if 'is_merged' in targets:
-                item['is_merged'] = a_pull.merged
-            if 'merged_by' in targets:
-                item['is_merged'] = a_pull.merged_by.login if a_pull.merged_by else None
+            if "is_merged" in targets:
+                item["is_merged"] = a_pull.merged
+            if "merged_by" in targets:
+                item["is_merged"] = a_pull.merged_by.login if a_pull.merged_by else None
 
             data.append(item)
             count += 1
@@ -386,11 +355,13 @@ class GithubPullRequestsTable(APIResource):
 class GithubCommitsTable(APIResource):
     """The GitHub Commits Table implementation"""
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None) -> pd.DataFrame:
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
         """Pulls data from the GitHub "List commits" API
 
         Returns
@@ -411,15 +382,15 @@ class GithubCommitsTable(APIResource):
         if sort is not None:
             for col in sort:
                 if col.column in ("author", "date", "message"):
-                    commits_kwargs['sort'] = col.column
-                    commits_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                    commits_kwargs["sort"] = col.column
+                    commits_kwargs["direction"] = "asc" if col.ascending else "desc"
                     sort.applied = True
 
                     # supported only 1 column
                     break
 
         for condition in conditions:
-            if condition.column == 'author':
+            if condition.column == "author":
                 if condition.op != FilterOperator.EQUAL:
                     raise ValueError("Unsupported where operation for author")
                 commits_kwargs["author"] = condition.value
@@ -428,10 +399,7 @@ class GithubCommitsTable(APIResource):
         self.handler.connect()
 
         data = []
-        for a_commit in self.handler.connection.get_repo(
-                self.handler.repository
-        ).get_commits(**commits_kwargs):
-
+        for a_commit in self.handler.connection.get_repo(self.handler.repository).get_commits(**commits_kwargs):
             item = {
                 "sha": a_commit.sha,
                 "author": a_commit.commit.author.name,
@@ -461,11 +429,13 @@ class GithubCommitsTable(APIResource):
 class GithubReleasesTable(APIResource):
     """The GitHub Releases Table implementation"""
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None) -> pd.DataFrame:
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
         """Pulls data from the GitHub "List repository releases" API
 
         Returns
@@ -484,10 +454,7 @@ class GithubReleasesTable(APIResource):
         self.handler.connect()
 
         data = []
-        for a_release in self.handler.connection.get_repo(
-                self.handler.repository
-        ).get_releases():
-
+        for a_release in self.handler.connection.get_repo(self.handler.repository).get_releases():
             item = {
                 "id": self.check_none(a_release.id),
                 "author": self.check_none(a_release.author.login),
@@ -498,7 +465,7 @@ class GithubReleasesTable(APIResource):
                 "tag_name": self.check_none(a_release.tag_name),
                 "title": self.check_none(a_release.title),
                 "url": self.check_none(a_release.url),
-                "zipball_url": self.check_none(a_release.zipball_url)
+                "zipball_url": self.check_none(a_release.zipball_url),
             }
 
             data.append(item)
@@ -530,18 +497,20 @@ class GithubReleasesTable(APIResource):
             "tag_name",
             "title",
             "url",
-            "zipball_url"
+            "zipball_url",
         ]
 
 
 class GithubBranchesTable(APIResource):
     """The GitHub Branches Table implementation"""
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None) -> pd.DataFrame:
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
         """Pulls data from the GitHub "List repository branches" API
 
         Returns
@@ -568,7 +537,7 @@ class GithubBranchesTable(APIResource):
                 "url": "https://github.com/" + self.handler.repository + "/tree/" + raw_data["name"],
                 "commit_sha": self.check_none(raw_data["commit"]["sha"]),
                 "commit_url": self.check_none(raw_data["commit"]["url"]),
-                "protected": self.check_none(raw_data["protected"])
+                "protected": self.check_none(raw_data["protected"]),
             }
 
             data.append(item)
@@ -590,23 +559,19 @@ class GithubBranchesTable(APIResource):
             List of columns
         """
 
-        return [
-            "name",
-            "url",
-            "commit_sha",
-            "commit_url",
-            "protected"
-        ]
+        return ["name", "url", "commit_sha", "commit_url", "protected"]
 
 
 class GithubContributorsTable(APIResource):
     """The GitHub Contributors Table implementation"""
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None) -> pd.DataFrame:
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
         """Pulls data from the GitHub "List repository contributors" API
 
         Returns
@@ -651,7 +616,7 @@ class GithubContributorsTable(APIResource):
                 "followers": self.check_none(raw_data["followers"]),
                 "following": self.check_none(raw_data["following"]),
                 "created_at": self.check_none(raw_data["created_at"]),
-                "updated_at": self.check_none(raw_data["updated_at"])
+                "updated_at": self.check_none(raw_data["updated_at"]),
             }
 
             data.append(item)
@@ -696,18 +661,20 @@ class GithubContributorsTable(APIResource):
             "followers",
             "following",
             "created_at",
-            "updated_at"
+            "updated_at",
         ]
 
 
 class GithubProjectsTable(APIResource):
     """The GitHub Projects Table implementation"""
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None) -> pd.DataFrame:
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
         """Pulls data from the GitHub "List repository projects" API
 
         Returns
@@ -746,7 +713,7 @@ class GithubProjectsTable(APIResource):
                 "creator_id": self.check_none(raw_data["creator"]["id"]),
                 "creator_url": self.check_none(raw_data["creator"]["url"]),
                 "creator_html_url": self.check_none(raw_data["creator"]["html_url"]),
-                "creator_site_admin": self.check_none(raw_data["creator"]["site_admin"])
+                "creator_site_admin": self.check_none(raw_data["creator"]["site_admin"]),
             }
 
             data.append(item)
@@ -785,18 +752,20 @@ class GithubProjectsTable(APIResource):
             "creator_id",
             "creator_url",
             "creator_html_url",
-            "creator_site_admin"
+            "creator_site_admin",
         ]
 
 
 class GithubMilestonesTable(APIResource):
     """The GitHub Milestones Table implementation"""
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None) -> pd.DataFrame:
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
         """Pulls data from the GitHub "List repository milestones" API
 
         Returns
@@ -834,7 +803,7 @@ class GithubMilestonesTable(APIResource):
                 "created_at": self.check_none(raw_data["created_at"]),
                 "updated_at": self.check_none(raw_data["updated_at"]),
                 "due_on": self.check_none(raw_data["due_on"]),
-                "closed_at": self.check_none(raw_data["closed_at"])
+                "closed_at": self.check_none(raw_data["closed_at"]),
             }
 
             data.append(item)
@@ -872,14 +841,12 @@ class GithubMilestonesTable(APIResource):
             "created_at",
             "updated_at",
             "due_on",
-            "closed_at"
+            "closed_at",
         ]
 
 
 class GithubFilesTable(APIResource):
-
     def get_path(self, repo, path, file_matches=None, file_not_matches=None, limit=None):
-
         res = []
         for item in list(repo.get_contents(path)):
             if item.type == "dir":
@@ -887,24 +854,13 @@ class GithubFilesTable(APIResource):
                 res.extend(subres)
                 limit -= len(subres)
             else:
-                if (
-                    (
-                        file_matches is None
-
-                        or any(re.match(pattern, item.name) for pattern in file_matches)
-                    )
-
-                    and (
-                        file_not_matches is None
-
-                        or not any(re.match(pattern, item.name) for pattern in file_not_matches)
-                    )
+                if (file_matches is None or any(re.match(pattern, item.name) for pattern in file_matches)) and (
+                    file_not_matches is None or not any(re.match(pattern, item.name) for pattern in file_not_matches)
                 ):
-
                     file = {
-                        'path': item.path,
-                        'name': item.name,
-                        'content': item.decoded_content,
+                        "path": item.path,
+                        "name": item.name,
+                        "content": item.decoded_content,
                     }
                     res.append(file)
                     limit -= 1
@@ -912,34 +868,35 @@ class GithubFilesTable(APIResource):
                 break
         return res
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None) -> pd.DataFrame:
-
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
         self.handler.connect()
         repo = self.handler.connection.get_repo(self.handler.repository)
 
         # TODO sort
 
-        path = ''
+        path = ""
         file_matches = []
         file_not_matches = []
         for condition in conditions:
-            if condition.column == 'path' and condition.op == FilterOperator.EQUAL:
+            if condition.column == "path" and condition.op == FilterOperator.EQUAL:
                 path = condition.value
                 condition.applied = True
-            elif condition.column == 'name':
-                pattern = f'^{condition.value}$'
+            elif condition.column == "name":
+                pattern = f"^{condition.value}$"
                 if condition.op == FilterOperator.EQUAL:
                     file_matches.append(pattern)
                 elif condition.op == FilterOperator.LIKE:
                     # https://stackoverflow.com/a/26148730
-                    pattern = pattern.replace('%', '.*')
+                    pattern = pattern.replace("%", ".*")
                     file_matches.append(pattern)
                 elif condition.op == FilterOperator.NOT_LIKE:
-                    pattern = pattern.replace('%', '.*')
+                    pattern = pattern.replace("%", ".*")
                     file_not_matches.append(pattern)
                 condition.applied = True
 
@@ -954,4 +911,4 @@ class GithubFilesTable(APIResource):
         return pd.DataFrame(res, columns=self.get_columns())
 
     def get_columns(self) -> list:
-        return ['path', 'name', 'content']
+        return ["path", "name", "content"]

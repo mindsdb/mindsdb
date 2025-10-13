@@ -1,7 +1,10 @@
 import overpy
 
-from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_tables import (OpenStreetMapNodeTable,
-                                                                                      OpenStreetMapWayTable, OpenStreetMapRelationTable)
+from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_tables import (
+    OpenStreetMapNodeTable,
+    OpenStreetMapWayTable,
+    OpenStreetMapRelationTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -70,7 +73,7 @@ class OpenStreetMapHandler(APIHandler):
             if api_session is not None:
                 response.success = True
         except Exception as e:
-            logger.error('Error connecting to OpenStreetMap!')
+            logger.error("Error connecting to OpenStreetMap!")
             response.error_message = str(e)
 
         self.is_connected = response.success

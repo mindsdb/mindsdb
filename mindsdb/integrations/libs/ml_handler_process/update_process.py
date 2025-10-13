@@ -11,14 +11,11 @@ def update_process(args: dict, integration_id: int, module_path: str, model_id: 
 
     result = None
 
-    if hasattr(module.Handler, 'upgate'):
+    if hasattr(module.Handler, "upgate"):
         engine_storage = HandlerStorage(integration_id)
         model_storage = ModelStorage(model_id)
         try:
-            result = module.Handler(
-                engine_storage=engine_storage,
-                model_storage=model_storage
-            ).upgate(args=args)
+            result = module.Handler(engine_storage=engine_storage, model_storage=model_storage).upgate(args=args)
         except NotImplementedError:
             return None
         except Exception as e:

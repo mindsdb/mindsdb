@@ -8,7 +8,10 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
 from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_client
-from mindsdb.integrations.handlers.bedrock_handler.settings import AmazonBedrockHandlerEngineConfig, AmazonBedrockHandlerModelConfig
+from mindsdb.integrations.handlers.bedrock_handler.settings import (
+    AmazonBedrockHandlerEngineConfig,
+    AmazonBedrockHandlerModelConfig,
+)
 
 
 logger = log.getLogger(__name__)
@@ -19,7 +22,7 @@ class AmazonBedrockHandler(BaseMLEngine):
     This handler handles connection and inference with the Amazon Bedrock API.
     """
 
-    name = 'bedrock'
+    name = "bedrock"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,25 +56,29 @@ class AmazonBedrockHandler(BaseMLEngine):
         Returns:
             None
         """
-        if 'using' not in args:
-            raise MissingConnectionParams("Amazon Bedrock engine requires a USING clause! Refer to its documentation for more details.")
+        if "using" not in args:
+            raise MissingConnectionParams(
+                "Amazon Bedrock engine requires a USING clause! Refer to its documentation for more details."
+            )
         else:
-            model_args = args['using']
+            model_args = args["using"]
             # Replace 'model_id' with 'id' to match the Amazon Bedrock handler model configuration.
             # This is done to avoid the Pydantic warning regarding conflicts with the protected 'model_' namespace.
-            if 'model_id' in model_args:
-                model_args['id'] = model_args['model_id']
-                del model_args['model_id']
+            if "model_id" in model_args:
+                model_args["id"] = model_args["model_id"]
+                del model_args["model_id"]
 
-            handler_model_config = AmazonBedrockHandlerModelConfig(**model_args, connection_args=self.engine_storage.get_connection_args())
+            handler_model_config = AmazonBedrockHandlerModelConfig(
+                **model_args, connection_args=self.engine_storage.get_connection_args()
+            )
 
             # Save the model configuration to the storage.
             handler_model_params = handler_model_config.model_dump()
             logger.info(f"Saving model configuration to storage: {handler_model_params}")
 
-            args['target'] = target
-            args['handler_model_params'] = handler_model_params
-            self.model_storage.json_set('args', args)
+            args["target"] = target
+            args["handler_model_params"] = handler_model_params
+            self.model_storage.json_set("args", args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -87,14 +94,14 @@ class AmazonBedrockHandler(BaseMLEngine):
         Returns:
             pd.DataFrame: The input data with the predicted values in a new column.
         """
-        args = self.model_storage.json_get('args')
-        handler_model_params = args['handler_model_params']
-        mode = handler_model_params['mode']
-        model_id = handler_model_params['id']
-        inference_config = handler_model_params.get('inference_config')
-        target = args['target']
+        args = self.model_storage.json_get("args")
+        handler_model_params = args["handler_model_params"]
+        mode = handler_model_params["mode"]
+        model_id = handler_model_params["id"]
+        inference_config = handler_model_params.get("inference_config")
+        target = args["target"]
 
-        if mode == 'default':
+        if mode == "default":
             prompts, empty_prompt_ids = self._prepare_data_for_default_mode(df, args)
             predictions = self._predict_for_default_mode(model_id, prompts, inference_config)
 
@@ -102,7 +109,7 @@ class AmazonBedrockHandler(BaseMLEngine):
             for i in sorted(empty_prompt_ids):
                 predictions.insert(i, None)
 
-        elif mode == 'conversational':
+        elif mode == "conversational":
             prompt, total_questions = self._prepare_data_for_conversational_mode(df, args)
             prediction = self._predict_for_conversational_mode(model_id, prompt, inference_config)
 
@@ -125,16 +132,14 @@ class AmazonBedrockHandler(BaseMLEngine):
         Returns:
             List[Dict]: The prepared prompts for invoking the Amazon Bedrock API. The model will be invoked for each prompt.
         """
-        handler_model_params = args['handler_model_params']
-        question_column = handler_model_params.get('question_column')
-        context_column = handler_model_params.get('context_column')
-        prompt_template = handler_model_params.get('prompt_template')
+        handler_model_params = args["handler_model_params"]
+        question_column = handler_model_params.get("question_column")
+        context_column = handler_model_params.get("context_column")
+        prompt_template = handler_model_params.get("prompt_template")
 
         if question_column is not None:
             questions, empty_prompt_ids = self._prepare_data_with_question_and_context_columns(
-                df,
-                question_column,
-                context_column
+                df, question_column, context_column
             )
 
         elif prompt_template is not None:
@@ -160,16 +165,14 @@ class AmazonBedrockHandler(BaseMLEngine):
             The model will be invoked once using this prompt which contains all the questions.
             The total number of questions is used to produce the final list of predictions.
         """
-        handler_model_params = args['handler_model_params']
-        question_column = handler_model_params.get('question_column')
-        context_column = handler_model_params.get('context_column')
-        prompt_template = handler_model_params.get('prompt_template')
+        handler_model_params = args["handler_model_params"]
+        question_column = handler_model_params.get("question_column")
+        context_column = handler_model_params.get("context_column")
+        prompt_template = handler_model_params.get("prompt_template")
 
         if question_column is not None:
             questions, empty_prompt_ids = self._prepare_data_with_question_and_context_columns(
-                df,
-                question_column,
-                context_column
+                df, question_column, context_column
             )
 
         if prompt_template is not None:
@@ -184,7 +187,9 @@ class AmazonBedrockHandler(BaseMLEngine):
 
         return prompt, total_questions
 
-    def _prepare_data_with_question_and_context_columns(self, df: pd.DataFrame, question_column: Text, context_column: Text = None) -> Tuple[List[Text], List[int]]:
+    def _prepare_data_with_question_and_context_columns(
+        self, df: pd.DataFrame, question_column: Text, context_column: Text = None
+    ) -> Tuple[List[Text], List[int]]:
         """
         Prepares the input data with question and context columns.
 
@@ -203,29 +208,21 @@ class AmazonBedrockHandler(BaseMLEngine):
             raise ValueError(f"Column {context_column} not found in the dataframe!")
 
         if context_column:
-            empty_prompt_ids = np.where(
-                df[[context_column, question_column]]
-                .isna()
-                .all(axis=1)
-                .values
-            )[0]
+            empty_prompt_ids = np.where(df[[context_column, question_column]].isna().all(axis=1).values)[0]
             contexts = list(df[context_column].apply(lambda x: str(x)))
             questions_without_context = list(df[question_column].apply(lambda x: str(x)))
 
-            questions = [
-                f'Context: {c}\nQuestion: {q}\nAnswer: '
-                for c, q in zip(contexts, questions_without_context)
-            ]
+            questions = [f"Context: {c}\nQuestion: {q}\nAnswer: " for c, q in zip(contexts, questions_without_context)]
 
         else:
             questions = list(df[question_column].apply(lambda x: str(x)))
-            empty_prompt_ids = np.where(
-                df[[question_column]].isna().all(axis=1).values
-            )[0]
+            empty_prompt_ids = np.where(df[[question_column]].isna().all(axis=1).values)[0]
 
         return questions, empty_prompt_ids
 
-    def _prepare_data_with_prompt_template(self, df: pd.DataFrame, prompt_template: Text) -> Tuple[List[Text], List[int]]:
+    def _prepare_data_with_prompt_template(
+        self, df: pd.DataFrame, prompt_template: Text
+    ) -> Tuple[List[Text], List[int]]:
         """
         Prepares the input data with a prompt template.
 
@@ -254,19 +251,14 @@ class AmazonBedrockHandler(BaseMLEngine):
         """
         predictions = []
         bedrock_runtime_client = create_amazon_bedrock_client(
-            'bedrock-runtime',
-            **self.engine_storage.get_connection_args()
+            "bedrock-runtime", **self.engine_storage.get_connection_args()
         )
 
         for prompt in prompts:
             response = bedrock_runtime_client.converse(
-                modelId=model_id,
-                messages=[prompt],
-                inferenceConfig=inference_config
+                modelId=model_id, messages=[prompt], inferenceConfig=inference_config
             )
-            predictions.append(
-                response["output"]["message"]["content"][0]["text"]
-            )
+            predictions.append(response["output"]["message"]["content"][0]["text"])
 
         return predictions
 
@@ -283,15 +275,10 @@ class AmazonBedrockHandler(BaseMLEngine):
             Text: The prediction made by the Amazon Bedrock API.
         """
         bedrock_runtime_client = create_amazon_bedrock_client(
-            'bedrock-runtime',
-            **self.engine_storage.get_connection_args()
+            "bedrock-runtime", **self.engine_storage.get_connection_args()
         )
 
-        response = bedrock_runtime_client.converse(
-            modelId=model_id,
-            messages=prompt,
-            inferenceConfig=inference_config
-        )
+        response = bedrock_runtime_client.converse(modelId=model_id, messages=prompt, inferenceConfig=inference_config)
 
         return response["output"]["message"]["content"][0]["text"]
 
@@ -305,24 +292,21 @@ class AmazonBedrockHandler(BaseMLEngine):
         Returns:
             pd.DataFrame: Model metadata or model arguments.
         """
-        args = self.model_storage.json_get('args')
+        args = self.model_storage.json_get("args")
 
-        if attribute == 'args':
-            del args['handler_model_params']
-            return pd.DataFrame(args.items(), columns=['key', 'value'])
+        if attribute == "args":
+            del args["handler_model_params"]
+            return pd.DataFrame(args.items(), columns=["key", "value"])
 
-        elif attribute == 'metadata':
-            model_id = args['handler_model_params']['id']
+        elif attribute == "metadata":
+            model_id = args["handler_model_params"]["id"]
             try:
-                bedrock_client = create_amazon_bedrock_client(
-                    'bedrock',
-                    **self.engine_storage.get_connection_args()
-                )
-                meta = bedrock_client.get_foundation_model(modelIdentifier=model_id)['modelDetails']
+                bedrock_client = create_amazon_bedrock_client("bedrock", **self.engine_storage.get_connection_args())
+                meta = bedrock_client.get_foundation_model(modelIdentifier=model_id)["modelDetails"]
             except Exception as e:
-                meta = {'error': str(e)}
-            return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])
+                meta = {"error": str(e)}
+            return pd.DataFrame(dict(meta).items(), columns=["key", "value"])
 
         else:
-            tables = ['args', 'metadata']
-            return pd.DataFrame(tables, columns=['tables'])
+            tables = ["args", "metadata"]
+            return pd.DataFrame(tables, columns=["tables"])

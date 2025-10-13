@@ -6,25 +6,25 @@ from mindsdb_sql_parser import ast
 
 
 def message_to_dataframe_row(message: dict):
-    message['id'] = message['_id']
-    message['room_id'] = message['rid']
-    message['text'] = message['msg']
-    message['sent_at'] = message['ts']
+    message["id"] = message["_id"]
+    message["room_id"] = message["rid"]
+    message["text"] = message["msg"]
+    message["sent_at"] = message["ts"]
 
-    if 'u' in message:
-        if 'username' in message['u']:
-            message['username'] = message['u']['username']
-        if 'name' in message['u']:
-            message['name'] = message['u']['name']
-    if 'bot' in message and 'i' in message['bot']:
-        message['bot_id'] = message['bot']['i']
+    if "u" in message:
+        if "username" in message["u"]:
+            message["username"] = message["u"]["username"]
+        if "name" in message["u"]:
+            message["name"] = message["u"]["name"]
+    if "bot" in message and "i" in message["bot"]:
+        message["bot_id"] = message["bot"]["i"]
     return message
 
 
 class ChannelsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
-        message_data = self.handler.call_api('channels_list')
-        df = pd.DataFrame(message_data['channels'])
+        message_data = self.handler.call_api("channels_list")
+        df = pd.DataFrame(message_data["channels"])
         df = project_dataframe(df, query.targets, self.get_columns())
 
         return df
@@ -32,10 +32,10 @@ class ChannelsTable(APITable):
     def get_columns(self):
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            '_id',
-            'name',
-            'usersCount',
-            'msgs',
+            "_id",
+            "name",
+            "usersCount",
+            "msgs",
         ]
 
 
@@ -52,20 +52,20 @@ class ChannelMessagesTable(APITable):
         """
         filters = conditions_to_filter(query.where)
 
-        if 'room_id' not in filters:
+        if "room_id" not in filters:
             raise NotImplementedError()
 
         params = {}
 
         if query.limit:
-            params['count'] = query.limit
+            params["count"] = query.limit
 
         # See Channel Messages endpoint:
         # https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/channels-endpoints/messages
-        message_data = self.handler.call_api('channels_history', filters['room_id'], **params)
+        message_data = self.handler.call_api("channels_history", filters["room_id"], **params)
 
         # Only return the columns we need to.
-        message_rows = [message_to_dataframe_row(m) for m in message_data['messages']]
+        message_rows = [message_to_dataframe_row(m) for m in message_data["messages"]]
         df = pd.DataFrame(message_rows)
 
         df = sort_dataframe(df, query.order_by)
@@ -85,25 +85,17 @@ class ChannelMessagesTable(APITable):
         for insert_row in query.values:
             insert_params = dict(zip(column_names, insert_row))
 
-            self.handler.call_api('chat_post_message', **insert_params)
+            self.handler.call_api("chat_post_message", **insert_params)
 
     def get_columns(self):
         """Gets all columns to be returned in pandas DataFrame responses"""
-        return [
-            'id',
-            'room_id',
-            'bot_id',
-            'text',
-            'username',
-            'name',
-            'sent_at'
-        ]
+        return ["id", "room_id", "bot_id", "text", "username", "name", "sent_at"]
 
 
 class DirectsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
-        message_data = self.handler.call_api('im_list')
-        df = pd.DataFrame(message_data['ims'])
+        message_data = self.handler.call_api("im_list")
+        df = pd.DataFrame(message_data["ims"])
         df = project_dataframe(df, query.targets, self.get_columns())
 
         return df
@@ -113,35 +105,33 @@ class DirectsTable(APITable):
         for insert_row in query.values:
             insert_params = dict(zip(column_names, insert_row))
 
-            self.handler.call_api('im_create', **insert_params)
+            self.handler.call_api("im_create", **insert_params)
 
     def get_columns(self):
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            '_id',
-            'usernames',
-            'usersCount',
-            'msgs',
+            "_id",
+            "usernames",
+            "usersCount",
+            "msgs",
         ]
 
 
 class DirectMessagesTable(APITable):
-
     def select(self, query: ast.Select) -> pd.DataFrame:
-
         filters = conditions_to_filter(query.where)
 
-        if 'room_id' not in filters:
+        if "room_id" not in filters:
             raise NotImplementedError()
 
         params = {}
 
         if query.limit:
-            params['count'] = query.limit
+            params["count"] = query.limit
 
-        message_data = self.handler.call_api('im_history', filters['room_id'], **params)
+        message_data = self.handler.call_api("im_history", filters["room_id"], **params)
 
-        message_rows = [message_to_dataframe_row(m) for m in message_data['messages']]
+        message_rows = [message_to_dataframe_row(m) for m in message_data["messages"]]
         df = pd.DataFrame(message_rows)
         df = sort_dataframe(df, query.order_by)
         df = project_dataframe(df, query.targets, self.get_columns())
@@ -149,39 +139,30 @@ class DirectMessagesTable(APITable):
         return df
 
     def insert(self, query: ast.Insert):
-
         column_names = [col.name for col in query.columns]
         for insert_row in query.values:
             insert_params = dict(zip(column_names, insert_row))
 
-            if 'username' in insert_params:
+            if "username" in insert_params:
                 # resolve username
-                resp = self.handler.call_api('users_info', insert_params['username'])
-                if 'user' in resp:
-                    insert_params['room_id'] = resp['user']['_id']
-                    del insert_params['username']
+                resp = self.handler.call_api("users_info", insert_params["username"])
+                if "user" in resp:
+                    insert_params["room_id"] = resp["user"]["_id"]
+                    del insert_params["username"]
                 else:
-                    raise ValueError(f'User not found: {insert_params["username"]}')
+                    raise ValueError(f"User not found: {insert_params['username']}")
 
-            self.handler.call_api('chat_post_message', **insert_params)
+            self.handler.call_api("chat_post_message", **insert_params)
 
     def get_columns(self):
         """Gets all columns to be returned in pandas DataFrame responses"""
-        return [
-            'id',
-            'room_id',
-            'bot_id',
-            'text',
-            'username',
-            'name',
-            'sent_at'
-        ]
+        return ["id", "room_id", "bot_id", "text", "username", "name", "sent_at"]
 
 
 class UsersTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
-        message_data = self.handler.call_api('users_list')
-        df = pd.DataFrame(message_data['users'])
+        message_data = self.handler.call_api("users_list")
+        df = pd.DataFrame(message_data["users"])
         df = project_dataframe(df, query.targets, self.get_columns())
 
         return df
@@ -189,10 +170,10 @@ class UsersTable(APITable):
     def get_columns(self):
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            '_id',
-            'username',
-            'name',
-            'status',
-            'active',
-            'type',
+            "_id",
+            "username",
+            "name",
+            "status",
+            "active",
+            "type",
         ]

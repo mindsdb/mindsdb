@@ -9,13 +9,14 @@ import sqlite3
 
 
 class KVStorageHandler:
-    """ 
+    """
     Simple key-value store. Instances of this handler shall store any information required by other handlers.
-    Context should store anything relevant to the storage handler, e.g. CompanyID, UserID, parent handler name, among others. 
+    Context should store anything relevant to the storage handler, e.g. CompanyID, UserID, parent handler name, among others.
     """  # noqa
+
     def __init__(self, context: Dict, config=None):
-        self.config = config if config else os.getenv('MDB_STORAGE_HANDLER_CONFIG')
-        self.serializer = pickle if config.get('serializer', '') == 'pickle' else dill
+        self.config = config if config else os.getenv("MDB_STORAGE_HANDLER_CONFIG")
+        self.serializer = pickle if config.get("serializer", "") == "pickle" else dill
         self.context = self.serializer.dumps(context)  # store serialized
 
     def _get_context_key(self, key: str):
@@ -43,18 +44,19 @@ class KVStorageHandler:
 
 
 class SqliteStorageHandler(KVStorageHandler):
-    """ StorageHandler that uses SQLite as backend. """  # noqa
+    """StorageHandler that uses SQLite as backend."""  # noqa
+
     def __init__(self, context: Dict, config=None):
         super().__init__(context, config)
-        name = self.config["name"] if self.config["name"][-3:] == '.db' else self.config["name"] + '.db'
+        name = self.config["name"] if self.config["name"][-3:] == ".db" else self.config["name"] + ".db"
         path = os.path.join(self.config.get("path", "./"), name)
         self.connection = sqlite3.connect(path)
         self._setup_connection()
 
     def _setup_connection(self):
-        """ Checks that a key-value table exists, otherwise creates it. """  # noqa
+        """Checks that a key-value table exists, otherwise creates it."""  # noqa
         cur = self.connection.cursor()
-        if ('store',) not in list(cur.execute("SELECT name FROM sqlite_master WHERE type='table';")):
+        if ("store",) not in list(cur.execute("SELECT name FROM sqlite_master WHERE type='table';")):
             cur.execute("""create table store (key text PRIMARY KEY, value text)""")
             self.connection.commit()
 
@@ -73,13 +75,14 @@ class SqliteStorageHandler(KVStorageHandler):
 
 
 class RedisStorageHandler(KVStorageHandler):
-    """ StorageHandler that uses Redis as backend. """  # noqa
+    """StorageHandler that uses Redis as backend."""  # noqa
+
     def __init__(self, context: Dict, config=None):
         super().__init__(context, config)
-        assert self.config.get('host', False)
-        assert self.config.get('port', False)
+        assert self.config.get("host", False)
+        assert self.config.get("port", False)
 
-        self.connection = redis.Redis(host=self.config['host'], port=self.config['port'])
+        self.connection = redis.Redis(host=self.config["host"], port=self.config["port"])
 
     def _get(self, serialized_key):
         return self.connection.get(serialized_key)

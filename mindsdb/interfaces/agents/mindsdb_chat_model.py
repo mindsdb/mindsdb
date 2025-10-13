@@ -34,7 +34,7 @@ from mindsdb.interfaces.agents.constants import USER_COLUMN
 from mindsdb.utilities.config import config
 
 logger = logging.getLogger(__name__)
-default_project = config.get('default_project')
+default_project = config.get("default_project")
 
 
 def _convert_message_to_dict(message: BaseMessage) -> dict:
@@ -71,6 +71,7 @@ class ChatMindsdb(BaseChatModel):
 
     class Config:
         """Configuration for this pydantic object."""
+
         arbitrary_types_allowed = True
         allow_reuse = True
 
@@ -78,40 +79,35 @@ class ChatMindsdb(BaseChatModel):
     def _default_params(self) -> Dict[str, Any]:
         return {}
 
-    def completion(
-            self, messages: List[dict]
-    ) -> Any:
-        problem_definition = self.model_info['problem_definition'].get('using', {})
-        output_col = self.model_info['predict']
+    def completion(self, messages: List[dict]) -> Any:
+        problem_definition = self.model_info["problem_definition"].get("using", {})
+        output_col = self.model_info["predict"]
 
         # TODO create table for conversational model?
         if len(messages) > 1:
-            content = '\n'.join([
-                f"{m['role']}: {m['content']}"
-                for m in messages
-            ])
+            content = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
         else:
-            content = messages[0]['content']
+            content = messages[0]["content"]
 
         record = {}
         params = {}
         # Default to conversational if not set.
-        mode = problem_definition.get('mode', 'conversational')
-        if mode == 'conversational' or mode == 'retrieval':
+        mode = problem_definition.get("mode", "conversational")
+        if mode == "conversational" or mode == "retrieval":
             # flag for langchain to prevent calling agent inside of agent
-            if self.model_info['engine'] == 'langchain':
-                params['mode'] = 'chat_model'
+            if self.model_info["engine"] == "langchain":
+                params["mode"] = "chat_model"
 
-            user_column = problem_definition.get('user_column', USER_COLUMN)
+            user_column = problem_definition.get("user_column", USER_COLUMN)
             record[user_column] = content
 
-        elif 'column' in problem_definition:
+        elif "column" in problem_definition:
             # input defined as 'column' param
-            record[problem_definition['column']] = content
+            record[problem_definition["column"]] = content
 
         else:
             # failback, maybe handler supports template injection
-            params['prompt_template'] = content
+            params["prompt_template"] = content
 
         predictions = self.project_datanode.predict(
             model_name=self.model_name,
@@ -128,43 +124,37 @@ class ChatMindsdb(BaseChatModel):
         result = predictions[col][0]
 
         # TODO token calculation
-        return {
-            'messages': [result]
-        }
+        return {"messages": [result]}
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     def validate_environment(cls, values: Dict) -> Dict:
-
-        model_name = values['model_name']
-        project_name = values['project_name']
+        model_name = values["model_name"]
+        project_name = values["project_name"]
 
         from mindsdb.api.executor.controllers import SessionController
 
         session = SessionController()
         session.database = default_project
 
-        values['model_info'] = session.model_controller.get_model(model_name, project_name=project_name)
+        values["model_info"] = session.model_controller.get_model(model_name, project_name=project_name)
 
-        project_datanode = session.datahub.get(values['project_name'])
+        project_datanode = session.datahub.get(values["project_name"])
 
         values["project_datanode"] = project_datanode
 
         return values
 
     def _generate(
-            self,
-            messages: List[BaseMessage],
-            stop: Optional[List[str]] = None,
-            run_manager: Optional[CallbackManagerForLLMRun] = None,
-            stream: Optional[bool] = None,
-            **kwargs: Any,
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        stream: Optional[bool] = None,
+        **kwargs: Any,
     ) -> ChatResult:
-
         message_dicts = [_convert_message_to_dict(m) for m in messages]
 
-        response = self.completion(
-            messages=message_dicts
-        )
+        response = self.completion(messages=message_dicts)
         return self._create_chat_result(response)
 
     def _create_chat_result(self, response: Mapping[str, Any]) -> ChatResult:

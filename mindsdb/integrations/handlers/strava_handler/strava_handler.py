@@ -52,7 +52,7 @@ class StravaHandler(APIHandler):
             return self.connection
 
         client = Client()
-        client.access_token = self.connection_data['strava_access_token']
+        client.access_token = self.connection_data["strava_access_token"]
         self.connection = client
 
         return self.connection
@@ -93,17 +93,10 @@ class StravaHandler(APIHandler):
 
 
 connection_args = OrderedDict(
-    strava_client_id={
-        'type': ARG_TYPE.STR,
-        'description': 'Client id for accessing Strava Application API'
-    },
-    strava_access_token={
-        'type': ARG_TYPE.STR,
-        'description': 'Access Token for accessing Strava Application API'
-    }
+    strava_client_id={"type": ARG_TYPE.STR, "description": "Client id for accessing Strava Application API"},
+    strava_access_token={"type": ARG_TYPE.STR, "description": "Access Token for accessing Strava Application API"},
 )
 
 connection_args_example = OrderedDict(
-    strava_client_id='<your-strava-client_id>',
-    strava_access_token='<your-strava-api-token>'
+    strava_client_id="<your-strava-client_id>", strava_access_token="<your-strava-api-token>"
 )

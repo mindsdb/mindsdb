@@ -12,10 +12,10 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 chat_bot_memory = {}
 
 
-@ns_conf.route('/chatbots/<webhook_token>')
+@ns_conf.route("/chatbots/<webhook_token>")
 class ChatbotWebhooks(Resource):
-    @ns_conf.doc('chatbots_webhook')
-    @api_endpoint_metrics('POST', '/webhooks/chatbots/<webhook_token>')
+    @ns_conf.doc("chatbots_webhook")
+    @api_endpoint_metrics("POST", "/webhooks/chatbots/<webhook_token>")
     def post(self, webhook_token: str) -> None:
         """
         This endpoint is used to receive messages posted by bots from different platforms.

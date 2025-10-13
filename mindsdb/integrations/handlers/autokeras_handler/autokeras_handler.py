@@ -44,7 +44,7 @@ def train_model(df, target, max_trials=DEFAULT_TRIALS):
         inputs=ak.Input(),
         outputs=ak.RegressionHead() if mode == "regression" else ak.ClassificationHead(),
         overwrite=True,
-        max_trials=max_trials
+        max_trials=max_trials,
     )
     # Save the column names of all numeric columns before transforming any categorical columns into dummies
     numeric_column_names = training_df.select_dtypes(include=[np.number]).columns.values.tolist()
@@ -128,7 +128,9 @@ class AutokerasHandler(BaseMLEngine):
         model = load_model(args["folder_path"], custom_objects=ak.CUSTOM_OBJECTS)
 
         df_to_predict = df.copy()
-        predictions = get_preds_from_model(df_to_predict, model, args["target"], args["training_data_column_count"], args["data_column_names"])
+        predictions = get_preds_from_model(
+            df_to_predict, model, args["target"], args["training_data_column_count"], args["data_column_names"]
+        )
 
         # If we used the classifier we need to pre-process the predictions before returning them
         original_y = training_df[args["target"]]

@@ -15,13 +15,15 @@ def make_ssl_cert(file_path):
         backend=default_backend(),
     )
 
-    name = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, 'mdb_autogen'),
-        x509.NameAttribute(NameOID.COUNTRY_NAME, 'US'),
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, 'California'),
-        x509.NameAttribute(NameOID.LOCALITY_NAME, 'Berkeley'),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'MindsDB')
-    ])
+    name = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, "mdb_autogen"),
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "California"),
+            x509.NameAttribute(NameOID.LOCALITY_NAME, "Berkeley"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "MindsDB"),
+        ]
+    )
 
     now = datetime.utcnow()
     cert = (
@@ -32,10 +34,7 @@ def make_ssl_cert(file_path):
         .serial_number(1)
         .not_valid_before(now - timedelta(days=10 * 365))
         .not_valid_after(now + timedelta(days=10 * 365))
-        .add_extension(
-            x509.BasicConstraints(ca=True, path_length=0),
-            False
-        )
+        .add_extension(x509.BasicConstraints(ca=True, path_length=0), False)
         .sign(key, hashes.SHA256(), default_backend())
     )
     cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
@@ -45,5 +44,5 @@ def make_ssl_cert(file_path):
         encryption_algorithm=serialization.NoEncryption(),
     )
 
-    with open(file_path, 'wb') as f:
+    with open(file_path, "wb") as f:
         f.write(key_pem + cert_pem)

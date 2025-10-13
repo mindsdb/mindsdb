@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 # from sqlalchemy_vertica.dialect_pyodbc  import VerticaDialect
@@ -26,16 +26,16 @@ class VerticaHandler(DatabaseHandler):
     This handler handles connection and execution of the Vertica statements.
     """
 
-    name = 'vertica'
+    name = "vertica"
 
     def __init__(self, name, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
 
         self.parser = parse_sql
-        self.dialect = 'vertica'
+        self.dialect = "vertica"
         self.kwargs = kwargs
         self.connection_data = connection_data
-        self.schema_name = connection_data['schema_name'] if 'schema_name' in connection_data else "public"
+        self.schema_name = connection_data["schema_name"] if "schema_name" in connection_data else "public"
 
         self.connection = None
         self.is_connected = False
@@ -45,11 +45,11 @@ class VerticaHandler(DatabaseHandler):
             return self.connection
 
         config = {
-            'host': self.connection_data['host'],
-            'port': self.connection_data['port'],
-            'user': self.connection_data['user'],
-            'password': self.connection_data['password'],
-            'database': self.connection_data['database']
+            "host": self.connection_data["host"],
+            "port": self.connection_data["port"],
+            "user": self.connection_data["user"],
+            "password": self.connection_data["password"],
+            "database": self.connection_data["database"],
         }
 
         connection = vp.connect(**config)
@@ -65,7 +65,6 @@ class VerticaHandler(DatabaseHandler):
         return
 
     def check_connection(self) -> StatusResponse:
-
         result = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -73,7 +72,7 @@ class VerticaHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.opened()
         except Exception as e:
-            logger.error(f'Error connecting to Vertica {self.connection_data["database"]}, {e}!')
+            logger.error(f"Error connecting to Vertica {self.connection_data['database']}, {e}!")
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -98,23 +97,15 @@ class VerticaHandler(DatabaseHandler):
                 e = cur.execute(query)
                 result = e.fetchall()
                 if e.rowcount != -1:
-
                     response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(
-                            result,
-                            columns=[x.name for x in cur.description]
-                        )
+                        RESPONSE_TYPE.TABLE, pd.DataFrame(result, columns=[x.name for x in cur.description])
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
                 connection.rollback()
 
         if need_to_close is True:
@@ -134,13 +125,13 @@ class VerticaHandler(DatabaseHandler):
         """
         Get a list with all of the tabels in VERTICA
         """
-        q = f'''SELECT
+        q = f"""SELECT
         TABLE_NAME,
         TABLE_SCHEMA
         from v_catalog.tables
         WHERE table_schema='{self.schema_name}'
         order by
-        table_name;'''
+        table_name;"""
 
         return self.native_query(q)
 
@@ -148,10 +139,10 @@ class VerticaHandler(DatabaseHandler):
         """
         Show details about the table
         """
-        q = f'''SELECT
+        q = f"""SELECT
         column_name ,
         data_type
         FROM v_catalog.columns
-        WHERE table_name='{table_name}';'''
+        WHERE table_name='{table_name}';"""
 
         return self.native_query(q)

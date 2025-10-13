@@ -11,7 +11,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
 
@@ -24,7 +24,7 @@ class DynamoDBHandler(DatabaseHandler):
     This handler handles connection and execution of the SQL statements on Amazon DynamoDB.
     """
 
-    name = 'dynamodb'
+    name = "dynamodb"
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         """
@@ -64,27 +64,30 @@ class DynamoDBHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters.
-        if not all(key in self.connection_data for key in ['aws_access_key_id', 'aws_secret_access_key', 'region_name']):
-            logger.error('Connection failed as required parameters (aws_access_key_id, aws_secret_access_key, region_name) have not been provided.')
-            raise ValueError('Required parameters (aws_access_key_id, aws_secret_access_key, region_name) must be provided.')
+        if not all(
+            key in self.connection_data for key in ["aws_access_key_id", "aws_secret_access_key", "region_name"]
+        ):
+            logger.error(
+                "Connection failed as required parameters (aws_access_key_id, aws_secret_access_key, region_name) have not been provided."
+            )
+            raise ValueError(
+                "Required parameters (aws_access_key_id, aws_secret_access_key, region_name) must be provided."
+            )
 
         config = {
-            'aws_access_key_id': self.connection_data.get('aws_access_key_id'),
-            'aws_secret_access_key': self.connection_data.get('aws_secret_access_key'),
-            'region_name': self.connection_data.get('region_name')
+            "aws_access_key_id": self.connection_data.get("aws_access_key_id"),
+            "aws_secret_access_key": self.connection_data.get("aws_secret_access_key"),
+            "region_name": self.connection_data.get("region_name"),
         }
 
         # Optional connection parameters.
-        optional_parameters = ['aws_session_token']
+        optional_parameters = ["aws_session_token"]
         for param in optional_parameters:
             if param in self.connection_data:
                 config[param] = self.connection_data[param]
 
         # An exception is not raised even if the credentials are invalid, therefore, no error handling is required.
-        self.connection = boto3.client(
-            'dynamodb',
-            **config
-        )
+        self.connection = boto3.client("dynamodb", **config)
 
         self.is_connected = True
 
@@ -116,10 +119,10 @@ class DynamoDBHandler(DatabaseHandler):
 
             response.success = True
         except (ValueError, ClientError) as known_error:
-            logger.error(f'Connection check to Amazon DynamoDB failed, {known_error}!')
+            logger.error(f"Connection check to Amazon DynamoDB failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to Amazon DynamoDB failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to Amazon DynamoDB failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
@@ -147,36 +150,24 @@ class DynamoDBHandler(DatabaseHandler):
         try:
             result = connection.execute_statement(Statement=query)
 
-            if result['Items']:
+            if result["Items"]:
                 # TODO: Can parsing be optimized?
                 records = []
-                records.extend(self._parse_records(result['Items']))
+                records.extend(self._parse_records(result["Items"]))
 
-                while 'LastEvaluatedKey' in result:
-                    result = connection.execute_statement(
-                        Statement=query,
-                        NextToken=result['NextToken']
-                    )
-                    records.extend(self._parse_records(result['Items']))
+                while "LastEvaluatedKey" in result:
+                    result = connection.execute_statement(Statement=query, NextToken=result["NextToken"])
+                    records.extend(self._parse_records(result["Items"]))
 
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.json_normalize(records)
-                )
+                response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.json_normalize(records))
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except ClientError as client_error:
-            logger.error(f'Error running query: {query} on DynamoDB!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(client_error)
-            )
+            logger.error(f"Error running query: {query} on DynamoDB!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(client_error))
         except Exception as unknown_error:
-            logger.error(f'Unknown error running query: {query} on DynamoDB!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(unknown_error)
-            )
+            logger.error(f"Unknown error running query: {query} on DynamoDB!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(unknown_error))
 
         connection.close()
         if need_to_close is True:
@@ -242,15 +233,9 @@ class DynamoDBHandler(DatabaseHandler):
         """
         result = self.connection.list_tables()
 
-        df = pd.DataFrame(
-            data=result['TableNames'],
-            columns=['table_name']
-        )
+        df = pd.DataFrame(data=result["TableNames"], columns=["table_name"])
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response
 
@@ -270,24 +255,12 @@ class DynamoDBHandler(DatabaseHandler):
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
 
-        result = self.connection.describe_table(
-            TableName=table_name
-        )
+        result = self.connection.describe_table(TableName=table_name)
 
-        df = pd.DataFrame(
-            result['Table']['AttributeDefinitions']
-        )
+        df = pd.DataFrame(result["Table"]["AttributeDefinitions"])
 
-        df = df.rename(
-            columns={
-                'AttributeName': 'column_name',
-                'AttributeType': 'data_type'
-            }
-        )
+        df = df.rename(columns={"AttributeName": "column_name", "AttributeType": "data_type"})
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response

@@ -12,10 +12,12 @@ logger = log.getLogger(__name__)
 
 
 class GoogleServiceAccountOAuth2Manager:
-    def __init__(self, credentials_url: str = None, credentials_file: str = None, credentials_json: Union[dict, str] = None) -> None:
+    def __init__(
+        self, credentials_url: str = None, credentials_file: str = None, credentials_json: Union[dict, str] = None
+    ) -> None:
         # if no credentials provided, raise an exception
         if not any([credentials_url, credentials_file, credentials_json]):
-            raise NoCredentialsException('No valid Google Service Account credentials provided.')
+            raise NoCredentialsException("No valid Google Service Account credentials provided.")
         self.credentials_url = credentials_url
         self.credentials_file = credentials_file
         if credentials_json:
@@ -55,5 +57,5 @@ class GoogleServiceAccountOAuth2Manager:
                 raise ValueError("Failed to parse credentials provided. Please provide a valid service account key.")
         else:
             # unescape new lines in private_key
-            credentials_json['private_key'] = credentials_json['private_key'].replace('\\n', '\n')
+            credentials_json["private_key"] = credentials_json["private_key"].replace("\\n", "\n")
             return credentials_json

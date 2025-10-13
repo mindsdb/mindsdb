@@ -100,9 +100,7 @@ class LibSQLHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(
-                f'Error connecting to SQLite {self.connection_data["database"]}, {e}!'
-            )
+            logger.error(f"Error connecting to SQLite {self.connection_data['database']}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -132,17 +130,13 @@ class LibSQLHandler(DatabaseHandler):
             if result:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result, columns=[x[0] for x in cursor.description]
-                    ),
+                    data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description]),
                 )
             else:
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(
-                f'Error running query: {query} on {self.connection_data["database"]}!'
-            )
+            logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
@@ -186,7 +180,5 @@ class LibSQLHandler(DatabaseHandler):
         query = f"PRAGMA table_info([{table_name}]);"
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(
-            columns={"name": "column_name", "type": "data_type"}
-        )
+        result.data_frame = df.rename(columns={"name": "column_name", "type": "data_type"})
         return result

@@ -8,12 +8,11 @@ import json
 
 
 class StrapiTable(APITable):
-
     def __init__(self, handler: APIHandler, name: str):
         super().__init__(handler)
         self.name = name
         # get all the fields of a collection as columns
-        self.columns = self.handler.call_strapi_api(method='GET', endpoint=f'/api/{name}').columns
+        self.columns = self.handler.call_strapi_api(method="GET", endpoint=f"/api/{name}").columns
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Triggered at the SELECT query
@@ -31,7 +30,7 @@ class StrapiTable(APITable):
         # Get id from where clause, if available
         conditions = extract_comparison_conditions(query.where)
         for op, arg1, arg2 in conditions:
-            if arg1 == 'id' and op == '=':
+            if arg1 == "id" and op == "=":
                 _id = arg2
             else:
                 raise ValueError("Unsupported condition in WHERE clause")
@@ -51,7 +50,7 @@ class StrapiTable(APITable):
 
         if _id is not None:
             # Fetch data using the provided endpoint for the specific id
-            df = self.handler.call_strapi_api(method='GET', endpoint=f'/api/{self.name}/{_id}')
+            df = self.handler.call_strapi_api(method="GET", endpoint=f"/api/{self.name}/{_id}")
 
             if len(df) > 0:
                 result_df = df[selected_columns]
@@ -74,7 +73,11 @@ class StrapiTable(APITable):
                 else:
                     current_page_size = page_size
 
-                df = self.handler.call_strapi_api(method='GET', endpoint=f'/api/{self.name}', params={'pagination[page]': page, 'pagination[pageSize]': current_page_size})
+                df = self.handler.call_strapi_api(
+                    method="GET",
+                    endpoint=f"/api/{self.name}",
+                    params={"pagination[page]": page, "pagination[pageSize]": current_page_size},
+                )
 
                 if len(df) == 0:
                     break
@@ -91,13 +94,13 @@ class StrapiTable(APITable):
         Args:
             query (ast.Insert): user's entered query
         """
-        data = {'data': {}}
+        data = {"data": {}}
         for column, value in zip(query.columns, query.values[0]):
             if isinstance(value, Constant):
-                data['data'][column.name] = value.value
+                data["data"][column.name] = value.value
             else:
-                data['data'][column.name] = value
-        self.handler.call_strapi_api(method='POST', endpoint=f'/api/{self.name}', json_data=json.dumps(data))
+                data["data"][column.name] = value
+        self.handler.call_strapi_api(method="POST", endpoint=f"/api/{self.name}", json_data=json.dumps(data))
 
     def update(self, query: ast.Update) -> None:
         """triggered at the UPDATE query
@@ -108,15 +111,15 @@ class StrapiTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         # Get id from query
         for op, arg1, arg2 in conditions:
-            if arg1 == 'id' and op == '=':
+            if arg1 == "id" and op == "=":
                 _id = arg2
             else:
                 raise NotImplementedError
-        data = {'data': {}}
+        data = {"data": {}}
         for key, value in query.update_columns.items():
             if isinstance(value, Constant):
-                data['data'][key] = value.value
-        self.handler.call_strapi_api(method='PUT', endpoint=f'/api/{self.name}/{_id}', json_data=json.dumps(data))
+                data["data"][key] = value.value
+        self.handler.call_strapi_api(method="PUT", endpoint=f"/api/{self.name}/{_id}", json_data=json.dumps(data))
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns

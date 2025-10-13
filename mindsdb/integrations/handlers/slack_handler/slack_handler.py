@@ -15,13 +15,13 @@ from mindsdb.integrations.handlers.slack_handler.slack_tables import (
     SlackConversationsTable,
     SlackMessagesTable,
     SlackThreadsTable,
-    SlackUsersTable
+    SlackUsersTable,
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler, FuncParser
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
@@ -49,12 +49,12 @@ class SlackHandler(APIChatHandler):
         self.kwargs = kwargs
 
         # If the parameters are not provided, check the environment variables and the handler configuration.
-        handler_config = Config().get('slack_handler', {})
+        handler_config = Config().get("slack_handler", {})
 
-        for key in ['token', 'app_token']:
+        for key in ["token", "app_token"]:
             if key not in self.connection_data:
-                if f'SLACK_{key.upper()}' in os.environ:
-                    self.connection_data[key] = os.environ[f'SLACK_{key.upper()}']
+                if f"SLACK_{key.upper()}" in os.environ:
+                    self.connection_data[key] = os.environ[f"SLACK_{key.upper()}"]
                 elif key in handler_config:
                     self.connection_data[key] = handler_config[key]
 
@@ -62,10 +62,10 @@ class SlackHandler(APIChatHandler):
         self._socket_connection = None
         self.is_connected = False
 
-        self._register_table('conversations', SlackConversationsTable(self))
-        self._register_table('messages', SlackMessagesTable(self))
-        self._register_table('threads', SlackThreadsTable(self))
-        self._register_table('users', SlackUsersTable(self))
+        self._register_table("conversations", SlackConversationsTable(self))
+        self._register_table("messages", SlackMessagesTable(self))
+        self._register_table("threads", SlackThreadsTable(self))
+        self._register_table("users", SlackUsersTable(self))
 
     def connect(self) -> WebClient:
         """
@@ -78,15 +78,15 @@ class SlackHandler(APIChatHandler):
             return self.web_connection
 
         # Check if the mandatory connection parameter (token) is available.
-        if 'token' not in self.connection_data:
-            raise ValueError('Required parameter (token) must be provided.')
+        if "token" not in self.connection_data:
+            raise ValueError("Required parameter (token) must be provided.")
 
         try:
-            self.web_connection = WebClient(token=self.connection_data['token'])
+            self.web_connection = WebClient(token=self.connection_data["token"])
             self.is_connected = True
             return self.web_connection
         except Exception as unknown_error:
-            logger.error(f'Unknown error connecting to Slack API: {unknown_error}')
+            logger.error(f"Unknown error connecting to Slack API: {unknown_error}")
             raise
 
     def check_connection(self) -> StatusResponse:
@@ -107,20 +107,19 @@ class SlackHandler(APIChatHandler):
             web_connection.auth_test()
 
             # Check the status of the socket connection if the app_token is provided.
-            if 'app_token' in self.connection_data:
+            if "app_token" in self.connection_data:
                 _socket_connection = SocketModeClient(
-                    app_token=self.connection_data['app_token'],
-                    web_client=web_connection
+                    app_token=self.connection_data["app_token"], web_client=web_connection
                 )
                 _socket_connection.connect()
                 _socket_connection.disconnect()
 
             response.success = True
         except (SlackApiError, ValueError) as known_error:
-            logger.error(f'Connection check to the Slack API failed, {known_error}!')
+            logger.error(f"Connection check to the Slack API failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to the Slack API failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to the Slack API failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         if response.success is False and self.is_connected is True:
@@ -142,10 +141,7 @@ class SlackHandler(APIChatHandler):
 
         df = self._call_slack_api(method_name, params)
 
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
     def _call_slack_api(self, method_name: Text = None, params: Dict = None) -> List[Dict]:
         """
@@ -173,9 +169,9 @@ class SlackHandler(APIChatHandler):
             items.extend(self._extract_data_from_response(response_data))
 
             # If the response contains a cursor, fetch the next page of results.
-            if 'response_metadata' in response and 'next_cursor' in response['response_metadata']:
-                while response['response_metadata']['next_cursor']:
-                    response = method(cursor=response['response_metadata']['next_cursor'], **params)
+            if "response_metadata" in response and "next_cursor" in response["response_metadata"]:
+                while response["response_metadata"]["next_cursor"]:
+                    response = method(cursor=response["response_metadata"]["next_cursor"], **params)
                     response_data = deepcopy(response.data)
 
                     # Get only the data items from the response data.
@@ -204,7 +200,7 @@ class SlackHandler(APIChatHandler):
             List[Dict]: The data items extracted from the response object.
         """
         # Remove the metadata from the response.
-        for key in ['ok', 'response_metadata', 'cache_ts', 'latest', 'pin_count', 'has_more']:
+        for key in ["ok", "response_metadata", "cache_ts", "latest", "pin_count", "has_more"]:
             if key in response_data:
                 response_data.pop(key)
 
@@ -218,7 +214,7 @@ class SlackHandler(APIChatHandler):
                 return [response_data[key]]
 
         # Otherwise, raise an error.
-        raise ValueError('Response data could not be parsed.')
+        raise ValueError("Response data could not be parsed.")
 
     def get_chat_config(self) -> Dict:
         """
@@ -228,32 +224,32 @@ class SlackHandler(APIChatHandler):
             Dict: The chat configuration.
         """
         return {
-            'polling': {
-                'type': 'realtime',
+            "polling": {
+                "type": "realtime",
             },
-            'memory': {
-                'type': 'handler',
+            "memory": {
+                "type": "handler",
             },
-            'tables': [
+            "tables": [
                 {
-                    'chat_table': {
-                        'name': 'messages',
-                        'chat_id_col': 'channel_id',
-                        'username_col': 'user',
-                        'text_col': 'text',
-                        'time_col': 'created_at',
+                    "chat_table": {
+                        "name": "messages",
+                        "chat_id_col": "channel_id",
+                        "username_col": "user",
+                        "text_col": "text",
+                        "time_col": "created_at",
                     }
                 },
                 {
-                    'chat_table': {
-                        'name': 'threads',
-                        'chat_id_col': ['channel_id', 'thread_ts'],
-                        'username_col': 'user',
-                        'text_col': 'text',
-                        'time_col': 'thread_ts',
+                    "chat_table": {
+                        "name": "threads",
+                        "chat_id_col": ["channel_id", "thread_ts"],
+                        "username_col": "user",
+                        "text_col": "text",
+                        "time_col": "thread_ts",
                     }
-                }
-            ]
+                },
+            ],
         }
 
     def get_my_user_name(self) -> Text:
@@ -265,10 +261,16 @@ class SlackHandler(APIChatHandler):
         """
         web_connection = self.connect()
         user_info = web_connection.auth_test().data
-        return user_info['bot_id']
+        return user_info["bot_id"]
 
-    def subscribe(self, stop_event: threading.Event, callback: Callable, table_name: Text = 'messages',
-                  columns: List = None, **kwargs: Any) -> None:
+    def subscribe(
+        self,
+        stop_event: threading.Event,
+        callback: Callable,
+        table_name: Text = "messages",
+        columns: List = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Subscribes to the Slack API using the Socket Mode for real-time responses to messages.
 
@@ -278,19 +280,19 @@ class SlackHandler(APIChatHandler):
             table_name (Text): The name of the table to subscribe to.
             kwargs: Arbitrary keyword arguments.
         """
-        if table_name not in ['messages', 'threads']:
-            raise RuntimeError(f'Table {table_name} is not supported for subscription.')
+        if table_name not in ["messages", "threads"]:
+            raise RuntimeError(f"Table {table_name} is not supported for subscription.")
 
         # Raise an error if columns are provided.
         # Since Slack subscriptions depend on events and not changes to the virtual tables, columns are not supported.
         if columns:
-            raise RuntimeError('Columns are not supported for Slack subscriptions.')
+            raise RuntimeError("Columns are not supported for Slack subscriptions.")
 
         self._socket_connection = SocketModeClient(
             # This app-level token will be used only for establishing a connection.
-            app_token=self.connection_data['app_token'],  # xapp-A111-222-xyz
+            app_token=self.connection_data["app_token"],  # xapp-A111-222-xyz
             # The WebClient for performing Web API calls in listeners.
-            web_client=WebClient(token=self.connection_data['token']),  # xoxb-111-222-xyz
+            web_client=WebClient(token=self.connection_data["token"]),  # xoxb-111-222-xyz
         )
 
         def _process_websocket_message(client: SocketModeClient, request: SocketModeRequest) -> None:
@@ -306,40 +308,40 @@ class SlackHandler(APIChatHandler):
             client.send_socket_mode_response(response)
 
             # Ignore requests that are not events.
-            if request.type != 'events_api':
+            if request.type != "events_api":
                 return
 
             # Ignore duplicate requests.
             if request.retry_attempt is not None and request.retry_attempt > 0:
                 return
 
-            payload_event = request.payload['event']
+            payload_event = request.payload["event"]
             # Avoid responding to events other than direct messages and app mentions.
-            if payload_event['type'] not in ('message', 'app_mention'):
+            if payload_event["type"] not in ("message", "app_mention"):
                 return
 
             # Avoid responding to unrelated events like message_changed, message_deleted, etc.
-            if 'subtype' in payload_event:
+            if "subtype" in payload_event:
                 return
 
             # Avoid responding to messages from the bot.
-            if 'bot_id' in payload_event:
+            if "bot_id" in payload_event:
                 return
 
             key = {
-                'channel_id': payload_event['channel'],
+                "channel_id": payload_event["channel"],
             }
 
             row = {
-                'text': payload_event['text'],
-                'user': payload_event['user'],
-                'created_at': dt.datetime.fromtimestamp(float(payload_event['ts'])).strftime('%Y-%m-%d %H:%M:%S')
+                "text": payload_event["text"],
+                "user": payload_event["user"],
+                "created_at": dt.datetime.fromtimestamp(float(payload_event["ts"])).strftime("%Y-%m-%d %H:%M:%S"),
             }
 
             # Add thread_ts to the key and row if it is a thread message. This is used to identify threads.
             # This message should be handled via the threads table.
-            if 'thread_ts' in payload_event:
-                key['thread_ts'] = payload_event['thread_ts']
+            if "thread_ts" in payload_event:
+                key["thread_ts"] = payload_event["thread_ts"]
 
             callback(row, key)
 

@@ -14,10 +14,10 @@ class SurrealdbHandlerTest(unittest.TestCase):
                 "user": "MAXDB",
                 "password": "password",
                 "database": "MAXDB",
-                "jdbc_location": "/path/to/jdbc/sapdbc.jar"
+                "jdbc_location": "/path/to/jdbc/sapdbc.jar",
             }
         }
-        cls.handler = MaxDBHandler('test_maxdb_handler', **cls.kwargs)
+        cls.handler = MaxDBHandler("test_maxdb_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -36,7 +36,7 @@ class SurrealdbHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_4_get_columns(self):
-        columns = self.handler.get_columns('TEST_TABLE')
+        columns = self.handler.get_columns("TEST_TABLE")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
     def test_5_get_tables(self):
@@ -51,5 +51,5 @@ class SurrealdbHandlerTest(unittest.TestCase):
         assert self.handler.disconnect() is None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

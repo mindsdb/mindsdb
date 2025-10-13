@@ -8,18 +8,24 @@ from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
 
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
+from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
+    construct_model_from_args,
+)
 from mindsdb.integrations.libs.vectordatabase_handler import DistanceFunction
 from mindsdb.integrations.utilities.rag.chains.map_reduce_summarizer_chain import MapReduceSummarizerChain
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
 from mindsdb.integrations.utilities.rag.retrievers.sql_retriever import SQLRetriever
 from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
-from mindsdb.integrations.utilities.rag.settings import (RAGPipelineModel,
-                                                         DEFAULT_AUTO_META_PROMPT_TEMPLATE,
-                                                         SearchKwargs, SearchType,
-                                                         RerankerConfig,
-                                                         SummarizationConfig, VectorStoreConfig)
+from mindsdb.integrations.utilities.rag.settings import (
+    RAGPipelineModel,
+    DEFAULT_AUTO_META_PROMPT_TEMPLATE,
+    SearchKwargs,
+    SearchType,
+    RerankerConfig,
+    SummarizationConfig,
+    VectorStoreConfig,
+)
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
@@ -49,14 +55,14 @@ class LangChainRAGPipeline:
     """
 
     def __init__(
-            self,
-            retriever_runnable,
-            prompt_template,
-            llm,
-            reranker: bool = DEFAULT_RERANKER_FLAG,
-            reranker_config: Optional[RerankerConfig] = None,
-            vector_store_config: Optional[VectorStoreConfig] = None,
-            summarization_config: Optional[SummarizationConfig] = None
+        self,
+        retriever_runnable,
+        prompt_template,
+        llm,
+        reranker: bool = DEFAULT_RERANKER_FLAG,
+        reranker_config: Optional[RerankerConfig] = None,
+        vector_store_config: Optional[VectorStoreConfig] = None,
+        summarization_config: Optional[SummarizationConfig] = None,
     ):
         self.retriever_runnable = retriever_runnable
         self.prompt_template = prompt_template
@@ -76,7 +82,7 @@ class LangChainRAGPipeline:
             self.summarizer = MapReduceSummarizerChain(
                 vector_store_handler=knowledge_base_table.get_vector_db(),
                 table_name=knowledge_base_table.get_vector_db_table_name(),
-                summarization_config=summarization_config
+                summarization_config=summarization_config,
             )
 
     def with_returned_sources(self) -> RunnableSerializable:
@@ -91,20 +97,20 @@ class LangChainRAGPipeline:
                 # instead of a list of documents e.g. SQLRetriever
                 return docs
             if not docs:
-                return ''
+                return ""
             # Sort by original document so we can group source summaries together.
-            docs.sort(key=lambda d: d.metadata.get('original_row_id') if d.metadata else 0)
+            docs.sort(key=lambda d: d.metadata.get("original_row_id") if d.metadata else 0)
             original_document_id = None
-            summary_prepended_text = 'Summary of the original document that the below context was taken from:\n'
-            document_content = ''
+            summary_prepended_text = "Summary of the original document that the below context was taken from:\n"
+            document_content = ""
             for d in docs:
                 metadata = d.metadata or {}
-                if metadata.get('original_row_id') != original_document_id and metadata.get('summary'):
+                if metadata.get("original_row_id") != original_document_id and metadata.get("summary"):
                     # We have a summary of a new document to prepend.
-                    original_document_id = metadata.get('original_row_id')
+                    original_document_id = metadata.get("original_row_id")
                     summary = f"{summary_prepended_text}{metadata.get('summary')}\n"
                     document_content += summary
-                document_content += f'{d.page_content}\n\n'
+                document_content += f"{d.page_content}\n\n"
             return document_content
 
         prompt = ChatPromptTemplate.from_template(self.prompt_template)
@@ -121,15 +127,12 @@ class LangChainRAGPipeline:
                 """Async-aware retriever that properly handles concurrent reranking operations."""
 
                 def __init__(self, base_retriever, reranker):
-                    super().__init__(
-                        base_compressor=reranker,
-                        base_retriever=base_retriever
-                    )
+                    super().__init__(base_compressor=reranker, base_retriever=base_retriever)
 
                 async def ainvoke(self, query: str) -> List[Document]:
                     """Async retrieval with proper concurrency handling."""
                     # Get initial documents
-                    if hasattr(self.base_retriever, 'ainvoke'):
+                    if hasattr(self.base_retriever, "ainvoke"):
                         docs = await self.base_retriever.ainvoke(query)
                     else:
                         docs = await RunnablePassthrough(self.base_retriever.get_relevant_documents)(query)
@@ -142,12 +145,12 @@ class LangChainRAGPipeline:
                 def get_relevant_documents(self, query: str) -> List[Document]:
                     """Sync wrapper for async retrieval."""
                     import asyncio
+
                     return asyncio.run(self.ainvoke(query))
 
             # Use our custom async-aware retriever
             self.retriever_runnable = AsyncRerankerRetriever(
-                base_retriever=copy(self.retriever_runnable),
-                reranker=self.reranker
+                base_retriever=copy(self.retriever_runnable), reranker=self.reranker
             )
 
         rag_chain_from_docs = (
@@ -157,10 +160,7 @@ class LangChainRAGPipeline:
             | StrOutputParser()
         )
 
-        retrieval_chain = RunnableParallel(
-            context=self.retriever_runnable,
-            question=RunnablePassthrough()
-        )
+        retrieval_chain = RunnableParallel(context=self.retriever_runnable, question=RunnablePassthrough())
         if self.summarizer is not None:
             retrieval_chain = retrieval_chain | self.summarizer
 
@@ -175,33 +175,36 @@ class LangChainRAGPipeline:
     def invoke(self, input_dict: dict) -> dict:
         """Sync invocation of the RAG pipeline."""
         import asyncio
+
         return asyncio.run(self.ainvoke(input_dict))
 
     @classmethod
-    def _apply_search_kwargs(cls, retriever: Any, search_kwargs: Optional[SearchKwargs] = None, search_type: Optional[SearchType] = None) -> Any:
+    def _apply_search_kwargs(
+        cls, retriever: Any, search_kwargs: Optional[SearchKwargs] = None, search_type: Optional[SearchType] = None
+    ) -> Any:
         """Apply search kwargs and search type to the retriever if they exist"""
-        if hasattr(retriever, 'search_kwargs') and search_kwargs:
+        if hasattr(retriever, "search_kwargs") and search_kwargs:
             # Convert search kwargs to dict, excluding None values
             kwargs_dict = search_kwargs.model_dump(exclude_none=True)
 
             # Only include relevant parameters based on search type
             if search_type == SearchType.SIMILARITY:
                 # Remove MMR and similarity threshold specific params
-                kwargs_dict.pop('fetch_k', None)
-                kwargs_dict.pop('lambda_mult', None)
-                kwargs_dict.pop('score_threshold', None)
+                kwargs_dict.pop("fetch_k", None)
+                kwargs_dict.pop("lambda_mult", None)
+                kwargs_dict.pop("score_threshold", None)
             elif search_type == SearchType.MMR:
                 # Remove similarity threshold specific params
-                kwargs_dict.pop('score_threshold', None)
+                kwargs_dict.pop("score_threshold", None)
             elif search_type == SearchType.SIMILARITY_SCORE_THRESHOLD:
                 # Remove MMR specific params
-                kwargs_dict.pop('fetch_k', None)
-                kwargs_dict.pop('lambda_mult', None)
+                kwargs_dict.pop("fetch_k", None)
+                kwargs_dict.pop("lambda_mult", None)
 
             retriever.search_kwargs.update(kwargs_dict)
 
             # Set search type if supported by the retriever
-            if hasattr(retriever, 'search_type') and search_type:
+            if hasattr(retriever, "search_type") and search_type:
                 retriever.search_type = search_type.value
 
         return retriever
@@ -217,7 +220,7 @@ class LangChainRAGPipeline:
             vector_store=config.vector_store,
             documents=config.documents,
             embedding_model=config.embedding_model,
-            vector_store_config=config.vector_store_config
+            vector_store_config=config.vector_store_config,
         )
         retriever = vector_store_operator.vector_store.as_retriever()
         retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
@@ -229,7 +232,7 @@ class LangChainRAGPipeline:
             vector_store_config=config.vector_store_config,
             reranker=config.reranker,
             reranker_config=config.reranker_config,
-            summarization_config=config.summarization_config
+            summarization_config=config.summarization_config,
         )
 
     @classmethod
@@ -246,7 +249,7 @@ class LangChainRAGPipeline:
             reranker_config=config.reranker_config,
             reranker=config.reranker,
             vector_store_config=config.vector_store_config,
-            summarization_config=config.summarization_config
+            summarization_config=config.summarization_config,
         )
 
     @classmethod
@@ -260,7 +263,7 @@ class LangChainRAGPipeline:
             reranker_config=config.reranker_config,
             reranker=config.reranker,
             vector_store_config=config.vector_store_config,
-            summarization_config=config.summarization_config
+            summarization_config=config.summarization_config,
         )
 
     @classmethod
@@ -272,21 +275,25 @@ class LangChainRAGPipeline:
         knowledge_base_table = vector_store_config.kb_table if vector_store_config is not None else None
         if knowledge_base_table is None:
             raise ValueError('Must provide valid "vector_store_config" for RAG pipeline config')
-        embedding_args = knowledge_base_table._kb.embedding_model.learn_args.get('using', {})
+        embedding_args = knowledge_base_table._kb.embedding_model.learn_args.get("using", {})
         embeddings = construct_model_from_args(embedding_args)
-        sql_llm = create_chat_model({
-            'model_name': retriever_config.llm_config.model_name,
-            'provider': retriever_config.llm_config.provider,
-            **retriever_config.llm_config.params
-        })
+        sql_llm = create_chat_model(
+            {
+                "model_name": retriever_config.llm_config.model_name,
+                "provider": retriever_config.llm_config.provider,
+                **retriever_config.llm_config.params,
+            }
+        )
         vector_store_operator = VectorStoreOperator(
             vector_store=config.vector_store,
             documents=config.documents,
             embedding_model=config.embedding_model,
-            vector_store_config=config.vector_store_config
+            vector_store_config=config.vector_store_config,
         )
         vector_store_retriever = vector_store_operator.vector_store.as_retriever()
-        vector_store_retriever = cls._apply_search_kwargs(vector_store_retriever, config.search_kwargs, config.search_type)
+        vector_store_retriever = cls._apply_search_kwargs(
+            vector_store_retriever, config.search_kwargs, config.search_type
+        )
         distance_function = DistanceFunction.SQUARED_EUCLIDEAN_DISTANCE
         if config.vector_store_config.is_sparse and config.vector_store_config.vector_size is not None:
             # Use negative dot product for sparse retrieval.
@@ -311,7 +318,7 @@ class LangChainRAGPipeline:
             source_table=retriever_config.source_table,
             source_id_column=retriever_config.source_id_column,
             distance_function=distance_function,
-            llm=sql_llm
+            llm=sql_llm,
         )
         return cls(
             retriever,
@@ -320,5 +327,5 @@ class LangChainRAGPipeline:
             reranker_config=config.reranker_config,
             reranker=config.reranker,
             vector_store_config=config.vector_store_config,
-            summarization_config=config.summarization_config
+            summarization_config=config.summarization_config,
         )

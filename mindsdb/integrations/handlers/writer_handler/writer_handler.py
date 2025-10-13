@@ -54,9 +54,7 @@ class WriterHandler(BaseMLEngine):
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if "using" not in args:
-            raise Exception(
-                "Writer engine requires a USING clause! Refer to its documentation for more details."
-            )
+            raise Exception("Writer engine requires a USING clause! Refer to its documentation for more details.")
 
     def create(
         self,
@@ -77,9 +75,7 @@ class WriterHandler(BaseMLEngine):
         args = WriterHandlerParameters(**input_args)
 
         # create folder for vector store to persist embeddings
-        args.vector_store_storage_path = self.engine_storage.folder_get(
-            args.vector_store_folder_name
-        )
+        args.vector_store_storage_path = self.engine_storage.folder_get(args.vector_store_folder_name)
 
         if df is not None and args.run_embeddings:
             if "context_columns" not in args:
@@ -88,9 +84,7 @@ class WriterHandler(BaseMLEngine):
                 args.context_columns = df.columns.tolist()
 
             if "embeddings_model_name" not in args:
-                logger.info(
-                    f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
-                )
+                logger.info(f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}")
 
             ingestor = WriterIngestor(args=args, df=df)
             ingestor.embeddings_to_vectordb()
@@ -127,9 +121,7 @@ class WriterHandler(BaseMLEngine):
                     "to run evaluation, add a WHERE clause with 'run_evaluation = true'"
                 )
 
-        args.vector_store_storage_path = self.engine_storage.folder_get(
-            args.vector_store_folder_name
-        )
+        args.vector_store_storage_path = self.engine_storage.folder_get(args.vector_store_folder_name)
 
         # get question answering results
         question_answerer = QuestionAnswerer(args=args)
@@ -141,16 +133,11 @@ class WriterHandler(BaseMLEngine):
         return pd.DataFrame(response)
 
     def evaluate(self, args: WriterHandlerParameters):
-
         if isinstance(args.evaluate_dataset, list):
             # if user provides a list of dicts, convert to dataframe and validate
-            evaluate_df = validate_dataframe(
-                pd.DataFrame(args.evaluate_dataset), EVAL_COLUMN_NAMES
-            )
+            evaluate_df = validate_dataframe(pd.DataFrame(args.evaluate_dataset), EVAL_COLUMN_NAMES)
         else:
-            evaluate_df = load_dataset(
-                ml_task_type="question_answering", dataset_name=args.evaluate_dataset
-            )
+            evaluate_df = load_dataset(ml_task_type="question_answering", dataset_name=args.evaluate_dataset)
             args.context_columns = "context"
 
         if args.n_rows_evaluation:

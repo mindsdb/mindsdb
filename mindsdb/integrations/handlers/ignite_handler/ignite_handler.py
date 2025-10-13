@@ -12,7 +12,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 
@@ -24,7 +24,7 @@ class IgniteHandler(DatabaseHandler):
     This handler handles connection and execution of the Apache Ignite statements.
     """
 
-    name = 'ignite'
+    name = "ignite"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -36,9 +36,9 @@ class IgniteHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'ignite'
+        self.dialect = "ignite"
 
-        optional_parameters = ['username', 'password', 'schema']
+        optional_parameters = ["username", "password", "schema"]
         for parameter in optional_parameters:
             if parameter not in connection_data:
                 connection_data[parameter] = None
@@ -64,17 +64,14 @@ class IgniteHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.client = Client(
-            username=self.connection_data['username'],
-            password=self.connection_data['password']
-        )
+        self.client = Client(username=self.connection_data["username"], password=self.connection_data["password"])
 
         try:
-            port = int(self.connection_data['port'])
+            port = int(self.connection_data["port"])
         except ValueError:
             raise ValueError("Invalid port number")
 
-        nodes = [(self.connection_data['host'], port)]
+        nodes = [(self.connection_data["host"], port)]
         self.connection = self.client.connect(nodes)
         self.is_connected = True
 
@@ -106,7 +103,7 @@ class IgniteHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error('Error connecting to Apache Ignite!')
+            logger.error("Error connecting to Apache Ignite!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -131,24 +128,15 @@ class IgniteHandler(DatabaseHandler):
 
         try:
             with connection:
-                with client.sql(query, include_field_names=True, schema=self.connection_data['schema']) as cursor:
+                with client.sql(query, include_field_names=True, schema=self.connection_data["schema"]) as cursor:
                     result = list(cursor)
-                    if result and result[0][0] != 'UPDATED':
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            data_frame=pd.DataFrame(
-                                result[1:],
-                                columns=result[0]
-                            )
-                        )
+                    if result and result[0][0] != "UPDATED":
+                        response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result[1:], columns=result[0]))
                     else:
                         response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on Apache Ignite!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on Apache Ignite!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:
@@ -185,7 +173,7 @@ class IgniteHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
@@ -202,7 +190,7 @@ class IgniteHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         df = result.data_frame
-        df['TYPE'] = df.apply(lambda row: row['TYPE'].split('.')[-1], axis=1)
+        df["TYPE"] = df.apply(lambda row: row["TYPE"].split(".")[-1], axis=1)
         df = df.iloc[2:]
-        result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'TYPE': 'data_type'})
+        result.data_frame = df.rename(columns={"COLUMN_NAME": "column_name", "TYPE": "data_type"})
         return result

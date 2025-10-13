@@ -14,7 +14,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 
@@ -22,17 +22,18 @@ class AerospikeHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Solr SQL statements.
     """
-    name = 'aerospike'
+
+    name = "aerospike"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'aerospike'
+        self.dialect = "aerospike"
         self.connection_data = connection_data
         self.kwargs = kwargs
-        if not self.connection_data.get('host'):
+        if not self.connection_data.get("host"):
             raise Exception("The host parameter should be provided!")
-        if not self.connection_data.get('port'):
+        if not self.connection_data.get("port"):
             raise Exception("The port parameter should be provided!")
 
         self.connection = None
@@ -51,12 +52,12 @@ class AerospikeHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        user = self.connection_data.get('user', None)
-        password = self.connection_data.get('password', None)
+        user = self.connection_data.get("user", None)
+        password = self.connection_data.get("password", None)
         config = {
-            'user': user,
-            'password': password,
-            'hosts': [(self.connection_data.get('host'), self.connection_data.get('port'))],
+            "user": user,
+            "password": password,
+            "hosts": [(self.connection_data.get("host"), self.connection_data.get("port"))],
         }
         connection = aerospike.client(config).connect()
         self.is_connected = True
@@ -116,20 +117,14 @@ class AerospikeHandler(DatabaseHandler):
             scan = connection.scan(aero_ns.lower(), aero_set.lower())
             res = scan.results()
             data_df = pd.DataFrame.from_records([r[2] for r in res])
-            if ' where ' in query or ' WHERE ' in query or '*' not in selected_bins:
-                new_query = re.sub(r'FROM [\w\.]+', 'FROM ' + 'data_df', query, 1)
-                new_query = new_query.replace(f'{aero_set}.', '')
+            if " where " in query or " WHERE " in query or "*" not in selected_bins:
+                new_query = re.sub(r"FROM [\w\.]+", "FROM " + "data_df", query, 1)
+                new_query = new_query.replace(f"{aero_set}.", "")
                 data_df = duckdb.query(new_query).to_df()
 
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_df
-            )
+            response = Response(RESPONSE_TYPE.TABLE, data_df)
         except Exception as e:
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -144,17 +139,17 @@ class AerospikeHandler(DatabaseHandler):
 
     def parse_aql_query(self, aql_query):
         # Split the AQL query into tokens
-        tokens = [t.replace(',', '').upper() for t in re.split(r'\s+', aql_query)]
+        tokens = [t.replace(",", "").upper() for t in re.split(r"\s+", aql_query)]
         # Extract the relevant components
         select_index = tokens.index("SELECT")
         from_index = tokens.index("FROM")
         # where_index = tokens.index("WHERE")
 
-        selected_bins = tokens[select_index + 1:from_index]
+        selected_bins = tokens[select_index + 1 : from_index]
         namespace_set = tokens[from_index + 1]
-        aero_ns, aero_set = namespace_set.split('.') if '.' in namespace_set else None, namespace_set
+        aero_ns, aero_set = namespace_set.split(".") if "." in namespace_set else None, namespace_set
         if not aero_ns:
-            aero_ns = self.connection_data.get('namespace')
+            aero_ns = self.connection_data.get("namespace")
         # filter_condition = " ".join(tokens[where_index + 1:])
         return selected_bins, aero_ns, aero_set
 
@@ -171,28 +166,24 @@ class AerospikeHandler(DatabaseHandler):
         try:
             for node, (err, res) in list(connection.info_all(request).items()):
                 if res:
-                    entries = [entry.strip() for entry in res.strip().split(';') if entry.strip()]
+                    entries = [entry.strip() for entry in res.strip().split(";") if entry.strip()]
                     for entry in entries:
-                        data = [d for d in entry.split('=') if ':set' in d or ':objects' in d]
+                        data = [d for d in entry.split("=") if ":set" in d or ":objects" in d]
                         ele = [None, None, None]
                         for d in data:
-                            if ':set' in d:
-                                ele[0] = d.split(':')[0]
-                            if ':objects' in d:
-                                ele[1] = d.split(':')[0]
+                            if ":set" in d:
+                                ele[0] = d.split(":")[0]
+                            if ":objects" in d:
+                                ele[1] = d.split(":")[0]
                             if d[0] or d[1]:
                                 ele[2] = request
                         data_lst.append(ele)
 
             response = Response(
-                RESPONSE_TYPE.TABLE,
-                pd.DataFrame(data_lst, columns=['table_schema', 'table_name', 'table_type'])
+                RESPONSE_TYPE.TABLE, pd.DataFrame(data_lst, columns=["table_schema", "table_name", "table_type"])
             )
         except Exception as e:
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -206,29 +197,23 @@ class AerospikeHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
         connection = self.connect()
 
-        column_df = pd.DataFrame([], columns=['column_name', 'data_type'])
+        column_df = pd.DataFrame([], columns=["column_name", "data_type"])
 
         try:
             response_table = self.get_tables()
             df = response_table.data_frame
             if not len(df):
                 return column_df
-            df = df[df['table_name'] == table_name]
-            tbl_dtl_arr = df.iloc[0][['table_schema', 'table_name']]
+            df = df[df["table_name"] == table_name]
+            tbl_dtl_arr = df.iloc[0][["table_schema", "table_name"]]
             scan = connection.scan(tbl_dtl_arr[0], tbl_dtl_arr[1])
             res = scan.results()
             data_df = pd.DataFrame.from_records([r[2] for r in res])
             column_df = pd.DataFrame(data_df.dtypes).reset_index()
-            column_df.columns = ['column_name', 'data_type']
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                column_df
-            )
+            column_df.columns = ["column_name", "data_type"]
+            response = Response(RESPONSE_TYPE.TABLE, column_df)
         except Exception as e:
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()

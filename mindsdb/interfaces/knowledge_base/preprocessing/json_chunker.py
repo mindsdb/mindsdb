@@ -3,11 +3,7 @@ import json
 import pandas as pd
 import ast
 
-from mindsdb.interfaces.knowledge_base.preprocessing.models import (
-    Document,
-    ProcessedChunk,
-    JSONChunkingConfig
-)
+from mindsdb.interfaces.knowledge_base.preprocessing.models import Document, ProcessedChunk, JSONChunkingConfig
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import DocumentPreprocessor
 from mindsdb.utilities import log
 
@@ -117,7 +113,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
         return ProcessedChunk(
             id=f"{doc.id}_error",
             content=f"Error processing document: {error_message}",
-            metadata=self._prepare_chunk_metadata(doc.id, 0, doc.metadata)
+            metadata=self._prepare_chunk_metadata(doc.id, 0, doc.metadata),
         )
 
     def _process_json_list(self, json_list: List, doc: Document) -> List[ProcessedChunk]:
@@ -132,20 +128,12 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             elif isinstance(item, list):
                 # Handle nested lists by converting to string representation
                 chunk = self._create_chunk_from_primitive(
-                    json.dumps(item),
-                    doc,
-                    chunk_index=i,
-                    total_chunks=total_objects
+                    json.dumps(item), doc, chunk_index=i, total_chunks=total_objects
                 )
                 chunks.append(chunk)
             else:
                 # Handle primitive values
-                chunk = self._create_chunk_from_primitive(
-                    item,
-                    doc,
-                    chunk_index=i,
-                    total_chunks=total_objects
-                )
+                chunk = self._create_chunk_from_primitive(item, doc, chunk_index=i, total_chunks=total_objects)
                 chunks.append(chunk)
 
         return chunks
@@ -190,24 +178,18 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
                 start_char=0,
                 end_char=len(field_content),
                 provided_id=doc.id,
-                content_column=self.config.content_column
+                content_column=self.config.content_column,
             )
 
             # Create and add the chunk
-            chunk = ProcessedChunk(
-                id=chunk_id,
-                content=field_content,
-                metadata=metadata
-            )
+            chunk = ProcessedChunk(id=chunk_id, content=field_content, metadata=metadata)
             chunks.append(chunk)
 
         return chunks
 
-    def _create_chunk_from_dict(self,
-                                json_dict: Dict,
-                                doc: Document,
-                                chunk_index: int,
-                                total_chunks: int) -> ProcessedChunk:
+    def _create_chunk_from_dict(
+        self, json_dict: Dict, doc: Document, chunk_index: int, total_chunks: int
+    ) -> ProcessedChunk:
         """Create a chunk from a JSON dictionary"""
         # Ensure we're working with a dictionary
         if isinstance(json_dict, str):
@@ -223,9 +205,12 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             filtered_dict = self._filter_fields(flattened)
             content = self._dict_to_text(filtered_dict)
         else:
-            filtered_dict = {k: v for k, v in json_dict.items()
-                             if (not self.config.include_fields or k in self.config.include_fields)
-                             and k not in self.config.exclude_fields}
+            filtered_dict = {
+                k: v
+                for k, v in json_dict.items()
+                if (not self.config.include_fields or k in self.config.include_fields)
+                and k not in self.config.exclude_fields
+            }
             content = json.dumps(filtered_dict, indent=2)
 
         # Create metadata
@@ -241,22 +226,23 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             start_char=0,
             end_char=len(content),
             provided_id=doc.id,
-            content_column=self.config.content_column
+            content_column=self.config.content_column,
         )
 
-        return ProcessedChunk(
-            id=chunk_id,
-            content=content,
-            metadata=metadata
-        )
+        return ProcessedChunk(id=chunk_id, content=content, metadata=metadata)
 
     def _filter_fields(self, flattened_dict: Dict) -> Dict:
         """Filter fields based on include/exclude configuration"""
         # If include_fields is specified, only keep those fields
         if self.config.include_fields:
-            filtered_dict = {k: v for k, v in flattened_dict.items()
-                             if any(k == field or k.startswith(field + self.config.nested_delimiter)
-                                    for field in self.config.include_fields)}
+            filtered_dict = {
+                k: v
+                for k, v in flattened_dict.items()
+                if any(
+                    k == field or k.startswith(field + self.config.nested_delimiter)
+                    for field in self.config.include_fields
+                )
+            }
         else:
             filtered_dict = flattened_dict.copy()
 
@@ -276,11 +262,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
         return filtered_dict
 
     def _create_chunk_from_primitive(
-            self,
-            value: Any,
-            doc: Document,
-            chunk_index: int = 0,
-            total_chunks: int = 1
+        self, value: Any, doc: Document, chunk_index: int = 0, total_chunks: int = 1
     ) -> ProcessedChunk:
         """Create a chunk from a primitive value"""
         content = str(value)
@@ -300,16 +282,12 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             start_char=0,
             end_char=len(content),
             provided_id=doc.id,
-            content_column=self.config.content_column
+            content_column=self.config.content_column,
         )
 
-        return ProcessedChunk(
-            id=chunk_id,
-            content=content,
-            metadata=metadata
-        )
+        return ProcessedChunk(id=chunk_id, content=content, metadata=metadata)
 
-    def _flatten_dict(self, d: Dict, delimiter: str = '.', prefix: str = '') -> Dict:
+    def _flatten_dict(self, d: Dict, delimiter: str = ".", prefix: str = "") -> Dict:
         """Flatten a nested dictionary structure"""
         result = {}
         for k, v in d.items():
@@ -337,7 +315,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
                     # Format list of dictionaries
                     lines.append(f"{key}:")
                     for i, item in enumerate(value):
-                        lines.append(f"  Item {i+1}:")
+                        lines.append(f"  Item {i + 1}:")
                         for k, v in item.items():
                             lines.append(f"    {k}: {v}")
                 else:
@@ -362,7 +340,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
                 # Format list of dictionaries
                 lines = [f"{key}:"]
                 for i, item in enumerate(value):
-                    lines.append(f"  Item {i+1}:")
+                    lines.append(f"  Item {i + 1}:")
                     for k, v in item.items():
                         lines.append(f"    {k}: {v}")
                 return "\n".join(lines)

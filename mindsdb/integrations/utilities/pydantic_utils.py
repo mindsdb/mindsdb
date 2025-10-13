@@ -80,9 +80,7 @@ def get_dummy_array(field_value):
             pass
         elif items["type"] == "array":  # is it an array?
             array_value = get_dummy_array(items)
-        elif (
-            items["type"] == "object" and "additionalProperties" in items
-        ):  # is it a dict?
+        elif items["type"] == "object" and "additionalProperties" in items:  # is it a dict?
             array_value = get_dummy_dict(items)
         else:  # it is a regular value!
             array_value = get_dummy_value(items)
@@ -111,9 +109,7 @@ def get_any_of(field_value):
             elif any_of["type"] == "array":  # is it an array?
                 out = get_dummy_array(any_of)
                 return out
-            elif (
-                any_of["type"] == "object" and "additionalProperties" in any_of
-            ):  # is it a dict?
+            elif any_of["type"] == "object" and "additionalProperties" in any_of:  # is it a dict?
                 out = get_dummy_dict(any_of)
                 return out
             else:  # it is a regular value!
@@ -129,17 +125,12 @@ def example_generator(pydantic_json_schema):
 
     example_dict = {}
     for schema_name, schema in pydantic_json_schema.items():
-
         for field_name, field_value in schema.items():
             if "type" in field_value:
-
                 if field_value["type"] == "array":  # is it an array?
                     example_dict[field_name] = get_dummy_array(field_value)
 
-                elif (
-                    field_value["type"] == "object"
-                    and "additionalProperties" in field_value
-                ):  # is it a dict?
+                elif field_value["type"] == "object" and "additionalProperties" in field_value:  # is it a dict?
                     example_dict[field_name] = get_dummy_dict(field_value)
 
                 else:  # it is a regular value!
@@ -195,9 +186,7 @@ def format_for_prompt(pydantic_object, ref_skip={}):
     """Format a Pydantic object description for prompting an LLM."""
     schema = {k: v for k, v in pydantic_object.schema().items()}
 
-    search_and_replace_refs(
-        schema=schema["properties"], defs=schema["$defs"], ref_skip=ref_skip, n=0
-    )
+    search_and_replace_refs(schema=schema["properties"], defs=schema["$defs"], ref_skip=ref_skip, n=0)
 
     reduced_schema = remove_extraneous_fields(schema, ref_skip)
 

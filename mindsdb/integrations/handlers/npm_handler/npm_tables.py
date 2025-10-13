@@ -16,7 +16,6 @@ def rename_key(d, new_key, old_key):
 
 
 class CustomAPITable(APITable):
-
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
         self.handler.connect()
@@ -29,7 +28,9 @@ class CustomAPITable(APITable):
 
     def parse_select(self, query: ast.Select, table_name: str):
         select_statement_parser = SELECTQueryParser(query, table_name, self.get_columns())
-        self.selected_columns, self.where_conditions, self.order_by_conditions, self.result_limit = select_statement_parser.parse_query()
+        self.selected_columns, self.where_conditions, self.order_by_conditions, self.result_limit = (
+            select_statement_parser.parse_query()
+        )
 
     def get_package_name(self, query: ast.Select):
         params = conditions_to_filter(query.where)
@@ -72,7 +73,7 @@ class NPMMetadataTable(CustomAPITable):
         connection = self.handler.connection(package_name)
         metadata = connection.get_cols_in(
             ["collected", "metadata"],
-            ["name", "scope", "version", "description", "author", "publisher", "repository", "license", "releases"]
+            ["name", "scope", "version", "description", "author", "publisher", "repository", "license", "releases"],
         )
         metadata["author_email"] = metadata["author"].get("email", "")
         metadata["author"] = metadata["author"].get("name", "")
@@ -84,10 +85,7 @@ class NPMMetadataTable(CustomAPITable):
         rename_key(metadata, "repository_url", "repository")
         metadata["releases"] = sum([x.get("count", 0) for x in metadata.get("releases", [0])])
         rename_key(metadata, "num_releases", "releases")
-        npm_data = connection.get_cols_in(
-            ["collected", "npm"],
-            ["downloads", "starsCount"]
-        )
+        npm_data = connection.get_cols_in(["collected", "npm"], ["downloads", "starsCount"])
         npm_data["downloads"] = sum([x.get("count", 0) for x in npm_data.get("downloads", [0])])
         rename_key(npm_data, "num_downloads", "downloads")
         rename_key(npm_data, "num_stars", "starsCount")
@@ -98,10 +96,7 @@ class NPMMetadataTable(CustomAPITable):
 
 class NPMMaintainersTable(CustomAPITable):
     name: str = "maintainers"
-    columns: List[str] = [
-        "username",
-        "email"
-    ]
+    columns: List[str] = ["username", "email"]
 
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
@@ -110,20 +105,19 @@ class NPMMaintainersTable(CustomAPITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         package_name = self.get_package_name(query)
         connection = self.handler.connection(package_name)
-        metadata = connection.get_cols_in(
-            ["collected", "metadata"],
-            ["maintainers"]
+        metadata = connection.get_cols_in(["collected", "metadata"], ["maintainers"])
+        records = (
+            [{col: x[col] for col in self.columns} for x in metadata["maintainers"]]
+            if metadata.get("maintainers")
+            else [{}]
         )
-        records = [{col: x[col] for col in self.columns} for x in metadata["maintainers"]] if metadata.get("maintainers") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
 
 class NPMKeywordsTable(CustomAPITable):
     name: str = "keywords"
-    columns: List[str] = [
-        "keyword"
-    ]
+    columns: List[str] = ["keyword"]
 
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
@@ -132,10 +126,7 @@ class NPMKeywordsTable(CustomAPITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         package_name = self.get_package_name(query)
         connection = self.handler.connection(package_name)
-        metadata = connection.get_cols_in(
-            ["collected", "metadata"],
-            ["keywords"]
-        )
+        metadata = connection.get_cols_in(["collected", "metadata"], ["keywords"])
         records = [{"keyword": keyword} for keyword in metadata["keywords"]] if metadata.get("keywords") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
@@ -143,10 +134,7 @@ class NPMKeywordsTable(CustomAPITable):
 
 class NPMDependenciesTable(CustomAPITable):
     name: str = "dependencies"
-    columns: List[str] = [
-        "dependency",
-        "version"
-    ]
+    columns: List[str] = ["dependency", "version"]
 
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
@@ -155,21 +143,19 @@ class NPMDependenciesTable(CustomAPITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         package_name = self.get_package_name(query)
         connection = self.handler.connection(package_name)
-        metadata = connection.get_cols_in(
-            ["collected", "metadata"],
-            ["dependencies"]
+        metadata = connection.get_cols_in(["collected", "metadata"], ["dependencies"])
+        records = (
+            [{"dependency": d, "version": v} for d, v in metadata["dependencies"].items()]
+            if metadata.get("dependencies")
+            else [{}]
         )
-        records = [{"dependency": d, "version": v} for d, v in metadata["dependencies"].items()] if metadata.get("dependencies") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
 
 class NPMDevDependenciesTable(CustomAPITable):
     name: str = "dev_dependencies"
-    columns: List[str] = [
-        "dev_dependency",
-        "version"
-    ]
+    columns: List[str] = ["dev_dependency", "version"]
 
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
@@ -178,21 +164,19 @@ class NPMDevDependenciesTable(CustomAPITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         package_name = self.get_package_name(query)
         connection = self.handler.connection(package_name)
-        metadata = connection.get_cols_in(
-            ["collected", "metadata"],
-            ["devDependencies"]
+        metadata = connection.get_cols_in(["collected", "metadata"], ["devDependencies"])
+        records = (
+            [{"dev_dependency": d, "version": v} for d, v in metadata["devDependencies"].items()]
+            if metadata.get("devDependencies")
+            else [{}]
         )
-        records = [{"dev_dependency": d, "version": v} for d, v in metadata["devDependencies"].items()] if metadata.get("devDependencies") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
 
 class NPMOptionalDependenciesTable(CustomAPITable):
     name: str = "optional_dependencies"
-    columns: List[str] = [
-        "optional_dependency",
-        "version"
-    ]
+    columns: List[str] = ["optional_dependency", "version"]
 
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
@@ -201,11 +185,12 @@ class NPMOptionalDependenciesTable(CustomAPITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         package_name = self.get_package_name(query)
         connection = self.handler.connection(package_name)
-        metadata = connection.get_cols_in(
-            ["collected", "metadata"],
-            ["optionalDependencies"]
+        metadata = connection.get_cols_in(["collected", "metadata"], ["optionalDependencies"])
+        records = (
+            [{"optional_dependency": d, "version": v} for d, v in metadata["optionalDependencies"].items()]
+            if metadata.get("optionalDependencies")
+            else [{}]
         )
-        records = [{"optional_dependency": d, "version": v} for d, v in metadata["optionalDependencies"].items()] if metadata.get("optionalDependencies") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
@@ -229,8 +214,7 @@ class NPMGithubStatsTable(CustomAPITable):
         package_name = self.get_package_name(query)
         connection = self.handler.connection(package_name)
         github_data = connection.get_cols_in(
-            ["collected", "github"],
-            ["homepage", "starsCount", "forksCount", "subscribersCount", "issues"]
+            ["collected", "github"], ["homepage", "starsCount", "forksCount", "subscribersCount", "issues"]
         )
         rename_key(github_data, "num_stars", "starsCount")
         rename_key(github_data, "num_forks", "forksCount")

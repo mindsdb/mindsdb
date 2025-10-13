@@ -6,11 +6,8 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 class IgniteHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "host": "127.0.0.1",
-            "port": 10800
-        }
-        cls.handler = IgniteHandler('test_ignite_handler', cls.kwargs)
+        cls.kwargs = {"host": "127.0.0.1", "port": 10800}
+        cls.handler = IgniteHandler("test_ignite_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -25,9 +22,9 @@ class IgniteHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_4_get_columns(self):
-        columns = self.handler.get_columns('City')
+        columns = self.handler.get_columns("City")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

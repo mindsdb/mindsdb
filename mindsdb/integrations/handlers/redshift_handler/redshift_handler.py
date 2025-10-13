@@ -3,10 +3,7 @@ import numpy as np
 import pandas as pd
 
 from mindsdb.utilities import log
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
+from mindsdb.integrations.libs.response import HandlerResponse as Response, RESPONSE_TYPE
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 
 logger = log.getLogger(__name__)
@@ -18,7 +15,7 @@ class RedshiftHandler(PostgresHandler):
     This handler handles connection and execution of the Redshift statements.
     """
 
-    name = 'redshift'
+    name = "redshift"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -45,9 +42,9 @@ class RedshiftHandler(PostgresHandler):
         df = df.replace({np.nan: None})
 
         # Build the query to insert the data
-        columns = ', '.join([f'"{col}"' if ' ' in col else col for col in df.columns])
-        values = ', '.join(['%s' for _ in range(len(df.columns))])
-        query = f'INSERT INTO {table_name} ({columns}) VALUES ({values})'
+        columns = ", ".join([f'"{col}"' if " " in col else col for col in df.columns])
+        values = ", ".join(["%s" for _ in range(len(df.columns))])
+        query = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
 
         with connection.cursor() as cur:
             try:
@@ -58,11 +55,7 @@ class RedshiftHandler(PostgresHandler):
             except Exception as e:
                 logger.error(f"Error inserting data into {table_name}, {e}!")
                 connection.rollback()
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(e)
-                )
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
 
         if need_to_close:
             self.disconnect()

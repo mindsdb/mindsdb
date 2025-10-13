@@ -18,6 +18,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import QueryError
+from mindsdb.utilities.functions import mark_process
 
 logger = log.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class Query(Resource):
 
     @ns_conf.doc("query")
     @api_endpoint_metrics("POST", "/sql/query")
+    @mark_process(name="http_query")
     def post(self):
         query = request.json["query"]
         context = request.json.get("context", {})

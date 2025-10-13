@@ -158,11 +158,7 @@ class Config:
                         "backupCount": 3,
                     },
                 },
-                "resources_log": {
-                    "enabled": False,
-                    "level": "INFO",
-                    "interval": 60
-                }
+                "resources_log": {"enabled": False, "level": "INFO", "interval": 60},
             },
             "gui": {"open_on_start": True, "autoupdate": True},
             "debug": False,

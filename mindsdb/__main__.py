@@ -589,7 +589,7 @@ if __name__ == "__main__":
         threading.Thread(
             target=log.resources_log_thread,
             args=(_stop_event, config["logging"]["resources_log"]["interval"]),
-            name="resources_log"
+            name="resources_log",
         ).start()
 
     ioloop.run_until_complete(gather_apis())

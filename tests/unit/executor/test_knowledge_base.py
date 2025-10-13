@@ -211,9 +211,9 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
+        # metadata as columns
         ret = self.run_sql("""
-                select chunk_content,
-                 metadata->>'specs' as specs, metadata->>'product' as product, metadata->>'url' as url
+                select chunk_content, specs, product, url
                 from kb_review 
                 where _original_doc_id = 123 -- id is id
         """)

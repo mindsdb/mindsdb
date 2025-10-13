@@ -118,9 +118,9 @@ class Query(Resource):
 
         end_time = time.time()
         log_msg = f"SQL processed in {(end_time - start_time):.2f}s ({end_time:.2f}-{start_time:.2f}), result is {query_response['type']}"
-        if query_response['type'] is SQL_RESPONSE_TYPE.TABLE:
+        if query_response["type"] is SQL_RESPONSE_TYPE.TABLE:
             log_msg += f" ({len(query_response['data'])} rows), "
-        elif query_response['type'] is SQL_RESPONSE_TYPE.ERROR:
+        elif query_response["type"] is SQL_RESPONSE_TYPE.ERROR:
             log_msg += f" ({query_response['error_message']}), "
         log_msg += f"used handlers {ctx.used_handlers}"
         logger.info(log_msg)

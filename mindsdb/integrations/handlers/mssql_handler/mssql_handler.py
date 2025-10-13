@@ -9,13 +9,13 @@ from pandas.api import types as pd_types
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
@@ -24,7 +24,7 @@ logger = log.getLogger(__name__)
 
 
 def _map_type(mssql_type_text: str) -> MYSQL_DATA_TYPE:
-    """ Map MSSQL text types names to MySQL types as enum.
+    """Map MSSQL text types names to MySQL types as enum.
 
     Args:
         mssql_type_text (str): The name of the MSSQL type to map.
@@ -34,16 +34,16 @@ def _map_type(mssql_type_text: str) -> MYSQL_DATA_TYPE:
     """
     internal_type_name = mssql_type_text.lower()
     types_map = {
-        ('tinyint', 'smallint', 'int', 'bigint'): MYSQL_DATA_TYPE.INT,
-        ('bit',): MYSQL_DATA_TYPE.BOOL,
-        ('money', 'smallmoney', 'float', 'real'): MYSQL_DATA_TYPE.FLOAT,
-        ('decimal', 'numeric'): MYSQL_DATA_TYPE.DECIMAL,
-        ('date',): MYSQL_DATA_TYPE.DATE,
-        ('time',): MYSQL_DATA_TYPE.TIME,
-        ('datetime2', 'datetimeoffset', 'datetime', 'smalldatetime'): MYSQL_DATA_TYPE.DATETIME,
-        ('varchar', 'nvarchar'): MYSQL_DATA_TYPE.VARCHAR,
-        ('char', 'text', 'nchar', 'ntext'): MYSQL_DATA_TYPE.TEXT,
-        ('binary', 'varbinary', 'image'): MYSQL_DATA_TYPE.BINARY
+        ("tinyint", "smallint", "int", "bigint"): MYSQL_DATA_TYPE.INT,
+        ("bit",): MYSQL_DATA_TYPE.BOOL,
+        ("money", "smallmoney", "float", "real"): MYSQL_DATA_TYPE.FLOAT,
+        ("decimal", "numeric"): MYSQL_DATA_TYPE.DECIMAL,
+        ("date",): MYSQL_DATA_TYPE.DATE,
+        ("time",): MYSQL_DATA_TYPE.TIME,
+        ("datetime2", "datetimeoffset", "datetime", "smalldatetime"): MYSQL_DATA_TYPE.DATETIME,
+        ("varchar", "nvarchar"): MYSQL_DATA_TYPE.VARCHAR,
+        ("char", "text", "nchar", "ntext"): MYSQL_DATA_TYPE.TEXT,
+        ("binary", "varbinary", "image"): MYSQL_DATA_TYPE.BINARY,
     }
 
     for db_types_list, mysql_data_type in types_map.items():
@@ -67,10 +67,7 @@ def _make_table_response(result: list[dict[str, Any]], cursor: pymssql.Cursor) -
     description: list[tuple[Any]] = cursor.description
     mysql_types: list[MYSQL_DATA_TYPE] = []
 
-    data_frame = pd.DataFrame(
-        result,
-        columns=[x[0] for x in cursor.description]
-    )
+    data_frame = pd.DataFrame(result, columns=[x[0] for x in cursor.description])
 
     for column in description:
         column_name = column[0]
@@ -105,7 +102,7 @@ def _make_table_response(result: list[dict[str, Any]], cursor: pymssql.Cursor) -
                         and isinstance(series.dt.tz, datetime.timezone)
                         and series.dt.tz != datetime.timezone.utc
                     ):
-                        series = series.dt.tz_convert('UTC')
+                        series = series.dt.tz_convert("UTC")
                         data_frame[column_name] = series.dt.tz_localize(None)
                     mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
                 else:
@@ -114,26 +111,23 @@ def _make_table_response(result: list[dict[str, Any]], cursor: pymssql.Cursor) -
                 logger.warning(f"Unknown type: {column_type}, use TEXT as fallback.")
                 mysql_types.append(MYSQL_DATA_TYPE.TEXT)
 
-    return Response(
-        RESPONSE_TYPE.TABLE,
-        data_frame=data_frame,
-        mysql_types=mysql_types
-    )
+    return Response(RESPONSE_TYPE.TABLE, data_frame=data_frame, mysql_types=mysql_types)
 
 
-class SqlServerHandler(DatabaseHandler):
+class SqlServerHandler(MetaDatabaseHandler):
     """
     This handler handles connection and execution of the Microsoft SQL Server statements.
     """
-    name = 'mssql'
+
+    name = "mssql"
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.connection_args = kwargs.get('connection_data')
-        self.dialect = 'mssql'
-        self.database = self.connection_args.get('database')
-        self.renderer = SqlalchemyRender('mssql')
+        self.connection_args = kwargs.get("connection_data")
+        self.dialect = "mssql"
+        self.database = self.connection_args.get("database")
+        self.renderer = SqlalchemyRender("mssql")
 
         self.connection = None
         self.is_connected = False
@@ -157,29 +151,29 @@ class SqlServerHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters
-        if not all(key in self.connection_args for key in ['host', 'user', 'password', 'database']):
-            raise ValueError('Required parameters (host, user, password, database) must be provided.')
+        if not all(key in self.connection_args for key in ["host", "user", "password", "database"]):
+            raise ValueError("Required parameters (host, user, password, database) must be provided.")
 
         config = {
-            'host': self.connection_args.get('host'),
-            'user': self.connection_args.get('user'),
-            'password': self.connection_args.get('password'),
-            'database': self.connection_args.get('database')
+            "host": self.connection_args.get("host"),
+            "user": self.connection_args.get("user"),
+            "password": self.connection_args.get("password"),
+            "database": self.connection_args.get("database"),
         }
 
         # Optional connection parameters
-        if 'port' in self.connection_args:
-            config['port'] = self.connection_args.get('port')
+        if "port" in self.connection_args:
+            config["port"] = self.connection_args.get("port")
 
-        if 'server' in self.connection_args:
-            config['server'] = self.connection_args.get('server')
+        if "server" in self.connection_args:
+            config["server"] = self.connection_args.get("server")
 
         try:
             self.connection = pymssql.connect(**config)
             self.is_connected = True
             return self.connection
         except OperationalError as e:
-            logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
+            logger.error(f"Error connecting to Microsoft SQL Server {self.database}, {e}!")
             self.is_connected = False
             raise
 
@@ -208,10 +202,10 @@ class SqlServerHandler(DatabaseHandler):
             connection = self.connect()
             with connection.cursor() as cur:
                 # Execute a simple query to test the connection
-                cur.execute('select 1;')
+                cur.execute("select 1;")
             response.success = True
         except OperationalError as e:
-            logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
+            logger.error(f"Error connecting to Microsoft SQL Server {self.database}, {e}!")
             response.error_message = str(e)
 
         if response.success and need_to_close:
@@ -245,12 +239,8 @@ class SqlServerHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.database}, {e}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.database}, {e}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                 connection.rollback()
 
         if need_to_close is True:
@@ -325,4 +315,219 @@ class SqlServerHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         result.to_columns_table_response(map_type_fn=_map_type)
+        return result
+
+    def meta_get_tables(self, table_names: list[str] | None = None) -> Response:
+        """
+        Retrieves metadata information about the tables in the Microsoft SQL Server database
+        to be stored in the data catalog.
+
+        Args:
+            table_names (list): A list of table names for which to retrieve metadata information.
+
+        Returns:
+            Response: A response object containing the metadata information, formatted as per the `Response` class.
+        """
+        query = f"""
+            SELECT 
+                t.TABLE_NAME as table_name,
+                t.TABLE_SCHEMA as table_schema,
+                t.TABLE_TYPE as table_type,
+                CAST(ep.value AS NVARCHAR(MAX)) as table_description,
+                SUM(p.rows) as row_count
+            FROM {self.database}.INFORMATION_SCHEMA.TABLES t
+            LEFT JOIN {self.database}.sys.tables st 
+                ON t.TABLE_NAME = st.name
+            LEFT JOIN {self.database}.sys.schemas s 
+                ON st.schema_id = s.schema_id AND t.TABLE_SCHEMA = s.name
+            LEFT JOIN {self.database}.sys.extended_properties ep 
+                ON st.object_id = ep.major_id 
+                AND ep.minor_id = 0 
+                AND ep.class = 1
+                AND ep.name = 'MS_Description'
+            LEFT JOIN {self.database}.sys.partitions p 
+                ON st.object_id = p.object_id 
+                AND p.index_id IN (0, 1)
+            WHERE t.TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+                AND t.TABLE_SCHEMA NOT IN ('sys', 'INFORMATION_SCHEMA')
+            GROUP BY t.TABLE_NAME, t.TABLE_SCHEMA, t.TABLE_TYPE, ep.value
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            quoted_names = [f"'{t}'" for t in table_names]
+            query += f" HAVING t.TABLE_NAME IN ({','.join(quoted_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_columns(self, table_names: list[str] | None = None) -> Response:
+        """
+        Retrieves column metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            Response: A response object containing the column metadata.
+        """
+        query = f"""
+            SELECT 
+                c.TABLE_NAME as table_name,
+                c.COLUMN_NAME as column_name,
+                c.DATA_TYPE as data_type,
+                CAST(ep.value AS NVARCHAR(MAX)) as column_description,
+                c.COLUMN_DEFAULT as column_default,
+                CASE WHEN c.IS_NULLABLE = 'YES' THEN 1 ELSE 0 END as is_nullable
+            FROM {self.database}.INFORMATION_SCHEMA.COLUMNS c
+            LEFT JOIN {self.database}.sys.tables st 
+                ON c.TABLE_NAME = st.name
+            LEFT JOIN {self.database}.sys.schemas s 
+                ON st.schema_id = s.schema_id AND c.TABLE_SCHEMA = s.name
+            LEFT JOIN {self.database}.sys.columns sc 
+                ON st.object_id = sc.object_id AND c.COLUMN_NAME = sc.name
+            LEFT JOIN {self.database}.sys.extended_properties ep 
+                ON st.object_id = ep.major_id 
+                AND sc.column_id = ep.minor_id 
+                AND ep.name = 'MS_Description'
+            WHERE c.TABLE_SCHEMA NOT IN ('sys', 'INFORMATION_SCHEMA')
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            quoted_names = [f"'{t}'" for t in table_names]
+            query += f" AND c.TABLE_NAME IN ({','.join(quoted_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_column_statistics(self, table_names: list[str] | None = None) -> Response:
+        """
+        Retrieves column statistics (e.g., null percentage, distinct value count, min/max values)
+        for the specified tables or all tables if no list is provided.
+
+        Note: Uses SQL Server's sys.dm_db_stats_properties and sys.dm_db_stats_histogram
+        (similar to PostgreSQL's pg_stats). Statistics are only available for columns that
+        have statistics objects created by SQL Server (typically indexed columns or columns
+        used in queries after AUTO_CREATE_STATISTICS).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column statistics.
+
+        Returns:
+            Response: A response object containing the column statistics.
+        """
+        table_filter = ""
+        if table_names is not None and len(table_names) > 0:
+            quoted_names = [f"'{t}'" for t in table_names]
+            table_filter = f" AND t.name IN ({','.join(quoted_names)})"
+
+        # Using OUTER APPLY to handle table-valued functions properly
+        # This is equivalent to PostgreSQL's pg_stats view approach
+        # Includes all statistics: auto-created, user-created, and index-based
+        # dm_db_stats_histogram columns: range_high_key, range_rows, equal_rows,
+        #                                 distinct_range_rows, average_range_rows
+        query = f"""
+            SELECT DISTINCT
+                t.name AS TABLE_NAME,
+                c.name AS COLUMN_NAME,
+                CAST(NULL AS DECIMAL(10,2)) AS NULL_PERCENTAGE,
+                CAST(h.distinct_count AS BIGINT) AS DISTINCT_VALUES_COUNT,
+                NULL AS MOST_COMMON_VALUES,
+                NULL AS MOST_COMMON_FREQUENCIES,
+                CAST(h.min_value AS NVARCHAR(MAX)) AS MINIMUM_VALUE,
+                CAST(h.max_value AS NVARCHAR(MAX)) AS MAXIMUM_VALUE
+            FROM {self.database}.sys.tables t
+            INNER JOIN {self.database}.sys.schemas s 
+                ON t.schema_id = s.schema_id
+            INNER JOIN {self.database}.sys.columns c 
+                ON t.object_id = c.object_id
+            LEFT JOIN {self.database}.sys.stats st
+                ON st.object_id = t.object_id
+            LEFT JOIN {self.database}.sys.stats_columns sc
+                ON sc.object_id = st.object_id 
+                AND sc.stats_id = st.stats_id
+                AND sc.column_id = c.column_id
+                AND sc.stats_column_id = 1  -- Only leading column in multi-column stats
+            OUTER APPLY (
+                SELECT 
+                    MIN(CAST(range_high_key AS NVARCHAR(MAX))) AS min_value,
+                    MAX(CAST(range_high_key AS NVARCHAR(MAX))) AS max_value,
+                    SUM(CAST(distinct_range_rows AS BIGINT)) + COUNT(*) AS distinct_count
+                FROM {self.database}.sys.dm_db_stats_histogram(st.object_id, st.stats_id)
+                WHERE st.object_id IS NOT NULL
+            ) h
+            WHERE s.name NOT IN ('sys', 'INFORMATION_SCHEMA')
+            {table_filter}
+            ORDER BY t.name, c.name
+        """
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_primary_keys(self, table_names: list[str] | None = None) -> Response:
+        """
+        Retrieves primary key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve primary key information.
+
+        Returns:
+            Response: A response object containing the primary key information.
+        """
+        query = f"""
+            SELECT 
+                tc.TABLE_NAME as table_name,
+                kcu.COLUMN_NAME as column_name,
+                kcu.ORDINAL_POSITION as ordinal_position,
+                tc.CONSTRAINT_NAME as constraint_name
+            FROM {self.database}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+            INNER JOIN {self.database}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+                ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+                AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA
+                AND tc.TABLE_NAME = kcu.TABLE_NAME
+            WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            quoted_names = [f"'{t}'" for t in table_names]
+            query += f" AND tc.TABLE_NAME IN ({','.join(quoted_names)})"
+
+        query += " ORDER BY tc.TABLE_NAME, kcu.ORDINAL_POSITION"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_foreign_keys(self, table_names: list[str] | None = None) -> Response:
+        """
+        Retrieves foreign key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve foreign key information.
+
+        Returns:
+            Response: A response object containing the foreign key information.
+        """
+        query = f"""
+            SELECT 
+                OBJECT_NAME(fk.referenced_object_id) as parent_table_name,
+                COL_NAME(fkc.referenced_object_id, fkc.referenced_column_id) as parent_column_name,
+                OBJECT_NAME(fk.parent_object_id) as child_table_name,
+                COL_NAME(fkc.parent_object_id, fkc.parent_column_id) as child_column_name,
+                fk.name as constraint_name
+            FROM {self.database}.sys.foreign_keys fk
+            INNER JOIN {self.database}.sys.foreign_key_columns fkc 
+                ON fk.object_id = fkc.constraint_object_id
+            INNER JOIN {self.database}.sys.tables t 
+                ON fk.parent_object_id = t.object_id
+            INNER JOIN {self.database}.sys.schemas s 
+                ON t.schema_id = s.schema_id
+            WHERE s.name NOT IN ('sys', 'INFORMATION_SCHEMA')
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            quoted_names = [f"'{t}'" for t in table_names]
+            query += f" AND OBJECT_NAME(fk.parent_object_id) IN ({','.join(quoted_names)})"
+
+        query += " ORDER BY child_table_name, constraint_name"
+
+        result = self.native_query(query)
         return result

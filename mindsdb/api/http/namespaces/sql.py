@@ -1,3 +1,4 @@
+import time
 from http import HTTPStatus
 
 from flask import request
@@ -33,6 +34,7 @@ class Query(Resource):
     @api_endpoint_metrics("POST", "/sql/query")
     @mark_process(name="http_query")
     def post(self):
+        start_time = time.time()
         query = request.json["query"]
         context = request.json.get("context", {})
 
@@ -113,6 +115,15 @@ class Query(Resource):
             error_text=error_text,
             traceback=error_traceback,
         )
+
+        end_time = time.time()
+        log_msg = f"SQL processed in {(end_time - start_time):.2f}s ({end_time:.2f}-{start_time:.2f}), result is {query_response['type']}"
+        if query_response['type'] is SQL_RESPONSE_TYPE.TABLE:
+            log_msg += f" ({len(query_response['data'])} rows), "
+        elif query_response['type'] is SQL_RESPONSE_TYPE.ERROR:
+            log_msg += f" ({query_response['error_message']}), "
+        log_msg += f"used handlers {ctx.used_handlers}"
+        logger.info(log_msg)
 
         return query_response, 200
 

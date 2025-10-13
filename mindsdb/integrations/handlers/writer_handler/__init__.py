@@ -15,16 +15,7 @@ title = "Writer"
 name = "writer"
 type = HANDLER_TYPE.ML
 permanent = False
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
 
 
-__all__ = [
-    "Handler",
-    "version",
-    "name",
-    "type",
-    "title",
-    "description",
-    "import_error",
-    "icon_path"
-]
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

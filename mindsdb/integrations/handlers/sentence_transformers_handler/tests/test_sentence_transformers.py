@@ -1,4 +1,3 @@
-
 import time
 
 import pandas as pd
@@ -8,7 +7,6 @@ from tests.unit.executor_test_base import BaseExecutorTest
 
 
 class TestSentenceTransformers(BaseExecutorTest):
-
     def wait_predictor(self, project, name):
         # wait
         done = False

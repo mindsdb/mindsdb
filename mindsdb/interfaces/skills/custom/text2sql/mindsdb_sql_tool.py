@@ -19,13 +19,13 @@ class MindsDBSQLParserTool(BaseTool):
 
     def _clean_query(self, query: str) -> str:
         # Sometimes LLM can input markdown into query tools.
-        cmd = re.sub(r'```(sql)?', '', query)
+        cmd = re.sub(r"```(sql)?", "", query)
         return cmd
 
     def _query_options(self, query):
         yield query
-        if '\\_' in query:
-            yield query.replace('\\_', '_')
+        if "\\_" in query:
+            yield query.replace("\\_", "_")
 
     def _run(self, query: str):
         """Validate the SQL query."""

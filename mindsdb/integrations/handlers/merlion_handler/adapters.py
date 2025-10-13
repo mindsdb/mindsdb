@@ -87,8 +87,9 @@ class DefaultForecasterAdapter(BaseMerlionForecastAdapter):
     #               merlion.models.defaults.DefaultForecaster
     def __init__(self, **kwargs):
         super(DefaultForecasterAdapter, self).__init__(**kwargs)
-        self.model = DefaultForecaster(DefaultForecasterConfig(max_forecast_steps=self.max_forecast_steps,
-                                                               target_seq_index=self.TARGET_SEQ_INDEX))
+        self.model = DefaultForecaster(
+            DefaultForecasterConfig(max_forecast_steps=self.max_forecast_steps, target_seq_index=self.TARGET_SEQ_INDEX)
+        )
 
 
 class SarimaForecasterAdapter(BaseMerlionForecastAdapter):
@@ -97,8 +98,9 @@ class SarimaForecasterAdapter(BaseMerlionForecastAdapter):
     #               module-merlion.models.automl.autosarima
     def __init__(self, **kwargs):
         super(SarimaForecasterAdapter, self).__init__(**kwargs)
-        config = AutoSarimaConfig(auto_pqPQ=True, auto_d=True, auto_D=True, auto_seasonality=True,
-                                  approximation=True, maxiter=5)
+        config = AutoSarimaConfig(
+            auto_pqPQ=True, auto_d=True, auto_D=True, auto_seasonality=True, approximation=True, maxiter=5
+        )
         self.model = AutoSarima(config)
 
 
@@ -117,9 +119,13 @@ class MSESForecasterAdapter(BaseMerlionForecastAdapter):
     #               merlion.models.forecast.smoother.MSES
     def __init__(self, **kwargs):
         super(MSESForecasterAdapter, self).__init__(**kwargs)
-        self.model = MSES(MSESConfig(max_forecast_steps=self.max_forecast_steps,
-                                     target_seq_index=self.TARGET_SEQ_INDEX,
-                                     max_backstep=self.max_backstep))
+        self.model = MSES(
+            MSESConfig(
+                max_forecast_steps=self.max_forecast_steps,
+                target_seq_index=self.TARGET_SEQ_INDEX,
+                max_backstep=self.max_backstep,
+            )
+        )
 
 
 class BaseMerlineDetectorAdapter(BaseMerlionForecastAdapter):

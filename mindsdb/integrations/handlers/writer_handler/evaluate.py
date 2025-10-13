@@ -24,7 +24,6 @@ logger = log.getLogger(__name__)
 
 class WriterEvaluator:
     def __init__(self, args: WriterHandlerParameters, df: pd.DataFrame, rag):
-
         self.args = args
         self.df = df
         self.rag = rag(self.args)
@@ -58,9 +57,7 @@ class WriterEvaluator:
         for metric in self.retrieval_metrics:
             col_name = f"{prefix}{metric}"
             if metric == "cosine_similarity":
-                df[col_name] = self.metric_map[metric](
-                    context_embeddings, retrieved_context_embeddings
-                )
+                df[col_name] = self.metric_map[metric](context_embeddings, retrieved_context_embeddings)
             elif metric == "accuracy":
                 col_name = f"{prefix}match"
                 df[col_name] = self.get_matches(
@@ -87,7 +84,6 @@ class WriterEvaluator:
         for metric in self.generator_metrics:
             col_name = f"{prefix}{metric}"
             if metric == "cosine_similarity":
-
                 df[col_name] = self.calculate_cosine_similarities(
                     generated_answer_embeddings, reference_answer_embeddings
                 )
@@ -100,9 +96,7 @@ class WriterEvaluator:
                 )
             elif metric == "rouge":
                 df[col_name] = df.apply(
-                    lambda x: self.metric_map[metric](
-                        x["generated_answers"], x["reference_answers"]
-                    ),
+                    lambda x: self.metric_map[metric](x["generated_answers"], x["reference_answers"]),
                     axis=1,
                 )
                 self.extract_rogue_scores(df, rogue_scores_col=col_name)
@@ -126,10 +120,7 @@ class WriterEvaluator:
                 raise ValueError(f"metric {metric} not supported")
 
             if metric != "rouge":
-
-                self.store_mean_metric(
-                    col_name=col_name, mean_metric=df[col_name].mean()
-                )
+                self.store_mean_metric(col_name=col_name, mean_metric=df[col_name].mean())
 
         return df
 
@@ -151,10 +142,7 @@ class WriterEvaluator:
         """Create prompt for evaluating RAG"""
 
         if self.args.summarize_context:
-
-            return self.rag.summarize_context(
-                question=question, combined_context=context
-            )
+            return self.rag.summarize_context(question=question, combined_context=context)
 
         return self.rag.prompt_template.format(question=question, context=context)
 
@@ -170,7 +158,6 @@ class WriterEvaluator:
 
         results = []
         for i, item in enumerate(responses):
-
             text = self.rag.extract_generated_text(item)
 
             results.append(text)
@@ -195,9 +182,7 @@ class WriterEvaluator:
         return extracted_answers
 
     @staticmethod
-    def _calculate_cosine_similarity(
-        gt_embeddings: List[float], test_embeddings: List[float]
-    ) -> float:
+    def _calculate_cosine_similarity(gt_embeddings: List[float], test_embeddings: List[float]) -> float:
         """Calculate cosine similarity between a context and retrieved context embedding"""
         cosine_sim = 1 - distance.cosine(gt_embeddings, test_embeddings)
 
@@ -211,21 +196,15 @@ class WriterEvaluator:
         """Calculate cosine similarity for each ground truth and retrieved/generated pair for a given question"""
 
         return [
-            self._calculate_cosine_similarity(
-                context_embedding, retrieved_context_embedding
-            )
-            for context_embedding, retrieved_context_embedding in zip(
-                gt_embeddings, test_embeddings
-            )
+            self._calculate_cosine_similarity(context_embedding, retrieved_context_embedding)
+            for context_embedding, retrieved_context_embedding in zip(gt_embeddings, test_embeddings)
         ]
 
     @staticmethod
     def check_match(cosine_similarity: float, threshold: float = 0.7) -> int:
         return int(cosine_similarity >= threshold)
 
-    def get_matches(
-        self, gt_embeddings, test_embeddings, threshold: float = 0.7
-    ) -> List[int]:
+    def get_matches(self, gt_embeddings, test_embeddings, threshold: float = 0.7) -> List[int]:
         """Get matches for each ground truth and retrieved/generated pair for a given question"""
 
         cosine_similarities = self.calculate_cosine_similarities(
@@ -233,8 +212,7 @@ class WriterEvaluator:
         )
 
         matches = [
-            self.check_match(cosine_similarity, threshold=threshold)
-            for cosine_similarity in cosine_similarities
+            self.check_match(cosine_similarity, threshold=threshold) for cosine_similarity in cosine_similarities
         ]
 
         return matches
@@ -246,14 +224,11 @@ class WriterEvaluator:
 
     @staticmethod
     def calculate_rouge(generated: str, reference: str) -> dict:
-
         scorer = rouge_scorer.RougeScorer(["rouge1", "rougeL"], use_stemmer=True)
         score = scorer.score(generated, reference)
         return score
 
-    def extract_rogue_scores(
-        self, df: pd.DataFrame, rogue_scores_col: str = "rouge_scores"
-    ):
+    def extract_rogue_scores(self, df: pd.DataFrame, rogue_scores_col: str = "rouge_scores"):
         """Extract rouge scores from dataframe"""
         rouge_metrics = ["rouge1", "rougeL"]
         supported_metrics = ["precision", "recall", "fmeasure"]
@@ -262,15 +237,11 @@ class WriterEvaluator:
             for supported_metric in supported_metrics:
                 col_name = f"{rouge_metric}_{supported_metric}"
                 df[col_name] = df.apply(
-                    lambda x: getattr(
-                        x[rogue_scores_col][rouge_metric], supported_metric
-                    ),
+                    lambda x: getattr(x[rogue_scores_col][rouge_metric], supported_metric),
                     axis=1,
                 )
 
-                self.store_mean_metric(
-                    col_name=col_name, mean_metric=df[col_name].mean()
-                )
+                self.store_mean_metric(col_name=col_name, mean_metric=df[col_name].mean())
 
     def store_mean_metric(self, col_name: str, mean_metric: float):
         """Calculate mean metric for each metric"""
@@ -278,15 +249,11 @@ class WriterEvaluator:
         self.mean_evaluation_metrics[f"mean_{col_name}"].append(mean_metric)
 
     @staticmethod
-    def calculate_bleu(
-        generated_tokens: List[str], reference_tokens: List[str]
-    ) -> float:
+    def calculate_bleu(generated_tokens: List[str], reference_tokens: List[str]) -> float:
         return sentence_bleu([reference_tokens], generated_tokens)
 
     @staticmethod
-    def calculate_meteor(
-        generated_tokens: List[str], reference_tokens: List[str]
-    ) -> float:
+    def calculate_meteor(generated_tokens: List[str], reference_tokens: List[str]) -> float:
         return meteor_score([reference_tokens], generated_tokens)
 
     def evaluate_retrieval(self):
@@ -296,21 +263,15 @@ class WriterEvaluator:
 
         # get question answering results
         df["retrieved_context"] = df.apply(
-            lambda x: self.extract_returned_text(
-                self.query_vector_store(x["question"])
-            ),
+            lambda x: self.extract_returned_text(self.query_vector_store(x["question"])),
             axis=1,
         )
 
         # embed context and retrieved context
         context_embeddings = self.embed_texts(df["context"].tolist())
-        retrieved_context_embeddings = self.embed_texts(
-            df["retrieved_context"].tolist()
-        )
+        retrieved_context_embeddings = self.embed_texts(df["retrieved_context"].tolist())
 
-        df = self.calculate_retrieval_metrics(
-            df, context_embeddings, retrieved_context_embeddings
-        )
+        df = self.calculate_retrieval_metrics(df, context_embeddings, retrieved_context_embeddings)
 
         return df
 
@@ -328,21 +289,15 @@ class WriterEvaluator:
         df["reference_answers"] = reference_answers
 
         # tokenize generated and reference answers
-        df["tokenized_generated_answers"] = df.apply(
-            lambda x: self._tokenize(x["generated_answers"]), axis=1
-        )
-        df["tokenized_reference_answers"] = df.apply(
-            lambda x: self._tokenize(x["reference_answers"]), axis=1
-        )
+        df["tokenized_generated_answers"] = df.apply(lambda x: self._tokenize(x["generated_answers"]), axis=1)
+        df["tokenized_reference_answers"] = df.apply(lambda x: self._tokenize(x["reference_answers"]), axis=1)
 
         # embed generated answers and reference answers
         generated_answer_embeddings = self.embed_texts(generated_answers)
 
         reference_answer_embeddings = self.embed_texts(reference_answers)
 
-        df = self.calculate_generation_metrics(
-            df, generated_answer_embeddings, reference_answer_embeddings
-        )
+        df = self.calculate_generation_metrics(df, generated_answer_embeddings, reference_answer_embeddings)
 
         return df
 

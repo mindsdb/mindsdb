@@ -11,7 +11,6 @@ from .base import BaseStepCall
 
 
 class LimitOffsetStepCall(BaseStepCall):
-
     bind = LimitOffsetStep
 
     def call(self, step):
@@ -22,9 +21,9 @@ class LimitOffsetStepCall(BaseStepCall):
         step_data2 = ResultSet(columns=list(step_data.columns))
 
         if isinstance(step.offset, int):
-            df = df[step.offset:]
+            df = df[step.offset :]
         if isinstance(step.limit, int):
-            df = df[:step.limit]
+            df = df[: step.limit]
 
         step_data2.add_raw_df(df)
 
@@ -32,10 +31,9 @@ class LimitOffsetStepCall(BaseStepCall):
 
 
 class DataStepCall(BaseStepCall):
-
     bind = DataStep
 
     def call(self, step):
         # create resultset
         df = pd.DataFrame(step.data)
-        return ResultSet.from_df(df, database='', table_name='')
+        return ResultSet.from_df(df, database="", table_name="")

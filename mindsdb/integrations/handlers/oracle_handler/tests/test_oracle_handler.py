@@ -6,14 +6,8 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 class OracleHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "host": "127.0.0.1",
-            "port": "1521",
-            "user": "admin",
-            "password": "password",
-            "sid": "ORCL"
-        }
-        cls.handler = OracleHandler('test_oracle_handler', **cls.kwargs)
+        cls.kwargs = {"host": "127.0.0.1", "port": "1521", "user": "admin", "password": "password", "sid": "ORCL"}
+        cls.handler = OracleHandler("test_oracle_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -28,5 +22,5 @@ class OracleHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_4_get_columns(self):
-        columns = self.handler.get_columns('customers')
+        columns = self.handler.get_columns("customers")
         assert columns.type is not RESPONSE_TYPE.ERROR

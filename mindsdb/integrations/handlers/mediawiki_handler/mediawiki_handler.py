@@ -17,7 +17,7 @@ class MediaWikiHandler(APIHandler):
     The MediaWiki handler implementation.
     """
 
-    name = 'mediawiki'
+    name = "mediawiki"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -66,7 +66,7 @@ class MediaWikiHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error('Error connecting to MediaWiki!')
+            logger.error("Error connecting to MediaWiki!")
             response.error_message = str(e)
 
         self.is_connected = response.success

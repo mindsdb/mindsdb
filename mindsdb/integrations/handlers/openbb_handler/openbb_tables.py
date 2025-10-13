@@ -73,8 +73,12 @@ class OpenBBtable(APITable):
             # Ensure that the cmd provided is a valid OpenBB command
             available_cmds = [f"obb{cmd}" for cmd in list(self.handler.obb.coverage.commands.keys())]
             if cmd not in available_cmds:
-                logger.error(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
-                raise Exception(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
+                logger.error(
+                    f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}"
+                )
+                raise Exception(
+                    f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}"
+                )
 
             args = ""
             # If there are parameters create arguments as a string
@@ -109,16 +113,12 @@ class OpenBBtable(APITable):
         return data
 
 
-def create_table_class(
-    params_metadata,
-    response_metadata,
-    obb_function,
-    func_docs="",
-    provider=None
-):
+def create_table_class(params_metadata, response_metadata, obb_function, func_docs="", provider=None):
     """Creates a table class for the given OpenBB Platform function."""
-    mandatory_fields = [key for key in params_metadata['fields'].keys() if params_metadata['fields'][key].is_required() is True]
-    response_columns = list(response_metadata['fields'].keys())
+    mandatory_fields = [
+        key for key in params_metadata["fields"].keys() if params_metadata["fields"][key].is_required() is True
+    ]
+    response_columns = list(response_metadata["fields"].keys())
 
     class AnyTable(APITable):
         def _get_params_from_conditions(self, conditions: List) -> Dict:
@@ -152,44 +152,43 @@ def create_table_class(
 
             params = {}
             if provider is not None:
-                params['provider'] = provider
+                params["provider"] = provider
 
             filters = []
             mandatory_args_set = {key: False for key in mandatory_fields}
             columns_to_add = {}
-            strict_filter = arg_params.get('strict_filter', False)
+            strict_filter = arg_params.get("strict_filter", False)
 
             for op, arg1, arg2 in conditions:
-                if op == 'or':
-                    raise NotImplementedError('OR is not supported')
+                if op == "or":
+                    raise NotImplementedError("OR is not supported")
 
                 if arg1 in mandatory_fields:
                     mandatory_args_set[arg1] = True
 
-                if ('start_' + arg1 in params_metadata['fields'] and arg1 in response_columns and arg2 is not None):
-
-                    if response_metadata['fields'][arg1].annotation == 'datetime':
+                if "start_" + arg1 in params_metadata["fields"] and arg1 in response_columns and arg2 is not None:
+                    if response_metadata["fields"][arg1].annotation == "datetime":
                         date = parse_local_date(arg2)
-                        interval = arg_params.get('interval', '1d')
+                        interval = arg_params.get("interval", "1d")
 
-                        if op == '>':
-                            params['start_' + arg1] = date.strftime('%Y-%m-%d')
-                        elif op == '<':
-                            params['end_' + arg1] = date.strftime('%Y-%m-%d')
-                        elif op == '>=':
+                        if op == ">":
+                            params["start_" + arg1] = date.strftime("%Y-%m-%d")
+                        elif op == "<":
+                            params["end_" + arg1] = date.strftime("%Y-%m-%d")
+                        elif op == ">=":
                             date = date - pd.Timedelta(interval)
-                            params['start_' + arg1] = date.strftime('%Y-%m-%d')
-                        elif op == '<=':
+                            params["start_" + arg1] = date.strftime("%Y-%m-%d")
+                        elif op == "<=":
                             date = date + pd.Timedelta(interval)
-                            params['end_' + arg1] = date.strftime('%Y-%m-%d')
-                        elif op == '=':
+                            params["end_" + arg1] = date.strftime("%Y-%m-%d")
+                        elif op == "=":
                             date = date - pd.Timedelta(interval)
-                            params['start_' + arg1] = date.strftime('%Y-%m-%d')
+                            params["start_" + arg1] = date.strftime("%Y-%m-%d")
                             date = date + pd.Timedelta(interval)
-                            params['end_' + arg1] = date.strftime('%Y-%m-%d')
+                            params["end_" + arg1] = date.strftime("%Y-%m-%d")
 
-                elif arg1 in params_metadata['fields'] or not strict_filter:
-                    if op == '=':
+                elif arg1 in params_metadata["fields"] or not strict_filter:
+                    if op == "=":
                         params[arg1] = arg2
                         columns_to_add[arg1] = arg2
 
@@ -201,9 +200,9 @@ def create_table_class(
 
                 # Create docstring for the current function
                 text += "\nDocstring:"
-                for param in params_metadata['fields']:
-                    field = params_metadata['fields'][param]
-                    if getattr(field.annotation, '__origin__', None) is Union:
+                for param in params_metadata["fields"]:
+                    field = params_metadata["fields"][param]
+                    if getattr(field.annotation, "__origin__", None) is Union:
                         annotation = f"Union[{', '.join(arg.__name__ for arg in field.annotation.__args__)}]"
                     else:
                         annotation = field.annotation.__name__
@@ -215,8 +214,8 @@ def create_table_class(
 
             try:
                 # Handle limit keyword correctly since it can't be parsed as a WHERE arg (i.e. WHERE limit = 50)
-                if query.limit is not None and 'limit' in params_metadata['fields']:
-                    params['limit'] = query.limit.value
+                if query.limit is not None and "limit" in params_metadata["fields"]:
+                    params["limit"] = query.limit.value
                 obbject = obb_function(**params)
 
                 # Extract data in dataframe format
@@ -273,13 +272,13 @@ def create_table_class(
                 return result
 
             except AttributeError as e:
-                logger.info(f'Encountered error while executing OpenBB select: {str(e)}')
+                logger.info(f"Encountered error while executing OpenBB select: {str(e)}")
 
                 # Create docstring for the current function
                 text = "Docstring:"
-                for param in params_metadata['fields']:
-                    field = params_metadata['fields'][param]
-                    if getattr(field.annotation, '__origin__', None) is Union:
+                for param in params_metadata["fields"]:
+                    field = params_metadata["fields"][param]
+                    if getattr(field.annotation, "__origin__", None) is Union:
                         annotation = f"Union[{', '.join(arg.__name__ for arg in field.annotation.__args__)}]"
                     else:
                         annotation = field.annotation.__name__
@@ -290,13 +289,13 @@ def create_table_class(
                 raise Exception(f"{str(e)}\n\n{text}.") from e
 
             except ValidationError as e:
-                logger.info(f'Encountered error while executing OpenBB select: {str(e)}')
+                logger.info(f"Encountered error while executing OpenBB select: {str(e)}")
 
                 # Create docstring for the current function
                 text = "Docstring:"
-                for param in params_metadata['fields']:
-                    field = params_metadata['fields'][param]
-                    if getattr(field.annotation, '__origin__', None) is Union:
+                for param in params_metadata["fields"]:
+                    field = params_metadata["fields"][param]
+                    if getattr(field.annotation, "__origin__", None) is Union:
                         annotation = f"Union[{', '.join(arg.__name__ for arg in field.annotation.__args__)}]"
                     else:
                         annotation = field.annotation.__name__
@@ -307,21 +306,25 @@ def create_table_class(
                 raise Exception(f"{str(e)}\n\n{text}.") from e
 
             except Exception as e:
-                logger.info(f'Encountered error while executing OpenBB select: {str(e)}')
+                logger.info(f"Encountered error while executing OpenBB select: {str(e)}")
 
                 #  TODO: This one doesn't work because it's taken care of from MindsDB side
                 if "Table not found" in str(e):
-                    raise Exception(f"{str(e)}\n\nCheck if the method exists here: {func_docs}.\n\n  -  If it doesn't you may need to look for the parent module to check whether there's a typo in the naming.\n- If it does you may need to install a new extension to the OpenBB Platform, and you can see what is available at https://my.openbb.co/app/platform/extensions.") from e
+                    raise Exception(
+                        f"{str(e)}\n\nCheck if the method exists here: {func_docs}.\n\n  -  If it doesn't you may need to look for the parent module to check whether there's a typo in the naming.\n- If it does you may need to install a new extension to the OpenBB Platform, and you can see what is available at https://my.openbb.co/app/platform/extensions."
+                    ) from e
 
                 if "Missing credential" in str(e):
-                    raise Exception(f"{str(e)}\n\nGo to https://my.openbb.co/app/platform/api-keys to set this API key, for free.") from e
+                    raise Exception(
+                        f"{str(e)}\n\nGo to https://my.openbb.co/app/platform/api-keys to set this API key, for free."
+                    ) from e
 
                 # Catch all other errors
                 # Create docstring for the current function
                 text = "Docstring:"
-                for param in params_metadata['fields']:
-                    field = params_metadata['fields'][param]
-                    if getattr(field.annotation, '__origin__', None) is Union:
+                for param in params_metadata["fields"]:
+                    field = params_metadata["fields"][param]
+                    if getattr(field.annotation, "__origin__", None) is Union:
                         annotation = f"Union[{', '.join(arg.__name__ for arg in field.annotation.__args__)}]"
                     else:
                         annotation = field.annotation.__name__

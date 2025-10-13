@@ -64,11 +64,8 @@ class DatabricksHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters.
-        if not all(
-            key in self.connection_data
-            for key in ["server_hostname", "http_path", "access_token"]
-        ):
-            raise ValueError('Required parameters (server_hostname, http_path, access_token) must be provided.')
+        if not all(key in self.connection_data for key in ["server_hostname", "http_path", "access_token"]):
+            raise ValueError("Required parameters (server_hostname, http_path, access_token) must be provided.")
 
         config = {
             "server_hostname": self.connection_data["server_hostname"],
@@ -88,19 +85,17 @@ class DatabricksHandler(DatabaseHandler):
                 config[parameter] = self.connection_data[parameter]
 
         try:
-            self.connection = connect(
-                **config
-            )
+            self.connection = connect(**config)
             self.is_connected = True
             return self.connection
         except RequestError as request_error:
-            logger.error(f'Request error when connecting to Databricks: {request_error}')
+            logger.error(f"Request error when connecting to Databricks: {request_error}")
             raise
         except RuntimeError as runtime_error:
-            logger.error(f'Runtime error when connecting to Databricks: {runtime_error}')
+            logger.error(f"Runtime error when connecting to Databricks: {runtime_error}")
             raise
         except Exception as unknown_error:
-            logger.error(f'Unknown error when connecting to Databricks: {unknown_error}')
+            logger.error(f"Unknown error when connecting to Databricks: {unknown_error}")
             raise
 
     def disconnect(self):
@@ -129,7 +124,7 @@ class DatabricksHandler(DatabaseHandler):
 
             # Execute a simple query to check the connection.
             query = "SELECT 1 FROM information_schema.schemata"
-            if 'schema' in self.connection_data:
+            if "schema" in self.connection_data:
                 query += f" WHERE schema_name = '{self.connection_data['schema']}'"
 
             with connection.cursor() as cursor:
@@ -138,14 +133,14 @@ class DatabricksHandler(DatabaseHandler):
 
             # If the query does not return a result, the schema does not exist.
             if not result:
-                raise ValueError(f'The schema {self.connection_data["schema"]} does not exist!')
+                raise ValueError(f"The schema {self.connection_data['schema']} does not exist!")
 
             response.success = True
         except (ValueError, RequestError, RuntimeError, ServerOperationError) as known_error:
-            logger.error(f'Connection check to Databricks failed, {known_error}!')
+            logger.error(f"Connection check to Databricks failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to Databricks failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to Databricks failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
@@ -176,30 +171,18 @@ class DatabricksHandler(DatabaseHandler):
                 if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result, columns=[x[0] for x in cursor.description]
-                        ),
+                        data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description]),
                     )
 
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except ServerOperationError as server_error:
-                logger.error(
-                    f'Server error running query: {query} on Databricks, {server_error}!'
-                )
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(server_error)
-                )
+                logger.error(f"Server error running query: {query} on Databricks, {server_error}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(server_error))
             except Exception as unknown_error:
-                logger.error(
-                    f'Unknown error running query: {query} on Databricks, {unknown_error}!'
-                )
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(unknown_error)
-                )
+                logger.error(f"Unknown error running query: {query} on Databricks, {unknown_error}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(unknown_error))
 
         if need_to_close is True:
             self.disconnect()

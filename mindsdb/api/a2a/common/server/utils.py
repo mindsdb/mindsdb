@@ -6,9 +6,7 @@ from ...common.types import (
 from typing import List
 
 
-def are_modalities_compatible(
-    server_output_modes: List[str], client_output_modes: List[str]
-):
+def are_modalities_compatible(server_output_modes: List[str], client_output_modes: List[str]):
     """Modalities are compatible if they are both non-empty
     and there is at least one common element."""
     if client_output_modes is None or len(client_output_modes) == 0:

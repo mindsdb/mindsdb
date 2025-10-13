@@ -11,7 +11,6 @@ logger = log.getLogger(__name__)
 
 
 class FinancialModelingHandler(APIHandler):
-
     name = "financial_modeling_prep"
 
     def __init__(self, name, connection_data: dict, **kwargs):
@@ -23,12 +22,12 @@ class FinancialModelingHandler(APIHandler):
             raise Exception(
                 "FINANCIAL_MODELING engine requires an API key. Retrieve an API key from https://site.financialmodelingprep.com/developer. See financial_modeling_prep_handler/README.MD on how to include API key in query."
             )
-        self.api_key = connection_data['api_key']
+        self.api_key = connection_data["api_key"]
         self.client = None
         self.is_connected = False
 
         historical_prices = HistoricalPriceTable(self)
-        self._register_table('historical_prices', historical_prices)
+        self._register_table("historical_prices", historical_prices)
 
     def connect(self):
         self.is_connected = True
@@ -36,16 +35,12 @@ class FinancialModelingHandler(APIHandler):
         return base_url
 
     def check_connection(self) -> StatusResponse:
-        """ Check connection to the handler
+        """Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
-        base_url = 'https://financialmodelingprep.com/api/v3/search'
-        param = {
-            'query': 'AA',
-            'apikey': self.api_key,
-            'limit': 5
-        }
+        base_url = "https://financialmodelingprep.com/api/v3/search"
+        param = {"query": "AA", "apikey": self.api_key, "limit": 5}
 
         response = requests.get(base_url, param)
         if response.status_code == 200:

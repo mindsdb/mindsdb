@@ -8,9 +8,18 @@ import copy
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
-from .adapters import BaseMerlionForecastAdapter, DefaultForecasterAdapter, MerlionArguments, DefaultDetectorAdapter, \
-    SarimaForecasterAdapter, ProphetForecasterAdapter, MSESForecasterAdapter, IsolationForestDetectorAdapter, \
-    WindStatsDetectorAdapter, ProphetDetectorAdapter
+from .adapters import (
+    BaseMerlionForecastAdapter,
+    DefaultForecasterAdapter,
+    MerlionArguments,
+    DefaultDetectorAdapter,
+    SarimaForecasterAdapter,
+    ProphetForecasterAdapter,
+    MSESForecasterAdapter,
+    IsolationForestDetectorAdapter,
+    WindStatsDetectorAdapter,
+    ProphetDetectorAdapter,
+)
 
 logger = log.getLogger(__name__)
 
@@ -74,7 +83,7 @@ def to_ts_dataframe(df: pd.DataFrame, time_col=None) -> (pd.DataFrame, str):
 
 
 class MerlionHandler(BaseMLEngine):
-    name = 'merlion'
+    name = "merlion"
 
     ARG_USING_TASK = "task"
     ARG_USING_MODEL_TYPE = "model_type"
@@ -201,6 +210,12 @@ class MerlionHandler(BaseMLEngine):
         try:
             adapter_class = task_enum.value[model_type].value
         except Exception as e:
-            raise Exception("Wrong using.model_type: " + model_type + ", valid options: "
-                            + enum_to_str(task_enum.value) + ", " + str(e))
+            raise Exception(
+                "Wrong using.model_type: "
+                + model_type
+                + ", valid options: "
+                + enum_to_str(task_enum.value)
+                + ", "
+                + str(e)
+            )
         return adapter_class

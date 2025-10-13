@@ -13,6 +13,7 @@ class DELETEQueryParser(BaseQueryParser):
     query : ast.Delete
         Given SQL DELETE query.
     """
+
     def __init__(self, query: ast.Delete):
         super().__init__(query)
 

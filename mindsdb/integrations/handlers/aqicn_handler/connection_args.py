@@ -4,13 +4,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
-    api_key={
-        "type": ARG_TYPE.STR,
-        "description": "API key",
-        "required": True,
-        "label": "api_key",
-        "secret": True
-    },
+    api_key={"type": ARG_TYPE.STR, "description": "API key", "required": True, "label": "api_key", "secret": True},
 )
 
 connection_args_example = OrderedDict(

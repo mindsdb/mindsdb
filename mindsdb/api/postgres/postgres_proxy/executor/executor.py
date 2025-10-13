@@ -47,12 +47,10 @@ class Executor:
             self.query = parse_sql(sql)
         except Exception as mdb_error:
             # not all statements are parsed by parse_sql
-            self.logger.warning('Failed to parse SQL query')
-            self.logger.debug(f'Query that cannot be parsed: {sql}')
+            self.logger.warning("Failed to parse SQL query")
+            self.logger.debug(f"Query that cannot be parsed: {sql}")
 
-            raise SqlApiException(
-                f"The SQL statement cannot be parsed - {sql}: {mdb_error}"
-            ) from mdb_error
+            raise SqlApiException(f"The SQL statement cannot be parsed - {sql}: {mdb_error}") from mdb_error
 
     def stmt_execute(self, param_values):
         if self.is_executed:
@@ -102,20 +100,15 @@ class Executor:
             "state_track": self.state_track,
             "server_status": self.server_status,
             "is_executed": self.is_executed,
-            "session": self.session.to_json()
-
+            "session": self.session.to_json(),
         }
         return params
 
     def to_postgres_columns(self, columns):
-
         result = []
 
-        database = (
-            None if self.session.database == "" else self.session.database.lower()
-        )
+        database = None if self.session.database == "" else self.session.database.lower()
         for column_record in columns:
-
             field_type = column_record.type
 
             column_type = POSTGRES_TYPES.VARCHAR

@@ -11,7 +11,7 @@ class CursorContextManager(Mock):
     def __exit__(self, *args):
         pass
 
-    description = [['a']]
+    description = [["a"]]
 
     def fetchall(self):
         return [[1]]
@@ -19,21 +19,21 @@ class CursorContextManager(Mock):
 
 class AthenaHandlerTest(unittest.TestCase):
     dummy_connection_data = OrderedDict(
-        aws_access_key_id='aws_access_key_id',
-        aws_secret_access_key='aws_secret_access_key',
-        region_name='us-east-1',
-        database='default',
-        workgroup='my_workgroup',
-        catalog='AwsDataCatalog',
-        results_output_location='s3://bucket-path/athena-query-results',
-        check_interval=0
+        aws_access_key_id="aws_access_key_id",
+        aws_secret_access_key="aws_secret_access_key",
+        region_name="us-east-1",
+        database="default",
+        workgroup="my_workgroup",
+        catalog="AwsDataCatalog",
+        results_output_location="s3://bucket-path/athena-query-results",
+        check_interval=0,
     )
 
     def setUp(self):
-        self.patcher = patch('boto3.client')
+        self.patcher = patch("boto3.client")
         self.mock_client = self.patcher.start()
         self.mock_client.return_value = MagicMock()
-        self.handler = AthenaHandler('athena', connection_data=self.dummy_connection_data)
+        self.handler = AthenaHandler("athena", connection_data=self.dummy_connection_data)
 
     def tearDown(self):
         self.patcher.stop()
@@ -81,5 +81,5 @@ class AthenaHandlerTest(unittest.TestCase):
         self.handler.native_query.assert_called_once_with(expected_query)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

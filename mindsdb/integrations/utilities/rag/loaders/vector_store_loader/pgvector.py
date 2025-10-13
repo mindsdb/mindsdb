@@ -29,7 +29,6 @@ class PGVectorMDB(PGVector):
     def __post_init__(
         self,
     ) -> None:
-
         collection_name = self.collection_name
 
         if collection_name not in _generated_sa_tables:
@@ -42,8 +41,13 @@ class PGVectorMDB(PGVector):
                 id = sa.Column(sa.Integer, primary_key=True)
                 embedding = sa.Column(
                     "embeddings",
-                    SPARSEVEC() if self.is_sparse else Vector() if self.vector_size is None else
-                    SPARSEVEC(self.vector_size) if self.is_sparse else Vector(self.vector_size)
+                    SPARSEVEC()
+                    if self.is_sparse
+                    else Vector()
+                    if self.vector_size is None
+                    else SPARSEVEC(self.vector_size)
+                    if self.is_sparse
+                    else Vector(self.vector_size),
                 )
                 document = sa.Column("content", sa.String, nullable=True)
                 cmetadata = sa.Column("metadata", JSON, nullable=True)
@@ -53,10 +57,10 @@ class PGVectorMDB(PGVector):
         self.EmbeddingStore = _generated_sa_tables[collection_name]
 
     def __query_collection(
-            self,
-            embedding: Union[List[float], Dict[int, float], str],
-            k: int = 4,
-            filter: Optional[Dict[str, str]] = None,
+        self,
+        embedding: Union[List[float], Dict[int, float], str],
+        k: int = 4,
+        filter: Optional[Dict[str, str]] = None,
     ) -> List[Any]:
         """Query the collection."""
         with Session(self._bind) as session:
@@ -64,6 +68,7 @@ class PGVectorMDB(PGVector):
                 # Sparse vectors: expect string in format "{key:value,...}/size" or dictionary
                 if isinstance(embedding, dict):
                     from pgvector.utils import SparseVector
+
                     embedding = SparseVector(embedding, self.vector_size)
                     embedding_str = embedding.to_text()
                 elif isinstance(embedding, str):
@@ -102,19 +107,13 @@ class PGVectorMDB(PGVector):
                 embedding_store = self.EmbeddingStore()
                 embedding_store.document = rec.content
                 embedding_store.cmetadata = metadata
-                result = type(
-                    'Result', (), {
-                        'EmbeddingStore': embedding_store,
-                        'distance': rec.distance
-                    }
-                )
+                result = type("Result", (), {"EmbeddingStore": embedding_store, "distance": rec.distance})
                 formatted_results.append(result)
 
             return formatted_results
 
     # aliases for different langchain versions
     def _PGVector__query_collection(self, *args, **kwargs):
-
         return self.__query_collection(*args, **kwargs)
 
     def _query_collection(self, *args, **kwargs):

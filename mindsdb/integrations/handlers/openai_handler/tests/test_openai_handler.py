@@ -6,7 +6,7 @@ from unittest.mock import patch
 from tests.unit.ml_handlers.base_ml_test import BaseMLAPITest
 
 
-@pytest.mark.skipif(os.environ.get('MDB_TEST_MDB_OPENAI_API_KEY') is None, reason='Missing API key!')
+@pytest.mark.skipif(os.environ.get("MDB_TEST_MDB_OPENAI_API_KEY") is None, reason="Missing API key!")
 class TestOpenAI(BaseMLAPITest):
     """
     Integration tests for the OpenAI handler.
@@ -23,7 +23,7 @@ class TestOpenAI(BaseMLAPITest):
             CREATE ML_ENGINE openai_engine
             FROM openai
             USING
-            openai_api_key = '{self.get_api_key('MDB_TEST_MDB_OPENAI_API_KEY')}';
+            openai_api_key = '{self.get_api_key("MDB_TEST_MDB_OPENAI_API_KEY")}';
             """
         )
 
@@ -76,10 +76,9 @@ class TestOpenAI(BaseMLAPITest):
         """
         Test the full flow in default mode with a question column for bulk predictions.
         """
-        df = pd.DataFrame.from_dict({"question": [
-            "What is the capital of Sweden?",
-            "What is the second planet of the solar system?"
-        ]})
+        df = pd.DataFrame.from_dict(
+            {"question": ["What is the capital of Sweden?", "What is the second planet of the solar system?"]}
+        )
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
@@ -135,10 +134,9 @@ class TestOpenAI(BaseMLAPITest):
         """
         Test the full flow in default mode with a prompt template for bulk predictions.
         """
-        df = pd.DataFrame.from_dict({"question": [
-            "What is the capital of Sweden?",
-            "What is the second planet of the solar system?"
-        ]})
+        df = pd.DataFrame.from_dict(
+            {"question": ["What is the capital of Sweden?", "What is the second planet of the solar system?"]}
+        )
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
@@ -198,10 +196,7 @@ class TestOpenAI(BaseMLAPITest):
         """
         Test the full flow in embedding mode for bulk predictions.
         """
-        df = pd.DataFrame.from_dict({"text": [
-            "Sweden",
-            "Venus"
-        ]})
+        df = pd.DataFrame.from_dict({"text": ["Sweden", "Venus"]})
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
@@ -261,10 +256,9 @@ class TestOpenAI(BaseMLAPITest):
         """
         Test the full flow in image mode for bulk predictions.
         """
-        df = pd.DataFrame.from_dict({"text": [
-            "Leopard clubs playing in the jungle",
-            "A beautiful sunset over the ocean"
-        ]})
+        df = pd.DataFrame.from_dict(
+            {"text": ["Leopard clubs playing in the jungle", "A beautiful sunset over the ocean"]}
+        )
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
@@ -323,10 +317,9 @@ class TestOpenAI(BaseMLAPITest):
         """
         Test the full flow in conversational mode for bulk predictions.
         """
-        df = pd.DataFrame.from_dict({"question": [
-            "What is the capital of Sweden?",
-            "What are some cool places to visit there?"
-        ]})
+        df = pd.DataFrame.from_dict(
+            {"question": ["What is the capital of Sweden?", "What are some cool places to visit there?"]}
+        )
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
@@ -387,10 +380,9 @@ class TestOpenAI(BaseMLAPITest):
         """
         Test the full flow in conversational-full mode for bulk predictions.
         """
-        df = pd.DataFrame.from_dict({"question": [
-            "What is the capital of Sweden?",
-            "What are some cool places to visit there?"
-        ]})
+        df = pd.DataFrame.from_dict(
+            {"question": ["What is the capital of Sweden?", "What are some cool places to visit there?"]}
+        )
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(

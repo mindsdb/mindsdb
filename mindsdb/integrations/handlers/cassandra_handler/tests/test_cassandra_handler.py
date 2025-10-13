@@ -13,10 +13,10 @@ class CassandraHandlerTest(unittest.TestCase):
                 "user": "cassandra",
                 "password": "",
                 "keyspace": "test_data",
-                "protocol_version": 4
+                "protocol_version": 4,
             }
         }
-        cls.handler = CassandraHandler('test_cassandra_handler', **cls.kwargs)
+        cls.handler = CassandraHandler("test_cassandra_handler", **cls.kwargs)
 
     def test_0_connect(self):
         self.handler.check_connection()

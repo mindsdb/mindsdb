@@ -15,7 +15,7 @@ class materializeHandlerTest(unittest.TestCase):
                 "database": "materialize",
             }
         }
-        cls.handler = MaterializeHandler('test_materialize_handler', **cls.kwargs)
+        cls.handler = MaterializeHandler("test_materialize_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -43,12 +43,12 @@ class materializeHandlerTest(unittest.TestCase):
         assert tables.type is RESPONSE_TYPE.TABLE
 
     def test_6_get_columns(self):
-        columns = self.handler.get_columns('LOVER')
+        columns = self.handler.get_columns("LOVER")
 
         query = "DROP Table IF  EXISTS Lover;"
         self.handler.query(query)
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

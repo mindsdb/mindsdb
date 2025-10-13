@@ -27,47 +27,46 @@ class SearchAnalyticsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         # Get the start and end times from the conditions.
         params = {}
-        accepted_params = ['siteUrl', 'dimensions', 'type', 'rowLimit', 'aggregationType']
+        accepted_params = ["siteUrl", "dimensions", "type", "rowLimit", "aggregationType"]
         for op, arg1, arg2 in conditions:
-            if arg1 == 'startDate' or arg1 == 'endDate':
+            if arg1 == "startDate" or arg1 == "endDate":
                 date = parse_utc_date(arg2)
-                if op == '=':
+                if op == "=":
                     params[arg1] = date
                 else:
                     raise NotImplementedError
             elif arg1 in accepted_params:
-                if op != '=':
+                if op != "=":
                     raise NotImplementedError
                 params[arg1] = arg2
             else:
                 raise NotImplementedError
 
-        dimensions = ['query', 'page', 'device', 'country']
+        dimensions = ["query", "page", "device", "country"]
 
         # Get the group by from the query.
-        params['dimensions'] = {}
+        params["dimensions"] = {}
         conditions = extract_comparison_conditions(query.group_by)
         for arg1 in conditions:
             if arg1 in dimensions:
-                params['dimensions'][arg1] = arg1
+                params["dimensions"][arg1] = arg1
             else:
                 raise NotImplementedError
 
         # Get the order by from the query.
         if query.order_by is not None:
-            if query.order_by[0].value == 'start_time':
-                params['orderBy'] = 'startTime'
-            elif query.order_by[0].value == 'updated':
-                params['orderBy'] = 'updated'
+            if query.order_by[0].value == "start_time":
+                params["orderBy"] = "startTime"
+            elif query.order_by[0].value == "updated":
+                params["orderBy"] = "updated"
             else:
                 raise NotImplementedError
 
         if query.limit is not None:
-            params['rowLimit'] = query.limit.value
+            params["rowLimit"] = query.limit.value
 
         # Get the traffic data from the Google Search Console API.
-        traffic_data = self.handler. \
-            call_application_api(method_name='get_traffic_data', params=params)
+        traffic_data = self.handler.call_application_api(method_name="get_traffic_data", params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -89,13 +88,7 @@ class SearchAnalyticsTable(APITable):
 
     def get_columns(self) -> list:
         """Gets all columns to be returned in pandas DataFrame responses"""
-        return [
-            'keys',
-            'clicks',
-            'impressions',
-            'ctr',
-            'position'
-        ]
+        return ["keys", "clicks", "impressions", "ctr", "position"]
 
 
 class SiteMapsTable(APITable):
@@ -118,9 +111,9 @@ class SiteMapsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         # Get the start and end times from the conditions.
         params = {}
-        accepted_params = ['siteUrl', 'sitemapIndex']
+        accepted_params = ["siteUrl", "sitemapIndex"]
         for op, arg1, arg2 in conditions:
-            if op != '=':
+            if op != "=":
                 raise NotImplementedError
             if arg1 in accepted_params:
                 params[arg1] = arg2
@@ -128,11 +121,10 @@ class SiteMapsTable(APITable):
                 raise NotImplementedError
 
         if query.limit is not None:
-            params['rowLimit'] = query.limit.value
+            params["rowLimit"] = query.limit.value
 
         # Get the traffic data from the Google Search Console API.
-        sitemaps = self.handler. \
-            call_application_api(method_name='get_sitemaps', params=params)
+        sitemaps = self.handler.call_application_api(method_name="get_sitemaps", params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -168,13 +160,13 @@ class SiteMapsTable(APITable):
         params = {}
         # Get the event data from the values.
         for col, val in zip(query.columns, values):
-            if col == 'siteUrl' or col == 'feedpath':
+            if col == "siteUrl" or col == "feedpath":
                 params[col] = val
             else:
                 raise NotImplementedError
 
         # Insert the event into the Google Calendar API.
-        self.handler.call_application_api(method_name='submit_sitemap', params=params)
+        self.handler.call_application_api(method_name="submit_sitemap", params=params)
 
     def delete(self, query: ast.Delete):
         """
@@ -192,26 +184,26 @@ class SiteMapsTable(APITable):
         # Get the start and end times from the conditions.
         params = {}
         for op, arg1, arg2 in conditions:
-            if op != '=':
+            if op != "=":
                 raise NotImplementedError
-            if arg1 == 'siteUrl' or arg1 == 'feedpath':
+            if arg1 == "siteUrl" or arg1 == "feedpath":
                 params[arg1] = arg2
             else:
                 raise NotImplementedError
 
         # Delete the events in the Google Calendar API.
-        self.handler.call_application_api(method_name='delete_sitemap', params=params)
+        self.handler.call_application_api(method_name="delete_sitemap", params=params)
 
     def get_columns(self) -> list:
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            'path',
-            'lastSubmitted',
-            'isPending',
-            'isSitemapsIndex',
-            'type',
-            'lastDownloaded',
-            'warnings',
-            'errors',
-            'contents'
+            "path",
+            "lastSubmitted",
+            "isPending",
+            "isSitemapsIndex",
+            "type",
+            "lastDownloaded",
+            "warnings",
+            "errors",
+            "contents",
         ]

@@ -11,9 +11,9 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'Lightwood'
-name = 'lightwood'
+title = "Lightwood"
+name = "lightwood"
 type = HANDLER_TYPE.ML
 icon_path = "icon.svg"
 
-__all__ = ['Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path']
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

@@ -4,10 +4,7 @@ from typing import List, Text
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition,
-    SortColumn
-)
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn
 
 from mindsdb.integrations.utilities.files.file_reader import FileReader
 
@@ -23,7 +20,7 @@ class ListFilesTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[Text] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Lists the files in Microsoft OneDrive.
@@ -42,11 +39,7 @@ class ListFilesTable(APIResource):
 
         data = []
         for file in files:
-            item = {
-                "name": file["name"],
-                "path": file["path"],
-                "extension": file["name"].split(".")[-1]
-            }
+            item = {"name": file["name"], "path": file["path"], "extension": file["name"].split(".")[-1]}
 
             # If the 'content' column is explicitly requested, fetch the content of the file.
             if targets and "content" in targets:

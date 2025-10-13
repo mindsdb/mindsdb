@@ -1,4 +1,5 @@
 """Utilities for knowledge base operations."""
+
 import hashlib
 
 

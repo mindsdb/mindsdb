@@ -12,9 +12,7 @@ from mindsdb.integrations.handlers.sharepoint_handler.utils import (
 
 
 class SharepointAPI:
-    def __init__(
-        self, client_id: str = None, client_secret: str = None, tenant_id: str = None
-    ):
+    def __init__(self, client_id: str = None, client_secret: str = None, tenant_id: str = None):
         self.client_id = client_id
         self.client_secret = client_secret
         self.tenant_id = tenant_id
@@ -46,11 +44,7 @@ class SharepointAPI:
         Returns
         bool
         """
-        if (
-            self.is_connected
-            and datetime.now(timezone.utc).astimezone().timestamp()
-            < self.expiration_time
-        ):
+        if self.is_connected and datetime.now(timezone.utc).astimezone().timestamp() < self.expiration_time:
             return True
         else:
             return False
@@ -80,9 +74,7 @@ class SharepointAPI:
             response = response[:limit]
         return response
 
-    def update_sites(
-        self, site_dict: List[Dict[Text, Text]], values_to_update: Dict[Text, Any]
-    ) -> None:
+    def update_sites(self, site_dict: List[Dict[Text, Text]], values_to_update: Dict[Text, Any]) -> None:
         """
         Updates the given sites (site_dict) with the provided values (values_to_update)
         Calls the function update_a_site for every site
@@ -108,13 +100,9 @@ class SharepointAPI:
         None
         """
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/"
-        update_an_entity(
-            url=url, values_to_update=values_to_update, bearer_token=self.bearer_token
-        )
+        update_an_entity(url=url, values_to_update=values_to_update, bearer_token=self.bearer_token)
 
-    def get_lists_by_site(
-        self, site_id: str, limit: int = None
-    ) -> List[Dict[Text, Any]]:
+    def get_lists_by_site(self, site_id: str, limit: int = None) -> List[Dict[Text, Any]]:
         """
         Gets lists' information corresponding to a site
 
@@ -176,9 +164,7 @@ class SharepointAPI:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}"
         delete_an_entity(url=url, bearer_token=self.bearer_token)
 
-    def update_lists(
-        self, list_dict: List[Dict[Text, Text]], values_to_update: Dict[Text, Any]
-    ) -> None:
+    def update_lists(self, list_dict: List[Dict[Text, Text]], values_to_update: Dict[Text, Any]) -> None:
         """
         Updates the given lists (list_dict) with the provided values (values_to_update)
         Calls the function update_a_list for every list
@@ -195,9 +181,7 @@ class SharepointAPI:
                 values_to_update=values_to_update,
             )
 
-    def update_a_list(
-        self, site_id: str, list_id: str, values_to_update: Dict[Text, Any]
-    ) -> None:
+    def update_a_list(self, site_id: str, list_id: str, values_to_update: Dict[Text, Any]) -> None:
         """
         Updates a list with given values
         list_id: GUID of the list
@@ -208,9 +192,7 @@ class SharepointAPI:
         None
         """
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/"
-        update_an_entity(
-            url=url, bearer_token=self.bearer_token, values_to_update=values_to_update
-        )
+        update_an_entity(url=url, bearer_token=self.bearer_token, values_to_update=values_to_update)
 
     def create_lists(self, data: List[Dict[Text, Any]]) -> None:
         """
@@ -231,9 +213,7 @@ class SharepointAPI:
                 list_template=entry["list"],
             )
 
-    def create_a_list(
-        self, site_id: str, list_template: str, display_name: str, column: str = None
-    ) -> None:
+    def create_a_list(self, site_id: str, list_template: str, display_name: str, column: str = None) -> None:
         """
         Creates a list with metadata information provided in the params
 
@@ -256,9 +236,7 @@ class SharepointAPI:
         payload["list"] = ast.literal_eval(list_template)
         create_an_entity(url=url, payload=payload, bearer_token=self.bearer_token)
 
-    def get_site_columns_by_site(
-        self, site_id: str, limit: int = None
-    ) -> List[Dict[Text, Any]]:
+    def get_site_columns_by_site(self, site_id: str, limit: int = None) -> List[Dict[Text, Any]]:
         """
         Gets columns' information corresponding to a site
 
@@ -286,9 +264,7 @@ class SharepointAPI:
         sites = self.get_all_sites()
         site_columns = []
         for site in sites:
-            for site_column_dict in self.get_site_columns_by_site(
-                site_id=site["id"].split(",")[1]
-            ):
+            for site_column_dict in self.get_site_columns_by_site(site_id=site["id"].split(",")[1]):
                 site_column_dict["siteName"] = site["name"]
                 site_column_dict["siteId"] = site["id"].split(",")[1]
                 site_columns.append(site_column_dict)
@@ -319,9 +295,7 @@ class SharepointAPI:
                 values_to_update=values_to_update,
             )
 
-    def update_a_site_column(
-        self, site_id: str, column_id: str, values_to_update: Dict[Text, Any]
-    ):
+    def update_a_site_column(self, site_id: str, column_id: str, values_to_update: Dict[Text, Any]):
         """
         Updates a column with given values
 
@@ -333,9 +307,7 @@ class SharepointAPI:
         None
         """
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/columns/{column_id}"
-        update_an_entity(
-            url=url, values_to_update=values_to_update, bearer_token=self.bearer_token
-        )
+        update_an_entity(url=url, values_to_update=values_to_update, bearer_token=self.bearer_token)
 
     def delete_site_columns(self, column_dict: List[Dict[Text, Any]]) -> None:
         """
@@ -348,9 +320,7 @@ class SharepointAPI:
         None
         """
         for column_entry in column_dict:
-            self.delete_a_site_columns(
-                site_id=column_entry["siteId"], column_id=column_entry["id"]
-            )
+            self.delete_a_site_columns(site_id=column_entry["siteId"], column_id=column_entry["id"])
 
     def delete_a_site_columns(self, site_id: str, column_id: str) -> None:
         """
@@ -422,9 +392,7 @@ class SharepointAPI:
             payload["indexed"] = indexed
         create_an_entity(url=url, payload=payload, bearer_token=self.bearer_token)
 
-    def get_items_by_sites_and_lists(
-        self, site_id: str, list_id: str, limit: int = None
-    ) -> List[Dict[Text, Any]]:
+    def get_items_by_sites_and_lists(self, site_id: str, list_id: str, limit: int = None) -> List[Dict[Text, Any]]:
         """
         Gets items' information corresponding to a site and a list
 
@@ -467,9 +435,7 @@ class SharepointAPI:
             items = items[:limit]
         return items
 
-    def update_items(
-        self, item_dict: List[Dict[Text, Text]], values_to_update: Dict[Text, Any]
-    ) -> None:
+    def update_items(self, item_dict: List[Dict[Text, Text]], values_to_update: Dict[Text, Any]) -> None:
         """
         Updates the given items (item_dict) with the provided values (values_to_update)
         Calls the function update_a_item for every column
@@ -508,9 +474,7 @@ class SharepointAPI:
         None
         """
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}"
-        update_an_entity(
-            url=url, values_to_update=values_to_update, bearer_token=self.bearer_token
-        )
+        update_an_entity(url=url, values_to_update=values_to_update, bearer_token=self.bearer_token)
 
     def delete_items(self, item_dict: List[Dict[Text, Any]]) -> None:
         """

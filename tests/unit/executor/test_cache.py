@@ -14,40 +14,41 @@ from mindsdb.utilities.cache import RedisCache, FileCache, dataframe_checksum
 
 
 class TestCashe(unittest.TestCase):
-
     @classmethod
     def setup_class(cls):
         # config
         config = {}
         # TODO run on own database
-        fdi, cfg_file = tempfile.mkstemp(prefix='mindsdb_conf_')
+        fdi, cfg_file = tempfile.mkstemp(prefix="mindsdb_conf_")
 
-        with os.fdopen(fdi, 'w') as fd:
+        with os.fdopen(fdi, "w") as fd:
             json.dump(config, fd)
 
-        os.environ['MINDSDB_CONFIG_PATH'] = cfg_file
+        os.environ["MINDSDB_CONFIG_PATH"] = cfg_file
 
     def test_redis(self):
-        cache = RedisCache('predict', max_size=2)
+        cache = RedisCache("predict", max_size=2)
         try:
             self.cache_test(cache)
         except redis.ConnectionError as e:
             # Skip test for redis if no redis installed
-            warnings.warn(f'redis is not available: {e}')
+            warnings.warn(f"redis is not available: {e}")
             print(traceback.format_exc())
 
     def test_file(self):
-        cache = FileCache('predict', max_size=2)
+        cache = FileCache("predict", max_size=2)
 
         self.cache_test(cache)
 
     def cache_test(self, cache):
-
         # test save
-        df = pd.DataFrame([
-            [1, 1.2, 'string', dt.datetime.now(), [1, 2, 3], {1: 3}],
-            [2, 3.2, 'other', dt.datetime(2011, 12, 30), [3], {11: 23, 2: 3}],
-        ], columns=['a', 'b', 'c', 'd', 'e', 'f'])
+        df = pd.DataFrame(
+            [
+                [1, 1.2, "string", dt.datetime.now(), [1, 2, 3], {1: 3}],
+                [2, 3.2, "other", dt.datetime(2011, 12, 30), [3], {11: 23, 2: 3}],
+            ],
+            columns=["a", "b", "c", "d", "e", "f"],
+        )
 
         # make bigger
         df = pd.concat([df] * 100).reset_index()
@@ -63,7 +64,7 @@ class TestCashe(unittest.TestCase):
         assert list(df.columns) == list(df2.columns)
 
         # test save df
-        name += '1'
+        name += "1"
         cache.set_df(name, df)
 
         df2 = cache.get_df(name)
@@ -79,11 +80,11 @@ class TestCashe(unittest.TestCase):
 
         # test max_size
         # load cache with size 2(max_size) + 5 (buffer)
-        cache.set('first', df)
+        cache.set("first", df)
         for i in range(8):
             time.sleep(0.01)
             cache.set(str(i), df)
 
         # get first, must be deleted
-        df2 = cache.get('first')
+        df2 = cache.get("first")
         assert df2 is None

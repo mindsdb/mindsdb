@@ -35,12 +35,12 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     nixtla_df = df.copy()
 
     # Resample every group
-    freq = settings_dict['frequency']
+    freq = settings_dict["frequency"]
     resampled_df = pd.DataFrame(columns=nixtla_df.columns)
-    if settings_dict["group_by"] and settings_dict["group_by"] != ['__group_by']:
+    if settings_dict["group_by"] and settings_dict["group_by"] != ["__group_by"]:
         for group, groupdf in nixtla_df.groupby(by=settings_dict["group_by"]):
             groupdf.index = pd.to_datetime(groupdf.pop(settings_dict["order_by"]))
-            resampled_groupdf = pd.DataFrame(groupdf[settings_dict['target']].resample(freq).mean())
+            resampled_groupdf = pd.DataFrame(groupdf[settings_dict["target"]].resample(freq).mean())
             for k, v in zip(settings_dict["group_by"], group):
                 resampled_groupdf[k] = v
             resampled_groupdf = resampled_groupdf.reset_index()
@@ -63,7 +63,7 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
 
     if "unique_id" not in nixtla_df.columns:
         # add to dataframe as it is expected by statsforecast
-        nixtla_df["unique_id"] = '1'
+        nixtla_df["unique_id"] = "1"
 
     columns_to_keep = ["unique_id", "ds", "y"] + exog_vars
     nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
@@ -75,7 +75,7 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
 
     This will return the dataframe to the original format supplied by the MindsDB query.
     """
-    return_df = nixtla_df.reset_index(drop=True if 'unique_id' in nixtla_df.columns else False)
+    return_df = nixtla_df.reset_index(drop=True if "unique_id" in nixtla_df.columns else False)
     if len(model_args["group_by"]) > 0:
         if len(model_args["group_by"]) > 1:
             for i, group in enumerate(model_args["group_by"]):
@@ -156,7 +156,9 @@ def get_hierarchy_from_df(df, model_args):
         nixtla_df, hier_df, hier_dict = aggregate(nixtla_df, spec)  # returns (nixtla_df, hierarchy_df, hierarchy_dict)
         return nixtla_df, hier_df, hier_dict
     else:
-        log.logger.warning("HierarchicalForecast is not installed, but `get_hierarchy_from_df` has been called. This should never happen.")  # noqa
+        log.logger.warning(
+            "HierarchicalForecast is not installed, but `get_hierarchy_from_df` has been called. This should never happen."
+        )  # noqa
 
 
 def reconcile_forecasts(nixtla_df, forecast_df, hierarchy_df, hierarchy_dict):
@@ -167,7 +169,9 @@ def reconcile_forecasts(nixtla_df, forecast_df, hierarchy_df, hierarchy_dict):
         reconciled_df = hrec.reconcile(Y_hat_df=forecast_df, Y_df=nixtla_df, S=hierarchy_df, tags=hierarchy_dict)
         return get_results_from_reconciled_df(reconciled_df, hierarchy_df)
     else:
-        log.logger.warning("HierarchicalForecast is not installed, but `reconcile_forecasts` has been called. This should never happen.")  # noqa
+        log.logger.warning(
+            "HierarchicalForecast is not installed, but `reconcile_forecasts` has been called. This should never happen."
+        )  # noqa
 
 
 def get_results_from_reconciled_df(reconciled_df, hierarchy_df):

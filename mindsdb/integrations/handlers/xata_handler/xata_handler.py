@@ -99,12 +99,12 @@ class XataHandler(VectorStoreHandler):
                     {
                         "name": "embeddings",
                         "type": "vector",
-                        "vector": {"dimension": self._create_table_params["dimension"]}
+                        "vector": {"dimension": self._create_table_params["dimension"]},
                     },
                     {"name": "content", "type": "text"},
                     {"name": "metadata", "type": "json"},
                 ]
-            }
+            },
         )
         if not resp.is_success():
             raise Exception(f"Unable to change schema of table {table_name}: {resp['message']}")
@@ -146,7 +146,7 @@ class XataHandler(VectorStoreHandler):
             )
 
     def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
-        """ Insert data into the Xata database. """
+        """Insert data into the Xata database."""
         if columns:
             data = data[columns]
         # Convert to records
@@ -171,22 +171,14 @@ class XataHandler(VectorStoreHandler):
             del rest_of_data["id"]
 
             resp = self._client.records().insert_with_id(
-                table_name=table_name,
-                record_id=id,
-                payload=rest_of_data,
-                create_only=True,
-                columns=columns
+                table_name=table_name, record_id=id, payload=rest_of_data, create_only=True, columns=columns
             )
             if not resp.is_success():
                 raise Exception(resp["message"])
 
         else:
             # If id not present
-            resp = self._client.records().insert(
-                table_name=table_name,
-                payload=data[0],
-                columns=columns
-            )
+            resp = self._client.records().insert(table_name=table_name, payload=data[0], columns=columns)
             if not resp.is_success():
                 raise Exception(resp["message"])
 
@@ -260,8 +252,14 @@ class XataHandler(VectorStoreHandler):
                     filters = {**filters, **original_filter}
         return filters if filters else None
 
-    def select(self, table_name: str, columns: List[str] = None, conditions: List[FilterCondition] = None,
-               offset: int = None, limit: int = None) -> pd.DataFrame:
+    def select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+    ) -> pd.DataFrame:
         """Run general query or a vector similarity search and return results."""
         if not columns:
             columns = [col["name"] for col in self.SCHEMA]
@@ -271,11 +269,7 @@ class XataHandler(VectorStoreHandler):
         search_vector = (
             []
             if conditions is None
-            else [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
-            ]
+            else [condition.value for condition in conditions if condition.column == TableField.SEARCH_VECTOR.value]
         )
         if len(search_vector) > 0:
             search_vector = search_vector[0]
@@ -289,7 +283,7 @@ class XataHandler(VectorStoreHandler):
             params = {
                 "queryVector": search_vector,
                 "column": TableField.EMBEDDINGS.value,
-                "similarityFunction": self._select_params["similarity_function"]
+                "similarityFunction": self._select_params["similarity_function"],
             }
             if filters:
                 params["filter"] = filters

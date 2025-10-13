@@ -8,7 +8,12 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
-from mindsdb.integrations.libs.vectordatabase_handler import FilterCondition, FilterOperator, TableField, VectorStoreHandler
+from mindsdb.integrations.libs.vectordatabase_handler import (
+    FilterCondition,
+    FilterOperator,
+    TableField,
+    VectorStoreHandler,
+)
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -121,7 +126,9 @@ class MilvusHandler(VectorStoreHandler):
             raise Exception(f"Operator {operator} is not supported by Milvus!")
         return mapping[operator]
 
-    def _translate_conditions(self, conditions: Optional[List[FilterCondition]], exclude_id: bool = True) -> Optional[str]:
+    def _translate_conditions(
+        self, conditions: Optional[List[FilterCondition]], exclude_id: bool = True
+    ) -> Optional[str]:
         """
         Translate a list of FilterCondition objects a string that can be used by Milvus.
         E.g.,
@@ -146,7 +153,8 @@ class MilvusHandler(VectorStoreHandler):
         filtered_conditions = [
             condition
             for condition in conditions
-            if condition.column.startswith(TableField.METADATA.value) or condition.column.startswith(TableField.ID.value)
+            if condition.column.startswith(TableField.METADATA.value)
+            or condition.column.startswith(TableField.ID.value)
         ]
         if len(filtered_conditions) == 0:
             return None
@@ -155,7 +163,9 @@ class MilvusHandler(VectorStoreHandler):
         for condition in filtered_conditions:
             if isinstance(condition.value, str):
                 condition.value = f"'{condition.value}'"
-            milvus_conditions.append(f"({condition.column.split('.')[-1]} {self._get_milvus_operator(condition.op)} {condition.value})")
+            milvus_conditions.append(
+                f"({condition.column.split('.')[-1]} {self._get_milvus_operator(condition.op)} {condition.value})"
+            )
         # Combine all metadata conditions into a single string and return
         return " and ".join(milvus_conditions) if milvus_conditions else None
 
@@ -172,11 +182,7 @@ class MilvusHandler(VectorStoreHandler):
         vector_filter = (
             []
             if conditions is None
-            else [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
-            ]
+            else [condition.value for condition in conditions if condition.column == TableField.SEARCH_VECTOR.value]
         )
 
         # Generate search arguments
@@ -225,11 +231,15 @@ class MilvusHandler(VectorStoreHandler):
             # Basic search
             if not search_arguments["filter"]:
                 search_arguments["filter"] = ""
-            search_arguments["output_fields"] = [
-                TableField.ID.value,
-                TableField.CONTENT.value,
-                TableField.EMBEDDINGS.value,
-            ] if not columns else columns
+            search_arguments["output_fields"] = (
+                [
+                    TableField.ID.value,
+                    TableField.CONTENT.value,
+                    TableField.EMBEDDINGS.value,
+                ]
+                if not columns
+                else columns
+            )
             results = self.milvus_client.query(table_name, **search_arguments)
             return pd.DataFrame.from_records(results)
 
@@ -240,44 +250,39 @@ class MilvusHandler(VectorStoreHandler):
             dtype=DataType.VARCHAR,
             is_primary=True,
             max_length=self._create_table_params["create_id_max_len"],
-            auto_id=self._create_table_params["create_auto_id"]
+            auto_id=self._create_table_params["create_auto_id"],
         )
         embeddings = FieldSchema(
             name=TableField.EMBEDDINGS.value,
             dtype=DataType.FLOAT_VECTOR,
-            dim=self._create_table_params["create_embedding_dim"]
+            dim=self._create_table_params["create_embedding_dim"],
         )
         content = FieldSchema(
             name=TableField.CONTENT.value,
             dtype=DataType.VARCHAR,
             max_length=self._create_table_params["create_content_max_len"],
-            default_value=self._create_table_params["create_content_default_value"]
+            default_value=self._create_table_params["create_content_default_value"],
         )
         schema = CollectionSchema(
             fields=[id, content, embeddings],
             description=self._create_table_params["create_schema_description"],
-            enable_dynamic_field=self._create_table_params["create_dynamic_field"]
+            enable_dynamic_field=self._create_table_params["create_dynamic_field"],
         )
         collection_name = table_name
-        self.milvus_client.create_collection(
-            collection_name=collection_name,
-            schema=schema
-        )
+        self.milvus_client.create_collection(collection_name=collection_name, schema=schema)
         index_params = self.milvus_client.prepare_index_params()
         index_params.add_index(
             field_name=TableField.EMBEDDINGS.value,
             index_type=self._create_table_params["create_index_type"],
             metric_type=self._create_table_params["create_index_metric_type"],
-            params=self._create_table_params.get("create_params", {})
+            params=self._create_table_params.get("create_params", {}),
         )
         self.milvus_client.create_index(
             collection_name=collection_name,
             index_params=index_params,
         )
 
-    def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ):
+    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
         """Insert data into the Milvus collection."""
         self.milvus_client.load_collection(collection_name=table_name)
         if columns:
@@ -295,9 +300,7 @@ class MilvusHandler(VectorStoreHandler):
                 data_dict[TableField.EMBEDDINGS.value] = json.loads(data_dict[TableField.EMBEDDINGS.value])
         self.milvus_client.insert(table_name, data_list)
 
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ):
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         # delete only supports IN operator
         for condition in conditions:
             if condition.op in [FilterOperator.EQUAL, FilterOperator.IN]:
@@ -320,8 +323,14 @@ class MilvusHandler(VectorStoreHandler):
                 error_message=f"Error finding table: {e}",
             )
         try:
-            field_names = {field["name"] for field in self.milvus_client.describe_collection(collection_name=table_name)["fields"]}
-            schema = [mindsdb_schema_field for mindsdb_schema_field in self.SCHEMA if mindsdb_schema_field["name"] in field_names]
+            field_names = {
+                field["name"] for field in self.milvus_client.describe_collection(collection_name=table_name)["fields"]
+            }
+            schema = [
+                mindsdb_schema_field
+                for mindsdb_schema_field in self.SCHEMA
+                if mindsdb_schema_field["name"] in field_names
+            ]
             data = pd.DataFrame(schema)
             data.columns = ["COLUMN_NAME", "DATA_TYPE"]
             return HandlerResponse(data_frame=data)

@@ -20,7 +20,6 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APIResource
 
 
 class ListFilesTable(APIResource):
-
     def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
         files = self.handler._list_files()
         data = []
@@ -39,7 +38,6 @@ class ListFilesTable(APIResource):
 
 
 class FileTable(APIResource):
-
     def _get_file_df(self):
         try:
             df = self.handler._read_file(self.table_name)
@@ -67,7 +65,6 @@ class FileTable(APIResource):
 
 
 class DropboxHandler(APIHandler):
-
     name = "dropbox"
     supported_file_formats = ["csv", "tsv", "json", "parquet"]
 
@@ -89,9 +86,7 @@ class DropboxHandler(APIHandler):
                 raise ValueError("Access token must be provided.")
             self.dbx = dropbox.Dropbox(self.connection_data["access_token"])
             self.is_connected = True
-            self.logger.info(
-                f"Connected to Dropbox as {self.dbx.users_get_current_account().email}"
-            )
+            self.logger.info(f"Connected to Dropbox as {self.dbx.users_get_current_account().email}")
         except ValueError as e:
             self.logger.error(f"Error connecting to Dropbox: {e}")
         except AuthError as e:
@@ -136,7 +131,6 @@ class DropboxHandler(APIHandler):
             self.logger.error(f"Error when downloading a file from Dropbox: {e}")
 
     def query(self, query: ASTNode) -> Response:
-
         if isinstance(query, Select):
             table_name = query.from_table.parts[-1]
             if table_name == "files":
@@ -146,10 +140,7 @@ class DropboxHandler(APIHandler):
                 # add content
                 has_content = False
                 for target in query.targets:
-                    if (
-                        isinstance(target, Identifier)
-                        and target.parts[-1].lower() == "content"
-                    ):
+                    if isinstance(target, Identifier) and target.parts[-1].lower() == "content":
                         has_content = True
                         break
                 if has_content:
@@ -165,9 +156,7 @@ class DropboxHandler(APIHandler):
             table.insert(query)
             return Response(RESPONSE_TYPE.OK)
         else:
-            raise NotImplementedError(
-                "Only SELECT and INSERT operations are supported."
-            )
+            raise NotImplementedError("Only SELECT and INSERT operations are supported.")
 
     def get_tables(self) -> Response:
         table_names = list(self._tables.keys())
@@ -242,9 +231,7 @@ class DropboxHandler(APIHandler):
             else:
                 raise ValueError(f"Unsupported file format: {extension}")
             buffer.seek(0)
-            self.dbx.files_upload(
-                buffer.read(), path, mode=dropbox.files.WriteMode.overwrite
-            )
+            self.dbx.files_upload(buffer.read(), path, mode=dropbox.files.WriteMode.overwrite)
         except ValueError as e:
             self.logger.error(f"Error with file extension: {e}")
         except ApiError as e:

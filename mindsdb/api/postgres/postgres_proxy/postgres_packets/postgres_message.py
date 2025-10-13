@@ -1,9 +1,13 @@
 from typing import Union, BinaryIO
 
-from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_identifiers import \
-    PostgresBackendMessageIdentifier, PostgresFrontendMessageIdentifier
-from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketReader, \
-    PostgresPacketBuilder
+from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_identifiers import (
+    PostgresBackendMessageIdentifier,
+    PostgresFrontendMessageIdentifier,
+)
+from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import (
+    PostgresPacketReader,
+    PostgresPacketBuilder,
+)
 
 
 class PostgresMessage:

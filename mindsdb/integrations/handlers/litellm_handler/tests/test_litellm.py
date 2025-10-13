@@ -106,7 +106,6 @@ class TestLiteLLM(BaseExecutorTest):
             )
 
     def test_completion_openai_with_prompt_template(self):
-
         # create project
         self.run_sql("create database proj")
 

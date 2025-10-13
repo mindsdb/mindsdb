@@ -33,20 +33,20 @@ class SentenceTransformersHandler(BaseMLEngine):
 
         args = self.model_storage.json_get("args")
 
-        if isinstance(df['content'].iloc[0], list) and len(df['content']) == 1:
+        if isinstance(df["content"].iloc[0], list) and len(df["content"]) == 1:
             # allow user to pass in a list of strings in where clause
             # i.e where content = ['hello', 'world'] or where content = (select content from some_db.some_table)
             input_df = df.copy()
-            df = pd.DataFrame(data={"content": input_df['content'].iloc[0]})
+            df = pd.DataFrame(data={"content": input_df["content"].iloc[0]})
 
         # get text columns if specified
-        if isinstance(args['text_columns'], str):
-            columns = [args['text_columns']]
+        if isinstance(args["text_columns"], str):
+            columns = [args["text_columns"]]
 
-        elif isinstance(args['text_columns'], list):
-            columns = args['text_columns']
+        elif isinstance(args["text_columns"], list):
+            columns = args["text_columns"]
 
-        elif args['text_columns'] is None:
+        elif args["text_columns"] is None:
             # assume all columns are text columns
             logger.info("No text columns specified, assuming all columns are text columns")
             columns = df.columns.tolist()
@@ -59,7 +59,7 @@ class SentenceTransformersHandler(BaseMLEngine):
         content = [doc.page_content for doc in documents]
         metadata = [doc.metadata for doc in documents]
 
-        model = load_embeddings_model(args['embeddings_model_name'])
+        model = load_embeddings_model(args["embeddings_model_name"])
 
         embeddings = model.embed_documents(texts=content)
 
@@ -68,7 +68,6 @@ class SentenceTransformersHandler(BaseMLEngine):
         return embeddings_df
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-
         args = self.model_storage.json_get("args")
 
         if attribute == "args":

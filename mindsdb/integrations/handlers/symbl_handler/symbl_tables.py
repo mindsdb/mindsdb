@@ -32,19 +32,15 @@ class GetConversationTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_conversation_id',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "get_conversation_id", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'audio_url':
-                if op == '=':
+            if arg1 == "audio_url":
+                if op == "=":
                     search_params["audio_url"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for audio_url column.")
@@ -52,7 +48,7 @@ class GetConversationTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("audio_url" in search_params)
+        filter_flag = "audio_url" in search_params
 
         if not filter_flag:
             raise NotImplementedError("audio_url column has to be present in where clause.")
@@ -65,11 +61,7 @@ class GetConversationTable(APITable):
         df = pd.json_normalize({"conversation_id": conversation_object.get_conversation_id()})
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -85,9 +77,7 @@ class GetConversationTable(APITable):
             List of columns
         """
 
-        return [
-            "conversation_id"
-        ]
+        return ["conversation_id"]
 
 
 class GetMessagesTable(APITable):
@@ -112,19 +102,15 @@ class GetMessagesTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_messages',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "get_messages", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'conversation_id':
-                if op == '=':
+            if arg1 == "conversation_id":
+                if op == "=":
                     search_params["conversation_id"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for conversation_id column.")
@@ -132,25 +118,23 @@ class GetMessagesTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("conversation_id" in search_params)
+        filter_flag = "conversation_id" in search_params
 
         if not filter_flag:
             raise NotImplementedError("conversation_id column has to be present in where clause.")
 
         df = pd.DataFrame(columns=self.get_columns())
 
-        resp = symbl.Conversations.get_messages(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
+        resp = symbl.Conversations.get_messages(
+            conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials
+        )
 
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["messages"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -180,7 +164,7 @@ class GetMessagesTable(APITable):
             "words",
             "_from.email",
             "_from.id",
-            "_from.name"
+            "_from.name",
         ]
 
 
@@ -206,19 +190,15 @@ class GetTopicsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_topics',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "get_topics", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'conversation_id':
-                if op == '=':
+            if arg1 == "conversation_id":
+                if op == "=":
                     search_params["conversation_id"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for conversation_id column.")
@@ -226,25 +206,23 @@ class GetTopicsTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("conversation_id" in search_params)
+        filter_flag = "conversation_id" in search_params
 
         if not filter_flag:
             raise NotImplementedError("conversation_id column has to be present in where clause.")
 
         df = pd.DataFrame(columns=self.get_columns())
 
-        resp = symbl.Conversations.get_topics(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
+        resp = symbl.Conversations.get_topics(
+            conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials
+        )
 
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["topics"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -263,16 +241,7 @@ class GetTopicsTable(APITable):
             List of columns
         """
 
-        return [
-            "id",
-            "text",
-            "type",
-            "score",
-            "message_ids",
-            "entities",
-            "sentiment",
-            "parent_refs"
-        ]
+        return ["id", "text", "type", "score", "message_ids", "entities", "sentiment", "parent_refs"]
 
 
 class GetQuestionsTable(APITable):
@@ -297,19 +266,15 @@ class GetQuestionsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_questions',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "get_questions", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'conversation_id':
-                if op == '=':
+            if arg1 == "conversation_id":
+                if op == "=":
                     search_params["conversation_id"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for conversation_id column.")
@@ -317,25 +282,23 @@ class GetQuestionsTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("conversation_id" in search_params)
+        filter_flag = "conversation_id" in search_params
 
         if not filter_flag:
             raise NotImplementedError("conversation_id column has to be present in where clause.")
 
         df = pd.DataFrame(columns=self.get_columns())
 
-        resp = symbl.Conversations.get_questions(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
+        resp = symbl.Conversations.get_questions(
+            conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials
+        )
 
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["questions"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -354,16 +317,7 @@ class GetQuestionsTable(APITable):
             List of columns
         """
 
-        return [
-            "id",
-            "text",
-            "type",
-            "score",
-            "message_ids",
-            "_from.id",
-            "_from.name",
-            "_from.user_id"
-        ]
+        return ["id", "text", "type", "score", "message_ids", "_from.id", "_from.name", "_from.user_id"]
 
 
 class GetFollowUpsTable(APITable):
@@ -388,19 +342,15 @@ class GetFollowUpsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_follow_ups',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "get_follow_ups", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'conversation_id':
-                if op == '=':
+            if arg1 == "conversation_id":
+                if op == "=":
                     search_params["conversation_id"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for conversation_id column.")
@@ -408,25 +358,23 @@ class GetFollowUpsTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("conversation_id" in search_params)
+        filter_flag = "conversation_id" in search_params
 
         if not filter_flag:
             raise NotImplementedError("conversation_id column has to be present in where clause.")
 
         df = pd.DataFrame(columns=self.get_columns())
 
-        resp = symbl.Conversations.get_follow_ups(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
+        resp = symbl.Conversations.get_follow_ups(
+            conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials
+        )
 
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["follow_ups"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -460,7 +408,7 @@ class GetFollowUpsTable(APITable):
             "_from.user_id",
             "assignee.id",
             "assignee.name",
-            "assignee.email"
+            "assignee.email",
         ]
 
 
@@ -486,19 +434,15 @@ class GetActionItemsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_action_items',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "get_action_items", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'conversation_id':
-                if op == '=':
+            if arg1 == "conversation_id":
+                if op == "=":
                     search_params["conversation_id"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for conversation_id column.")
@@ -506,25 +450,23 @@ class GetActionItemsTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("conversation_id" in search_params)
+        filter_flag = "conversation_id" in search_params
 
         if not filter_flag:
             raise NotImplementedError("conversation_id column has to be present in where clause.")
 
         df = pd.DataFrame(columns=self.get_columns())
 
-        resp = symbl.Conversations.get_action_items(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
+        resp = symbl.Conversations.get_action_items(
+            conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials
+        )
 
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["action_items"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -558,7 +500,7 @@ class GetActionItemsTable(APITable):
             "_from.user_id",
             "assignee.id",
             "assignee.name",
-            "assignee.email"
+            "assignee.email",
         ]
 
 
@@ -584,19 +526,15 @@ class GetAnalyticsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_analytics',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "get_analytics", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'conversation_id':
-                if op == '=':
+            if arg1 == "conversation_id":
+                if op == "=":
                     search_params["conversation_id"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for conversation_id column.")
@@ -604,25 +542,23 @@ class GetAnalyticsTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("conversation_id" in search_params)
+        filter_flag = "conversation_id" in search_params
 
         if not filter_flag:
             raise NotImplementedError("conversation_id column has to be present in where clause.")
 
         df = pd.DataFrame(columns=self.get_columns())
 
-        resp = symbl.Conversations.get_analytics(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
+        resp = symbl.Conversations.get_analytics(
+            conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials
+        )
 
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["metrics"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -641,8 +577,4 @@ class GetAnalyticsTable(APITable):
             List of columns
         """
 
-        return [
-            "type",
-            "percent",
-            "seconds"
-        ]
+        return ["type", "percent", "seconds"]

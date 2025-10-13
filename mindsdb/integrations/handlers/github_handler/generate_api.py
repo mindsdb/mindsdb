@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import pandas as pd
 import github
 
-from mindsdb.integrations.utilities.sql_utils import (FilterCondition, FilterOperator, SortColumn)
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 from mindsdb.integrations.libs.api_handler import APIResource
 
 
@@ -25,28 +25,27 @@ class GHMethod:
 
 
 def parse_annotations(annotations):
-    '''
+    """
     Parse string annotation, and extract type, input examples:
     - Milestone | Opt[str]
     - PaginatedList[Issue]
-    '''
+    """
     type_name, sub_type = None, None
     if not isinstance(annotations, str):
-
-        return Type(getattr(annotations, '__name__', None))
-    for item in annotations.split('|'):
+        return Type(getattr(annotations, "__name__", None))
+    for item in annotations.split("|"):
         item = item.strip()
         if item is None:
             continue
-        if '[' in item:
-            type_name = item[: item.find('[')]
-            item2 = item[item.find('[') + 1: item.rfind(']')]
-            if type_name == 'Opt':
+        if "[" in item:
+            type_name = item[: item.find("[")]
+            item2 = item[item.find("[") + 1 : item.rfind("]")]
+            if type_name == "Opt":
                 inner_type = parse_annotations(item2)
                 inner_type.optional = Type
                 return inner_type
-            if type_name == 'dict':
-                item2 = item2[item2.find(',') + 1:]
+            if type_name == "dict":
+                item2 = item2[item2.find(",") + 1 :]
             sub_type = parse_annotations(item2).name
         else:
             type_name = item
@@ -60,7 +59,7 @@ def get_properties(cls):
 
     properties = {}
     for prop_name, prop in inspect.getmembers(cls):
-        if prop_name.startswith('_'):
+        if prop_name.startswith("_"):
             continue
         if not isinstance(prop, property):
             continue
@@ -80,7 +79,6 @@ def get_github_types():
         if cls is None:
             continue
         if issubclass(cls, GithubObject):
-
             # remove inherited props
             parent_props = []
             for cls2 in cls.__bases__:
@@ -96,31 +94,26 @@ def get_github_types():
 
 
 def get_github_methods(cls):
-    '''
+    """
     Analyse class in order to find methods which return list of objects.
-    '''
+    """
     methods = []
 
     for method_name, method in inspect.getmembers(cls, inspect.isfunction):
         sig = inspect.signature(method)
 
         return_type = parse_annotations(sig.return_annotation)
-        list_prefix = 'get_'
-        if not (method_name.startswith(list_prefix) and return_type.name == 'PaginatedList'):
+        list_prefix = "get_"
+        if not (method_name.startswith(list_prefix) and return_type.name == "PaginatedList"):
             continue
 
-        table_name = method_name[len(list_prefix):]
+        table_name = method_name[len(list_prefix) :]
 
         params = {}
         for param_name, param in sig.parameters.items():
             params[param_name] = parse_annotations(param.annotation)
 
-        methods.append(GHMethod(
-            name=method_name,
-            table_name=table_name,
-            params=params,
-            output=return_type
-        ))
+        methods.append(GHMethod(name=method_name, table_name=table_name, params=params, output=return_type))
     return methods
 
 
@@ -137,22 +130,22 @@ class GHTable(APIResource):
         self.params, self.list_params = [], []
         for name, param_type in method.params.items():
             self.params.append(name)
-            if param_type.name == 'list':
+            if param_type.name == "list":
                 self.list_params.append(name)
 
-        self._allow_sort = 'sort' in method.params
+        self._allow_sort = "sort" in method.params
 
         super().__init__(*args, **kwargs)
 
     def repr_value(self, value, type_name):
-        if value is None or type_name in ('bool', 'int', 'float'):
+        if value is None or type_name in ("bool", "int", "float"):
             return value
         if type_name in self.github_types:
             properties = self.github_types[type_name]
-            if 'login' in properties:
-                value = getattr(value, 'login')
-            elif 'url' in properties:
-                value = getattr(value, 'url')
+            if "login" in properties:
+                value = getattr(value, "login")
+            elif "url" in properties:
+                value = getattr(value, "url")
         return str(value)
 
     def get_columns(self) -> List[str]:
@@ -164,17 +157,16 @@ class GHTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
-
         if limit is None:
             limit = 20
 
         method_kwargs = {}
         if sort is not None and self._allow_sort:
             for col in sort:
-                method_kwargs['sort'] = col.column
-                method_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                method_kwargs["sort"] = col.column
+                method_kwargs["direction"] = "asc" if col.ascending else "desc"
                 sort.applied = True
                 # supported only 1 column
                 break
@@ -202,19 +194,15 @@ class GHTable(APIResource):
         for record in method(**method_kwargs):
             item = {}
             for name, output_type in self.output_columns.items():
-
                 # workaround to prevent making addition request per property.
                 if name in targets:
                     # request only if is required
                     value = getattr(record, name)
                 else:
-                    value = getattr(record, '_' + name).value
+                    value = getattr(record, "_" + name).value
                 if value is not None:
-                    if output_type.name == 'list':
-                        value = ",".join([
-                                str(self.repr_value(i, output_type.sub_type))
-                                for i in value
-                        ])
+                    if output_type.name == "list":
+                        value = ",".join([str(self.repr_value(i, output_type.sub_type)) for i in value])
                     else:
                         value = self.repr_value(value, output_type.name)
                 item[name] = value

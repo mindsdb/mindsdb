@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -23,7 +23,7 @@ class AirtableHandler(DatabaseHandler):
     This handler handles connection and execution of the Airtable statements.
     """
 
-    name = 'airtable'
+    name = "airtable"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -35,7 +35,7 @@ class AirtableHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'airtable'
+        self.dialect = "airtable"
         self.connection_data = connection_data
         self.kwargs = kwargs
 
@@ -57,27 +57,27 @@ class AirtableHandler(DatabaseHandler):
             return self.connection
 
         url = f"https://api.airtable.com/v0/{self.connection_data['base_id']}/{self.connection_data['table_name']}"
-        headers = {"Authorization": "Bearer " + self.connection_data['api_key']}
+        headers = {"Authorization": "Bearer " + self.connection_data["api_key"]}
 
         response = requests.get(url, headers=headers)
         response = response.json()
-        records = response['records']
+        records = response["records"]
 
         new_records = True
         while new_records:
             try:
-                if response['offset']:
-                    params = {"offset": response['offset']}
+                if response["offset"]:
+                    params = {"offset": response["offset"]}
                     response = requests.get(url, params=params, headers=headers)
                     response = response.json()
 
-                    new_records = response['records']
+                    new_records = response["records"]
                     records = records + new_records
             except Exception:
                 new_records = False
 
-        rows = [record['fields'] for record in records]
-        globals()[self.connection_data['table_name']] = pd.DataFrame(rows)
+        rows = [record["fields"] for record in records]
+        globals()[self.connection_data["table_name"]] = pd.DataFrame(rows)
 
         self.connection = duckdb.connect()
         self.is_connected = True
@@ -110,7 +110,7 @@ class AirtableHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Airtable base {self.connection_data["base_id"]}, {e}!')
+            logger.error(f"Error connecting to Airtable base {self.connection_data['base_id']}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -138,22 +138,17 @@ class AirtableHandler(DatabaseHandler):
             result = cursor.fetchall()
             if result:
                 response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
+                    RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description])
                 )
 
             else:
                 response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
         except Exception as e:
-            logger.error(f'Error running query: {query} on table {self.connection_data["table_name"]} in base {self.connection_data["base_id"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
+            logger.error(
+                f"Error running query: {query} on table {self.connection_data['table_name']} in base {self.connection_data['base_id']}!"
             )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -180,11 +175,7 @@ class AirtableHandler(DatabaseHandler):
         """
 
         response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                [self.connection_data['table_name']],
-                columns=['table_name']
-            )
+            RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([self.connection_data["table_name"]], columns=["table_name"])
         )
 
         return response
@@ -202,10 +193,10 @@ class AirtableHandler(DatabaseHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': list(globals()[self.connection_data['table_name']].columns),
-                    'data_type': globals()[self.connection_data['table_name']].dtypes
+                    "column_name": list(globals()[self.connection_data["table_name"]].columns),
+                    "data_type": globals()[self.connection_data["table_name"]].dtypes,
                 }
-            )
+            ),
         )
 
         return response

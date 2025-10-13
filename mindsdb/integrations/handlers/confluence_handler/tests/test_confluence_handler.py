@@ -11,13 +11,11 @@ class ConfluenceHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         connection_data = {
-            'url': os.getenv('CONFLUENCE_URL'),
-            'username': os.getenv('CONFLUENCE_USERNAME'),
-            'password': os.getenv('CONFLUENCE_PASSWORD'),
+            "url": os.getenv("CONFLUENCE_URL"),
+            "username": os.getenv("CONFLUENCE_USERNAME"),
+            "password": os.getenv("CONFLUENCE_PASSWORD"),
         }
-        cls.handler = ConfluenceHandler(
-            name='confluence_handler', connection_data=connection_data
-        )
+        cls.handler = ConfluenceHandler(name="confluence_handler", connection_data=connection_data)
 
     def test_connect(self):
         self.handler.connect()
@@ -30,9 +28,7 @@ class ConfluenceHandlerTest(unittest.TestCase):
         assert response.type is not RESPONSE_TYPE.ERROR
 
     def test_get_pages(self):
-        response = self.handler.native_query(
-            "SELECT * FROM confluence_data.pages WHERE space='DEMO'"
-        )
+        response = self.handler.native_query("SELECT * FROM confluence_data.pages WHERE space='DEMO'")
         assert response.type is not RESPONSE_TYPE.ERROR
 
     # TODO: Uncomment when `insert` native query is fixed.
@@ -47,22 +43,22 @@ class ConfluenceHandlerTest(unittest.TestCase):
     #     assert response.type is not RESPONSE_TYPE.ERROR
 
     def test_update_page(self):
-        query = f'''
+        query = f"""
         UPDATE confluence_data.pages
         SET title='Title updated', body='Body updated'
-        WHERE id={os.getenv('CONFLUENCE_TEST_PAGE_ID')}
-        '''
+        WHERE id={os.getenv("CONFLUENCE_TEST_PAGE_ID")}
+        """
         response = self.handler.native_query(query)
         assert response.type is not RESPONSE_TYPE.ERROR
 
     def test_delete_page(self):
-        query = f'''
+        query = f"""
         DELETE FROM confluence_data.pages
-        WHERE id={os.getenv('CONFLUENCE_TEST_PAGE_ID')}
-        '''
+        WHERE id={os.getenv("CONFLUENCE_TEST_PAGE_ID")}
+        """
         response = self.handler.native_query(query)
         assert response.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

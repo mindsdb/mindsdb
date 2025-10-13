@@ -18,15 +18,15 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import COMMANDS, getCons
 
 
 class CommandPacket(Packet):
-    '''
+    """
     Implementation based on description:
     https://mariadb.com/kb/en/library/1-connecting-connecting/#initial-handshake-packet
-    '''
+    """
 
     def _read_byte(self, buffer):
         b = buffer[:1]
         buffer = buffer[1:]
-        b = struct.unpack('<B', b)[0]
+        b = struct.unpack("<B", b)[0]
         return b, buffer
 
     def read_params(self, buffer, num_params):
@@ -50,20 +50,16 @@ class CommandPacket(Packet):
             for i in range(num_params):
                 t, buffer = self._read_byte(buffer)
                 s, buffer = self._read_byte(buffer)
-                types.append(dict(
-                    type=t,
-                    signed=s
-                ))
+                types.append(dict(type=t, signed=s))
 
         datumtypes = {
-            TYPES.MYSQL_TYPE_VAR_STRING: 'string<lenenc>',
-            TYPES.MYSQL_TYPE_STRING: 'string<lenenc>',
-            TYPES.MYSQL_TYPE_VARCHAR: 'string<lenenc>',
-
-            TYPES.MYSQL_TYPE_TINY: 'int<1>',
-            TYPES.MYSQL_TYPE_SHORT: 'int<2>',
-            TYPES.MYSQL_TYPE_LONG: 'int<4>',
-            TYPES.MYSQL_TYPE_LONGLONG: 'int<8>',
+            TYPES.MYSQL_TYPE_VAR_STRING: "string<lenenc>",
+            TYPES.MYSQL_TYPE_STRING: "string<lenenc>",
+            TYPES.MYSQL_TYPE_VARCHAR: "string<lenenc>",
+            TYPES.MYSQL_TYPE_TINY: "int<1>",
+            TYPES.MYSQL_TYPE_SHORT: "int<2>",
+            TYPES.MYSQL_TYPE_LONG: "int<4>",
+            TYPES.MYSQL_TYPE_LONGLONG: "int<8>",
         }
 
         for i in range(num_params):
@@ -71,7 +67,7 @@ class CommandPacket(Packet):
                 self.parameters.append(None)
                 continue
 
-            datum_type = datumtypes.get(types[i]['type'])
+            datum_type = datumtypes.get(types[i]["type"])
             if datum_type is not None:
                 x = Datum(datum_type)
                 buffer = x.setFromBuff(buffer)
@@ -84,7 +80,7 @@ class CommandPacket(Packet):
                 # NOTE at this moment all sends as strings and it works
                 raise Exception(f"Unsupported type {types[i]['type']}")
 
-    def setup(self, length=0, count_header=1, body=''):
+    def setup(self, length=0, count_header=1, body=""):
         if length == 0:
             return
 
@@ -94,27 +90,27 @@ class CommandPacket(Packet):
         self._seq = count_header
         self._body = body
 
-        self.type = Datum('int<1>')
+        self.type = Datum("int<1>")
         buffer = body
         buffer = self.type.setFromBuff(buffer)
 
         if self.type.value in (COMMANDS.COM_QUERY, COMMANDS.COM_STMT_PREPARE):
-            self.sql = Datum('str<EOF>')
+            self.sql = Datum("str<EOF>")
             buffer = self.sql.setFromBuff(buffer)
         elif self.type.value == COMMANDS.COM_STMT_EXECUTE:
             # https://mariadb.com/kb/en/com_stmt_execute/
-            self.stmt_id = Datum('int<4>')
+            self.stmt_id = Datum("int<4>")
             buffer = self.stmt_id.setFromBuff(buffer)
-            self.flags = Datum('int<1>')
+            self.flags = Datum("int<1>")
             buffer = self.flags.setFromBuff(buffer)
-            self.iteration_count = Datum('int<4>')
+            self.iteration_count = Datum("int<4>")
             buffer = self.iteration_count.setFromBuff(buffer)
 
             self.parameters = []
 
             prepared_stmt = self.session.prepared_stmts[self.stmt_id.value]
 
-            num_params = len(prepared_stmt['statement'].params)
+            num_params = len(prepared_stmt["statement"].params)
             self.read_params(buffer, num_params)
             #
             # if prepared_stmt['type'] == 'select':
@@ -137,23 +133,25 @@ class CommandPacket(Packet):
             #     num_params = len(prepared_stmt['statement'].parameters)
             #     self.read_params(buffer, num_params)
         elif self.type.value == COMMANDS.COM_STMT_CLOSE:
-            self.stmt_id = Datum('int<4>')
+            self.stmt_id = Datum("int<4>")
             buffer = self.stmt_id.setFromBuff(buffer)
         elif self.type.value == COMMANDS.COM_STMT_FETCH:
-            self.stmt_id = Datum('int<4>')
+            self.stmt_id = Datum("int<4>")
             buffer = self.stmt_id.setFromBuff(buffer)
-            self.limit = Datum('int<4>')
+            self.limit = Datum("int<4>")
             buffer = self.limit.setFromBuff(buffer)
         elif self.type.value == COMMANDS.COM_INIT_DB:
-            self.database = Datum('str<EOF>')
+            self.database = Datum("str<EOF>")
             buffer = self.database.setFromBuff(buffer)
         else:
-            self.data = Datum('str<EOF>')
+            self.data = Datum("str<EOF>")
             buffer = self.data.setFromBuff(buffer)
 
     def __str__(self):
-        return str({
-            'header': {'length': self.length, 'seq': self.seq},
-            'type': getConstName(COMMANDS, self.type.value),
-            'vars': self.__dict__
-        })
+        return str(
+            {
+                "header": {"length": self.length, "seq": self.seq},
+                "type": getConstName(COMMANDS, self.type.value),
+                "vars": self.__dict__,
+            }
+        )

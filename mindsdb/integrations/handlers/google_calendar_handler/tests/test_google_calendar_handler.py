@@ -4,16 +4,15 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class GoogleCalendarHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
                 "credentials": "C:\\Users\\panagiotis\\Desktop\\GitHub\\mindsdb\\mindsdb\\integrations\\handlers"
-                               "\\google_calendar_handler\\credentials.json",
+                "\\google_calendar_handler\\credentials.json",
             }
         }
-        cls.handler = GoogleCalendarHandler('test_google_calendar_handler', **cls.kwargs)
+        cls.handler = GoogleCalendarHandler("test_google_calendar_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -28,7 +27,7 @@ class GoogleCalendarHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('id')
+        columns = self.handler.get_columns("id")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
     def test_4_insert(self):
@@ -36,7 +35,8 @@ class GoogleCalendarHandlerTest(unittest.TestCase):
             "INSERT INTO calendar.events VALUES (100, '2023-04-21 00:00:00', '2023-05-01 00:00:00',"
             "'summary', 'description','location', 'status', 'html_link', "
             "'creator', 'organizer', 'reminders', "
-            "'timeZone', 'calendar_id', 'attendees'")
+            "'timeZone', 'calendar_id', 'attendees'"
+        )
         assert res.type is not RESPONSE_TYPE.ERROR
 
     def test_5_update(self):
@@ -52,5 +52,5 @@ class GoogleCalendarHandlerTest(unittest.TestCase):
         assert res.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

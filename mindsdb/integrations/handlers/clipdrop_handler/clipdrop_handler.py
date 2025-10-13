@@ -18,37 +18,45 @@ class ClipdropHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        args = args['using']
+        args = args["using"]
 
-        available_tasks = ["remove_text", "remove_background", "sketch_to_image", "text_to_image", "replace_background", "reimagine"]
+        available_tasks = [
+            "remove_text",
+            "remove_background",
+            "sketch_to_image",
+            "text_to_image",
+            "replace_background",
+            "reimagine",
+        ]
 
-        if 'task' not in args:
-            raise Exception(f'task has to be specified. Available tasks are - {available_tasks}')
+        if "task" not in args:
+            raise Exception(f"task has to be specified. Available tasks are - {available_tasks}")
 
-        if args['task'] not in available_tasks:
-            raise Exception(f'Unknown task specified. Available tasks are - {available_tasks}')
+        if args["task"] not in available_tasks:
+            raise Exception(f"Unknown task specified. Available tasks are - {available_tasks}")
 
-        if 'local_directory_path' not in args:
-            raise Exception('local_directory_path has to be specified')
+        if "local_directory_path" not in args:
+            raise Exception("local_directory_path has to be specified")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        if 'using' not in args:
-            raise Exception("Clipdrop AI Inference engine requires a USING clause! Refer to its documentation for more details.")
+        if "using" not in args:
+            raise Exception(
+                "Clipdrop AI Inference engine requires a USING clause! Refer to its documentation for more details."
+            )
         self.generative = True
 
-        args = args['using']
-        args['target'] = target
-        self.model_storage.json_set('args', args)
+        args = args["using"]
+        args["target"] = target
+        self.model_storage.json_set("args", args)
 
     def _get_clipdrop_client(self, args):
-        api_key = get_api_key('clipdrop', args, self.engine_storage, strict=False)
+        api_key = get_api_key("clipdrop", args, self.engine_storage, strict=False)
 
         local_directory_path = args["local_directory_path"]
 
         return ClipdropClient(api_key=api_key, local_dir=local_directory_path)
 
     def _process_remove_text(self, df, args):
-
         def generate_remove_text(conds, client):
             conds = conds.to_dict()
             return client.remove_text(conds.get("image_url"))
@@ -60,14 +68,15 @@ class ClipdropHandler(BaseMLEngine):
 
         for col in df.columns:
             if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for remove text - {supported_params}")
+                raise Exception(
+                    f"Unknown column {col}. Currently supported parameters for remove text - {supported_params}"
+                )
 
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_remove_text, client=client, axis=1)
 
     def _process_remove_background(self, df, args):
-
         def generate_remove_background(conds, client):
             conds = conds.to_dict()
             return client.remove_background(conds.get("image_url"))
@@ -79,14 +88,15 @@ class ClipdropHandler(BaseMLEngine):
 
         for col in df.columns:
             if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for remove background - {supported_params}")
+                raise Exception(
+                    f"Unknown column {col}. Currently supported parameters for remove background - {supported_params}"
+                )
 
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_remove_background, client=client, axis=1)
 
     def _process_sketch_to_image(self, df, args):
-
         def generate_sketch_to_image(conds, client):
             conds = conds.to_dict()
             return client.sketch_to_image(conds.get("image_url"), conds.get("text"))
@@ -101,14 +111,15 @@ class ClipdropHandler(BaseMLEngine):
 
         for col in df.columns:
             if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for remove background - {supported_params}")
+                raise Exception(
+                    f"Unknown column {col}. Currently supported parameters for remove background - {supported_params}"
+                )
 
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_sketch_to_image, client=client, axis=1)
 
     def _process_text_to_image(self, df, args):
-
         def generate_text_to_image(conds, client):
             conds = conds.to_dict()
             return client.text_to_image(conds.get("text"))
@@ -120,14 +131,15 @@ class ClipdropHandler(BaseMLEngine):
 
         for col in df.columns:
             if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for remove background - {supported_params}")
+                raise Exception(
+                    f"Unknown column {col}. Currently supported parameters for remove background - {supported_params}"
+                )
 
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_text_to_image, client=client, axis=1)
 
     def _process_replace_background(self, df, args):
-
         def generate_replace_background(conds, client):
             conds = conds.to_dict()
             return client.replace_background(conds.get("image_url"), conds.get("text"))
@@ -142,14 +154,15 @@ class ClipdropHandler(BaseMLEngine):
 
         for col in df.columns:
             if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for replace background - {supported_params}")
+                raise Exception(
+                    f"Unknown column {col}. Currently supported parameters for replace background - {supported_params}"
+                )
 
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_replace_background, client=client, axis=1)
 
     def _process_reimagine(self, df, args):
-
         def generate_reimagine(conds, client):
             conds = conds.to_dict()
             return client.reimagine(conds.get("image_url"))
@@ -161,15 +174,16 @@ class ClipdropHandler(BaseMLEngine):
 
         for col in df.columns:
             if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for reimagine - {supported_params}")
+                raise Exception(
+                    f"Unknown column {col}. Currently supported parameters for reimagine - {supported_params}"
+                )
 
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_reimagine, client=client, axis=1)
 
     def predict(self, df, args=None):
-
-        args = self.model_storage.json_get('args')
+        args = self.model_storage.json_get("args")
 
         if args["task"] == "remove_text":
             preds = self._process_remove_text(df, args)
@@ -186,8 +200,8 @@ class ClipdropHandler(BaseMLEngine):
 
         result_df = pd.DataFrame()
 
-        result_df['predictions'] = preds
+        result_df["predictions"] = preds
 
-        result_df = result_df.rename(columns={'predictions': args['target']})
+        result_df = result_df.rename(columns={"predictions": args["target"]})
 
         return result_df

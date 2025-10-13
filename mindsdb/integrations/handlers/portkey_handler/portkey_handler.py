@@ -32,26 +32,16 @@ class PortkeyHandler(BaseMLEngine):
         df: Optional[pd.DataFrame] = None,
         args: Optional[Dict] = None,
     ) -> None:
-
         if "using" not in args:
-            raise Exception(
-                "Portkey engine requires a USING clause! Refer to its documentation for more details."
-            )
+            raise Exception("Portkey engine requires a USING clause! Refer to its documentation for more details.")
 
         self.model_storage.json_set("args", args)
 
-    def predict(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> None:
-
+    def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args = self.model_storage.json_get("args")
-        api_key = get_api_key('portkey', args["using"], self.engine_storage, strict=False)
+        api_key = get_api_key("portkey", args["using"], self.engine_storage, strict=False)
 
-        self.client = Portkey(
-            **self.engine_storage.get_connection_args(),
-            api_key=api_key,
-            metadata=DEFAULT_METADATA
-        )
+        self.client = Portkey(**self.engine_storage.get_connection_args(), api_key=api_key, metadata=DEFAULT_METADATA)
 
         result_df = pd.DataFrame()
 
@@ -69,11 +59,6 @@ class PortkeyHandler(BaseMLEngine):
 
         model_args = self.model_storage.json_get("args")
 
-        message = self.client.chat.completions.create(
-            **model_args,
-            messages=[
-                {"role": "user", "content": text}
-            ]
-        )
+        message = self.client.chat.completions.create(**model_args, messages=[{"role": "user", "content": text}])
 
         return message.choices[0].message.content

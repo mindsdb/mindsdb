@@ -15,7 +15,7 @@ connection_args = OrderedDict(
         "description": "Optional GitHub API key to use for authentication.",
         "required": False,
         "label": "Api key",
-        "secret": True
+        "secret": True,
     },
     github_url={
         "type": ARG_TYPE.STR,
@@ -28,5 +28,5 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     repository="mindsdb/mindsdb",
     api_key="ghp_z91InCQZWZAMlddOzFCX7xHJrf9Fai35HT7",
-    github_url="https://github.com/mindsdb/mindsdb"
+    github_url="https://github.com/mindsdb/mindsdb",
 )

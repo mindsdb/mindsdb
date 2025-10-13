@@ -14,33 +14,28 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 
 
 class ErrPacket(Packet):
-    '''
+    """
     Implementation based on:
     https://mariadb.com/kb/en/library/1-connecting-connecting/#initial-handshake-packet
-    '''
+    """
 
     def setup(self):
         err_code = 0
-        if 'err_code' in self._kwargs:
-            err_code = self._kwargs['err_code']
+        if "err_code" in self._kwargs:
+            err_code = self._kwargs["err_code"]
 
-        msg = 'ERROR'
-        if 'msg' in self._kwargs:
-            msg = self._kwargs['msg']
+        msg = "ERROR"
+        if "msg" in self._kwargs:
+            msg = self._kwargs["msg"]
 
-        self.err_header = Datum('int<1>', 255)
-        self.err_code = Datum('int<2>', err_code)
-        self.msg = Datum('string<EOF>', msg)
+        self.err_header = Datum("int<1>", 255)
+        self.err_code = Datum("int<2>", err_code)
+        self.msg = Datum("string<EOF>", msg)
 
     @property
     def body(self):
-
-        order = [
-            'err_header',
-            'err_code',
-            'msg'
-        ]
-        string = b''
+        order = ["err_header", "err_code", "msg"]
+        string = b""
         for key in order:
             string += getattr(self, key).toStringPacket()
 
@@ -50,6 +45,7 @@ class ErrPacket(Packet):
     @staticmethod
     def test():
         import pprint
+
         pprint.pprint(str(ErrPacket().get_packet_string()))
 
 

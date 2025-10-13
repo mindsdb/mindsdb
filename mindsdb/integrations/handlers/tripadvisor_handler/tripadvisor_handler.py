@@ -96,16 +96,12 @@ class TripAdvisorHandler(APIHandler):
 
         return response
 
-    def call_tripadvisor_searchlocation_api(
-        self, method_name: str = None, params: dict = None
-    ) -> pd.DataFrame:
+    def call_tripadvisor_searchlocation_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
         if self.is_connected is False:
             self.connect()
 
-        locations = self.api.getTripAdvisorData(
-            TripAdvisorAPICall.SEARCH_LOCATION, **params
-        )
+        locations = self.api.getTripAdvisorData(TripAdvisorAPICall.SEARCH_LOCATION, **params)
         result = []
 
         for loc in locations:
@@ -130,9 +126,7 @@ class TripAdvisorHandler(APIHandler):
         result = pd.DataFrame(result)
         return result
 
-    def call_tripadvisor_location_details_api(
-        self, method_name: str = None, params: dict = None
-    ) -> pd.DataFrame:
+    def call_tripadvisor_location_details_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
         if self.is_connected is False:
             self.connect()
@@ -172,12 +166,8 @@ class TripAdvisorHandler(APIHandler):
             "parent_brand": loc.get("parent_brand"),
             "brand": loc.get("brand"),
             "ancestors": str(loc.get("ancestors")),
-            "periods": str(loc.get("hours").get("periods"))
-            if loc.get("hours") is not None
-            else None,
-            "weekday": str(loc.get("hours").get("weekday_text"))
-            if loc.get("weekday") is not None
-            else None,
+            "periods": str(loc.get("hours").get("periods")) if loc.get("hours") is not None else None,
+            "weekday": str(loc.get("hours").get("weekday_text")) if loc.get("weekday") is not None else None,
             "amenities": str(loc.get("amenities")),
             "features": str(loc.get("features")),
             "cuisines": str(loc.get("cuisine")),
@@ -193,9 +183,7 @@ class TripAdvisorHandler(APIHandler):
         result = pd.DataFrame(result)
         return result
 
-    def call_tripadvisor_reviews_api(
-        self, method_name: str = None, params: dict = None
-    ) -> pd.DataFrame:
+    def call_tripadvisor_reviews_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
         if self.is_connected is False:
             self.connect()
@@ -226,9 +214,7 @@ class TripAdvisorHandler(APIHandler):
         result = pd.DataFrame(result)
         return result
 
-    def call_tripadvisor_photos_api(
-        self, method_name: str = None, params: dict = None
-    ) -> pd.DataFrame:
+    def call_tripadvisor_photos_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
         if self.is_connected is False:
             self.connect()
@@ -251,9 +237,7 @@ class TripAdvisorHandler(APIHandler):
         result = pd.DataFrame(result)
         return result
 
-    def call_tripadvisor_nearby_location_api(
-        self, method_name: str = None, params: dict = None
-    ) -> pd.DataFrame:
+    def call_tripadvisor_nearby_location_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
         if self.is_connected is False:
             self.connect()

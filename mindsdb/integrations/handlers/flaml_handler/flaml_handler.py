@@ -17,30 +17,23 @@ class FLAMLHandler(BaseMLEngine):
             target_dtype = infer_types(df, 0).to_dict()["dtypes"][target]
             model = AutoML(verbose=0)
 
-            if target_dtype in ['binary', 'categorical', 'tags']:
-                model.fit(X_train=df.drop(columns=[target]),
-                          y_train=df[target],
-                          task='classification',
-                          **args.get('using'))
+            if target_dtype in ["binary", "categorical", "tags"]:
+                model.fit(
+                    X_train=df.drop(columns=[target]), y_train=df[target], task="classification", **args.get("using")
+                )
 
-            elif target_dtype in ['integer', 'float', 'quantity']:
-                model.fit(X_train=df.drop(columns=[target]),
-                          y_train=df[target],
-                          task='regression',
-                          **args.get('using'))
+            elif target_dtype in ["integer", "float", "quantity"]:
+                model.fit(X_train=df.drop(columns=[target]), y_train=df[target], task="regression", **args.get("using"))
 
-            self.model_storage.json_set('args', args)
-            self.model_storage.file_set('model', dill.dumps(model))
+            self.model_storage.json_set("args", args)
+            self.model_storage.file_set("model", dill.dumps(model))
 
         else:
-            raise Exception(
-                "Data is empty!!"
-            )
+            raise Exception("Data is empty!!")
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
-
         model = dill.loads(self.model_storage.file_get("model"))
-        target = self.model_storage.json_get('args').get("target")
+        target = self.model_storage.json_get("args").get("target")
 
         results = pd.DataFrame(model.predict(df), columns=[target])
 

@@ -92,19 +92,12 @@ class TogetherAIHandler(OpenAIHandler):
             None
         """
         if "using" not in args:
-            raise Exception(
-                "TogetherAI engine require a USING clause! Refer to its documentation for more details"
-            )
+            raise Exception("TogetherAI engine require a USING clause! Refer to its documentation for more details")
         else:
             args = args["using"]
 
-        if (
-            len(set(args.keys()) & {"question_column", "prompt_template", "prompt"})
-            == 0
-        ):
-            raise Exception(
-                "One of `question_column`, `prompt_template` or `prompt` is required for this engine."
-            )
+        if len(set(args.keys()) & {"question_column", "prompt_template", "prompt"}) == 0:
+            raise Exception("One of `question_column`, `prompt_template` or `prompt` is required for this engine.")
 
         keys_collection = [
             ["prompt_template"],
@@ -112,9 +105,7 @@ class TogetherAIHandler(OpenAIHandler):
             ["prompt", "user_column", "assistant_column"],
         ]
         for keys in keys_collection:
-            if keys[0] in args and any(
-                x[0] in args for x in keys_collection if x != keys
-            ):
+            if keys[0] in args and any(x[0] in args for x in keys_collection if x != keys):
                 raise Exception(
                     textwrap.dedent(
                         """\
@@ -166,9 +157,7 @@ class TogetherAIHandler(OpenAIHandler):
             if args.get("mode") is None:
                 args["mode"] = self.default_mode
             elif args["mode"] not in self.supported_modes:
-                raise Exception(
-                    f"Invalid operation mode. Please use one of {self.supported_modes}"
-                )
+                raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}")
 
             if not args.get("model_name"):
                 if args["mode"] == "embedding":
@@ -176,9 +165,7 @@ class TogetherAIHandler(OpenAIHandler):
                 else:
                     args["model_name"] = self.default_model
             elif args["model_name"] not in available_models:
-                raise Exception(
-                    f"Invalid model name. Please use one of {available_models}"
-                )
+                raise Exception(f"Invalid model name. Please use one of {available_models}")
         finally:
             self.model_storage.json_set("args", args)
 
@@ -228,7 +215,5 @@ class TogetherAIHandler(OpenAIHandler):
         else:
             raise Exception(f"Failed to get supported models: {response.text}")
 
-    def finetune(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         raise NotImplementedError("Fine-tuning is not supported for TogetherAI engine")

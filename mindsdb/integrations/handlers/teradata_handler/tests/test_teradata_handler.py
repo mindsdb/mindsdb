@@ -41,12 +41,12 @@ class TeradataHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": os.environ.get('TERADATA_HOST', 'localhost'),
+            "host": os.environ.get("TERADATA_HOST", "localhost"),
             "user": "dbc",
             "password": "dbc",
-            "database": "HR"
+            "database": "HR",
         }
-        cls.handler = TeradataHandler('test_teradata_handler', cls.kwargs)
+        cls.handler = TeradataHandler("test_teradata_handler", cls.kwargs)
 
     def test_0_connect(self):
         assert self.handler.connect()
@@ -55,13 +55,13 @@ class TeradataHandlerTest(unittest.TestCase):
         assert self.handler.check_connection().success is True
 
     def test_2_get_columns(self):
-        assert self.handler.get_columns('Employees').resp_type is not RESPONSE_TYPE.ERROR
+        assert self.handler.get_columns("Employees").resp_type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_tables(self):
         assert self.handler.get_tables().resp_type is not RESPONSE_TYPE.ERROR
 
     def test_4_select_query(self):
-        query = 'SELECT * FROM HR.Employees WHERE GlobalID=101'
+        query = "SELECT * FROM HR.Employees WHERE GlobalID=101"
         assert self.handler.query(query).resp_type is RESPONSE_TYPE.TABLE
 
 

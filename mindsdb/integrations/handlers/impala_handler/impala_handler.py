@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 
@@ -24,13 +24,13 @@ class ImpalaHandler(DatabaseHandler):
     This handler handles connection and execution of the Impala statements.
     """
 
-    name = 'impala'
+    name = "impala"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
 
         self.parser = parse_sql
-        self.dialect = 'impala'
+        self.dialect = "impala"
         self.kwargs = kwargs
         self.connection_data = connection_data
 
@@ -42,13 +42,11 @@ class ImpalaHandler(DatabaseHandler):
             return self.connection
 
         config = {
-            'host': self.connection_data.get('host'),
-            'port': self.connection_data.get('port', 21050),
-            'user': self.connection_data.get('user'),
-            'password': self.connection_data.get('password'),
-            'database': self.connection_data.get('database'),
-
-
+            "host": self.connection_data.get("host"),
+            "port": self.connection_data.get("port", 21050),
+            "user": self.connection_data.get("user"),
+            "password": self.connection_data.get("password"),
+            "database": self.connection_data.get("database"),
         }
 
         connection = db.connect(**config)
@@ -64,7 +62,6 @@ class ImpalaHandler(DatabaseHandler):
         return
 
     def check_connection(self) -> StatusResponse:
-
         result = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -72,7 +69,7 @@ class ImpalaHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection is not None
         except Exception as e:
-            logger.error(f'x x x Error connecting to Impala {self.connection_data["database"]}, {e}!')
+            logger.error(f"x x x Error connecting to Impala {self.connection_data['database']}, {e}!")
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -97,23 +94,15 @@ class ImpalaHandler(DatabaseHandler):
                 cur.execute(query)
                 result = cur.fetchall()
                 if cur.has_result_set:
-
                     response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
+                        RESPONSE_TYPE.TABLE, pd.DataFrame(result, columns=[x[0] for x in cur.description])
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
                 # connection.rollback()
 
         if need_to_close is True:
@@ -135,7 +124,7 @@ class ImpalaHandler(DatabaseHandler):
         """
         q = "SHOW TABLES;"
         result = self.native_query(q)
-        df = result.data_frame.rename(columns={'name': 'TABLE_NAME'})
+        df = result.data_frame.rename(columns={"name": "TABLE_NAME"})
         result.data_frame = df
 
         return result
@@ -147,7 +136,7 @@ class ImpalaHandler(DatabaseHandler):
         q = f"DESCRIBE {table_name};"
 
         result = self.native_query(q)
-        df = result.data_frame.iloc[:, 0:2].rename(columns={'name': 'COLUMN_NAME', 'type': 'Data_Type'})
+        df = result.data_frame.iloc[:, 0:2].rename(columns={"name": "COLUMN_NAME", "type": "Data_Type"})
         result.data_frame = df
 
         return result

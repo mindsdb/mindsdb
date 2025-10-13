@@ -2,7 +2,6 @@ import requests
 
 
 class NPM:
-
     def __init__(self, package_name: str):
         resp = requests.get("https://api.npms.io/v2/package/" + package_name)
         if not resp or resp.status_code != 200:

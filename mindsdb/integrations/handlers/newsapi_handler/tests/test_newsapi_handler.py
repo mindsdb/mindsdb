@@ -9,9 +9,7 @@ from mindsdb.integrations.handlers.newsapi_handler.newsapi_handler import NewsAP
 class NewsApiHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "connection_data": {"api_key": "82fa480335ce42c0aa3758cb0efe66be"}
-        }
+        cls.kwargs = {"connection_data": {"api_key": "82fa480335ce42c0aa3758cb0efe66be"}}
         cls.handler = NewsAPIHandler("test_newsapi_handler", **cls.kwargs)
 
     def test_0_connect(self):
@@ -33,15 +31,11 @@ class NewsApiHandlerTest(unittest.TestCase):
     def test_4_select(self):
         # table = self.handler.get_table("article")
         with self.assertRaises(NewsAPIException):
-            self.handler.native_query(
-                'SELECT * FROM article WHERE query="google" AND sources="google.com"'
-            )
+            self.handler.native_query('SELECT * FROM article WHERE query="google" AND sources="google.com"')
 
     def test_5_select(self):
         # table = self.handler.get_table("article")
-        res = self.handler.native_query(
-            'SELECT * FROM article WHERE query="google" AND sources="abc-news"'
-        )
+        res = self.handler.native_query('SELECT * FROM article WHERE query="google" AND sources="abc-news"')
         assert res.type is RESPONSE_TYPE.TABLE
 
     def test_6_select(self):
@@ -52,37 +46,27 @@ class NewsApiHandlerTest(unittest.TestCase):
 
     def test_7_select(self):
         # table = self.handler.get_table("article")
-        res = self.handler.native_query(
-            'SELECT * FROM article WHERE query="google" LIMIT 78'
-        )
+        res = self.handler.native_query('SELECT * FROM article WHERE query="google" LIMIT 78')
         assert res.type is RESPONSE_TYPE.TABLE
 
     def test_8_select(self):
         # table = self.handler.get_table("article")
-        res = self.handler.native_query(
-            'SELECT * FROM article WHERE query="google" LIMIT 150'
-        )
+        res = self.handler.native_query('SELECT * FROM article WHERE query="google" LIMIT 150')
         assert res.type is RESPONSE_TYPE.TABLE
 
     def test_9_select(self):
         # table = self.handler.get_table("article")
-        res = self.handler.native_query(
-            'SELECT * FROM article WHERE query="google" ORDER BY publishedAt'
-        )
+        res = self.handler.native_query('SELECT * FROM article WHERE query="google" ORDER BY publishedAt')
         assert res.type is RESPONSE_TYPE.TABLE
 
     def test_10_select(self):
         # table = self.handler.get_table("article")
         with self.assertRaises(NotImplementedError):
-            self.handler.native_query(
-                'SELECT * FROM article WHERE query="google" ORDER BY query'
-            )
+            self.handler.native_query('SELECT * FROM article WHERE query="google" ORDER BY query')
 
     def test_11_select(self):
         # table = self.handler.get_table("article")
-        res = self.handler.native_query(
-            'SELECT * FROM article WHERE query="google" ORDER BY relevancy'
-        )
+        res = self.handler.native_query('SELECT * FROM article WHERE query="google" ORDER BY relevancy')
         assert res.type is RESPONSE_TYPE.TABLE
 
 

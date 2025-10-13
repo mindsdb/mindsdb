@@ -3,7 +3,7 @@ from mindsdb.integrations.handlers.zipcodebase_handler.zipcodebase_tables import
     ZipCodeBaseCodeInRadiusTable,
     ZipCodeBaseCodeByCityTable,
     ZipCodeBaseCodeByStateTable,
-    ZipCodeBaseStatesByCountryTable
+    ZipCodeBaseStatesByCountryTable,
 )
 from mindsdb.integrations.handlers.zipcodebase_handler.zipcodebase import ZipCodeBaseClient
 from mindsdb.integrations.libs.api_handler import APIHandler

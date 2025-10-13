@@ -11,7 +11,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
 
@@ -24,7 +24,7 @@ class TeradataHandler(DatabaseHandler):
     This handler handles the connection and execution of SQL statements on Teradata.
     """
 
-    name = 'teradata'
+    name = "teradata"
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """
@@ -64,18 +64,18 @@ class TeradataHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters.
-        if not all(key in self.connection_data for key in ['host', 'user', 'password']):
-            raise ValueError('Required parameters (host, user, password) must be provided.')
+        if not all(key in self.connection_data for key in ["host", "user", "password"]):
+            raise ValueError("Required parameters (host, user, password) must be provided.")
 
         config = {
-            'host': self.connection_data.get('host'),
-            'user': self.connection_data.get('user'),
-            'password': self.connection_data.get('password')
+            "host": self.connection_data.get("host"),
+            "user": self.connection_data.get("user"),
+            "password": self.connection_data.get("password"),
         }
 
         # Optional connection parameters.
-        if 'database' in self.connection_data:
-            config['database'] = self.connection_data.get('database')
+        if "database" in self.connection_data:
+            config["database"] = self.connection_data.get("database")
 
         try:
             self.connection = teradatasql.connect(
@@ -84,10 +84,10 @@ class TeradataHandler(DatabaseHandler):
             self.is_connected = True
             return self.connection
         except OperationalError as operational_error:
-            logger.error(f'Error connecting to Teradata, {operational_error}!')
+            logger.error(f"Error connecting to Teradata, {operational_error}!")
             raise
         except Exception as unknown_error:
-            logger.error(f'Unknown error connecting to Teradata, {unknown_error}!')
+            logger.error(f"Unknown error connecting to Teradata, {unknown_error}!")
             raise
 
     def disconnect(self) -> None:
@@ -117,10 +117,10 @@ class TeradataHandler(DatabaseHandler):
                 cur.execute('SELECT 1 FROM (SELECT 1 AS "dual") AS "dual"')
             response.success = True
         except (OperationalError, ValueError) as known_error:
-            logger.error(f'Connection check to Teradata failed, {known_error}!')
+            logger.error(f"Connection check to Teradata failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to Teradata failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to Teradata failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         if response.success is True and need_to_close:
@@ -150,27 +150,15 @@ class TeradataHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 else:
                     result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
-                    )
+                    response = Response(RESPONSE_TYPE.TABLE, DataFrame(result, columns=[x[0] for x in cur.description]))
                 connection.commit()
             except OperationalError as operational_error:
-                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(operational_error)
-                )
+                logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(operational_error))
                 connection.rollback()
             except Exception as unknown_error:
-                logger.error(f'Unknown error running query: {query} on {self.connection_data["database"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(unknown_error)
-                )
+                logger.error(f"Unknown error running query: {query} on {self.connection_data['database']}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(unknown_error))
                 connection.rollback()
 
         if need_to_close is True:
@@ -204,7 +192,7 @@ class TeradataHandler(DatabaseHandler):
                 TableName AS table_name,
                 TableKind AS table_type
             FROM DBC.TablesV
-            WHERE DatabaseName = '{self.connection_data.get('database') if self.connection_data.get('database') else self.connection_data.get('user')}'
+            WHERE DatabaseName = '{self.connection_data.get("database") if self.connection_data.get("database") else self.connection_data.get("user")}'
             AND (TableKind = 'T'
                 OR TableKind = 'O'
                 OR TableKind = 'Q'
@@ -213,7 +201,7 @@ class TeradataHandler(DatabaseHandler):
         result = self.native_query(query)
 
         df = result.data_frame
-        df['table_type'] = df['table_type'].apply(lambda x: 'VIEW' if x == 'V' else 'BASE TABLE')
+        df["table_type"] = df["table_type"].apply(lambda x: "VIEW" if x == "V" else "BASE TABLE")
 
         result.data_frame = df
         return result
@@ -238,7 +226,7 @@ class TeradataHandler(DatabaseHandler):
             SELECT ColumnName AS "Field",
                    ColumnType AS "Type"
             FROM DBC.ColumnsV
-            WHERE DatabaseName = '{self.connection_data.get('database') if self.connection_data.get('database') else self.connection_data.get('user')}'
+            WHERE DatabaseName = '{self.connection_data.get("database") if self.connection_data.get("database") else self.connection_data.get("user")}'
             AND TableName = '{table_name}'
         """
 

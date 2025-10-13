@@ -3,7 +3,7 @@ from typing import Text, Dict, Optional
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql_parser.ast.base import ASTNode
 import pandas as pd
-from pyhive import (hive, sqlalchemy_hive)
+from pyhive import hive, sqlalchemy_hive
 from pyhive.exc import OperationalError
 from thrift.transport.TTransport import TTransportException
 
@@ -11,7 +11,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
 
@@ -24,7 +24,7 @@ class HiveHandler(DatabaseHandler):
     This handler handles the connection and execution of SQL statements on Apache Hive.
     """
 
-    name = 'hive'
+    name = "hive"
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs) -> None:
         """
@@ -63,31 +63,28 @@ class HiveHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters.
-        if not all(key in self.connection_data for key in ['host', 'database']):
-            raise ValueError('Required parameters (account, database) must be provided.')
+        if not all(key in self.connection_data for key in ["host", "database"]):
+            raise ValueError("Required parameters (account, database) must be provided.")
 
-        config = {
-            'host': self.connection_data.get('host'),
-            'database': self.connection_data.get('database')
-        }
+        config = {"host": self.connection_data.get("host"), "database": self.connection_data.get("database")}
 
         # Optional connection parameters.
-        optional_parameters = ['port', 'username', 'password']
+        optional_parameters = ["port", "username", "password"]
         for param in optional_parameters:
             if param in self.connection_data:
                 config[param] = self.connection_data[param]
 
-        config['auth'] = self.connection_data.get('auth', 'CUSTOM').upper()
+        config["auth"] = self.connection_data.get("auth", "CUSTOM").upper()
 
         try:
             self.connection = hive.Connection(**config)
             self.is_connected = True
             return self.connection
         except (OperationalError, TTransportException, ValueError) as known_error:
-            logger.error(f'Error connecting to Hive {config["database"]}, {known_error}!')
+            logger.error(f"Error connecting to Hive {config['database']}, {known_error}!")
             raise
         except Exception as unknown_error:
-            logger.error(f'Unknown error connecting to Hive {config["database"]}, {unknown_error}!')
+            logger.error(f"Unknown error connecting to Hive {config['database']}, {unknown_error}!")
             raise
 
     def disconnect(self) -> None:
@@ -115,10 +112,10 @@ class HiveHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except (OperationalError, TTransportException, ValueError) as known_error:
-            logger.error(f'Connection check to Hive failed, {known_error}!')
+            logger.error(f"Connection check to Hive failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to Hive failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to Hive failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         if response.success is True and need_to_close:
@@ -148,27 +145,18 @@ class HiveHandler(DatabaseHandler):
                 if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(
-                            result,
-                            columns=[x[0].split('.')[-1] for x in cur.description]
-                        )
+                        pd.DataFrame(result, columns=[x[0].split(".")[-1] for x in cur.description]),
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except OperationalError as operational_error:
-                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(operational_error)
-                )
+                logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(operational_error))
                 connection.rollback()
             except Exception as unknown_error:
-                logger.error(f'Unknown error running query: {query} on {self.connection_data["database"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(unknown_error)
-                )
+                logger.error(f"Unknown error running query: {query} on {self.connection_data['database']}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(unknown_error))
                 connection.rollback()
 
         if need_to_close is True:
@@ -200,7 +188,7 @@ class HiveHandler(DatabaseHandler):
         q = "SHOW TABLES"
         result = self.native_query(q)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name: Text) -> Response:

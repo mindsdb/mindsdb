@@ -79,7 +79,5 @@ class WriterHandlerParameters(RAGBaseParameters):
     @field_validator("evaluation_type")
     def evaluation_type_must_be_supported(cls, v):
         if v not in SUPPORTED_EVALUATION_TYPES:
-            raise ValueError(
-                f"evaluation_type must be one of `retrieval` or `e2e`, got {v}"
-            )
+            raise ValueError(f"evaluation_type must be one of `retrieval` or `e2e`, got {v}")
         return v

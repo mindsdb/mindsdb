@@ -22,9 +22,9 @@ class GroqHandlerConfig(BaseSettings):
     DEFAULT_MODEL: str = "llama3-8b-8192"
     DEFAULT_MODE: str = "default"
     SUPPORTED_MODES: list[str] = [
-        'default',
-        'conversational',
-        'conversational-full',
+        "default",
+        "conversational",
+        "conversational-full",
     ]
 
 

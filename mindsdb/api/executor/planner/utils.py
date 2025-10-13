@@ -27,30 +27,29 @@ def disambiguate_predictor_column_identifier(identifier, predictor):
 
 
 def recursively_extract_column_values(op, row_dict, predictor):
-    if isinstance(op, BinaryOperation) and op.op == '=':
+    if isinstance(op, BinaryOperation) and op.op == "=":
         id = op.args[0]
         value = op.args[1]
 
-        if not (
-            isinstance(id, Identifier)
-            and (isinstance(value, Constant) or isinstance(value, Parameter))
-        ):
-            raise PlanningException(f'The WHERE clause for selecting from a predictor'
-                                    f' must contain pairs \'Identifier(...) = Constant(...)\','
-                                    f' found instead: {id.to_tree()}, {value.to_tree()}')
+        if not (isinstance(id, Identifier) and (isinstance(value, Constant) or isinstance(value, Parameter))):
+            raise PlanningException(
+                f"The WHERE clause for selecting from a predictor"
+                f" must contain pairs 'Identifier(...) = Constant(...)',"
+                f" found instead: {id.to_tree()}, {value.to_tree()}"
+            )
 
         id = disambiguate_predictor_column_identifier(id, predictor)
 
         if str(id) in row_dict:
-            raise PlanningException(f'Multiple values provided for {str(id)}')
+            raise PlanningException(f"Multiple values provided for {str(id)}")
         if isinstance(value, Constant):
             value = value.value
         row_dict[str(id)] = value
-    elif isinstance(op, BinaryOperation) and op.op == 'and':
+    elif isinstance(op, BinaryOperation) and op.op == "and":
         recursively_extract_column_values(op.args[0], row_dict, predictor)
         recursively_extract_column_values(op.args[1], row_dict, predictor)
     else:
-        raise PlanningException(f'Only \'and\' and \'=\' operations allowed in WHERE clause, found: {op.to_tree()}')
+        raise PlanningException(f"Only 'and' and '=' operations allowed in WHERE clause, found: {op.to_tree()}")
 
 
 def get_deepest_select(select):
@@ -63,7 +62,7 @@ def convert_join_to_list(join):
     # join tree to table list
 
     if isinstance(join.right, ast.Join):
-        raise NotImplementedError('Wrong join AST')
+        raise NotImplementedError("Wrong join AST")
 
     items = []
 
@@ -72,17 +71,10 @@ def convert_join_to_list(join):
         items.extend(convert_join_to_list(join.left))
     else:
         # this is first table
-        items.append(dict(
-            table=join.left
-        ))
+        items.append(dict(table=join.left))
 
     # all properties set to right table
-    items.append(dict(
-        table=join.right,
-        join_type=join.join_type,
-        is_implicit=join.implicit,
-        condition=join.condition
-    ))
+    items.append(dict(table=join.right, join_type=join.join_type, is_implicit=join.implicit, condition=join.condition))
 
     return items
 
@@ -101,7 +93,6 @@ def get_query_params(query):
 
 
 def fill_query_params(query, params):
-
     params = copy.deepcopy(params)
 
     def params_replace(node, **kwargs):
@@ -122,5 +113,5 @@ def filters_to_bin_op(filters: List[BinaryOperation]):
         if where is None:
             where = flt
         else:
-            where = BinaryOperation(op='and', args=[where, flt])
+            where = BinaryOperation(op="and", args=[where, flt])
     return where

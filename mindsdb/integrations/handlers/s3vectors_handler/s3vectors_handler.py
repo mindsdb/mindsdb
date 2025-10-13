@@ -32,6 +32,7 @@ MAX_FETCH_LIMIT = 10000
 UPSERT_BATCH_SIZE = 100
 MAX_METADATA_KEYS = 10  # S3 Vectors has a hard limit of 10 metadata keys per vector
 MAX_GET_VECTORS_KEYS = 100  # S3 Vectors API limit for GetVectors operation
+MAX_DELETE_VECTORS_KEYS = 500  # S3 Vectors API limit for DeleteVectors operation
 
 
 class S3VectorsHandler(VectorStoreHandler):
@@ -335,8 +336,13 @@ class S3VectorsHandler(VectorStoreHandler):
         for chunk in (data[pos:pos + UPSERT_BATCH_SIZE] for pos in range(0, len(data), UPSERT_BATCH_SIZE)):
             vectors = []
             for _, row in chunk.iterrows():
+                key_str = str(row["id"])
+                # Validate key length (S3 Vectors constraint: 1-1024 characters)
+                if not (1 <= len(key_str) <= 1024):
+                    raise Exception(f"Invalid key length: '{key_str}' (length {len(key_str)}). Keys must be between 1 and 1024 characters.")
+                
                 vector_entry = {
-                    "key": str(row["id"]),
+                    "key": key_str,
                     "data": {"float32": row["values"]}
                 }
                 if "metadata" in row and row["metadata"]:
@@ -383,27 +389,56 @@ class S3VectorsHandler(VectorStoreHandler):
 
         connection = self.connect()
 
+        ids = []
         # Extract ID filters
-        ids = [
+        values = [
             condition.value
             for condition in conditions
-            if condition.column == TableField.ID.value
+            if condition.column == 'metadata._original_doc_id'
         ]
+        
+        for value in values:
+            if isinstance(value, list):
+                ids.extend(value)
+            else:
+                ids.append(value)
 
         # Extract metadata filters
-        filters = self._translate_metadata_condition(conditions)
+        # filters = self._translate_metadata_condition(conditions)
 
-        if not ids and filters is None:
-            raise Exception("Delete query must have either id condition or metadata condition!")
+        if not ids:
+            raise Exception("Delete query must have an id condition!")
 
         try:
             if ids:
-                # Delete by IDs
-                connection.delete_vectors(
-                    vectorBucketName=self.vector_bucket,
-                    indexName=table_name,
-                    keys=[str(id_val) for id_val in ids]
-                )
+                # Validate key lengths (S3 Vectors constraint: 1-1024 characters)
+                valid_keys = []
+                invalid_keys = []
+                
+                for id_val in ids:
+                    key_str = str(id_val)
+                    if 1 <= len(key_str) <= 1024:
+                        valid_keys.append(key_str)
+                    else:
+                        invalid_keys.append(key_str)
+                
+                if invalid_keys:
+                    raise Exception(f"Invalid key lengths found. Keys must be between 1 and 1024 characters. Invalid keys: {invalid_keys}")
+                
+                if not valid_keys:
+                    raise Exception("No valid keys found for deletion")
+                
+                logger.info(f"Deleting {len(valid_keys)} vectors by ID from '{table_name}'")
+                
+                # Delete in batches (S3 Vectors API limit: max 500 keys per call)
+                for i in range(0, len(valid_keys), MAX_DELETE_VECTORS_KEYS):
+                    batch_keys = valid_keys[i:i + MAX_DELETE_VECTORS_KEYS]
+                    logger.debug(f"Deleting batch of {len(batch_keys)} vectors")
+                    connection.delete_vectors(
+                        vectorBucketName=self.vector_bucket,
+                        indexName=table_name,
+                        keys=batch_keys
+                    )
             else:
                 # Delete by metadata filter
                 # Note: This may require query + delete approach
@@ -518,12 +553,26 @@ class S3VectorsHandler(VectorStoreHandler):
             # AWS S3 Vectors API has a limit of 100 keys per GetVectors call, so batch requests
             results_data = []
 
-            # Convert all IDs to strings
-            id_strings = [str(id_val) for id_val in id_filters]
+            # Convert all IDs to strings and validate lengths
+            valid_id_strings = []
+            invalid_ids = []
+            
+            for id_val in id_filters:
+                id_str = str(id_val)
+                if 1 <= len(id_str) <= 1024:
+                    valid_id_strings.append(id_str)
+                else:
+                    invalid_ids.append(id_str)
+            
+            if invalid_ids:
+                raise Exception(f"Invalid key lengths found. Keys must be between 1 and 1024 characters. Invalid keys: {invalid_ids}")
+            
+            if not valid_id_strings:
+                raise Exception("No valid keys found for selection")
 
             # Batch the requests in chunks of MAX_GET_VECTORS_KEYS
-            for i in range(0, len(id_strings), MAX_GET_VECTORS_KEYS):
-                batch_ids = id_strings[i:i + MAX_GET_VECTORS_KEYS]
+            for i in range(0, len(valid_id_strings), MAX_GET_VECTORS_KEYS):
+                batch_ids = valid_id_strings[i:i + MAX_GET_VECTORS_KEYS]
 
                 try:
                     result = connection.get_vectors(

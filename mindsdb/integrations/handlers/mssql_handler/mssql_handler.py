@@ -360,7 +360,7 @@ class SqlServerHandler(DatabaseHandler):
                         response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                     connection.commit()
                 except Exception as e:
-                    logger.error(f"Error running query: {query} on {self.database}, {e}!")
+                    logger.exception(f"Error running query: {query} on {self.database}, {e}!")
                     response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                     connection.rollback()
         else:
@@ -375,7 +375,7 @@ class SqlServerHandler(DatabaseHandler):
                         response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                     connection.commit()
                 except Exception as e:
-                    logger.error(f"Error running query: {query} on {self.database}, {e}!")
+                    logger.exception(f"Error running query: {query} on {self.database}, {e}!")
                     response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                     connection.rollback()
 

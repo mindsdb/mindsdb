@@ -232,6 +232,337 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(call_args, expected_sql)
         self.assertEqual(response, expected_response)
 
+    def test_meta_get_tables_returns_response(self):
+        # realistic names
+        df = DataFrame(
+            [
+                {
+                    "table_name": "customers",
+                    "table_schema": "dbo",
+                    "table_type": "BASE TABLE",
+                    "table_description": None,
+                    "row_count": 100,
+                },
+                {
+                    "table_name": "orders",
+                    "table_schema": "dbo",
+                    "table_type": "BASE TABLE",
+                    "table_description": None,
+                    "row_count": 500,
+                },
+                {
+                    "table_name": "products",
+                    "table_schema": "dbo",
+                    "table_type": "BASE TABLE",
+                    "table_description": None,
+                    "row_count": 42,
+                },
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_tables()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter
+        self.handler.native_query.reset_mock()
+        tables = ["customers", "orders"]
+        filtered_df = df[df["table_name"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_tables(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertEqual(sorted(list(response.data_frame["table_name"])), sorted(tables))
+
+    def test_meta_get_columns_returns_response(self):
+        df = DataFrame(
+            [
+                {
+                    "table_name": "customers",
+                    "column_name": "id",
+                    "data_type": "int",
+                    "column_description": None,
+                    "column_default": None,
+                    "is_nullable": 0,
+                },
+                {
+                    "table_name": "customers",
+                    "column_name": "name",
+                    "data_type": "varchar",
+                    "column_description": None,
+                    "column_default": None,
+                    "is_nullable": 1,
+                },
+                {
+                    "table_name": "products",
+                    "column_name": "sku",
+                    "data_type": "varchar",
+                    "column_description": None,
+                    "column_default": None,
+                    "is_nullable": 0,
+                },
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_columns()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter
+        self.handler.native_query.reset_mock()
+        tables = ["customers"]
+        filtered_df = df[df["table_name"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_columns(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertTrue((response.data_frame["table_name"] == "customers").all())
+
+    def test_meta_get_column_statistics_returns_response(self):
+        df = DataFrame(
+            [
+                {
+                    "TABLE_NAME": "customers",
+                    "COLUMN_NAME": "id",
+                    "NULL_PERCENTAGE": 0.0,
+                    "DISTINCT_VALUES_COUNT": 100,
+                    "MOST_COMMON_VALUES": None,
+                    "MOST_COMMON_FREQUENCIES": None,
+                    "MINIMUM_VALUE": "1",
+                    "MAXIMUM_VALUE": "100",
+                },
+                {
+                    "TABLE_NAME": "products",
+                    "COLUMN_NAME": "sku",
+                    "NULL_PERCENTAGE": 0.0,
+                    "DISTINCT_VALUES_COUNT": 42,
+                    "MOST_COMMON_VALUES": None,
+                    "MOST_COMMON_FREQUENCIES": None,
+                    "MINIMUM_VALUE": None,
+                    "MAXIMUM_VALUE": None,
+                },
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_column_statistics()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter
+        self.handler.native_query.reset_mock()
+        tables = ["customers"]
+        filtered_df = df[df["TABLE_NAME"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_column_statistics(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertTrue((response.data_frame["TABLE_NAME"] == "customers").all())
+
+    def test_meta_get_primary_keys_returns_response(self):
+        df = DataFrame(
+            [
+                {
+                    "table_name": "customers",
+                    "column_name": "id",
+                    "ordinal_position": 1,
+                    "constraint_name": "pk_customers",
+                },
+                {"table_name": "orders", "column_name": "id", "ordinal_position": 1, "constraint_name": "pk_orders"},
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_primary_keys()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter
+        self.handler.native_query.reset_mock()
+        tables = ["customers"]
+        filtered_df = df[df["table_name"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_primary_keys(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertEqual(list(response.data_frame["table_name"].unique()), ["customers"])
+
+    def test_meta_get_foreign_keys_returns_response(self):
+        df = DataFrame(
+            [
+                {
+                    "parent_table_name": "customers",
+                    "parent_column_name": "id",
+                    "child_table_name": "orders",
+                    "child_column_name": "customer_id",
+                    "constraint_name": "fk_orders_customers",
+                },
+                {
+                    "parent_table_name": "products",
+                    "parent_column_name": "sku",
+                    "child_table_name": "orders",
+                    "child_column_name": "product_sku",
+                    "constraint_name": "fk_orders_products",
+                },
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_foreign_keys()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter (filter by child table names per handler implementation)
+        self.handler.native_query.reset_mock()
+        tables = ["orders"]
+        filtered_df = df[df["child_table_name"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_foreign_keys(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertTrue((response.data_frame["child_table_name"] == "orders").all())
+
+    def test_meta_methods_result_shape_and_exceptions(self):
+        """
+        Smoke-check expected columns presence and exception propagation
+        for all meta_* methods with and without table filters.
+        """
+        methods = [
+            (
+                "meta_get_tables",
+                lambda: DataFrame(
+                    [
+                        {
+                            "table_name": "t1",
+                            "table_schema": "dbo",
+                            "table_type": "BASE TABLE",
+                            "table_description": None,
+                            "row_count": 1,
+                        }
+                    ]
+                ),
+                self.handler.meta_get_tables,
+            ),
+            (
+                "meta_get_columns",
+                lambda: DataFrame(
+                    [
+                        {
+                            "table_name": "t1",
+                            "column_name": "c1",
+                            "data_type": "int",
+                            "column_description": None,
+                            "column_default": None,
+                            "is_nullable": 1,
+                        }
+                    ]
+                ),
+                self.handler.meta_get_columns,
+            ),
+            (
+                "meta_get_column_statistics",
+                lambda: DataFrame(
+                    [
+                        {
+                            "TABLE_NAME": "t1",
+                            "COLUMN_NAME": "c1",
+                            "NULL_PERCENTAGE": None,
+                            "DISTINCT_VALUES_COUNT": 0,
+                            "MOST_COMMON_VALUES": None,
+                            "MOST_COMMON_FREQUENCIES": None,
+                            "MINIMUM_VALUE": None,
+                            "MAXIMUM_VALUE": None,
+                        }
+                    ]
+                ),
+                self.handler.meta_get_column_statistics,
+            ),
+            (
+                "meta_get_primary_keys",
+                lambda: DataFrame(
+                    [{"table_name": "t1", "column_name": "id", "ordinal_position": 1, "constraint_name": "pk_t1"}]
+                ),
+                self.handler.meta_get_primary_keys,
+            ),
+            (
+                "meta_get_foreign_keys",
+                lambda: DataFrame(
+                    [
+                        {
+                            "parent_table_name": "p",
+                            "parent_column_name": "id",
+                            "child_table_name": "c",
+                            "child_column_name": "p_id",
+                            "constraint_name": "fk_c_p",
+                        }
+                    ]
+                ),
+                self.handler.meta_get_foreign_keys,
+            ),
+        ]
+
+        for name, df_factory, method in methods:
+            with self.subTest(method=name, case="no_filter"):
+                df = df_factory()
+                expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+                self.handler.native_query = MagicMock(return_value=expected_response)
+                res = method()
+                self.handler.native_query.assert_called_once()
+                self.assertIs(res, expected_response)
+                self.assertIsNotNone(res.data_frame)
+                # Columns presence smoke-check
+                for col in list(df.columns):
+                    self.assertIn(col, res.data_frame.columns)
+
+            with self.subTest(method=name, case="with_filter"):
+                df = df_factory()
+                expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+                self.handler.native_query = MagicMock(return_value=expected_response)
+                res = (
+                    method(table_names=["A", "B"])
+                    if name != "meta_get_column_statistics"
+                    else method(table_names=["A", "B"])
+                )  # same signature
+                self.handler.native_query.assert_called_once()
+                self.assertIs(res, expected_response)
+                self.assertIsNotNone(res.data_frame)
+                for col in list(df.columns):
+                    self.assertIn(col, res.data_frame.columns)
+
+            with self.subTest(method=name, case="exception_propagation"):
+                err = (
+                    OperationalError(f"{name} failure")
+                    if name != "meta_get_primary_keys"
+                    else OperationalError("pk failure")
+                )
+                self.handler.native_query = MagicMock(side_effect=err)
+                with self.assertRaises(type(err)):
+                    _ = method()
+
+        # access denied
+        with self.subTest(method="meta_get_column_statistics", case="permissions_error"):
+            permission_err = OperationalError("The SELECT permission was denied on object 'dm_db_stats_histogram'")
+            self.handler.native_query = MagicMock(side_effect=permission_err)
+            with self.assertRaises(OperationalError):
+                _ = self.handler.meta_get_column_statistics()
+
     def test_connect_validation(self):
         """
         Tests that connect method raises ValueError when required connection parameters are missing

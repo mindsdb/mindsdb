@@ -332,33 +332,49 @@ class FileReader(FormatDetector):
         return pd.read_csv(file_obj, sep=dialect.delimiter, index_col=False)
 
     @staticmethod
-    def read_txt(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
+    def read_txt(file_obj: BytesIO, name: str | None = None, chunk_size: int | None = None, chunk_overlap: int | None = None, **kwargs) -> pd.DataFrame:
         # the lib is heavy, so import it only when needed
 
         file_obj = decode(file_obj)
 
         text = file_obj.read()
 
-        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
+        # If chunk_size is 0 or negative, return full text without chunking
+        if chunk_size is not None and chunk_size <= 0:
+            return pd.DataFrame([{"content": text, "metadata": {"source_file": name, "file_format": "txt"}}])
+
+        # Use provided chunk_size and chunk_overlap if available, otherwise use defaults
+        _chunk_size = chunk_size if chunk_size is not None else DEFAULT_CHUNK_SIZE
+        _chunk_overlap = chunk_overlap if chunk_overlap is not None else DEFAULT_CHUNK_OVERLAP
+
+        text_splitter = TextSplitter(chunk_size=_chunk_size, chunk_overlap=_chunk_overlap)
 
         docs = text_splitter.split_text(text)
         return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "txt"}} for doc in docs])
 
     @staticmethod
-    def read_md(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
+    def read_md(file_obj: BytesIO, name: str | None = None, chunk_size: int | None = None, chunk_overlap: int | None = None, **kwargs) -> pd.DataFrame:
         # Read markdown files similar to txt
 
         file_obj = decode(file_obj)
 
         text = file_obj.read()
 
-        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
+        # If chunk_size is 0 or negative, return full text without chunking
+        if chunk_size is not None and chunk_size <= 0:
+            return pd.DataFrame([{"content": text, "metadata": {"source_file": name, "file_format": "md"}}])
+
+        # Use provided chunk_size and chunk_overlap if available, otherwise use defaults
+        _chunk_size = chunk_size if chunk_size is not None else DEFAULT_CHUNK_SIZE
+        _chunk_overlap = chunk_overlap if chunk_overlap is not None else DEFAULT_CHUNK_OVERLAP
+
+        text_splitter = TextSplitter(chunk_size=_chunk_size, chunk_overlap=_chunk_overlap)
 
         docs = text_splitter.split_text(text)
         return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "md"}} for doc in docs])
 
     @staticmethod
-    def read_docx(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
+    def read_docx(file_obj: BytesIO, name: str | None = None, chunk_size: int | None = None, chunk_overlap: int | None = None, **kwargs) -> pd.DataFrame:
         # the lib is heavy, so import it only when needed
         try:
             import docx
@@ -374,13 +390,21 @@ class FileReader(FormatDetector):
         # Extract text from all paragraphs
         text = "\n".join([paragraph.text for paragraph in doc.paragraphs if paragraph.text.strip()])
 
-        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
+        # If chunk_size is 0 or negative, return full text without chunking
+        if chunk_size is not None and chunk_size <= 0:
+            return pd.DataFrame([{"content": text, "metadata": {"source_file": name, "file_format": "docx"}}])
+
+        # Use provided chunk_size and chunk_overlap if available, otherwise use defaults
+        _chunk_size = chunk_size if chunk_size is not None else DEFAULT_CHUNK_SIZE
+        _chunk_overlap = chunk_overlap if chunk_overlap is not None else DEFAULT_CHUNK_OVERLAP
+
+        text_splitter = TextSplitter(chunk_size=_chunk_size, chunk_overlap=_chunk_overlap)
 
         docs = text_splitter.split_text(text)
         return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "docx"}} for doc in docs])
 
     @staticmethod
-    def read_doc(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
+    def read_doc(file_obj: BytesIO, name: str | None = None, chunk_size: int | None = None, chunk_overlap: int | None = None, **kwargs) -> pd.DataFrame:
         # DOC files (older Word format) are more complex and require different handling
         # For now, we'll try to use python-docx which sometimes works with .doc files
         # or fall back to treating as text
@@ -399,20 +423,41 @@ class FileReader(FormatDetector):
             file_obj = decode(file_obj)
             text = file_obj.read()
 
-        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
+        # If chunk_size is 0 or negative, return full text without chunking
+        if chunk_size is not None and chunk_size <= 0:
+            return pd.DataFrame([{"content": text, "metadata": {"source_file": name, "file_format": "doc"}}])
+
+        # Use provided chunk_size and chunk_overlap if available, otherwise use defaults
+        _chunk_size = chunk_size if chunk_size is not None else DEFAULT_CHUNK_SIZE
+        _chunk_overlap = chunk_overlap if chunk_overlap is not None else DEFAULT_CHUNK_OVERLAP
+
+        text_splitter = TextSplitter(chunk_size=_chunk_size, chunk_overlap=_chunk_overlap)
 
         docs = text_splitter.split_text(text)
         return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "doc"}} for doc in docs])
 
     @staticmethod
-    def read_pdf(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
+    def read_pdf(file_obj: BytesIO, name: str | None = None, chunk_size: int | None = None, chunk_overlap: int | None = None, **kwargs) -> pd.DataFrame:
         # the libs are heavy, so import it only when needed
         import fitz  # pymupdf
 
         with fitz.open(stream=file_obj.read()) as pdf:  # open pdf
             text = chr(12).join([page.get_text() for page in pdf])
 
-        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
+        # If chunk_size is 0 or negative, return full text without chunking
+        if chunk_size is not None and chunk_size <= 0:
+            return pd.DataFrame(
+                {
+                    "content": [text],
+                    "metadata": [{"file_format": "pdf", "source_file": name}],
+                }
+            )
+
+        # Use provided chunk_size and chunk_overlap if available, otherwise use defaults
+        _chunk_size = chunk_size if chunk_size is not None else DEFAULT_CHUNK_SIZE
+        _chunk_overlap = chunk_overlap if chunk_overlap is not None else DEFAULT_CHUNK_OVERLAP
+
+        text_splitter = TextSplitter(chunk_size=_chunk_size, chunk_overlap=_chunk_overlap)
 
         split_text = text_splitter.split_text(text)
 

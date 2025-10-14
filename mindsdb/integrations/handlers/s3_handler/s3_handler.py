@@ -270,9 +270,14 @@ class S3Handler(APIHandler):
         ar = key.split("/")
         return ar[0], "/".join(ar[1:])
 
-    def read_as_table(self, key) -> pd.DataFrame:
+    def read_as_table(self, key, chunk_size: int = None, chunk_overlap: int = None) -> pd.DataFrame:
         """
         Read object as dataframe. Uses duckdb for structured files, FileReader for text files
+
+        Args:
+            key: S3 object key
+            chunk_size: Optional chunk size for text splitting (used for txt, pdf, md, doc, docx files)
+            chunk_overlap: Optional chunk overlap for text splitting (used for txt, pdf, md, doc, docx files)
         """
         bucket, key = self._get_bucket(key)
 
@@ -286,9 +291,9 @@ class S3Handler(APIHandler):
             # Extract filename from key
             file_name = key.split("/")[-1]
 
-            # Use FileReader to parse the content
+            # Use FileReader to parse the content, passing chunk parameters
             file_reader = FileReader(file=file_obj, name=file_name)
-            tables = file_reader.get_contents()
+            tables = file_reader.get_contents(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
             # Return the main table (text files have single table)
             return tables.get("main", pd.DataFrame())

@@ -49,6 +49,7 @@ from mindsdb_sql_parser.ast.mindsdb import (
     CreateDatabase,
     CreateJob,
     CreateKnowledgeBase,
+    AlterKnowledgeBase,
     CreateMLEngine,
     CreatePredictor,
     CreateSkill,
@@ -655,6 +656,8 @@ class ExecuteCommands:
             return self.answer_drop_chatbot(statement, database_name)
         elif statement_type is CreateKnowledgeBase:
             return self.answer_create_kb(statement, database_name)
+        elif statement_type is AlterKnowledgeBase:
+            return self.answer_alter_kb(statement, database_name)
         elif statement_type is DropKnowledgeBase:
             return self.answer_drop_kb(statement, database_name)
         elif statement_type is CreateSkill:
@@ -1427,6 +1430,20 @@ class ExecuteCommands:
             storage=statement.storage,
             params=statement.params,
             if_not_exists=statement.if_not_exists,
+        )
+
+        return ExecuteAnswer()
+
+    def answer_alter_kb(self, statement: AlterKnowledgeBase, database_name: str):
+        project_name, kb_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
+
+        # update the knowledge base
+        self.session.kb_controller.update(
+            name=kb_name,
+            project_name=project_name,
+            params=statement.params,
         )
 
         return ExecuteAnswer()

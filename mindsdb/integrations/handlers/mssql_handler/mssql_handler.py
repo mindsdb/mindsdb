@@ -294,7 +294,6 @@ class SqlServerHandler(MetaDatabaseHandler):
             self.is_connected = False
             raise
 
-
     def disconnect(self):
         """
         Closes the connection to the Microsoft SQL Server database if it's currently open.

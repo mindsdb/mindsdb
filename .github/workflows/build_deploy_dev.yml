@@ -2,8 +2,7 @@ name: Build and deploy to dev
 
 
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, labeled]
+  push:
 
 defaults:
   run:

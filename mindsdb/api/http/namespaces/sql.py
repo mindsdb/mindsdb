@@ -25,7 +25,7 @@ logger = log.getLogger(__name__)
 
 
 @ns_conf.route("/query")
-@ns_conf.param("query", "Execute query")
+@ns_conf.param("query", "Execute query ")
 class Query(Resource):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

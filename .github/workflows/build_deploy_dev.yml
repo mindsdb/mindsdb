@@ -6,9 +6,7 @@ permissions:
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, labeled]
-    branches:
-      - 'main'
-      - '25-8-2-revert'
+
 
 jobs:
 

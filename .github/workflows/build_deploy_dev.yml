@@ -3,6 +3,8 @@ name: Build and deploy to dev
 
 on:
   push:
+    branches:
+      - '**' # This pattern matches all branches
 
 defaults:
   run:

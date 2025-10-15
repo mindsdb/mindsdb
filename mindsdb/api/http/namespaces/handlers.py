@@ -234,7 +234,7 @@ class BYOMUpload(Resource):
             return http_error(
                 HTTPStatus.CONFLICT,
                 "Engine already exists",
-                f"Engine \"{name}\" already exists",
+                f'Engine "{name}" already exists',
             )
 
         return "", 200

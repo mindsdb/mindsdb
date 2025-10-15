@@ -125,7 +125,7 @@ class File(Resource):
             return http_error(
                 400,
                 "Wrong file source type",
-                f"Only \"file\" and \"url\" supported as file source, got \"{source_type}\"",
+                f'Only "file" and "url" supported as file source, got "{source_type}"',
             )
 
         if source_type == "url":
@@ -133,13 +133,13 @@ class File(Resource):
                 return http_error(
                     400,
                     "Fields conflict",
-                    "URL source type can not be used together with \"file\" field.",
+                    'URL source type can not be used together with "file" field.',
                 )
             if "source" not in data:
                 return http_error(
                     400,
                     "Missed file source",
-                    "If the file's source type is URL, the \"source\" field should be specified.",
+                    'If the file\'s source type is URL, the "source" field should be specified.',
                 )
             url = data["source"]
             try:
@@ -206,7 +206,7 @@ class File(Resource):
             return http_error(
                 400,
                 "File field is missed",
-                "The \"field\" field is missed in the form",
+                'The "field" field is missed in the form',
             )
 
         original_file_name = clear_filename(data.get("original_file_name"))

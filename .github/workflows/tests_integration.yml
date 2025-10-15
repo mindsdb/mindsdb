@@ -37,33 +37,13 @@ env:
   UV_LINK_MODE: "symlink"
 
 jobs:
-  changes:
-    name: Filter changed files
-    runs-on: mdb-dev
-    outputs:
-      not-docs: ${{ steps.filter.outputs.not-docs }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          predicate-quantifier: "every"
-          filters: |
-            not-docs:
-              - '!docs/**'  
-              - '!**/*.md'
-              - '!.github/workflows/build_deploy_dev.yml'
-              - '!.github/workflows/test_on_deploy.yml'
-              - '!mindsdb/__about__.py'
   # Run our integration tests
   test:
-    needs: changes
     environment:
       name: ${{ inputs.deploy-env }}
       url: ${{ vars.MDB_ENV_URL }}
     name: Run integration tests on deploy
     runs-on: mdb-dev
-    if: ${{ github.ref_type == 'branch' && needs.changes.outputs.not-docs == 'true' }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -74,7 +54,7 @@ jobs:
         # Place cache in the tool dir because we mount this in our runnners
         cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
         prune-cache: false
-        python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
+        python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
     - name: Install dependencies
       run: |
         uv pip install -r requirements/requirements-test.txt

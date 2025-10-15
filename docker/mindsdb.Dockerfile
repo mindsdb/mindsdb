@@ -8,7 +8,7 @@ WORKDIR /mindsdb
 # This will almost always invalidate the cache for this stage
 COPY . .
 # Find every FILE that is not a requirements file and delete it
-RUN find ./ -type f -not -name "requirements*.txt" -print | xargs rm -f \
+RUN find ./ -type f -not -name "requirements*.txt" -print0 | xargs -0 rm -f \
 # Find every empty directory and delete it
     && find ./ -type d -empty -delete
 # Copy setup.py and everything else used by setup.py
@@ -54,10 +54,9 @@ ENV UV_LINK_MODE=copy \
 
 # Install all requirements for mindsdb and all the default handlers
 # Installs everything into a venv in /mindsdb so that everything is isolated
-# TODO: Remove --prerelease=allow once writer release new version
 RUN --mount=type=cache,target=/root/.cache \
     uv venv /venv \
-    && uv pip install pip "." --prerelease=allow
+    && uv pip install pip "."
 
 
 

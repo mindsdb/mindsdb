@@ -17,7 +17,8 @@
               "group": "Get Started",
               "pages": [
                 "mindsdb",
-                "quickstart-tutorial"
+                "quickstart-tutorial",
+                "releases"
               ]
             },
             {
@@ -34,7 +35,8 @@
                   "group": "Configuration",
                   "pages": [
                     "setup/custom-config",
-                    "setup/environment-vars"
+                    "setup/environment-vars",
+                    "setup/mindsdb-apis"
                   ]
                 },
                 {
@@ -56,7 +58,8 @@
               "group": "Overview",
               "pages": [
                 "mindsdb-connect",
-                "mindsdb-fqe"
+                "mindsdb-fqe",
+                "mindsdb-objects"
               ]
             },
             {
@@ -679,17 +682,12 @@
               "group": "Contribute",
               "pages": [
                 "contribute/contribute",
-                "contribute/issues",
-                "contribute/issue-labels",
                 "contribute/install",
                 "contribute/python-coding-standards",
                 "contribute/data-handlers",
                 "contribute/app-handlers",
-                "contribute/tests",
                 "contribute/integrations-readme",
-                "contribute/tutorials",
                 "contribute/docs",
-                "contribute/docs-rules",
                 "contribute/community"
               ]
             }

@@ -32,6 +32,11 @@ DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_RERANKER_FLAG = False
 DEFAULT_RERANKING_MODEL = "gpt-4o"
 DEFAULT_LLM_ENDPOINT = "https://api.openai.com/v1"
+DEFAULT_RERANKER_N = 1
+DEFAULT_RERANKER_LOGPROBS = True
+DEFAULT_RERANKER_TOP_LOGPROBS = 4
+DEFAULT_RERANKER_MAX_TOKENS = 100
+DEFAULT_VALID_CLASS_TOKENS = ["1", "2", "3", "4"]
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.
 Return a JSON list with an entry for each column. Each entry should have
@@ -694,6 +699,11 @@ class RerankerConfig(BaseModel):
     retry_delay: float = 1.0
     early_stop: bool = True  # Whether to enable early stopping
     early_stop_threshold: float = 0.8  # Confidence threshold for early stopping
+    n: int = DEFAULT_RERANKER_N  # Number of completions to generate
+    logprobs: bool = DEFAULT_RERANKER_LOGPROBS  # Whether to include log probabilities
+    top_logprobs: int = DEFAULT_RERANKER_TOP_LOGPROBS  # Number of top log probabilities to include
+    max_tokens: int = DEFAULT_RERANKER_MAX_TOKENS  # Maximum tokens to generate
+    valid_class_tokens: List[str] = DEFAULT_VALID_CLASS_TOKENS  # Valid class tokens to look for in the response
 
 
 class MultiHopRetrieverConfig(BaseModel):

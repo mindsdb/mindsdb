@@ -33,7 +33,7 @@ def test_path_traversal(client):
     assert not os.path.exists(path)
 
 
-@pytest.mark.slow
+# @pytest.mark.slow
 def test_conflict(client):
     """Test that it is not possible to create two engins with the same name"""
     path = "test_module.py"
@@ -42,7 +42,7 @@ def test_conflict(client):
         data={
             "code": (get_file(), path),
             "modules": (io.BytesIO(b""), "req.txt"),
-            "mode": "custom_function",
+            "type": "inhouse",
         },
     )
     assert response.status_code == HTTPStatus.OK
@@ -52,7 +52,7 @@ def test_conflict(client):
         data={
             "code": (get_file(), path),
             "modules": (io.BytesIO(b""), "req.txt"),
-            "mode": "custom_function",
+            "type": "inhouse",
         },
     )
 

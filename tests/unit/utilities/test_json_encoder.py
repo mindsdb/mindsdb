@@ -1,7 +1,9 @@
-import orjson
-import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+
+import orjson
+import pandas as pd
+import numpy as np
 
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
@@ -39,3 +41,8 @@ def test_decimal_serialization_to_number():
     # Our default maps Decimal to float
     s = dumps({"price": Decimal("12.34")})
     assert '"price":12.34' in s
+
+
+def test_numpy_array():
+    s = dumps({"name": np.array(["x", "y", "z"], dtype="object")})
+    assert s == '{"name":["x","y","z"]}'

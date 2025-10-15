@@ -21,7 +21,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: dorny/paths-filter@v3
         id: filter
-        base: ${{ github.ref }}
         with:
           predicate-quantifier: "every"
           filters: |

@@ -133,7 +133,7 @@ jobs:
     secrets: inherit
 
   tests_completed:
-    needs: [run_tests]
+    needs: [run_tests, changes]
     runs-on: mdb-dev
     if: always()
     steps:

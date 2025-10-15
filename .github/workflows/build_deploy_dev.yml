@@ -1,12 +1,13 @@
 name: Build and deploy to dev
 
-permissions:
-  contents: read
 
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, labeled]
 
+defaults:
+  run:
+    shell: bash
 
 jobs:
 

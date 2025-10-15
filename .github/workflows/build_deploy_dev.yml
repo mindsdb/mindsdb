@@ -16,8 +16,12 @@ jobs:
     outputs:
       not-docs: ${{ steps.filter.outputs.not-docs }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: dorny/paths-filter@v3
         id: filter
+        base: ${{ github.ref }}
         with:
           predicate-quantifier: "every"
           filters: |
@@ -129,7 +133,7 @@ jobs:
     secrets: inherit
 
   tests_completed:
-    needs: [run_tests, changes]
+    needs: [run_tests]
     runs-on: mdb-dev
     if: always()
     steps:

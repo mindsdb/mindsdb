@@ -1,14 +1,12 @@
 name: Build and deploy to dev
 
+permissions:
+  contents: read
 
 on:
   push:
     branches:
       - '**' # This pattern matches all branches
-
-defaults:
-  run:
-    shell: bash
 
 jobs:
 

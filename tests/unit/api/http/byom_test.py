@@ -33,7 +33,7 @@ def test_path_traversal(client):
     assert not os.path.exists(path)
 
 
-# @pytest.mark.slow
+@pytest.mark.slow
 def test_conflict(client):
     """Test that it is not possible to create two engins with the same name"""
     path = "test_module.py"

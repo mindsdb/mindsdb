@@ -304,8 +304,8 @@ class TestMySqlApi(BaseStuff):
             "t_varchar": "Test",
             "t_text": "Test",
             "t_bytea": "Demo binary data.",
-            "t_json": '{"name": "test"}',
-            "t_jsonb": '{"name": "test"}',
+            "t_json": '{"name":"test"}',
+            "t_jsonb": '{"name":"test"}',
             "t_xml": "<root><element>test</element><nested><value>123</value></nested></root>",
             "t_uuid": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
             # numeric types

@@ -27,7 +27,6 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.starters import (
     start_http,
     start_mysql,
-    start_postgres,
     start_ml_task_queue,
     start_scheduler,
     start_tasks,
@@ -58,7 +57,6 @@ _stop_event = threading.Event()
 class TrunkProcessEnum(Enum):
     HTTP = "http"
     MYSQL = "mysql"
-    POSTGRES = "postgres"
     JOBS = "jobs"
     TASKS = "tasks"
     ML_TASK_QUEUE = "ml_task_queue"
@@ -447,12 +445,6 @@ if __name__ == "__main__":
                 "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
             ),
         ),
-        TrunkProcessEnum.POSTGRES: TrunkProcessData(
-            name=TrunkProcessEnum.POSTGRES.value,
-            entrypoint=start_postgres,
-            port=config["api"]["postgres"]["port"],
-            args=(config.cmd_args.verbose,),
-        ),
         TrunkProcessEnum.JOBS: TrunkProcessData(
             name=TrunkProcessEnum.JOBS.value, entrypoint=start_scheduler, args=(config.cmd_args.verbose,)
         ),
@@ -550,7 +542,7 @@ if __name__ == "__main__":
                         trunc_process_data.process = None
                         if trunc_process_data.name == TrunkProcessEnum.HTTP.value:
                             # do not open GUI on HTTP API restart
-                            trunc_process_data.args = (config.cmd_args.verbose, True)
+                            trunc_process_data.args = (config.cmd_args.verbose, None, True)
                         start_process(trunc_process_data)
                         api_name, port, started = await wait_api_start(
                             trunc_process_data.name,

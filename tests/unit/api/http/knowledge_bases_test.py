@@ -3,8 +3,9 @@ from http import HTTPStatus
 from unittest.mock import patch
 
 
+@patch("mindsdb.integrations.handlers.chromadb_handler.chromadb_handler.ChromaDBHandler")
 @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-def test_update_kb_embeddings(mock_embedding, client):
+def test_update_kb_embeddings(mock_embedding, chroma, client):
     # for test of embeddings
     mock_embedding().data = [{"embedding": [0.1, 0.2]}]
 
@@ -24,7 +25,8 @@ def test_update_kb_embeddings(mock_embedding, client):
             }
         },
     )
-    raise Exception(create_response.text)
+    if create_response.status_code != HTTPStatus.CREATED:
+        raise Exception(create_response.text)
     assert create_response.status_code == HTTPStatus.CREATED
 
     mock_embedding.reset_mock()

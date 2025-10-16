@@ -318,7 +318,7 @@ class MySQLHandler(MetaDatabaseHandler):
 
     def meta_get_tables(self, table_names: Optional[list[str]] = None) -> Response:
         """
-        Retrieves metadata information about the tables in the MySQL database 
+        Retrieves metadata information about the tables in the MySQL database
         to be stored in the data catalog.
 
         Args:
@@ -383,10 +383,10 @@ class MySQLHandler(MetaDatabaseHandler):
         """
         Retrieves column statistics for the specified tables (or all tables if no list is provided).
         Uses MySQL 8.0+ metadata sources (INFORMATION_SCHEMA.COLUMN_STATISTICS and INFORMATION_SCHEMA.STATISTICS) not requiring table scans.
-        
+
         Args:
             table_names (list): A list of table names for which to retrieve column statistics.
-        
+
         Returns:
             Response: A response object containing the column statistics.
         """
@@ -481,7 +481,6 @@ class MySQLHandler(MetaDatabaseHandler):
             ORDER BY c.TABLE_NAME, c.ORDINAL_POSITION;
         """
         return self.native_query(query)
-
 
     def meta_get_primary_keys(self, table_names: Optional[list[str]] = None) -> Response:
         """

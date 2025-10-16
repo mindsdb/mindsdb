@@ -42,6 +42,5 @@ def test_update_kb_embeddings(mock_embedding, client):
     )
 
     assert update_response.status_code == HTTPStatus.OK
-
     kwargs = mock_embedding.call_args_list[0][1]
     assert kwargs["api_key"] == "embed-key-2"

@@ -42,7 +42,7 @@ class Query(Resource):
             return http_error(
                 HTTPStatus.BAD_REQUEST,
                 'Wrong arguments',
-                'Please provide "query" with the request.'
+                'Please provide "query" with the request. '
             )
         logger.debug(f'Incoming query: {query}')
 

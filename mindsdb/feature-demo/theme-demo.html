@@ -32,22 +32,27 @@
       cursor: pointer;
     }
   </style>
+  <script>
+    // Wrap all theme logic in an IIFE to avoid polluting global scope
+    (function() {
+      const root = document.documentElement;
+
+      // Initialize theme from localStorage
+      const savedTheme = localStorage.getItem("theme") || "light";
+      root.setAttribute("data-theme", savedTheme);
+
+      // Expose toggleTheme globally for the button
+      window.toggleTheme = () => {
+        const current = root.getAttribute("data-theme");
+        const next = current === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        localStorage.setItem("theme", next);
+      };
+    })();
+  </script>
 </head>
 <body>
   <h1>🧠 MindsDB Custom Theme Demo</h1>
   <button onclick="toggleTheme()">Toggle Theme</button>
-
-  <script>
-    const toggleTheme = () => {
-      const current = document.documentElement.getAttribute("data-theme");
-      const next = current === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", next);
-      localStorage.setItem("theme", next);
-    };
-    document.documentElement.setAttribute(
-      "data-theme",
-      localStorage.getItem("theme") || "light"
-    );
-  </script>
 </body>
 </html>

@@ -117,28 +117,25 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     """
     from mindsdb.integrations.utilities.rag.settings import RerankerConfig
 
+    # Work on a copy; do not mutate caller's dict
     params_copy = copy.deepcopy(reranking_model_params)
 
     # Handle model_name -> model alias for backward compatibility
     if "model_name" in params_copy and "model" not in params_copy:
         params_copy["model"] = params_copy.pop("model_name")
 
-    # Create and validate config using Pydantic model
+    # Validate core fields (e.g. mode) via Pydantic
     try:
-        config = RerankerConfig(**params_copy)
+        cfg = RerankerConfig(**params_copy)
     except ValueError as e:
         raise ValueError(f"Invalid reranker configuration: {str(e)}")
 
-    # Get API key if not provided
-    if not hasattr(config, "api_key") or not config.api_key:
-        provider = getattr(config, "provider", "openai").lower()
-        config.api_key = get_api_key(provider, params_copy, strict=False)
+    # Merge validated fields back, preserving any extra user fields
+    validated = cfg.model_dump()
+    reranker_params = {**params_copy, **validated}
 
-    # Convert to dict for the reranker constructors
-    reranker_params = config.model_dump()
-
-    # Return appropriate reranker based on mode
-    if config.mode == RerankerMode.LISTWISE:
+    # Choose reranker class based on validated mode
+    if cfg.mode == RerankerMode.LISTWISE:
         return ListwiseLLMReranker(**reranker_params)
     return BaseLLMReranker(**reranker_params)
 

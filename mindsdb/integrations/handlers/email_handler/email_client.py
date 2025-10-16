@@ -209,6 +209,11 @@ class EmailClient:
         # STARTTLS flag and username (assign once)
         self._smtp_starttls = bool(connection_data.smtp_starttls)
         self.smtp_username = connection_data.smtp_username or self.email
+        self._smtp_host = smtp_host
+        self._smtp_port = smtp_port
+
+        self._smtp_starttls = bool(connection_data.smtp_starttls)
+        self.smtp_username = connection_data.smtp_username or self.email
 
     def _ensure_imap_session(self) -> None:
         """Login and optionally STARTTLS for IMAP if needed (idempotent)."""

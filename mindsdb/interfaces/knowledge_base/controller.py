@@ -125,18 +125,17 @@ def get_reranking_model_from_params(reranking_model_params: dict):
         raise ValueError("'model_name' must be provided for reranking model")
     params_copy["model"] = params_copy.pop("model_name")
 
-    mode = params_copy.get("mode", "pointwise")
+    mode = params_copy.get("mode", RerankerMode.POINTWISE)
 
-    if mode == RerankerMode.LISTWISE:
-        params_copy["mode"] = mode
-        return ListwiseLLMReranker(**params_copy)
-    if mode == RerankerMode.POINTWISE:
-        params_copy["mode"] = mode
-    else:
+    if mode not in (RerankerMode.POINTWISE, RerankerMode.LISTWISE):
         raise ValueError(
-            f"Invalid reranking mode:{mode} for reranking model. "
+            f"Invalid reranking mode: {mode} for reranking model. "
             f"Valid modes are: {RerankerMode.POINTWISE}, {RerankerMode.LISTWISE}"
         )
+
+    params_copy["mode"] = mode
+    if mode == RerankerMode.LISTWISE:
+        return ListwiseLLMReranker(**params_copy)
     return BaseLLMReranker(**params_copy)
 
 

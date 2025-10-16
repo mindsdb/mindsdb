@@ -191,6 +191,11 @@ class EmailClient:
         self.smtp_timeout = connection_data.smtp_timeout or 30.0
         self.smtp_server = smtplib.SMTP(smtp_host, smtp_port, timeout=self.smtp_timeout)
         self._smtp_starttls = bool(connection_data.smtp_starttls)
+        self.smtp_username = connection_data.smtp_username or self.email
+        self._smtp_host = smtp_host
+        self._smtp_port = smtp_port
+
+        self._smtp_starttls = bool(connection_data.smtp_starttls)
         # Allow SMTP username override; fallback to 'email'
         self.smtp_username = connection_data.smtp_username or self.email
 

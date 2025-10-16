@@ -4,9 +4,19 @@ permissions:
   contents: read
 
 on:
-  push:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
     branches:
-      - '**' # This pattern matches all branches
+      - 'main'
+      - 'develop'
+      - '25-8-2-revert'
+      - 'feat/FQE-1654'
+
+# Cancel any existing runs of this workflow on the same branch/pr
+# We always want to build/deploy/test a new commit over an older one
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
 
 jobs:
 
@@ -24,12 +34,15 @@ jobs:
             not-docs:
               - '!docs/**'  
               - '!**/*.md'
+              - '!.github/workflows/build_deploy_dev.yml'
+              - '!.github/workflows/test_on_deploy.yml'
               - '!mindsdb/__about__.py'
 
   # Start running unit tests early - we want to run them always
   # and they don't depend on build or deployment
   run_unit_tests:
     name: Run Unit Tests
+    needs: [changes]
     if: ${{ needs.changes.outputs.not-docs == 'true' }}
     uses: ./.github/workflows/tests_unit.yml
     secrets: inherit
@@ -39,6 +52,7 @@ jobs:
     if: ${{ !github.event.pull_request.head.repo.fork }}
     name: Get Deploy Envs
     runs-on: mdb-dev
+    needs: [changes]
     outputs:
       deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
     steps:
@@ -111,7 +125,7 @@ jobs:
   # This is a collection point for all of the matrix tests above so we can have a single required job
   tests_completed:
     name: All Tests Succeeded
-    needs: [run_unit_tests, run_integration_tests]
+    needs: [run_unit_tests, run_integration_tests, changes]
     runs-on: mdb-dev
     if: always()
     steps:

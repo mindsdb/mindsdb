@@ -115,28 +115,32 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     """
     Create reranking model from parameters.
     """
+    from mindsdb.integrations.utilities.rag.settings import RerankerConfig
+
     params_copy = copy.deepcopy(reranking_model_params)
-    provider = params_copy.get("provider", "openai").lower()
 
-    if "api_key" not in params_copy:
-        params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
+    # Handle model_name -> model alias for backward compatibility
+    if "model_name" in params_copy and "model" not in params_copy:
+        params_copy["model"] = params_copy.pop("model_name")
 
-    if "model_name" not in params_copy:
-        raise ValueError("'model_name' must be provided for reranking model")
-    params_copy["model"] = params_copy.pop("model_name")
+    # Create and validate config using Pydantic model
+    try:
+        config = RerankerConfig(**params_copy)
+    except ValueError as e:
+        raise ValueError(f"Invalid reranker configuration: {str(e)}")
 
-    mode = params_copy.get("mode", RerankerMode.POINTWISE)
+    # Get API key if not provided
+    if not hasattr(config, "api_key") or not config.api_key:
+        provider = getattr(config, "provider", "openai").lower()
+        config.api_key = get_api_key(provider, params_copy, strict=False)
 
-    if mode not in (RerankerMode.POINTWISE, RerankerMode.LISTWISE):
-        raise ValueError(
-            f"Invalid reranking mode: {mode} for reranking model. "
-            f"Valid modes are: {RerankerMode.POINTWISE}, {RerankerMode.LISTWISE}"
-        )
+    # Convert to dict for the reranker constructors
+    reranker_params = config.model_dump()
 
-    params_copy["mode"] = mode
-    if mode == RerankerMode.LISTWISE:
-        return ListwiseLLMReranker(**params_copy)
-    return BaseLLMReranker(**params_copy)
+    # Return appropriate reranker based on mode
+    if config.mode == RerankerMode.LISTWISE:
+        return ListwiseLLMReranker(**reranker_params)
+    return BaseLLMReranker(**reranker_params)
 
 
 def safe_pandas_is_datetime(value: str) -> bool:

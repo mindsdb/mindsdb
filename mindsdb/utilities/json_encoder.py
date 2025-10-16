@@ -18,6 +18,8 @@ class CustomJSONEncoder:
             return float(obj)
         if isinstance(obj, np.bool_):
             return bool(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
         if pd.isnull(obj):
             return None
 

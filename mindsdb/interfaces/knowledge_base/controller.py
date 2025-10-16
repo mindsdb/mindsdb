@@ -22,6 +22,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
 )
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get_validated_jwt
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
@@ -142,6 +143,28 @@ def to_json(obj):
         return obj
 
 
+def rotate_provider_api_key(params):
+    """
+    Check api key for specific providers. At the moment it checks and updated jwt token of snowflake provider
+    :param params: input params, can be modified by this function
+    :return: a new api key if it is refreshed
+    """
+    provider = params.get("provider").lower()
+
+    if provider == "snowflake":
+        api_key = params.get("api_key")
+        api_key2 = get_validated_jwt(
+            api_key,
+            account=params.get("snowflake_account_id"),
+            user=params.get("user"),
+            private_key=params.get("private_key"),
+        )
+        if api_key2 != api_key:
+            # update keys
+            params["api_key"] = api_key2
+            return api_key2
+
+
 class KnowledgeBaseTable:
     """
     Knowledge base table interface
@@ -193,6 +216,22 @@ class KnowledgeBaseTable:
 
         executor = KnowledgeBaseQueryExecutor(self)
         df = executor.run(query)
+
+        # copy metadata to columns
+        if "metadata" in df.columns:
+            meta_columns = self._get_allowed_metadata_columns()
+            if meta_columns:
+                meta_data = pd.json_normalize(df["metadata"])
+                # exclude absent columns and used colunns
+                df_columns = list(df.columns)
+                meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
+
+                # add columns
+                df = df.join(meta_data[meta_columns])
+
+                # put metadata in the end
+                df_columns.remove("metadata")
+                df = df[df_columns + meta_columns + ["metadata"]]
 
         if (
             query_copy.group_by is not None
@@ -402,6 +441,7 @@ class KnowledgeBaseTable:
         return [col.lower() for col in columns]
 
     def score_documents(self, query_text, documents, reranking_model_params):
+        rotate_provider_api_key(reranking_model_params)
         reranker = get_reranking_model_from_params(reranking_model_params)
         return reranker.get_scores(query_text, documents)
 
@@ -411,6 +451,15 @@ class KnowledgeBaseTable:
         reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_reranking_model")
         if reranking_model_params and query_text and len(df) > 0 and not disable_reranking:
             # Use reranker for relevance score
+
+            new_api_key = rotate_provider_api_key(reranking_model_params)
+            if new_api_key:
+                # update key
+                if "reranking_model" not in self._kb.params:
+                    self._kb.params["reranking_model"] = {}
+                self._kb.params["reranking_model"]["api_key"] = new_api_key
+                flag_modified(self._kb, "params")
+                db.session.commit()
 
             # Apply custom filtering threshold if provided
             if relevance_threshold is not None:
@@ -1072,8 +1121,6 @@ class KnowledgeBaseController:
         :param is_sparse: Whether to use sparse vectors for embeddings
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
 
         # fill variables
         params = variables_controller.fill_parameters(params)
@@ -1112,8 +1159,6 @@ class KnowledgeBaseController:
         project = self.session.database_controller.get_project(project_name)
         project_id = project.id
 
-        # not difference between cases in sql
-        name = name.lower()
         # check if knowledge base already exists
         kb = self.get(name, project_id)
         if kb is not None:
@@ -1145,6 +1190,7 @@ class KnowledgeBaseController:
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
+            rotate_provider_api_key(reranking_model_params)
             self._test_reranking(reranking_model_params)
 
         # search for the vector database table

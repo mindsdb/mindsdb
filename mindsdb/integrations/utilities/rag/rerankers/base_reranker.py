@@ -22,6 +22,7 @@ from mindsdb.integrations.utilities.rag.settings import (
     DEFAULT_RERANKER_TOP_LOGPROBS,
     DEFAULT_RERANKER_MAX_TOKENS,
     DEFAULT_VALID_CLASS_TOKENS,
+    RerankerMode,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -38,7 +39,7 @@ class BaseLLMReranker(BaseModel, ABC):
     api_version: Optional[str] = None
     num_docs_to_keep: Optional[int] = None  # How many of the top documents to keep after reranking & compressing.
     method: str = "multi-class"  # Scoring method: 'multi-class' or 'binary'
-    mode: str = "pointwise"
+    mode: RerankerMode = RerankerMode.POINTWISE
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[AsyncOpenAI | BaseMLEngine] = None
     _semaphore: Optional[asyncio.Semaphore] = None
@@ -423,7 +424,7 @@ def _strip_code_fences(text: str) -> str:
 
 
 class ListwiseLLMReranker(BaseLLMReranker):
-    mode: str = "listwise"
+    mode: RerankerMode = RerankerMode.LISTWISE
     max_document_characters: int = 3000
 
     async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:

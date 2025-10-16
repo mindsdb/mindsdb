@@ -28,6 +28,7 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
     construct_model_from_args,
 )
+from mindsdb.integrations.utilities.rag.settings import RerankerMode
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
@@ -125,11 +126,17 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     params_copy["model"] = params_copy.pop("model_name")
 
     mode = params_copy.get("mode", "pointwise")
-    if isinstance(mode, str) and mode.lower() == "listwise":
-        params_copy["mode"] = "listwise"
-        return ListwiseLLMReranker(**params_copy)
 
-    params_copy["mode"] = "pointwise"
+    if mode == RerankerMode.LISTWISE:
+        params_copy["mode"] = mode
+        return ListwiseLLMReranker(**params_copy)
+    if mode == RerankerMode.POINTWISE:
+        params_copy["mode"] = mode
+    else:
+        raise ValueError(
+            f"Invalid reranking mode:{mode} for reranking model. "
+            f"Valid modes are: {RerankerMode.POINTWISE}, {RerankerMode.LISTWISE}"
+        )
     return BaseLLMReranker(**params_copy)
 
 

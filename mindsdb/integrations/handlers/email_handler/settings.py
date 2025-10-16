@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class EmailSearchOptions(BaseModel):
     """
     Represents IMAP search options to use when searching emails.
+    Note on max_results: Consumers MUST enforce chunked fetches and memory-efficient
+    processing when handling large values (up to 1000) to avoid resource spikes.
     """
 
     mailbox: str = "INBOX"
@@ -21,14 +23,12 @@ class EmailSearchOptions(BaseModel):
     # Default None -> use client default cap; enforce sensible bounds if explicitly set.
     max_results: Optional[int] = Field(default=None, ge=1, le=1000)
 
-    # Ensure mailbox is not blank; default back to INBOX if an empty string is provided
     @field_validator("mailbox")
     @classmethod
     def _validate_mailbox_non_empty(cls, v: str) -> str:
         v = (v or "").strip()
         return v or "INBOX"
 
-    # Enforce since_date <= until_date when both provided
     @field_validator("until_date")
     @classmethod
     def _validate_date_range(cls, v, info):
@@ -37,7 +37,6 @@ class EmailSearchOptions(BaseModel):
             raise ValueError("until_date must be on or after since_date")
         return v
 
-    # Normalize optional string filters to stripped values (no-op for None)
     @field_validator("subject", "to_field", "from_field")
     @classmethod
     def _strip_optional_strings(cls, v: Optional[str]) -> Optional[str]:
@@ -64,6 +63,7 @@ class EmailConnectionDetails(BaseModel):
     """
     Represents the connection details for an email client.
     Backward compatible with legacy fields and extended with advanced options.
+    Also provides resolved_* properties to centralize effective values.
     """
 
     email: str
@@ -88,7 +88,6 @@ class EmailConnectionDetails(BaseModel):
     smtp_username: Optional[str] = None  # use if SMTP auth differs from email
     smtp_timeout: Optional[float] = 30.0  # seconds
 
-    # Enforce non-empty credentials
     @field_validator("email", "password")
     @classmethod
     def _non_empty_credentials(cls, v: str) -> str:
@@ -97,13 +96,11 @@ class EmailConnectionDetails(BaseModel):
             raise ValueError("must be a non-empty string")
         return v
 
-    # Normalize optional username values (strip whitespace)
     @field_validator("imap_username", "smtp_username", "imap_host", "smtp_host")
     @classmethod
     def _strip_optional_strings(cls, v: Optional[str]) -> Optional[str]:
         return v.strip() if isinstance(v, str) else v
 
-    # Validate ports if provided (must be positive)
     @field_validator("imap_port", "smtp_port")
     @classmethod
     def _validate_ports_positive(cls, v: Optional[int]) -> Optional[int]:
@@ -111,13 +108,47 @@ class EmailConnectionDetails(BaseModel):
             raise ValueError("port must be a positive integer")
         return v
 
-    # Validate timeouts if provided (must be positive)
     @field_validator("imap_timeout", "smtp_timeout")
     @classmethod
     def _validate_timeouts_positive(cls, v: Optional[float]) -> Optional[float]:
         if v is not None and v <= 0:
             raise ValueError("timeout must be a positive value (seconds)")
         return v
+
+    # Resolved/effective properties to avoid duplicating fallback logic
+    @property
+    def resolved_imap_host(self) -> str:
+        return self.imap_host or self.imap_server
+
+    @property
+    def resolved_imap_port(self) -> int:
+        if self.imap_port is not None:
+            return self.imap_port
+        return 993 if self.imap_use_ssl else 143
+
+    @property
+    def resolved_imap_username(self) -> str:
+        return self.imap_username or self.email
+
+    @property
+    def resolved_imap_timeout(self) -> float:
+        return float(self.imap_timeout or 30.0)
+
+    @property
+    def resolved_smtp_host(self) -> str:
+        return self.smtp_host or self.smtp_server
+
+    @property
+    def resolved_smtp_port(self) -> int:
+        return int(self.smtp_port)
+
+    @property
+    def resolved_smtp_username(self) -> str:
+        return self.smtp_username or self.email
+
+    @property
+    def resolved_smtp_timeout(self) -> float:
+        return float(self.smtp_timeout or 30.0)
 
     model_config = ConfigDict(
         json_schema_extra={

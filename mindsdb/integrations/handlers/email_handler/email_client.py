@@ -80,14 +80,19 @@ def _sanitize_mailbox(mailbox: str) -> str:
     - Forbid path traversal ('.' or '..' segments anywhere) and empty segments
     - Forbid nulls and Unicode control/format characters
     - Only allow ASCII letters/digits and the safe set: " .-_&@'()[]"
+    - Reject empty/whitespace-only names
     - Max length: 255
     """
-    mb = (mailbox or "INBOX").strip()
+    mb = (mailbox or "").strip()
 
     try:
         mb = unicodedata.normalize("NFKC", mb)
     except Exception:
         pass
+
+    # Reject empty or whitespace-only mailbox names
+    if not mb:
+        raise ValueError("Invalid mailbox name: empty or whitespace only.")
 
     if "\x00" in mb or mb.startswith("/"):
         raise ValueError("Invalid mailbox name.")
@@ -117,10 +122,16 @@ def _imap_quote(value: str) -> str:
     - Normalize to NFKC
     - Strip CR/LF
     - Reject any non-ASCII or control characters (ord < 32 or ord > 126)
+    - Reject empty/whitespace-only values
     - Escape backslashes and double quotes
     """
     v = unicodedata.normalize("NFKC", value or "")
     v = v.replace("\r", "").replace("\n", "")
+
+    # Reject empty or whitespace-only values
+    if v.strip() == "":
+        raise ValueError("Invalid IMAP search value: empty or whitespace-only values are not allowed.")
+
     for ch in v:
         o = ord(ch)
         if o < 32 or o > 126:
@@ -190,8 +201,13 @@ class EmailClient:
         smtp_port = connection_data.smtp_port
         self.smtp_timeout = connection_data.smtp_timeout or 30.0
         self.smtp_server = smtplib.SMTP(smtp_host, smtp_port, timeout=self.smtp_timeout)
+
+        # Store resolved host/port for diagnostics
+        self._smtp_host = smtp_host
+        self._smtp_port = smtp_port
+
+        # STARTTLS flag and username (assign once)
         self._smtp_starttls = bool(connection_data.smtp_starttls)
-        # Allow SMTP username override; fallback to 'email'
         self.smtp_username = connection_data.smtp_username or self.email
 
     def _ensure_imap_session(self) -> None:

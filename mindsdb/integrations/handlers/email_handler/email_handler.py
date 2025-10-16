@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+import threading
+from hashlib import sha256
+from typing import Any, Dict, Optional, Tuple
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -22,6 +24,10 @@ class EmailHandler(APIHandler):
     Handler for interacting with Email (send and search).
     """
 
+    # Simple shared-connection pool keyed by effective connection parameters
+    _POOL: Dict[Tuple, EmailClient] = {}
+    _POOL_LOCK = threading.Lock()
+
     def __init__(self, name: Optional[str] = None, **kwargs: Any) -> None:
         super().__init__(name)
 
@@ -35,44 +41,79 @@ class EmailHandler(APIHandler):
         emails = EmailsTable(self)
         self._register_table("emails", emails)
 
+    def _pool_key(self) -> Tuple:
+        cd = self.connection_data
+        pwd_hash = sha256((cd.password or "").encode("utf-8")).hexdigest()[:12]
+        return (
+            cd.resolved_imap_host,
+            cd.resolved_imap_port,
+            bool(cd.imap_use_ssl),
+            bool(cd.imap_use_starttls),
+            cd.resolved_imap_username,
+            cd.resolved_smtp_host,
+            cd.resolved_smtp_port,
+            bool(cd.smtp_starttls),
+            cd.email,
+            pwd_hash,
+        )
+
     def connect(self) -> EmailClient:
-        """Create a client instance using connection settings."""
+        """Create or reuse a client instance using connection settings."""
         if self.is_connected and self.connection is not None:
             return self.connection
 
-        try:
+        key = self._pool_key()
+        with EmailHandler._POOL_LOCK:
+            pooled = EmailHandler._POOL.get(key)
+            if pooled is not None:
+                # Reuse pooled connection
+                self.connection = pooled
+                self.is_connected = True
+                return self.connection
+
+            # Create and pool the connection
             self.connection = EmailClient(self.connection_data)
+            EmailHandler._POOL[key] = self.connection
             self.is_connected = True
-        except Exception as e:
-            logger.error(f"Error initializing Email client: {e}")
-            self.connection = None
-            self.is_connected = False
-            raise
 
         return self.connection
 
     def disconnect(self) -> None:
-        """Close any existing connections and reset flags."""
+        """Close any existing connections and reset flags. Force cleanup on failure."""
         try:
             if self.connection is not None:
+                key = self._pool_key()
                 try:
-                    # Attempt a clean logout
                     self.connection.logout()
-                    # Since EmailClient.logout() does not return a status, verify cleanup defensively
-                    still_open = False
+                except Exception as e:
+                    logger.warning(f"Non-fatal error during email logout: {e}")
+                finally:
+                    # Force close if logout left servers open
                     try:
                         if getattr(self.connection, "imap_server", None) is not None:
-                            still_open = True
+                            try:
+                                self.connection.imap_server.logout()
+                            except Exception:
+                                pass
+                            try:
+                                self.connection.imap_server = None
+                            except Exception:
+                                pass
                         if getattr(self.connection, "smtp_server", None) is not None:
-                            still_open = True
+                            try:
+                                self.connection.smtp_server.quit()
+                            except Exception:
+                                pass
+                            try:
+                                self.connection.smtp_server = None
+                            except Exception:
+                                pass
                     except Exception:
                         pass
-                    if still_open:
-                        logger.warning("Email client resources appear open after logout; forcing cleanup.")
-                except Exception as e:
-                    logger.warning(f"Non-fatal error during email disconnect: {e}")
+                    # Remove from pool
+                    with EmailHandler._POOL_LOCK:
+                        EmailHandler._POOL.pop(key, None)
         finally:
-            # Always reset state
             self.is_connected = False
             self.connection = None
 
@@ -87,24 +128,15 @@ class EmailHandler(APIHandler):
             client = self.connection
             assert client is not None
 
-            # Explicitly sanitize mailbox before use
             inbox = _sanitize_mailbox("INBOX")
             client.select_mailbox(inbox)
-
-            # Only teardown if we created it here (preserve reuse for callers)
-            if created_here:
-                client.logout()
-                self.is_connected = False
-                self.connection = None
 
             response.success = True
         except Exception as e:
             response.error_message = f"Error connecting to Email: {e}."
             logger.error(response.error_message)
-            # Ensure clean state on error
-            self.disconnect()
         finally:
-            # Always clean up if created here, regardless of current state
+            # Clean up only once per health check, no redundant logout+disconnect
             if created_here:
                 self.disconnect()
 

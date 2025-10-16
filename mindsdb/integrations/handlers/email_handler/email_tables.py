@@ -86,14 +86,13 @@ class EmailsTable(APITable):
             except Exception:
                 effective_limit = 1000
 
-        # Propagate LIMIT to search options to cap IMAP calls (client-side).
+        # Propagate LIMIT to IMAP via search options
         search_params["max_results"] = effective_limit
 
-        # Always sanitize mailbox even when not provided, so defaults fail fast if invalid
-        if "mailbox" in search_params:
-            search_params["mailbox"] = _sanitize_mailbox(str(search_params["mailbox"]))
-        else:
-            search_params["mailbox"] = _sanitize_mailbox("INBOX")
+        # Always sanitize mailbox, whether provided or default
+        if "mailbox" not in search_params:
+            search_params["mailbox"] = "INBOX"
+        search_params["mailbox"] = _sanitize_mailbox(str(search_params["mailbox"]))
 
         search_options = EmailSearchOptions(**search_params) if search_params else EmailSearchOptions()
 
@@ -127,7 +126,6 @@ class EmailsTable(APITable):
             connection.send_email(to_addr, **payload)
 
     def get_columns(self):
-        # Columns available for selection. Conditions are only supported on a subset handled in select().
         return [
             "id",
             "body_safe",

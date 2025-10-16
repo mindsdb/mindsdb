@@ -14,6 +14,8 @@ __github__ = "https://github.com/mindsdb/mindsdb"
 __pypi__ = "https://pypi.org/project/mindsdb/"
 __license__ = "MIT"
 __icon_path__ = "icon.png"
+# Restored for compatibility with tools that expect this metadata
+__copyright__ = "Copyright 2022- mindsdb"
 
 # Robust, import-safe HANDLER_TYPE assignment:
 # Prefer the enum-like source; if unavailable, fall back to a compatible enum member, not a bare string.

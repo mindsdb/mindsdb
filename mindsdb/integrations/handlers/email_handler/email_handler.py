@@ -11,6 +11,7 @@ from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.email_handler.email_tables import EmailsTable
 from mindsdb.integrations.handlers.email_handler.email_client import EmailClient
+from mindsdb.integrations.handlers.email_handler.email_client import _sanitize_mailbox
 from mindsdb.integrations.handlers.email_handler.settings import EmailConnectionDetails
 
 logger = log.getLogger(__name__)
@@ -55,7 +56,19 @@ class EmailHandler(APIHandler):
         try:
             if self.connection is not None:
                 try:
+                    # Attempt a clean logout
                     self.connection.logout()
+                    # Since EmailClient.logout() does not return a status, verify cleanup defensively
+                    still_open = False
+                    try:
+                        if getattr(self.connection, "imap_server", None) is not None:
+                            still_open = True
+                        if getattr(self.connection, "smtp_server", None) is not None:
+                            still_open = True
+                    except Exception:
+                        pass
+                    if still_open:
+                        logger.warning("Email client resources appear open after logout; forcing cleanup.")
                 except Exception as e:
                     logger.warning(f"Non-fatal error during email disconnect: {e}")
         finally:
@@ -74,8 +87,9 @@ class EmailHandler(APIHandler):
             client = self.connection
             assert client is not None
 
-            # Rely on internal sanitization in select_mailbox
-            client.select_mailbox("INBOX")
+            # Explicitly sanitize mailbox before use
+            inbox = _sanitize_mailbox("INBOX")
+            client.select_mailbox(inbox)
 
             # Only teardown if we created it here (preserve reuse for callers)
             if created_here:
@@ -87,8 +101,12 @@ class EmailHandler(APIHandler):
         except Exception as e:
             response.error_message = f"Error connecting to Email: {e}."
             logger.error(response.error_message)
-            # Ensure clean state
+            # Ensure clean state on error
             self.disconnect()
+        finally:
+            # Always clean up if created here, regardless of current state
+            if created_here:
+                self.disconnect()
 
         return response
 

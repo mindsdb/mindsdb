@@ -112,7 +112,8 @@ class TestEmailHandlerAdvanced:
             patch("mindsdb.integrations.handlers.email_handler.email_client.imaplib.IMAP4_SSL") as mock_ssl,
             patch("mindsdb.integrations.handlers.email_handler.email_client.smtplib.SMTP") as mock_smtp,
             patch.object(EmailClient, "_UID_FETCH_CHUNK", 2),
-        ):  # Force multiple chunks for this test
+            patch.object(EmailClient, "_FETCH_ALL_THRESHOLD", 2),
+        ):  # Force chunking for 3 UIDs (> threshold)
             imap = MagicMock()
             mock_ssl.return_value = imap
             mock_smtp.return_value = MagicMock()

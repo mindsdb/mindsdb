@@ -6,7 +6,7 @@ permissions:
 on:
   push:
     branches:
-      - '**'
+      - '**' # This pattern matches all branches
 
 jobs:
 
@@ -24,7 +24,6 @@ jobs:
             not-docs:
               - '!docs/**'  
               - '!**/*.md'
-              - '!.github/workflows/test_on_deploy.yml'
               - '!mindsdb/__about__.py'
 
   # Start running unit tests early - we want to run them always

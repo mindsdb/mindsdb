@@ -6,10 +6,7 @@ permissions:
 on:
   push:
     branches:
-      - 'main'
-      - 'develop'
-      - '25-8-2-revert'
-      - 'feat/FQE-1654'
+      - '**'
 
 jobs:
 
@@ -27,7 +24,6 @@ jobs:
             not-docs:
               - '!docs/**'  
               - '!**/*.md'
-              - '!.github/workflows/build_deploy_dev.yml'
               - '!.github/workflows/test_on_deploy.yml'
               - '!mindsdb/__about__.py'
 

@@ -24,6 +24,7 @@ def test_update_kb_embeddings(mock_embedding, client):
             }
         },
     )
+    raise Exception(create_response.text)
     assert create_response.status_code == HTTPStatus.CREATED
 
     mock_embedding.reset_mock()

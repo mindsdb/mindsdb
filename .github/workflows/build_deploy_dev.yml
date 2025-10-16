@@ -4,12 +4,12 @@ permissions:
   contents: read
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize, labeled]
+  push:
     branches:
       - 'main'
       - 'develop'
       - '25-8-2-revert'
+      - 'feat/FQE-1654'
 
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one

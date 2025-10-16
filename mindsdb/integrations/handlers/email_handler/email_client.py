@@ -5,6 +5,7 @@ import imaplib
 import smtplib
 import ssl
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from email.header import decode_header
 from email.mime.multipart import MIMEMultipart
@@ -76,7 +77,7 @@ def _sanitize_mailbox(mailbox: str) -> str:
     Strict mailbox validation compatible with common providers (e.g., Gmail):
     - Normalize to NFKC
     - Allow '/' as a hierarchy delimiter; forbid leading '/' (absolute paths)
-    - Forbid path traversal ('..') and '.' segments and empty segments
+    - Forbid path traversal ('.' or '..' segments anywhere) and empty segments
     - Forbid nulls and Unicode control/format characters
     - Allow letters, digits, and curated safe characters in segments: " .-_&@'()[]"
     - Max length: 255
@@ -92,6 +93,7 @@ def _sanitize_mailbox(mailbox: str) -> str:
         raise ValueError("Invalid mailbox name.")
 
     segments = mb.split("/")
+    # Reject any empty, '.' or '..' segments anywhere
     if any(s in ("", ".", "..") for s in segments):
         raise ValueError("Invalid mailbox path segments.")
 
@@ -144,6 +146,7 @@ class EmailClient:
 
     _DEFAULT_SINCE_DAYS = 10
     _UID_FETCH_CHUNK = 50
+    _FETCH_ALL_THRESHOLD = 500
     _MAX_RESULTS_DEFAULT = 500
 
     def __init__(self, connection_data: EmailConnectionDetails):
@@ -189,7 +192,7 @@ class EmailClient:
         if self._imap_starttls:
             try:
                 ctx = ssl.create_default_context()
-                # starttls signature is starttls(ssl_context=...) on Python 3.12
+                # starttls signature is starttls(ssl_context=...) on Python 3.12+
                 self.imap_server.starttls(ssl_context=ctx)
             except Exception as e:
                 raise ValueError(f"IMAP STARTTLS failed: {e}")
@@ -248,6 +251,11 @@ class EmailClient:
         except Exception as e:
             # Do not log credentials
             logger.error(f"Failed sending email to {to_addr}: {e}")
+            # Ensure SMTP connection is closed on error to avoid leaks
+            try:
+                self.smtp_server.quit()
+            except Exception:
+                pass
             raise
 
     def _build_search_query(self, options: EmailSearchOptions) -> str:
@@ -298,8 +306,10 @@ class EmailClient:
 
     def _fetch_messages_by_uids(self, uids: List[bytes]) -> List[Tuple[bytes, bytes]]:
         """
-        Fetch messages in chunks using comma-separated UID lists.
-        Returns a flat list of (meta, raw_message) pairs (only the tuple entries).
+        Fetch messages using comma-separated UID lists:
+        - If total UIDs <= _FETCH_ALL_THRESHOLD: single fetch to reduce round-trips.
+        - Else: chunked fetches with _UID_FETCH_CHUNK.
+        Returns a flat list of (meta, raw_message) pairs.
         """
         results: List[Tuple[bytes, bytes]] = []
         if not uids:
@@ -315,21 +325,28 @@ class EmailClient:
         if not uid_strings:
             return results
 
-        for i in range(0, len(uid_strings), EmailClient._UID_FETCH_CHUNK):
-            id_string = ",".join(uid_strings[i : i + EmailClient._UID_FETCH_CHUNK])
-            status, data = self.imap_server.uid("fetch", id_string, "(RFC822)")
+        def _fetch(id_string: str) -> None:
+            status, data = self.imap_server.uid("fetch", id_string, "(UID RFC822)")
             if status != "OK":
                 raise RuntimeError("Failed to fetch emails via IMAP UID FETCH.")
             for part in data:
                 if isinstance(part, tuple) and len(part) >= 2:
                     results.append((part[0], part[1]))
+
+        if len(uid_strings) <= EmailClient._FETCH_ALL_THRESHOLD:
+            _fetch(",".join(uid_strings))
+            return results
+
+        for i in range(0, len(uid_strings), EmailClient._UID_FETCH_CHUNK):
+            _fetch(",".join(uid_strings[i : i + EmailClient._UID_FETCH_CHUNK]))
+
         return results
 
     def search_email(self, options: EmailSearchOptions) -> pd.DataFrame:
         """
         Search emails based on the given options and return a DataFrame.
-        Uses UID search/fetch and chunked fetching for performance and correctness.
-        Applies an upper bound on total fetched messages to avoid excessive IMAP calls.
+        Uses UID search/fetch and efficient batching. Applies an upper bound on
+        total fetched messages to avoid excessive IMAP calls.
         """
         self.select_mailbox(options.mailbox)
 
@@ -349,13 +366,12 @@ class EmailClient:
 
             fetched = self._fetch_messages_by_uids(raw_list)
 
-            ret = []
-            for meta, raw in fetched:
+            def _parse_one(meta_raw: Tuple[bytes, bytes]) -> Optional[dict]:
+                meta, raw = meta_raw
                 try:
                     msg = email.message_from_bytes(raw)
                 except Exception:
-                    # Skip undecodable messages instead of failing the batch
-                    continue
+                    return None
 
                 subject = _decode_mime_header(msg.get("Subject"))
                 from_addr = _decode_mime_header(msg.get("From"))
@@ -399,37 +415,41 @@ class EmailClient:
 
                 body_bytes = plain_payload or html_payload
                 if body_bytes is None:
-                    continue
+                    return None
 
                 body_text = _decode_bytes(body_bytes, declared_charset)
-
-                # Provide a safe-to-render variant
                 body_safe = _sanitize_for_ui(body_text)
 
-                # Attempt to pull UID from meta tuple
+                # Extract UID robustly
                 email_id = None
                 try:
                     if isinstance(meta, (bytes, bytearray)):
                         parts = meta.decode("utf-8", errors="replace").split()
                         if "UID" in parts:
                             uid_idx = parts.index("UID") + 1
-                            email_id = parts[uid_idx]
+                            if uid_idx < len(parts):
+                                email_id = parts[uid_idx]
                 except Exception:
                     email_id = None
 
-                ret.append(
-                    {
-                        "id": email_id,
-                        "to_field": _decode_mime_header(msg.get("To")),
-                        "from_field": from_addr,
-                        "subject": subject,
-                        "datetime": date_hdr,
-                        "body": body_text,
-                        "body_safe": body_safe,
-                        "body_content_type": content_type,
-                    }
-                )
+                return {
+                    "id": email_id,
+                    "to_field": _decode_mime_header(msg.get("To")),
+                    "from_field": from_addr,
+                    "subject": subject,
+                    "datetime": date_hdr,
+                    # 'body' removed to reduce risk of stored XSS; use 'body_safe' for UI
+                    "body_safe": body_safe,
+                    "body_content_type": content_type,
+                }
 
-            return pd.DataFrame(ret)
+            # Parallelize message parsing/decoding for better throughput
+            rows: List[dict] = []
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                for row in executor.map(_parse_one, fetched):
+                    if row is not None:
+                        rows.append(row)
+
+            return pd.DataFrame(rows)
         except Exception as e:
             raise Exception("Error searching email") from e

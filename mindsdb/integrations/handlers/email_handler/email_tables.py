@@ -28,6 +28,42 @@ class EmailsTable(APITable):
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
+
+        # Dispatch table for columns
+        def handle_datetime(op, value):
+            date = self.parse_date(value)
+            if op == ">":
+                search_params["since_date"] = date
+            elif op == "<":
+                search_params["until_date"] = date
+            else:
+                raise NotImplementedError("Only > and < operators are supported for created_at column.")
+
+        def handle_id(op, value):
+            if op not in ["=", ">", ">="]:
+                raise NotImplementedError("Only =, > and >= operators are supported for id column.")
+            if op in ["=", ">="]:
+                search_params["since_email_id"] = int(value)
+            elif op == ">":
+                search_params["since_email_id"] = int(value) + 1
+
+        def handle_eq_string(field_name, op, value):
+            if op != "=":
+                raise NotImplementedError("Only = operator is supported for mailbox, subject, to and from columns.")
+            if field_name == "mailbox":
+                search_params["mailbox"] = _sanitize_mailbox(str(value))
+            else:
+                search_params[field_name] = value
+
+        handlers = {
+            "datetime": lambda op, val: handle_datetime(op, val),
+            "id": lambda op, val: handle_id(op, val),
+            "mailbox": lambda op, val: handle_eq_string("mailbox", op, val),
+            "subject": lambda op, val: handle_eq_string("subject", op, val),
+            "to_field": lambda op, val: handle_eq_string("to_field", op, val),
+            "from_field": lambda op, val: handle_eq_string("from_field", op, val),
+        }
+
         for op, arg1, arg2 in where_conditions:
             if arg2 is None:
                 logger.warning(
@@ -35,44 +71,22 @@ class EmailsTable(APITable):
                     " Please ignore if this is intentional, e.g. 'id > last' on first query of job run."
                 )
                 continue
-
-            if arg1 == "datetime":
-                date = self.parse_date(arg2)
-                if op == ">":
-                    search_params["since_date"] = date
-                elif op == "<":
-                    search_params["until_date"] = date
-                else:
-                    raise NotImplementedError("Only > and < operators are supported for created_at column.")
-                continue
-
-            elif arg1 == "id":
-                if op not in ["=", ">", ">="]:
-                    raise NotImplementedError("Only =, > and >= operators are supported for id column.")
-                if op in ["=", ">="]:
-                    search_params["since_email_id"] = int(arg2)
-                elif op == ">":
-                    search_params["since_email_id"] = int(arg2) + 1
-
-            elif arg1 in ["mailbox", "subject", "to_field", "from_field"]:
-                if op != "=":
-                    raise NotImplementedError("Only = operator is supported for mailbox, subject, to and from columns.")
-                # Sanitize mailbox early to fail fast
-                if arg1 == "mailbox":
-                    search_params["mailbox"] = _sanitize_mailbox(str(arg2))
-                elif arg1 == "from_field":
-                    search_params["from_field"] = arg2
-                else:
-                    search_params[arg1] = arg2
-
-            else:
+            handler = handlers.get(arg1)
+            if handler is None:
                 raise NotImplementedError(f"Unsupported column: {arg1}.")
+            handler(op, arg2)
 
         self.handler.connect()
 
         # Propagate LIMIT to search options to cap IMAP calls (client-side).
         if result_limit:
             search_params["max_results"] = int(result_limit)
+
+        # Always sanitize mailbox even when not provided, so defaults fail fast if invalid
+        if "mailbox" in search_params:
+            search_params["mailbox"] = _sanitize_mailbox(str(search_params["mailbox"]))
+        else:
+            search_params["mailbox"] = _sanitize_mailbox("INBOX")
 
         search_options = EmailSearchOptions(**search_params) if search_params else EmailSearchOptions()
 
@@ -107,7 +121,15 @@ class EmailsTable(APITable):
 
     def get_columns(self):
         # Columns available for selection. Conditions are only supported on a subset handled in select().
-        return ["id", "body", "body_safe", "body_content_type", "subject", "to_field", "from_field", "datetime"]
+        return [
+            "id",
+            "body_safe",
+            "body_content_type",
+            "subject",
+            "to_field",
+            "from_field",
+            "datetime",
+        ]
 
     @staticmethod
     def parse_date(date_str) -> dt.datetime:

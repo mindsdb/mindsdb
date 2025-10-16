@@ -51,7 +51,7 @@ class TestEmailHandlerAdvanced:
             smtp_args, smtp_kwargs = mock_smtp.call_args
             assert smtp_args == ("127.0.0.1", 1025)
             assert "timeout" in smtp_kwargs
-            assert isinstance(smtp_kwargs["timeout"], (int, float)) and smtp_kwargs["timeout"] > 0
+            assert isinstance(smtp_kwargs["timeout"], (int, float)) and kwargs["timeout"] > 0
 
             # Ensure username override is set
             assert client.imap_username == "user@localhost"
@@ -112,7 +112,8 @@ class TestEmailHandlerAdvanced:
             patch("mindsdb.integrations.handlers.email_handler.email_client.imaplib.IMAP4_SSL") as mock_ssl,
             patch("mindsdb.integrations.handlers.email_handler.email_client.smtplib.SMTP") as mock_smtp,
             patch.object(EmailClient, "_UID_FETCH_CHUNK", 2),
-        ):  # Force multiple chunks for this test
+            patch.object(EmailClient, "_FETCH_ALL_THRESHOLD", 2),
+        ):  # Force chunking for 3 UIDs (> threshold)
             imap = MagicMock()
             mock_ssl.return_value = imap
             mock_smtp.return_value = MagicMock()

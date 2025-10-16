@@ -11,6 +11,7 @@ from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.email_handler.email_tables import EmailsTable
 from mindsdb.integrations.handlers.email_handler.email_client import EmailClient
+from mindsdb.integrations.handlers.email_handler.email_client import _sanitize_mailbox
 from mindsdb.integrations.handlers.email_handler.settings import EmailConnectionDetails
 
 logger = log.getLogger(__name__)
@@ -74,8 +75,9 @@ class EmailHandler(APIHandler):
             client = self.connection
             assert client is not None
 
-            # Rely on internal sanitization in select_mailbox
-            client.select_mailbox("INBOX")
+            # Explicitly sanitize mailbox before use
+            inbox = _sanitize_mailbox("INBOX")
+            client.select_mailbox(inbox)
 
             # Only teardown if we created it here (preserve reuse for callers)
             if created_here:
@@ -87,8 +89,12 @@ class EmailHandler(APIHandler):
         except Exception as e:
             response.error_message = f"Error connecting to Email: {e}."
             logger.error(response.error_message)
-            # Ensure clean state
+            # Ensure clean state on error
             self.disconnect()
+        finally:
+            # If we created the connection here and it's still active, clean up
+            if created_here and self.is_connected:
+                self.disconnect()
 
         return response
 

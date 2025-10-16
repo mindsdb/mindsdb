@@ -19,7 +19,7 @@ class EmailSearchOptions(BaseModel):
     since_email_id: Optional[int] = None
     # Cap total messages fetched (client-side). Prevents excessive IMAP calls.
     # Default None -> use client default cap; enforce sensible bounds if explicitly set.
-    max_results: Optional[int] = Field(default=None, ge=1, le=5000)
+    max_results: Optional[int] = Field(default=None, ge=1, le=1000)
 
     # Ensure mailbox is not blank; default back to INBOX if an empty string is provided
     @field_validator("mailbox")

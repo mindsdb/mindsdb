@@ -20,3 +20,4 @@ filelock==3.18.0
 mysql-connector-python==9.1.0
 walrus==0.9.3
 pymongo == 4.8.0
+pytest-json-report==1.5.0

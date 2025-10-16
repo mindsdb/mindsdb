@@ -30,7 +30,6 @@ jobs:
   # and they don't depend on build or deployment
   run_unit_tests:
     name: Run Unit Tests
-    needs: [changes]
     if: ${{ needs.changes.outputs.not-docs == 'true' }}
     uses: ./.github/workflows/tests_unit.yml
     secrets: inherit
@@ -40,7 +39,6 @@ jobs:
     if: ${{ !github.event.pull_request.head.repo.fork }}
     name: Get Deploy Envs
     runs-on: mdb-dev
-    needs: [changes]
     outputs:
       deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
     steps:
@@ -113,7 +111,7 @@ jobs:
   # This is a collection point for all of the matrix tests above so we can have a single required job
   tests_completed:
     name: All Tests Succeeded
-    needs: [run_unit_tests, run_integration_tests, changes]
+    needs: [run_unit_tests, run_integration_tests]
     runs-on: mdb-dev
     if: always()
     steps:

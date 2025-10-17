@@ -211,9 +211,9 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
+        # metadata as columns
         ret = self.run_sql("""
-                select chunk_content,
-                 metadata->>'specs' as specs, metadata->>'product' as product, metadata->>'url' as url
+                select chunk_content, specs, product, url
                 from kb_review 
                 where _original_doc_id = 123 -- id is id
         """)
@@ -496,6 +496,20 @@ class TestKB(BaseExecutorDummyML):
         for _, item in ret.iterrows():
             assert "white" in item["chunk_content"]
             assert item["metadata"]["num"] in (3, 4)
+
+        # -- chunk_content and '%'
+        ret = self.run_sql("""
+           select * from kb_alg where
+               (chunk_content like '%green%' and size='big') 
+            or (chunk_content like '%white%' and size='small') 
+            or (chunk_content is null)
+           limit 3
+        """)
+        for content in ret["chunk_content"]:
+            if "green" in content:
+                assert "big" in content
+            else:
+                assert "small" in content
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_select_allowed_columns(self, mock_litellm_embedding):

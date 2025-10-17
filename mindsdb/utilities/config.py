@@ -181,7 +181,6 @@ class Config:
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60,
                 },
-                "postgres": {"host": api_host, "port": "55432", "database": "mindsdb"},
                 "litellm": {
                     "host": "0.0.0.0",  # API server binds to all interfaces by default
                     "port": "8000",

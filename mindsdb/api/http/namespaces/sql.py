@@ -31,7 +31,7 @@ class Query(Resource):
         super().__init__(*args, **kwargs)
 
     @ns_conf.doc("query")
-    @api_endpoint_metrics('POST', '/sql/query')
+    @api_endpoint_metrics("POST", "/sql/query")
     @mark_process(name="http_sql")
     def post(self):
         start_time = time.time()
@@ -39,12 +39,8 @@ class Query(Resource):
         context = request.json.get("context", {})
 
         if isinstance(query, str) is False or isinstance(context, dict) is False:
-            return http_error(
-                HTTPStatus.BAD_REQUEST,
-                'Wrong arguments',
-                'Please provide "query" with the request. '
-            )
-        logger.debug(f'Incoming query: {query}')
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" with the request. ')
+        logger.debug(f"Incoming query: {query}")
 
         if context.get("profiling") is True:
             profiler.enable()
@@ -54,9 +50,7 @@ class Query(Resource):
         error_text = None
         error_traceback = None
 
-        profiler.set_meta(
-            query=query, api="http", environment=Config().get("environment")
-        )
+        profiler.set_meta(query=query, api="http", environment=Config().get("environment"))
         with profiler.Context("http_query_processing"):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
@@ -113,9 +107,9 @@ class Query(Resource):
         )
         end_time = time.time()
         log_msg = f"SQL processed in {(end_time - start_time):.2f}s ({end_time:.2f}-{start_time:.2f}), result is {query_response['type']}"
-        if query_response['type'] is SQL_RESPONSE_TYPE.TABLE:
+        if query_response["type"] is SQL_RESPONSE_TYPE.TABLE:
             log_msg += f" ({len(query_response['data'])} rows), "
-        elif query_response['type'] is SQL_RESPONSE_TYPE.ERROR:
+        elif query_response["type"] is SQL_RESPONSE_TYPE.ERROR:
             log_msg += f" ({query_response['error_message']}), "
         log_msg += f"used handlers {ctx.used_handlers}"
         logger.info(log_msg)
@@ -127,7 +121,7 @@ class Query(Resource):
 @ns_conf.param("list_databases", "lists databases of mindsdb")
 class ListDatabases(Resource):
     @ns_conf.doc("list_databases")
-    @api_endpoint_metrics('GET', '/sql/list_databases')
+    @api_endpoint_metrics("GET", "/sql/list_databases")
     def get(self):
         listing_query = "SHOW DATABASES"
         mysql_proxy = FakeMysqlProxy()
@@ -145,15 +139,18 @@ class ListDatabases(Resource):
                 listing_query_response = {"type": "ok"}
             elif result.type == SQL_RESPONSE_TYPE.TABLE:
                 listing_query_response = {
-                    "data": [{
-                        "name": db_row[0],
-                        "tables": [
-                            table_row[0]
-                            for table_row in mysql_proxy.process_query(
-                                "SHOW TABLES FROM `{}`".format(db_row[0])
-                            ).result_set.to_lists()
-                        ]
-                    } for db_row in result.result_set.to_lists()]
+                    "data": [
+                        {
+                            "name": db_row[0],
+                            "tables": [
+                                table_row[0]
+                                for table_row in mysql_proxy.process_query(
+                                    "SHOW TABLES FROM `{}`".format(db_row[0])
+                                ).result_set.to_lists()
+                            ],
+                        }
+                        for db_row in result.result_set.to_lists()
+                    ]
                 }
         except Exception as e:
             listing_query_response = {

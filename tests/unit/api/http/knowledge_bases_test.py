@@ -25,8 +25,6 @@ def test_update_kb_embeddings(mock_embedding, chroma, client):
             }
         },
     )
-    if create_response.status_code != HTTPStatus.CREATED:
-        raise Exception(create_response.text)
     assert create_response.status_code == HTTPStatus.CREATED
 
     mock_embedding.reset_mock()

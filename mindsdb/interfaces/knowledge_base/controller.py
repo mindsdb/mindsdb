@@ -1348,7 +1348,7 @@ class KnowledgeBaseController:
             reranker = get_reranking_model_from_params(params)
             reranker.get_scores("test", ["test"])
         except (ValueError, RuntimeError) as e:
-            if params["provider"] in ("azure_openai", "openai"):
+            if params["provider"] in ("azure_openai", "openai") and params.get("method") != "no-logprobs":
                 # check with no-logprobs
                 params["method"] = "no-logprobs"
                 self._test_reranking(params)

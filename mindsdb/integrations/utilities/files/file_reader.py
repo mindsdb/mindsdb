@@ -16,8 +16,8 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-DEFAULT_CHUNK_SIZE = 500
-DEFAULT_CHUNK_OVERLAP = 250
+DEFAULT_CHUNK_SIZE = 800
+DEFAULT_CHUNK_OVERLAP = 80
 
 
 class FileProcessingError(Exception): ...
@@ -442,14 +442,14 @@ class FileReader(FormatDetector):
         import fitz  # pymupdf
 
         with fitz.open(stream=file_obj.read()) as pdf:  # open pdf
-            text = chr(12).join([page.get_text() for page in pdf])
+            text = '\n'.join([page.get_text() for page in pdf])
 
         # If chunk_size is 0 or negative, return full text without chunking
         if chunk_size is not None and chunk_size <= 0:
             return pd.DataFrame(
                 {
                     "content": [text],
-                    "metadata": [{"file_format": "pdf", "source_file": name}],
+                    "metadata": [{"file_format": "pdf", "source_file": name, "chunk_size": 0, "chunk_overlap": 0}],
                 }
             )
 
@@ -464,7 +464,7 @@ class FileReader(FormatDetector):
         return pd.DataFrame(
             {
                 "content": split_text,
-                "metadata": [{"file_format": "pdf", "source_file": name}] * len(split_text),
+                "metadata": [{"file_format": "pdf", "source_file": name, "chunk_size": _chunk_size, "chunk_overlap": _chunk_overlap}] * len(split_text),
             }
         )
 

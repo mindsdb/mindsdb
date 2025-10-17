@@ -73,6 +73,10 @@ def get_model_params(model_params: dict, default_config_key: str):
         if not isinstance(model_params, dict):
             raise ValueError("Model parameters must be passed as a JSON object")
 
+        # if provider mismatches - don't use default values
+        if "provider" in model_params and model_params["provider"] != combined_model_params.get("provider"):
+            return model_params
+
         combined_model_params.update(model_params)
 
     combined_model_params.pop("use_default_llm", None)
@@ -1104,6 +1108,26 @@ class KnowledgeBaseController:
     def __init__(self, session) -> None:
         self.session = session
 
+    def _check_kb_input_params(self, params):
+        # check names and types KB params
+        try:
+            KnowledgeBaseInputParams.model_validate(params)
+        except ValidationError as e:
+            problems = []
+            for error in e.errors():
+                parameter = ".".join([str(i) for i in error["loc"]])
+                param_type = error["type"]
+                if param_type == "extra_forbidden":
+                    msg = f"Parameter '{parameter}' is not allowed"
+                else:
+                    msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
+                problems.append(msg)
+
+            msg = "\n".join(problems)
+            if len(problems) > 1:
+                msg = "\n" + msg
+            raise ValueError(f"Problem with knowledge base parameters: {msg}") from e
+
     def add(
         self,
         name: str,
@@ -1125,29 +1149,13 @@ class KnowledgeBaseController:
         # fill variables
         params = variables_controller.fill_parameters(params)
 
-        try:
-            KnowledgeBaseInputParams.model_validate(params)
-        except ValidationError as e:
-            problems = []
-            for error in e.errors():
-                parameter = ".".join([str(i) for i in error["loc"]])
-                param_type = error["type"]
-                if param_type == "extra_forbidden":
-                    msg = f"Parameter '{parameter}' is not allowed"
-                else:
-                    msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
-                problems.append(msg)
-
-            msg = "\n".join(problems)
-            if len(problems) > 1:
-                msg = "\n" + msg
-            raise ValueError(f"Problem with knowledge base parameters: {msg}") from e
-
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
             params = params or {}
             params["preprocessing"] = preprocessing_config
+
+        self._check_kb_input_params(params)
 
         # Check if vector_size is provided when using sparse vectors
         is_sparse = params.get("is_sparse")
@@ -1170,7 +1178,7 @@ class KnowledgeBaseController:
         params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
-        self._create_embedding_model(
+        self._check_embedding_model(
             project.name,
             params=embedding_params,
             kb_name=name,
@@ -1180,9 +1188,6 @@ class KnowledgeBaseController:
         reranking_model_params = params.get("reranking_model", {})
 
         if isinstance(reranking_model_params, bool) and not reranking_model_params:
-            params["reranking_model"] = {}
-        # if params.get("reranking_model", {}) is string and false in any case we evaluate it to empty dictionary
-        if isinstance(reranking_model_params, str) and reranking_model_params.lower() == "false":
             params["reranking_model"] = {}
 
         reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
@@ -1251,6 +1256,93 @@ class KnowledgeBaseController:
         db.session.commit()
         return kb
 
+    def update(
+        self,
+        name: str,
+        project_name: str,
+        params: dict,
+        preprocessing_config: Optional[dict] = None,
+    ) -> db.KnowledgeBase:
+        """
+        Update the knowledge base
+        :param name: The name of the knowledge base
+        :param project_name: Current project name
+        :param params: The parameters to update
+        :param preprocessing_config: Optional preprocessing configuration to validate and store
+        """
+
+        # fill variables
+        params = variables_controller.fill_parameters(params)
+
+        # Validate preprocessing config first if provided
+        if preprocessing_config is not None:
+            PreprocessingConfig(**preprocessing_config)  # Validate before storing
+            params = params or {}
+            params["preprocessing"] = preprocessing_config
+
+        self._check_kb_input_params(params)
+
+        # get project id
+        project = self.session.database_controller.get_project(project_name)
+        project_id = project.id
+
+        # get existed KB
+        kb = self.get(name.lower(), project_id)
+        if kb is None:
+            raise EntityNotExistsError("Knowledge base doesn't exists", name)
+
+        if "embedding_model" in params:
+            new_config = params["embedding_model"]
+            # update embedding
+            embed_params = kb.params.get("embedding_model", {})
+            if not embed_params:
+                # maybe old version of KB
+                raise ValueError("No embedding config to update")
+
+            # some parameters are not allowed to update
+            for key in ("provider", "model_name"):
+                if key in new_config and new_config[key] != embed_params.get(key):
+                    raise ValueError(f"You can't update '{key}' setting")
+
+            embed_params.update(new_config)
+
+            self._check_embedding_model(
+                project.name,
+                params=embed_params,
+                kb_name=name,
+            )
+            kb.params["embedding_model"] = embed_params
+
+        if "reranking_model" in params:
+            new_config = params["reranking_model"]
+            # update embedding
+            rerank_params = kb.params.get("reranking_model", {})
+
+            if new_config is False:
+                # disable reranking
+                rerank_params = {}
+            elif "provider" in new_config and new_config["provider"] != rerank_params.get("provider"):
+                # use new config (and include default config)
+                rerank_params = get_model_params(new_config, "default_reranking_model")
+            else:
+                # update current config
+                rerank_params.update(new_config)
+
+            if rerank_params:
+                self._test_reranking(rerank_params)
+
+            kb.params["reranking_model"] = rerank_params
+
+        # update other keys
+        for key in ["id_column", "metadata_columns", "content_columns", "preprocessing"]:
+            if key in params:
+                kb.params[key] = params[key]
+
+        flag_modified(kb, "params")
+        db.session.commit()
+
+        return self.get(name.lower(), project_id)
+
     def _test_reranking(self, params):
         try:
             reranker = get_reranking_model_from_params(params)
@@ -1292,11 +1384,11 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_embedding_model(self, project_name, params: dict = None, kb_name=""):
-        """create a default embedding model for knowledge base, if not specified"""
-        model_name = f"kb_embedding_{kb_name}"
+    def _check_embedding_model(self, project_name, params: dict = None, kb_name=""):
+        """check embedding model for knowledge base"""
 
-        # drop if exists - parameters can be different
+        # if mindsdb model from old KB exists - drop it
+        model_name = f"kb_embedding_{kb_name}"
         try:
             model = self.session.model_controller.get_model(model_name, project_name=project_name)
             if model is not None:
@@ -1424,12 +1516,6 @@ class KnowledgeBaseController:
         project_id = self.session.database_controller.get_project(project_name).id
         kb_table = self.get_table(table_name, project_id)
         kb_table.create_index()
-
-    def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
-        """
-        Update a knowledge base record
-        """
-        raise NotImplementedError()
 
     def evaluate(self, table_name: str, project_name: str, params: dict = None) -> pd.DataFrame:
         """

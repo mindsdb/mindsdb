@@ -289,9 +289,8 @@ class KnowledgeBaseTable:
             FilterOperator.GREATER_THAN.value,
         ]
         gt_filtering = False
-        hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
-        hybrid_search_alpha = None  # Default to None, meaning no alpha weighted blending
+        hybrid_search_alpha = None
         if query_conditions is not None:
             for item in query_conditions:
                 if (item.column == "relevance") and (item.op.value in relevance_threshold_allowed_operators):
@@ -316,12 +315,9 @@ class KnowledgeBaseTable:
                     if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
                         disable_reranking = True
                 elif item.column == "hybrid_search":
-                    hybrid_search_enabled_flag = item.value
-                    # cast to boolean
-                    if isinstance(hybrid_search_enabled_flag, str):
-                        hybrid_search_enabled_flag = hybrid_search_enabled_flag.lower() not in ("false")
-                    if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
-                        disable_reranking = True
+                    if item.value:
+                        if hybrid_search_alpha is None:
+                            hybrid_search_alpha = 0.5
                 elif item.column == "hybrid_search_alpha":
                     # validate item.value is a float
                     if not isinstance(item.value, (float, int)):
@@ -373,15 +369,24 @@ class KnowledgeBaseTable:
             query.limit = Constant(query_limit)
 
         allowed_metadata_columns = self._get_allowed_metadata_columns()
-        df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
-        df = self.addapt_result_columns(df)
-        logger.debug(f"Query returned {len(df)} rows")
-        logger.debug(f"Columns in response: {df.columns.tolist()}")
 
-        if hybrid_search_enabled_flag and not isinstance(db_handler, KeywordSearchBase):
-            raise ValueError(f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. ")
+        if hybrid_search_alpha is None:
+            hybrid_search_alpha = 0
+
+        if hybrid_search_alpha < 1:
+            df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
+            df = self.addapt_result_columns(df)
+            logger.debug(f"Query returned {len(df)} rows")
+            logger.debug(f"Columns in response: {df.columns.tolist()}")
+        else:
+            df = pd.DataFrame([], columns=['id', 'chunk_id', 'chunk_content', 'metadata', 'distance'])
+
         # check if db_handler inherits from KeywordSearchBase
-        if hybrid_search_enabled_flag and isinstance(db_handler, KeywordSearchBase):
+        if hybrid_search_alpha > 0:
+            if not isinstance(db_handler, KeywordSearchBase):
+                raise ValueError(
+                    f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. ")
+
             # If query_text is present, use it for keyword search
             logger.debug(f"Performing keyword search with query text: {query_text}")
             keyword_search_args = KeywordSearchArgs(query=query_text, column=TableField.CONTENT.value)
@@ -393,31 +398,32 @@ class KnowledgeBaseTable:
                 Identifier(TableField.METADATA.value),
             ]
 
-            df_keyword_select = db_handler.dispatch_select(
-                keyword_query_obj, keyword_search_conditions, keyword_search_args=keyword_search_args
+            df_keyword = db_handler.dispatch_select(
+                keyword_query_obj, keyword_search_conditions,
+                allowed_metadata_columns=allowed_metadata_columns,
+                keyword_search_args=keyword_search_args
             )
-            df_keyword_select = self.addapt_result_columns(df_keyword_select)
-            logger.debug(f"Keyword search returned {len(df_keyword_select)} rows")
-            logger.debug(f"Columns in keyword search response: {df_keyword_select.columns.tolist()}")
+            df_keyword = self.addapt_result_columns(df_keyword)
+            logger.debug(f"Keyword search returned {len(df_keyword)} rows")
+            logger.debug(f"Columns in keyword search response: {df_keyword.columns.tolist()}")
             # ensure df and df_keyword_select have exactly the same columns
-            if not df_keyword_select.empty:
-                if set(df.columns) != set(df_keyword_select.columns):
-                    raise ValueError(
-                        f"Keyword search returned different columns: {df_keyword_select.columns} "
-                        f"than expected: {df.columns}"
-                    )
+            if not df_keyword.empty:
                 if hybrid_search_alpha:
-                    df_keyword_select[TableField.DISTANCE.value] = (
-                        hybrid_search_alpha * df_keyword_select[TableField.DISTANCE.value]
+                    df_keyword[TableField.DISTANCE.value] = (
+                        hybrid_search_alpha * df_keyword[TableField.DISTANCE.value]
                     )
                     df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[TableField.DISTANCE.value]
-                df = pd.concat([df, df_keyword_select], ignore_index=True)
-                # sort by distance if distance column exists
-                if TableField.DISTANCE.value in df.columns:
-                    df = df.sort_values(by=TableField.DISTANCE.value, ascending=True)
-                # if chunk_id column exists remove duplicates based on chunk_id
-                if "chunk_id" in df.columns:
-                    df = df.drop_duplicates(subset=["chunk_id"])
+
+                if df is None:
+                    df = df_keyword
+                else:
+                    df = pd.concat([df, df_keyword], ignore_index=True)
+                    # sort by distance if distance column exists
+                    if TableField.DISTANCE.value in df.columns:
+                        df = df.sort_values(by=TableField.DISTANCE.value, ascending=True)
+                    # if chunk_id column exists remove duplicates based on chunk_id
+                    if "chunk_id" in df.columns:
+                        df = df.drop_duplicates(subset=["chunk_id"])
 
         # Check if we have a rerank_model configured in KB params
         df = self.add_relevance(df, query_text, relevance_threshold, disable_reranking)

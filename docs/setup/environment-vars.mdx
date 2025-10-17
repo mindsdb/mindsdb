@@ -23,6 +23,22 @@ MindsDB does not require authentication by default. If you want to enable authen
     ```
 </CodeGroup>
 
+## MindsDB Configuration File
+
+In order to start MindsDB with a [custom configuration file](/setup/custom-config), the `MINDSDB_CONFIG_PATH` environment variable should store the file path.
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_CONFIG_PATH=/Users/username/path/config.json -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_CONFIG_PATH=/Users/username/path/config.json
+    ```
+</CodeGroup>
+
 ## MindsDB Storage 
 
 By default, MindsDB stores the configuration files by determining appropriate platform-specific directories, e.g. a "user data dir": 
@@ -67,12 +83,7 @@ default storage option and use different database by adding the new connection s
 
 ## MindsDB APIs
 
-By default, MindsDB starts the http and mysql APIs. To define which APIs you want to start, you can use the `MINDSDB_APIS` environment variable. The available APIs are:
-
-- `http` (port 47334) - HTTP/REST API
-- `mysql` (port 47335) - MySQL API
-
-To expose the ports for the APIs, you need to add the respective ports to the command with the `-p` flag.
+The `MINDSDB_APIS` environment variable lets users define which APIs to start. Learn more about the [available APIs here](/setup/mindsdb-apis).
 
 ### Example
 
@@ -85,7 +96,6 @@ To expose the ports for the APIs, you need to add the respective ports to the co
     export MINDSDB_APIS='http,mysql'
     ```
 </CodeGroup>
-
 
 ## MindsDB Logs
 
@@ -136,5 +146,43 @@ If used, the PID file is stored in the temp directory (`$TMPDIR` on MacOS and Li
 
     ```bash Shell
     export USE_PIDFILE=1
+    ```
+</CodeGroup>
+
+## MindsDB GUI Updates
+
+In order to disable automatic GUI updates, the `MINDSDB_GUI_AUTOUPDATE` environment variable should be set to `false` (or `0`).
+
+By default, the automatic GUI updates are enabled and the `MINDSDB_GUI_AUTOUPDATE` environment variable is set to `true` (or `1`).
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_GUI_AUTOUPDATE=false -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_GUI_AUTOUPDATE=false
+    ```
+</CodeGroup>
+
+## MindsDB GUI Startup and Updates
+
+In order to not open the MindsDB GUI automatically when starting the instance (and to disable automatic GUI updates), the `MINDSDB_NO_STUDIO` environment variable should be set to `true` (or `1`).
+
+By default, the MindsDB GUI starts automatically when starting the instance (and the automatic GUI updates are enabled), that is, the `MINDSDB_NO_STUDIO` environment variable is set to `false` (or `0`).
+
+Note that the `MINDSDB_NO_STUDIO` is not recommended for the MindsDB instance running in Docker. Instead, use the `MINDSDB_GUI_AUTOUPDATE` environment variable to disable automatic GUI updates.
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_NO_STUDIO=true -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_NO_STUDIO=true
     ```
 </CodeGroup>

@@ -8,8 +8,8 @@ import atexit
 import signal
 import psutil
 import asyncio
-import traceback
 import threading
+import shutil
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Tuple, List
@@ -27,7 +27,6 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.starters import (
     start_http,
     start_mysql,
-    start_postgres,
     start_ml_task_queue,
     start_scheduler,
     start_tasks,
@@ -39,6 +38,7 @@ from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_mar
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
+from mindsdb.utilities.api_status import set_api_status
 
 try:
     import torch.multiprocessing as mp
@@ -57,7 +57,6 @@ _stop_event = threading.Event()
 class TrunkProcessEnum(Enum):
     HTTP = "http"
     MYSQL = "mysql"
-    POSTGRES = "postgres"
     JOBS = "jobs"
     TASKS = "tasks"
     ML_TASK_QUEUE = "ml_task_queue"
@@ -152,6 +151,16 @@ def close_api_gracefully(trunc_processes_struct):
         sys.exit(0)
 
 
+def clean_mindsdb_tmp_dir():
+    """Clean the MindsDB tmp dir at exit."""
+    temp_dir = config["paths"]["tmp"]
+    for file in temp_dir.iterdir():
+        if file.is_dir():
+            shutil.rmtree(file)
+        else:
+            file.unlink()
+
+
 def set_error_model_status_by_pids(unexisting_pids: List[int]):
     """Models have id of its traiing process in the 'training_metadata' field.
     If the pid does not exist, we should set the model status to "error".
@@ -217,19 +226,20 @@ def create_permanent_integrations():
     """
     integration_name = "files"
     existing = db.session.query(db.Integration).filter_by(name=integration_name, company_id=None).first()
-    if existing is None:
-        integration_record = db.Integration(
-            name=integration_name,
-            data={},
-            engine=integration_name,
-            company_id=None,
-        )
-        db.session.add(integration_record)
-        try:
-            db.session.commit()
-        except Exception as e:
-            logger.error(f"Failed to commit permanent integration {integration_name}: {e}")
-            db.session.rollback()
+    if existing is not None:
+        return
+    integration_record = db.Integration(
+        name=integration_name,
+        data={},
+        engine=integration_name,
+        company_id=None,
+    )
+    db.session.add(integration_record)
+    try:
+        db.session.commit()
+    except Exception:
+        logger.exception(f"Failed to create permanent integration '{integration_name}' in the internal database.")
+        db.session.rollback()
 
 
 def validate_default_project() -> None:
@@ -289,7 +299,7 @@ def start_process(trunc_process_data: TrunkProcessData) -> None:
         )
         trunc_process_data.process.start()
     except Exception as e:
-        logger.error(f"Failed to start {trunc_process_data.name} API with exception {e}\n{traceback.format_exc()}")
+        logger.exception(f"Failed to start '{trunc_process_data.name}' API process due to unexpected error:")
         close_api_gracefully(trunc_processes_struct)
         raise e
 
@@ -363,8 +373,8 @@ if __name__ == "__main__":
     if environment == "aws_marketplace":
         try:
             register_oauth_client()
-        except Exception as e:
-            logger.error(f"Something went wrong during client register: {e}")
+        except Exception:
+            logger.exception("Something went wrong during client register:")
     elif environment != "local":
         try:
             aws_meta_data = get_aws_meta_data()
@@ -384,6 +394,7 @@ if __name__ == "__main__":
     logger.info(f"Version: {mindsdb_version}")
     logger.info(f"Configuration file: {config.config_path or 'absent'}")
     logger.info(f"Storage path: {config.paths['root']}")
+    log.log_system_info(logger)
     logger.debug(f"User config: {config.user_config}")
     logger.debug(f"System config: {config.auto_config}")
     logger.debug(f"Env config: {config.env_config}")
@@ -391,13 +402,12 @@ if __name__ == "__main__":
     is_cloud = config.is_cloud
     unexisting_pids = clean_unlinked_process_marks()
     if not is_cloud:
-        logger.debug("Applying database migrations")
         try:
             from mindsdb.migrations import migrate
 
             migrate.migrate_to_head()
-        except Exception as e:
-            logger.error(f"Error! Something went wrong during DB migrations: {e}")
+        except Exception:
+            logger.exception("Failed to apply database migrations. This may prevent MindsDB from operating correctly:")
 
         validate_default_project()
 
@@ -434,12 +444,6 @@ if __name__ == "__main__":
             max_restart_interval_seconds=mysql_api_config.get(
                 "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
             ),
-        ),
-        TrunkProcessEnum.POSTGRES: TrunkProcessData(
-            name=TrunkProcessEnum.POSTGRES.value,
-            entrypoint=start_postgres,
-            port=config["api"]["postgres"]["port"],
-            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.JOBS: TrunkProcessData(
             name=TrunkProcessEnum.JOBS.value, entrypoint=start_scheduler, args=(config.cmd_args.verbose,)
@@ -484,8 +488,12 @@ if __name__ == "__main__":
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:
             continue
         start_process(trunc_process_data)
+        # Set status for APIs without ports (they don't go through wait_api_start)
+        if trunc_process_data.port is None:
+            set_api_status(trunc_process_data.name, True)
 
     atexit.register(close_api_gracefully, trunc_processes_struct=trunc_processes_struct)
+    atexit.register(clean_mindsdb_tmp_dir)
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60
@@ -494,6 +502,9 @@ if __name__ == "__main__":
         while (time.time() - start_time) < timeout and started is False:
             await asyncio.sleep(0.5)
             started = is_pid_listen_port(pid, port)
+
+        set_api_status(api_name, started)
+
         return api_name, port, started
 
     async def wait_apis_start():
@@ -531,7 +542,7 @@ if __name__ == "__main__":
                         trunc_process_data.process = None
                         if trunc_process_data.name == TrunkProcessEnum.HTTP.value:
                             # do not open GUI on HTTP API restart
-                            trunc_process_data.args = (config.cmd_args.verbose, True)
+                            trunc_process_data.args = (config.cmd_args.verbose, None, True)
                         start_process(trunc_process_data)
                         api_name, port, started = await wait_api_start(
                             trunc_process_data.name,

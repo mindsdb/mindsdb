@@ -19,7 +19,7 @@ on:
         required: true
       REPO_DISPATCH_PAT_TOKEN:
         required: true
-      MINDSDB_DB_CON:
+      MINDSDB_DB_URI:
         required: true
 
 jobs:
@@ -39,7 +39,7 @@ jobs:
       group: deploy-${{ matrix.deploy-env }}
       cancel-in-progress: false
     env:
-      MINDSDB_DB_CON: ${{ secrets.MINDSDB_DB_CON }}
+      MINDSDB_DB_URI: ${{ secrets.MINDSDB_DB_URI }}
       UV_LINK_MODE: "symlink"
     steps:
       - uses: actions/checkout@v4

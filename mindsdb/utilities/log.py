@@ -440,6 +440,7 @@ def log_system_info(logger: logging.Logger) -> None:
 
 def log_resources_thread(stop_event):
     from mindsdb.utilities.fs import get_tmp_dir
+
     logger = getLogger(__name__)
     i = 0
     timeout = 3
@@ -450,43 +451,40 @@ def log_resources_thread(stop_event):
             continue
         try:
             import psutil
+
             main_process = psutil.Process(os.getpid())
             children = main_process.children(recursive=True)
-            
+
             total_memory_info = {
-                'main_process': {
-                    'pid': main_process.pid,
-                    'name': main_process.name(),
-                    'memory_info': main_process.memory_info(),
-                    'memory_percent': main_process.memory_percent()
+                "main_process": {
+                    "pid": main_process.pid,
+                    "name": main_process.name(),
+                    "memory_info": main_process.memory_info(),
+                    "memory_percent": main_process.memory_percent(),
                 },
-                'children': [],
-                'total_memory': {
-                    'rss': 0,
-                    'vms': 0,
-                    'percent': 0
-                }
+                "children": [],
+                "total_memory": {"rss": 0, "vms": 0, "percent": 0},
             }
 
             for child in children:
                 try:
                     child_info = {
-                        'pid': child.pid,
-                        'name': child.name(),
-                        'memory_info': child.memory_info(),
-                        'memory_percent': child.memory_percent()
+                        "pid": child.pid,
+                        "name": child.name(),
+                        "memory_info": child.memory_info(),
+                        "memory_percent": child.memory_percent(),
                     }
-                    total_memory_info['children'].append(child_info)
+                    total_memory_info["children"].append(child_info)
 
-                    total_memory_info['total_memory']['rss'] += child.memory_info().rss
-                    total_memory_info['total_memory']['vms'] += child.memory_info().vms
-                    total_memory_info['total_memory']['percent'] += child.memory_percent()
+                    total_memory_info["total_memory"]["rss"] += child.memory_info().rss
+                    total_memory_info["total_memory"]["vms"] += child.memory_info().vms
+                    total_memory_info["total_memory"]["percent"] += child.memory_percent()
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
-            
-            total_memory_info['total_memory']['rss'] += main_process.memory_info().rss
-            total_memory_info['total_memory']['vms'] += main_process.memory_info().vms
-            total_memory_info['total_memory']['percent'] += main_process.memory_percent()
+
+            total_memory_info["total_memory"]["rss"] += main_process.memory_info().rss
+            total_memory_info["total_memory"]["vms"] += main_process.memory_info().vms
+            total_memory_info["total_memory"]["percent"] += main_process.memory_percent()
 
             memory = psutil.virtual_memory()
             total_memory_gb = memory.total / (1024**3)

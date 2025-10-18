@@ -4,10 +4,13 @@ permissions:
   contents: read
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
+      - 'develop'
+      - '25-8-2-revert'
+      - 'feat/FQE-1654'
 
 jobs:
 

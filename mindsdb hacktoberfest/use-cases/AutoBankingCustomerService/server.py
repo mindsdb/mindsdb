@@ -4,9 +4,9 @@ Banking Customer Service API Server
 
 This FastAPI server handles the complete flow:
 1. Receives conversation texts via POST /api/process-conversations
-2. Inserts into PostgreSQL conversations_summary table
-3. MindsDB TRIGGER automatically processes with classification_agent
-4. Polls for completion and returns Salesforce-formatted JSON
+2. Uses MindsDB SDK to query classification_agent for analysis
+3. Inserts results into PostgreSQL conversations_summary table
+4. Returns Salesforce-formatted JSON
 """
 
 from fastapi import FastAPI, HTTPException
@@ -20,6 +20,8 @@ import uuid
 from datetime import datetime
 import sys
 from pathlib import Path
+import mindsdb_sdk
+import re
 
 # Add script directory to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent / "script"))
@@ -45,6 +47,14 @@ DB_CONFIG = {
     "password": "psqlpasswd"
 }
 
+# MindsDB Configuration
+MINDSDB_URL = 'http://127.0.0.1:47334'
+AGENT_NAME = 'classification_agent'
+
+# Global MindsDB connection (initialized on startup)
+mindsdb_server = None
+classification_agent = None
+
 # Request/Response Models
 class ConversationRequest(BaseModel):
     conversation_texts: List[str]
@@ -64,17 +74,17 @@ class SalesforceResponse(BaseModel):
     cases: List[SalesforceCase]
     processing_time_seconds: float
 
-# Startup Event Handler
 @app.on_event("startup")
 async def startup_event():
-    """Check and initialize database table on server startup"""
+    """Initialize database table and MindsDB connection on server startup"""
+    global mindsdb_server, classification_agent
+
     print("\n" + "="*70)
     print("Starting Banking Customer Service API Server...")
     print("="*70)
-    print("\nChecking database table...")
 
+    print("\nChecking database table...")
     try:
-        # Ensure conversations_summary table exists
         if ensure_table_exists(db_config=DB_CONFIG, verbose=True):
             print("✓ Database ready")
         else:
@@ -83,6 +93,16 @@ async def startup_event():
     except Exception as e:
         print(f"✗ Error during database check: {e}")
         print("  The server will start, but may encounter errors.")
+
+    print("\nConnecting to MindsDB...")
+    try:
+        mindsdb_server = mindsdb_sdk.connect(MINDSDB_URL)
+        classification_agent = mindsdb_server.agents.get(AGENT_NAME)
+
+    except Exception as e:
+        print(f"✗ Error connecting to MindsDB: {e}")
+        print("  The server will start, but agent queries will fail.")
+        print("  Make sure MindsDB is running at " + MINDSDB_URL)
 
     print("\n" + "="*70)
     print("Server startup complete!")
@@ -98,130 +118,81 @@ def get_db_connection():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
 
-def insert_conversation(conversation_text: str) -> str:
-    """Insert conversation into conversations_summary table and return conversation_id"""
-    conversation_id = str(uuid.uuid4())
+def query_agent(conversation_text: str) -> Dict[str, Any]:
+    """
+    Query the MindsDB classification agent to analyze conversation.
+    Returns dict with 'summary' and 'resolved' (bool).
+    """
+    if classification_agent is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Classification agent not initialized. Make sure MindsDB is running."
+        )
 
+    try:
+        # Query the agent with the conversation text
+        completion = classification_agent.completion([{
+            'question': conversation_text,
+            'answer': None
+        }])
+
+        # Parse the agent response
+        response_text = completion.content
+
+        # Extract summary and status using regex
+        summary_match = re.search(r'Summary:\s*(.+?)(?=Status:)', response_text, re.DOTALL)
+        status_match = re.search(r'Status:\s*(RESOLVED|UNRESOLVED)', response_text, re.IGNORECASE)
+
+        summary = summary_match.group(1).strip() if summary_match else response_text.strip()
+        status = status_match.group(1).upper() if status_match else "UNRESOLVED"
+
+        resolved = (status == "RESOLVED")
+
+        return {
+            "summary": summary,
+            "resolved": resolved
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Agent query failed: {str(e)}"
+        )
+
+def insert_conversation_with_analysis(conversation_id: str, conversation_text: str, summary: str, resolved: bool) -> None:
+    """Insert analyzed conversation into conversations_summary table"""
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
             insert_sql = """
                 INSERT INTO demo_data.conversations_summary
-                (conversation_id, conversation_text, created_at, summary, resolved)
-                VALUES (%s, %s, NOW(), NULL, NULL)
-                RETURNING conversation_id;
+                (conversation_id, conversation_text, summary, resolved, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, NOW(), NOW());
             """
-            cur.execute(insert_sql, (conversation_id, conversation_text))
+            cur.execute(insert_sql, (conversation_id, conversation_text, summary, resolved))
             conn.commit()
-            return conversation_id
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to insert conversation: {str(e)}")
     finally:
         conn.close()
 
-def poll_for_processing(conversation_ids: List[str], max_wait_seconds: int = 60, poll_interval: float = 2.0) -> List[Dict[str, Any]]:
-    """
-    Poll the database until MindsDB Agent completes processing.
-    Returns list of processed conversation records.
-    """
-    start_time = time.time()
+def create_salesforce_case(conversation_id: str, conversation_text: str, summary: str, resolved: bool) -> SalesforceCase:
+    """Create a Salesforce case from conversation analysis"""
+    status = "RESOLVED" if resolved else "UNRESOLVED"
+    current_time = datetime.now().isoformat()
 
-    while (time.time() - start_time) < max_wait_seconds:
-        conn = get_db_connection()
-        try:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Check if all conversations have been processed (summary is not NULL)
-                placeholders = ', '.join(['%s'] * len(conversation_ids))
-                query = f"""
-                    SELECT
-                        conversation_id,
-                        conversation_text,
-                        summary,
-                        resolved,
-                        created_at,
-                        updated_at
-                    FROM demo_data.conversations_summary
-                    WHERE conversation_id IN ({placeholders})
-                    AND summary IS NOT NULL;
-                """
-                cur.execute(query, conversation_ids)
-                processed_records = cur.fetchall()
+    # Truncate long conversation text for display
+    display_text = conversation_text[:500] + "..." if len(conversation_text) > 500 else conversation_text
 
-                # If all conversations are processed, return results
-                if len(processed_records) == len(conversation_ids):
-                    return [dict(record) for record in processed_records]
-
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Polling failed: {str(e)}")
-        finally:
-            conn.close()
-
-        # Wait before next poll
-        time.sleep(poll_interval)
-
-    # Timeout: return whatever we have processed so far
-    conn = get_db_connection()
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            placeholders = ', '.join(['%s'] * len(conversation_ids))
-            query = f"""
-                SELECT
-                    conversation_id,
-                    conversation_text,
-                    summary,
-                    resolved,
-                    created_at,
-                    updated_at
-                FROM demo_data.conversations_summary
-                WHERE conversation_id IN ({placeholders});
-            """
-            cur.execute(query, conversation_ids)
-            all_records = cur.fetchall()
-            return [dict(record) for record in all_records]
-    finally:
-        conn.close()
-
-def format_salesforce_json(processed_records: List[Dict[str, Any]]) -> List[SalesforceCase]:
-    """Convert processed records to Salesforce case format"""
-    salesforce_cases = []
-
-    for record in processed_records:
-        # Parse summary to extract status
-        summary_text = record.get('summary')  # Keep None if not processed yet
-        resolved = record.get('resolved')
-
-        # Determine status
-        if summary_text is None or resolved is None:
-            status = "PROCESSING"
-        elif resolved is True:
-            status = "RESOLVED"
-        elif resolved is False:
-            status = "UNRESOLVED"
-        else:
-            status = "PROCESSING"
-
-        case = SalesforceCase(
-            conversation_id=record['conversation_id'],
-            conversation_text=record['conversation_text'][:500] + "..." if len(record['conversation_text']) > 500 else record['conversation_text'],
-            summary=summary_text if summary_text else None,  # Keep None for unprocessed
-            status=status,
-            created_at=record['created_at'].isoformat() if record.get('created_at') else datetime.now().isoformat(),
-            processed_at=record['updated_at'].isoformat() if record.get('updated_at') else datetime.now().isoformat()
-        )
-        salesforce_cases.append(case)
-
-    return salesforce_cases
-
-# API Endpoints
-@app.get("/")
-def root():
-    """Health check endpoint"""
-    return {
-        "service": "Banking Customer Service API",
-        "status": "running",
-        "version": "1.0.0"
-    }
+    return SalesforceCase(
+        conversation_id=conversation_id,
+        conversation_text=display_text,
+        summary=summary,
+        status=status,
+        created_at=current_time,
+        processed_at=current_time
+    )
 
 @app.get("/health")
 def health_check():
@@ -238,12 +209,6 @@ async def process_conversations(request: ConversationRequest):
     """
     Process banking customer service conversations.
 
-    Flow:
-    1. Insert conversations into PostgreSQL conversations_summary table
-    2. MindsDB TRIGGER automatically invokes classification_agent
-    3. Agent analyzes conversation and updates summary + resolved status
-    4. Poll for completion and return Salesforce-formatted JSON
-
     Args:
         request: ConversationRequest with list of conversation texts
 
@@ -255,100 +220,48 @@ async def process_conversations(request: ConversationRequest):
     if not request.conversation_texts:
         raise HTTPException(status_code=400, detail="conversation_texts cannot be empty")
 
-    # Step 1: Insert all conversations and collect IDs
-    conversation_ids = []
+    salesforce_cases = []
+    processed_count = 0
+
     for conv_text in request.conversation_texts:
         if not conv_text or not conv_text.strip():
             continue
-        conversation_id = insert_conversation(conv_text)
-        conversation_ids.append(conversation_id)
 
-    if not conversation_ids:
-        raise HTTPException(status_code=400, detail="No valid conversations to process")
+        try:
+            analysis = query_agent(conv_text)
+            conversation_id = str(uuid.uuid4())
+            insert_conversation_with_analysis(
+                conversation_id=conversation_id,
+                conversation_text=conv_text,
+                summary=analysis['summary'],
+                resolved=analysis['resolved']
+            )
+            case = create_salesforce_case(
+                conversation_id=conversation_id,
+                conversation_text=conv_text,
+                summary=analysis['summary'],
+                resolved=analysis['resolved']
+            )
+            salesforce_cases.append(case)
+            processed_count += 1
 
-    # Step 2: Wait for MindsDB TRIGGER + Agent processing to complete
-    # The TRIGGER will automatically process new records and update summary/resolved
-    processed_records = poll_for_processing(conversation_ids, max_wait_seconds=60, poll_interval=2.0)
+        except Exception as e:
+            print(f"Error processing conversation: {str(e)}")
+            continue
 
-    # Step 3: Format as Salesforce JSON
-    salesforce_cases = format_salesforce_json(processed_records)
+    if not salesforce_cases:
+        raise HTTPException(status_code=500, detail="No conversations could be processed")
 
     processing_time = time.time() - start_time
 
-    # Step 4: Return response
+    # Return response
     return SalesforceResponse(
         success=True,
         total_conversations=len(request.conversation_texts),
-        processed_count=len([case for case in salesforce_cases if case.status != "PROCESSING"]),
+        processed_count=processed_count,
         cases=salesforce_cases,
         processing_time_seconds=round(processing_time, 2)
     )
-
-@app.get("/api/conversations/{conversation_id}")
-async def get_conversation(conversation_id: str):
-    """Retrieve a specific conversation by ID"""
-    conn = get_db_connection()
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT
-                    conversation_id,
-                    conversation_text,
-                    summary,
-                    resolved,
-                    created_at,
-                    updated_at
-                FROM demo_data.conversations_summary
-                WHERE conversation_id = %s;
-            """, (conversation_id,))
-            record = cur.fetchone()
-
-            if not record:
-                raise HTTPException(status_code=404, detail="Conversation not found")
-
-            return dict(record)
-    finally:
-        conn.close()
-
-@app.get("/api/conversations")
-async def list_conversations(limit: int = 50, offset: int = 0, resolved: bool = None):
-    """List conversations with optional filtering"""
-    conn = get_db_connection()
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            where_clause = ""
-            params = []
-
-            if resolved is not None:
-                where_clause = "WHERE resolved = %s"
-                params.append(resolved)
-
-            query = f"""
-                SELECT
-                    conversation_id,
-                    conversation_text,
-                    summary,
-                    resolved,
-                    created_at,
-                    updated_at
-                FROM demo_data.conversations_summary
-                {where_clause}
-                ORDER BY created_at DESC
-                LIMIT %s OFFSET %s;
-            """
-            params.extend([limit, offset])
-
-            cur.execute(query, params)
-            records = cur.fetchall()
-
-            return {
-                "total": len(records),
-                "limit": limit,
-                "offset": offset,
-                "conversations": [dict(record) for record in records]
-            }
-    finally:
-        conn.close()
 
 if __name__ == "__main__":
     import uvicorn

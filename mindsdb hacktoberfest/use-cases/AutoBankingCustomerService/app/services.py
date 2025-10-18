@@ -10,10 +10,12 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from fastapi import HTTPException
 
 from . import db
+from .jira_client import JiraClient, JiraClientError
 
 classification_agent = None
 _mindsdb_server = None
 _db_config_override: Optional[Dict[str, Any]] = None
+_jira_client: Optional[JiraClient] = None
 
 
 def set_agent(agent: Any) -> None:
@@ -31,14 +33,21 @@ def set_db_config(config: Dict[str, Any]) -> None:
     _db_config_override = config
 
 
+def set_jira_client(client: Optional[JiraClient]) -> None:
+    """Lifecycle hook used during app startup to inject the Jira client."""
+    global _jira_client
+    _jira_client = client
+
+
 def get_db_config() -> Optional[Dict[str, Any]]:
     return _db_config_override
 
 
 def clear_state() -> None:
-    global classification_agent, _mindsdb_server
+    global classification_agent, _mindsdb_server, _jira_client
     classification_agent = None
     _mindsdb_server = None
+    _jira_client = None
 
 
 def query_agent(conversation_text: str) -> Dict[str, Any]:
@@ -77,17 +86,48 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
     analysis = query_agent(conversation_text)
     conversation_id = str(uuid.uuid4())
 
+    timestamp = datetime.now().isoformat()
+    display_text = (
+        conversation_text[:500] + "..." if len(conversation_text) > 500 else conversation_text
+    )
+
+    jira_issue_key: Optional[str] = None
+    jira_issue_url: Optional[str] = None
+    jira_error: Optional[str] = None
+
+    if not analysis["resolved"]:
+        if _jira_client is None:
+            jira_error = "Jira client not configured; skipped ticket creation."
+        else:
+            try:
+                summary = analysis["summary"][:255] if analysis["summary"] else "Unresolved customer conversation"
+                description = _format_jira_description(
+                    conversation_id=conversation_id,
+                    conversation_text=conversation_text,
+                    analysis=analysis,
+                    created_at=timestamp,
+                )
+                issue = _jira_client.create_issue(
+                    summary=summary,
+                    description=description,
+                    extra_fields=None,
+                )
+                jira_issue_key = issue.get("issue_key")
+                jira_issue_url = issue.get("issue_url")
+            except JiraClientError as exc:
+                jira_error = f"Failed to create Jira issue: {exc}"
+            except Exception as exc:  # pragma: no cover - guard against unexpected errors
+                jira_error = f"Unexpected Jira error: {exc}"
+
     db.insert_conversation_with_analysis(
         conversation_id=conversation_id,
         conversation_text=conversation_text,
         summary=analysis["summary"],
         resolved=analysis["resolved"],
+        jira_issue_key=jira_issue_key,
+        jira_issue_url=jira_issue_url,
+        jira_issue_error=jira_error,
         db_config=_db_config_override,
-    )
-
-    timestamp = datetime.now().isoformat()
-    display_text = (
-        conversation_text[:500] + "..." if len(conversation_text) > 500 else conversation_text
     )
 
     return {
@@ -97,6 +137,9 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
         "status": "RESOLVED" if analysis["resolved"] else "UNRESOLVED",
         "created_at": timestamp,
         "processed_at": timestamp,
+        "jira_issue_key": jira_issue_key,
+        "jira_issue_url": jira_issue_url,
+        "jira_issue_error": jira_error,
     }
 
 
@@ -120,3 +163,26 @@ def process_conversation_batch(
         processed_count += 1
 
     return cases, processed_count
+
+
+def _format_jira_description(
+    *,
+    conversation_id: str,
+    conversation_text: str,
+    analysis: Dict[str, Any],
+    created_at: str,
+) -> str:
+    """Build a human-friendly Jira description payload."""
+    resolved_status = "RESOLVED" if analysis.get("resolved") else "UNRESOLVED"
+    summary = analysis.get("summary") or "No summary generated."
+    preview = conversation_text if len(conversation_text) <= 2000 else f"{conversation_text[:2000]}..."
+
+    return (
+        "Auto-generated from AutoBanking Customer Service workflow.\n\n"
+        f"Conversation ID: {conversation_id}\n"
+        f"Created At: {created_at}\n"
+        f"Resolution Status: {resolved_status}\n"
+        f"Summary: {summary}\n\n"
+        "---- Conversation Transcript ----\n"
+        f"{preview}"
+    )

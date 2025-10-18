@@ -42,12 +42,16 @@ def ensure_table_exists(db_config: Optional[Dict[str, str | int]] = None, verbos
     if _check_table_exists(config, verbose=verbose):
         if verbose:
             print("✓ conversations_summary table already exists")
+        _ensure_jira_columns(config, verbose=verbose)
         return True
 
     if verbose:
         print("⚠ conversations_summary table not found, creating...")
 
-    return _init_summary_table(config, verbose=verbose)
+    created = _init_summary_table(config, verbose=verbose)
+    if created:
+        _ensure_jira_columns(config, verbose=verbose)
+    return created
 
 
 def check_table_exists(db_config: Optional[Dict[str, str | int]] = None, verbose: bool = False) -> bool:
@@ -59,7 +63,10 @@ def check_table_exists(db_config: Optional[Dict[str, str | int]] = None, verbose
 def init_summary_table(db_config: Optional[Dict[str, str | int]] = None, verbose: bool = True) -> bool:
     """Public wrapper that forces table creation."""
     config = db_config or DEFAULT_DB_CONFIG
-    return _init_summary_table(config, verbose=verbose)
+    success = _init_summary_table(config, verbose=verbose)
+    if success:
+        _ensure_jira_columns(config, verbose=verbose)
+    return success
 
 
 def insert_conversation_with_analysis(
@@ -68,6 +75,9 @@ def insert_conversation_with_analysis(
     summary: str,
     resolved: bool,
     db_config: Optional[Dict[str, str | int]] = None,
+    jira_issue_key: Optional[str] = None,
+    jira_issue_url: Optional[str] = None,
+    jira_issue_error: Optional[str] = None,
 ) -> None:
     """Insert a single analyzed conversation into the database."""
     config = db_config or DEFAULT_DB_CONFIG
@@ -76,11 +86,62 @@ def insert_conversation_with_analysis(
         with conn.cursor() as cur:
             insert_sql = """
                 INSERT INTO demo_data.conversations_summary
-                (conversation_id, conversation_text, summary, resolved, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, NOW(), NOW());
+                (
+                    conversation_id,
+                    conversation_text,
+                    summary,
+                    resolved,
+                    jira_issue_key,
+                    jira_issue_url,
+                    jira_issue_error,
+                    created_at,
+                    updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
             """
-            cur.execute(insert_sql, (conversation_id, conversation_text, summary, resolved))
+            cur.execute(
+                insert_sql,
+                (
+                    conversation_id,
+                    conversation_text,
+                    summary,
+                    resolved,
+                    jira_issue_key,
+                    jira_issue_url,
+                    jira_issue_error,
+                ),
+            )
         conn.commit()
+
+
+def _ensure_jira_columns(db_config: Dict[str, str | int], verbose: bool = False) -> None:
+    try:
+        with db_connection(db_config) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    ALTER TABLE demo_data.conversations_summary
+                    ADD COLUMN IF NOT EXISTS jira_issue_key TEXT NULL;
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE demo_data.conversations_summary
+                    ADD COLUMN IF NOT EXISTS jira_issue_url TEXT NULL;
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE demo_data.conversations_summary
+                    ADD COLUMN IF NOT EXISTS jira_issue_error TEXT NULL;
+                    """
+                )
+            conn.commit()
+        if verbose:
+            print("✓ Jira columns verified on conversations_summary")
+    except Exception as exc:  # pragma: no cover - defensive logging
+        if verbose:
+            print(f"✗ Unable to ensure Jira columns: {exc}")
 
 
 def _check_table_exists(db_config: Dict[str, str | int], verbose: bool = False) -> bool:
@@ -135,6 +196,9 @@ def _init_summary_table(db_config: Dict[str, str | int], verbose: bool = True) -
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         summary TEXT NULL,
                         resolved BOOLEAN NULL,
+                        jira_issue_key TEXT NULL,
+                        jira_issue_url TEXT NULL,
+                        jira_issue_error TEXT NULL,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     """

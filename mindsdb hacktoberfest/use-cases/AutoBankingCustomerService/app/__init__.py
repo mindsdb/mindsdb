@@ -5,10 +5,12 @@ from __future__ import annotations
 import mindsdb_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
 from . import services
 from .api import router as api_router
 from .db import ensure_table_exists
+from .jira_client import JiraClientError, build_default_client
 
 DB_CONFIG = {
     "host": "localhost",
@@ -22,6 +24,7 @@ MINDSDB_URL = "http://127.0.0.1:47334"
 AGENT_NAME = "classification_agent"
 
 services.set_db_config(DB_CONFIG)
+load_dotenv()
 
 app = FastAPI(title="Banking Customer Service API", version="1.0.0")
 
@@ -63,6 +66,19 @@ async def startup_event() -> None:
         print(f"✗ Error connecting to MindsDB: {exc}")
         print("  The server will start, but agent queries will fail.")
         print(f"  Make sure MindsDB is running at {MINDSDB_URL}")
+
+    print("\nInitializing Jira client...")
+    try:
+        jira_client = build_default_client()
+        if jira_client:
+            services.set_jira_client(jira_client)
+            print("✓ Jira client configured")
+        else:
+            print("✗ Jira client not configured. Missing Jira environment variables.")
+    except JiraClientError as exc:
+        print(f"✗ Jira client configuration error: {exc}")
+    except Exception as exc:  # pragma: no cover - startup diagnostics
+        print(f"✗ Unexpected Jira initialization error: {exc}")
 
     print("\n" + "=" * 70)
     print("Server startup complete!")

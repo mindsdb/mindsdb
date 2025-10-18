@@ -94,7 +94,13 @@ cp .env.example .env
 ### Configuration
 1. **MindsDB Setup**: Configure AI agents for summarization, classification, sentiment analysis, and recommendations
 2. **Salesforce Integration**: Set up OAuth credentials and API endpoints
-3. **Jira Configuration**: Configure project settings and custom fields
+3. **Jira Configuration**: Configure project settings and custom fields. Set the following environment variables before starting the API server (you can place them in a `.env` file at the project root; they are loaded automatically on startup):
+   - `JIRA_BASE_URL`: Base URL to your Jira instance (e.g., `https://your-domain.atlassian.net`)
+   - `JIRA_EMAIL`: Jira user email associated with an API token
+   - `JIRA_API_TOKEN`: Jira API token (create via Jira account settings)
+   - `JIRA_PROJECT_KEY`: Target project key where issues should be created
+   - `JIRA_ISSUE_TYPE` *(optional)*: Issue type name to use, defaults to `Task`
+   - `JIRA_LABELS` *(optional)*: Comma-separated list of labels to add to tickets
 4. **Data Pipeline**: Set up input sources and output destinations
 
 ## 📈 Expected Benefits

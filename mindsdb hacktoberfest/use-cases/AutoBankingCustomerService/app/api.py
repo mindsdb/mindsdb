@@ -25,6 +25,9 @@ class SalesforceCase(BaseModel):
     status: str
     created_at: str
     processed_at: str
+    jira_issue_key: str | None = None
+    jira_issue_url: str | None = None
+    jira_issue_error: str | None = None
 
 
 class SalesforceResponse(BaseModel):

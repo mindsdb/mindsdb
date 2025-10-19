@@ -7,7 +7,7 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import CreateTable, DropTables, Insert, Select, Identifier
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import query_df, get_query_tables
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
@@ -76,7 +76,10 @@ class FileHandler(DatabaseHandler):
     def query(self, query: ASTNode) -> Response:
         if type(query) is DropTables:
             for table_identifier in query.tables:
-                if len(table_identifier.parts) == 2 and table_identifier.parts[0] != self.name:
+                if (
+                    len(table_identifier.parts) == 2
+                    and table_identifier.parts[0] != self.name
+                ):
                     return Response(
                         RESPONSE_TYPE.ERROR,
                         error_message=f"Can't delete table from database '{table_identifier.parts[0]}'",
@@ -127,7 +130,9 @@ class FileHandler(DatabaseHandler):
                 df = pd.DataFrame(columns=[col.name for col in query.columns])
                 df.to_csv(temp_file_path, index=False)
 
-                self.file_controller.save_file(table_name, temp_file_path, file_name=f"{table_name}.csv")
+                self.file_controller.save_file(
+                    table_name, temp_file_path, file_name=f"{table_name}.csv"
+                )
             except Exception as unknown_error:
                 return Response(
                     RESPONSE_TYPE.ERROR,
@@ -148,15 +153,45 @@ class FileHandler(DatabaseHandler):
 
                 df = sub_result.data_frame
                 query.from_table = Identifier("t")
+                result_df = query_df(df, query)
             elif isinstance(query.from_table, Identifier):
-                table_name, page_name = self._get_table_page_names(query.from_table)
+                tables = get_query_tables(query)
+                if len(tables) == 0:
+                    table_name, page_name = self._get_table_page_names(query.from_table)
+                    df = self.file_controller.get_file_data(table_name, page_name)
+                    result_df = query_df(df, query)
+                elif len(tables) == 1:
+                    table_name, page_name = self._get_table_page_names(query.from_table)
+                    df = self.file_controller.get_file_data(table_name, page_name)
+                    result_df = query_df(df, query)
+                else:
+                    dataframe_dict = {}
 
-                df = self.file_controller.get_file_data(table_name, page_name)
+                    for db_name, table_name, version in tables:
+                        if db_name and db_name.lower() != "files":
+                            continue
+
+                        table_name_lower = table_name.lower()
+
+                        if table_name_lower in dataframe_dict:
+                            continue
+
+                        try:
+                            df = self.file_controller.get_file_data(
+                                table_name, page_name=None
+                            )
+                            dataframe_dict[table_name_lower] = df
+                        except Exception as e:
+                            return Response(
+                                RESPONSE_TYPE.ERROR,
+                                error_message=f"Error loading table '{table_name}': {e}",
+                            )
+
+                    result_df = query_df(dataframe_dict, query)
+
             else:
                 raise RuntimeError(f"Not supported query target: {query}")
 
-            # Process the SELECT query
-            result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
 
         elif isinstance(query, Insert):
@@ -165,7 +200,9 @@ class FileHandler(DatabaseHandler):
             df = self.file_controller.get_file_data(table_name, page_name)
 
             # Create a new dataframe with the values from the query
-            new_df = pd.DataFrame(query.values, columns=[col.name for col in query.columns])
+            new_df = pd.DataFrame(
+                query.values, columns=[col.name for col in query.columns]
+            )
 
             # Concatenate the new dataframe with the existing one
             df = pd.concat([df, new_df], ignore_index=True)
@@ -206,7 +243,9 @@ class FileHandler(DatabaseHandler):
             data_frame=pd.DataFrame(
                 [
                     {
-                        "Field": x["name"].strip() if isinstance(x, dict) else x.strip(),
+                        "Field": (
+                            x["name"].strip() if isinstance(x, dict) else x.strip()
+                        ),
                         "Type": "str",
                     }
                     for x in file_meta["columns"]

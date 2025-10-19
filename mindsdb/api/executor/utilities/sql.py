@@ -254,7 +254,7 @@ def query_df(dfs, query, session=None):
             else:
                 if len(node.parts) > 1:
                     if len(node.parts) > 2:
-                        node.parts = [node.parts[-2:]]
+                        node.parts = node.parts[-2:]
                     return node
 
         if isinstance(node, Function):
@@ -331,13 +331,14 @@ def query_df(dfs, query, session=None):
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException
-    if len(dfs) > 0:
-        if original_table_name.lower() in ("models", "predictors"):
-            if "TRAINING_OPTIONS" in dfs.columns:
-                dfs = dfs.astype({"TRAINING_OPTIONS": "string"})
-        if original_table_name.lower() == "ml_engines":
-            if "CONNECTION_DATA" in dfs.columns:
-                dfs = dfs.astype({"CONNECTION_DATA": "string"})
+    for table_name, df in dataframe_dict.items():
+        if len(df) > 0:
+            if table_name.lower() in ("models", "predictors"):
+                if "TRAINING_OPTIONS" in df.columns:
+                    df = df.astype({"TRAINING_OPTIONS": "string"})
+            if table_name.lower() == "ml_engines":
+                if "CONNECTION_DATA" in df.columns:
+                    df = df.astype({"CONNECTION_DATA": "string"})
 
     result_df, description = query_df_with_type_infer_fallback(
         query_str, dataframe_dict, user_functions=user_functions

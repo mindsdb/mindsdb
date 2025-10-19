@@ -190,18 +190,6 @@ def query_df(dfs, query, session=None):
         query_ast = copy.deepcopy(query)
         query_str = str(query)
 
-    if (
-        isinstance(query_ast, Select) is False
-        or isinstance(query_ast.from_table, Identifier) is False
-    ):
-        raise QueryError(
-            db_type="DuckDB",
-            db_error_msg="Only 'SELECT from TABLE' statements supported for internal query",
-            failed_query=query_str,
-            is_external=False,
-            is_expected=False,
-        )
-
     # We need to chheck if multiple dataframes provided
     if isinstance(dfs, pd.DataFrame):
         dataframe_dict = {"df": dfs}

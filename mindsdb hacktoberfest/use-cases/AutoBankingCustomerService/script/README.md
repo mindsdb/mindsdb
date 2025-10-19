@@ -4,7 +4,7 @@ This directory contains utility scripts for initializing the PostgreSQL database
 
 ## Scripts
 
-### 1. `init_summary_table.py`
+### 1. Database initializer (`app.db`)
 
 Initializes the `conversations_summary` table for the MindsDB AI agent workflow.
 
@@ -17,10 +17,10 @@ Initializes the `conversations_summary` table for the MindsDB AI agent workflow.
 
 ```bash
 # Run standalone to create table
-python script/init_summary_table.py
+python -m app.db
 
-# Import as module (used by server.py)
-from script.init_summary_table import ensure_table_exists
+# Import as module (used by server startup)
+from app.db import ensure_table_exists
 ensure_table_exists()
 ```
 
@@ -104,4 +104,4 @@ DB_CONFIG = {
 
 ## Automatic Initialization
 
-The FastAPI server (`server.py`) automatically calls `ensure_table_exists()` on startup, so manual initialization of the `conversations_summary` table is optional.
+The FastAPI server (`app/__init__.py`) automatically calls `ensure_table_exists()` on startup, so manual initialization of the `conversations_summary` table is optional.

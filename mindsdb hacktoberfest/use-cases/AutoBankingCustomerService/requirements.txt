@@ -13,6 +13,7 @@ httpcore==1.0.9
 httpx==0.28.1
 idna==3.11
 iniconfig==2.1.0
+jira==3.6.0
 jiter==0.11.0
 mindsdb_sdk==3.4.8
 mindsdb_sql_parser==0.0.2

@@ -1,4 +1,5 @@
 import copy
+import pandas as pd
 from typing import List
 
 import duckdb
@@ -12,7 +13,10 @@ from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Consta
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log
 from mindsdb.utilities.exception import QueryError
-from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
+from mindsdb.utilities.functions import (
+    resolve_table_identifier,
+    resolve_model_identifier,
+)
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import mysql_to_duckdb_fnc
@@ -20,7 +24,9 @@ from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import mysql_to_du
 logger = log.getLogger(__name__)
 
 
-def _get_query_tables(query: ASTNode, resolve_function: callable, default_database: str = None) -> List[tuple]:
+def _get_query_tables(
+    query: ASTNode, resolve_function: callable, default_database: str = None
+) -> List[tuple]:
     """Find all tables/models in the query
 
     Args:
@@ -52,7 +58,9 @@ def get_query_models(query: ASTNode, default_database: str = None) -> List[tuple
     return _get_query_tables(query, resolve_model_identifier, default_database)
 
 
-def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_functions=None):
+def query_df_with_type_infer_fallback(
+    query_str: str, dataframes: dict, user_functions=None
+):
     """Duckdb need to infer column types if column.dtype == object. By default it take 1000 rows,
     but that may be not sufficient for some cases. This func try to run query multiple times
     increasing butch size for type infer
@@ -100,7 +108,11 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
         ) from e
     except Exception as e:
         raise QueryError(
-            db_type="DuckDB", db_error_msg=str(e), failed_query=query_str, is_external=False, is_expected=False
+            db_type="DuckDB",
+            db_error_msg=str(e),
+            failed_query=query_str,
+            is_external=False,
+            is_expected=False,
         ) from e
 
     return result_df, description
@@ -150,7 +162,10 @@ def get_duckdb_functions_and_kw_list() -> list[str] | None:
                 dataframes={},
             )
             df.columns = [name.lower() for name in df.columns]
-            _duckdb_functions_and_kw_list = df["name"].drop_duplicates().str.lower().to_list() + window_functions_list
+            _duckdb_functions_and_kw_list = (
+                df["name"].drop_duplicates().str.lower().to_list()
+                + window_functions_list
+            )
         except Exception as e:
             logger.warning(f"Unable to get DuckDB functions list: {e}")
 
@@ -175,7 +190,10 @@ def query_df(dfs, query, session=None):
         query_ast = copy.deepcopy(query)
         query_str = str(query)
 
-    if isinstance(query_ast, Select) is False or isinstance(query_ast.from_table, Identifier) is False:
+    if (
+        isinstance(query_ast, Select) is False
+        or isinstance(query_ast.from_table, Identifier) is False
+    ):
         raise QueryError(
             db_type="DuckDB",
             db_error_msg="Only 'SELECT from TABLE' statements supported for internal query",
@@ -184,8 +202,26 @@ def query_df(dfs, query, session=None):
             is_expected=False,
         )
 
-    table_name = query_ast.from_table.parts[0]
-    query_ast.from_table.parts = ["df"]
+    # We need to chheck if multiple dataframes provided
+    if isinstance(dfs, pd.DataFrame):
+        dataframe_dict = {"df": dfs}
+        if isinstance(query_ast, Select) and isinstance(
+            query_ast.from_table, Identifier
+        ):
+            original_table_name = query_ast.from_table.parts[-1]
+        else:
+            original_table_name = "df"
+
+    elif isinstance(dfs, dict):
+        dataframe_dict = {k.lower(): v for k, v in dfs.items()}
+        original_table_name = None
+    else:
+        raise ValueError(
+            "dfs argument should be pandas.DataFrame or dict of DataFrames"
+        )
+
+    # table_name = query_ast.from_table.parts[0]
+    # query_ast.from_table.parts = ["df"]
 
     json_columns = set()
 
@@ -195,12 +231,32 @@ def query_df(dfs, query, session=None):
         user_functions = None
 
     def adapt_query(node, is_table, **kwargs):
-        if is_table:
-            return
+        # if is_table:
+        #     return
         if isinstance(node, Identifier):
-            if len(node.parts) > 1:
-                node.parts = [node.parts[-1]]
-                return node
+            if is_table:
+                table_name = node.parts[-1].lower()
+                if table_name in dataframe_dict:
+                    return node
+                elif len(dataframe_dict) == 1 and "df" in dataframe_dict:
+                    node.parts = ["df"]
+                    return node
+                else:
+                    raise QueryError(
+                        db_type="DuckDB",
+                        db_error_msg=(
+                            f"Table '{table_name}' not found in provided dataframes. Available tables: {list(dataframe_dict.keys())}",
+                        ),
+                        failed_query=query_str,
+                        is_external=False,
+                        is_expected=False,
+                    )
+            else:
+                if len(node.parts) > 1:
+                    if len(node.parts) > 2:
+                        node.parts = [node.parts[-2:]]
+                    return node
+
         if isinstance(node, Function):
             fnc = mysql_to_duckdb_fnc(node)
             if fnc is not None:
@@ -229,7 +285,9 @@ def query_df(dfs, query, session=None):
                     user_functions.check_function(node)
 
             duckdb_functions_and_kw_list = get_duckdb_functions_and_kw_list() or []
-            custom_functions_list = [] if user_functions is None else list(user_functions.functions.keys())
+            custom_functions_list = (
+                [] if user_functions is None else list(user_functions.functions.keys())
+            )
             all_functions_list = duckdb_functions_and_kw_list + custom_functions_list
             if len(all_functions_list) > 0 and fnc_name not in all_functions_list:
                 raise QueryError(
@@ -250,32 +308,40 @@ def query_df(dfs, query, session=None):
             try:
                 default_encoder = CustomJSONEncoder().default
                 return orjson.dumps(
-                    v, default=default_encoder, option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME
+                    v,
+                    default=default_encoder,
+                    option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
                 ).decode("utf-8")
             except Exception:
                 pass
         return v
 
-    for column in json_columns:
-        df[column] = df[column].apply(_convert)
+    for df_name, df in dataframe_dict.items():
+        for column in json_columns:
+            if column in df.columns:
+                df[column] = df[column].apply(_convert)
 
     render = SqlalchemyRender("postgres")
     try:
         query_str = render.get_string(query_ast, with_failback=False)
     except Exception:
-        logger.exception(f"Exception during query casting to 'postgres' dialect. Query:\n{str(query)}.\nError:")
+        logger.exception(
+            f"Exception during query casting to 'postgres' dialect. Query:\n{str(query)}.\nError:"
+        )
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException
-    if len(df) > 0:
-        if table_name.lower() in ("models", "predictors"):
-            if "TRAINING_OPTIONS" in df.columns:
-                df = df.astype({"TRAINING_OPTIONS": "string"})
-        if table_name.lower() == "ml_engines":
-            if "CONNECTION_DATA" in df.columns:
-                df = df.astype({"CONNECTION_DATA": "string"})
+    if len(dfs) > 0:
+        if original_table_name.lower() in ("models", "predictors"):
+            if "TRAINING_OPTIONS" in dfs.columns:
+                dfs = dfs.astype({"TRAINING_OPTIONS": "string"})
+        if original_table_name.lower() == "ml_engines":
+            if "CONNECTION_DATA" in dfs.columns:
+                dfs = dfs.astype({"CONNECTION_DATA": "string"})
 
-    result_df, description = query_df_with_type_infer_fallback(query_str, {"df": df}, user_functions=user_functions)
+    result_df, description = query_df_with_type_infer_fallback(
+        query_str, dataframe_dict, user_functions=user_functions
+    )
     result_df.replace({np.nan: None}, inplace=True)
     result_df.columns = [x[0] for x in description]
     return result_df

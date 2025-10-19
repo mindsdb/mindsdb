@@ -157,11 +157,11 @@ def get_duckdb_functions_and_kw_list() -> list[str] | None:
     return _duckdb_functions_and_kw_list
 
 
-def query_df(df, query, session=None):
+def query_df(dfs, query, session=None):
     """Perform simple query ('select' from one table, without subqueries and joins) on DataFrame.
 
     Args:
-        df (pandas.DataFrame): data
+        dfs (pandas.DataFrame | dict): dataframe or dict of dataframes
         query (mindsdb_sql_parser.ast.Select | str): select query
 
     Returns:

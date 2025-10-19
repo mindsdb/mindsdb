@@ -190,7 +190,7 @@ def query_df(dfs, query, session=None):
         query_ast = copy.deepcopy(query)
         query_str = str(query)
 
-    # We need to chheck if multiple dataframes provided
+    # We need to check if multiple dataframes provided
     if isinstance(dfs, pd.DataFrame):
         dataframe_dict = {"df": dfs}
         if isinstance(query_ast, Select) and isinstance(
@@ -208,6 +208,7 @@ def query_df(dfs, query, session=None):
             "dfs argument should be pandas.DataFrame or dict of DataFrames"
         )
 
+    # check if from_table has alias
     from_alias = None
     if isinstance(query_ast.from_table, Identifier) and query_ast.from_table.alias:
         from_alias = query_ast.from_table.alias.parts[-1].lower()
@@ -340,15 +341,19 @@ def query_df(dfs, query, session=None):
     for table_name, df in dataframe_dict.items():
         if len(df) > 0:
             if table_name.lower() in ("models", "predictors"):
-                if "TRAINING_OPTIONS" in df.columns:
-                    df = df.astype({"TRAINING_OPTIONS": "string"})
+                columns_lower = {col.lower(): col for col in df.columns}
+                if "training_options" in columns_lower:
             if table_name.lower() == "ml_engines":
                 if "CONNECTION_DATA" in df.columns:
+                    df["CONNECTION_DATA"] = df["CONNECTION_DATA"].astype("string")
                     df = df.astype({"CONNECTION_DATA": "string"})
 
     result_df, description = query_df_with_type_infer_fallback(
         query_str, dataframe_dict, user_functions=user_functions
     )
     result_df.replace({np.nan: None}, inplace=True)
-    result_df.columns = [x[0] for x in description]
+    if description is not None and all(isinstance(x, (list, tuple)) and len(x) > 0 for x in description):
+        result_df.columns = [x[0] for x in description]
+    else:
+        logger.warning("Description is None or not in expected format; skipping column renaming.")
     return result_df

@@ -208,6 +208,10 @@ def query_df(dfs, query, session=None):
             "dfs argument should be pandas.DataFrame or dict of DataFrames"
         )
 
+    from_alias = None
+    if isinstance(query_ast.from_table, Identifier) and query_ast.from_table.alias:
+        from_alias = query_ast.from_table.alias.parts[-1].lower()
+
     # table_name = query_ast.from_table.parts[0]
     # query_ast.from_table.parts = ["df"]
 
@@ -245,7 +249,17 @@ def query_df(dfs, query, session=None):
                         node.parts = node.parts[-2:]
 
                     if len(dataframe_dict) == 1 and "df" in dataframe_dict:
-                        node.parts = ["df", node.parts[-1]]
+                        table_qualifier = node.parts[0].lower()
+
+                        if table_qualifier == "df":
+                            # If only one dataframe is present and its name is 'df', replace the table qualifier with 'df'
+                            # This ensures that references like 'table.column' are mapped to 'df.column'
+                            pass
+                        elif from_alias and table_qualifier == from_alias:
+                            # No action needed
+                            pass
+                        else:
+                            node.parts = ["df", node.parts[-1]]
 
                     return node
 

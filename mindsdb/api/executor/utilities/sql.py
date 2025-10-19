@@ -243,6 +243,10 @@ def query_df(dfs, query, session=None):
                 if len(node.parts) > 1:
                     if len(node.parts) > 2:
                         node.parts = node.parts[-2:]
+
+                    if len(dataframe_dict) == 1 and "df" in dataframe_dict:
+                        node.parts = ["df", node.parts[-1]]
+
                     return node
 
         if isinstance(node, Function):

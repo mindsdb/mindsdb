@@ -120,7 +120,7 @@ class TestFiles(BaseExecutorDummyML):
         """Test the updated query_df function with multiple dataframes"""
 
         df_a5 = pd.DataFrame(
-            {"tab_num": [1, 1, 1, 2, 2, 3], "shop": [1, 2, 3, 1, 2, 1]}
+            {"tab_num": [1, 1, 1, 2, 2, 2, 3], "shop": [1, 2, 3, 1, 2, 3, 1]}
         )
 
         df_b5 = pd.DataFrame({"shop": [1, 2, 3]})
@@ -157,8 +157,8 @@ class TestFiles(BaseExecutorDummyML):
 
         query2 = """
             SELECT DISTINCT a1.tab_num, a2.fio, a2.city
-            FROM A5 a1
-            JOIN A2 a2 ON a1.tab_num = a2.tab_num
+            FROM A5 as a1
+            JOIN A2 as a2 ON a1.tab_num = a2.tab_num
             WHERE a1.shop = 1
         """
         dataframes4 = {"a5": df_a5, "a2": df_a2}

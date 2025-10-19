@@ -167,8 +167,12 @@ class FileHandler(DatabaseHandler):
                 else:
                     dataframe_dict = {}
 
-                    for db_name, table_name, version in tables:
-                        if db_name and db_name.lower() != "files":
+                    for table in tables:
+                        if len(table) == 3:
+                            db_name, table_name, page_name = table
+                        elif len(table) == 2:
+                            db_name, table_name = table
+                        else:
                             continue
 
                         table_name_lower = table_name.lower()

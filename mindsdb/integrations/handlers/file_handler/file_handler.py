@@ -76,10 +76,7 @@ class FileHandler(DatabaseHandler):
     def query(self, query: ASTNode) -> Response:
         if type(query) is DropTables:
             for table_identifier in query.tables:
-                if (
-                    len(table_identifier.parts) == 2
-                    and table_identifier.parts[0] != self.name
-                ):
+                if len(table_identifier.parts) == 2 and table_identifier.parts[0] != self.name:
                     return Response(
                         RESPONSE_TYPE.ERROR,
                         error_message=f"Can't delete table from database '{table_identifier.parts[0]}'",
@@ -130,9 +127,7 @@ class FileHandler(DatabaseHandler):
                 df = pd.DataFrame(columns=[col.name for col in query.columns])
                 df.to_csv(temp_file_path, index=False)
 
-                self.file_controller.save_file(
-                    table_name, temp_file_path, file_name=f"{table_name}.csv"
-                )
+                self.file_controller.save_file(table_name, temp_file_path, file_name=f"{table_name}.csv")
             except Exception as unknown_error:
                 return Response(
                     RESPONSE_TYPE.ERROR,
@@ -181,9 +176,7 @@ class FileHandler(DatabaseHandler):
                             continue
 
                         try:
-                            df = self.file_controller.get_file_data(
-                                table_name, page_name=None
-                            )
+                            df = self.file_controller.get_file_data(table_name, page_name=None)
                             dataframe_dict[table_name_lower] = df
                         except Exception as e:
                             return Response(
@@ -204,9 +197,7 @@ class FileHandler(DatabaseHandler):
             df = self.file_controller.get_file_data(table_name, page_name)
 
             # Create a new dataframe with the values from the query
-            new_df = pd.DataFrame(
-                query.values, columns=[col.name for col in query.columns]
-            )
+            new_df = pd.DataFrame(query.values, columns=[col.name for col in query.columns])
 
             # Concatenate the new dataframe with the existing one
             df = pd.concat([df, new_df], ignore_index=True)
@@ -247,9 +238,7 @@ class FileHandler(DatabaseHandler):
             data_frame=pd.DataFrame(
                 [
                     {
-                        "Field": (
-                            x["name"].strip() if isinstance(x, dict) else x.strip()
-                        ),
+                        "Field": (x["name"].strip() if isinstance(x, dict) else x.strip()),
                         "Type": "str",
                     }
                     for x in file_meta["columns"]

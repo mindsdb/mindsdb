@@ -190,7 +190,7 @@ class FaissIndexWithFilter:
             json.dump(side, f)
 
     @classmethod
-    def load(cls, path: str) -> FaissIndexWithFilter:
+    def load(cls, path: str):
         index = faiss.read_index(path)
         with open(path + ".meta", "r") as f:
             side = json.load(f)

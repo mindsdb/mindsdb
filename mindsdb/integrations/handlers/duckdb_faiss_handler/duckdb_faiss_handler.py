@@ -24,7 +24,7 @@ from mindsdb_sql_parser.ast import (
 )
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse as Response
+from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse as Response, HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
     VectorStoreHandler,
@@ -49,7 +49,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
     name = "duckdb_faiss"
 
     def __init__(self, name: str, **kwargs):
-        super().__init__(name=name, **kwargs)
+        super().__init__(name=name)
         
         # Extract configuration
         self.connection_data = kwargs.get("connection_data", {})
@@ -942,10 +942,10 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         try:
             if not self.is_connected:
                 self.connect()
-            return Response(RESPONSE_TYPE.OK)
+            return StatusResponse(RESPONSE_TYPE.OK)
         except Exception as e:
             logger.error(f"Connection check failed: {e}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            return StatusResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
 
     def native_query(self, query: str) -> Response:
         """Execute a native SQL query."""

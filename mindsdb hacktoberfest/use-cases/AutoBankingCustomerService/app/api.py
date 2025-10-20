@@ -28,6 +28,9 @@ class SalesforceCase(BaseModel):
     jira_issue_key: str | None = None
     jira_issue_url: str | None = None
     jira_issue_error: str | None = None
+    salesforce_case_id: str | None = None
+    salesforce_case_url: str | None = None
+    salesforce_error: str | None = None
 
 
 class SalesforceResponse(BaseModel):

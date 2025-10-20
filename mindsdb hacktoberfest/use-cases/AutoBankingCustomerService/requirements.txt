@@ -44,3 +44,4 @@ tzdata==2025.2
 urllib3==2.5.0
 uvicorn==0.34.0
 validators==0.20.0
+simple-salesforce==1.12.6

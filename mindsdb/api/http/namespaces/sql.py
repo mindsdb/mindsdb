@@ -123,7 +123,7 @@ class Query(Resource):
         elif query_response["type"] is SQL_RESPONSE_TYPE.ERROR:
             log_msg += f" ({query_response['error_message']}), "
         log_msg += f"used handlers {ctx.used_handlers}"
-        logger.info(log_msg)
+        logger.debug(log_msg)
 
         return query_response, 200
 

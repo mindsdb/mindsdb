@@ -4,7 +4,7 @@ import pytest
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import (
-    Identifier, Select, Join, Constant, Star, Parameter, BinaryOperation, OrderBy, Function
+    Identifier, Select, Join, Constant, Star, BinaryOperation, OrderBy, Function
 )
 from mindsdb_sql_parser.utils import JoinType
 

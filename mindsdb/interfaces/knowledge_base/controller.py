@@ -28,6 +28,7 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
     construct_model_from_args,
 )
+from mindsdb.integrations.utilities.rag.settings import RerankerMode
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
@@ -46,7 +47,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
+from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker, ListwiseLLMReranker
 
 logger = log.getLogger(__name__)
 
@@ -114,17 +115,29 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     """
     Create reranking model from parameters.
     """
+    from mindsdb.integrations.utilities.rag.settings import RerankerConfig
+
+    # Work on a copy; do not mutate caller's dict
     params_copy = copy.deepcopy(reranking_model_params)
-    provider = params_copy.get("provider", "openai").lower()
 
-    if "api_key" not in params_copy:
-        params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
+    # Handle model_name -> model alias for backward compatibility
+    if "model_name" in params_copy and "model" not in params_copy:
+        params_copy["model"] = params_copy.pop("model_name")
 
-    if "model_name" not in params_copy:
-        raise ValueError("'model_name' must be provided for reranking model")
-    params_copy["model"] = params_copy.pop("model_name")
+    # Validate core fields (e.g. mode) via Pydantic
+    try:
+        cfg = RerankerConfig(**params_copy)
+    except ValueError as e:
+        raise ValueError(f"Invalid reranker configuration: {str(e)}")
 
-    return BaseLLMReranker(**params_copy)
+    # Merge validated fields back, preserving any extra user fields
+    validated = cfg.model_dump()
+    reranker_params = {**params_copy, **validated}
+
+    # Choose reranker class based on validated mode
+    if cfg.mode == RerankerMode.LISTWISE:
+        return ListwiseLLMReranker(**reranker_params)
+    return BaseLLMReranker(**reranker_params)
 
 
 def safe_pandas_is_datetime(value: str) -> bool:

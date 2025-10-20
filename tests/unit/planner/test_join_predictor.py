@@ -740,11 +740,11 @@ class TestPredictorParams:
         subquery.where.args[0].args[0].args[0].args[1].args[1] = Parameter(Result(2))
 
         query = parse_sql(sql)
-        
+
         # Construct query for tab2 with Parameter manually since parse_sql doesn't support Parameter syntax
         q_table2 = parse_sql("select * from tab2 as t2 where x=0 and b=2")
         q_table2.where.args[0].args[1] = Parameter(Result(2))
-        
+
         expected_plan = QueryPlan(
             steps=[
                 # nested queries

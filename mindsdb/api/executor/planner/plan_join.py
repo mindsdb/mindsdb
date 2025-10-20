@@ -285,7 +285,7 @@ class PlanJoinTablesQuery:
             use_limit = True
             has_join = False
             regular_table_count = 0
-            
+
             for item in join_sequence:
                 if isinstance(item, TableInfo):
                     # Check if it's a regular table (not a predictor, not a subselect)
@@ -293,12 +293,12 @@ class PlanJoinTablesQuery:
                         regular_table_count += 1
                 elif isinstance(item, Join):
                     has_join = True
-            
+
             # Disable limit pushdown only if joining MULTIPLE regular database tables
             # Allow it for: single table, or table + predictor (predictor generates on-demand)
             if has_join and regular_table_count > 1:
                 use_limit = False
-                
+
         self.query_context["use_limit"] = use_limit
 
     def plan_join_tables(self, query_in):
@@ -492,11 +492,11 @@ class PlanJoinTablesQuery:
     def get_filters_from_join_conditions(self, fetch_table):
         """
         Extract filters from join conditions for filter pushdown optimization.
-        
+
         Note: This function is currently disabled (not called) to avoid:
         - Creating massive IN clauses that exceed database query size limits
         - Making arbitrary assumptions about data distribution
-        
+
         For cross-database joins with large tables, users should:
         - Add explicit WHERE clauses to filter data at the source
         - Use indexed/partitioned tables in their databases

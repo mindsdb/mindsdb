@@ -120,9 +120,7 @@ class TestFiles(BaseExecutorDummyML):
     def test_multiple_dataframes(self):
         """Test the updated query_df function with multiple dataframes"""
 
-        df_a5 = pd.DataFrame(
-            {"tab_num": [1, 1, 1, 2, 2, 2, 3], "shop": [1, 2, 3, 1, 2, 3, 1]}
-        )
+        df_a5 = pd.DataFrame({"tab_num": [1, 1, 1, 2, 2, 2, 3], "shop": [1, 2, 3, 1, 2, 3, 1]})
 
         df_b5 = pd.DataFrame({"shop": [1, 2, 3]})
 

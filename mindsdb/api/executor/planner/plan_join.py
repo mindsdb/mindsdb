@@ -279,24 +279,49 @@ class PlanJoinTablesQuery:
         self.query_context["binary_ops"] = binary_ops
 
     def check_use_limit(self, query_in, join_sequence):
-        # if only models (predictors), not for regular table joins
+        """
+        Determine if LIMIT can be pushed down to the first table fetch.
+
+        LIMIT pushdown means: fetch only N rows from the first table, then join.
+        This optimization is ONLY correct when the first table determines the final row count.
+
+        LIMIT pushdown is CORRECT for:
+        - Single table queries (no join)
+        - LEFT JOIN (left table determines row count - each left row appears exactly once)
+        - Joins with ML predictors
+
+        LIMIT pushdown is SLOW for:
+        - INNER JOIN between tables
+        - RIGHT JOIN (right table determines row count, not left)
+
+        When LIMIT pushdown is disabled, we fetch all data and apply LIMIT after the join.
+        This is slower but guarantees correct results.
+        """
         use_limit = False
         if query_in.having is None and query_in.group_by is None and query_in.limit is not None:
             use_limit = True
-            has_join = False
-            regular_table_count = 0
+
+            # Check what we're joining
+            has_predictor = False
+            cannot_pushdown_limit = False
 
             for item in join_sequence:
                 if isinstance(item, TableInfo):
-                    # Check if it's a regular table (not a predictor, not a subselect)
-                    if item.predictor_info is None and item.sub_select is None:
-                        regular_table_count += 1
+                    if item.predictor_info is not None:
+                        has_predictor = True
                 elif isinstance(item, Join):
-                    has_join = True
+                    join_type = (
+                        item.join_type.upper() if hasattr(item.join_type, "upper") else str(item.join_type).upper()
+                    )
 
-            # Disable limit pushdown only if joining MULTIPLE regular database tables
-            # Allow it for: single table, or table + predictor (predictor generates on-demand)
-            if has_join and regular_table_count > 1:
+                    # LEFT JOIN preserves left table row count - LIMIT pushdown is safe
+                    if join_type in ("LEFT JOIN", "LEFT OUTER JOIN"):
+                        continue
+
+                    # INNER/RIGHT JOIN: can't push LIMIT down
+                    cannot_pushdown_limit = True
+
+            if cannot_pushdown_limit and not has_predictor:
                 use_limit = False
 
         self.query_context["use_limit"] = use_limit

@@ -22,14 +22,6 @@ USING
     data = {
         "tables": ["banking_postgres_db.conversations_summary"]
     },
-    prompt_template = '',
-    timeout = 30;
-
-CREATE AGENT test_agent
-USING
-    data = {
-        "tables": ["banking_postgres_db.conversations_summary"]
-    },
     prompt_template= 'You are a banking customer service analyst. Analyze the conversation transcript and provide:
 
 1. A concise summary (2-3 sentences) of the customer interaction
@@ -61,36 +53,37 @@ client: Hi, I\'m calling to inquire about donating to a local charity through Un
 SHOW AGENTS;
 
 show SKILLS;
+--jiaqi
 
-CREATE JOB process_new_conversations (
+-- CREATE JOB process_new_conversations (
 
-    UPDATE banking_postgres_db.conversations_summary
-    SET
-        summary = (
-            SELECT answer
-            FROM classification_agent
-            WHERE question = banking_postgres_db.conversations_summary.conversation_text
-            LIMIT 1
-        ),
-        resolved = CASE
-            WHEN (
-                SELECT answer
-                FROM classification_agent
-                WHERE question = banking_postgres_db.conversations_summary.conversation_text
-                LIMIT 1
-            ) LIKE '%Status: RESOLVED%' THEN TRUE
-            ELSE FALSE
-        END
-    WHERE
-        banking_postgres_db.conversations_summary.summary IS NULL
-)
-EVERY 1 min;
+--     UPDATE banking_postgres_db.conversations_summary
+--     SET
+--         summary = (
+--             SELECT answer
+--             FROM classification_agent
+--             WHERE question = banking_postgres_db.conversations_summary.conversation_text
+--             LIMIT 1
+--         ),
+--         resolved = CASE
+--             WHEN (
+--                 SELECT answer
+--                 FROM classification_agent
+--                 WHERE question = banking_postgres_db.conversations_summary.conversation_text
+--                 LIMIT 1
+--             ) LIKE '%Status: RESOLVED%' THEN TRUE
+--             ELSE FALSE
+--         END
+--     WHERE
+--         banking_postgres_db.conversations_summary.summary IS NULL
+-- )
+-- EVERY 1 min;
 
 
-show JOBS;
-DROP JOB process_new_conversations;
+-- show JOBS;
+-- DROP JOB process_new_conversations;
 
-SHOW TRIGGERS;
+-- SHOW TRIGGERS;
 
 
 

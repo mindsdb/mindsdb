@@ -67,6 +67,7 @@ class JiraHandler(APIHandler):
                 "username": self.connection_data['username'],
                 "password": self.connection_data['api_token'],
                 "url": self.connection_data['url'],
+                "cloud": is_cloud
             }
         else:
             # Jira Server supports personal access token authentication or open access.

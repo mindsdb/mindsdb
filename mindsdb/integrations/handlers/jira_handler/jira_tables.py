@@ -130,7 +130,7 @@ class JiraIssuesTable(APIResource):
             },
             inplace=True
         )
-        issues_df = issues_df[self.get_columns()]
+        issues_df = issues_df.reindex(columns=self.get_columns(), fill_value=None)
 
         return issues_df
 

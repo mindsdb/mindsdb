@@ -11,11 +11,13 @@ from fastapi import HTTPException
 
 from . import db
 from .jira_client import JiraClient, JiraClientError
+from .salesforce_client import SalesforceClient, SalesforceClientError
 
 classification_agent = None
 _mindsdb_server = None
 _db_config_override: Optional[Dict[str, Any]] = None
 _jira_client: Optional[JiraClient] = None
+_salesforce_client: Optional[SalesforceClient] = None
 
 
 def set_agent(agent: Any) -> None:
@@ -39,15 +41,22 @@ def set_jira_client(client: Optional[JiraClient]) -> None:
     _jira_client = client
 
 
+def set_salesforce_client(client: Optional[SalesforceClient]) -> None:
+    """Lifecycle hook used during app startup to inject the Salesforce client."""
+    global _salesforce_client
+    _salesforce_client = client
+
+
 def get_db_config() -> Optional[Dict[str, Any]]:
     return _db_config_override
 
 
 def clear_state() -> None:
-    global classification_agent, _mindsdb_server, _jira_client
+    global classification_agent, _mindsdb_server, _jira_client, _salesforce_client
     classification_agent = None
     _mindsdb_server = None
     _jira_client = None
+    _salesforce_client = None
 
 
 def query_agent(conversation_text: str) -> Dict[str, Any]:
@@ -94,7 +103,31 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
     jira_issue_key: Optional[str] = None
     jira_issue_url: Optional[str] = None
     jira_error: Optional[str] = None
+    salesforce_case_id: Optional[str] = None
+    salesforce_case_url: Optional[str] = None
+    salesforce_error: Optional[str] = None
 
+    # Create Salesforce case for all conversations (resolved and unresolved)
+    if _salesforce_client is None:
+        salesforce_error = "Salesforce client not configured; skipped case creation."
+    else:
+        try:
+            status = "RESOLVED" if analysis["resolved"] else "UNRESOLVED"
+            case = _salesforce_client.create_case(
+                conversation_id=conversation_id,
+                summary=analysis["summary"] or "No summary generated",
+                status=status,
+                priority="High" if not analysis["resolved"] else "Medium",
+                origin="AI Workflow",
+            )
+            salesforce_case_id = case.get("case_id")
+            salesforce_case_url = case.get("case_url")
+        except SalesforceClientError as exc:
+            salesforce_error = f"Failed to create Salesforce case: {exc}"
+        except Exception as exc:  # pragma: no cover - guard against unexpected errors
+            salesforce_error = f"Unexpected Salesforce error: {exc}"
+
+    # Create Jira ticket only for unresolved issues
     if not analysis["resolved"]:
         if _jira_client is None:
             jira_error = "Jira client not configured; skipped ticket creation."
@@ -127,6 +160,9 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
         jira_issue_key=jira_issue_key,
         jira_issue_url=jira_issue_url,
         jira_issue_error=jira_error,
+        salesforce_case_id=salesforce_case_id,
+        salesforce_case_url=salesforce_case_url,
+        salesforce_error=salesforce_error,
         db_config=_db_config_override,
     )
 
@@ -140,6 +176,9 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
         "jira_issue_key": jira_issue_key,
         "jira_issue_url": jira_issue_url,
         "jira_issue_error": jira_error,
+        "salesforce_case_id": salesforce_case_id,
+        "salesforce_case_url": salesforce_case_url,
+        "salesforce_error": salesforce_error,
     }
 
 

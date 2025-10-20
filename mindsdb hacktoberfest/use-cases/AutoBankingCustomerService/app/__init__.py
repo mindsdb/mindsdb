@@ -11,6 +11,7 @@ from . import services
 from .api import router as api_router
 from .db import ensure_table_exists
 from .jira_client import JiraClientError, build_default_client
+from .salesforce_client import SalesforceClientError, build_default_client as build_salesforce_client
 
 DB_CONFIG = {
     "host": "localhost",
@@ -79,6 +80,19 @@ async def startup_event() -> None:
         print(f"✗ Jira client configuration error: {exc}")
     except Exception as exc:  # pragma: no cover - startup diagnostics
         print(f"✗ Unexpected Jira initialization error: {exc}")
+
+    print("\nInitializing Salesforce client...")
+    try:
+        salesforce_client = build_salesforce_client()
+        if salesforce_client:
+            services.set_salesforce_client(salesforce_client)
+            print("✓ Salesforce client configured")
+        else:
+            print("✗ Salesforce client not configured. Missing Salesforce environment variables.")
+    except SalesforceClientError as exc:
+        print(f"✗ Salesforce client configuration error: {exc}")
+    except Exception as exc:  # pragma: no cover - startup diagnostics
+        print(f"✗ Unexpected Salesforce initialization error: {exc}")
 
     print("\n" + "=" * 70)
     print("Server startup complete!")

@@ -78,6 +78,9 @@ def insert_conversation_with_analysis(
     jira_issue_key: Optional[str] = None,
     jira_issue_url: Optional[str] = None,
     jira_issue_error: Optional[str] = None,
+    salesforce_case_id: Optional[str] = None,
+    salesforce_case_url: Optional[str] = None,
+    salesforce_error: Optional[str] = None,
 ) -> None:
     """Insert a single analyzed conversation into the database."""
     config = db_config or DEFAULT_DB_CONFIG
@@ -94,10 +97,13 @@ def insert_conversation_with_analysis(
                     jira_issue_key,
                     jira_issue_url,
                     jira_issue_error,
+                    salesforce_case_id,
+                    salesforce_case_url,
+                    salesforce_error,
                     created_at,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
             """
             cur.execute(
                 insert_sql,
@@ -109,6 +115,9 @@ def insert_conversation_with_analysis(
                     jira_issue_key,
                     jira_issue_url,
                     jira_issue_error,
+                    salesforce_case_id,
+                    salesforce_case_url,
+                    salesforce_error,
                 ),
             )
         conn.commit()

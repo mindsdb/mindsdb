@@ -24,7 +24,9 @@ from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import mysql_to_du
 logger = log.getLogger(__name__)
 
 
-def _get_query_tables(query: ASTNode, resolve_function: callable, default_database: str = None) -> List[tuple]:
+def _get_query_tables(
+    query: ASTNode, resolve_function: callable, default_database: str = None
+) -> List[tuple]:
     """Find all tables/models in the query
 
     Args:
@@ -56,7 +58,9 @@ def get_query_models(query: ASTNode, default_database: str = None) -> List[tuple
     return _get_query_tables(query, resolve_model_identifier, default_database)
 
 
-def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_functions=None):
+def query_df_with_type_infer_fallback(
+    query_str: str, dataframes: dict, user_functions=None
+):
     """Duckdb need to infer column types if column.dtype == object. By default it take 1000 rows,
     but that may be not sufficient for some cases. This func try to run query multiple times
     increasing butch size for type infer
@@ -158,7 +162,10 @@ def get_duckdb_functions_and_kw_list() -> list[str] | None:
                 dataframes={},
             )
             df.columns = [name.lower() for name in df.columns]
-            _duckdb_functions_and_kw_list = df["name"].drop_duplicates().str.lower().to_list() + window_functions_list
+            _duckdb_functions_and_kw_list = (
+                df["name"].drop_duplicates().str.lower().to_list()
+                + window_functions_list
+            )
         except Exception as e:
             logger.warning(f"Unable to get DuckDB functions list: {e}")
 
@@ -188,11 +195,15 @@ def query_df(dfs, query, session=None):
         dataframe_dict = {"df": dfs}
 
         if not isinstance(query_ast, Select):
-            raise ValueError("When single DataFrame is provided, only Select queries are supported")
+            raise ValueError(
+                "When single DataFrame is provided, only Select queries are supported"
+            )
     elif isinstance(dfs, dict):
         dataframe_dict = {k.lower(): v for k, v in dfs.items()}
     else:
-        raise ValueError("dfs argument should be pandas.DataFrame or dict of DataFrames")
+        raise ValueError(
+            "dfs argument should be pandas.DataFrame or dict of DataFrames"
+        )
 
     # check if from_table has alias
     from_alias = None
@@ -203,6 +214,8 @@ def query_df(dfs, query, session=None):
 
         if query_ast.from_table.alias:
             from_alias = query_ast.from_table.alias.parts[-1].lower()
+    elif hasattr(query_ast.from_table, "alias") and query_ast.from_table.alias:
+        from_alias = query_ast.from_table.alias.parts[-1].lower()
 
     json_columns = set()
 
@@ -225,9 +238,7 @@ def query_df(dfs, query, session=None):
                 else:
                     raise QueryError(
                         db_type="DuckDB",
-                        db_error_msg=(
-                            f"Table '{table_name}' not found in provided dataframes. Available tables: {list(dataframe_dict.keys())}",
-                        ),
+                        db_error_msg=f"Table '{table_name}' not found in provided dataframes. Available tables: {list(dataframe_dict.keys())}",
                         failed_query=query_str,
                         is_external=False,
                         is_expected=False,
@@ -240,10 +251,8 @@ def query_df(dfs, query, session=None):
                     if len(dataframe_dict) == 1 and "df" in dataframe_dict:
                         table_qualifier = node.parts[0].lower()
 
-                        if (
-                            table_qualifier in dataframe_dict
-                            or table_qualifier == from_table_name
-                            or (from_alias is not None and table_qualifier == from_alias)
+                        if table_qualifier in dataframe_dict or (
+                            from_alias is not None and table_qualifier == from_alias
                         ):
                             pass
                         else:
@@ -279,19 +288,20 @@ def query_df(dfs, query, session=None):
                     user_functions.check_function(node)
 
             duckdb_functions_and_kw_list = get_duckdb_functions_and_kw_list() or []
-            custom_functions_list = [] if user_functions is None else list(user_functions.functions.keys())
+            custom_functions_list = (
+                [] if user_functions is None else list(user_functions.functions.keys())
+            )
             all_functions_list = duckdb_functions_and_kw_list + custom_functions_list
             if len(all_functions_list) > 0 and fnc_name not in all_functions_list:
                 raise QueryError(
                     db_type="DuckDB",
-                    db_error_msg=(
-                        f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
-                        "Please use DuckDB-supported functions instead."
-                    ),
+                    db_error_msg=f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
+                    "Please use DuckDB-supported functions instead.",
                     failed_query=query_str,
                     is_external=False,
                     is_expected=False,
                 )
+        return None
 
     query_traversal(query_ast, adapt_query)
 
@@ -308,16 +318,21 @@ def query_df(dfs, query, session=None):
                 pass
         return v
 
-    for df_name, df in dataframe_dict.items():
-        for column in json_columns:
-            if column in df.columns:
-                df[column] = df[column].apply(_convert)
+    if json_columns:
+        for df_name, df in dataframe_dict.items():
+            for column in json_columns:
+                if column in df.columns:
+                    # Only apply if the column actually contains dict/list
+                    if df[column].apply(lambda x: isinstance(x, (dict, list))).any():
+                        df[column] = df[column].apply(_convert)
 
     render = SqlalchemyRender("postgres")
     try:
         query_str = render.get_string(query_ast, with_failback=False)
     except Exception:
-        logger.exception(f"Exception during query casting to 'postgres' dialect. Query:\n{str(query)}.\nError:")
+        logger.exception(
+            f"Exception during query casting to 'postgres' dialect. Query:\n{str(query)}.\nError:"
+        )
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException
@@ -325,14 +340,24 @@ def query_df(dfs, query, session=None):
         if len(df) > 0:
             if table_name.lower() in ("models", "predictors"):
                 if "TRAINING_OPTIONS" in df.columns:
-                    dataframe_dict[table_name] = df.astype({"TRAINING_OPTIONS": "string"})
+                    dataframe_dict[table_name] = df.astype(
+                        {"TRAINING_OPTIONS": "string"}
+                    )
             if table_name.lower() == "ml_engines":
                 if "CONNECTION_DATA" in df.columns:
-                    dataframe_dict[table_name] = df.astype({"CONNECTION_DATA": "string"})
-    result_df, description = query_df_with_type_infer_fallback(query_str, dataframe_dict, user_functions=user_functions)
+                    dataframe_dict[table_name] = df.astype(
+                        {"CONNECTION_DATA": "string"}
+                    )
+    result_df, description = query_df_with_type_infer_fallback(
+        query_str, dataframe_dict, user_functions=user_functions
+    )
     result_df.replace({np.nan: None}, inplace=True)
-    if description is not None and all(isinstance(x, (list, tuple)) and len(x) > 0 for x in description):
+    if description is not None and all(
+        isinstance(x, (list, tuple)) and len(x) > 0 for x in description
+    ):
         result_df.columns = [x[0] for x in description]
     else:
-        logger.warning("Description is None or not in expected format; skipping column renaming.")
+        logger.warning(
+            "Description is None or not in expected format; skipping column renaming."
+        )
     return result_df

@@ -317,7 +317,7 @@ class TestFiles(BaseExecutorDummyML):
 
         df = pd.DataFrame({"value": [1, 2, 3]})
 
-        # SOME_INVALID_FUNCTION doesn't exist in DuckDB
+        # SOME_INVALID_FUNCTION doesn't exist
         query = """
             SELECT SOME_INVALID_FUNCTION(value) as result
             FROM mytable

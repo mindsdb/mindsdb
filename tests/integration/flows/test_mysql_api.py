@@ -352,6 +352,10 @@ class TestMySqlApi(BaseStuff):
                 assert abs(row[column_name] - expected_values[column_name]) < 1e-5, (
                     f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
                 )
+            elif column_name in ("t_json", "t_jsonb"):
+                assert json.loads(row[column_name]) == json.loads(expected_values[column_name]), (
+                    f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
+                )
             else:
                 assert row[column_name] == expected_values[column_name], (
                     f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"

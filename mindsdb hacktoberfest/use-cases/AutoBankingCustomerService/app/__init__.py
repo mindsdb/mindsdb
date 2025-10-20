@@ -12,6 +12,7 @@ from .api import router as api_router
 from .db import ensure_table_exists
 from .jira_client import JiraClientError, build_default_client
 from .salesforce_client import SalesforceClientError, build_default_client as build_salesforce_client
+from .recommendation_client import RecommendationClientError, build_recommendation_client
 
 DB_CONFIG = {
     "host": "localhost",
@@ -23,6 +24,7 @@ DB_CONFIG = {
 
 MINDSDB_URL = "http://127.0.0.1:47334"
 AGENT_NAME = "classification_agent"
+RECOMMENDATION_AGENT_NAME = "recommendation_agent"
 
 services.set_db_config(DB_CONFIG)
 load_dotenv()
@@ -61,8 +63,22 @@ async def startup_event() -> None:
     try:
         mindsdb_server = mindsdb_sdk.connect(MINDSDB_URL)
         services.set_mindsdb_server(mindsdb_server)
+        
+        # Initialize classification agent
         classification_agent = mindsdb_server.agents.get(AGENT_NAME)
         services.set_agent(classification_agent)
+        print("✓ Classification agent configured")
+        
+        # Initialize recommendation agent
+        try:
+            recommendation_agent = mindsdb_server.agents.get(RECOMMENDATION_AGENT_NAME)
+            recommendation_client = build_recommendation_client(recommendation_agent)
+            services.set_recommendation_client(recommendation_client)
+            print("✓ Recommendation agent configured")
+        except Exception as rec_exc:
+            print(f"✗ Recommendation agent not available: {rec_exc}")
+            print("  Recommendation features will be disabled.")
+            
     except Exception as exc:  # pragma: no cover - startup diagnostics
         print(f"✗ Error connecting to MindsDB: {exc}")
         print("  The server will start, but agent queries will fail.")

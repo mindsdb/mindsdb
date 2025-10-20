@@ -9,13 +9,13 @@ This project implements an end-to-end automated workflow that transforms raw cus
 ```
 Raw Customer Service Script 
     ↓
-MindsDB AI Summary Agent + Classification Agent 
+MindsDB AI Classification Agent (Summary + Resolution Status)
     ↓
-Salesforce Records 
+Salesforce Case Creation (All conversations)
     ↓
-MindsDB Sentiment Analysis Agent + Recommendation Agent 
+MindsDB Recommendation Agent (For unresolved issues only)
     ↓
-Jira Issue Tickets
+Jira Issue Tickets (For unresolved issues with AI recommendations)
 ```
 
 ## 🔄 Workflow Pipeline
@@ -24,19 +24,25 @@ Jira Issue Tickets
 - **Source**: Raw customer service scripts (calls, chats, emails)
 - **Format**: Unstructured text data from various customer touchpoints
 
-### 2. **AI Processing Layer (MindsDB)**
-- **AI Summary Agent**: Extracts key information and creates concise summaries
-- **AI Classification Agent**: Categorizes issues by type, priority, and department
+### 2. **AI Classification (MindsDB)**
+- **Classification Agent**: Analyzes conversation and determines resolution status
+- **Summary Generation**: Creates concise summaries of customer interactions
+- **Resolution Detection**: Identifies if issues are RESOLVED or UNRESOLVED
 
-### 3. **CRM Integration**
-- **Salesforce Records**: Structured data storage with customer context and issue classification
+### 3. **CRM Integration (Salesforce)**
+- **Case Creation**: Creates Salesforce cases for ALL conversations
+- **Status Tracking**: Records resolution status and priority levels
+- **Customer Context**: Maintains customer relationship data
 
-### 4. **Advanced Analytics (MindsDB)**
-- **Sentiment Analysis Agent**: Analyzes customer emotional tone and satisfaction levels
-- **AI Recommendation Agent**: Generates personalized action recommendations
+### 4. **AI Recommendations (MindsDB)**
+- **Recommendation Agent**: Generates actionable suggestions for UNRESOLVED issues only
+- **Knowledge Base**: Uses Confluence documentation for context-aware recommendations
+- **Best Practices**: Applies customer complaints handling procedures
 
-### 5. **Actionable Output**
-- **Jira Issue Tickets**: Automated ticket creation with priority, assignments, and context
+### 5. **Issue Tracking (Jira)**
+- **Ticket Creation**: Creates Jira tickets for UNRESOLVED issues only
+- **AI Integration**: Includes AI recommendations in ticket descriptions
+- **Priority Assignment**: Sets appropriate priority levels based on issue severity
 
 ## 🎯 Key Features
 
@@ -50,10 +56,14 @@ Jira Issue Tickets
 ## 🛠️ Technology Stack
 
 - **MindsDB**: AI/ML platform for intelligent agents and analytics
+- **PostgreSQL**: Primary database for conversation storage
 - **Salesforce**: CRM system for customer relationship management
 - **Jira**: Issue tracking and project management
-- **Python**: Primary development language
-- **APIs**: RESTful integrations between systems
+- **FastAPI**: Python web framework for API endpoints
+- **Confluence**: Knowledge base for recommendation context
+- **Python 3.11+**: Primary development language
+- **Docker**: Containerized deployment
+- **OpenAI**: AI model provider for agents
 
 ## 📊 Use Cases
 
@@ -72,10 +82,12 @@ Jira Issue Tickets
 ## 🚀 Getting Started
 
 ### Prerequisites
-- MindsDB instance (cloud or self-hosted)
-- Salesforce developer account
-- Jira workspace
-- Python 3.8+
+- **MindsDB**: Running instance (Docker or cloud)
+- **PostgreSQL**: Database server
+- **Salesforce**: Developer account with API access
+- **Jira**: Workspace with API token
+- **Confluence**: Knowledge base access
+- **Python 3.11+**: Development environment
 
 ### Installation
 ```bash
@@ -87,21 +99,76 @@ cd AutoBankingCustomerService
 pip install -r requirements.txt
 
 # Configure environment variables
-cp .env.example .env
+cp env.template .env
 # Edit .env with your API credentials
 ```
 
 ### Configuration
-1. **MindsDB Setup**: Configure AI agents for summarization, classification, sentiment analysis, and recommendations
-2. **Salesforce Integration**: Set up OAuth credentials and API endpoints
-3. **Jira Configuration**: Configure project settings and custom fields. Set the following environment variables before starting the API server (you can place them in a `.env` file at the project root; they are loaded automatically on startup):
-   - `JIRA_BASE_URL`: Base URL to your Jira instance (e.g., `https://your-domain.atlassian.net`)
-   - `JIRA_EMAIL`: Jira user email associated with an API token
-   - `JIRA_API_TOKEN`: Jira API token (create via Jira account settings)
-   - `JIRA_PROJECT_KEY`: Target project key where issues should be created
-   - `JIRA_ISSUE_TYPE` *(optional)*: Issue type name to use, defaults to `Task`
-   - `JIRA_LABELS` *(optional)*: Comma-separated list of labels to add to tickets
-4. **Data Pipeline**: Set up input sources and output destinations
+
+#### 1. **Database Setup**
+```bash
+# Start PostgreSQL (Docker)
+docker run -d --name postgres-db \
+  -e POSTGRES_USER=postgresql \
+  -e POSTGRES_PASSWORD=psqlpasswd \
+  -e POSTGRES_DB=demo \
+  -p 5432:5432 postgres:13
+
+# Initialize database schema
+python3.11 script/import_banking_data.py
+```
+
+#### 2. **MindsDB Setup**
+```bash
+# Start MindsDB (Docker)
+docker run -d --name mindsdb \
+  -p 47334:47334 mindsdb/mindsdb
+
+# Configure agents and knowledge base
+# Access MindsDB web interface at http://localhost:47334
+# Run the SQL commands in mindsdb_setup.sql to create:
+#   - PostgreSQL database connection
+#   - OpenAI ML engine
+#   - Classification agent
+#   - Confluence knowledge base
+#   - Recommendation agent
+```
+
+#### 3. **Environment Variables**
+Create a `.env` file with the following variables:
+
+```bash
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=demo
+DB_USER=postgresql
+DB_PASSWORD=psqlpasswd
+
+# MindsDB Configuration
+MINDSDB_URL=http://127.0.0.1:47334
+
+# Salesforce Configuration
+SALESFORCE_USERNAME=your_username
+SALESFORCE_PASSWORD=your_password
+SALESFORCE_SECURITY_TOKEN=your_token
+SALESFORCE_DOMAIN=your_domain
+
+# Jira Configuration
+JIRA_BASE_URL=https://your-domain.atlassian.net
+JIRA_EMAIL=your_email
+JIRA_API_TOKEN=your_token
+JIRA_PROJECT_KEY=your_project_key
+JIRA_ISSUE_TYPE=Story
+
+# OpenAI Configuration (for MindsDB agents)
+OPENAI_API_KEY=your_openai_key
+```
+
+#### 4. **Start the API Server**
+```bash
+python3.11 server.py
+```
 
 ## 📈 Expected Benefits
 
@@ -120,31 +187,94 @@ cp .env.example .env
 - **Trend Analysis** for service improvement
 - **Predictive Insights** for capacity planning
 
-## 🔧 Configuration Files
+## 📁 Project Structure
 
-- `config/mindsdb_agents.py`: AI agent configurations
-- `config/salesforce.py`: CRM integration settings
-- `config/jira.py`: Issue tracking setup
-- `config/pipeline.py`: Workflow orchestration
+```
+AutoBankingCustomerService/
+├── app/                          # Core application code
+│   ├── __init__.py              # FastAPI app initialization
+│   ├── api.py                   # API routes and schemas
+│   ├── db.py                    # Database utilities
+│   ├── services.py              # Business logic
+│   ├── jira_client.py           # Jira integration
+│   ├── salesforce_client.py     # Salesforce integration
+│   └── recommendation_client.py # AI recommendation client
+├── script/                       # Data import scripts
+│   ├── banking_sample_10k.csv  # Sample banking data
+│   └── import_banking_data.py   # Data import utility
+├── test_*.py                     # Test scripts
+├── server.py                     # Application entry point
+├── mindsdb_setup.sql            # MindsDB configuration
+├── env.template                 # Environment variables template
+└── requirements.txt             # Python dependencies
+```
 
 ## 📝 API Endpoints
 
-- `POST /process-customer-script`: Process raw customer service script
-- `GET /analytics/sentiment`: Retrieve sentiment analysis results
-- `GET /recommendations`: Fetch AI-generated recommendations
-- `POST /create-ticket`: Generate Jira tickets
+### Core Endpoints
+- `GET /health`: Health check endpoint
+- `POST /api/process-conversations`: Process customer conversations in batch
+
+### Request Format
+```json
+{
+  "conversation_texts": [
+    "agent: Hello, how can I help you today?\nclient: I have an issue with my account..."
+  ]
+}
+```
+
+### Response Format
+```json
+{
+  "success": true,
+  "total_conversations": 1,
+  "processed_count": 1,
+  "processing_time_seconds": 2.5,
+  "cases": [
+    {
+      "conversation_id": "uuid",
+      "conversation_text": "truncated text...",
+      "summary": "AI-generated summary",
+      "status": "UNRESOLVED",
+      "jira_issue_key": "BCS-123",
+      "jira_issue_url": "https://...",
+      "salesforce_case_id": "500...",
+      "salesforce_case_url": "https://...",
+      "salesforce_error": null,
+      "recommendation": "AI-generated recommendations",
+      "recommendation_error": null,
+      "created_at": "2024-01-01T00:00:00",
+      "processed_at": "2024-01-01T00:00:00"
+    }
+  ]
+}
+```
 
 ## 🧪 Testing
 
+### Test Scripts
 ```bash
-# Run unit tests
-python -m pytest tests/unit/
+# Test single conversation processing
+python3.11 test_single_conversation.py
 
-# Run integration tests
-python -m pytest tests/integration/
+# Test recommendation workflow (includes AI recommendations)
+python3.11 test_recommendation.py
+```
 
-# Run end-to-end workflow test
-python tests/e2e/test_full_pipeline.py
+### Available Test Scripts
+- `test_single_conversation.py`: Basic conversation processing test
+- `test_recommendation.py`: Full workflow test with AI recommendations
+
+### Manual Testing
+```bash
+# Test health endpoint
+curl http://localhost:8000/health
+
+# Test conversation processing
+curl -X POST http://localhost:8000/api/process-conversations \
+  -H "Content-Type: application/json" \
+  -d '{"conversation_texts": ["agent: Hello\nclient: Hi, I need help"]}'
 ```
 
 ## 📊 Monitoring & Analytics
@@ -181,23 +311,40 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🗺️ Roadmap
 
-### Phase 1: Core Pipeline
+### Phase 1: Core Pipeline ✅ COMPLETED
 - [x] Basic text processing
-- [x] AI agent integration
-- [ ] Salesforce connector
-- [ ] Jira integration
+- [x] AI agent integration (classification + recommendation)
+- [x] Salesforce connector
+- [x] Jira integration
+- [x] Database storage
+- [x] API endpoints
+- [x] Complete workflow automation
+- [x] Error handling and logging
+- [x] Test scripts and validation
 
-### Phase 2: Advanced Features
+### Phase 2: Production Ready ✅ COMPLETED
+- [x] Environment configuration
+- [x] Docker deployment support
+- [x] Database schema management
+- [x] API documentation
+- [x] Comprehensive testing
+- [x] Integration validation
+
+### Phase 3: Advanced Features
 - [ ] Multi-language support
 - [ ] Voice-to-text integration
 - [ ] Advanced analytics dashboard
 - [ ] Machine learning model training
+- [ ] Real-time monitoring
+- [ ] Performance optimization
 
-### Phase 3: Enterprise Features
+### Phase 4: Enterprise Features
 - [ ] Multi-tenant support
 - [ ] Advanced security features
 - [ ] Custom AI model training
 - [ ] Enterprise integrations
+- [ ] High availability deployment
+- [ ] Scalability enhancements
 
 ---
 

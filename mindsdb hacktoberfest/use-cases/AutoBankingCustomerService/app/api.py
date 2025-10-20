@@ -31,6 +31,8 @@ class SalesforceCase(BaseModel):
     salesforce_case_id: str | None = None
     salesforce_case_url: str | None = None
     salesforce_error: str | None = None
+    recommendation: str | None = None
+    recommendation_error: str | None = None
 
 
 class SalesforceResponse(BaseModel):

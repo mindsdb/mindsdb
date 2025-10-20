@@ -12,12 +12,14 @@ from fastapi import HTTPException
 from . import db
 from .jira_client import JiraClient, JiraClientError
 from .salesforce_client import SalesforceClient, SalesforceClientError
+from .recommendation_client import RecommendationClient, RecommendationClientError
 
 classification_agent = None
 _mindsdb_server = None
 _db_config_override: Optional[Dict[str, Any]] = None
 _jira_client: Optional[JiraClient] = None
 _salesforce_client: Optional[SalesforceClient] = None
+_recommendation_client: Optional[RecommendationClient] = None
 
 
 def set_agent(agent: Any) -> None:
@@ -47,16 +49,23 @@ def set_salesforce_client(client: Optional[SalesforceClient]) -> None:
     _salesforce_client = client
 
 
+def set_recommendation_client(client: Optional[RecommendationClient]) -> None:
+    """Lifecycle hook used during app startup to inject the recommendation client."""
+    global _recommendation_client
+    _recommendation_client = client
+
+
 def get_db_config() -> Optional[Dict[str, Any]]:
     return _db_config_override
 
 
 def clear_state() -> None:
-    global classification_agent, _mindsdb_server, _jira_client, _salesforce_client
+    global classification_agent, _mindsdb_server, _jira_client, _salesforce_client, _recommendation_client
     classification_agent = None
     _mindsdb_server = None
     _jira_client = None
     _salesforce_client = None
+    _recommendation_client = None
 
 
 def query_agent(conversation_text: str) -> Dict[str, Any]:
@@ -106,6 +115,8 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
     salesforce_case_id: Optional[str] = None
     salesforce_case_url: Optional[str] = None
     salesforce_error: Optional[str] = None
+    recommendation: Optional[str] = None
+    recommendation_error: Optional[str] = None
 
     # Create Salesforce case for all conversations (resolved and unresolved)
     if _salesforce_client is None:
@@ -127,6 +138,21 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
         except Exception as exc:  # pragma: no cover - guard against unexpected errors
             salesforce_error = f"Unexpected Salesforce error: {exc}"
 
+    # Get recommendation for unresolved issues
+    if not analysis["resolved"]:
+        if _recommendation_client is None:
+            recommendation_error = "Recommendation client not configured; skipped recommendation generation."
+        else:
+            try:
+                recommendation = _recommendation_client.get_recommendation(
+                    conversation_text=conversation_text,
+                    summary=analysis["summary"] or "No summary generated"
+                )
+            except RecommendationClientError as exc:
+                recommendation_error = f"Failed to get recommendation: {exc}"
+            except Exception as exc:  # pragma: no cover - guard against unexpected errors
+                recommendation_error = f"Unexpected recommendation error: {exc}"
+
     # Create Jira ticket only for unresolved issues
     if not analysis["resolved"]:
         if _jira_client is None:
@@ -139,6 +165,7 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
                     conversation_text=conversation_text,
                     analysis=analysis,
                     created_at=timestamp,
+                    recommendation=recommendation,
                 )
                 issue = _jira_client.create_issue(
                     summary=summary,
@@ -163,6 +190,8 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
         salesforce_case_id=salesforce_case_id,
         salesforce_case_url=salesforce_case_url,
         salesforce_error=salesforce_error,
+        recommendation=recommendation,
+        recommendation_error=recommendation_error,
         db_config=_db_config_override,
     )
 
@@ -179,6 +208,8 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
         "salesforce_case_id": salesforce_case_id,
         "salesforce_case_url": salesforce_case_url,
         "salesforce_error": salesforce_error,
+        "recommendation": recommendation,
+        "recommendation_error": recommendation_error,
     }
 
 
@@ -210,18 +241,24 @@ def _format_jira_description(
     conversation_text: str,
     analysis: Dict[str, Any],
     created_at: str,
+    recommendation: Optional[str] = None,
 ) -> str:
     """Build a human-friendly Jira description payload."""
     resolved_status = "RESOLVED" if analysis.get("resolved") else "UNRESOLVED"
     summary = analysis.get("summary") or "No summary generated."
     preview = conversation_text if len(conversation_text) <= 2000 else f"{conversation_text[:2000]}..."
 
-    return (
+    description = (
         "Auto-generated from AutoBanking Customer Service workflow.\n\n"
         f"Conversation ID: {conversation_id}\n"
         f"Created At: {created_at}\n"
         f"Resolution Status: {resolved_status}\n"
         f"Summary: {summary}\n\n"
-        "---- Conversation Transcript ----\n"
-        f"{preview}"
     )
+    
+    if recommendation:
+        description += f"---- AI Recommendations ----\n{recommendation}\n\n"
+    
+    description += f"---- Conversation Transcript ----\n{preview}"
+    
+    return description

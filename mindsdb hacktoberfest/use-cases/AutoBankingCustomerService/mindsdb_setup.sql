@@ -27,13 +27,19 @@ USING
 1. A concise summary (2-3 sentences) of the customer interaction
 2. Classification of issue resolution status
 
-IMPORTANT GUIDELINES:
-- If the customer explicitly confirms the issue is resolved, mark as RESOLVED
+IMPORTANT GUIDELINES FOR UNRESOLVED:
+- If the customer expresses dissatisfaction, frustration, or complaints, mark as UNRESOLVED
+- If the agent promises to "pass feedback along" or "escalate" without immediate resolution, mark as UNRESOLVED
+- If the customer raises concerns about bank policies, procedures, or communication, mark as UNRESOLVED
 - If the conversation ends without clear resolution, mark as UNRESOLVED
 - If customer audio is missing or incomplete (e.g., only agent responses visible), mark as UNRESOLVED
 - If the agent offers a solution but customer confirmation is missing, mark as UNRESOLVED
 - If the conversation is cut off or incomplete, mark as UNRESOLVED
-- Look for explicit confirmation words like "thank you", "that worked", "issue resolved", "problem solved"
+
+GUIDELINES FOR RESOLVED:
+- Only mark as RESOLVED if the customer explicitly confirms satisfaction
+- Look for explicit confirmation words like "thank you", "that worked", "issue resolved", "problem solved", "perfect"
+- The customer must express contentment with the outcome, not just acceptance
 
 Format your response EXACTLY as:
 Summary: [your 2-3 sentence summary describing what happened in the conversation]
@@ -55,6 +61,49 @@ SHOW AGENTS;
 show SKILLS;
 --jiaqi
 
+CREATE DATABASE my_Confluence   --- display name for database.
+WITH ENGINE = 'confluence',
+PARAMETERS = {
+  "api_base": "",
+  "username": "",
+  "password":""
+};
+
+CREATE KNOWLEDGE_BASE my_confluence_kb
+USING
+    embedding_model = {
+        "provider": "openai",
+        "model_name": "text-embedding-3-small",
+        "api_key":""
+    },
+    content_columns = ['body_storage_value'],
+    id_column = 'id';
+
+DESCRIBE KNOWLEDGE_BASE my_confluence_kb;
+
+INSERT INTO my_confluence_kb (
+    SELECT id, title, body_storage_value
+    FROM my_confluence.pages
+    WHERE id IN ('360449','589825')
+);
+
+SELECT COUNT(*) as total_rows FROM my_confluence_kb;
+
+SELECT * FROM my_confluence_kb
+WHERE chunk_content = 'Consumer Focus'
+LIMIT 3;
+
+CREATE AGENT recommendation_agent
+USING
+    model = {
+        "provider": "openai",
+        "model_name": "gpt-4o",
+        "api_key":""
+    },
+    data = {
+        "knowledge_bases": ["mindsdb.my_confluence_kb"]
+    },
+    prompt_template = 'my_confluence_kb stores Confluence pages data, you need to give recommendations according to the customer complaints handling manual';
 -- CREATE JOB process_new_conversations (
 
 --     UPDATE banking_postgres_db.conversations_summary

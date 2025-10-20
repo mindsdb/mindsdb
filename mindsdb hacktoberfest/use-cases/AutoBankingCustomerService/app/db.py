@@ -81,6 +81,8 @@ def insert_conversation_with_analysis(
     salesforce_case_id: Optional[str] = None,
     salesforce_case_url: Optional[str] = None,
     salesforce_error: Optional[str] = None,
+    recommendation: Optional[str] = None,
+    recommendation_error: Optional[str] = None,
 ) -> None:
     """Insert a single analyzed conversation into the database."""
     config = db_config or DEFAULT_DB_CONFIG
@@ -100,10 +102,12 @@ def insert_conversation_with_analysis(
                     salesforce_case_id,
                     salesforce_case_url,
                     salesforce_error,
+                    recommendation,
+                    recommendation_error,
                     created_at,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW());
             """
             cur.execute(
                 insert_sql,
@@ -118,6 +122,8 @@ def insert_conversation_with_analysis(
                     salesforce_case_id,
                     salesforce_case_url,
                     salesforce_error,
+                    recommendation,
+                    recommendation_error,
                 ),
             )
         conn.commit()
@@ -145,9 +151,41 @@ def _ensure_jira_columns(db_config: Dict[str, str | int], verbose: bool = False)
                     ADD COLUMN IF NOT EXISTS jira_issue_error TEXT NULL;
                     """
                 )
+                # Salesforce columns
+                cur.execute(
+                    """
+                    ALTER TABLE demo_data.conversations_summary
+                    ADD COLUMN IF NOT EXISTS salesforce_case_id TEXT NULL;
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE demo_data.conversations_summary
+                    ADD COLUMN IF NOT EXISTS salesforce_case_url TEXT NULL;
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE demo_data.conversations_summary
+                    ADD COLUMN IF NOT EXISTS salesforce_error TEXT NULL;
+                    """
+                )
+                # Recommendation columns
+                cur.execute(
+                    """
+                    ALTER TABLE demo_data.conversations_summary
+                    ADD COLUMN IF NOT EXISTS recommendation TEXT NULL;
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE demo_data.conversations_summary
+                    ADD COLUMN IF NOT EXISTS recommendation_error TEXT NULL;
+                    """
+                )
             conn.commit()
         if verbose:
-            print("✓ Jira columns verified on conversations_summary")
+            print("✓ Jira, Salesforce, and Recommendation columns verified on conversations_summary")
     except Exception as exc:  # pragma: no cover - defensive logging
         if verbose:
             print(f"✗ Unable to ensure Jira columns: {exc}")

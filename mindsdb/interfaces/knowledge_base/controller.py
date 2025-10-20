@@ -379,13 +379,14 @@ class KnowledgeBaseTable:
             logger.debug(f"Query returned {len(df)} rows")
             logger.debug(f"Columns in response: {df.columns.tolist()}")
         else:
-            df = pd.DataFrame([], columns=['id', 'chunk_id', 'chunk_content', 'metadata', 'distance'])
+            df = pd.DataFrame([], columns=["id", "chunk_id", "chunk_content", "metadata", "distance"])
 
         # check if db_handler inherits from KeywordSearchBase
         if hybrid_search_alpha > 0:
             if not isinstance(db_handler, KeywordSearchBase):
                 raise ValueError(
-                    f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. ")
+                    f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. "
+                )
 
             # If query_text is present, use it for keyword search
             logger.debug(f"Performing keyword search with query text: {query_text}")
@@ -399,9 +400,10 @@ class KnowledgeBaseTable:
             ]
 
             df_keyword = db_handler.dispatch_select(
-                keyword_query_obj, keyword_search_conditions,
+                keyword_query_obj,
+                keyword_search_conditions,
                 allowed_metadata_columns=allowed_metadata_columns,
-                keyword_search_args=keyword_search_args
+                keyword_search_args=keyword_search_args,
             )
             df_keyword = self.addapt_result_columns(df_keyword)
             logger.debug(f"Keyword search returned {len(df_keyword)} rows")
@@ -409,9 +411,7 @@ class KnowledgeBaseTable:
             # ensure df and df_keyword_select have exactly the same columns
             if not df_keyword.empty:
                 if hybrid_search_alpha:
-                    df_keyword[TableField.DISTANCE.value] = (
-                        hybrid_search_alpha * df_keyword[TableField.DISTANCE.value]
-                    )
+                    df_keyword[TableField.DISTANCE.value] = hybrid_search_alpha * df_keyword[TableField.DISTANCE.value]
                     df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[TableField.DISTANCE.value]
 
                 if df is None:

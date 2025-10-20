@@ -577,6 +577,12 @@ if __name__ == "__main__":
     ioloop.run_until_complete(wait_apis_start())
 
     threading.Thread(target=do_clean_process_marks, name="clean_process_marks").start()
+    if config["logging"]["resources_log"]["enabled"] is True:
+        threading.Thread(
+            target=log.resources_log_thread,
+            args=(_stop_event, config["logging"]["resources_log"]["interval"]),
+            name="resources_log",
+        ).start()
 
     ioloop.run_until_complete(gather_apis())
     ioloop.close()

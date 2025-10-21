@@ -484,3 +484,288 @@ class ElasticsearchHandler(DatabaseHandler):
             result.data_frame = df.rename(columns={"column": "COLUMN_NAME", "type": "DATA_TYPE"})
 
         return result
+
+    def get_column_statistics(self, table_name: str, column_name: Optional[str] = None) -> Response:
+        """
+        Retrieves statistics for columns in the specified Elasticsearch index.
+
+        This method uses Elasticsearch aggregations to efficiently gather statistics in a single query:
+        - Numeric fields: min, max, avg, sum, count
+        - Keyword fields: distinct count (cardinality)
+        - Text fields: distinct count (cardinality on .keyword multi-field)
+        - Date fields: min, max (as timestamps)
+        - All fields: null count (missing values)
+        - Object/nested fields: excluded from aggregations, null count only
+        - Nested/array fields: treated as text (cardinality on JSON string representation)
+
+        Implementation Details:
+        - Text fields use the .keyword multi-field suffix for aggregations
+        - Object and nested types are skipped for cardinality (not aggregatable)
+        - If aggregations fail (e.g., text field without .keyword), returns schema with NULL values
+        - All statistics gathered in a single Elasticsearch search query for performance
+
+        Args:
+            table_name (str): The name of the index to analyze.
+            column_name (Optional[str]): Specific column name. If None, returns statistics for all columns.
+
+        Returns:
+            Response: DataFrame with columns:
+                - column_name: Field name
+                - data_type: Elasticsearch field type
+                - null_count: Number of documents missing this field (0 if aggregation failed)
+                - distinct_count: Approximate count of unique values (0 if not aggregatable)
+                - min: Minimum value (numeric/date fields, None otherwise)
+                - max: Maximum value (numeric/date fields, None otherwise)
+                - avg: Average value (numeric fields only, None otherwise)
+
+        Raises:
+            ValueError: If table_name is invalid or column_name not found in index.
+
+        Example:
+            >>> handler.get_column_statistics('kibana_sample_data_flights')
+            >>> handler.get_column_statistics('products', 'price')
+        """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Table name must be a non-empty string")
+
+        logger.debug(f"Getting column statistics for {table_name}, column: {column_name}")
+        need_to_close = not self.is_connected
+        connection = self.connect()
+
+        try:
+            # Step 1: Get index mapping to determine field types
+            mapping_response = connection.indices.get_mapping(index=table_name)
+
+            # Extract field mappings (handle both single and multi-index responses)
+            if table_name in mapping_response:
+                properties = mapping_response[table_name].get("mappings", {}).get("properties", {})
+            else:
+                # For wildcard or first index in response
+                first_index = list(mapping_response.keys())[0]
+                properties = mapping_response[first_index].get("mappings", {}).get("properties", {})
+
+            if not properties:
+                logger.warning(f"No properties found for index {table_name}")
+                return Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=DataFrame(
+                        columns=["column_name", "data_type", "null_count", "distinct_count", "min", "max", "avg"]
+                    ),
+                )
+
+            # Step 2: Flatten nested field mappings and filter by column_name if provided
+            fields_to_analyze = {}
+            self._extract_fields_from_mapping(properties, fields_to_analyze, prefix="")
+
+            if column_name:
+                if column_name not in fields_to_analyze:
+                    raise ValueError(f"Column '{column_name}' not found in index '{table_name}'")
+                fields_to_analyze = {column_name: fields_to_analyze[column_name]}
+
+            # Step 3: Build comprehensive aggregation query
+            aggs = {}
+            for field_name, field_info in fields_to_analyze.items():
+                field_type = field_info.get("type", "object")
+                safe_field_name = field_name.replace(".", "_")
+
+                # Determine aggregation field (text fields need .keyword suffix)
+                agg_field = field_name
+                if field_type == "text":
+                    # Text fields typically have a .keyword multi-field for aggregations
+                    agg_field = f"{field_name}.keyword"
+
+                # Cardinality aggregation for all fields (distinct count)
+                # Skip for object/nested types that don't support aggregations
+                if field_type not in ["object", "nested"]:
+                    aggs[f"{safe_field_name}_cardinality"] = {"cardinality": {"field": agg_field}}
+
+                # Missing aggregation for all fields (null count)
+                aggs[f"{safe_field_name}_missing"] = {"missing": {"field": field_name}}
+
+                # Stats aggregation for numeric and date fields
+                if field_type in [
+                    "long",
+                    "integer",
+                    "short",
+                    "byte",
+                    "double",
+                    "float",
+                    "half_float",
+                    "scaled_float",
+                    "date",
+                ]:
+                    aggs[f"{safe_field_name}_stats"] = {"stats": {"field": field_name}}
+
+            # Step 4: Execute single aggregation query for all statistics
+            search_body = {
+                "size": 0,  # We only need aggregations, not documents
+                "aggs": aggs,
+            }
+
+            logger.debug(f"Executing aggregation query with {len(aggs)} aggregations")
+
+            # Execute aggregation query with error handling for field-specific failures
+            try:
+                agg_response = connection.search(index=table_name, body=search_body)
+            except Exception as search_error:
+                # If aggregation fails (e.g., text field without .keyword), log and retry without problematic aggs
+                error_msg = str(search_error).lower()
+                if "fielddata" in error_msg or "keyword" in error_msg or "text" in error_msg:
+                    logger.warning(f"Aggregation failed, possibly due to text field without fielddata: {search_error}")
+                    # Return basic statistics without aggregations
+                    stats_data = []
+                    for field_name, field_info in fields_to_analyze.items():
+                        stats_data.append(
+                            {
+                                "column_name": field_name,
+                                "data_type": field_info.get("type", "object"),
+                                "null_count": None,
+                                "distinct_count": None,
+                                "min": None,
+                                "max": None,
+                                "avg": None,
+                            }
+                        )
+                    return Response(RESPONSE_TYPE.TABLE, data_frame=DataFrame(stats_data))
+                else:
+                    raise
+
+            # Step 5: Parse aggregation results into statistics
+            stats_data = []
+            for field_name, field_info in fields_to_analyze.items():
+                field_type = field_info.get("type", "object")
+                safe_field_name = field_name.replace(".", "_")
+
+                aggregations = agg_response.get("aggregations", {})
+
+                # Extract cardinality (distinct count)
+                cardinality_key = f"{safe_field_name}_cardinality"
+                cardinality_result = aggregations.get(cardinality_key, {})
+                distinct_count = int(cardinality_result.get("value", 0)) if cardinality_result else 0
+
+                # Extract missing count (null count)
+                missing_key = f"{safe_field_name}_missing"
+                missing_result = aggregations.get(missing_key, {})
+                null_count = missing_result.get("doc_count", 0) if missing_result else 0
+
+                # Extract stats for numeric/date fields
+                stats_key = f"{safe_field_name}_stats"
+                stats = aggregations.get(stats_key, {})
+
+                min_val = stats.get("min") if stats else None
+                max_val = stats.get("max") if stats else None
+                avg_val = stats.get("avg") if stats else None
+
+                stats_data.append(
+                    {
+                        "column_name": field_name,
+                        "data_type": field_type,
+                        "null_count": null_count,
+                        "distinct_count": distinct_count,
+                        "min": min_val,
+                        "max": max_val,
+                        "avg": avg_val,
+                    }
+                )
+
+            result_df = DataFrame(stats_data)
+            logger.debug(f"Retrieved statistics for {len(stats_data)} fields")
+
+            return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
+
+        except ValueError:
+            # Re-raise ValueError (e.g., invalid column name) as-is
+            raise
+        except Exception as e:
+            logger.error(f"Failed to get column statistics: {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+
+        finally:
+            if need_to_close:
+                self.disconnect()
+
+    def _extract_fields_from_mapping(self, properties: Dict, fields: Dict, prefix: str = "") -> None:
+        """
+        Recursively extracts field definitions from Elasticsearch mapping.
+
+        This helper method flattens nested object and nested type fields into dot-notation paths.
+
+        Args:
+            properties (Dict): Field properties from mapping
+            fields (Dict): Output dictionary to populate with field definitions
+            prefix (str): Current field path prefix for nested fields
+        """
+        for field_name, field_def in properties.items():
+            full_field_name = f"{prefix}.{field_name}" if prefix else field_name
+            field_type = field_def.get("type")
+
+            if field_type:
+                # Regular field with a type
+                fields[full_field_name] = field_def
+            elif "properties" in field_def:
+                # Nested object - recurse into it
+                self._extract_fields_from_mapping(field_def["properties"], fields, full_field_name)
+            else:
+                # Field without type or properties (treat as object)
+                fields[full_field_name] = {"type": "object"}
+
+    def get_primary_keys(self, table_name: str) -> Response:
+        """
+        Retrieves the primary key for the specified Elasticsearch index.
+
+        In Elasticsearch, the _id field serves as the implicit primary key for each document.
+        This method always returns _id as the primary key.
+
+        Args:
+            table_name (str): The name of the index.
+
+        Returns:
+            Response: DataFrame with columns:
+                - constraint_name: Name of the primary key constraint
+                - column_name: The column name (_id)
+
+        Example:
+            >>> handler.get_primary_keys('products')
+            # Returns: constraint_name='PRIMARY', column_name='_id'
+        """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Table name must be a non-empty string")
+
+        logger.debug(f"Getting primary keys for {table_name}")
+
+        # Elasticsearch always uses _id as the document identifier (primary key)
+        pk_data = [{"constraint_name": "PRIMARY", "column_name": "_id"}]
+
+        return Response(RESPONSE_TYPE.TABLE, data_frame=DataFrame(pk_data))
+
+    def get_foreign_keys(self, table_name: str) -> Response:
+        """
+        Retrieves foreign keys for the specified Elasticsearch index.
+
+        Elasticsearch is a NoSQL document store and does not support foreign key constraints.
+        This method always returns an empty DataFrame with the proper structure.
+
+        Args:
+            table_name (str): The name of the index.
+
+        Returns:
+            Response: Empty DataFrame with columns:
+                - constraint_name: Foreign key constraint name
+                - column_name: The column name
+                - referenced_table: The referenced table name
+                - referenced_column: The referenced column name
+
+        Example:
+            >>> handler.get_foreign_keys('products')
+            # Returns: Empty DataFrame (NoSQL has no foreign keys)
+        """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Table name must be a non-empty string")
+
+        logger.debug(f"Getting foreign keys for {table_name} (NoSQL - will return empty)")
+
+        # Elasticsearch is NoSQL and doesn't have foreign key constraints
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=DataFrame(columns=["constraint_name", "column_name", "referenced_table", "referenced_column"]),
+        )

@@ -1,6 +1,8 @@
 import shopify
 import requests
-import re
+import json
+
+from pyactiveresource.connection import ClientError, ServerError, ConnectionError as ResourceConnectionError
 
 from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     ProductsTable,
@@ -125,61 +127,59 @@ class ShopifyHandler(APIHandler):
             shopify.ShopifyResource.activate_session(api_session)
             shopify.Shop.current()
             response.success = True
-        except Exception as e:
+        except ClientError as e:
+            # Handle Shopify API client errors (4xx responses)
             logger.error(f"Error connecting to Shopify: {str(e)}")
             response.error_message = str(e)
 
-            # Parse the error to extract clean, user-friendly messages
-            error_msg = str(e)
+            status_code = e.response.code if hasattr(e.response, "code") else None
 
-            # Handle ClientError (Shopify API errors)
-            if "ClientError" in error_msg and "Response(" in error_msg:
-                # Extract HTTP status code
-                if "code=402" in error_msg:
-                    if '"errors":"Unavailable Shop"' in error_msg or "Unavailable Shop" in error_msg:
-                        raise ConnectionFailed(
-                            "Shopify shop is unavailable. This could be due to shop suspension, billing issues, or incorrect shop URL."
-                        )
-                    else:
-                        raise ConnectionFailed(
-                            "Shopify API access requires payment. Please check your Shopify billing status."
-                        )
-                elif "code=401" in error_msg:
+            # Try to parse error message from response body
+            error_detail = None
+            if hasattr(e.response, "body"):
+                try:
+                    body = json.loads(e.response.body)
+                    error_detail = body.get("errors", None)
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+
+            if status_code == 402:
+                if error_detail and "Unavailable Shop" in str(error_detail):
                     raise ConnectionFailed(
-                        "Invalid Shopify API credentials. Please check your access token and shop URL."
+                        "Shopify shop is unavailable. This could be due to shop suspension, billing issues, or incorrect shop URL."
                     )
-                elif "code=404" in error_msg:
-                    raise ConnectionFailed("Shopify shop not found. Please verify the shop URL is correct.")
-                elif "code=403" in error_msg:
-                    raise ConnectionFailed("Access denied. Please check your API permissions and credentials.")
                 else:
-                    body_match = re.search(r'"errors":"([^"]+)"', error_msg)
-                    if body_match:
-                        shopify_error = body_match.group(1)
-                        raise ConnectionFailed(f"Shopify API error: {shopify_error}")
-                    else:
-                        raise ConnectionFailed(
-                            "Failed to connect to Shopify API. Please check your credentials and shop URL."
-                        )
-
-            # Handle other HTTP errors
-            elif "HTTP Error 402" in error_msg:
-                raise ConnectionFailed(
-                    "Shopify shop is unavailable or requires payment. Please check your shop status and billing."
-                )
-            elif "HTTP Error 401" in error_msg or "Unauthorized" in error_msg:
+                    raise ConnectionFailed(
+                        "Shopify API access requires payment. Please check your Shopify billing status."
+                    )
+            elif status_code == 401:
                 raise ConnectionFailed("Invalid Shopify API credentials. Please check your access token and shop URL.")
-            elif "HTTP Error 404" in error_msg:
+            elif status_code == 404:
                 raise ConnectionFailed("Shopify shop not found. Please verify the shop URL is correct.")
-            elif "ConnectionError" in error_msg or "timeout" in error_msg.lower():
-                raise ConnectionFailed(
-                    "Network connection failed. Please check your internet connection and try again."
-                )
+            elif status_code == 403:
+                raise ConnectionFailed("Access denied. Please check your API permissions and credentials.")
             else:
-                # Generic error
-                raise ConnectionFailed("Failed to connect to Shopify. Please verify your shop URL and access token.")
-
-            response.success = False
+                if error_detail:
+                    raise ConnectionFailed(f"Shopify API error: {error_detail}")
+                else:
+                    raise ConnectionFailed(
+                        "Failed to connect to Shopify API. Please check your credentials and shop URL."
+                    )
+        except ServerError as e:
+            # Handle Shopify API server errors (5xx responses)
+            logger.error(f"Shopify server error: {str(e)}")
+            response.error_message = str(e)
+            raise ConnectionFailed("Shopify API server error. Please try again later or contact Shopify support.")
+        except ResourceConnectionError as e:
+            # Handle network/connection errors
+            logger.error(f"Connection error: {str(e)}")
+            response.error_message = str(e)
+            raise ConnectionFailed("Network connection failed. Please check your internet connection and try again.")
+        except Exception as e:
+            # Handle any other unexpected errors
+            logger.error(f"Unexpected error connecting to Shopify: {str(e)}")
+            response.error_message = str(e)
+            raise ConnectionFailed("Failed to connect to Shopify. Please verify your shop URL and access token.")
 
         if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
             url = f"https://api.yotpo.com/v1/apps/{self.yotpo_app_key}/reviews?count=1&utoken={self.yotpo_access_token}"

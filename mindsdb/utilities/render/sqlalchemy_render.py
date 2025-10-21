@@ -384,7 +384,7 @@ class SqlalchemyRender:
         elif isinstance(t, ast.Parameter):
             col = sa.column(t.value, is_literal=True)
             if t.alias:
-                raise RenderError()
+                raise RenderError("Parameter aliases are not supported in the renderer")
         elif isinstance(t, ast.Tuple):
             col = [self.to_expression(i) for i in t.items]
         elif isinstance(t, ast.Variable):

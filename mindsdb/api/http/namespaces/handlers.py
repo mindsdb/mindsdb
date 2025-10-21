@@ -19,6 +19,10 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.command_executor import ExecuteCommands
+from mindsdb.utilities.exception import EntityExistsError
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 @ns_conf.route("/")
@@ -59,7 +63,9 @@ class HandlerIcon(Resource):
             if icon_path.is_absolute() is False:
                 icon_path = Path(os.getcwd()).joinpath(icon_path)
         except Exception:
-            return http_error(HTTPStatus.NOT_FOUND, "Icon not found", f"Icon for {handler_name} not found")
+            error_message = f"Icon for '{handler_name}' not found"
+            logger.warning(error_message)
+            return http_error(HTTPStatus.NOT_FOUND, "Icon not found", error_message)
         else:
             return send_file(icon_path)
 
@@ -120,11 +126,16 @@ def prepare_formdata():
         params[name] = value
 
     def on_file(file):
-        file_name = file.field_name.decode()
-        if file_name not in ("code", "modules"):
-            raise ValueError(f"Wrong field name: {file_name}")
-        params[file_name] = file.file_object
-        file_names.append(file_name)
+        file_name = file.file_name.decode()
+        if Path(file_name).name != file_name:
+            raise ValueError(f"Wrong file name: {file_name}")
+
+        field_name = file.field_name.decode()
+        if field_name not in ("code", "modules"):
+            raise ValueError(f"Wrong field name: {field_name}")
+
+        params[field_name] = file.file_object
+        file_names.append(field_name)
 
     temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
 
@@ -170,7 +181,7 @@ class BYOMUpload(Resource):
         code_file_path = params["code"]
         try:
             module_file_path = params["modules"]
-        except AttributeError:
+        except KeyError:
             module_file_path = Path(code_file_path).parent / "requirements.txt"
             module_file_path.touch()
             module_file_path = str(module_file_path)
@@ -217,6 +228,13 @@ class BYOMUpload(Resource):
         ast_query = CreateMLEngine(name=Identifier(name), handler="byom", params=connection_args)
         sql_session = SessionController()
         command_executor = ExecuteCommands(sql_session)
-        command_executor.execute_command(ast_query)
+        try:
+            command_executor.execute_command(ast_query)
+        except EntityExistsError:
+            return http_error(
+                HTTPStatus.CONFLICT,
+                "Engine already exists",
+                f'Engine "{name}" already exists',
+            )
 
         return "", 200

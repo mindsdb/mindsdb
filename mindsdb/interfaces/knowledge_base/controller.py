@@ -371,9 +371,9 @@ class KnowledgeBaseTable:
         allowed_metadata_columns = self._get_allowed_metadata_columns()
 
         if hybrid_search_alpha is None:
-            hybrid_search_alpha = 0
+            hybrid_search_alpha = 1
 
-        if hybrid_search_alpha < 1:
+        if hybrid_search_alpha > 0:
             df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
             df = self.addapt_result_columns(df)
             logger.debug(f"Query returned {len(df)} rows")
@@ -382,7 +382,7 @@ class KnowledgeBaseTable:
             df = pd.DataFrame([], columns=["id", "chunk_id", "chunk_content", "metadata", "distance"])
 
         # check if db_handler inherits from KeywordSearchBase
-        if hybrid_search_alpha > 0:
+        if hybrid_search_alpha < 1:
             if not isinstance(db_handler, KeywordSearchBase):
                 raise ValueError(
                     f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. "
@@ -410,13 +410,12 @@ class KnowledgeBaseTable:
             logger.debug(f"Columns in keyword search response: {df_keyword.columns.tolist()}")
             # ensure df and df_keyword_select have exactly the same columns
             if not df_keyword.empty:
-                if hybrid_search_alpha:
-                    df_keyword[TableField.DISTANCE.value] = hybrid_search_alpha * df_keyword[TableField.DISTANCE.value]
-                    df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[TableField.DISTANCE.value]
-
                 if df is None:
                     df = df_keyword
                 else:
+                    df_keyword[TableField.DISTANCE.value] = hybrid_search_alpha * df_keyword[TableField.DISTANCE.value]
+                    df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[TableField.DISTANCE.value]
+
                     df = pd.concat([df, df_keyword], ignore_index=True)
                     # sort by distance if distance column exists
                     if TableField.DISTANCE.value in df.columns:

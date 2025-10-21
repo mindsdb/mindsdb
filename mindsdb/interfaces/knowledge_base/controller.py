@@ -410,7 +410,7 @@ class KnowledgeBaseTable:
             logger.debug(f"Columns in keyword search response: {df_keyword.columns.tolist()}")
             # ensure df and df_keyword_select have exactly the same columns
             if not df_keyword.empty:
-                if df is None:
+                if df.empty:
                     df = df_keyword
                 else:
                     df_keyword[TableField.DISTANCE.value] = hybrid_search_alpha * df_keyword[TableField.DISTANCE.value]

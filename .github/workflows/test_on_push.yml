@@ -5,7 +5,11 @@ permissions:
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - 'main'
+      - 'develop'
+      - '25-8-2-revert'
+      - 'feat/FQE-1654'
   workflow_dispatch:
 
 defaults:

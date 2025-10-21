@@ -515,6 +515,7 @@ class IntegrationController:
         """
         handler = self.handlers_cache.get(name)
         if handler is not None:
+            ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
             return handler
 
         integration_record = self._get_integration_record(name, case_sensitive)
@@ -588,6 +589,7 @@ class IntegrationController:
         if connect:
             self.handlers_cache.set(handler)
 
+        ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
         return handler
 
     def reload_handler_module(self, handler_name):

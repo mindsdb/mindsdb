@@ -4,10 +4,13 @@ permissions:
   contents: read
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
+      - 'develop'
+      - '25-8-2-revert'
+      - 'feat/FQE-1654'
 
 jobs:
 
@@ -30,9 +33,6 @@ jobs:
   get-deploy-labels:
     name: Get Deploy Envs
     runs-on: mdb-dev
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-labels
-      cancel-in-progress: true
     environment:
       name: ${{ github.event.pull_request.head.repo.fork && 'manual-approval' || '' }}
     outputs:
@@ -52,9 +52,6 @@ jobs:
     runs-on: mdb-dev
     needs: [get-deploy-labels]
     if: ${{ needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,9 +75,6 @@ jobs:
     name: Push Docker Cache
     runs-on: mdb-dev
     needs: [build]
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-cache
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -120,9 +114,6 @@ jobs:
       fail-fast: false
       matrix:
         deploy-env: ${{ fromJson(needs.get-deploy-labels.outputs.deploy-envs) }}
-    concurrency:
-      group: deploy-${{ matrix.deploy-env }}
-      cancel-in-progress: false
     uses: ./.github/workflows/test_on_deploy.yml
     with:
       git-sha: ${{ github.event.pull_request.head.sha }}

@@ -101,6 +101,9 @@ OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
 
+# upper version of numba is fixed in statsforecast handler to prevent installing numba==0.62.0 (its import fails on windows)
+STATSFORECAST_EP002_IGNORE_HANDLER_DEPS = ["numba"]
+
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
 SNOWFLAKE_DEP003_IGNORE_HANDLER_DEPS = ["pyarrow"]
@@ -119,6 +122,7 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
+        + STATSFORECAST_EP002_IGNORE_HANDLER_DEPS
     )
 )
 

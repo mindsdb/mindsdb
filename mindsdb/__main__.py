@@ -391,6 +391,7 @@ if __name__ == "__main__":
     logger.info(f"Version: {mindsdb_version}")
     logger.info(f"Configuration file: {config.config_path or 'absent'}")
     logger.info(f"Storage path: {config.paths['root']}")
+    log.log_system_info(logger)
     logger.debug(f"User config: {config.user_config}")
     logger.debug(f"System config: {config.auto_config}")
     logger.debug(f"Env config: {config.env_config}")
@@ -606,6 +607,7 @@ if __name__ == "__main__":
     ioloop.run_until_complete(wait_apis_start())
 
     threading.Thread(target=do_clean_process_marks, name="clean_process_marks").start()
+    threading.Thread(target=log.log_resources_thread, args=(_stop_event,), name="log_resources").start()
 
     ioloop.run_until_complete(gather_apis())
     ioloop.close()

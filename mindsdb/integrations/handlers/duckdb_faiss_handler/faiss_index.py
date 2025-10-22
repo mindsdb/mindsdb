@@ -1,7 +1,9 @@
+import os
 import json
 from typing import Iterable, List, Optional, Sequence, Tuple, Any, Union
 import numpy as np
 import faiss  # faiss or faiss-gpu
+
 
 def _as_np(x: Union[np.ndarray, Iterable[Iterable[float]]]) -> np.ndarray:
     arr = np.ascontiguousarray(np.array(x, dtype="float32"))
@@ -9,16 +11,18 @@ def _as_np(x: Union[np.ndarray, Iterable[Iterable[float]]]) -> np.ndarray:
         arr = arr.reshape(1, -1)
     return arr
 
+
 def _normalize_rows(x: np.ndarray) -> np.ndarray:
     norms = np.linalg.norm(x, axis=1, keepdims=True) + 1e-12
     return x / norms
 
+
 class FaissIndexWithFilter:
     def __init__(
         self,
-        dim: int,
+        dim: int = None,
         metric: str = "cosine",      # "cosine" or "l2"
-        backend: str = "ivf",        # "ivf", "flat", "hnsw"
+        backend: str = "hnsw",        # "ivf", "flat", "hnsw"
         use_gpu: bool = False,
         nlist: int = 1024,
         nprobe: int = 32,
@@ -26,6 +30,7 @@ class FaissIndexWithFilter:
         hnsw_m: int = 32,
         hnsw_ef_search: int = 64,
         hnsw_ef_construction: int = 200,
+        **kwargs
     ):
         assert metric in {"cosine", "l2"}
         assert backend in {"ivf", "flat", "hnsw"}
@@ -51,11 +56,11 @@ class FaissIndexWithFilter:
 
         self._next_id = 0
         self._meta: dict[int, Any] = {}
+        self._index_path = None
+        self._meta_path = None
         
         # Track deleted IDs for filtering
         self._deleted_ids: set = set()
-
-        self._build_index()
 
     def _build_index(self):
         if self.metric == "cosine":
@@ -87,10 +92,15 @@ class FaissIndexWithFilter:
         self,
         vectors: Union[np.ndarray, Iterable[Iterable[float]]],
         ids: Optional[Sequence[int]] = None,
-        metadata: Optional[Sequence[Any]] = None,
         batch_size: int = 65536,
     ) -> None:
         X = _as_np(vectors)
+
+        if self._index is None:
+            # first insert
+            self.dim = X.shape[1]
+            self._build_index()
+
         if X.shape[1] != self.dim:
             raise ValueError(f"Dimension mismatch: expected {self.dim}, got {X.shape[1]}")
 
@@ -98,25 +108,19 @@ class FaissIndexWithFilter:
             X = _normalize_rows(X)
 
         N = X.shape[0]
-        if ids is None:
-            ids = [self._alloc_id() for _ in range(N)]
-        else:
-            if len(ids) != N:
-                raise ValueError("Length of ids must match number of vectors")
-
-        if metadata is not None:
-            if len(metadata) != N:
-                raise ValueError("Length of metadata must match number of vectors")
-            for _id, m in zip(ids, metadata):
-                self._meta[_id] = m
+        # if ids is None:
+        ids = [self._alloc_id() for _ in range(N)]
+        # else:
+        #     if len(ids) != N:
+        #         raise ValueError("Length of ids must match number of vectors")
 
         if self.backend == "ivf" and not self._is_trained:
             # buffer until we reach threshold
             self._buf_vectors.append(X)
             self._buf_ids.extend(ids)
             total_buf = sum(buf.shape[0] for buf in self._buf_vectors)
-            if total_buf >= self.train_threshold:
-                self._train_ivf_and_flush(batch_size=batch_size)
+            # if total_buf >= self.train_threshold:
+            self._train_ivf_and_flush(batch_size=batch_size)
         else:
             self._batched_add(X, ids, batch_size=batch_size)
 
@@ -166,10 +170,16 @@ class FaissIndexWithFilter:
         """Mark IDs as deleted for filtering in searches."""
         self._deleted_ids.update(ids)
 
-    def save(self, path: str):
+    def drop(self):
+        if os.path.exists(self._index_path):
+            os.remove(self._index_path)
+        if os.path.exists(self._meta_path):
+            os.remove(self._meta_path)
+
+    def save(self):
         if self._index is None:
             raise RuntimeError("No index to save")
-        faiss.write_index(self._index, path)
+        faiss.write_index(self._index, self._index_path)
         side = {
             "dim": self.dim,
             "metric": self.metric,
@@ -186,36 +196,33 @@ class FaissIndexWithFilter:
             "meta": self._meta,
             "deleted_ids": list(self._deleted_ids),
         }
-        with open(path + ".meta", "w") as f:
+        with open(self._meta_path, "w") as f:
             json.dump(side, f)
 
     @classmethod
     def load(cls, path: str):
-        index = faiss.read_index(path)
-        with open(path + ".meta", "r") as f:
-            side = json.load(f)
-        obj = cls(
-            dim=side["dim"],
-            metric=side["metric"],
-            backend=side["backend"],
-            use_gpu=side["use_gpu"],
-            nlist=side["nlist"],
-            nprobe=side["nprobe"],
-            train_threshold=side["train_threshold"],
-            hnsw_m=side["hnsw_m"],
-            hnsw_ef_search=side["hnsw_ef_search"],
-            hnsw_ef_construction=side["hnsw_ef_construction"],
-        )
-        obj._index = index
-        obj._is_trained = side["is_trained"]
-        obj._next_id = side["next_id"]
-        obj._meta = {int(k): v for k, v in side.get("meta", {}).items()}
-        obj._deleted_ids = set(side.get("deleted_ids", []))
+        meta = {}
+        meta_path = os.path.join(path, "m.meta")
+        index_path = os.path.join(path, "i.idx")
 
-        if obj.backend == "hnsw":
-            h = faiss.downcast_index(obj._index)
-            if hasattr(h, "hnsw"):
-                h.hnsw.efSearch = obj.hnsw_ef_search
+        if os.path.exists(meta_path):
+            with open(meta_path, "r") as f:
+                meta = json.load(f)
+        obj = cls(**meta)
+        obj._index_path = index_path
+        obj._meta_path = meta_path
+        # obj._is_trained = side["is_trained"]
+        # obj._next_id = side["next_id"]
+        # obj._meta = {int(k): v for k, v in side.get("meta", {}).items()}
+        # obj._deleted_ids = set(side.get("deleted_ids", []))
+
+        if os.path.exists(index_path):
+            obj._index = faiss.read_index(index_path)
+
+            if obj.backend == "hnsw":
+                h = faiss.downcast_index(obj._index)
+                if hasattr(h, "hnsw"):
+                    h.hnsw.efSearch = obj.hnsw_ef_search
 
         return obj
 
@@ -225,15 +232,15 @@ class FaissIndexWithFilter:
         k: int = 10,
         allowed_ids: Optional[Sequence[int]] = None,
         return_metadata: bool = True,
-    ) -> Tuple[np.ndarray, np.ndarray, Optional[List[List[Any]]]]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Search with optional filtering by allowed_ids.
         If allowed_ids is provided, we first try to use native FAISS filtering
         (via IDSelector & SearchParameters). If that fails or is unsupported,
         we fall back to post-filtering.
         """
-        if self._index is None or self.ntotal == 0:
-            raise RuntimeError("Empty index")
+        if self._index is None:
+            return [], []
 
         Q = _as_np(queries)
         if Q.shape[1] != self.dim:
@@ -306,4 +313,4 @@ class FaissIndexWithFilter:
         if return_metadata:
             metas = [[self._meta.get(int(i)) if int(i) != -1 else None for i in row] for row in I]
 
-        return D, I, metas
+        return D, I

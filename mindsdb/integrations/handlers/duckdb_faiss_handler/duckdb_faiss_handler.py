@@ -78,12 +78,12 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         self.is_connected = False
         
         # Table registry: {table_name: {faiss_index, vector_columns, dimensions}}
-        self.table_registry = {}
+        # self.table_registry = {}
         
         # Initialize storage paths
         self.duckdb_path = os.path.join(self.persist_directory, "duckdb.db")
-        self.faiss_indices_path = os.path.join(self.persist_directory, "faiss_indices")
-        os.makedirs(self.faiss_indices_path, exist_ok=True)
+        self.faiss_index_path = os.path.join(self.persist_directory, "faiss_indices")
+        os.makedirs(self.faiss_index_path, exist_ok=True)
         
         self.connect()
 
@@ -94,14 +94,9 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         
         try:
             self.connection = duckdb.connect(self.duckdb_path)
+            self.faiss_index = FaissIndexWithFilter.load(self.faiss_index_path)
             self.is_connected = True
-            
-            # Initialize system tables
-            self._initialize_system_tables()
-            
-            # Load existing table metadata
-            self._load_table_registry()
-            
+
             logger.info("Connected to DuckDB database")
             return self.connection
             
@@ -115,208 +110,71 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             self.connection.close()
             self.is_connected = False
 
-    def _initialize_system_tables(self):
-        """Initialize system tables for tracking table metadata."""
+
+    # def _get_faiss_index(self, table_name: str) -> Optional[FaissIndexWithFilter]:
+    #     """Lazy load Faiss index for a table."""
+    #     # if table_name not in self.table_registry:
+    #     #     return None
+    #
+    #     if self.table_registry[table_name]["faiss_index"] is None:
+    #         index_path = os.path.join(self.faiss_indices_path, f"{table_name}.index")
+    #         if os.path.exists(index_path):
+    #             try:
+    #                 self.table_registry[table_name]["faiss_index"] = FaissIndexWithFilter.load(index_path)
+    #             except Exception as e:
+    #                 logger.error(f"Failed to load Faiss index for {table_name}: {e}")
+    #                 return None
+    #         else:
+    #             logger.warning(f"Faiss index not found for table {table_name}")
+    #             return None
+    #
+    #     return self.table_registry[table_name]["faiss_index"]
+
+    # def _generate_id(self, content: str) -> str:
+    #     """Generate ID from content hash."""
+    #     return hashlib.md5(content.encode()).hexdigest()
+
+    def create_table(self, table_name: str, if_not_exists=True):
+
         with self.connection.cursor() as cur:
-            # Create system table for tracking table schemas
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS __mindsdb_tables__ (
-                    table_name VARCHAR PRIMARY KEY,
-                    vector_columns JSON,
-                    dimensions JSON,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+            cur.execute(f"""
+                CREATE TABLE IF NOT EXISTS {table_name} (
+                    id TEXT PRIMARY KEY,
+                    content TEXT,
+                    metadata JSON
                 )
             """)
 
-    def _load_table_registry(self):
-        """Load existing table metadata into registry."""
-        try:
-            with self.connection.cursor() as cur:
-                cur.execute("SELECT table_name, vector_columns, dimensions FROM __mindsdb_tables__")
-                rows = cur.fetchall()
-                
-                for table_name, vector_columns, dimensions in rows:
-                    self.table_registry[table_name] = {
-                        "vector_columns": json.loads(vector_columns) if vector_columns else {},
-                        "dimensions": json.loads(dimensions) if dimensions else {},
-                        "faiss_index": None  # Lazy load
-                    }
-        except Exception as e:
-            logger.warning(f"Could not load table registry: {e}")
-
-    def _get_faiss_index(self, table_name: str) -> Optional[FaissIndexWithFilter]:
-        """Lazy load Faiss index for a table."""
-        if table_name not in self.table_registry:
-            return None
-            
-        if self.table_registry[table_name]["faiss_index"] is None:
-            index_path = os.path.join(self.faiss_indices_path, f"{table_name}.index")
-            if os.path.exists(index_path):
-                try:
-                    self.table_registry[table_name]["faiss_index"] = FaissIndexWithFilter.load(index_path)
-                except Exception as e:
-                    logger.error(f"Failed to load Faiss index for {table_name}: {e}")
-                    return None
-            else:
-                logger.warning(f"Faiss index not found for table {table_name}")
-                return None
-                
-        return self.table_registry[table_name]["faiss_index"]
-
-    def _parse_vector_columns(self, create_table_query: CreateTable) -> Dict[str, int]:
-        """Parse CREATE TABLE query to extract VECTOR(dim) columns."""
-        vector_columns = {}
-        
-        for column in create_table_query.columns:
-            column_name = column.name
-            column_type = str(column.type).upper()
-            
-            # Match VECTOR(dimension) pattern
-            match = re.match(r'VECTOR\s*\(\s*(\d+)\s*\)', column_type)
-            if match:
-                dimension = int(match.group(1))
-                vector_columns[column_name] = dimension
-                
-        return vector_columns
-
-    def _generate_id(self, content: str) -> str:
-        """Generate ID from content hash."""
-        return hashlib.md5(content.encode()).hexdigest()
-
-    def create_table(self, table_name: str, if_not_exists=True) -> Response:
-        """Create table with DuckDB and Faiss structures."""
-        try:
-            # This will be called from the dispatcher with the actual CREATE TABLE query
-            # For now, we'll implement the core logic
-            logger.info(f"Creating table {table_name}")
-            return Response(RESPONSE_TYPE.OK)
-            
-        except Exception as e:
-            logger.error(f"Error creating table {table_name}: {e}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
-
-    def _dispatch_create_table(self, query: CreateTable):
-        """Dispatch CREATE TABLE query."""
-        table_name = query.name.parts[-1]
-        if_not_exists = getattr(query, "if_not_exists", False)
-        
-        # Parse vector columns
-        vector_columns = self._parse_vector_columns(query)
-        
-        # Extract regular columns
-        regular_columns = []
-        for column in query.columns:
-            column_name = column.name
-            column_type = str(column.type).upper()
-            
-            # Skip vector columns (handled separately)
-            if not re.match(r'VECTOR\s*\(\s*\d+\s*\)', column_type):
-                regular_columns.append(f"{column_name} {column_type}")
-        
-        # Create the table
-        self._create_table_impl(table_name, vector_columns, regular_columns, if_not_exists)
-        return Response(RESPONSE_TYPE.OK)
-
-    def _create_table_impl(self, table_name: str, vector_columns: Dict[str, int], 
-                           regular_columns: List[str], if_not_exists=True):
-        """Internal implementation of table creation."""
-        with self.connection.cursor() as cur:
-            # Create DuckDB table
-            columns_sql = ["id VARCHAR PRIMARY KEY", "content TEXT", "metadata JSON"]
-            columns_sql.extend(regular_columns)
-            
-            # Add vector columns as JSON (we'll store the actual vectors in Faiss)
-            for col_name, dim in vector_columns.items():
-                columns_sql.append(f"{col_name} JSON")  # Store as JSON for metadata
-            
-            create_sql = f"CREATE TABLE {'IF NOT EXISTS' if if_not_exists else ''} {table_name} ({', '.join(columns_sql)})"
-            cur.execute(create_sql)
-            
-            # Create Faiss index for each vector column
-            for col_name, dim in vector_columns.items():
-                faiss_index = FaissIndexWithFilter(
-                    dim=dim,
-                    metric=self.metric,
-                    backend=self.backend,
-                    use_gpu=self.use_gpu,
-                    nlist=self.nlist,
-                    nprobe=self.nprobe,
-                    hnsw_m=self.hnsw_m,
-                    hnsw_ef_search=self.hnsw_ef_search,
-                )
-                
-                # Save initial empty index
-                index_path = os.path.join(self.faiss_indices_path, f"{table_name}_{col_name}.index")
-                faiss_index.save(index_path)
-                
-                # Store in registry
-                if table_name not in self.table_registry:
-                    self.table_registry[table_name] = {
-                        "vector_columns": {},
-                        "dimensions": {},
-                        "faiss_index": None
-                    }
-                
-                self.table_registry[table_name]["vector_columns"][col_name] = dim
-                self.table_registry[table_name]["dimensions"][col_name] = dim
-                
-                # For now, use the first vector column as the main index
-                if self.table_registry[table_name]["faiss_index"] is None:
-                    self.table_registry[table_name]["faiss_index"] = faiss_index
-            
-            # Store metadata in system table
-            cur.execute("""
-                INSERT OR REPLACE INTO __mindsdb_tables__ 
-                (table_name, vector_columns, dimensions) 
-                VALUES (?, ?, ?)
-            """, (
-                table_name,
-                json.dumps(vector_columns),
-                json.dumps({col: dim for col, dim in vector_columns.items()})
-            ))
-
-    def drop_table(self, table_name: str, if_exists=True) -> Response:
+    def drop_table(self, table_name: str, if_exists=True):
         """Drop table from both DuckDB and Faiss."""
-        try:
-            with self.connection.cursor() as cur:
+        with self.connection.cursor() as cur:
                 # Drop DuckDB table
-                drop_sql = f"DROP TABLE {'IF EXISTS' if if_exists else ''} {table_name}"
-                cur.execute(drop_sql)
-                
-                # Remove from system table
-                cur.execute("DELETE FROM __mindsdb_tables__ WHERE table_name = ?", (table_name,))
-                
-                # Delete Faiss index files
-                if table_name in self.table_registry:
-                    vector_columns = self.table_registry[table_name]["vector_columns"]
-                    for col_name in vector_columns:
-                        index_path = os.path.join(self.faiss_indices_path, f"{table_name}_{col_name}.index")
-                        if os.path.exists(index_path):
-                            os.remove(index_path)
-                        if os.path.exists(index_path + ".meta"):
-                            os.remove(index_path + ".meta")
-                    
-                    del self.table_registry[table_name]
-                
-                logger.info(f"Dropped table {table_name}")
-                return Response(RESPONSE_TYPE.OK)
-                
-        except Exception as e:
-            logger.error(f"Error dropping table {table_name}: {e}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            drop_sql = f"DROP TABLE {'IF EXISTS' if if_exists else ''} {table_name}"
+            cur.execute(drop_sql)
+
+        if self.faiss_index:
+            self.faiss_index.drop()
 
     def insert(self, table_name: str, data: pd.DataFrame) -> Response:
         """Insert data into both DuckDB and Faiss."""
+
+        with self.connection.cursor() as cur:
+
+            cur.execute(f"""
+                insert into {table_name} (id, content, metadata) (
+                    select id, content, metadata from data
+                )
+            """)
+
+        vectors = data['embeddings']
+        ids = data['id']
+        self.faiss_index.add(list(vectors), ids)
+        self.faiss_index.save()
+        return
         try:
-            if table_name not in self.table_registry:
-                raise ValueError(f"Table {table_name} does not exist")
-            
-            vector_columns = self.table_registry[table_name]["vector_columns"]
-            faiss_index = self._get_faiss_index(table_name)
-            
-            if faiss_index is None:
-                raise ValueError(f"Faiss index not found for table {table_name}")
-            
+
+
             # Process each row
             for _, row in data.iterrows():
                 # Generate ID if not provided
@@ -383,6 +241,30 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         limit: int = None,
     ) -> pd.DataFrame:
         """Select data with hybrid search logic."""
+
+        vector_filter = None
+        meta_filters = []
+        ids = []
+        for condition in conditions:
+            if condition.column == 'embeddings':
+                vector_filter = condition
+            elif condition.column == 'id':
+                if condition.op == FilterOperator.EQUAL:
+                    ids.append(condition.value)
+                elif condition.op == FilterOperator.IN:
+                    ids.extend(condition.value)
+                else:
+                    raise NotImplementedError
+            else:
+                meta_filters.append(condition)
+
+        # fixme only with semantic search implemented
+        if vector_filter:
+            return self._select_vector_first(table_name, columns, vector_filter, offset, limit)
+
+        return self._select_by_ids_metadata(table_name, ids, meta_filters, offset, limit)
+
+
         try:
             if table_name not in self.table_registry:
                 raise ValueError(f"Table {table_name} does not exist")
@@ -522,43 +404,59 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         
         return pd.DataFrame()
 
-    def _select_vector_first(self, table_name: str, columns: List[str], 
+    def _select_vector_first(self, table_name: str,
+                             columns: List[str],
                             embedding_condition: FilterCondition, 
-                            offset: int, limit: int) -> pd.DataFrame:
+                            offset: int,
+                            limit: int) -> pd.DataFrame:
         """Search Faiss first, then fetch from DuckDB."""
-        faiss_index = self._get_faiss_index(table_name)
-        if faiss_index is None:
-            raise ValueError(f"Faiss index not found for table {table_name}")
-        
         # Convert embedding to numpy array
         embedding = embedding_condition.value
         if isinstance(embedding, str):
             embedding = json.loads(embedding)
         
-        distances, indices, _ = faiss_index.search(
+        distances, indices, _ = self.faiss_index.search(
             [embedding], 
             k=limit or 100
         )
         
         # Fetch full data from DuckDB
         if len(indices[0]) > 0:
-            ids = [str(idx) for idx in indices[0] if idx != -1]
-            if ids:
-                placeholders = ", ".join(["?" for _ in ids])
-                select_columns = ", ".join(columns) if columns else "*"
-                query = f"SELECT {select_columns} FROM {table_name} WHERE id IN ({placeholders})"
-                
-                with self.connection.cursor() as cur:
-                    cur.execute(query, ids)
-                    result = cur.fetchdf()
-                    
-                    # Add distance column
-                    if "distance" in (columns or []):
-                        result["distance"] = distances[0][:len(result)]
-                    
-                    return result
+            ids = [str(idx) for idx in indices]
+            result = self._select_by_ids_metadata(table_name, ids)
+                # Add distance column
+            if "distance" in (columns or []):
+                result["distance"] = distances[0][:len(result)]
+
+            result["metadata"] = result["metadata"].apply(json.loads, inplace=True)
+            return result
         
         return pd.DataFrame()
+
+    def _select_by_ids_metadata(self, table_name, ids=None, meta_filters=None, offset=None, limit=None):
+
+        query = f"SELECT * FROM {table_name}"
+        conditions = []
+        if ids:
+            ids_str = ", ".join([f"'{id}'" for id in ids])
+            conditions.append(f" id IN ({ids_str})")
+        if limit is not None:
+            query += f" limit f{limit}"
+        if meta_filters:
+            for item in meta_filters:
+                col = item.column.split('.')[1]
+                conditions.append(f"metadata ->> '{col}' {item.op.value} {repr(item.value)} ")
+
+        if conditions:
+            query += f" WHERE {' AND '.join(conditions)}"
+
+        with self.connection.cursor() as cur:
+            cur.execute(query)
+            df = cur.fetchdf()
+            df["metadata"] = df["metadata"].apply(json.loads)
+            return df
+
+
 
     def _select_with_distance_condition(self, table_name: str, columns: List[str], 
                                       distance_condition: FilterCondition, 
@@ -576,27 +474,6 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         
         # For now, return empty result - this would need the full SQL parser integration
         return pd.DataFrame()
-
-    def dispatch_select(
-        self,
-        query: Select,
-        conditions: Optional[List[FilterCondition]] = None,
-        allowed_metadata_columns: List[str] = None,
-        keyword_search_args: Optional[KeywordSearchArgs] = None,
-    ):
-        """
-        Enhanced dispatcher that can parse vector operations from SELECT clause.
-        """
-        # Parse the SELECT query to extract vector operations
-        vector_ops = self._parse_vector_operations(query)
-        
-        if vector_ops:
-            # This is a vector search query with distance-based filtering
-            return self._execute_enhanced_vector_search(query, vector_ops, conditions, 
-                                                      allowed_metadata_columns, keyword_search_args)
-        else:
-            # Use the standard dispatcher
-            return super().dispatch_select(query, conditions, allowed_metadata_columns, keyword_search_args)
 
     def _parse_vector_operations(self, query: Select) -> Dict[str, Any]:
         """Parse SELECT query to extract vector operations like embeddings <-> vector."""
@@ -899,7 +776,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         """Get list of tables."""
         try:
             with self.connection.cursor() as cur:
-                cur.execute("SELECT table_name FROM __mindsdb_tables__")
+                cur.execute("SHOW TABLES")
                 tables = [row[0] for row in cur.fetchall()]
                 
                 data = [{"table_name": table} for table in tables]

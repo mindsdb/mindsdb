@@ -17,6 +17,7 @@ class MSGraphAPIBaseClient:
         MICROSOFT_GRAPH_API_VERSION (Text): The version of the Microsoft Graph API.
         PAGINATION_COUNT (Optional[int]): The number of items to retrieve per request.
     """
+
     MICROSOFT_GRAPH_BASE_API_URL: Text = "https://graph.microsoft.com/"
     MICROSOFT_GRAPH_API_VERSION: Text = "v1.0"
     PAGINATION_COUNT: Optional[int] = 20
@@ -45,11 +46,7 @@ class MSGraphAPIBaseClient:
         return api_url
 
     def _make_request(
-        self,
-        api_url: Text,
-        params: Optional[Dict] = None,
-        data: Optional[Dict] = None,
-        method: Text = "GET"
+        self, api_url: Text, params: Optional[Dict] = None, data: Optional[Dict] = None, method: Text = "GET"
     ) -> Union[Dict, object]:
         """
         Makes a request to the Microsoft Graph API.

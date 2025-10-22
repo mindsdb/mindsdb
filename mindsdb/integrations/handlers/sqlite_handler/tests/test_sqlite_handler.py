@@ -9,7 +9,7 @@ class SQLiteHandlerTest(unittest.TestCase):
         cls.kwargs = {
             "db_file": "chinook.db",
         }
-        cls.handler = SQLiteHandler('test_sqlite_handler', cls.kwargs)
+        cls.handler = SQLiteHandler("test_sqlite_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -24,9 +24,9 @@ class SQLiteHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_4_get_columns(self):
-        columns = self.handler.get_columns('customers')
+        columns = self.handler.get_columns("customers")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

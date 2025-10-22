@@ -4,7 +4,6 @@ from mindsdb_sql_parser import ast
 
 
 class AccountsTable(APITable):
-
     def flatten_dict(self, data: dict, prefix: str = ""):
         flat_data = {}
         for key, value in data.items():
@@ -25,23 +24,23 @@ class AccountsTable(APITable):
 
     def get_columns(self):
         return [
-            'Name',
-            'SubAccount',
-            'FullyQualifiedName',
-            'Active',
-            'Classification',
-            'AccountType',
-            'AccountSubType',
-            'CurrentBalance',
-            'CurrentBalanceWithSubAccounts',
-            'CurrencyRef_value',
-            'CurrencyRef_name',
-            'domain',
-            'sparse',
-            'Id',
-            'SyncToken',
-            'MetaData_CreateTime',
-            'MetaData_LastUpdatedTime',
+            "Name",
+            "SubAccount",
+            "FullyQualifiedName",
+            "Active",
+            "Classification",
+            "AccountType",
+            "AccountSubType",
+            "CurrentBalance",
+            "CurrentBalanceWithSubAccounts",
+            "CurrencyRef_value",
+            "CurrencyRef_name",
+            "domain",
+            "sparse",
+            "Id",
+            "SyncToken",
+            "MetaData_CreateTime",
+            "MetaData_LastUpdatedTime",
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
@@ -58,7 +57,6 @@ class AccountsTable(APITable):
 
 
 class PurchasesTable(APITable):
-
     def flatten_dict(self, data: dict, prefix: str = ""):
         flat_data = {}
         for key, value in data.items():
@@ -86,26 +84,26 @@ class PurchasesTable(APITable):
 
     def get_columns(self):
         return [
-            'AccountRef_value',
-            'AccountRef_name',
-            'PaymentType',
-            'Credit',
-            'TotalAmt',
-            'domain',
-            'sparse',
-            'Id',
-            'SyncToken',
-            'MetaData_CreateTime',
-            'MetaData_LastUpdatedTime',
-            'TxnDate',
-            'CurrencyRef_value',
-            'CurrencyRef_name',
-            'EntityRef_value',
-            'EntityRef_name',
-            'EntityRef_type',
-            'Line_0_Id',
-            'Line_0_Amount',
-            'Line_0_DetailType'
+            "AccountRef_value",
+            "AccountRef_name",
+            "PaymentType",
+            "Credit",
+            "TotalAmt",
+            "domain",
+            "sparse",
+            "Id",
+            "SyncToken",
+            "MetaData_CreateTime",
+            "MetaData_LastUpdatedTime",
+            "TxnDate",
+            "CurrencyRef_value",
+            "CurrencyRef_name",
+            "EntityRef_value",
+            "EntityRef_name",
+            "EntityRef_type",
+            "Line_0_Id",
+            "Line_0_Amount",
+            "Line_0_DetailType",
             # Add more columns for additional line items if needed
         ]
 
@@ -150,27 +148,27 @@ class BillPaymentsTable(APITable):
 
     def get_columns(self):
         return [
-            'VendorRef_value',
-            'VendorRef_name',
-            'PayType',
-            'CreditCardPayment_CCAccountRef_value',
-            'CreditCardPayment_CCAccountRef_name',
-            'CheckPayment_BankAccountRef_value',
-            'CheckPayment_BankAccountRef_name',
-            'TotalAmt',
-            'Id',
-            'SyncToken',
-            'MetaData_CreateTime',
-            'MetaData_LastUpdatedTime',
-            'DocNumber',
-            'TxnDate',
-            'CurrencyRef_value',
-            'CurrencyRef_name',
-            'Line_0_Amount',
-            'Line_0_LinkedTxn_0_TxnId',
-            'Line_0_LinkedTxn_0_TxnType',
-            'domain',
-            'sparse',
+            "VendorRef_value",
+            "VendorRef_name",
+            "PayType",
+            "CreditCardPayment_CCAccountRef_value",
+            "CreditCardPayment_CCAccountRef_name",
+            "CheckPayment_BankAccountRef_value",
+            "CheckPayment_BankAccountRef_name",
+            "TotalAmt",
+            "Id",
+            "SyncToken",
+            "MetaData_CreateTime",
+            "MetaData_LastUpdatedTime",
+            "DocNumber",
+            "TxnDate",
+            "CurrencyRef_value",
+            "CurrencyRef_name",
+            "Line_0_Amount",
+            "Line_0_LinkedTxn_0_TxnId",
+            "Line_0_LinkedTxn_0_TxnType",
+            "domain",
+            "sparse",
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
@@ -187,7 +185,6 @@ class BillPaymentsTable(APITable):
 
 
 class VendorsTable(APITable):
-
     def flatten_dict(self, data: dict, prefix: str = ""):
         flat_data = {}
         for key, value in data.items():
@@ -208,19 +205,19 @@ class VendorsTable(APITable):
 
     def get_columns(self):
         return [
-            'Balance',
-            'Vendor1099',
-            'CurrencyRef_value',
-            'CurrencyRef_name',
-            'Id',
-            'SyncToken',
-            'MetaData_CreateTime',
-            'MetaData_LastUpdatedTime',
-            'DisplayName',
-            'PrintOnCheckName',
-            'Active',
-            'domain',
-            'sparse'
+            "Balance",
+            "Vendor1099",
+            "CurrencyRef_value",
+            "CurrencyRef_name",
+            "Id",
+            "SyncToken",
+            "MetaData_CreateTime",
+            "MetaData_LastUpdatedTime",
+            "DisplayName",
+            "PrintOnCheckName",
+            "Active",
+            "domain",
+            "sparse",
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
@@ -237,7 +234,6 @@ class VendorsTable(APITable):
 
 
 class BillsTable(APITable):
-
     def flatten_dict(self, data: dict, prefix: str = ""):
         flat_data = {}
         for key, value in data.items():
@@ -265,42 +261,42 @@ class BillsTable(APITable):
 
     def get_columns(self):
         return [
-            'DueDate',
-            'Balance',
-            'Id',
-            'SyncToken',
-            'MetaData_CreateTime',
-            'MetaData_LastUpdatedTime',
-            'TxnDate',
-            'CurrencyRef_value',
-            'CurrencyRef_name',
-            'VendorRef_value',
-            'VendorRef_name',
-            'APAccountRef_value',
-            'APAccountRef_name',
-            'TotalAmt',
-            'Line_0_Id',
-            'Line_0_LineNum',
-            'Line_0_Description',
-            'Line_0_Amount',
-            'Line_0_DetailType',
-            'Line_0_ItemBasedExpenseLineDetail_BillableStatus',
-            'Line_0_ItemBasedExpenseLineDetail_ItemRef_value',
-            'Line_0_ItemBasedExpenseLineDetail_ItemRef_name',
-            'Line_0_ItemBasedExpenseLineDetail_UnitPrice',
-            'Line_0_ItemBasedExpenseLineDetail_Qty',
-            'Line_1_Id',
-            'Line_1_LineNum',
-            'Line_1_Description',
-            'Line_1_Amount',
-            'Line_1_DetailType',
-            'Line_1_ItemBasedExpenseLineDetail_BillableStatus',
-            'Line_1_ItemBasedExpenseLineDetail_ItemRef_value',
-            'Line_1_ItemBasedExpenseLineDetail_ItemRef_name',
-            'Line_1_ItemBasedExpenseLineDetail_UnitPrice',
-            'Line_1_ItemBasedExpenseLineDetail_Qty',
-            'domain',
-            'sparse'
+            "DueDate",
+            "Balance",
+            "Id",
+            "SyncToken",
+            "MetaData_CreateTime",
+            "MetaData_LastUpdatedTime",
+            "TxnDate",
+            "CurrencyRef_value",
+            "CurrencyRef_name",
+            "VendorRef_value",
+            "VendorRef_name",
+            "APAccountRef_value",
+            "APAccountRef_name",
+            "TotalAmt",
+            "Line_0_Id",
+            "Line_0_LineNum",
+            "Line_0_Description",
+            "Line_0_Amount",
+            "Line_0_DetailType",
+            "Line_0_ItemBasedExpenseLineDetail_BillableStatus",
+            "Line_0_ItemBasedExpenseLineDetail_ItemRef_value",
+            "Line_0_ItemBasedExpenseLineDetail_ItemRef_name",
+            "Line_0_ItemBasedExpenseLineDetail_UnitPrice",
+            "Line_0_ItemBasedExpenseLineDetail_Qty",
+            "Line_1_Id",
+            "Line_1_LineNum",
+            "Line_1_Description",
+            "Line_1_Amount",
+            "Line_1_DetailType",
+            "Line_1_ItemBasedExpenseLineDetail_BillableStatus",
+            "Line_1_ItemBasedExpenseLineDetail_ItemRef_value",
+            "Line_1_ItemBasedExpenseLineDetail_ItemRef_name",
+            "Line_1_ItemBasedExpenseLineDetail_UnitPrice",
+            "Line_1_ItemBasedExpenseLineDetail_Qty",
+            "domain",
+            "sparse",
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
@@ -317,7 +313,6 @@ class BillsTable(APITable):
 
 
 class EmployeesTable(APITable):
-
     def flatten_dict(self, data: dict, prefix: str = ""):
         flat_data = {}
         for key, value in data.items():
@@ -345,20 +340,20 @@ class EmployeesTable(APITable):
 
     def get_columns(self):
         return [
-            'BillableTime',
-            'Id',
-            'SyncToken',
-            'MetaData_CreateTime',
-            'MetaData_LastUpdatedTime',
-            'GivenName',
-            'FamilyName',
-            'DisplayName',
-            'PrintOnCheckName',
-            'Active',
-            'PrimaryPhone_FreeFormNumber',
-            'HiredDate',
-            'domain',
-            'sparse'
+            "BillableTime",
+            "Id",
+            "SyncToken",
+            "MetaData_CreateTime",
+            "MetaData_LastUpdatedTime",
+            "GivenName",
+            "FamilyName",
+            "DisplayName",
+            "PrintOnCheckName",
+            "Active",
+            "PrimaryPhone_FreeFormNumber",
+            "HiredDate",
+            "domain",
+            "sparse",
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):

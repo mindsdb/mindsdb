@@ -6,7 +6,7 @@ from mindsdb.integrations.handlers.symbl_handler.symbl_tables import (
     GetQuestionsTable,
     GetAnalyticsTable,
     GetActionItemsTable,
-    GetFollowUpsTable
+    GetFollowUpsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -35,7 +35,10 @@ class SymblHandler(APIHandler):
 
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
-        self.credentials = {"app_id": self.connection_data.get("app_id"), "app_secret": self.connection_data.get("app_secret")}
+        self.credentials = {
+            "app_id": self.connection_data.get("app_id"),
+            "app_secret": self.connection_data.get("app_secret"),
+        }
         self.kwargs = kwargs
         self.is_connected = False
 

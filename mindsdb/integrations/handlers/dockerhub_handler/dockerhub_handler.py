@@ -3,7 +3,7 @@ from mindsdb.integrations.handlers.dockerhub_handler.dockerhub_tables import (
     DockerHubRepoImagesTable,
     DockerHubRepoTagTable,
     DockerHubRepoTagsTable,
-    DockerHubOrgSettingsTable
+    DockerHubOrgSettingsTable,
 )
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub import DockerHubClient
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -79,7 +79,9 @@ class DockerHubHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            status = self.docker_client.login(self.connection_data.get("username"), self.connection_data.get("password"))
+            status = self.docker_client.login(
+                self.connection_data.get("username"), self.connection_data.get("password")
+            )
             if status["code"] == 200:
                 current_user = self.connection_data.get("username")
                 logger.info(f"Authenticated as user {current_user}")

@@ -14,7 +14,7 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import Au
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.utilities import log
@@ -27,8 +27,8 @@ class MSOneDriveHandler(APIHandler):
     This handler handles the connection and execution of SQL statements on Microsoft OneDrive.
     """
 
-    name = 'one_drive'
-    supported_file_formats = ['csv', 'tsv', 'json', 'parquet', 'pdf', 'txt']
+    name = "one_drive"
+    supported_file_formats = ["csv", "tsv", "json", "parquet", "pdf", "txt"]
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """
@@ -41,7 +41,7 @@ class MSOneDriveHandler(APIHandler):
         """
         super().__init__(name)
         self.connection_data = connection_data
-        self.handler_storage = kwargs['handler_storage']
+        self.handler_storage = kwargs["handler_storage"]
         self.kwargs = kwargs
 
         self.connection = None
@@ -62,14 +62,14 @@ class MSOneDriveHandler(APIHandler):
             return self.connection
 
         # Mandatory connection parameters.
-        if not all(key in self.connection_data for key in ['client_id', 'client_secret', 'tenant_id']):
+        if not all(key in self.connection_data for key in ["client_id", "client_secret", "tenant_id"]):
             raise ValueError("Required parameters (client_id, client_secret, tenant_id) must be provided.")
 
         # Initialize the token cache.
         cache = msal.SerializableTokenCache()
 
         # Load the cache from file if it exists.
-        cache_file = 'cache.bin'
+        cache_file = "cache.bin"
         try:
             cache_content = self.handler_storage.file_get(cache_file)
         except FileNotFoundError:
@@ -80,18 +80,18 @@ class MSOneDriveHandler(APIHandler):
 
         # Initialize the Microsoft Authentication Library (MSAL) app.
         permissions_manager = MSGraphAPIDelegatedPermissionsManager(
-            client_id=self.connection_data['client_id'],
-            client_secret=self.connection_data['client_secret'],
-            tenant_id=self.connection_data['tenant_id'],
+            client_id=self.connection_data["client_id"],
+            client_secret=self.connection_data["client_secret"],
+            tenant_id=self.connection_data["tenant_id"],
             cache=cache,
-            code=self.connection_data.get('code')
+            code=self.connection_data.get("code"),
         )
 
         access_token = permissions_manager.get_access_token()
 
         # Save the cache back to file if it has changed.
         if cache.has_state_changed:
-            self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
+            self.handler_storage.file_set(cache_file, cache.serialize().encode("utf-8"))
 
         # Pass the access token to the Microsoft Graph API client for Microsoft OneDrive.
         self.connection = MSGraphAPIOneDriveClient(
@@ -119,14 +119,14 @@ class MSOneDriveHandler(APIHandler):
             else:
                 raise RequestException("Connection check failed!")
         except (ValueError, RequestException) as known_error:
-            logger.error(f'Connection check to Microsoft OneDrive failed, {known_error}!')
+            logger.error(f"Connection check to Microsoft OneDrive failed, {known_error}!")
             response.error_message = str(known_error)
         except AuthException as error:
             response.error_message = str(error)
             response.redirect_url = error.auth_url
             return response
         except Exception as unknown_error:
-            logger.error(f'Connection check to Microsoft OneDrive failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to Microsoft OneDrive failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         self.is_connected = response.success
@@ -158,23 +158,18 @@ class MSOneDriveHandler(APIHandler):
             # For any other table name, query the file content via the 'FileTable' class.
             # Only the supported file formats can be queried.
             else:
-                extension = table_name.split('.')[-1]
+                extension = table_name.split(".")[-1]
                 if extension not in self.supported_file_formats:
-                    logger.error(f'The file format {extension} is not supported!')
-                    raise ValueError(f'The file format {extension} is not supported!')
+                    logger.error(f"The file format {extension} is not supported!")
+                    raise ValueError(f"The file format {extension} is not supported!")
 
                 table = FileTable(self, table_name=table_name)
                 df = table.select(query)
 
-            return Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=df
-            )
+            return Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
         else:
-            raise NotImplementedError(
-                "Only SELECT queries are supported by the Microsoft OneDrive handler."
-            )
+            raise NotImplementedError("Only SELECT queries are supported by the Microsoft OneDrive handler.")
 
     def native_query(self, query: Text) -> Response:
         """
@@ -204,19 +199,13 @@ class MSOneDriveHandler(APIHandler):
         supported_files = [
             f"`{file['path']}`"
             for file in connection.get_all_items()
-            if file['path'].split('.')[-1] in self.supported_file_formats
+            if file["path"].split(".")[-1] in self.supported_file_formats
         ]
 
         # Add the 'files' table to the list of supported tables.
-        supported_files.insert(0, 'files')
+        supported_files.insert(0, "files")
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                supported_files,
-                columns=['table_name']
-            )
-        )
+        response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(supported_files, columns=["table_name"]))
 
         return response
 
@@ -231,11 +220,7 @@ class MSOneDriveHandler(APIHandler):
             Response: A response object containing the column details, formatted as per the `Response` class.
         """
         # Get the columns (and their data types) by querying a single row from the table.
-        query = Select(
-            targets=[Star()],
-            from_table=Identifier(parts=[table_name]),
-            limit=Constant(1)
-        )
+        query = Select(targets=[Star()], from_table=Identifier(parts=[table_name]), limit=Constant(1))
 
         result = self.query(query)
 
@@ -243,10 +228,12 @@ class MSOneDriveHandler(APIHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': result.data_frame.columns,
-                    'data_type': [data_type if data_type != 'object' else 'string' for data_type in result.data_frame.dtypes]
+                    "column_name": result.data_frame.columns,
+                    "data_type": [
+                        data_type if data_type != "object" else "string" for data_type in result.data_frame.dtypes
+                    ],
                 }
-            )
+            ),
         )
 
         return response

@@ -12,7 +12,6 @@ from mindsdb.integrations.utilities.sql_utils import conditions_to_filter
 
 
 class CustomAPITable(APITable):
-
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
         self.handler.connect()
@@ -25,7 +24,9 @@ class CustomAPITable(APITable):
 
     def parse_select(self, query: ast.Select, table_name: str):
         select_statement_parser = SELECTQueryParser(query, table_name, self.get_columns())
-        self.selected_columns, self.where_conditions, self.order_by_conditions, self.result_limit = select_statement_parser.parse_query()
+        self.selected_columns, self.where_conditions, self.order_by_conditions, self.result_limit = (
+            select_statement_parser.parse_query()
+        )
 
     def get_where_param(self, query: ast.Select, param: str):
         params = conditions_to_filter(query.where)

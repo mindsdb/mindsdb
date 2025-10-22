@@ -51,9 +51,7 @@ class FaunaDBHandler(DatabaseHandler):
         # either scheme + domain + port or endpoint is required
         # but not both
         if not endpoint and not (scheme and domain and port):
-            raise Exception(
-                "Either scheme + domain + port or endpoint is required for FaunaDB connection!"
-            )
+            raise Exception("Either scheme + domain + port or endpoint is required for FaunaDB connection!")
         elif endpoint and (scheme or domain or port):
             raise Exception(
                 "Either scheme + domain + port or endpoint is required for FaunaDB connection, but not both!"
@@ -170,7 +168,7 @@ class FaunaDBHandler(DatabaseHandler):
             self.drop_table(collection_name)
         """
 
-        df = pd.json_normalize(result['data'])
+        df = pd.json_normalize(result["data"])
         return Response(RESPONSE_TYPE.TABLE, df)
 
     def select(

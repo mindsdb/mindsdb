@@ -53,8 +53,9 @@ class PirateWeatherAPIBaseTable(APITable):
         # Remove request parameters from where conditions
         where_conditions = [c for c in where_conditions if c[1] not in self.allowed_select_keys]
 
-        query_executor = SELECTQueryExecutor(result, selected_columns, where_conditions, order_by_conditions,
-                                             result_limit)
+        query_executor = SELECTQueryExecutor(
+            result, selected_columns, where_conditions, order_by_conditions, result_limit
+        )
 
         return query_executor.execute_query()
 
@@ -63,12 +64,7 @@ class PirateWeatherAPIBaseTable(APITable):
 
 
 class PiratePirateWeatherAPIHourlyTable(PirateWeatherAPIBaseTable):
-    allowed_select_keys = {
-        "latitude",
-        "longitude",
-        "time",
-        "units"
-    }
+    allowed_select_keys = {"latitude", "longitude", "time", "units"}
     columns = [
         "localtime",
         "icon",
@@ -85,18 +81,13 @@ class PiratePirateWeatherAPIHourlyTable(PirateWeatherAPIBaseTable):
         "latitude",
         "longitude",
         "timezone",
-        "offset"
+        "offset",
     ]
     table_name = "hourly"
 
 
 class PiratePirateWeatherAPIDailyTable(PirateWeatherAPIBaseTable):
-    allowed_select_keys = {
-        "latitude",
-        "longitude",
-        "time",
-        "units"
-    }
+    allowed_select_keys = {"latitude", "longitude", "time", "units"}
 
     columns = [
         "localtime",
@@ -131,7 +122,7 @@ class PiratePirateWeatherAPIDailyTable(PirateWeatherAPIBaseTable):
         "latitude",
         "longitude",
         "timezone",
-        "offset"
+        "offset",
     ]
     table_name = "daily"
 
@@ -172,9 +163,9 @@ class PirateWeatherAPIHandler(APIHandler):
         response = HandlerStatusResponse(False)
 
         try:
-            self.call_application_api(method_name="daily", params=dict(latitude=51.507351,
-                                                                       longitude=-0.127758,
-                                                                       time="1672578052"))
+            self.call_application_api(
+                method_name="daily", params=dict(latitude=51.507351, longitude=-0.127758, time="1672578052")
+            )
             response.success = True
 
         except Exception as e:
@@ -188,9 +179,7 @@ class PirateWeatherAPIHandler(APIHandler):
         data = self._tables[table].select(ast)
         return HandlerResponse(RESPONSE_TYPE.TABLE, data_frame=data)
 
-    def call_application_api(
-            self, method_name: str = None, params: dict = None
-    ) -> pd.DataFrame:
+    def call_application_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         # This will implement api base on the native query
         # By processing native query to convert it to api callable parameters
         if method_name not in ["hourly", "daily"]:
@@ -206,9 +195,7 @@ class PirateWeatherAPIHandler(APIHandler):
 
         # Build the query
         query = self.query_string_template.format(
-            api_key=self._api_key,
-            latitude=params["latitude"],
-            longitude=params["longitude"]
+            api_key=self._api_key, latitude=params["latitude"], longitude=params["longitude"]
         )
         if "time" in params:
             query += f",{params['time']}"
@@ -222,14 +209,13 @@ class PirateWeatherAPIHandler(APIHandler):
         # Parse the response
         data = response.json()
         if method_name not in data:
-            raise ValueError(f"API response did not contain {method_name} data. Check your API key. Got response: {data}")
+            raise ValueError(
+                f"API response did not contain {method_name} data. Check your API key. Got response: {data}"
+            )
 
         # Convert to dataframe
         df = pd.DataFrame(data[method_name]["data"]).assign(
-            latitude=params["latitude"],
-            longitude=params["longitude"],
-            timezone=data["timezone"],
-            offset=data["offset"]
+            latitude=params["latitude"], longitude=params["longitude"], timezone=data["timezone"], offset=data["offset"]
         )
         df["localtime"] = pd.to_datetime(df["time"], utc=True, unit="s").dt.tz_convert(data["timezone"])
         df.drop(columns="time", inplace=True)

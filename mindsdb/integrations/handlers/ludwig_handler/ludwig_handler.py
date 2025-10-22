@@ -14,14 +14,14 @@ class LudwigHandler(BaseMLEngine):
     Integration with the Ludwig declarative ML library.
     """  # noqa
 
-    name = 'ludwig'
+    name = "ludwig"
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
-        args = args['using']  # ignore the rest of the problem definition
+        args = args["using"]  # ignore the rest of the problem definition
 
         # TODO: filter out incompatible use cases (e.g. time series won't work currently)
         # TODO: enable custom values via `args` (mindful of local vs cloud)
-        user_config = {'hyperopt': {'executor': {'gpu_resources_per_trial': 0, 'num_samples': 3}}}  # no GPU for now
+        user_config = {"hyperopt": {"executor": {"gpu_resources_per_trial": 0, "num_samples": 3}}}  # no GPU for now
 
         with RayConnection():
             results = auto_train(
@@ -36,13 +36,13 @@ class LudwigHandler(BaseMLEngine):
                 # kwargs={}
             )
         model = results.best_model
-        args['dtype_dict'] = {f['name']: f['type'] for f in model.base_config['input_features']}
-        args['accuracies'] = {'metric': results.experiment_analysis.best_result['metric_score']}
-        self.model_storage.json_set('args', args)
-        self.model_storage.file_set('model', dill.dumps(model))
+        args["dtype_dict"] = {f["name"]: f["type"] for f in model.base_config["input_features"]}
+        args["accuracies"] = {"metric": results.experiment_analysis.best_result["metric_score"]}
+        self.model_storage.json_set("args", args)
+        self.model_storage.file_set("model", dill.dumps(model))
 
     def predict(self, df, args=None):
-        model = dill.loads(self.model_storage.file_get('model'))
+        model = dill.loads(self.model_storage.file_get("model"))
         with RayConnection():
             predictions = self._call_model(df, model)
         return predictions
@@ -50,19 +50,16 @@ class LudwigHandler(BaseMLEngine):
     @staticmethod
     def _call_model(df, model):
         predictions = dask.compute(model.predict(df)[0])[0]
-        target_name = model.config['output_features'][0]['column']
+        target_name = model.config["output_features"][0]["column"]
 
         if target_name not in df:
             predictions.columns = [target_name]
         else:
-            predictions.columns = ['prediction']
+            predictions.columns = ["prediction"]
 
-        predictions[f'{target_name}_explain'] = None
+        predictions[f"{target_name}_explain"] = None
         joined = df.join(predictions)
 
-        if 'prediction' in joined:
-            joined = joined.rename({
-                target_name: f'{target_name}_original',
-                'prediction': target_name
-            }, axis=1)
+        if "prediction" in joined:
+            joined = joined.rename({target_name: f"{target_name}_original", "prediction": target_name}, axis=1)
         return joined

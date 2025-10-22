@@ -58,9 +58,7 @@ class RAGIngestor:
         self.df = df
         self.embeddings_model_name = args.embeddings_model_name
 
-        self.vector_store = VectorStoreFactory.get_vectorstore_class(
-            args.vector_store_name
-        )
+        self.vector_store = VectorStoreFactory.get_vectorstore_class(args.vector_store_name)
 
     def split_documents(self, chunk_size, chunk_overlap) -> list:
         # Load documents and split in chunks
@@ -68,9 +66,7 @@ class RAGIngestor:
 
         documents = []
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size, chunk_overlap=chunk_overlap
-        )
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
         if self.df is not None:
             # if user provides a dataframe, load documents from dataframe
@@ -100,13 +96,10 @@ class RAGIngestor:
         """Create DB from documents."""
 
         if self.args.vector_store_name == "chromadb":
-
             return self.vector_store.from_documents(
                 documents=documents,
                 embedding=embeddings_model,
-                client=get_chroma_client(
-                    persist_directory=self.args.vector_store_storage_path
-                ),
+                client=get_chroma_client(persist_directory=self.args.vector_store_storage_path),
                 collection_name=self.args.collection_name,
             )
         else:
@@ -118,9 +111,7 @@ class RAGIngestor:
         texts = [doc.page_content for doc in documents]
         metadata = [doc.metadata for doc in documents]
 
-        return self.vector_store.from_texts(
-            texts=texts, embedding=embeddings_model, metadatas=metadata
-        )
+        return self.vector_store.from_texts(texts=texts, embedding=embeddings_model, metadatas=metadata)
 
     @staticmethod
     def _create_batch_embeddings(documents: List[Document], embeddings_batch_size):
@@ -129,7 +120,7 @@ class RAGIngestor:
         """
 
         for i in range(0, len(documents), embeddings_batch_size):
-            yield documents[i: i + embeddings_batch_size]
+            yield documents[i : i + embeddings_batch_size]
 
     def embeddings_to_vectordb(self) -> None:
         """Create vectorstore from documents and store locally."""
@@ -137,14 +128,10 @@ class RAGIngestor:
         start_time = time.time()
 
         # Load documents and splits in chunks (if not in evaluation_type mode)
-        documents = self.split_documents(
-            chunk_size=self.args.chunk_size, chunk_overlap=self.args.chunk_overlap
-        )
+        documents = self.split_documents(chunk_size=self.args.chunk_size, chunk_overlap=self.args.chunk_overlap)
 
         # Load embeddings model
-        embeddings_model = load_embeddings_model(
-            self.embeddings_model_name, self.args.use_gpu
-        )
+        embeddings_model = load_embeddings_model(self.embeddings_model_name, self.args.use_gpu)
 
         logger.info("Creating vectorstore from documents")
 
@@ -154,9 +141,7 @@ class RAGIngestor:
         try:
             db = self.create_db_from_documents(documents, embeddings_model)
         except Exception as e:
-            raise Exception(
-                f"Error loading embeddings to {self.args.vector_store_name}: {e}"
-            )
+            raise Exception(f"Error loading embeddings to {self.args.vector_store_name}: {e}")
 
         config = PersistedVectorStoreSaverConfig(
             vector_store_name=self.args.vector_store_name,
@@ -174,8 +159,10 @@ class RAGIngestor:
         end_time = time.time()
         elapsed_time = round(end_time - start_time)
 
-        logger.info(f"Finished creating {self.args.vector_store_name} from texts, it has been "
-                    f"persisted to {self.args.vector_store_storage_path}")
+        logger.info(
+            f"Finished creating {self.args.vector_store_name} from texts, it has been "
+            f"persisted to {self.args.vector_store_storage_path}"
+        )
 
         time_minutes = round(elapsed_time / 60)
 

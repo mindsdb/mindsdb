@@ -4,10 +4,9 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class OpenStreetMapHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        cls.handler = OpenStreetMapHandler(name='test_handler', connection_data={})
+        cls.handler = OpenStreetMapHandler(name="test_handler", connection_data={})
 
     def test_0_connect(self):
         assert self.handler.connect()
@@ -33,5 +32,5 @@ class OpenStreetMapHandlerTest(unittest.TestCase):
         assert self.handler.disconnect()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

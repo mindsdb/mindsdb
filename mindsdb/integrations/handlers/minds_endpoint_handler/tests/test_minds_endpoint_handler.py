@@ -6,7 +6,7 @@ from unittest.mock import patch
 from tests.unit.ml_handlers.base_ml_test import BaseMLAPITest
 
 
-@pytest.mark.skipif(os.environ.get('MDB_TEST_MINDS_ENDPOINT_API_KEY') is None, reason='Missing API key!')
+@pytest.mark.skipif(os.environ.get("MDB_TEST_MINDS_ENDPOINT_API_KEY") is None, reason="Missing API key!")
 class TestMindsEndpoint(BaseMLAPITest):
     """
     Integration tests for Minds Endpoint engine.
@@ -27,7 +27,7 @@ class TestMindsEndpoint(BaseMLAPITest):
             CREATE ML_ENGINE minds_endpoint_engine
             FROM minds_endpoint
             USING
-            minds_endpoint_api_key = '{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
+            minds_endpoint_api_key = '{self.get_api_key("MDB_TEST_MINDS_ENDPOINT_API_KEY")}';
             """
         )
 
@@ -44,7 +44,7 @@ class TestMindsEndpoint(BaseMLAPITest):
                 engine='minds_endpoint_engine',
                 model_name='this-model-does-not-exist',
                 prompt_template='dummy_prompt_template',
-                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
+                minds_endpoint_api_key='{self.get_api_key("MDB_TEST_MINDS_ENDPOINT_API_KEY")}';
             """
         )
         with pytest.raises(Exception):
@@ -62,7 +62,7 @@ class TestMindsEndpoint(BaseMLAPITest):
             USING
                 engine='minds_endpoint_engine',
                 prompt_template='dummy_prompt_template',
-                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}',
+                minds_endpoint_api_key='{self.get_api_key("MDB_TEST_MINDS_ENDPOINT_API_KEY")}',
                 evidently_wrong_argument='wrong value';
             """
         )
@@ -81,7 +81,7 @@ class TestMindsEndpoint(BaseMLAPITest):
             USING
                 engine='minds_endpoint_engine',
                 question_column='question',
-                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
+                minds_endpoint_api_key='{self.get_api_key("MDB_TEST_MINDS_ENDPOINT_API_KEY")}';
             """
         )
         self.wait_predictor("proj", "test_minds_endpoint_single_qa")
@@ -102,10 +102,9 @@ class TestMindsEndpoint(BaseMLAPITest):
         Test for valid answers to bulk questions in a question answering task (chat completion).
         """
 
-        df = pd.DataFrame.from_dict({"question": [
-            "What is the capital of Sweden?",
-            "What is the second planet in the solar system?"
-        ]})
+        df = pd.DataFrame.from_dict(
+            {"question": ["What is the capital of Sweden?", "What is the second planet in the solar system?"]}
+        )
         self.set_handler(mock_postgres_handler, name="pg", tables={"df": df})
 
         self.run_sql(
@@ -115,7 +114,7 @@ class TestMindsEndpoint(BaseMLAPITest):
             USING
                 engine='minds_endpoint_engine',
                 question_column='question',
-                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
+                minds_endpoint_api_key='{self.get_api_key("MDB_TEST_MINDS_ENDPOINT_API_KEY")}';
             """
         )
         self.wait_predictor("proj", "test_minds_endpoint_bulk_qa")
@@ -144,7 +143,7 @@ class TestMindsEndpoint(BaseMLAPITest):
                 engine='minds_endpoint_engine',
                 question_column='text',
                 mode='embedding',
-                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
+                minds_endpoint_api_key='{self.get_api_key("MDB_TEST_MINDS_ENDPOINT_API_KEY")}';
             """
         )
         self.wait_predictor("proj", "test_minds_endpoint_single_embeddings")

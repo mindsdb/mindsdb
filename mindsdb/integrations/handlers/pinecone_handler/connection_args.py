@@ -8,7 +8,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "The API key that can be found in your pinecone account",
         "required": True,
-        "secret": True
+        "secret": True,
     },
     environment={
         "type": ARG_TYPE.STR,
@@ -49,5 +49,5 @@ connection_args_example = OrderedDict(
     metric="cosine",
     pods=1,
     replicas=1,
-    pod_type='p1',
+    pod_type="p1",
 )

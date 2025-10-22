@@ -9,11 +9,11 @@ class EmailsTableTest(unittest.TestCase):
         cls.kwargs = {
             "connection_data": {
                 "credentials_file": "mindsdb/integrations/handlers/gmail_handler/credentials.json",
-                "scopes": ['https://www.googleapis.com/auth/gmail.readonly']
+                "scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
             }
         }
 
-        cls.handler = GmailHandler('test_gmail_handler', **cls.kwargs)
+        cls.handler = GmailHandler("test_gmail_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -31,20 +31,20 @@ class EmailsTableTest(unittest.TestCase):
         columns = self.handler.emails.get_columns()
 
         expected_columns = [
-            'id',
-            'message_id',
-            'thread_id',
-            'label_ids',
-            'sender',
-            'to',
-            'date',
-            'subject',
-            'snippet',
-            'body',
+            "id",
+            "message_id",
+            "thread_id",
+            "label_ids",
+            "sender",
+            "to",
+            "date",
+            "subject",
+            "snippet",
+            "body",
         ]
 
         self.assertListEqual(columns, expected_columns)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -8,7 +8,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
@@ -20,7 +20,7 @@ class HSQLDBHandler(DatabaseHandler):
     This handler handles connection and execution of the HyperSQL statements.
     """
 
-    name = 'hsqldb'
+    name = "hsqldb"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -32,13 +32,13 @@ class HSQLDBHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'hsqldb'
-        self.connection_args = kwargs.get('connection_data')
-        self.server_name = self.connection_args.get('server_name', 'localhost')
-        self.port = self.connection_args.get('port')
-        self.database_name = self.connection_args.get('database_name')
-        self.username = self.connection_args.get('username')
-        self.password = self.connection_args.get('password')
+        self.dialect = "hsqldb"
+        self.connection_args = kwargs.get("connection_data")
+        self.server_name = self.connection_args.get("server_name", "localhost")
+        self.port = self.connection_args.get("port")
+        self.database_name = self.connection_args.get("database_name")
+        self.username = self.connection_args.get("username")
+        self.password = self.connection_args.get("password")
         self.conn_str = f"DRIVER={{PostgreSQL Unicode}};SERVER={self.server_name};PORT={self.port};DATABASE={self.database_name};UID={self.username};PWD={self.password};Trusted_Connection=True"
         self.connection = None
         self.is_connected = False
@@ -88,7 +88,7 @@ class HSQLDBHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to SQLite, {e}!')
+            logger.error(f"Error connecting to SQLite, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -117,21 +117,15 @@ class HSQLDBHandler(DatabaseHandler):
                 if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame.from_records(
-                            result,
-                            columns=[x[0] for x in cursor.description]
-                        )
+                        data_frame=pd.DataFrame.from_records(result, columns=[x[0] for x in cursor.description]),
                     )
 
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -148,7 +142,7 @@ class HSQLDBHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        renderer = SqlalchemyRender('postgres')
+        renderer = SqlalchemyRender("postgres")
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
@@ -161,13 +155,14 @@ class HSQLDBHandler(DatabaseHandler):
 
         connection = self.connect()
         cursor = connection.cursor()
-        cursor.execute("SELECT * FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog') AND table_type='BASE TABLE'")
-        results = cursor.fetchall()
-        df = pd.DataFrame([x[2] for x in results], columns=['table_name'])  # Workaround since cursor.tables() wont work with postgres driver
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
+        cursor.execute(
+            "SELECT * FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog') AND table_type='BASE TABLE'"
         )
+        results = cursor.fetchall()
+        df = pd.DataFrame(
+            [x[2] for x in results], columns=["table_name"]
+        )  # Workaround since cursor.tables() wont work with postgres driver
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response
 
@@ -182,17 +177,11 @@ class HSQLDBHandler(DatabaseHandler):
 
         connection = self.connect()
         cursor = connection.cursor()
-        query = f'SELECT * FROM information_schema.columns WHERE table_name ={table_name}'  # Workaround since cursor.columns() wont work with postgres driver
+        query = f"SELECT * FROM information_schema.columns WHERE table_name ={table_name}"  # Workaround since cursor.columns() wont work with postgres driver
         cursor.execute(query)
         results = cursor.fetchall()
-        df = pd.DataFrame(
-            [(x[3], x[7]) for x in results],
-            columns=['column_name', 'data_type']
-        )
+        df = pd.DataFrame([(x[3], x[7]) for x in results], columns=["column_name", "data_type"])
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response

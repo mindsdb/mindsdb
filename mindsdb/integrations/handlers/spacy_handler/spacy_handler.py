@@ -129,16 +129,12 @@ class SpacyHandler(BaseMLEngine):
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if "using" not in args:
-            raise Exception(
-                "spaCy engine requires a USING clause! Refer to its documentation for more details."
-            )
+            raise Exception("spaCy engine requires a USING clause! Refer to its documentation for more details.")
         else:
             args = args["using"]
 
         if len(set(args.keys()) & {"linguistic_feature", "target_column"}) == 0:
-            raise Exception(
-                "`linguistic_feature` and `target_column` are required for this engine."
-            )
+            raise Exception("`linguistic_feature` and `target_column` are required for this engine.")
 
     def create(
         self,
@@ -181,9 +177,7 @@ class SpacyHandler(BaseMLEngine):
         for _, text in df.iterrows():
             doc = nlp(text[column_name])
             if linguistic_feature in lingustic_features:
-                pred_whole, pred_attributes = lingustic_features[linguistic_feature](
-                    doc
-                )
+                pred_whole, pred_attributes = lingustic_features[linguistic_feature](doc)
                 predictions_whole.append(pred_whole)
                 predictions_attributes.append(pred_attributes)
 

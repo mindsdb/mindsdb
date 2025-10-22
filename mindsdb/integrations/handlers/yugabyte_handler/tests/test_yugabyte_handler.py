@@ -12,10 +12,10 @@ class YugabyteHandlerTest(unittest.TestCase):
                 "port": 5433,
                 "user": "admin",
                 "password": "",
-                "database": "yugabyte"
+                "database": "yugabyte",
             }
         }
-        cls.handler = YugabyteHandler('test_yugabyte_handler', cls.kwargs)
+        cls.handler = YugabyteHandler("test_yugabyte_handler", cls.kwargs)
 
     def test_0_connect(self):
         self.handler.connect()
@@ -45,5 +45,5 @@ class YugabyteHandlerTest(unittest.TestCase):
         self.handler.check_connection()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

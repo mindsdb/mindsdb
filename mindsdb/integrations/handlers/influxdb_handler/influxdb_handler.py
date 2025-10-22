@@ -26,7 +26,7 @@ class InfluxDBHandler(APIHandler):
         connection_data = kwargs.get("connection_data", {})
 
         self.parser = parse_sql
-        self.dialect = 'influxdb'
+        self.dialect = "influxdb"
         self.connection_data = connection_data
         self.kwargs = kwargs
         self.connection = None
@@ -47,7 +47,11 @@ class InfluxDBHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = InfluxDBClient3(host=self.connection_data['influxdb_url'], token=self.connection_data['influxdb_token'], org=self.connection_data.get('org'))
+        self.connection = InfluxDBClient3(
+            host=self.connection_data["influxdb_url"],
+            token=self.connection_data["influxdb_token"],
+            org=self.connection_data.get("org"),
+        )
 
         self.is_connected = True
 
@@ -96,7 +100,7 @@ class InfluxDBHandler(APIHandler):
         """
         influx_connection = self.connect()
         if query is None:
-            query = 'SELECT * FROM ' + f"{self.connection_data['influxdb_table_name']}"
+            query = "SELECT * FROM " + f"{self.connection_data['influxdb_table_name']}"
 
-        table = influx_connection.query(query=query, database=self.connection_data['influxdb_db_name'], language='sql')
+        table = influx_connection.query(query=query, database=self.connection_data["influxdb_db_name"], language="sql")
         return table.to_pandas()

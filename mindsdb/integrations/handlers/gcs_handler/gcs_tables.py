@@ -5,16 +5,12 @@ from typing import List
 
 
 class ListFilesTable(APIResource):
-
-    def list(self,
-             targets: List[str] = None,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             *args, **kwargs) -> pd.DataFrame:
-
+    def list(
+        self, targets: List[str] = None, conditions: List[FilterCondition] = None, limit: int = None, *args, **kwargs
+    ) -> pd.DataFrame:
         buckets = None
         for condition in conditions:
-            if condition.column == 'bucket':
+            if condition.column == "bucket":
                 if condition.op == FilterOperator.IN:
                     buckets = condition.value
                 elif condition.op == FilterOperator.EQUAL:
@@ -23,13 +19,13 @@ class ListFilesTable(APIResource):
 
         data = []
         for obj in self.handler.get_objects(limit=limit, buckets=buckets):
-            path = obj['Key']
-            path = path.replace('`', '')
+            path = obj["Key"]
+            path = path.replace("`", "")
             item = {
-                'path': path,
-                'bucket': obj['Bucket'],
-                'name': path[path.rfind('/') + 1:],
-                'extension': path[path.rfind('.') + 1:]
+                "path": path,
+                "bucket": obj["Bucket"],
+                "name": path[path.rfind("/") + 1 :],
+                "extension": path[path.rfind(".") + 1 :],
             }
 
             data.append(item)
@@ -41,7 +37,6 @@ class ListFilesTable(APIResource):
 
 
 class FileTable(APIResource):
-
     def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
         return self.handler.read_as_table(table_name)
 

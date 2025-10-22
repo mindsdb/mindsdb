@@ -1,5 +1,3 @@
-
-
 # base exception for unknown error
 class UnknownError(Exception):
     # err_code = ERR.ER_UNKNOWN_ERROR

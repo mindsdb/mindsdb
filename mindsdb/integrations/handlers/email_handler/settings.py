@@ -6,6 +6,7 @@ class EmailSearchOptions(BaseModel):
     """
     Represents IMAP search options to use when searching emails
     """
+
     # IMAP mailbox to search.
     mailbox: str = "INBOX"
     # Search by email subject.
@@ -29,9 +30,8 @@ class EmailSearchOptions(BaseModel):
                 "from_email": "hello@example.com",
                 "since_date": "2021-01-01",
                 "until_date": "2021-01-31",
-                "since_email_id": "123"
+                "since_email_id": "123",
             }
-
         }
         extra = "forbid"
 
@@ -40,6 +40,7 @@ class EmailConnectionDetails(BaseModel):
     """
     Represents the connection details for an email client
     """
+
     email: str
     password: str
     imap_server: str = "imap.gmail.com"
@@ -53,7 +54,7 @@ class EmailConnectionDetails(BaseModel):
                 "password": "password",
                 "imap_server": "imap.gmail.com",
                 "smtp_server": "smtp.gmail.com",
-                "smtp_port": 587
+                "smtp_port": 587,
             }
         }
         extra = "forbid"

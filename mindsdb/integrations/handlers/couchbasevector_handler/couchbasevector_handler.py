@@ -76,9 +76,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
 
         try:
             # wait until the cluster is ready for use
-            cluster.wait_until_ready(
-                timedelta(seconds=self.DEFAULT_TIMEOUT_SECONDS)
-            )
+            cluster.wait_until_ready(timedelta(seconds=self.DEFAULT_TIMEOUT_SECONDS))
             self.is_connected = cluster.connected
             self.cluster = cluster
         except UnAmbiguousTimeoutException:
@@ -108,9 +106,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
             cluster = self.connect()
             result.success = cluster.connected
         except UnAmbiguousTimeoutException as e:
-            logger.error(
-                f'Error connecting to Couchbase {self.connection_data["bucket"]}, {e}!'
-            )
+            logger.error(f"Error connecting to Couchbase {self.connection_data['bucket']}, {e}!")
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -119,9 +115,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
             self.is_connected = False
         return result
 
-    def _translate_conditions(
-        self, conditions: List[FilterCondition]
-    ) -> Union[dict, None]:
+    def _translate_conditions(self, conditions: List[FilterCondition]) -> Union[dict, None]:
         """
         Translate filter conditions to a dictionary
         """
@@ -143,7 +137,6 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         offset_query: str,
         search_query: str,
     ) -> str:
-
         return f"{where_query} {search_query} {limit_query} {offset_query} "
 
     def _construct_where_query(self, filter_conditions=None):
@@ -155,9 +148,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
 
         where_querys = []
         metadata_conditions = {
-            key: value
-            for key, value in filter_conditions.items()
-            if not key.startswith(TableField.EMBEDDINGS.value)
+            key: value for key, value in filter_conditions.items() if not key.startswith(TableField.EMBEDDINGS.value)
         }
         for key, value in metadata_conditions.items():
             if value["op"].lower() == "in":
@@ -165,7 +156,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
                 value["value"] = "({})".format(", ".join(values))
             else:
                 value["value"] = repr(value["value"])
-            where_querys.append(f'{key} {value["op"]} {value["value"]}')
+            where_querys.append(f"{key} {value['op']} {value['value']}")
 
         if len(where_querys) > 1:
             return f"WHERE {' AND '.join(where_querys)}"
@@ -174,9 +165,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         else:
             return ""
 
-    def _construct_search_query(
-        self, table_name: str, field: str, vector: list, k: int, condition: str
-    ):
+    def _construct_search_query(self, table_name: str, field: str, vector: list, k: int, condition: str):
         """
         Construct a SEARCH query for KNN
         :param table_name: Name of the table
@@ -219,11 +208,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
 
         vector_filter = (
             next(
-                (
-                    condition
-                    for condition in conditions
-                    if condition.column == TableField.EMBEDDINGS.value
-                ),
+                (condition for condition in conditions if condition.column == TableField.EMBEDDINGS.value),
                 None,
             )
             if conditions
@@ -276,11 +261,8 @@ class CouchbaseVectorHandler(VectorStoreHandler):
                 metadatas.append(hit.get("metadata", {}))
                 distances.append(hit.get("score", ""))
         else:
-
             where_query = self._construct_where_query(filter_conditions)
-            after_from_query = self._construct_full_after_from_query(
-                where_query, limit_query, offset_query, ""
-            )
+            after_from_query = self._construct_full_after_from_query(where_query, limit_query, offset_query, "")
 
             if columns is None:
                 targets = "id, content, embeddings, metadata"
@@ -311,11 +293,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
             TableField.EMBEDDINGS.value: [doc for doc in embeddings],
         }
         if columns:
-            payload = {
-                column: payload[column]
-                for column in columns
-                if column in payload
-            }
+            payload = {column: payload[column] for column in columns if column in payload}
         if distances is not None:
             payload[TableField.DISTANCE.value] = distances
         return pd.DataFrame(payload)
@@ -338,23 +316,15 @@ class CouchbaseVectorHandler(VectorStoreHandler):
             document = {TableField.ID.value: doc_id}
 
             if TableField.CONTENT.value in record:
-                document[TableField.CONTENT.value] = record[
-                    TableField.CONTENT.value
-                ]
+                document[TableField.CONTENT.value] = record[TableField.CONTENT.value]
 
             if TableField.EMBEDDINGS.value in record:
-                document[TableField.EMBEDDINGS.value] = record[
-                    TableField.EMBEDDINGS.value
-                ]
+                document[TableField.EMBEDDINGS.value] = record[TableField.EMBEDDINGS.value]
                 if not isinstance(document[TableField.EMBEDDINGS.value], list):
-                    document[TableField.EMBEDDINGS.value] = ast.literal_eval(
-                        document[TableField.EMBEDDINGS.value]
-                    )
+                    document[TableField.EMBEDDINGS.value] = ast.literal_eval(document[TableField.EMBEDDINGS.value])
 
             if TableField.METADATA.value in record:
-                document[TableField.METADATA.value] = record[
-                    TableField.METADATA.value
-                ]
+                document[TableField.METADATA.value] = record[TableField.METADATA.value]
             document_key = f"{table_name}::{doc_id}"
 
             collection.upsert(document_key, document)
@@ -390,9 +360,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         except CouchbaseException as e:
             raise Exception(f"Error while updating document: '{e}'")
 
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ):
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         """
         Delete documents in Couchbase based on conditions.
         """
@@ -406,9 +374,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         try:
             _ = scope.query(query)
         except CouchbaseException as e:
-            raise Exception(
-                f"Error while performing delete query index: '{e}'"
-            )
+            raise Exception(f"Error while performing delete query index: '{e}'")
 
     def create_table(self, table_name: str, if_not_exists=True):
         """
@@ -418,9 +384,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         cluster = self.connect()
         bucket = cluster.bucket(self.bucket_name)
         try:
-            bucket.collections().create_collection(
-                scope_name=self.scope, collection_name=table_name
-            )
+            bucket.collections().create_collection(scope_name=self.scope, collection_name=table_name)
         except Exception as e:
             raise Exception(f"Error while creating table: '{e}'")
 
@@ -445,15 +409,9 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         cluster = self.connect()
         bucket = cluster.bucket(self.bucket_name)
         collections = bucket.collections().get_all_scopes()
-        collection_names = [
-            coll.name for scope in collections for coll in scope.collections
-        ]
-        collections_df = pd.DataFrame(
-            columns=["table_name"], data=collection_names
-        )
-        return Response(
-            resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_df
-        )
+        collection_names = [coll.name for scope in collections for coll in scope.collections]
+        collections_df = pd.DataFrame(columns=["table_name"], data=collection_names)
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_df)
 
     def get_columns(self, table_name: str) -> Response:
         """

@@ -2,8 +2,16 @@ from enum import Enum
 
 
 class PostgresField:
-    def __init__(self, name: str, object_id: int, dt_size: int, type_modifier: int, format_code: int, table_id: int = 0,
-                 column_id: int = 0):
+    def __init__(
+        self,
+        name: str,
+        object_id: int,
+        dt_size: int,
+        type_modifier: int,
+        format_code: int,
+        table_id: int = 0,
+        column_id: int = 0,
+    ):
         self.name = name
         self.object_id = object_id
         self.dt_size = dt_size
@@ -15,14 +23,22 @@ class PostgresField:
 
 class GenericField(PostgresField):
     def __init__(self, name: str, object_id: int, table_id: int = 0, column_id: int = 0):
-        super().__init__(name=name, object_id=object_id, dt_size=-1, type_modifier=-1, format_code=0, table_id=table_id,
-                         column_id=column_id)
+        super().__init__(
+            name=name,
+            object_id=object_id,
+            dt_size=-1,
+            type_modifier=-1,
+            format_code=0,
+            table_id=table_id,
+            column_id=column_id,
+        )
 
 
 class IntField(PostgresField):
     def __init__(self, name: str, table_id: int = 0, column_id: int = 0):
-        super().__init__(name=name, object_id=23, dt_size=4, type_modifier=-1, format_code=0, table_id=table_id,
-                         column_id=column_id)
+        super().__init__(
+            name=name, object_id=23, dt_size=4, type_modifier=-1, format_code=0, table_id=table_id, column_id=column_id
+        )
 
 
 class POSTGRES_TYPES(Enum):

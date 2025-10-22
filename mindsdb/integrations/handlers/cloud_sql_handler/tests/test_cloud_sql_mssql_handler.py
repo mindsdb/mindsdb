@@ -12,9 +12,9 @@ class CloudSQLMSSQLHandlerTest(unittest.TestCase):
             "user": "root",
             "password": "",
             "database": "public",
-            "db_engine": "mssql"
+            "db_engine": "mssql",
         }
-        cls.handler = CloudSQLHandler('test_cloud_sql_mssql_handler', cls.kwargs)
+        cls.handler = CloudSQLHandler("test_cloud_sql_mssql_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -29,9 +29,9 @@ class CloudSQLMSSQLHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('person')
+        columns = self.handler.get_columns("person")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

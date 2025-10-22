@@ -22,13 +22,13 @@ class StrapiHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-        args = kwargs.get('connection_data', {})
-        if 'host' in args and 'port' in args:
+        args = kwargs.get("connection_data", {})
+        if "host" in args and "port" in args:
             self._base_url = f"http://{args['host']}:{args['port']}"
-        if 'api_token' in args:
-            self._api_token = args['api_token']
-        if 'plural_api_ids' in args:
-            self._plural_api_ids = args['plural_api_ids']
+        if "api_token" in args:
+            self._api_token = args["api_token"]
+        if "plural_api_ids" in args:
+            self._plural_api_ids = args["plural_api_ids"]
         # Registers tables for each collections in strapi
         for pluralApiId in self._plural_api_ids:
             self._register_table(table_name=pluralApiId, table_class=StrapiTable(handler=self, name=pluralApiId))
@@ -44,15 +44,14 @@ class StrapiHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Strapi API: {e}!')
+            logger.error(f"Error connecting to Strapi API: {e}!")
             response.error_message = e
 
         self.is_connected = response.success
         return response
 
     def connect(self) -> StatusResponse:
-        """making the connectino object
-        """
+        """making the connectino object"""
         if self.is_connected and self.connection:
             return self.connection
 
@@ -66,7 +65,7 @@ class StrapiHandler(APIHandler):
             else:
                 raise Exception(f"Error connecting to Strapi API: {response.status_code} - {response.text}")
         except Exception as e:
-            logger.error(f'Error connecting to Strapi API: {e}!')
+            logger.error(f"Error connecting to Strapi API: {e}!")
             return StatusResponse(False, error_message=e)
 
     def native_query(self, query: str) -> StatusResponse:
@@ -89,10 +88,10 @@ class StrapiHandler(APIHandler):
         headers = {"Authorization": f"Bearer {self._api_token}"}
         url = f"{self._base_url}{endpoint}"
 
-        if method.upper() in ('GET', 'POST', 'PUT', 'DELETE'):
-            headers['Content-Type'] = 'application/json'
+        if method.upper() in ("GET", "POST", "PUT", "DELETE"):
+            headers["Content-Type"] = "application/json"
 
-            if method.upper() in ('POST', 'PUT', 'DELETE'):
+            if method.upper() in ("POST", "PUT", "DELETE"):
                 response = requests.request(method, url, headers=headers, params=params, data=json_data)
             else:
                 response = requests.get(url, headers=headers, params=params)
@@ -101,15 +100,15 @@ class StrapiHandler(APIHandler):
                 data = response.json()
                 # Create an empty DataFrame
                 df = pd.DataFrame()
-                if isinstance(data.get('data', None), list):
-                    for item in data['data']:
+                if isinstance(data.get("data", None), list):
+                    for item in data["data"]:
                         # Add 'id' and 'attributes' to the DataFrame
-                        row_data = {'id': item['id'], **item['attributes']}
+                        row_data = {"id": item["id"], **item["attributes"]}
                         df = df._append(row_data, ignore_index=True)
                     return df
-                elif isinstance(data.get('data', None), dict):
+                elif isinstance(data.get("data", None), dict):
                     # Add 'id' and 'attributes' to the DataFrame
-                    row_data = {'id': data['data']['id'], **data['data']['attributes']}
+                    row_data = {"id": data["data"]["id"], **data["data"]["attributes"]}
                     df = df._append(row_data, ignore_index=True)
                     return df
             else:

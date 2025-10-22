@@ -6,11 +6,8 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 class LindormHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "url": 'http://127.0.0.1:8765',
-            "autocommit": True
-        }
-        cls.handler = LindormHandler('test_phoenix_handler', cls.kwargs)
+        cls.kwargs = {"url": "http://127.0.0.1:8765", "autocommit": True}
+        cls.handler = LindormHandler("test_phoenix_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -25,9 +22,9 @@ class LindormHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('USERS')
+        columns = self.handler.get_columns("USERS")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

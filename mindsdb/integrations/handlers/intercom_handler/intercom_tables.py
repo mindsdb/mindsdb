@@ -28,7 +28,7 @@ class Articles(APITable):
         # Get id from where clause, if available
         conditions = extract_comparison_conditions(query.where)
         for op, arg1, arg2 in conditions:
-            if arg1 == 'id' and op == '=':
+            if arg1 == "id" and op == "=":
                 _id = arg2
             else:
                 raise ValueError("Unsupported condition in WHERE clause")
@@ -48,7 +48,7 @@ class Articles(APITable):
 
         if _id is not None:
             # Fetch data using the provided endpoint for the specific id
-            df = self.handler.call_intercom_api(endpoint=f'/articles/{_id}')
+            df = self.handler.call_intercom_api(endpoint=f"/articles/{_id}")
 
             if len(df) > 0:
                 result_df = df[selected_columns]
@@ -73,7 +73,11 @@ class Articles(APITable):
                 else:
                     current_page_size = page_size
 
-                df = pd.DataFrame(self.handler.call_intercom_api(endpoint='/articles', params={'page': page, 'per_page': current_page_size})['data'][0])
+                df = pd.DataFrame(
+                    self.handler.call_intercom_api(
+                        endpoint="/articles", params={"page": page, "per_page": current_page_size}
+                    )["data"][0]
+                )
                 if len(df) == 0:
                     break
                 result_df = pd.concat([result_df, df[selected_columns]], ignore_index=True)
@@ -96,7 +100,7 @@ class Articles(APITable):
                 data[column.name] = value.value
             else:
                 data[column.name] = value
-        self.handler.call_intercom_api(endpoint='/articles', method='POST', data=json.dumps(data))
+        self.handler.call_intercom_api(endpoint="/articles", method="POST", data=json.dumps(data))
 
     def update(self, query: ast.Update) -> None:
         """update
@@ -111,7 +115,7 @@ class Articles(APITable):
         # Get page id from query
         _id = None
         for op, arg1, arg2 in conditions:
-            if arg1 == 'id' and op == '=':
+            if arg1 == "id" and op == "=":
                 _id = arg2
             else:
                 raise NotImplementedError
@@ -122,7 +126,7 @@ class Articles(APITable):
                 data[key] = value.value
             else:
                 data[key] = value
-        self.handler.call_intercom_api(endpoint=f'/articles/{_id}', method='PUT', data=json.dumps(data))
+        self.handler.call_intercom_api(endpoint=f"/articles/{_id}", method="PUT", data=json.dumps(data))
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns
@@ -148,5 +152,5 @@ class Articles(APITable):
             "parent_id",
             "parent_ids",
             "parent_type",
-            "statistics"
+            "statistics",
         ]

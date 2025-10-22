@@ -123,9 +123,7 @@ class TwelveLabsHandlerModel(BaseModel):
         task = values.get("task")
 
         if task and task not in ["search", "summarization"]:
-            raise ValueError(
-                f"task {task} is not supported. Please provide a valid task."
-            )
+            raise ValueError(f"task {task} is not supported. Please provide a valid task.")
 
         return values
 
@@ -149,8 +147,8 @@ class TwelveLabsHandlerModel(BaseModel):
         engine_id = values.get("engine_id")
         index_options = values.get("index_options")
 
-        if engine_id and 'pegasus' in engine_id:
-            if not set(index_options).issubset(set(['visual', 'conversation'])):
+        if engine_id and "pegasus" in engine_id:
+            if not set(index_options).issubset(set(["visual", "conversation"])):
                 raise ValueError(
                     "index_optios for the Pegasus family of video understanding engines should be one or both of the following engine options: visual and conversation.."
                 )
@@ -209,22 +207,16 @@ class TwelveLabsHandlerModel(BaseModel):
         if task == "search":
             search_options = values.get("search_options")
             if not search_options:
-                raise ValueError(
-                    "search_options have not been provided. Please provide search_options."
-                )
+                raise ValueError("search_options have not been provided. Please provide search_options.")
 
             # search options should be a subset of index options
             index_options = values.get("index_options")
             if not set(search_options).issubset(set(index_options)):
-                raise ValueError(
-                    "search_options should be a subset of index_options."
-                )
+                raise ValueError("search_options should be a subset of index_options.")
 
             search_query_column = values.get("search_query_column")
             if not search_query_column:
-                raise ValueError(
-                    "search_query_column has not been provided. Please provide query_column."
-                )
+                raise ValueError("search_query_column has not been provided. Please provide query_column.")
 
         elif task == "summarization":
             summarization_type = values.get("summarization_type")
@@ -235,14 +227,10 @@ class TwelveLabsHandlerModel(BaseModel):
                     )
 
             else:
-                raise ValueError(
-                    "type has not been provided. Please provide summarization_type."
-                )
+                raise ValueError("type has not been provided. Please provide summarization_type.")
 
         else:
-            raise ValueError(
-                f"task {task} is not supported. Please provide a valid task."
-            )
+            raise ValueError(f"task {task} is not supported. Please provide a valid task.")
 
         return values
 
@@ -263,6 +251,7 @@ class TwelveLabsHandlerConfig(BaseSettings):
     DEFAULT_WAIT_DURATION : int
         Default wait duration when polling video indexing tasks created via the Twelve Labs API.
     """
+
     BASE_URL: str = "https://api.twelvelabs.io/v1.2"
     DEFAULT_ENGINE: str = "marengo2.6"
     DEFAULT_WAIT_DURATION: int = 5

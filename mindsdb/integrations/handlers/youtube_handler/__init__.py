@@ -6,6 +6,7 @@ from .__about__ import __version__ as version, __description__ as description
 try:
     from .youtube_handler import YoutubeHandler as Handler
     from .connection_args import connection_args
+
     import_error = None
 except Exception as e:
     Handler = None

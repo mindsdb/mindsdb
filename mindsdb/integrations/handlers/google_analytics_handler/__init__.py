@@ -8,11 +8,9 @@ try:
 except Exception as e:
     Handler = None
     import_error = e
-title = 'Google Analytics'
-name = 'google_analytics'
+title = "Google Analytics"
+name = "google_analytics"
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
 permanent = False
-__all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'
-]
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

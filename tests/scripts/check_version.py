@@ -7,7 +7,7 @@ from mindsdb.__about__ import __version__
 RELEASE_PATTERN = "^\d+(\.\d+)*$"  # noqa: W605
 PRERELEASE_PATTERN = "^\d+(\.\d+)*(a|b|rc)\d+$"  # noqa: W605
 
-version_str = sys.argv[1].replace('v', '')
+version_str = sys.argv[1].replace("v", "")
 is_prerelease = sys.argv[2] == "true"
 
 if is_prerelease:

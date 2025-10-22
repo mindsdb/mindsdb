@@ -7,6 +7,7 @@ class BaseMLAPITest(BaseExecutorTest):
     """
     Base test class for API-based ML engines
     """
+
     @staticmethod
     def get_api_key(env_var: str):
         """Retrieve API key from environment variables"""

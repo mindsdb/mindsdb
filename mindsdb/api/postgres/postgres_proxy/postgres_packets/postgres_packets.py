@@ -7,8 +7,11 @@ import time
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import PostgresField
 
 
-from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_identifiers import \
-    PostgresBackendMessageIdentifier, PostgresFrontendMessageIdentifier, PostgresAuthType
+from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_identifiers import (
+    PostgresBackendMessageIdentifier,
+    PostgresFrontendMessageIdentifier,
+    PostgresAuthType,
+)
 
 
 class PostgresEmptyDataException(Exception):
@@ -29,8 +32,11 @@ class UnsupportedPostgresMessageType(Exception):
 
 class PostgresPacketReader:
     def __init__(self, buffer: BinaryIO):
-        from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_formats import FE_MESSAGE_MAP, \
-            SUPPORTED_AUTH_TYPES
+        from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_formats import (
+            FE_MESSAGE_MAP,
+            SUPPORTED_AUTH_TYPES,
+        )
+
         self.fe_message_map = FE_MESSAGE_MAP
         self.supported_auth_types = SUPPORTED_AUTH_TYPES
         self.buffer = buffer
@@ -80,7 +86,7 @@ class PostgresPacketReader:
 
     def read_parameters(self, n):
         data = self.read_bytes(n)
-        return data.split(b'\x00')
+        return data.split(b"\x00")
 
     def read_verify_ssl_request(self):
         self.logger.debug("reading ssl")
@@ -94,9 +100,9 @@ class PostgresPacketReader:
         length = self.read_int32()
         version = self.read_int32()
         major_version = version >> 16
-        minor_version = version & 0xffff
+        minor_version = version & 0xFFFF
         message = self.read_parameters(length - 8)
-        self.logger.debug('PSQL Startup Message %d.%d : %s' % (major_version, minor_version, message))
+        self.logger.debug("PSQL Startup Message %d.%d : %s" % (major_version, minor_version, message))
         parameters = {}
         while len(message) != 0:
             key = message.pop(0)
@@ -111,7 +117,7 @@ class PostgresPacketReader:
             auth_type = self.read_byte()
         except PostgresEmptyDataException:
             # No authentication parameters specified. Which is fine if we're local on a mindsdbuser
-            return ''
+            return ""
         try:
             auth_type = PostgresAuthType(auth_type)
         except Exception as e:
@@ -119,7 +125,9 @@ class PostgresPacketReader:
         if auth_type not in self.supported_auth_types:
             raise UnsupportedPostgresAuthException("%s is not a supported auth type identifier" % auth_type)
         length = self.read_int32()
-        password = strip_null_byte(self.read_bytes(length - 4), encoding=encoding)  # password. Do something with later. We read to clear buffer.
+        password = strip_null_byte(
+            self.read_bytes(length - 4), encoding=encoding
+        )  # password. Do something with later. We read to clear buffer.
         return password
 
     def read_message(self):
@@ -132,14 +140,16 @@ class PostgresPacketReader:
             message_type = PostgresFrontendMessageIdentifier(message_type)
         except Exception as e:
             raise UnsupportedPostgresMessageType(
-                "%s is not a supported frontend message identifier:\n%s" % (message_type, str(e)))
+                "%s is not a supported frontend message identifier:\n%s" % (message_type, str(e))
+            )
 
         if message_type in self.fe_message_map:
             self.logger.debug("reading message type %s" % str(message_type.name))
             return self.fe_message_map[message_type]().read(self)
         else:
             raise UnsupportedPostgresMessageType(
-                "%s is not a supported frontend message identifier" % message_type.value)
+                "%s is not a supported frontend message identifier" % message_type.value
+            )
 
 
 class PostgresPacketBuilder:
@@ -153,8 +163,8 @@ class PostgresPacketBuilder:
         self.reset()
 
     def reset(self):
-        self.identifier = b''
-        self.pack_string = ''
+        self.identifier = b""
+        self.pack_string = ""
         self.pack_args = []
         self.length = 0
 
@@ -194,44 +204,46 @@ class PostgresPacketBuilder:
         write_file.write(packed_binary)
 
     def add_char(self, s: bytes):
-        self.pack_string += 'c'
+        self.pack_string += "c"
         if len(s) != 1:
             raise Exception("Char must be of length 1 in add_char")
         self.pack_args.append(s)
         return self.add_length(1)
 
     def add_string(self, s: bytes):
-        s = s + b'\x00'
-        self.pack_string += str(len(s)) + 's'
+        s = s + b"\x00"
+        self.pack_string += str(len(s)) + "s"
         self.pack_args.append(s)
         return self.add_length(len(s))
 
     def add_int32(self, i):
-        self.pack_string += 'i'
+        self.pack_string += "i"
         self.pack_args.append(i)
         return self.add_length(4)
 
     def add_int16(self, h):
-        self.pack_string += 'h'
+        self.pack_string += "h"
         self.pack_args.append(h)
         return self.add_length(2)
 
     def add_bytes(self, b: bytes):
         if len(b) == 1:
-            self.pack_string += 's'
+            self.pack_string += "s"
         else:
-            self.pack_string += str(len(b)) + 's'
+            self.pack_string += str(len(b)) + "s"
         self.pack_args.append(b)
         return self.add_length(len(b))
 
     def add_field(self, field: PostgresField):
-        return self.add_string(field.name.encode()) \
-            .add_int32(field.table_id) \
-            .add_int16(field.column_id) \
-            .add_int32(field.object_id) \
-            .add_int16(field.dt_size) \
-            .add_int32(field.type_modifier) \
+        return (
+            self.add_string(field.name.encode())
+            .add_int32(field.table_id)
+            .add_int16(field.column_id)
+            .add_int32(field.object_id)
+            .add_int16(field.dt_size)
+            .add_int32(field.type_modifier)
             .add_int16(field.format_code)
+        )
 
     def add_fields(self, fields: Sequence[PostgresField]):
         for field in fields:
@@ -239,7 +251,7 @@ class PostgresPacketBuilder:
         return self
 
     def add_column_value(self, val: bytes):
-        if val == b'NULL':
+        if val == b"NULL":
             self.add_int32(-1)
             return self
 

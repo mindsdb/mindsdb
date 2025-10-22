@@ -15,11 +15,8 @@ connection_args = OrderedDict(
         "description": "App Secret of symbl",
         "required": True,
         "label": "app_secret",
-        "secret": True
-    }
+        "secret": True,
+    },
 )
 
-connection_args_example = OrderedDict(
-    app_id="app_id",
-    app_secret="app_secret"
-)
+connection_args_example = OrderedDict(app_id="app_id", app_secret="app_secret")

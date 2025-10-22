@@ -3,7 +3,6 @@ from urllib.parse import urljoin
 
 
 class Lightdash:
-
     def __init__(self, url: str, api_key: str) -> None:
         self.base_url = urljoin(url, "/api/v1/")
         self.api_key = api_key
@@ -14,7 +13,7 @@ class Lightdash:
             "url": urljoin(self.base_url, relative_endpoint),
             "headers": {
                 "Authorization": "ApiKey " + self.api_key,
-            }
+            },
         }
         if data is not None:
             kwargs["data"] = data

@@ -9,20 +9,14 @@ class HandlersCache(UserDict):
 
     def __setitem__(self, key, value) -> None:
         if len(self.data) > self._max_size:
-            sorted_elements = sorted(
-                self.data.items(),
-                key=lambda x: x[1]['last_usage_at']
-            )
+            sorted_elements = sorted(self.data.items(), key=lambda x: x[1]["last_usage_at"])
             del self.data[sorted_elements[0][0]]
-        self.data[key] = {
-            'last_usage_at': time.time(),
-            'handler': value
-        }
+        self.data[key] = {"last_usage_at": time.time(), "handler": value}
 
     def __getitem__(self, key: int) -> object:
         el = super().__getitem__(key)
-        el['last_usage_at'] = time.time()
-        return el['handler']
+        el["last_usage_at"] = time.time()
+        return el["handler"]
 
 
 handlers_cacher = HandlersCache()

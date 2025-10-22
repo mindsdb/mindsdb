@@ -15,7 +15,6 @@ from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusRe
 
 
 class NPMHandler(APIHandler):
-
     def __init__(self, name: str, **kwargs) -> None:
         super().__init__(name)
         self.connection = None

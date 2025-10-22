@@ -23,7 +23,7 @@ class JsonStorage:
                 resource_group=self.resource_group,
                 resource_id=self.resource_id,
                 company_id=ctx.company_id,
-                content=value
+                content=value,
             )
             db.session.add(record)
         else:
@@ -43,26 +43,27 @@ class JsonStorage:
         return self[key]
 
     def get_record(self, key):
-        record = db.session.query(db.JsonStorage).filter_by(
-            name=key,
-            resource_group=self.resource_group,
-            resource_id=self.resource_id,
-            company_id=ctx.company_id
-        ).first()
+        record = (
+            db.session.query(db.JsonStorage)
+            .filter_by(
+                name=key, resource_group=self.resource_group, resource_id=self.resource_id, company_id=ctx.company_id
+            )
+            .first()
+        )
         return record
 
     def get_all_records(self):
-        records = db.session.query(db.JsonStorage).filter_by(
-            resource_group=self.resource_group,
-            resource_id=self.resource_id,
-            company_id=ctx.company_id
-        ).all()
+        records = (
+            db.session.query(db.JsonStorage)
+            .filter_by(resource_group=self.resource_group, resource_id=self.resource_id, company_id=ctx.company_id)
+            .all()
+        )
         return records
 
     def __repr__(self):
         records = self.get_all_records()
         names = [x.name for x in records]
-        return f'json_storage({names})'
+        return f"json_storage({names})"
 
     def __len__(self):
         records = self.get_all_records()
@@ -76,7 +77,7 @@ class JsonStorage:
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-                logger.error('cant delete record from JSON storage')
+                logger.error("cant delete record from JSON storage")
 
     def delete(self, key):
         del self[key]
@@ -89,13 +90,13 @@ class JsonStorage:
             db.session.commit()
         except Exception:
             db.session.rollback()
-            logger.error('cant delete records from JSON storage')
+            logger.error("cant delete records from JSON storage")
 
 
 class EncryptedJsonStorage(JsonStorage):
     def __init__(self, resource_group: str, resource_id: int):
         super().__init__(resource_group, resource_id)
-        self.secret_key = config.get('secret_key', 'dummy-key')
+        self.secret_key = config.get("secret_key", "dummy-key")
 
     def __setitem__(self, key: str, value: dict) -> None:
         if isinstance(value, dict) is False:
@@ -110,7 +111,7 @@ class EncryptedJsonStorage(JsonStorage):
                 resource_group=self.resource_group,
                 resource_id=self.resource_id,
                 company_id=ctx.company_id,
-                encrypted_content=encrypted_value
+                encrypted_content=encrypted_value,
             )
             db.session.add(record)
         else:
@@ -125,7 +126,7 @@ class EncryptedJsonStorage(JsonStorage):
                 resource_group=self.resource_group,
                 resource_id=self.resource_id,
                 company_id=ctx.company_id,
-                encrypted_content=encrypted_value
+                encrypted_content=encrypted_value,
             )
             db.session.add(record)
         else:

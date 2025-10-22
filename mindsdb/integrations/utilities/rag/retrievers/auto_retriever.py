@@ -20,10 +20,7 @@ class AutoRetriever(BaseRetriever):
 
     """
 
-    def __init__(
-            self,
-            config: RAGPipelineModel
-    ):
+    def __init__(self, config: RAGPipelineModel):
         """
 
         :param config: RAGPipelineModel
@@ -60,9 +57,7 @@ class AutoRetriever(BaseRetriever):
         :return:
         """
 
-        def _alter_description(data: pd.DataFrame,
-                               low_cardinality_columns: list,
-                               result: List[dict]):
+        def _alter_description(data: pd.DataFrame, low_cardinality_columns: list, result: List[dict]):
             """
             For low cardinality columns, alter the description to include the sorted valid values.
             :param data: pd.DataFrame
@@ -75,20 +70,12 @@ class AutoRetriever(BaseRetriever):
                     if entry["name"] == column_name:
                         entry["description"] += f". Valid values: {valid_values}"
 
-        data = documents_to_df(
-            self.content_column_name,
-            self.documents
-        )
+        data = documents_to_df(self.content_column_name, self.documents)
 
-        prompt = self.prompt_template.format(dataframe=data.head().to_json(),
-                                             description=self.document_description)
+        prompt = self.prompt_template.format(dataframe=data.head().to_json(), description=self.document_description)
         result: List[dict] = json.loads(self.llm.invoke(input=prompt).content)
 
-        _alter_description(
-            data,
-            self._get_low_cardinality_columns(data),
-            result
-        )
+        _alter_description(data, self._get_low_cardinality_columns(data), result)
 
         return result
 
@@ -97,9 +84,9 @@ class AutoRetriever(BaseRetriever):
 
         :return:
         """
-        return VectorStoreOperator(vector_store=self.vectorstore,
-                                   documents=self.documents,
-                                   embedding_model=self.embedding_model).vector_store
+        return VectorStoreOperator(
+            vector_store=self.vectorstore, documents=self.documents, embedding_model=self.embedding_model
+        ).vector_store
 
     def as_runnable(self) -> BaseRetriever:
         """
@@ -113,5 +100,5 @@ class AutoRetriever(BaseRetriever):
             vectorstore=vectorstore,
             document_contents=self.document_description,
             metadata_field_info=self.get_metadata_field_info(),
-            verbose=True
+            verbose=True,
         )

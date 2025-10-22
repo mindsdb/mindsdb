@@ -10,18 +10,9 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'EventStoreDB'
-name = 'eventstoredb'
+title = "EventStoreDB"
+name = "eventstoredb"
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
 
-__all__ = [
-    'Handler',
-    'version',
-    'name',
-    'type',
-    'title',
-    'description',
-    'import_error',
-    'icon_path'
-]
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

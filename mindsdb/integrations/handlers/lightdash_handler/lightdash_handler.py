@@ -33,7 +33,6 @@ from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusRe
 
 
 class LightdashHandler(APIHandler):
-
     def __init__(self, name: str, **kwargs) -> None:
         super().__init__(name)
         self.connection = None
@@ -88,21 +87,18 @@ class LightdashHandler(APIHandler):
 
 connection_args = OrderedDict(
     api_key={
-        'type': ARG_TYPE.STR,
-        'description': 'API Token for accessing Lightdash instance',
-        'required': True,
-        'label': 'API Key',
+        "type": ARG_TYPE.STR,
+        "description": "API Token for accessing Lightdash instance",
+        "required": True,
+        "label": "API Key",
     },
     base_url={
-        'type': ARG_TYPE.STR,
-        'description': 'Base URL of Lightdash instance',
-        'required': True,
-        'label': 'Base URL',
-    }
+        "type": ARG_TYPE.STR,
+        "description": "Base URL of Lightdash instance",
+        "required": True,
+        "label": "Base URL",
+    },
 )
 
 
-connection_args_example = OrderedDict(
-    api_key='23d6b9e0c2fab7eba2e8b7e452cead47',
-    base_url='http://localhost:8080/'
-)
+connection_args_example = OrderedDict(api_key="23d6b9e0c2fab7eba2e8b7e452cead47", base_url="http://localhost:8080/")

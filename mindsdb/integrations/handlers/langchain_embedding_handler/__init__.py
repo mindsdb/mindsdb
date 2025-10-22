@@ -14,10 +14,17 @@ except Exception as e:
 title = "LangChain Embedding"
 name = "langchain_embedding"
 type = HANDLER_TYPE.ML
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
 permanent = False
 
 __all__ = [
-    "Handler", "version", "name", "type", "title", "description",
-    "import_error", "icon_path", "construct_model_from_args"
+    "Handler",
+    "version",
+    "name",
+    "type",
+    "title",
+    "description",
+    "import_error",
+    "icon_path",
+    "construct_model_from_args",
 ]

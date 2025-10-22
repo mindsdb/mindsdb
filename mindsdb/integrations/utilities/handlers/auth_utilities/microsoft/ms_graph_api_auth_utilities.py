@@ -15,6 +15,7 @@ class MSGraphAPIPermissionsManager(ABC):
     """
     The base class for managing the delegated permissions for the Microsoft Graph API.
     """
+
     def __init__(
         self,
         client_id: Text,
@@ -69,6 +70,7 @@ class MSGraphAPIDelegatedPermissionsManager(MSGraphAPIPermissionsManager):
     """
     The class for managing the delegated permissions for the Microsoft Graph API.
     """
+
     def __init__(
         self,
         client_id: Text,
@@ -105,15 +107,17 @@ class MSGraphAPIDelegatedPermissionsManager(MSGraphAPIPermissionsManager):
         # If the request origin is 127.0.0.1 (localhost), replace it with localhost.
         # This is done because the only HTTP origin allowed in Microsoft Entra ID app registration is localhost.
         try:
-            request_origin = request.headers.get('ORIGIN') or (request.scheme + '://' + request.host)
+            request_origin = request.headers.get("ORIGIN") or (request.scheme + "://" + request.host)
             if not request_origin:
-                raise AuthException('Request origin could not be determined!')
+                raise AuthException("Request origin could not be determined!")
         except RuntimeError:
             # if it is outside of request context (streaming in agent)
-            request_origin = ''
+            request_origin = ""
 
-        request_origin = request_origin.replace('127.0.0.1', 'localhost') if 'http://127.0.0.1' in request_origin else request_origin
-        self.redirect_uri = request_origin + '/verify-auth'
+        request_origin = (
+            request_origin.replace("127.0.0.1", "localhost") if "http://127.0.0.1" in request_origin else request_origin
+        )
+        self.redirect_uri = request_origin + "/verify-auth"
 
     def get_access_token(self) -> Text:
         """
@@ -131,19 +135,18 @@ class MSGraphAPIDelegatedPermissionsManager(MSGraphAPIPermissionsManager):
         if accounts:
             response = msal_app.acquire_token_silent(self.scopes, account=accounts[0])
             if "access_token" in response:
-                return response['access_token']
+                return response["access_token"]
 
         # If no valid access token is found in the cache, run the authentication flow.
         response = self._execute_ms_graph_api_auth_flow()
 
         if "access_token" in response:
-            return response['access_token']
+            return response["access_token"]
         # If no access token is returned, raise an exception.
         # This is the expected behaviour when the user attempts to authenticate for the first time.
         else:
             raise AuthException(
-                f'Error getting access token: {response.get("error_description")}',
-                auth_url=response.get('auth_url')
+                f"Error getting access token: {response.get('error_description')}", auth_url=response.get("auth_url")
             )
 
     def _execute_ms_graph_api_auth_flow(self) -> Dict:
@@ -163,21 +166,16 @@ class MSGraphAPIDelegatedPermissionsManager(MSGraphAPIPermissionsManager):
         # If the authentication code is provided, acquire the token by authorization code.
         if self.code:
             response = msal_app.acquire_token_by_authorization_code(
-                code=self.code,
-                scopes=self.scopes,
-                redirect_uri=self.redirect_uri
+                code=self.code, scopes=self.scopes, redirect_uri=self.redirect_uri
             )
 
             return response
 
         # If the authentication code is not provided, get the authorization request URL.
         else:
-            auth_url = msal_app.get_authorization_request_url(
-                scopes=self.scopes,
-                redirect_uri=self.redirect_uri
-            )
+            auth_url = msal_app.get_authorization_request_url(scopes=self.scopes, redirect_uri=self.redirect_uri)
 
-            raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
+            raise AuthException(f"Authorisation required. Please follow the url: {auth_url}", auth_url=auth_url)
 
 
 class MSGraphAPIApplicationPermissionsManager(MSGraphAPIPermissionsManager):
@@ -207,6 +205,4 @@ class MSGraphAPIApplicationPermissionsManager(MSGraphAPIPermissionsManager):
         if "access_token" in response:
             return response["access_token"]
         else:
-            raise AuthException(
-                f"Error getting access token: {response.get('error_description')}"
-            )
+            raise AuthException(f"Error getting access token: {response.get('error_description')}")

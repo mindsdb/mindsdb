@@ -10,16 +10,12 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.utilities.sql import query_df
-from mindsdb.api.executor.exceptions import (
-    KeyColumnDoesNotExist,
-    NotSupportedYet
-)
+from mindsdb.api.executor.exceptions import KeyColumnDoesNotExist, NotSupportedYet
 
 from .base import BaseStepCall
 
 
 class ProjectStepCall(BaseStepCall):
-
     bind = ProjectStep
 
     def call(self, step):
@@ -39,7 +35,7 @@ class ProjectStepCall(BaseStepCall):
         # analyze condition and change name of columns
         def check_fields(node, is_table=None, **kwargs):
             if is_table:
-                raise NotSupportedYet('Subqueries is not supported in target')
+                raise NotSupportedYet("Subqueries is not supported in target")
             if isinstance(node, Identifier):
                 # only column name
                 col_name = node.parts[-1]
@@ -50,10 +46,7 @@ class ProjectStepCall(BaseStepCall):
                     else:
                         # replace with all columns from table
                         table_name = node.parts[-2]
-                        return [
-                            Identifier(parts=[col])
-                            for col in tbl_idx.get(table_name, [])
-                        ]
+                        return [Identifier(parts=[col]) for col in tbl_idx.get(table_name, [])]
 
                 if len(node.parts) == 1:
                     key = col_name
@@ -62,15 +55,12 @@ class ProjectStepCall(BaseStepCall):
                     key = (table_name, col_name)
 
                 if key not in col_idx:
-                    raise KeyColumnDoesNotExist(f'Table not found for column: {key}')
+                    raise KeyColumnDoesNotExist(f"Table not found for column: {key}")
 
                 new_name = col_idx[key]
                 return Identifier(parts=[new_name], alias=node.alias)
 
-        query = Select(
-            targets=step.columns,
-            from_table=Identifier('df_table')
-        )
+        query = Select(targets=step.columns, from_table=Identifier("df_table"))
 
         targets0 = query_traversal(query.targets, check_fields)
         targets = []

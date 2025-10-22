@@ -58,15 +58,11 @@ class VLLMEmbeddings(Embeddings):
         embedding_coroutines = []
         chunk_start_indices = range(0, len(texts), self.batch_size)
         for i in chunk_start_indices:
-
-            batch = texts[i: i + self.batch_size]
+            batch = texts[i : i + self.batch_size]
             embedding_coroutines.append(await_openai_call(batch))
 
             # if at max-concurrency, then run with gather
-            if len(embedding_coroutines) == 512 or len(embedding_coroutines) == len(
-                chunk_start_indices
-            ):
-
+            if len(embedding_coroutines) == 512 or len(embedding_coroutines) == len(chunk_start_indices):
                 openai_responses = []
 
                 async def gather_coroutines(openai_responses):

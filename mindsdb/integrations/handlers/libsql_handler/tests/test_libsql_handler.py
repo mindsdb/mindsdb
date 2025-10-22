@@ -20,9 +20,7 @@ class LibSQLHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.OK
 
     def test_2_insert_rows(self):
-        query = (
-            "INSERT OR IGNORE INTO user (name, age) VALUES ('Alice', 30), ('Bob', 25)"
-        )
+        query = "INSERT OR IGNORE INTO user (name, age) VALUES ('Alice', 30), ('Bob', 25)"
         result = self.handler.native_query(query)
         print(result)
         assert result.type is RESPONSE_TYPE.OK

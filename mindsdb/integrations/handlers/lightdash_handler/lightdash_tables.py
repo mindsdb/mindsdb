@@ -35,7 +35,6 @@ def select_keys(d, keys):
 
 
 class CustomAPITable(APITable):
-
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
         self.handler.connect()
@@ -48,7 +47,9 @@ class CustomAPITable(APITable):
 
     def parse_select(self, query: ast.Select, table_name: str):
         select_statement_parser = SELECTQueryParser(query, table_name, self.get_columns())
-        self.selected_columns, self.where_conditions, self.order_by_conditions, self.result_limit = select_statement_parser.parse_query()
+        self.selected_columns, self.where_conditions, self.order_by_conditions, self.result_limit = (
+            select_statement_parser.parse_query()
+        )
 
     def get_where_param(self, query: ast.Select, param: str):
         params = conditions_to_filter(query.where)
@@ -66,18 +67,18 @@ class CustomAPITable(APITable):
 class UserTable(CustomAPITable):
     name: str = "user"
     columns: List[str] = [
-        'userUuid',
-        'email',
-        'firstName',
-        'lastName',
-        'organizationUuid',
-        'organizationName',
-        'organizationCreatedAt',
-        'isTrackingAnonymized',
-        'isMarketingOptedIn',
-        'isSetupComplete',
-        'role',
-        'isActive',
+        "userUuid",
+        "email",
+        "firstName",
+        "lastName",
+        "organizationUuid",
+        "organizationName",
+        "organizationCreatedAt",
+        "isTrackingAnonymized",
+        "isMarketingOptedIn",
+        "isSetupComplete",
+        "role",
+        "isActive",
     ]
 
     def __init__(self, handler: APIHandler):
@@ -92,11 +93,7 @@ class UserTable(CustomAPITable):
 
 class UserAbilityTable(CustomAPITable):
     name: str = "user_ability"
-    columns: List[str] = [
-        'action',
-        'subject',
-        'conditions'
-    ]
+    columns: List[str] = ["action", "subject", "conditions"]
 
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
@@ -113,11 +110,10 @@ class UserAbilityTable(CustomAPITable):
 class OrgTable(CustomAPITable):
     name: str = "org"
     columns: List[str] = [
-        'organizationUuid',
-        'defaultProjectUuid'
-        'name',
-        'chartColors',
-        'needsProject',
+        "organizationUuid",
+        "defaultProjectUuidname",
+        "chartColors",
+        "needsProject",
     ]
 
     def __init__(self, handler: APIHandler):
@@ -134,9 +130,9 @@ class OrgTable(CustomAPITable):
 class OrgProjectsTable(CustomAPITable):
     name: str = "org_projects"
     columns: List[str] = [
-        'name',
-        'projectUuid',
-        'type',
+        "name",
+        "projectUuid",
+        "type",
     ]
 
     def __init__(self, handler: APIHandler):
@@ -152,14 +148,14 @@ class OrgProjectsTable(CustomAPITable):
 class OrgMembersTable(CustomAPITable):
     name: str = "org_members"
     columns: List[str] = [
-        'userUuid',
-        'firstName',
-        'lastName',
-        'email',
-        'organizationUuid',
-        'role',
-        'isActive',
-        'isInviteExpired',
+        "userUuid",
+        "firstName",
+        "lastName",
+        "email",
+        "organizationUuid",
+        "role",
+        "isActive",
+        "isInviteExpired",
     ]
 
     def __init__(self, handler: APIHandler):
@@ -175,13 +171,13 @@ class OrgMembersTable(CustomAPITable):
 class ProjectTable(CustomAPITable):
     name: str = "project_table"
     columns: List[str] = [
-        'organizationUuid',
-        'projectUuid',
-        'name',
-        'type',
-        'pinnedListUuid',
-        'copiedFromProjectUuid',
-        'dbtVersion',
+        "organizationUuid",
+        "projectUuid",
+        "name",
+        "type",
+        "pinnedListUuid",
+        "copiedFromProjectUuid",
+        "dbtVersion",
     ]
 
     def __init__(self, handler: APIHandler):
@@ -189,7 +185,7 @@ class ProjectTable(CustomAPITable):
         self.connection = self.handler.connect()
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        project_uuid = self.get_where_param(query, 'project_uuid')
+        project_uuid = self.get_where_param(query, "project_uuid")
         data = select_keys(self.connection.get_project(project_uuid), self.columns)
         df = pd.DataFrame.from_records([data])
         return self.apply_query_params(df, query)
@@ -216,7 +212,7 @@ class WarehouseConnectionTable(CustomAPITable):
         self.connection = self.handler.connect()
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        project_uuid = self.get_where_param(query, 'project_uuid')
+        project_uuid = self.get_where_param(query, "project_uuid")
         data = select_keys(self.connection.get_project(project_uuid).get("warehouseConnection", {}), self.columns)
         df = pd.DataFrame.from_records([data])
         return self.apply_query_params(df, query)
@@ -465,7 +461,7 @@ class ChartConfigTable(CustomAPITable):
         "valueLabel",
         "isDonut",
         "metricId",
-        "groupFieldIds"
+        "groupFieldIds",
     ]
 
     def __init__(self, handler: APIHandler):

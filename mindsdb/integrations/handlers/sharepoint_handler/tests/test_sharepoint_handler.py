@@ -5,17 +5,16 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class SharepointHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
-                "clientId": os.environ.get('CLIENT_ID'),
-                "clientSecret": os.environ.get('CLIENT_SECRET'),
-                "tenantId": os.environ.get('TENANT_ID'),
+                "clientId": os.environ.get("CLIENT_ID"),
+                "clientSecret": os.environ.get("CLIENT_SECRET"),
+                "tenantId": os.environ.get("TENANT_ID"),
             }
         }
-        cls.handler = SharepointHandler('test_sharepoint_handler', **cls.kwargs)
+        cls.handler = SharepointHandler("test_sharepoint_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -45,9 +44,9 @@ class SharepointHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_6_get_columns(self):
-        columns = self.handler.get_columns('test_sharepoint_handler.siteColumns')
+        columns = self.handler.get_columns("test_sharepoint_handler.siteColumns")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

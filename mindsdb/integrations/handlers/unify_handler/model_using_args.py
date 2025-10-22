@@ -1,5 +1,1 @@
-model_using_args = {
-    'unify_api_key': {
-        'secret': True
-    }
-}
+model_using_args = {"unify_api_key": {"secret": True}}

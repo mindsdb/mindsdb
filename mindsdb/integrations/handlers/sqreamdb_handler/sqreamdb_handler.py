@@ -8,7 +8,7 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 import pandas as pd
@@ -20,11 +20,10 @@ logger = log.getLogger(__name__)
 
 
 class SQreamDBHandler(DatabaseHandler):
-
-    name = 'sqreamdb'
+    name = "sqreamdb"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
-        """ Initialize the handler
+        """Initialize the handler
         Args:
             name (str): name of particular handler instance
             connection_data (dict): parameters for connecting to the database
@@ -45,14 +44,14 @@ class SQreamDBHandler(DatabaseHandler):
             return self.connection
 
         args = {
-            "database": self.connection_data.get('database'),
-            "host": self.connection_data.get('host'),
-            "port": self.connection_data.get('port'),
-            "username": self.connection_data.get('user'),
-            "password": self.connection_data.get('password'),
-            "clustered": self.connection_data.get('clustered', False),
-            "use_ssl": self.connection_data.get('use_ssl', False),
-            "service": self.connection_data.get('service', 'sqream')
+            "database": self.connection_data.get("database"),
+            "host": self.connection_data.get("host"),
+            "port": self.connection_data.get("port"),
+            "username": self.connection_data.get("user"),
+            "password": self.connection_data.get("password"),
+            "clustered": self.connection_data.get("clustered", False),
+            "use_ssl": self.connection_data.get("use_ssl", False),
+            "service": self.connection_data.get("service", "sqream"),
         }
 
         connection = db.connect(**args)
@@ -72,10 +71,10 @@ class SQreamDBHandler(DatabaseHandler):
         try:
             connection = self.connect()
             with connection.cursor() as cur:
-                cur.execute('select 1;')
+                cur.execute("select 1;")
             response.success = True
         except db.Error as e:
-            logger.error(f'Error connecting to SQreamDB {self.database}, {e}!')
+            logger.error(f"Error connecting to SQreamDB {self.database}, {e}!")
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -99,24 +98,17 @@ class SQreamDBHandler(DatabaseHandler):
             try:
                 cur.execute(query)
 
-                if cur.rowcount > 0 and query.upper().startswith('SELECT'):
+                if cur.rowcount > 0 and query.upper().startswith("SELECT"):
                     result = cur.fetchall()
                     response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
+                        RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cur.description])
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 self.connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.database}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.database}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
                 self.connection.rollback()
 
         if need_to_close is True:

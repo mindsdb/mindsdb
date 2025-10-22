@@ -33,7 +33,7 @@ class BaseQueryParser(ABC):
         return where_conditions
 
 
-class BaseQueryExecutor():
+class BaseQueryExecutor:
     """
     Executes a SQL query.
 

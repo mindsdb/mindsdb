@@ -31,12 +31,12 @@ class AnnotationsTable(APITable):
         supported = False  # Flag to check if the query is supported
 
         for op, arg1, arg2 in conditions:
-            if op in {'or', 'and'}:
-                raise NotImplementedError('OR and AND are not supported')
-            if arg1 == 'item_id' and op == '=':
+            if op in {"or", "and"}:
+                raise NotImplementedError("OR and AND are not supported")
+            if arg1 == "item_id" and op == "=":
                 df = self._get_item(arg2)
                 supported = True
-            elif arg1 == 'parent_item_id' and op == '=':
+            elif arg1 == "parent_item_id" and op == "=":
                 df = self._get_item_children(arg2)
                 supported = True
 
@@ -54,18 +54,18 @@ class AnnotationsTable(APITable):
             List of column names.
         """
         return [
-            'annotationColor',
-            'annotationComment',
-            'annotationPageLabel',
-            'annotationText',
-            'annotationType',
-            'dateAdded',
-            'dateModified',
-            'key',
-            'parentItem',
-            'relations',
-            'tags',
-            'version'
+            "annotationColor",
+            "annotationComment",
+            "annotationPageLabel",
+            "annotationText",
+            "annotationType",
+            "dateAdded",
+            "dateModified",
+            "key",
+            "parentItem",
+            "relations",
+            "tags",
+            "version",
         ]
 
     def _get_items(self) -> pd.DataFrame:
@@ -80,13 +80,13 @@ class AnnotationsTable(APITable):
             self.handler.connect()
 
         try:
-            method = getattr(self.handler.api, 'items')
-            result = method(itemType='annotation')
+            method = getattr(self.handler.api, "items")
+            result = method(itemType="annotation")
 
             if isinstance(result, dict):
-                return pd.DataFrame([result.get('data', {})])
+                return pd.DataFrame([result.get("data", {})])
             if isinstance(result, list) and all(isinstance(item, dict) for item in result):
-                data_list = [item.get('data', {}) for item in result]
+                data_list = [item.get("data", {}) for item in result]
                 return pd.DataFrame(data_list)
 
         except Exception as e:
@@ -112,11 +112,11 @@ class AnnotationsTable(APITable):
             self.handler.connect()
 
         try:
-            method = getattr(self.handler.api, 'item')
-            result = method(item_id, itemType='annotation')
+            method = getattr(self.handler.api, "item")
+            result = method(item_id, itemType="annotation")
 
             if isinstance(result, dict):
-                return pd.DataFrame([result.get('data', {})])
+                return pd.DataFrame([result.get("data", {})])
 
         except Exception as e:
             logger.error(f"Error fetching item with ID {item_id}: {e}")
@@ -141,13 +141,13 @@ class AnnotationsTable(APITable):
             self.handler.connect()
 
         try:
-            method = getattr(self.handler.api, 'children')
-            result = method(parent_item_id, itemType='annotation')
+            method = getattr(self.handler.api, "children")
+            result = method(parent_item_id, itemType="annotation")
 
             if isinstance(result, dict):
-                return pd.DataFrame([result.get('data', {})])
+                return pd.DataFrame([result.get("data", {})])
             if isinstance(result, list) and all(isinstance(item, dict) for item in result):
-                data_list = [item.get('data', {}) for item in result]
+                data_list = [item.get("data", {}) for item in result]
                 return pd.DataFrame(data_list)
 
         except Exception as e:

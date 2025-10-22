@@ -8,9 +8,7 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 
-from mindsdb.integrations.utilities.handlers.query_utilities.insert_query_utilities import (
-    INSERTQueryParser
-)
+from mindsdb.integrations.utilities.handlers.query_utilities.insert_query_utilities import INSERTQueryParser
 
 from mindsdb.utilities import log
 
@@ -22,27 +20,27 @@ class MessagesTable(APITable):
 
     def get_columns(self):
         return [
-            'id',
-            'type',
-            'content',
-            'author_id',
-            'author_username',
-            'author_global_name',
-            'author_avatar',
-            'author_banner_color',
-            'attachments',
-            'embeds',
-            'mentions',
-            'mention_roles',
-            'pinned',
-            'mention_everyone',
-            'tts',
-            'timestamp',
-            'edited_timestamp',
-            'flags',
-            'components',
-            'nonce',
-            'referenced_message',
+            "id",
+            "type",
+            "content",
+            "author_id",
+            "author_username",
+            "author_global_name",
+            "author_avatar",
+            "author_banner_color",
+            "attachments",
+            "embeds",
+            "mentions",
+            "mention_roles",
+            "pinned",
+            "mention_everyone",
+            "tts",
+            "timestamp",
+            "edited_timestamp",
+            "flags",
+            "components",
+            "nonce",
+            "referenced_message",
         ]
 
     def select(self, query: ast.Select) -> Response:
@@ -65,25 +63,23 @@ class MessagesTable(APITable):
         filters = []
         user_filter_flag = channel_filter_flag = False
         for op, arg1, arg2 in conditions:
-            if op == 'or':
-                raise NotImplementedError('OR is not supported')
-            if arg1 == 'timestamp':
-                if op == '>':
-                    params['after'] = arg2
-                elif op == '<':
-                    params['before'] = arg2
+            if op == "or":
+                raise NotImplementedError("OR is not supported")
+            if arg1 == "timestamp":
+                if op == ">":
+                    params["after"] = arg2
+                elif op == "<":
+                    params["before"] = arg2
                 else:
-                    raise NotImplementedError(
-                        f'Unsupported operator {op} for timestamp'
-                    )
+                    raise NotImplementedError(f"Unsupported operator {op} for timestamp")
 
-            elif arg1 in ['author_id', 'author_username', 'author_global_name']:
+            elif arg1 in ["author_id", "author_username", "author_global_name"]:
                 if user_filter_flag:
-                    raise NotImplementedError('Multiple user filters are not supported')
+                    raise NotImplementedError("Multiple user filters are not supported")
                 user_filter_flag = True
 
-                if op != '=':
-                    raise NotImplementedError(f'Unsupported operator {op} for {arg1}')
+                if op != "=":
+                    raise NotImplementedError(f"Unsupported operator {op} for {arg1}")
 
                 # if arg1 == 'author_id':
                 #     filters.append(lambda x: x.author.id == int(arg2))
@@ -92,26 +88,24 @@ class MessagesTable(APITable):
                 # elif arg1 == 'author_global_name':
                 #     filters.append(lambda x: x.author.global_name == arg2)
 
-            elif arg1 == 'channel_id':
-                if op != '=':
-                    raise NotImplementedError(f'Unsupported operator {op} for {arg1}')
+            elif arg1 == "channel_id":
+                if op != "=":
+                    raise NotImplementedError(f"Unsupported operator {op} for {arg1}")
                 channel_filter_flag = True
-                params['channel_id'] = int(arg2)
+                params["channel_id"] = int(arg2)
 
             else:
                 filters.append([op, arg1, arg2])
 
         if query.limit is not None:
-            params['limit'] = query.limit
+            params["limit"] = query.limit
         else:
-            params['limit'] = 100
+            params["limit"] = 100
 
         if not channel_filter_flag:
-            raise NotImplementedError('Channel filter is required')
+            raise NotImplementedError("Channel filter is required")
 
-        result = self.handler.call_discord_api(
-            'get_messages', params=params, filters=filters
-        )
+        result = self.handler.call_discord_api("get_messages", params=params, filters=filters)
 
         # filter targets
         columns = []
@@ -160,8 +154,8 @@ class MessagesTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['channel_id', 'text'],
-            mandatory_columns=['channel_id', 'text'],
+            supported_columns=["channel_id", "text"],
+            mandatory_columns=["channel_id", "text"],
             all_mandatory=False,
         )
         message_data = insert_statement_parser.parse_query()
@@ -181,8 +175,8 @@ class MessagesTable(APITable):
         """
         for message in message_data:
             try:
-                params = {'channel_id': message['channel_id'], 'text': message['text']}
-                self.handler.call_discord_api('send_message', params=params)
+                params = {"channel_id": message["channel_id"], "text": message["text"]}
+                self.handler.call_discord_api("send_message", params=params)
                 logger.info("Message sent to Discord channel successfully.")
             except Exception as e:
                 logger.error(f"Error sending message to Discord channel: {e}")

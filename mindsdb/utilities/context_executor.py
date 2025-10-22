@@ -5,7 +5,8 @@ import contextvars
 
 
 class ContextThreadPoolExecutor(ThreadPoolExecutor):
-    '''Handles copying context variables to threads created by ThreadPoolExecutor'''
+    """Handles copying context variables to threads created by ThreadPoolExecutor"""
+
     def __init__(self, max_workers=None):
         self.context = contextvars.copy_context()
         # ThreadPoolExecutor does not propagate context to threads by default, so we need a custom initializer.

@@ -70,13 +70,9 @@ class PyPIRecentTable(CustomAPITable):
                 del all_cols[period]
                 to_be_excluded = list(all_cols.values())
             else:
-                raise ValueError(
-                    "Make sure that one of `day`, `week` or `month` values is assigned to `period`."
-                )
+                raise ValueError("Make sure that one of `day`, `week` or `month` values is assigned to `period`.")
 
-        select_statement_parser = SELECTQueryParser(
-            query, PyPIRecentTable.name, self.get_columns(to_be_excluded)
-        )
+        select_statement_parser = SELECTQueryParser(query, PyPIRecentTable.name, self.get_columns(to_be_excluded))
         (
             selected_columns,
             _,
@@ -86,9 +82,7 @@ class PyPIRecentTable(CustomAPITable):
 
         raw_df = self.handler.connection(name=package_name).recent(period)
 
-        select_statement_executor = SELECTQueryExecutor(
-            raw_df, selected_columns, [], order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(raw_df, selected_columns, [], order_by_conditions)
 
         result_df = select_statement_executor.execute_query()
 
@@ -124,13 +118,9 @@ class PyPIOverallTable(CustomAPITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        raw_df = self.handler.connection(name=package_name, limit=result_limit).overall(
-            mirrors=mirrors
-        )
+        raw_df = self.handler.connection(name=package_name, limit=result_limit).overall(mirrors=mirrors)
 
-        select_statement_executor = SELECTQueryExecutor(
-            raw_df, selected_columns, [], order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(raw_df, selected_columns, [], order_by_conditions)
 
         result_df = select_statement_executor.execute_query()
 
@@ -166,13 +156,9 @@ class PyPIPythonMajorTable(CustomAPITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        raw_df = self.handler.connection(
-            name=package_name, limit=result_limit
-        ).python_major(version=version)
+        raw_df = self.handler.connection(name=package_name, limit=result_limit).python_major(version=version)
 
-        select_statement_executor = SELECTQueryExecutor(
-            raw_df, selected_columns, [], order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(raw_df, selected_columns, [], order_by_conditions)
 
         result_df = select_statement_executor.execute_query()
 
@@ -208,13 +194,9 @@ class PyPIPythonMinorTable(CustomAPITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        raw_df = self.handler.connection(
-            name=package_name, limit=result_limit
-        ).python_minor(version=version)
+        raw_df = self.handler.connection(name=package_name, limit=result_limit).python_minor(version=version)
 
-        select_statement_executor = SELECTQueryExecutor(
-            raw_df, selected_columns, [], order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(raw_df, selected_columns, [], order_by_conditions)
 
         result_df = select_statement_executor.execute_query()
 
@@ -250,13 +232,9 @@ class PyPISystemTable(CustomAPITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        raw_df = self.handler.connection(name=package_name, limit=result_limit).system(
-            os=os
-        )
+        raw_df = self.handler.connection(name=package_name, limit=result_limit).system(os=os)
 
-        select_statement_executor = SELECTQueryExecutor(
-            raw_df, selected_columns, [], order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(raw_df, selected_columns, [], order_by_conditions)
 
         result_df = select_statement_executor.execute_query()
 

@@ -12,10 +12,10 @@ class SQreamDBHandlerTest(unittest.TestCase):
                 "port": "5000",
                 "user": "sqream",
                 "password": "sqream",
-                "database": "master"
+                "database": "master",
             }
         }
-        cls.handler = SQreamDBHandler('test_sqreamdb_handler', **cls.kwargs)
+        cls.handler = SQreamDBHandler("test_sqreamdb_handler", **cls.kwargs)
 
     def test_0_connect(self):
         self.handler.connect()
@@ -41,5 +41,5 @@ class SQreamDBHandlerTest(unittest.TestCase):
         self.handler.check_connection()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

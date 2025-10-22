@@ -25,17 +25,12 @@ class LightFMHandler(BaseMLEngine):
     # todo add ability to partially update model based on new data for existing users, items
     # todo add support for hybrid recommender
     def create(self, target: str, df: pd.DataFrame = None, args: Optional[Dict] = None):
-
         args = args["using"]
 
         # get model parameters if defined by user - else use default values
 
-        user_defined_model_params = list(
-            filter(lambda x: x in args, ["learning_rate", "loss", "epochs"])
-        )
-        args["model_params"] = {
-            model_param: args[model_param] for model_param in user_defined_model_params
-        }
+        user_defined_model_params = list(filter(lambda x: x in args, ["learning_rate", "loss", "epochs"]))
+        args["model_params"] = {model_param: args[model_param] for model_param in user_defined_model_params}
         model_parameters = ModelParameters(**args["model_params"])
 
         # store model parameters
@@ -61,14 +56,9 @@ class LightFMHandler(BaseMLEngine):
 
         # run evaluation if specified
         if args.get("evaluation"):
-
-            evaluation_metrics = self.evaluate(
-                preprocessed_data.interaction_matrix, random_state, model_parameters
-            )
+            evaluation_metrics = self.evaluate(preprocessed_data.interaction_matrix, random_state, model_parameters)
             # convert to float to str so it can be stored in json
-            args["evaluation_metrics"] = {
-                k: str(v) for k, v in evaluation_metrics.items()
-            }
+            args["evaluation_metrics"] = {k: str(v) for k, v in evaluation_metrics.items()}
 
         # train model
         model = LightFM(
@@ -82,7 +72,6 @@ class LightFMHandler(BaseMLEngine):
         self.model_storage.json_set("args", args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None):
-
         predict_params = args["predict_params"]
 
         # if user doesn't specify recommender type, default to user_item
@@ -94,12 +83,8 @@ class LightFMHandler(BaseMLEngine):
         args = self.model_storage.json_get("args")
 
         # get item_id to idx and user_id to idx maps
-        args["item_id_to_idx_map"] = dict(
-            zip(args["item_idx_to_id_map"].values(), args["item_idx_to_id_map"].keys())
-        )
-        args["user_id_to_idx_map"] = dict(
-            zip(args["user_idx_to_id_map"].values(), args["user_idx_to_id_map"].keys())
-        )
+        args["item_id_to_idx_map"] = dict(zip(args["item_idx_to_id_map"].values(), args["item_idx_to_id_map"].keys()))
+        args["user_id_to_idx_map"] = dict(zip(args["user_idx_to_id_map"].values(), args["user_idx_to_id_map"].keys()))
 
         model = dill.loads(self.model_storage.file_get("model"))
 
@@ -109,7 +94,6 @@ class LightFMHandler(BaseMLEngine):
 
         if recommender_type == "user_item":
             if df is not None:
-
                 if args["item_id"] in df.columns:
                     n_items = df[args["item_id"]].nunique()
                     item_ids = df[args["item_id"]].unique().tolist()
@@ -138,14 +122,10 @@ class LightFMHandler(BaseMLEngine):
             )
 
         elif recommender_type == "user_user":
-            raise NotImplementedError(
-                "user_user recommendation type is not implemented yet"
-            )
+            raise NotImplementedError("user_user recommendation type is not implemented yet")
 
         else:
-            raise ValueError(
-                "recommender_type must be either 'user_item', 'item_item' or 'user_user'"
-            )
+            raise ValueError("recommender_type must be either 'user_item', 'item_item' or 'user_user'")
 
     def describe(self, attribute=None):
         model_args = self.model_storage.json_get("args")
@@ -161,7 +141,6 @@ class LightFMHandler(BaseMLEngine):
             )
 
         elif attribute == "info":
-
             model_metrics = model_args["evaluation_metrics"]
 
             info_dict = {k: [model_metrics[k]] for k in ["auc", "precision", "recall"]}
@@ -175,7 +154,6 @@ class LightFMHandler(BaseMLEngine):
             return pd.DataFrame(tables, columns=["tables"])
 
     def evaluate(self, interaction_matrix, random_state, model_parameters):
-
         train, test = random_train_test_split(
             interaction_matrix,
             test_percentage=0.2,

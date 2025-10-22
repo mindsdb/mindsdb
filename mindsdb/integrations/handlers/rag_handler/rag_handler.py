@@ -15,13 +15,15 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-logger.warning("\nThe RAG handler has been deprecated and is no longer being actively supported. \n"
-               "It will be fully removed in v24.8.x.x, "
-               "for RAG workflows, please migrate to "
-               "Agents + Retrieval skill. \n"
-               "Example usage can be found here: \n"
-               "https://github.com/mindsdb/mindsdb_python_sdk/blob/staging/examples"
-               "/using_agents_with_retrieval.py")
+logger.warning(
+    "\nThe RAG handler has been deprecated and is no longer being actively supported. \n"
+    "It will be fully removed in v24.8.x.x, "
+    "for RAG workflows, please migrate to "
+    "Agents + Retrieval skill. \n"
+    "Example usage can be found here: \n"
+    "https://github.com/mindsdb/mindsdb_python_sdk/blob/staging/examples"
+    "/using_agents_with_retrieval.py"
+)
 
 
 class RAGHandler(BaseMLEngine):
@@ -42,15 +44,13 @@ class RAGHandler(BaseMLEngine):
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if "using" not in args:
-            raise Exception(
-                "RAG engine requires a USING clause! Refer to its documentation for more details."
-            )
+            raise Exception("RAG engine requires a USING clause! Refer to its documentation for more details.")
 
     def create(
-            self,
-            target: str,
-            df: pd.DataFrame = None,
-            args: Optional[Dict] = None,
+        self,
+        target: str,
+        df: pd.DataFrame = None,
+        args: Optional[Dict] = None,
     ):
         """
         Dispatch is running embeddings and storing in a VectorDB, unless user already has embeddings persisted
@@ -68,9 +68,7 @@ class RAGHandler(BaseMLEngine):
         args = RAGHandlerParameters(**input_args)
 
         # create folder for vector store to persist embeddings or load from existing folder
-        args.vector_store_storage_path = self.engine_storage.folder_get(
-            args.vector_store_folder_name
-        )
+        args.vector_store_storage_path = self.engine_storage.folder_get(args.vector_store_folder_name)
 
         if args.run_embeddings:
             if "context_columns" not in args and df is not None:
@@ -79,9 +77,7 @@ class RAGHandler(BaseMLEngine):
                 args.context_columns = df.columns.tolist()
 
             if "embeddings_model_name" not in args:
-                logger.info(
-                    f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
-                )
+                logger.info(f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}")
 
             if df is not None or args.url is not None:
                 # if user provides a dataframe or url, run embeddings and store in vector store
@@ -104,7 +100,6 @@ class RAGHandler(BaseMLEngine):
         self.model_storage.json_set("args", export_args)
 
     def update(self, args) -> None:
-
         # build llm params from user input args in update query
         updated_args = build_llm_params(args["using"], update=True)
 
@@ -130,9 +125,7 @@ class RAGHandler(BaseMLEngine):
 
         args = RAGHandlerParameters(**input_args)
 
-        args.vector_store_storage_path = self.engine_storage.folder_get(
-            args.vector_store_folder_name
-        )
+        args.vector_store_storage_path = self.engine_storage.folder_get(args.vector_store_folder_name)
 
         # get question answering results
         question_answerer = RAGQuestionAnswerer(args=args)

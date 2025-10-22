@@ -6,12 +6,10 @@ from .base import BaseStepCall
 
 
 class MultipleStepsCall(BaseStepCall):
-
     bind = MultipleSteps
 
     def call(self, step):
-
-        if step.reduce != 'union':
+        if step.reduce != "union":
             raise NotSupportedYet(f"Only MultipleSteps with type = 'union' is supported. Got '{step.type}'")
         data = None
         for substep in step.steps:

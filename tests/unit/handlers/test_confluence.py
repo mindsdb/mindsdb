@@ -17,29 +17,25 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
-from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition,
-    FilterOperator
-)
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 
 class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
-
     @property
     def dummy_connection_data(self):
         return OrderedDict(
-            api_base='https://demo.atlassian.net/',
-            username='demo@example.com',
-            password='demo_password',
+            api_base="https://demo.atlassian.net/",
+            username="demo@example.com",
+            password="demo_password",
         )
 
     def create_handler(self):
-        return ConfluenceHandler('confluence', connection_data=self.dummy_connection_data)
+        return ConfluenceHandler("confluence", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch('requests.Session')
+        return patch("requests.Session")
 
     def test_connect(self):
         """
@@ -60,10 +56,7 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
         mock_request.return_value = MagicMock(
             status_code=200,
             raise_for_status=lambda: None,
-            json=lambda: dict(
-                results=[],
-                _links=dict(next=None)
-            ),
+            json=lambda: dict(results=[], _links=dict(next=None)),
         )
         self.mock_connect.return_value = MagicMock(request=mock_request)
 
@@ -76,11 +69,8 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.mock_connect.return_value.request.assert_called_with(
             "GET",
             f"{self.dummy_connection_data['api_base']}/wiki/api/v2/spaces",
-            params={
-                "description-format": "view",
-                "limit": 1
-            },
-            json=None
+            params={"description-format": "view", "limit": 1},
+            json=None,
         )
 
     def test_check_connection_failure(self):
@@ -102,11 +92,8 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.mock_connect.return_value.request.assert_called_with(
             "GET",
             f"{self.dummy_connection_data['api_base']}/wiki/api/v2/spaces",
-            params={
-                "description-format": "view",
-                "limit": 1
-            },
-            json=None
+            params={"description-format": "view", "limit": 1},
+            json=None,
         )
 
     def test_get_tables(self):
@@ -117,34 +104,33 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertIsInstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
-        self.assertEqual(response.data_frame.columns.tolist(), ['table_name', 'table_type'])
+        self.assertEqual(response.data_frame.columns.tolist(), ["table_name", "table_type"])
 
     def test_get_columns(self):
         """
         Test that the `get_columns` method returns a list of columns for a table.
         """
-        response = self.handler.get_columns('spaces')
+        response = self.handler.get_columns("spaces")
 
         self.assertIsInstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
-        self.assertEqual(response.data_frame.columns.tolist(), ['Field', 'Type'])
+        self.assertEqual(response.data_frame.columns.tolist(), ["Field", "Type"])
 
 
 class ConfluenceTablesTestSetup(BaseAPIResourceTestSetup):
-
     @property
     def dummy_connection_data(self):
         return OrderedDict(
-            api_base='https://demo.atlassian.net/',
-            username='demo@example.com',
-            password='demo_password',
+            api_base="https://demo.atlassian.net/",
+            username="demo@example.com",
+            password="demo_password",
         )
 
     def create_handler(self):
-        return ConfluenceHandler('confluence', connection_data=self.dummy_connection_data)
+        return ConfluenceHandler("confluence", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch('requests.Session')
+        return patch("requests.Session")
 
     def setUp(self):
         """
@@ -157,15 +143,13 @@ class ConfluenceTablesTestSetup(BaseAPIResourceTestSetup):
             status_code=200,
             raise_for_status=lambda: None,
             json=lambda: dict(
-                results=[{column: f"mock_{column}" for column in self.resource.get_columns()}],
-                _links=dict(next=None)
-            )
+                results=[{column: f"mock_{column}" for column in self.resource.get_columns()}], _links=dict(next=None)
+            ),
         )
         self.mock_connect.return_value = MagicMock(request=mock_request)
 
 
 class TestConfluenceSpacesTable(ConfluenceTablesTestSetup, unittest.TestCase):
-
     def create_resource(self):
         return ConfluenceSpacesTable(self.handler)
 
@@ -173,9 +157,7 @@ class TestConfluenceSpacesTable(ConfluenceTablesTestSetup, unittest.TestCase):
         """
         Test that the `list` with a query equivalent to `SELECT * FROM spaces` returns a list of spaces.
         """
-        df = self.resource.list(
-            conditions=[]
-        )
+        df = self.resource.list(conditions=[])
 
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(df.columns.tolist(), self.resource.get_columns())
@@ -184,42 +166,24 @@ class TestConfluenceSpacesTable(ConfluenceTablesTestSetup, unittest.TestCase):
         self.mock_connect.return_value.request.assert_called_with(
             "GET",
             f"{self.dummy_connection_data['api_base']}/wiki/api/v2/spaces",
-            params={
-                "description-format": "view"
-            },
-            json=None
+            params={"description-format": "view"},
+            json=None,
         )
 
     def test_list_with_conditions_returns_results(self):
         """
         Test that the `list` method returns a list of spaces with the specified conditions.
         """
-        mock_id = 'mock_id'
-        mock_key = 'mock_key'
-        mock_type = 'mock_type'
-        mock_status = 'mock_status'
+        mock_id = "mock_id"
+        mock_key = "mock_key"
+        mock_type = "mock_type"
+        mock_status = "mock_status"
         df = self.resource.list(
             conditions=[
-                FilterCondition(
-                    column="id",
-                    op=FilterOperator.EQUAL,
-                    value=mock_id
-                ),
-                FilterCondition(
-                    column="key",
-                    op=FilterOperator.EQUAL,
-                    value=mock_key
-                ),
-                FilterCondition(
-                    column="type",
-                    op=FilterOperator.EQUAL,
-                    value=mock_type
-                ),
-                FilterCondition(
-                    column="status",
-                    op=FilterOperator.EQUAL,
-                    value=mock_status
-                ),
+                FilterCondition(column="id", op=FilterOperator.EQUAL, value=mock_id),
+                FilterCondition(column="key", op=FilterOperator.EQUAL, value=mock_key),
+                FilterCondition(column="type", op=FilterOperator.EQUAL, value=mock_type),
+                FilterCondition(column="status", op=FilterOperator.EQUAL, value=mock_status),
             ]
         )
 
@@ -235,14 +199,13 @@ class TestConfluenceSpacesTable(ConfluenceTablesTestSetup, unittest.TestCase):
                 "ids": [mock_id],
                 "keys": [mock_key],
                 "type": mock_type,
-                "status": mock_status
+                "status": mock_status,
             },
-            json=None
+            json=None,
         )
 
 
 class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
-
     def create_resource(self):
         return ConfluencePagesTable(self.handler)
 
@@ -250,9 +213,7 @@ class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
         """
         Test that the `list` with a query equivalent to `SELECT * FROM pages` returns a list of pages.
         """
-        df = self.resource.list(
-            conditions=[]
-        )
+        df = self.resource.list(conditions=[])
 
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(df.columns.tolist(), self.resource.get_columns())
@@ -261,42 +222,24 @@ class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
         self.mock_connect.return_value.request.assert_called_with(
             "GET",
             f"{self.dummy_connection_data['api_base']}/wiki/api/v2/pages",
-            params={
-                "body-format": "storage"
-            },
-            json=None
+            params={"body-format": "storage"},
+            json=None,
         )
 
     def test_list_with_conditions_returns_results(self):
         """
         Test that the `list` method returns a list of pages with the specified conditions.
         """
-        mock_id = 'mock_id'
-        mock_space_id = 'mock_space_id'
-        mock_status = 'mock_status'
-        mock_title = 'mock_title'
+        mock_id = "mock_id"
+        mock_space_id = "mock_space_id"
+        mock_status = "mock_status"
+        mock_title = "mock_title"
         df = self.resource.list(
             conditions=[
-                FilterCondition(
-                    column="id",
-                    op=FilterOperator.EQUAL,
-                    value=mock_id
-                ),
-                FilterCondition(
-                    column="spaceId",
-                    op=FilterOperator.EQUAL,
-                    value=mock_space_id
-                ),
-                FilterCondition(
-                    column="status",
-                    op=FilterOperator.EQUAL,
-                    value=mock_status
-                ),
-                FilterCondition(
-                    column="title",
-                    op=FilterOperator.EQUAL,
-                    value=mock_title
-                )
+                FilterCondition(column="id", op=FilterOperator.EQUAL, value=mock_id),
+                FilterCondition(column="spaceId", op=FilterOperator.EQUAL, value=mock_space_id),
+                FilterCondition(column="status", op=FilterOperator.EQUAL, value=mock_status),
+                FilterCondition(column="title", op=FilterOperator.EQUAL, value=mock_title),
             ]
         )
 
@@ -312,14 +255,13 @@ class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
                 "id": [mock_id],
                 "space-id": [mock_space_id],
                 "status": [mock_status],
-                "title": mock_title
+                "title": mock_title,
             },
-            json=None
+            json=None,
         )
 
 
 class TestConfluenceBlogPostsTable(ConfluenceTablesTestSetup, unittest.TestCase):
-
     def create_resource(self):
         return ConfluenceBlogPostsTable(self.handler)
 
@@ -327,9 +269,7 @@ class TestConfluenceBlogPostsTable(ConfluenceTablesTestSetup, unittest.TestCase)
         """
         Test that the `list` with a query equivalent to `SELECT * FROM blogposts` returns a list of blog posts.
         """
-        df = self.resource.list(
-            conditions=[]
-        )
+        df = self.resource.list(conditions=[])
 
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(df.columns.tolist(), self.resource.get_columns())
@@ -338,42 +278,24 @@ class TestConfluenceBlogPostsTable(ConfluenceTablesTestSetup, unittest.TestCase)
         self.mock_connect.return_value.request.assert_called_with(
             "GET",
             f"{self.dummy_connection_data['api_base']}/wiki/api/v2/blogposts",
-            params={
-                "body-format": "storage"
-            },
-            json=None
+            params={"body-format": "storage"},
+            json=None,
         )
 
     def test_list_with_conditions_returns_results(self):
         """
         Test that the `list` method returns a list of blog posts with the specified conditions.
         """
-        mock_id = 'mock_id'
-        mock_space_id = 'mock_space_id'
-        mock_status = 'mock_status'
-        mock_title = 'mock_title'
+        mock_id = "mock_id"
+        mock_space_id = "mock_space_id"
+        mock_status = "mock_status"
+        mock_title = "mock_title"
         df = self.resource.list(
             conditions=[
-                FilterCondition(
-                    column="id",
-                    op=FilterOperator.EQUAL,
-                    value=mock_id
-                ),
-                FilterCondition(
-                    column="spaceId",
-                    op=FilterOperator.EQUAL,
-                    value=mock_space_id
-                ),
-                FilterCondition(
-                    column="status",
-                    op=FilterOperator.EQUAL,
-                    value=mock_status
-                ),
-                FilterCondition(
-                    column="title",
-                    op=FilterOperator.EQUAL,
-                    value=mock_title
-                )
+                FilterCondition(column="id", op=FilterOperator.EQUAL, value=mock_id),
+                FilterCondition(column="spaceId", op=FilterOperator.EQUAL, value=mock_space_id),
+                FilterCondition(column="status", op=FilterOperator.EQUAL, value=mock_status),
+                FilterCondition(column="title", op=FilterOperator.EQUAL, value=mock_title),
             ]
         )
 
@@ -389,14 +311,13 @@ class TestConfluenceBlogPostsTable(ConfluenceTablesTestSetup, unittest.TestCase)
                 "id": [mock_id],
                 "space-id": [mock_space_id],
                 "status": [mock_status],
-                "title": mock_title
+                "title": mock_title,
             },
-            json=None
+            json=None,
         )
 
 
 class TestConfluenceDatabasesTable(ConfluenceTablesTestSetup, unittest.TestCase):
-
     def create_resource(self):
         return ConfluenceDatabasesTable(self.handler)
 
@@ -408,18 +329,14 @@ class TestConfluenceDatabasesTable(ConfluenceTablesTestSetup, unittest.TestCase)
         mock_request.return_value = MagicMock(
             status_code=200,
             raise_for_status=lambda: None,
-            json=lambda: {column: f"mock_{column}" for column in self.resource.get_columns()}
+            json=lambda: {column: f"mock_{column}" for column in self.resource.get_columns()},
         )
         self.mock_connect.return_value = MagicMock(request=mock_request)
 
-        mock_id = 'mock_id'
+        mock_id = "mock_id"
         df = self.resource.list(
             conditions=[
-                FilterCondition(
-                    column="id",
-                    op=FilterOperator.EQUAL,
-                    value=mock_id
-                ),
+                FilterCondition(column="id", op=FilterOperator.EQUAL, value=mock_id),
             ]
         )
 
@@ -428,10 +345,7 @@ class TestConfluenceDatabasesTable(ConfluenceTablesTestSetup, unittest.TestCase)
         self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
 
         self.mock_connect.return_value.request.assert_called_with(
-            "GET",
-            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/databases/{mock_id}",
-            params=None,
-            json=None
+            "GET", f"{self.dummy_connection_data['api_base']}/wiki/api/v2/databases/{mock_id}", params=None, json=None
         )
 
     def test_list_without_database_id_raises_error(self):
@@ -443,7 +357,6 @@ class TestConfluenceDatabasesTable(ConfluenceTablesTestSetup, unittest.TestCase)
 
 
 class TestConfluenceWhiteboardsTable(ConfluenceTablesTestSetup, unittest.TestCase):
-
     def create_resource(self):
         return ConfluenceWhiteboardsTable(self.handler)
 
@@ -455,18 +368,14 @@ class TestConfluenceWhiteboardsTable(ConfluenceTablesTestSetup, unittest.TestCas
         mock_request.return_value = MagicMock(
             status_code=200,
             raise_for_status=lambda: None,
-            json=lambda: {column: f"mock_{column}" for column in self.resource.get_columns()}
+            json=lambda: {column: f"mock_{column}" for column in self.resource.get_columns()},
         )
         self.mock_connect.return_value = MagicMock(request=mock_request)
 
-        mock_id = 'mock_id'
+        mock_id = "mock_id"
         df = self.resource.list(
             conditions=[
-                FilterCondition(
-                    column="id",
-                    op=FilterOperator.EQUAL,
-                    value=mock_id
-                ),
+                FilterCondition(column="id", op=FilterOperator.EQUAL, value=mock_id),
             ]
         )
 
@@ -475,10 +384,7 @@ class TestConfluenceWhiteboardsTable(ConfluenceTablesTestSetup, unittest.TestCas
         self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
 
         self.mock_connect.return_value.request.assert_called_with(
-            "GET",
-            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/whiteboards/{mock_id}",
-            params=None,
-            json=None
+            "GET", f"{self.dummy_connection_data['api_base']}/wiki/api/v2/whiteboards/{mock_id}", params=None, json=None
         )
 
     def test_list_without_whiteboard_id_raises_error(self):
@@ -490,7 +396,6 @@ class TestConfluenceWhiteboardsTable(ConfluenceTablesTestSetup, unittest.TestCas
 
 
 class TestConfluenceTasksTable(ConfluenceTablesTestSetup, unittest.TestCase):
-
     def create_resource(self):
         return ConfluenceTasksTable(self.handler)
 
@@ -498,9 +403,7 @@ class TestConfluenceTasksTable(ConfluenceTablesTestSetup, unittest.TestCase):
         """
         Test that the `list` with a query equivalent to `SELECT * FROM tasks` returns a list of tasks.
         """
-        df = self.resource.list(
-            conditions=[]
-        )
+        df = self.resource.list(conditions=[])
 
         self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(df.columns.tolist(), self.resource.get_columns())
@@ -509,61 +412,31 @@ class TestConfluenceTasksTable(ConfluenceTablesTestSetup, unittest.TestCase):
         self.mock_connect.return_value.request.assert_called_with(
             "GET",
             f"{self.dummy_connection_data['api_base']}/wiki/api/v2/tasks",
-            params={
-                "body-format": "storage"
-            },
-            json=None
+            params={"body-format": "storage"},
+            json=None,
         )
 
     def test_list_with_conditions_returns_results(self):
         """
         Test that the `list` method returns a list of tasks with the specified conditions.
         """
-        mock_task_ids = ['mock_task_id']
-        mock_space_ids = ['mock_space_id']
-        mock_page_ids = ['mock_page_id']
-        mock_created_by_ids = ['mock_created_by_id']
-        mock_assigned_to_ids = ['mock_assigned_to_id']
-        mock_completed_by_ids = ['mock_completed_by_id']
-        mock_status = 'mock_status'
+        mock_task_ids = ["mock_task_id"]
+        mock_space_ids = ["mock_space_id"]
+        mock_page_ids = ["mock_page_id"]
+        mock_created_by_ids = ["mock_created_by_id"]
+        mock_assigned_to_ids = ["mock_assigned_to_id"]
+        mock_completed_by_ids = ["mock_completed_by_id"]
+        mock_status = "mock_status"
 
         df = self.resource.list(
             conditions=[
-                FilterCondition(
-                    column="id",
-                    op=FilterOperator.EQUAL,
-                    value=mock_task_ids[0]
-                ),
-                FilterCondition(
-                    column="spaceId",
-                    op=FilterOperator.EQUAL,
-                    value=mock_space_ids[0]
-                ),
-                FilterCondition(
-                    column="pageId",
-                    op=FilterOperator.EQUAL,
-                    value=mock_page_ids[0]
-                ),
-                FilterCondition(
-                    column="createdBy",
-                    op=FilterOperator.EQUAL,
-                    value=mock_created_by_ids[0]
-                ),
-                FilterCondition(
-                    column="assignedTo",
-                    op=FilterOperator.EQUAL,
-                    value=mock_assigned_to_ids[0]
-                ),
-                FilterCondition(
-                    column="completedBy",
-                    op=FilterOperator.EQUAL,
-                    value=mock_completed_by_ids[0]
-                ),
-                FilterCondition(
-                    column="status",
-                    op=FilterOperator.EQUAL,
-                    value=mock_status
-                ),
+                FilterCondition(column="id", op=FilterOperator.EQUAL, value=mock_task_ids[0]),
+                FilterCondition(column="spaceId", op=FilterOperator.EQUAL, value=mock_space_ids[0]),
+                FilterCondition(column="pageId", op=FilterOperator.EQUAL, value=mock_page_ids[0]),
+                FilterCondition(column="createdBy", op=FilterOperator.EQUAL, value=mock_created_by_ids[0]),
+                FilterCondition(column="assignedTo", op=FilterOperator.EQUAL, value=mock_assigned_to_ids[0]),
+                FilterCondition(column="completedBy", op=FilterOperator.EQUAL, value=mock_completed_by_ids[0]),
+                FilterCondition(column="status", op=FilterOperator.EQUAL, value=mock_status),
             ]
         )
 
@@ -582,11 +455,11 @@ class TestConfluenceTasksTable(ConfluenceTablesTestSetup, unittest.TestCase):
                 "created-by": mock_created_by_ids,
                 "assigned-to": mock_assigned_to_ids,
                 "completed-by": mock_completed_by_ids,
-                "status": mock_status
+                "status": mock_status,
             },
-            json=None
+            json=None,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

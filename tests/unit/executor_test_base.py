@@ -88,14 +88,14 @@ class BaseUnitTest:
         shutil.rmtree(cls.storage_dir, ignore_errors=True)
 
         # remove environ for next tests
-        if 'MINDSDB_DB_CON' in os.environ:
+        if "MINDSDB_DB_CON" in os.environ:
             del os.environ["MINDSDB_DB_CON"]
 
         # remove import of mindsdb for next tests
         unload_module("mindsdb")
 
     def setup_method(self):
-        self._dummy_db_path = os.path.join(tempfile.mkdtemp(), '_mindsdb_duck_db')
+        self._dummy_db_path = os.path.join(tempfile.mkdtemp(), "_mindsdb_duck_db")
         self.clear_db(self.db)
         self.reset_prom_collectors()
 
@@ -109,9 +109,10 @@ class BaseUnitTest:
 
         # fill with data
         from mindsdb.interfaces.database.integrations import integration_controller
+
         integration_controller.create_permanent_integrations()
 
-        r = db.Integration(name="dummy_data", data={'db_path': self._dummy_db_path}, engine="dummy_data")
+        r = db.Integration(name="dummy_data", data={"db_path": self._dummy_db_path}, engine="dummy_data")
         db.session.add(r)
 
         # Lightwood should always be last (else tests break, why?)
@@ -131,8 +132,8 @@ class BaseUnitTest:
 
     def set_data(self, table, data):
         con = duckdb.connect(self._dummy_db_path)
-        con.execute('DROP TABLE IF EXISTS {}'.format(table))
-        con.execute('CREATE TABLE {} AS SELECT * FROM data'.format(table))
+        con.execute("DROP TABLE IF EXISTS {}".format(table))
+        con.execute("CREATE TABLE {} AS SELECT * FROM data".format(table))
 
     def wait_predictor(self, project, name, timeout=100, filters=None):
         """
@@ -191,18 +192,18 @@ class BaseExecutorTest(BaseUnitTest):
 
     def _import_handler(self, integration_controller, handler_name, handler_dir):
         handler_meta = {
-            'import': {
-                'success': None,
-                'error_message': None,
-                'folder': handler_dir.name,
-                'dependencies': [],
+            "import": {
+                "success": None,
+                "error_message": None,
+                "folder": handler_dir.name,
+                "dependencies": [],
             },
-            'path': handler_dir,
-            'name': handler_name,
-            'permanent': False,
+            "path": handler_dir,
+            "name": handler_name,
+            "permanent": False,
         }
         integration_controller.handlers_import_status[handler_name] = handler_meta
-        integration_controller.import_handler(handler_name, '')
+        integration_controller.import_handler(handler_name, "")
 
     def set_executor(
         self,
@@ -218,8 +219,10 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.api.executor.command_executor import (
             ExecuteCommands,
         )
+
         # clear cache of previous test case to apply mocks of current test case
         from mindsdb.integrations.libs.process_cache import process_cache
+
         process_cache.cache = {}
         from mindsdb.interfaces.database.integrations import integration_controller
         from mindsdb.interfaces.file.file_controller import FileController
@@ -241,22 +244,22 @@ class BaseExecutorTest(BaseUnitTest):
             test_handler_path = os.path.dirname(__file__)
             sys.path.append(test_handler_path)
 
-            handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
-            self._import_handler(integration_controller, 'dummy_ml', handler_dir)
+            handler_dir = Path(test_handler_path) / "dummy_ml_handler"
+            self._import_handler(integration_controller, "dummy_ml", handler_dir)
 
-            if not integration_controller.get_handler_meta('dummy_ml')['import']['success']:
-                error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
+            if not integration_controller.get_handler_meta("dummy_ml")["import"]["success"]:
+                error = integration_controller.handlers_import_status["dummy_ml"]["import"]["error_message"]
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if import_dummy_llm:
             test_handler_path = os.path.dirname(__file__)
             sys.path.append(test_handler_path)
 
-            handler_dir = Path(test_handler_path) / 'dummy_llm_handler'
-            self._import_handler(integration_controller, 'dummy_llm', handler_dir)
+            handler_dir = Path(test_handler_path) / "dummy_llm_handler"
+            self._import_handler(integration_controller, "dummy_llm", handler_dir)
 
-            if not integration_controller.handlers_import_status['dummy_llm']['import']['success']:
-                error = integration_controller.handlers_import_status['dummy_llm']['import']['error_message']
+            if not integration_controller.handlers_import_status["dummy_llm"]["import"]["success"]:
+                error = integration_controller.handlers_import_status["dummy_llm"]["import"]["error_message"]
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if mock_lightwood:
@@ -280,7 +283,7 @@ class BaseExecutorTest(BaseUnitTest):
 
     def teardown_method(self):
         # Don't want cache to pick up a stale version with the wrong duckdb_path.
-        self.command_executor.session.integration_controller.delete('dummy_data')
+        self.command_executor.session.integration_controller.delete("dummy_data")
         if os.path.exists(self._dummy_db_path):
             os.unlink(self._dummy_db_path)
         os.rmdir(os.path.dirname(self._dummy_db_path))
@@ -298,11 +301,7 @@ class BaseExecutorTest(BaseUnitTest):
             self.db.session.delete(r)
 
         # create
-        r = self.db.Integration(
-            name=name,
-            data={'password': 'secret'},
-            engine=engine
-        )
+        r = self.db.Integration(name=name, data={"password": "secret"}, engine=engine)
         self.db.session.add(r)
         self.db.session.commit()
 
@@ -324,9 +323,7 @@ class BaseExecutorTest(BaseUnitTest):
                     }
                 )
 
-            return handler_response(
-                pd.DataFrame(tables_ar)
-            )
+            return handler_response(pd.DataFrame(tables_ar))
 
         mock_handler().get_tables.side_effect = get_tables_f
 
@@ -351,8 +348,8 @@ class BaseExecutorTest(BaseUnitTest):
 
             for table_name, df in tables.items():
                 # it is not possible to insert/delete from a dataframe itself, but possible if create table from it
-                con.register(f'{table_name}_df', df)
-                con.execute(f'CREATE TABLE {table_name} AS SELECT * FROM {table_name}_df;')
+                con.register(f"{table_name}_df", df)
+                con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM {table_name}_df;")
 
             try:
                 con.execute(query)
@@ -361,7 +358,7 @@ class BaseExecutorTest(BaseUnitTest):
                 # region for insert/update/delete duckdb returns rowcount as 'Count' value in result, rather than using the
                 # cursor.rowcount attr.
                 match (columns, data):
-                    case ['Count'], [(affected_rows,)]:
+                    case ["Count"], [(affected_rows,)]:
                         result_df = pd.DataFrame()
                     case _:
                         affected_rows = None
@@ -409,11 +406,9 @@ class BaseExecutorDummyML(BaseExecutorTest):
     def setup_method(self):
         super().setup_method(import_dummy_ml=True)
 
-    def run_sql(self, sql, throw_error=True, database='mindsdb'):
+    def run_sql(self, sql, throw_error=True, database="mindsdb"):
         self.command_executor.session.database = database
-        ret = self.command_executor.execute_command(
-            parse_sql(sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(sql))
         if throw_error:
             assert ret.error_code is None
         if ret.data is not None:
@@ -480,7 +475,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
             df._predict_df = df[:]
 
             explain_arr = []
-            data = df.to_dict('records')
+            data = df.to_dict("records")
 
             predicted_value = predictor["predicted_value"]
             target = predictor["predict"]
@@ -543,9 +538,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.mock_model_controller.get_model_data.side_effect = get_model_data_f
 
     def execute(self, sql):
-        ret = self.command_executor.execute_command(
-            parse_sql(sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(sql))
         if ret.error_code is not None:
             raise Exception()
         return ret

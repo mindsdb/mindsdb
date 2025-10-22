@@ -11,7 +11,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
 
@@ -24,7 +24,7 @@ class HanaHandler(DatabaseHandler):
     This handler handles the connection and execution of SQL statements on SAP HANA.
     """
 
-    name = 'hana'
+    name = "hana"
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """
@@ -64,37 +64,35 @@ class HanaHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters.
-        if not all(key in self.connection_data for key in ['address', 'port', 'user', 'password']):
-            raise ValueError('Required parameters (address, port, user, password) must be provided.')
+        if not all(key in self.connection_data for key in ["address", "port", "user", "password"]):
+            raise ValueError("Required parameters (address, port, user, password) must be provided.")
 
         config = {
-            'address': self.connection_data['address'],
-            'port': self.connection_data['port'],
-            'user': self.connection_data['user'],
-            'password': self.connection_data['password'],
+            "address": self.connection_data["address"],
+            "port": self.connection_data["port"],
+            "user": self.connection_data["user"],
+            "password": self.connection_data["password"],
         }
 
         # Optional connection parameters.
-        if 'database' in self.connection_data:
-            config['databaseName'] = self.connection_data['database']
+        if "database" in self.connection_data:
+            config["databaseName"] = self.connection_data["database"]
 
-        if 'schema' in self.connection_data:
-            config['currentSchema'] = self.connection_data['schema']
+        if "schema" in self.connection_data:
+            config["currentSchema"] = self.connection_data["schema"]
 
-        if 'encrypt' in self.connection_data:
-            config['encrypt'] = self.connection_data['encrypt']
+        if "encrypt" in self.connection_data:
+            config["encrypt"] = self.connection_data["encrypt"]
 
         try:
-            self.connection = dbapi.connect(
-                **config
-            )
+            self.connection = dbapi.connect(**config)
             self.is_connected = True
             return self.connection
         except Error as known_error:
-            logger.error(f'Error connecting to SAP HANA, {known_error}!')
+            logger.error(f"Error connecting to SAP HANA, {known_error}!")
             raise
         except Exception as unknown_error:
-            logger.error(f'Unknown error connecting to Teradata, {unknown_error}!')
+            logger.error(f"Unknown error connecting to Teradata, {unknown_error}!")
             raise
 
     def disconnect(self) -> None:
@@ -118,13 +116,13 @@ class HanaHandler(DatabaseHandler):
         try:
             connection = self.connect()
             with connection.cursor() as cur:
-                cur.execute('SELECT 1 FROM SYS.DUMMY')
+                cur.execute("SELECT 1 FROM SYS.DUMMY")
             response.success = True
         except (Error, ProgrammingError, ValueError) as known_error:
-            logger.error(f'Connection check to SAP HANA failed, {known_error}!')
+            logger.error(f"Connection check to SAP HANA failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to SAP HANA failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to SAP HANA failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         if response.success is True and need_to_close:
@@ -154,29 +152,15 @@ class HanaHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 else:
                     result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
-                    )
+                    response = Response(RESPONSE_TYPE.TABLE, DataFrame(result, columns=[x[0] for x in cur.description]))
                 connection.commit()
             except ProgrammingError as programming_error:
-                logger.error(f'Error running query: {query} on {self.address}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(programming_error)
-                )
+                logger.error(f"Error running query: {query} on {self.address}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(programming_error))
                 connection.rollback()
             except Exception as unknown_error:
-                logger.error(f'Unknown error running query: {query} on {self.address}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(unknown_error)
-                )
+                logger.error(f"Unknown error running query: {query} on {self.address}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(unknown_error))
                 connection.rollback()
 
         if need_to_close is True:

@@ -36,6 +36,7 @@ def analyze_df(df: DataFrame) -> dict:
     df.columns = cols
 
     from dataprep_ml.insights import analyze_dataset
+
     analysis = analyze_dataset(df)
     return analysis.to_dict()
 
@@ -43,7 +44,7 @@ def analyze_df(df: DataFrame) -> dict:
 @ns_conf.route("/query")
 class QueryAnalysis(Resource):
     @ns_conf.doc("post_query_to_analyze")
-    @api_endpoint_metrics('POST', '/analysis/query')
+    @api_endpoint_metrics("POST", "/analysis/query")
     def post(self):
         data = request.json
         query = data.get("query")
@@ -83,14 +84,12 @@ class QueryAnalysis(Resource):
             analysis = analyze_df(df)
         except ImportError:
             return {
-                'analysis': {},
-                'timestamp': time.time(),
-                'error': 'To use this feature, please install the "dataprep_ml" package.'
+                "analysis": {},
+                "timestamp": time.time(),
+                "error": 'To use this feature, please install the "dataprep_ml" package.',
             }
 
-        query_tables = [
-            table.to_string() for table in get_query_tables(ast)
-        ]
+        query_tables = [table.to_string() for table in get_query_tables(ast)]
 
         return {
             "analysis": analysis,
@@ -104,7 +103,7 @@ class QueryAnalysis(Resource):
 @ns_conf.route("/data")
 class DataAnalysis(Resource):
     @ns_conf.doc("post_data_to_analyze")
-    @api_endpoint_metrics('POST', '/analysis/data')
+    @api_endpoint_metrics("POST", "/analysis/data")
     def post(self):
         payload = request.json
         column_names = payload.get("column_names")
@@ -116,15 +115,11 @@ class DataAnalysis(Resource):
             return {"analysis": analysis, "timestamp": time.time()}
         except ImportError:
             return {
-                'analysis': {},
-                'timestamp': timestamp,
-                'error': 'To use this feature, please install the "dataprep_ml" package.'
+                "analysis": {},
+                "timestamp": timestamp,
+                "error": 'To use this feature, please install the "dataprep_ml" package.',
             }
         except Exception as e:
             # Don't want analysis exceptions to show up on UI.
             # TODO: Fix analysis so it doesn't throw exceptions at all.
-            return {
-                'analysis': {},
-                'timestamp': timestamp,
-                'error': str(e)
-            }
+            return {"analysis": {}, "timestamp": timestamp, "error": str(e)}

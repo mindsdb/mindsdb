@@ -40,10 +40,7 @@ def seed_db():
     )
     credentials = google_sa_oauth2_manager.get_oauth2_credentials()
 
-    client = bigquery.Client(
-        project=HANDLER_KWARGS["connection_data"]["project_id"],
-        credentials=credentials
-    )
+    client = bigquery.Client(project=HANDLER_KWARGS["connection_data"]["project_id"], credentials=credentials)
 
     with open("mindsdb/integrations/handlers/bigquery_handler/tests/seed.sql", "r") as f:
         for line in f.readlines():
@@ -57,12 +54,8 @@ def check_valid_response(res):
     """
     if res.resp_type == RESPONSE_TYPE.TABLE:
         assert res.data_frame is not None, "expected to have some data, but got None"
-    assert (
-        res.error_code == 0
-    ), f"expected to have zero error_code, but got {res.error_code}"
-    assert (
-        res.error_message is None
-    ), f"expected to have None in error message, but got {res.error_message}"
+    assert res.error_code == 0, f"expected to have zero error_code, but got {res.error_code}"
+    assert res.error_message is None, f"expected to have None in error message, but got {res.error_message}"
 
 
 def get_table_names(snowflake_handler):
@@ -73,9 +66,7 @@ def get_table_names(snowflake_handler):
     tables = res.data_frame
 
     assert tables is not None, "expected to have some tables in the db, but got None"
-    assert (
-        "table_name" in tables
-    ), f"expected to get 'table_name' column in the response:\n{tables}"
+    assert "table_name" in tables, f"expected to get 'table_name' column in the response:\n{tables}"
 
     return list(tables["table_name"])
 
@@ -111,15 +102,9 @@ class TestBigQueryHandlerTables:
 
         tables = res.data_frame
 
-        assert (
-            tables is not None
-        ), "expected to have some tables in the db, but got None"
-        assert (
-            "table_name" in tables
-        ), f"expected to get 'table_name' in the response but got: {tables}"
-        assert (
-            "TEST" in tables["table_name"].values
-        ), "expected to have 'test' in the response."
+        assert tables is not None, "expected to have some tables in the db, but got None"
+        assert "table_name" in tables, f"expected to get 'table_name' in the response but got: {tables}"
+        assert "TEST" in tables["table_name"].values, "expected to have 'test' in the response."
 
     def test_get_columns(self, bigquery_handler):
         """
@@ -141,9 +126,7 @@ class TestBigQueryHandlerTables:
         views = views.sort_values(by=list(res.data_frame.columns)).reset_index(drop=True)
         expected_df = expected_df.sort_values(by=list(expected_df.columns)).reset_index(drop=True)
 
-        assert views.equals(
-            expected_df
-        ), "response does not contain the expected columns"
+        assert views.equals(expected_df), "response does not contain the expected columns"
 
     def test_create_table(self, bigquery_handler):
         """
@@ -159,9 +142,9 @@ class TestBigQueryHandlerTables:
 
         tables = get_table_names(bigquery_handler)
 
-        assert (
-            self.table_for_creation in tables
-        ), f"expected to have {self.table_for_creation} in database, but got: {tables}"
+        assert self.table_for_creation in tables, (
+            f"expected to have {self.table_for_creation} in database, but got: {tables}"
+        )
 
     def test_drop_table(self, bigquery_handler):
         """
@@ -196,9 +179,7 @@ class TestBigQueryHandlerQuery:
         }
         expected_df = pd.DataFrame(expected_data)
 
-        assert res.data_frame.equals(
-            expected_df
-        ), "response does not contain the expected data"
+        assert res.data_frame.equals(expected_df), "response does not contain the expected data"
 
     def test_select_query(self, bigquery_handler):
         """
@@ -212,9 +193,7 @@ class TestBigQueryHandlerQuery:
         got_rows = res.data_frame.shape[0]
         want_rows = limit
 
-        assert (
-            got_rows == want_rows
-        ), f"expected to have {want_rows} rows in response but got: {got_rows}"
+        assert got_rows == want_rows, f"expected to have {want_rows} rows in response but got: {got_rows}"
 
 
 if __name__ == "__main__":

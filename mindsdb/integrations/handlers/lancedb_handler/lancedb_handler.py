@@ -40,14 +40,10 @@ class LanceDBHandler(VectorStoreHandler):
 
         # uri is required either for LanceDB Cloud or local
         if not self._client_config["uri"]:
-            raise Exception(
-                "persist_directory is required for LanceDB connection!"
-            )
+            raise Exception("persist_directory is required for LanceDB connection!")
         # uri, api_key and region is required either for LanceDB Cloud
         elif self._client_config["uri"] and self._client_config["api_key"] and not self._client_config["region"]:
-            raise Exception(
-                "region is required for LanceDB Cloud connection!"
-            )
+            raise Exception("region is required for LanceDB Cloud connection!")
 
         self._client = None
         self.is_connected = False
@@ -121,9 +117,7 @@ class LanceDBHandler(VectorStoreHandler):
 
         return mapping[operator]
 
-    def _translate_condition(
-        self, conditions: List[FilterCondition]
-    ) -> Optional[dict]:
+    def _translate_condition(self, conditions: List[FilterCondition]) -> Optional[dict]:
         """
         Translate a list of FilterCondition objects to string that can be used by LanceDB.
         E.g.,
@@ -165,12 +159,10 @@ class LanceDBHandler(VectorStoreHandler):
             if condition.op in (FilterOperator.IN, FilterOperator.NOT_IN):
                 if not isinstance(condition.value, list):
                     value = [value]
-                value = '({})'.format(', '.join([repr(i) for i in value]))
+                value = "({})".format(", ".join([repr(i) for i in value]))
             else:
                 value = str(value)
-            lancedb_conditions.append(
-                ' '.join([condition_key, self._get_lancedb_operator(condition.op), value])
-            )
+            lancedb_conditions.append(" ".join([condition_key, self._get_lancedb_operator(condition.op), value]))
         # Combine all conditions into a single string and return
         return " and ".join(lancedb_conditions) if lancedb_conditions else None
 
@@ -182,7 +174,6 @@ class LanceDBHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> pd.DataFrame:
-
         collection = self._client.open_table(table_name)
 
         filters = self._translate_condition(conditions)
@@ -190,11 +181,7 @@ class LanceDBHandler(VectorStoreHandler):
         vector_filter = (
             []
             if conditions is None
-            else [
-                condition
-                for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
-            ]
+            else [condition for condition in conditions if condition.column == TableField.SEARCH_VECTOR.value]
         )
 
         if len(vector_filter) > 0:
@@ -211,9 +198,22 @@ class LanceDBHandler(VectorStoreHandler):
 
         new_columns = columns + [TableField.DISTANCE.value] if TableField.DISTANCE.value in result.columns else columns
 
-        col_str = ', '.join([col for col in new_columns if col in (TableField.ID.value, TableField.CONTENT.value, TableField.METADATA.value, TableField.EMBEDDINGS.value, TableField.DISTANCE.value)])
+        col_str = ", ".join(
+            [
+                col
+                for col in new_columns
+                if col
+                in (
+                    TableField.ID.value,
+                    TableField.CONTENT.value,
+                    TableField.METADATA.value,
+                    TableField.EMBEDDINGS.value,
+                    TableField.DISTANCE.value,
+                )
+            ]
+        )
 
-        where_str = f'where {filters}' if filters else ''
+        where_str = f"where {filters}" if filters else ""
         # implementing limit and offset. Not supported natively in lancedb
         if limit and offset:
             sql = f"""select {col_str} from result {where_str} limit {limit} offset {offset}"""
@@ -227,9 +227,7 @@ class LanceDBHandler(VectorStoreHandler):
         data_df = duckdb.query(sql).to_df()
         return data_df
 
-    def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ):
+    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
         """
         Insert data into the LanceDB database.
         In case of create table statements the there is a mismatch between the column types of the `data` pandas dataframe filled with data
@@ -255,25 +253,21 @@ class LanceDBHandler(VectorStoreHandler):
             column_dtypes = collection_df.dtypes
             df = df.astype(column_dtypes)
             new_df = pd.concat([collection_df, df])
-            new_df['id'] = new_df['id'].apply(str)
+            new_df["id"] = new_df["id"].apply(str)
             pa_data = pa.Table.from_pandas(new_df, preserve_index=False)
             vec_data = vec_to_table(df[TableField.EMBEDDINGS.value].values.tolist())
             new_pa_data = pa_data.append_column("vector", vec_data["vector"])
             self.drop_table(table_name)
             self._client.create_table(table_name, new_pa_data)
 
-    def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ):
+    def update(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
         """
         Update data in the LanceDB database.
         TODO: not implemented yet
         """
         return super().update(table_name, data, columns)
 
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ):
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         filters = self._translate_condition(conditions)
         if filters is None:
             raise Exception("Delete query must have at least one condition!")
@@ -320,7 +314,7 @@ class LanceDBHandler(VectorStoreHandler):
         try:
             df = self._client.open_table(table_name).to_pandas()
             column_df = pd.DataFrame(df.dtypes).reset_index()
-            column_df.columns = ['column_name', 'data_type']
+            column_df.columns = ["column_name", "data_type"]
         except ValueError:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,

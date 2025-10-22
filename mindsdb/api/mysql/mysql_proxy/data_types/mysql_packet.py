@@ -39,8 +39,7 @@ class Packet:
         else:
             self.load_from_params(length, session.packet_sequence_number, body)
 
-    def setup(self, length=0, seq=0, body=None):
-        ...
+    def setup(self, length=0, seq=0, body=None): ...
 
     def load_from_params(self, length, seq, body):
         self._length = length
@@ -73,9 +72,7 @@ class Packet:
         while len_header == MAX_PACKET_SIZE:
             packet_string = self.mysql_socket.recv(4)
             if len(packet_string) < 4:
-                self.session.logging.debug(
-                    f"Packet with less than 4 bytes in length: {packet_string}"
-                )
+                self.session.logging.debug(f"Packet with less than 4 bytes in length: {packet_string}")
                 return False
             len_header = struct.unpack("i", packet_string[:3] + b"\x00")[0]
             count_header = int(packet_string[3])

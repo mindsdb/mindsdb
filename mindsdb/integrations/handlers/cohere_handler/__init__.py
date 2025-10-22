@@ -6,16 +6,15 @@ logger = log.getLogger(__name__)
 
 try:
     from .cohere_handler import CohereHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None
     import_error = e
 
-title = 'Cohere'
-name = 'cohere'
+title = "Cohere"
+name = "cohere"
 type = HANDLER_TYPE.ML
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
 
-__all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'
-]
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

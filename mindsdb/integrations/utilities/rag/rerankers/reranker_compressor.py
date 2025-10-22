@@ -36,7 +36,7 @@ class LLMReranker(BaseDocumentCompressor, BaseLLMReranker):
             return []
 
         # Stream reranking update.
-        dispatch_custom_event('rerank_begin', {'num_documents': len(documents)})
+        dispatch_custom_event("rerank_begin", {"num_documents": len(documents)})
 
         try:
             # Prepare query-document pairs

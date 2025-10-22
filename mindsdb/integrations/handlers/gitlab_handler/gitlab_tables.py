@@ -47,18 +47,14 @@ class GitlabIssuesTable(APITable):
                     else:
                         order_by_conditions["ascending"].append(False)
                 else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
+                    raise ValueError(f"Order by unknown column {an_order.field.parts[1]}")
 
         for a_where in conditions:
             if a_where[1] == "state":
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for state")
                 if a_where[2] not in ["opened", "closed", "all"]:
-                    raise ValueError(
-                        f"Unsupported where argument for state {a_where[2]}"
-                    )
+                    raise ValueError(f"Unsupported where argument for state {a_where[2]}")
 
                 issues_kwargs["state"] = a_where[2]
 
@@ -86,10 +82,7 @@ class GitlabIssuesTable(APITable):
         issues_kwargs["get_all"] = False
         while True:
             try:
-                for issue in self.handler.connection.projects.get(
-                    self.handler.repository
-                ).issues.list(**issues_kwargs):
-
+                for issue in self.handler.connection.projects.get(self.handler.repository).issues.list(**issues_kwargs):
                     logger.debug(f"Processing issue {issue.iid}")
 
                     gitlab_issues_df = pd.concat(
@@ -102,18 +95,9 @@ class GitlabIssuesTable(APITable):
                                         "title": issue.title,
                                         "state": issue.state,
                                         "creator": issue.author["name"],
-                                        "closed_by": issue.closed_by
-                                        if issue.closed_by
-                                        else None,
-                                        "labels": ",".join(
-                                            [label for label in issue.labels]
-                                        ),
-                                        "assignees": ",".join(
-                                            [
-                                                assignee["name"]
-                                                for assignee in issue.assignees
-                                            ]
-                                        ),
+                                        "closed_by": issue.closed_by if issue.closed_by else None,
+                                        "labels": ",".join([label for label in issue.labels]),
+                                        "assignees": ",".join([assignee["name"] for assignee in issue.assignees]),
                                         "body": issue.description,
                                         "created": issue.created_at,
                                         "updated": issue.updated_at,
@@ -217,18 +201,14 @@ class GitlabMergeRequestsTable(APITable):
                     else:
                         order_by_conditions["ascending"].append(False)
                 else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
+                    raise ValueError(f"Order by unknown column {an_order.field.parts[1]}")
 
         for a_where in conditions:
             if a_where[1] == "state":
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for state")
                 if a_where[2] not in ["opened", "closed", "merged", "all"]:
-                    raise ValueError(
-                        f"Unsupported where argument for state {a_where[2]}"
-                    )
+                    raise ValueError(f"Unsupported where argument for state {a_where[2]}")
 
                 merge_requests_kwargs["state"] = a_where[2]
 
@@ -256,10 +236,9 @@ class GitlabMergeRequestsTable(APITable):
         merge_requests_kwargs["get_all"] = False
         while True:
             try:
-                for merge_request in self.handler.connection.projects.get(
-                    self.handler.repository
-                ).mergerequests.list(**merge_requests_kwargs):
-
+                for merge_request in self.handler.connection.projects.get(self.handler.repository).mergerequests.list(
+                    **merge_requests_kwargs
+                ):
                     logger.debug(f"Processing merge request {merge_request.iid}")
 
                     gitlab_merge_requests_df = pd.concat(
@@ -272,26 +251,16 @@ class GitlabMergeRequestsTable(APITable):
                                         "title": merge_request.title,
                                         "state": merge_request.state,
                                         "creator": merge_request.author["name"],
-                                        "closed_by": merge_request.closed_by
-                                        if merge_request.closed_by
-                                        else None,
+                                        "closed_by": merge_request.closed_by if merge_request.closed_by else None,
                                         "mergeed_by": merge_request.merge_user["name"]
                                         if merge_request.merge_user
                                         else None,
-                                        "labels": ",".join(
-                                            [label for label in merge_request.labels]
-                                        ),
+                                        "labels": ",".join([label for label in merge_request.labels]),
                                         "assignees": ",".join(
-                                            [
-                                                assignee["name"]
-                                                for assignee in merge_request.assignees
-                                            ]
+                                            [assignee["name"] for assignee in merge_request.assignees]
                                         ),
                                         "reviewers": ",".join(
-                                            [
-                                                reviewer["name"]
-                                                for reviewer in merge_request.reviewers
-                                            ]
+                                            [reviewer["name"] for reviewer in merge_request.reviewers]
                                         ),
                                         "body": merge_request.description,
                                         "target_branch": merge_request.target_branch,

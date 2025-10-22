@@ -22,7 +22,7 @@ def parse_csv_attributes(csv_attributes: typing.Optional[str] = "") -> typing.Di
         for row in reader:
             for pair in row:
                 # Match key=value pattern
-                match = re.match(r'^\s*([^=]+?)\s*=\s*(.+?)\s*$', pair)
+                match = re.match(r"^\s*([^=]+?)\s*=\s*(.+?)\s*$", pair)
                 if match:
                     key, value = match.groups()
                     attributes[key.strip()] = value.strip()

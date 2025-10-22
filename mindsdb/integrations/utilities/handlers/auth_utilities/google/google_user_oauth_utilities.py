@@ -17,7 +17,14 @@ logger = log.getLogger(__name__)
 
 
 class GoogleUserOAuth2Manager:
-    def __init__(self, handler_stroage: str, scopes: list, credentials_file: str = None, credentials_url: str = None, code: str = None):
+    def __init__(
+        self,
+        handler_stroage: str,
+        scopes: list,
+        credentials_file: str = None,
+        credentials_url: str = None,
+        code: str = None,
+    ):
         self.handler_storage = handler_stroage
         self.scopes = scopes
         self.credentials_file = credentials_file
@@ -28,7 +35,7 @@ class GoogleUserOAuth2Manager:
         creds = None
 
         if self.credentials_file or self.credentials_url:
-            oauth_user_info = self.handler_storage.encrypted_json_get('oauth_user_info')
+            oauth_user_info = self.handler_storage.encrypted_json_get("oauth_user_info")
 
             if oauth_user_info:
                 creds = Credentials.from_authorized_user_info(oauth_user_info, self.scopes)
@@ -45,7 +52,7 @@ class GoogleUserOAuth2Manager:
                     creds = self._execute_google_auth_flow(oauth_user_info)
                     logger.debug("New credentials obtained")
 
-                self.handler_storage.encrypted_json_set('oauth_user_info', self._convert_credentials_to_dict(creds))
+                self.handler_storage.encrypted_json_set("oauth_user_info", self._convert_credentials_to_dict(creds))
                 logger.debug("Saving credentials to storage")
 
         return creds
@@ -64,20 +71,17 @@ class GoogleUserOAuth2Manager:
         if self.credentials_file:
             path = Path(self.credentials_file).expanduser()
             if path.exists():
-                with open(path, 'r') as f:
+                with open(path, "r") as f:
                     return json.load(f)
             else:
                 logger.error("Credentials file does not exist")
 
-        raise ValueError('OAuth2 credentials could not be found')
+        raise ValueError("OAuth2 credentials could not be found")
 
     def _execute_google_auth_flow(self, oauth_user_info: dict):
-        flow = Flow.from_client_config(
-            oauth_user_info,
-            scopes=self.scopes
-        )
+        flow = Flow.from_client_config(oauth_user_info, scopes=self.scopes)
 
-        flow.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
+        flow.redirect_uri = request.headers["ORIGIN"] + "/verify-auth"
 
         if self.code:
             flow.fetch_token(code=self.code)
@@ -85,15 +89,15 @@ class GoogleUserOAuth2Manager:
             return creds
         else:
             auth_url = flow.authorization_url()[0]
-            raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
+            raise AuthException(f"Authorisation required. Please follow the url: {auth_url}", auth_url=auth_url)
 
     def _convert_credentials_to_dict(self, credentials):
         return {
-            'token': credentials.token,
-            'refresh_token': credentials.refresh_token,
-            'token_uri': credentials.token_uri,
-            'client_id': credentials.client_id,
-            'client_secret': credentials.client_secret,
-            'scopes': credentials.scopes,
-            'expiry': dt.datetime.strftime(credentials.expiry, '%Y-%m-%dT%H:%M:%S')
+            "token": credentials.token,
+            "refresh_token": credentials.refresh_token,
+            "token_uri": credentials.token_uri,
+            "client_id": credentials.client_id,
+            "client_secret": credentials.client_secret,
+            "scopes": credentials.scopes,
+            "expiry": dt.datetime.strftime(credentials.expiry, "%Y-%m-%dT%H:%M:%S"),
         }

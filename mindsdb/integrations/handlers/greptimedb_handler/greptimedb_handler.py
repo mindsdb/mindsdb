@@ -15,7 +15,7 @@ class GreptimeDBHandler(MySQLHandler):
     It's a subclass of default mysql handler
     """
 
-    name = 'greptimedb'
+    name = "greptimedb"
 
     def __init__(self, name, **kwargs):
         super().__init__(name, **kwargs)

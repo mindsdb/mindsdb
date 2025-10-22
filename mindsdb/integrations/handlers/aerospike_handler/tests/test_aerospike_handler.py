@@ -9,11 +9,11 @@ class AerospikeHandlerTest(unittest.TestCase):
         cls.kwargs = {
             # "user": "",
             # "password": "",
-            "host": '172.17.0.2',
+            "host": "172.17.0.2",
             "port": 3000,
             "namespace": "test",
         }
-        cls.handler = AerospikeHandler('test_aerospike_handler', cls.kwargs)
+        cls.handler = AerospikeHandler("test_aerospike_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -28,9 +28,9 @@ class AerospikeHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('house_rentals')
+        columns = self.handler.get_columns("house_rentals")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

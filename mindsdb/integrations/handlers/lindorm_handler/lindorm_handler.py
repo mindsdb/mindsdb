@@ -10,7 +10,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -21,7 +21,7 @@ class LindormHandler(DatabaseHandler):
     This handler handles connection and execution of the Apache Phoenix statements.
     """
 
-    name = 'lindorm'
+    name = "lindorm"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -33,8 +33,8 @@ class LindormHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'phoenix'
-        optional_parameters = ['autocommit', 'lindorm_user', 'lindorm_password']
+        self.dialect = "phoenix"
+        optional_parameters = ["autocommit", "lindorm_user", "lindorm_password"]
         for parameter in optional_parameters:
             if parameter not in connection_data:
                 connection_data[parameter] = None
@@ -59,19 +59,20 @@ class LindormHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        lindorm_connection_data = {'lindorm_user': self.connection_data['lindorm_user'], 'lindorm_password': self.connection_data['lindorm_password']}
+        lindorm_connection_data = {
+            "lindorm_user": self.connection_data["lindorm_user"],
+            "lindorm_password": self.connection_data["lindorm_password"],
+        }
 
         self.connection = phoenixdb.connect(
-            url=self.connection_data['url'],
-            autocommit=self.connection_data['autocommit'],
-            **lindorm_connection_data
+            url=self.connection_data["url"], autocommit=self.connection_data["autocommit"], **lindorm_connection_data
         )
         self.is_connected = True
 
         return self.connection
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
 
         Should switch self.is_connected.
         """
@@ -97,7 +98,7 @@ class LindormHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to the Phoenix Query Server, {e}!')
+            logger.error(f"Error connecting to the Phoenix Query Server, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -126,21 +127,14 @@ class LindormHandler(DatabaseHandler):
             result = cursor.fetchall()
             if result:
                 response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
+                    RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description])
                 )
             else:
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on the Lindorm Query Server!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on the Lindorm Query Server!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:
@@ -174,9 +168,9 @@ class LindormHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         df = result.data_frame
-        df = df[df['TABLE_SCHEM'] != 'SYSTEM']
-        df = df.drop('TABLE_SCHEM', axis=1)
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        df = df[df["TABLE_SCHEM"] != "SYSTEM"]
+        df = df.drop("TABLE_SCHEM", axis=1)
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
@@ -201,17 +195,13 @@ class LindormHandler(DatabaseHandler):
             response = Response(
                 RESPONSE_TYPE.TABLE,
                 data_frame=pd.DataFrame(
-                    [(x[0], x[1]) for x in cursor.description],
-                    columns=['column_name', 'data_type']
-                )
+                    [(x[0], x[1]) for x in cursor.description], columns=["column_name", "data_type"]
+                ),
             )
 
         except Exception as e:
-            logger.error(f'Error running query: {query} on the Phoenix Query Server!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on the Phoenix Query Server!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:

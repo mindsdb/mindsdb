@@ -18,7 +18,7 @@ class TwelveLabsHandler(BaseMLEngine):
     Twelve Labs API handler implementation.
     """
 
-    name = 'twelve_labs'
+    name = "twelve_labs"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -50,11 +50,13 @@ class TwelveLabsHandler(BaseMLEngine):
         """
 
         # check for USING clause
-        if 'using' not in args:
-            raise MissingConnectionParams("Twelve Labs engine requires a USING clause! Refer to its documentation for more details.")
+        if "using" not in args:
+            raise MissingConnectionParams(
+                "Twelve Labs engine requires a USING clause! Refer to its documentation for more details."
+            )
         else:
             # get USING args
-            args = args['using']
+            args = args["using"]
             # pass args to TwelveLabsHandlerModel for validation
             TwelveLabsHandlerModel(**args)
 
@@ -79,33 +81,33 @@ class TwelveLabsHandler(BaseMLEngine):
         """
 
         # get USING args and add target
-        args = args['using']
-        args['target'] = target
+        args = args["using"]
+        args["target"] = target
 
         # get api client and api key
         twelve_labs_api_client, api_key = self._get_api_client(args)
 
         # update args with api key
-        args['twelve_labs_api_key'] = api_key
+        args["twelve_labs_api_key"] = api_key
 
         # get index if it exists
-        index_id = twelve_labs_api_client.get_index_by_name(index_name=args['index_name'])
+        index_id = twelve_labs_api_client.get_index_by_name(index_name=args["index_name"])
 
         # create index if it doesn't exist
         if not index_id:
             logger.info(f"Index {args['index_name']} does not exist. Creating index.")
             index_id = twelve_labs_api_client.create_index(
-                index_name=args['index_name'],
-                engine_id=args['engine_id'] if 'engine_id' in args else None,
-                index_options=args['index_options'],
-                addons=args['addons'] if 'addons' in args else []
+                index_name=args["index_name"],
+                engine_id=args["engine_id"] if "engine_id" in args else None,
+                index_options=args["index_options"],
+                addons=args["addons"] if "addons" in args else [],
             )
 
         else:
             logger.info(f"Index {args['index_name']} already exists. Using existing index.")
 
         # store index_id in args
-        args['index_id'] = index_id
+        args["index_id"] = index_id
 
         # initialize video_urls and video_files
         video_urls, video_files = None, None
@@ -113,25 +115,29 @@ class TwelveLabsHandler(BaseMLEngine):
         # create video indexing tasks for all video files or video urls
         # video urls will be given precedence
         # check if video_urls_column has been set and use it to get the video urls
-        if 'video_urls_column' in args:
+        if "video_urls_column" in args:
             logger.info("video_urls_column has been set, therefore, it will be given precedence.")
-            video_urls = df[args['video_urls_column']].tolist()
+            video_urls = df[args["video_urls_column"]].tolist()
 
         # else, check if video_files_column has been set and use it to get the video files
-        elif 'video_files_column' in args:
+        elif "video_files_column" in args:
             logger.info("video_urls_column has not been set, therefore, video_files_column will be used.")
-            video_files = df[args['video_files_column']].tolist()
+            video_files = df[args["video_files_column"]].tolist()
 
         # else, check if video_urls or video_files have been set and use them
         else:
-            logger.info("video_urls_column and video_files_column have not been set, therefore, video_urls and video_files will be used.")
-            video_urls = args['video_urls'] if 'video_urls' in args else None
-            video_files = args['video_files'] if 'video_files' in args else None
+            logger.info(
+                "video_urls_column and video_files_column have not been set, therefore, video_urls and video_files will be used."
+            )
+            video_urls = args["video_urls"] if "video_urls" in args else None
+            video_files = args["video_files"] if "video_files" in args else None
 
         # if video_urls and video_files are not set, then raise an exception
         if not video_urls and not video_files:
             logger.error("Neither video_urls_column, video_files_column, video_urls nor video_files have been set.")
-            raise RuntimeError("Neither video_urls_column, video_files_column, video_urls nor video_files have been set. Please set one of them.")
+            raise RuntimeError(
+                "Neither video_urls_column, video_files_column, video_urls nor video_files have been set. Please set one of them."
+            )
 
         task_ids = twelve_labs_api_client.create_video_indexing_tasks(
             index_id=index_id,
@@ -143,7 +149,7 @@ class TwelveLabsHandler(BaseMLEngine):
         twelve_labs_api_client.poll_for_video_indexing_tasks(task_ids=task_ids)
 
         # store args in model_storage
-        self.model_storage.json_set('args', args)
+        self.model_storage.json_set("args", args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
@@ -160,22 +166,20 @@ class TwelveLabsHandler(BaseMLEngine):
         """
 
         # get args from model_storage
-        args = self.model_storage.json_get('args')
+        args = self.model_storage.json_get("args")
 
         # get api client
         twelve_labs_api_client, _ = self._get_api_client(args)
 
         # check if task is search
-        if args['task'] == 'search':
+        if args["task"] == "search":
             # get search query
             # TODO: support multiple queries
-            query = df[args['search_query_column']].tolist()[0]
+            query = df[args["search_query_column"]].tolist()[0]
 
             # search for query in index
             data = twelve_labs_api_client.search_index(
-                index_id=args['index_id'],
-                query=query,
-                search_options=args['search_options']
+                index_id=args["index_id"], query=query, search_options=args["search_options"]
             )
 
             # TODO: pick only the necessary columns?
@@ -185,22 +189,22 @@ class TwelveLabsHandler(BaseMLEngine):
             # df_modules = pd.json_normalize(data, record_path='modules', meta=metadata, record_prefix='modules_')
             # df_predictions = pd.merge(df_metadata, df_modules, on=metadata)
             # return df_predictions
-            return pd.json_normalize(data).add_prefix(args['target'] + '_')
+            return pd.json_normalize(data).add_prefix(args["target"] + "_")
 
         # check if task is summarize
-        elif args['task'] == 'summarization':
+        elif args["task"] == "summarization":
             # sumarize videos
-            video_ids = df['video_id'].tolist()
+            video_ids = df["video_id"].tolist()
             data = twelve_labs_api_client.summarize_videos(
-                video_ids=video_ids,
-                summarization_type=args['summarization_type'],
-                prompt=args['prompt']
+                video_ids=video_ids, summarization_type=args["summarization_type"], prompt=args["prompt"]
             )
 
-            if args['summarization_type'] in ('chapter', 'highlight'):
-                return pd.json_normalize(data, record_path=f"{args['summarization_type']}s", meta=['id']).add_prefix(args['target'] + '_')
+            if args["summarization_type"] in ("chapter", "highlight"):
+                return pd.json_normalize(data, record_path=f"{args['summarization_type']}s", meta=["id"]).add_prefix(
+                    args["target"] + "_"
+                )
             else:
-                return pd.json_normalize(data).add_prefix(args['target'] + '_')
+                return pd.json_normalize(data).add_prefix(args["target"] + "_")
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         """
@@ -237,7 +241,7 @@ class TwelveLabsHandler(BaseMLEngine):
                 video_data.update(video["metadata"])
 
                 # convert engine_ids to string
-                video_data['engine_ids'] = ", ".join(video_data['engine_ids'])
+                video_data["engine_ids"] = ", ".join(video_data["engine_ids"])
 
                 indexed_video_data.append(video_data)
 
@@ -270,7 +274,7 @@ class TwelveLabsHandler(BaseMLEngine):
         """
 
         if not args:
-            args = self.model_storage.json_get('args')
+            args = self.model_storage.json_get("args")
 
         # get api key
         api_key = get_api_key(
@@ -279,7 +283,7 @@ class TwelveLabsHandler(BaseMLEngine):
             engine_storage=self.engine_storage,
         )
 
-        base_url = args.get('base_url', None)
+        base_url = args.get("base_url", None)
 
         # initialize TwelveLabsAPIClient
         return TwelveLabsAPIClient(api_key=api_key, base_url=base_url), api_key

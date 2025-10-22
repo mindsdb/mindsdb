@@ -11,7 +11,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -22,7 +22,7 @@ class EmpressHandler(DatabaseHandler):
     This handler handles connection and execution of the Empress Embedded statements.
     """
 
-    name = 'empress'
+    name = "empress"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -35,14 +35,14 @@ class EmpressHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'empress'
-        self.connection_args = kwargs.get('connection_data')
-        self.database = self.connection_args.get('database')
-        self.server = self.connection_args.get('server')
-        self.user = self.connection_args.get('user')
-        self.password = self.connection_args.get('password')
-        self.host = self.connection_args.get('host')
-        self.port = self.connection_args.get('port', 6322)
+        self.dialect = "empress"
+        self.connection_args = kwargs.get("connection_data")
+        self.database = self.connection_args.get("database")
+        self.server = self.connection_args.get("server")
+        self.user = self.connection_args.get("user")
+        self.password = self.connection_args.get("password")
+        self.host = self.connection_args.get("host")
+        self.port = self.connection_args.get("port", 6322)
         self.connection = None
         self.is_connected = False
 
@@ -81,7 +81,7 @@ class EmpressHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Empress Embedded, {e}!')
+            logger.error(f"Error connecting to Empress Embedded, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -121,20 +121,14 @@ class EmpressHandler(DatabaseHandler):
                 if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame.from_records(
-                            result,
-                            columns=[x[0] for x in cursor.description]
-                        )
+                        data_frame=pd.DataFrame.from_records(result, columns=[x[0] for x in cursor.description]),
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.connection_args["database"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.connection_args['database']}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -151,7 +145,7 @@ class EmpressHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        renderer = SqlalchemyRender('sqlite')
+        renderer = SqlalchemyRender("sqlite")
 
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
@@ -167,18 +161,16 @@ class EmpressHandler(DatabaseHandler):
         cursor = connection.cursor()
         # Execute query to get all table names
         cursor.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")
+            "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'"
+        )
 
         table_names = [x[0] for x in cursor.fetchall()]
 
         # Create dataframe with table names
-        df = pd.DataFrame(table_names, columns=['table_name', 'data_type'])
+        df = pd.DataFrame(table_names, columns=["table_name", "data_type"])
 
         # Create response object
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response
 
@@ -198,14 +190,8 @@ class EmpressHandler(DatabaseHandler):
         results = cursor.fetchall()
 
         # construct a pandas dataframe from the query results
-        df = pd.DataFrame(
-            results,
-            columns=['column_name', 'data_type']
-        )
+        df = pd.DataFrame(results, columns=["column_name", "data_type"])
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response

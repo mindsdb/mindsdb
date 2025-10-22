@@ -41,9 +41,14 @@ INF_SCHEMA_COLUMNS_NAMES_SET = set(f.name for f in fields(INF_SCHEMA_COLUMNS_NAM
 
 class HandlerResponse:
     def __init__(
-            self, resp_type: RESPONSE_TYPE, data_frame: pandas.DataFrame = None, query: ASTNode = 0,
-            error_code: int = 0, error_message: str | None = None, affected_rows: int | None = None,
-            mysql_types: list[MYSQL_DATA_TYPE] | None = None
+        self,
+        resp_type: RESPONSE_TYPE,
+        data_frame: pandas.DataFrame = None,
+        query: ASTNode = 0,
+        error_code: int = 0,
+        error_message: str | None = None,
+        affected_rows: int | None = None,
+        mysql_types: list[MYSQL_DATA_TYPE] | None = None,
     ) -> None:
         self.resp_type = resp_type
         self.query = query
@@ -71,9 +76,7 @@ class HandlerResponse:
                     f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE}, "
                     f"the error is: {self.error_message}"
                 )
-            raise ValueError(
-                f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE}"
-            )
+            raise ValueError(f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE}")
 
         self.data_frame.columns = [name.upper() for name in self.data_frame.columns]
         self.data_frame[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self.data_frame[
@@ -83,9 +86,7 @@ class HandlerResponse:
         # region validate df
         current_columns_set = set(self.data_frame.columns)
         if INF_SCHEMA_COLUMNS_NAMES_SET != current_columns_set:
-            raise ValueError(
-                f"Columns set for INFORMATION_SCHEMA.COLUMNS is wrong: {list(current_columns_set)}"
-            )
+            raise ValueError(f"Columns set for INFORMATION_SCHEMA.COLUMNS is wrong: {list(current_columns_set)}")
         # endregion
 
         self.data_frame = self.data_frame.astype(
@@ -112,9 +113,7 @@ class HandlerResponse:
         try:
             data = None
             if self.data_frame is not None:
-                data = self.data_frame.to_json(
-                    orient="split", index=False, date_format="iso"
-                )
+                data = self.data_frame.to_json(orient="split", index=False, date_format="iso")
         except Exception as e:
             logger.error("%s.to_json: error - %s", self.__class__.__name__, e)
             data = None

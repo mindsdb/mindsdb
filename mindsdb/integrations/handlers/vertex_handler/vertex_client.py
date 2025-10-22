@@ -87,7 +87,6 @@ class VertexClient:
         return self.predict_from_df(endpoint_display_name, df)
 
     def predict_from_dict(self, endpoint_display_name, data):
-
         # convert to list of dictionaries
         instances = [dict(zip(data.keys(), values)) for values in zip(*data.values())]
         endpoint = self.get_endpoint_by_display_name(endpoint_display_name)

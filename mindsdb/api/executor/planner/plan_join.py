@@ -59,9 +59,7 @@ class PlanJoin:
 
     def check_single_integration(self, query):
         query_info = self.planner.get_query_info(query)
-
         # can we send all query to integration?
-
         # one integration and not mindsdb objects in query
         if (
             len(query_info["mdb_entities"]) == 0
@@ -71,7 +69,8 @@ class PlanJoin:
         ):
             int_name = list(query_info["integrations"])[0]
             # if is sql database
-            if self.planner.integrations.get(int_name, {}).get("class_type") != "api":
+            class_type = self.planner.integrations.get(int_name, {}).get("class_type")
+            if class_type != "api":
                 # send to this integration
                 return int_name
         return None
@@ -280,20 +279,51 @@ class PlanJoinTablesQuery:
         self.query_context["binary_ops"] = binary_ops
 
     def check_use_limit(self, query_in, join_sequence):
-        # use limit for first table?
-        # if only models
+        """
+        Determine if LIMIT can be pushed down to the first table fetch.
+
+        LIMIT pushdown means: fetch only N rows from the first table, then join.
+        This optimization is ONLY correct when the first table determines the final row count.
+
+        LIMIT pushdown is CORRECT for:
+        - Single table queries (no join)
+        - LEFT JOIN (left table determines row count - each left row appears exactly once)
+        - Joins with ML predictors
+
+        LIMIT pushdown is SLOW for:
+        - INNER JOIN between tables
+        - RIGHT JOIN (right table determines row count, not left)
+
+        When LIMIT pushdown is disabled, we fetch all data and apply LIMIT after the join.
+        This is slower but guarantees correct results.
+        """
         use_limit = False
-        if query_in.having is None or query_in.group_by is None and query_in.limit is not None:
-            join = None
+        if query_in.having is None and query_in.group_by is None and query_in.limit is not None:
             use_limit = True
+
+            # Check what we're joining
+            has_predictor = False
+            cannot_pushdown_limit = False
+
             for item in join_sequence:
                 if isinstance(item, TableInfo):
-                    if item.predictor_info is None and item.sub_select is None:
-                        if join is not None:
-                            if join.join_type.upper() != "LEFT JOIN":
-                                use_limit = False
+                    if item.predictor_info is not None:
+                        has_predictor = True
                 elif isinstance(item, Join):
-                    join = item
+                    join_type = (
+                        item.join_type.upper() if hasattr(item.join_type, "upper") else str(item.join_type).upper()
+                    )
+
+                    # LEFT JOIN preserves left table row count - LIMIT pushdown is safe
+                    if join_type in ("LEFT JOIN", "LEFT OUTER JOIN"):
+                        continue
+
+                    # INNER/RIGHT JOIN: can't push LIMIT down
+                    cannot_pushdown_limit = True
+
+            if cannot_pushdown_limit and not has_predictor:
+                use_limit = False
+
         self.query_context["use_limit"] = use_limit
 
     def plan_join_tables(self, query_in):
@@ -412,7 +442,10 @@ class PlanJoinTablesQuery:
             # not use conditions
             conditions = []
 
-        conditions += self.get_filters_from_join_conditions(item)
+        # For cross-database joins, skip the IN clause optimization
+        # Reason: We can't predict row counts, and building large IN clauses causes errors
+        # Let the join happen in memory without filter pushdown
+        # conditions += self.get_filters_from_join_conditions(item, query_in.using)
 
         if self.query_context["use_limit"]:
             order_by = None
@@ -482,6 +515,18 @@ class PlanJoinTablesQuery:
         return columns_map
 
     def get_filters_from_join_conditions(self, fetch_table):
+        """
+        Extract filters from join conditions for filter pushdown optimization.
+
+        Note: This function is currently disabled (not called) to avoid:
+        - Creating massive IN clauses that exceed database query size limits
+        - Making arbitrary assumptions about data distribution
+
+        For cross-database joins with large tables, users should:
+        - Add explicit WHERE clauses to filter data at the source
+        - Use indexed/partitioned tables in their databases
+        - Consider materializing intermediate results
+        """
         binary_ops = set()
         conditions = []
         data_conditions = []

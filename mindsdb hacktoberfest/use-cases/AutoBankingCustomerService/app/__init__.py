@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import mindsdb_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,25 +10,19 @@ from dotenv import load_dotenv
 
 from . import services
 from .api import router as api_router
-from .db import ensure_table_exists
+from .db import ensure_table_exists, DEFAULT_DB_CONFIG
 from .jira_client import JiraClientError, build_default_client
 from .salesforce_client import SalesforceClientError, build_default_client as build_salesforce_client
-from .recommendation_client import RecommendationClientError, build_recommendation_client
+from .agents import register_agent, clear_agents
 
-DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "demo",
-    "user": "postgresql",
-    "password": "psqlpasswd",
-}
+load_dotenv()
 
-MINDSDB_URL = "http://127.0.0.1:47334"
+# Configuration
+MINDSDB_URL = os.getenv("MINDSDB_URL", "http://127.0.0.1:47334")
 AGENT_NAME = "classification_agent"
 RECOMMENDATION_AGENT_NAME = "recommendation_agent"
 
-services.set_db_config(DB_CONFIG)
-load_dotenv()
+services.set_db_config(DEFAULT_DB_CONFIG)
 
 app = FastAPI(title="Banking Customer Service API", version="1.0.0")
 
@@ -48,9 +43,10 @@ async def startup_event() -> None:
     print("Starting Banking Customer Service API Server...")
     print("=" * 70)
 
-    print("\nChecking database table...")
+    # Step 1: Check PostgreSQL database
+    print("\nStep 1: Checking database table...")
     try:
-        if ensure_table_exists(db_config=DB_CONFIG, verbose=True):
+        if ensure_table_exists(db_config=DEFAULT_DB_CONFIG, verbose=True):
             print("✓ Database ready")
         else:
             print("✗ Warning: Could not verify or create database table")
@@ -59,32 +55,51 @@ async def startup_event() -> None:
         print(f"✗ Error during database check: {exc}")
         print("  The server will start, but may encounter errors.")
 
-    print("\nConnecting to MindsDB...")
+    # Step 2: Initialize MindsDB (create database, engine, agents)
+    print("\nStep 2: Initializing MindsDB...")
+    try:
+        from .init_mindsdb import init_mindsdb
+        init_success = init_mindsdb(verbose=True)
+        if init_success:
+            print("✓ MindsDB initialization completed")
+        else:
+            print("⚠ MindsDB initialization had some issues, but continuing...")
+    except Exception as init_exc:  # pragma: no cover - startup diagnostics
+        print(f"✗ MindsDB initialization failed: {init_exc}")
+        print("  Attempting to connect to MindsDB anyway...")
+
+    # Step 3: Connect to MindsDB and register agents
+    print("\nStep 3: Connecting to MindsDB and registering agents...")
     try:
         mindsdb_server = mindsdb_sdk.connect(MINDSDB_URL)
         services.set_mindsdb_server(mindsdb_server)
-        
-        # Initialize classification agent
-        classification_agent = mindsdb_server.agents.get(AGENT_NAME)
-        services.set_agent(classification_agent)
-        print("✓ Classification agent configured")
-        
-        # Initialize recommendation agent
+        print("✓ Connected to MindsDB")
+
+        # Register classification agent
+        try:
+            classification_agent = mindsdb_server.agents.get(AGENT_NAME)
+            register_agent(AGENT_NAME, classification_agent)
+            services.set_agent(classification_agent)
+            print(f"✓ Registered agent: {AGENT_NAME}")
+        except Exception as agent_exc:
+            print(f"✗ Failed to register {AGENT_NAME}: {agent_exc}")
+
+        # Register recommendation agent
         try:
             recommendation_agent = mindsdb_server.agents.get(RECOMMENDATION_AGENT_NAME)
-            recommendation_client = build_recommendation_client(recommendation_agent)
-            services.set_recommendation_client(recommendation_client)
-            print("✓ Recommendation agent configured")
+            register_agent(RECOMMENDATION_AGENT_NAME, recommendation_agent)
+            print(f"✓ Registered agent: {RECOMMENDATION_AGENT_NAME}")
         except Exception as rec_exc:
             print(f"✗ Recommendation agent not available: {rec_exc}")
             print("  Recommendation features will be disabled.")
-            
+
     except Exception as exc:  # pragma: no cover - startup diagnostics
         print(f"✗ Error connecting to MindsDB: {exc}")
         print("  The server will start, but agent queries will fail.")
         print(f"  Make sure MindsDB is running at {MINDSDB_URL}")
 
-    print("\nInitializing Jira client...")
+    # Step 4: Initialize Jira client
+    print("\nStep 4: Initializing Jira client...")
     try:
         jira_client = build_default_client()
         if jira_client:
@@ -97,7 +112,8 @@ async def startup_event() -> None:
     except Exception as exc:  # pragma: no cover - startup diagnostics
         print(f"✗ Unexpected Jira initialization error: {exc}")
 
-    print("\nInitializing Salesforce client...")
+    # Step 5: Initialize Salesforce client
+    print("\nStep 5: Initializing Salesforce client...")
     try:
         salesforce_client = build_salesforce_client()
         if salesforce_client:
@@ -118,7 +134,9 @@ async def startup_event() -> None:
 
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
+    """Cleanup on server shutdown."""
     services.clear_state()
+    clear_agents()
 
 
 __all__ = ["app"]

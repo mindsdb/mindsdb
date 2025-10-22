@@ -15,6 +15,8 @@ DEFAULT_DB_CONFIG: Dict[str, str | int] = {
     "database": "demo",
     "user": "postgresql",
     "password": "psqlpasswd",
+    "schema": "demo_data",
+    "table": "conversations_summary",
 }
 
 
@@ -32,7 +34,26 @@ def db_connection(db_config: Optional[Dict[str, str | int]] = None) -> Iterator[
 def get_db_connection(db_config: Optional[Dict[str, str | int]] = None) -> PGConnection:
     """Return a raw PostgreSQL connection (caller must close)."""
     config = db_config or DEFAULT_DB_CONFIG
-    return psycopg2.connect(**config)
+    # Extract schema/table to avoid passing them to psycopg2.connect
+    connection_params = {k: v for k, v in config.items() if k not in ("schema", "table")}
+    return psycopg2.connect(**connection_params)
+
+
+def _get_full_table_name(db_config: Dict[str, str | int]) -> str:
+    """Get the fully qualified table name (schema.table)."""
+    schema = db_config.get("schema", "demo_data")
+    table = db_config.get("table", "conversations_summary")
+    return f"{schema}.{table}"
+
+
+def _get_schema(db_config: Dict[str, str | int]) -> str:
+    """Get the schema name."""
+    return str(db_config.get("schema", "demo_data"))
+
+
+def _get_table(db_config: Dict[str, str | int]) -> str:
+    """Get the table name."""
+    return str(db_config.get("table", "conversations_summary"))
 
 
 def ensure_table_exists(db_config: Optional[Dict[str, str | int]] = None, verbose: bool = False) -> bool:
@@ -86,11 +107,12 @@ def insert_conversation_with_analysis(
 ) -> None:
     """Insert a single analyzed conversation into the database."""
     config = db_config or DEFAULT_DB_CONFIG
+    full_table_name = _get_full_table_name(config)
 
     with db_connection(config) as conn:
         with conn.cursor() as cur:
-            insert_sql = """
-                INSERT INTO demo_data.conversations_summary
+            insert_sql = f"""
+                INSERT INTO {full_table_name}
                 (
                     conversation_id,
                     conversation_text,
@@ -130,68 +152,72 @@ def insert_conversation_with_analysis(
 
 
 def _ensure_jira_columns(db_config: Dict[str, str | int], verbose: bool = False) -> None:
+    full_table_name = _get_full_table_name(db_config)
     try:
         with db_connection(db_config) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
-                    ALTER TABLE demo_data.conversations_summary
+                    f"""
+                    ALTER TABLE {full_table_name}
                     ADD COLUMN IF NOT EXISTS jira_issue_key TEXT NULL;
                     """
                 )
                 cur.execute(
-                    """
-                    ALTER TABLE demo_data.conversations_summary
+                    f"""
+                    ALTER TABLE {full_table_name}
                     ADD COLUMN IF NOT EXISTS jira_issue_url TEXT NULL;
                     """
                 )
                 cur.execute(
-                    """
-                    ALTER TABLE demo_data.conversations_summary
+                    f"""
+                    ALTER TABLE {full_table_name}
                     ADD COLUMN IF NOT EXISTS jira_issue_error TEXT NULL;
                     """
                 )
                 # Salesforce columns
                 cur.execute(
-                    """
-                    ALTER TABLE demo_data.conversations_summary
+                    f"""
+                    ALTER TABLE {full_table_name}
                     ADD COLUMN IF NOT EXISTS salesforce_case_id TEXT NULL;
                     """
                 )
                 cur.execute(
-                    """
-                    ALTER TABLE demo_data.conversations_summary
+                    f"""
+                    ALTER TABLE {full_table_name}
                     ADD COLUMN IF NOT EXISTS salesforce_case_url TEXT NULL;
                     """
                 )
                 cur.execute(
-                    """
-                    ALTER TABLE demo_data.conversations_summary
+                    f"""
+                    ALTER TABLE {full_table_name}
                     ADD COLUMN IF NOT EXISTS salesforce_error TEXT NULL;
                     """
                 )
                 # Recommendation columns
                 cur.execute(
-                    """
-                    ALTER TABLE demo_data.conversations_summary
+                    f"""
+                    ALTER TABLE {full_table_name}
                     ADD COLUMN IF NOT EXISTS recommendation TEXT NULL;
                     """
                 )
                 cur.execute(
-                    """
-                    ALTER TABLE demo_data.conversations_summary
+                    f"""
+                    ALTER TABLE {full_table_name}
                     ADD COLUMN IF NOT EXISTS recommendation_error TEXT NULL;
                     """
                 )
             conn.commit()
         if verbose:
-            print("✓ Jira, Salesforce, and Recommendation columns verified on conversations_summary")
+            table = _get_table(db_config)
+            print(f"✓ Jira, Salesforce, and Recommendation columns verified on {table}")
     except Exception as exc:  # pragma: no cover - defensive logging
         if verbose:
             print(f"✗ Unable to ensure Jira columns: {exc}")
 
 
 def _check_table_exists(db_config: Dict[str, str | int], verbose: bool = False) -> bool:
+    schema = _get_schema(db_config)
+    table = _get_table(db_config)
     try:
         with db_connection(db_config) as conn:
             with conn.cursor() as cur:
@@ -199,10 +225,11 @@ def _check_table_exists(db_config: Dict[str, str | int], verbose: bool = False) 
                     """
                     SELECT EXISTS (
                         SELECT FROM information_schema.tables
-                        WHERE table_schema = 'demo_data'
-                        AND table_name = 'conversations_summary'
+                        WHERE table_schema = %s
+                        AND table_name = %s
                     );
-                    """
+                    """,
+                    (schema, table)
                 )
                 exists = cur.fetchone()[0]
     except Exception as exc:  # pragma: no cover - defensive logging
@@ -216,9 +243,13 @@ def _check_table_exists(db_config: Dict[str, str | int], verbose: bool = False) 
 
 
 def _init_summary_table(db_config: Dict[str, str | int], verbose: bool = True) -> bool:
+    schema = _get_schema(db_config)
+    table = _get_table(db_config)
+    full_table_name = _get_full_table_name(db_config)
+
     if verbose:
         print("=" * 70)
-        print("Initializing conversations_summary table...")
+        print(f"Initializing {table} table...")
         print("=" * 70)
         print(f"\nConnecting to database at {db_config['host']}:{db_config['port']}...")
 
@@ -227,16 +258,16 @@ def _init_summary_table(db_config: Dict[str, str | int], verbose: bool = True) -
             with conn.cursor() as cur:
                 if verbose:
                     print("✓ Successfully connected to database")
-                    print("\nEnsuring schema 'demo_data' exists...")
-                cur.execute("CREATE SCHEMA IF NOT EXISTS demo_data;")
+                    print(f"\nEnsuring schema '{schema}' exists...")
+                cur.execute(f"CREATE SCHEMA IF NOT EXISTS {schema};")
                 conn.commit()
 
                 if verbose:
                     print("✓ Schema ready")
-                    print("\nCreating 'conversations_summary' table...")
+                    print(f"\nCreating '{table}' table...")
                 cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS demo_data.conversations_summary (
+                    f"""
+                    CREATE TABLE IF NOT EXISTS {full_table_name} (
                         id SERIAL PRIMARY KEY,
                         conversation_id VARCHAR(255) NOT NULL UNIQUE,
                         conversation_text TEXT NOT NULL,
@@ -253,12 +284,12 @@ def _init_summary_table(db_config: Dict[str, str | int], verbose: bool = True) -
                 conn.commit()
 
                 if verbose:
-                    print("✓ Table 'conversations_summary' created successfully")
+                    print(f"✓ Table '{table}' created successfully")
                     print("\nCreating index on conversation_id...")
                 cur.execute(
-                    """
+                    f"""
                     CREATE INDEX IF NOT EXISTS idx_conversation_id
-                    ON demo_data.conversations_summary(conversation_id);
+                    ON {full_table_name}(conversation_id);
                     """
                 )
                 conn.commit()
@@ -267,9 +298,9 @@ def _init_summary_table(db_config: Dict[str, str | int], verbose: bool = True) -
                     print("✓ Index created successfully")
                     print("Creating index on resolved status...")
                 cur.execute(
-                    """
+                    f"""
                     CREATE INDEX IF NOT EXISTS idx_resolved
-                    ON demo_data.conversations_summary(resolved);
+                    ON {full_table_name}(resolved);
                     """
                 )
                 conn.commit()
@@ -293,13 +324,15 @@ def _init_summary_table(db_config: Dict[str, str | int], verbose: bool = True) -
                 if verbose:
                     print("✓ Trigger function created successfully")
                     print("Creating trigger for updated_at...")
+                # Generate a unique trigger name based on schema and table
+                trigger_name = f"update_{schema}_{table}_updated_at"
                 cur.execute(
-                    """
-                    DROP TRIGGER IF EXISTS update_conversations_summary_updated_at
-                    ON demo_data.conversations_summary;
+                    f"""
+                    DROP TRIGGER IF EXISTS {trigger_name}
+                    ON {full_table_name};
 
-                    CREATE TRIGGER update_conversations_summary_updated_at
-                    BEFORE UPDATE ON demo_data.conversations_summary
+                    CREATE TRIGGER {trigger_name}
+                    BEFORE UPDATE ON {full_table_name}
                     FOR EACH ROW
                     EXECUTE FUNCTION update_updated_at_column();
                     """
@@ -313,10 +346,11 @@ def _init_summary_table(db_config: Dict[str, str | int], verbose: bool = True) -
                         """
                         SELECT column_name, data_type, is_nullable, column_default
                         FROM information_schema.columns
-                        WHERE table_schema = 'demo_data'
-                        AND table_name = 'conversations_summary'
+                        WHERE table_schema = %s
+                        AND table_name = %s
                         ORDER BY ordinal_position;
-                        """
+                        """,
+                        (schema, table)
                     )
                     columns = cur.fetchall()
                     print("\n  Table Structure:")
@@ -330,12 +364,12 @@ def _init_summary_table(db_config: Dict[str, str | int], verbose: bool = True) -
                         )
                     print("  " + "-" * 66)
 
-                cur.execute("SELECT COUNT(*) FROM demo_data.conversations_summary;")
+                cur.execute(f"SELECT COUNT(*) FROM {full_table_name};")
                 count = cur.fetchone()[0]
                 if verbose:
                     print(f"\n✓ Current records in table: {count}")
                     print("\n" + "=" * 70)
-                    print("✓ conversations_summary table initialization completed!")
+                    print(f"✓ {table} table initialization completed!")
                     print("=" * 70)
                     print("\nTable is ready to receive data from your backend!")
                     print("MindsDB agents can now read from and write to this table.")

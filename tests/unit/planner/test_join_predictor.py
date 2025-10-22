@@ -34,7 +34,7 @@ class TestPlanJoinPredictor:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(targets=[Identifier('column1', alias=Identifier('column1'))], from_table=Identifier("tab1")),  # Column pruning
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
                 JoinStep(
@@ -67,7 +67,7 @@ class TestPlanJoinPredictor:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1", alias=Identifier("ta"))),
+                    query=Select(targets=[Identifier('column1', alias=Identifier('column1'))], from_table=Identifier("tab1", alias=Identifier("ta"))),  # Column pruning
                 ),
                 ApplyPredictorStep(
                     namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred", alias=Identifier("tb"))
@@ -105,12 +105,12 @@ class TestPlanJoinPredictor:
                     integration="int",
                     query=parse_sql(
                         """
-                                              select * from tab
-                                              where product_id = 'x' and time between '2021-01-01' and '2021-01-31'
-                                              order by column2
-                                              limit 10
-                                              offset 1
-                                            """
+                            select column1 as column1, column2 as column2, product_id as product_id, time as time from tab
+                            where product_id = 'x' and time between '2021-01-01' and '2021-01-31'
+                            order by column2
+                            limit 10
+                            offset 1
+                        """
                     ),
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
@@ -169,7 +169,7 @@ class TestPlanJoinPredictor:
 
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab as t where col1 = 'x'")),
+                FetchDataframeStep(integration="int", query=parse_sql("select asset as asset, col1 as col1, time as time from tab as t where col1 = 'x'")),  # Column pruning
                 ApplyPredictorStep(
                     namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred", alias=Identifier("m"))
                 ),
@@ -205,7 +205,7 @@ class TestPlanJoinPredictor:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(targets=[Identifier('column1', alias=Identifier('column1'))], from_table=Identifier("tab1")),  # Column pruning
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
                 JoinStep(
@@ -238,7 +238,7 @@ class TestPlanJoinPredictor:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(targets=[Identifier('column1', alias=Identifier('column1'))], from_table=Identifier("tab1")),  # Column pruning
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
                 JoinStep(
@@ -740,19 +740,19 @@ class TestPredictorParams:
         subquery.where.args[0].args[0].args[0].args[1].args[1] = Parameter(Result(2))
 
         query = parse_sql(sql)
-
+        
         # Construct query for tab2 with Parameter manually since parse_sql doesn't support Parameter syntax
-        q_table2 = parse_sql("select * from tab2 as t2 where x=0 and b=2")
+        q_table2 = parse_sql("select a as a, b as b, x as x from tab2 as t2 where x=0 and b=2")
         q_table2.where.args[0].args[1] = Parameter(Result(2))
-
+        
         expected_plan = QueryPlan(
             steps=[
                 # nested queries
                 FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab0 where x=0")),
                 FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab3 where x=3")),
                 FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab4 where x=4")),
-                # tables (IN clause filter optimization disabled)
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as t1 where b=1")),
+                # tables (IN clause filter optimization disabled, but column pruning enabled)
+                FetchDataframeStep(integration="int", query=parse_sql("select a as a, b as b, x as x from tab1 as t1 where b=1")),
                 FetchDataframeStep(integration="int", query=q_table2),
                 JoinStep(
                     left=Result(3),

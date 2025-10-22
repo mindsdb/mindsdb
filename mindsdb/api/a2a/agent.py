@@ -4,6 +4,7 @@ import requests
 import httpx
 from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
 from mindsdb.api.a2a.constants import DEFAULT_STREAM_TIMEOUT
+from mindsdb.api.a2a.common.types import A2AClientError, A2AClientHTTPError
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 
@@ -128,11 +129,11 @@ class MindsDBAgent:
         except httpx.HTTPStatusError as e:
             error_msg = f"HTTP error {e.response.status_code} from agent '{self.agent_name}': {str(e)}"
             logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            raise A2AClientHTTPError(status_code=e.response.status_code, message=error_msg)
         except httpx.RequestError as e:
             error_msg = f"Request error while streaming from agent '{self.agent_name}': {str(e)}"
             logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            raise A2AClientError(error_msg)
 
     async def stream(
         self,

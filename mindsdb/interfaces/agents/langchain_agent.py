@@ -742,11 +742,8 @@ AI: {response}"""
                 error_message = str(e)
 
                 # Special handling for specific error types
-                if "timeout" in error_message.lower() or "timed out" in error_message.lower():
-                    logger.error(f"Timeout Error: {error_message}", exc_info=True)
-                    error_message = f"Request timed out: {error_message}"
-                    error_type = "timeout"
-                elif "API key" in error_message and ("not found" in error_message or "missing" in error_message):
+                # Note: TimeoutError and ConnectionError are already handled by specific exception handlers above
+                if "API key" in error_message and ("not found" in error_message or "missing" in error_message):
                     logger.error(f"API Key Error: {error_message}")
                     error_message = f"API Key Error: {error_message}"
                     error_type = "authentication"
@@ -757,10 +754,6 @@ AI: {response}"""
                     logger.error(f"Rate Limit Error: {error_message}")
                     error_message = f"Rate limit exceeded: {error_message}"
                     error_type = "rate_limit"
-                elif "connection" in error_message.lower() or "connect" in error_message.lower():
-                    logger.error(f"Connection Error: {error_message}")
-                    error_message = f"Connection error: {error_message}"
-                    error_type = "connection"
                 else:
                     logger.error(f"LLM chain encountered an error during streaming: {error_message}", exc_info=True)
                     error_type = "general"

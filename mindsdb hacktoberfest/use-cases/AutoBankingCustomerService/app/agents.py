@@ -64,6 +64,40 @@ Be specific and actionable.
 
 Conversation summary:""",
     },
+    "analytics_agent": {
+        "model": {
+            "provider": "openai",
+            "model_name": "gpt-4o",
+            "api_key": os.getenv("OPENAI_API_KEY", ""),
+        },
+        "prompt_template": """You are a banking customer service analytics expert. Analyze the provided conversation data and generate comprehensive insights.
+
+Your task:
+1. Identify the most common customer issues (top 5-10)
+2. Calculate resolution rates and trends
+3. Provide key insights about customer service performance
+4. Generate actionable recommendations for improvement
+
+Input data will be provided as:
+- Total conversations
+- Resolved count
+- Unresolved count
+- Individual conversation summaries
+
+Format your response EXACTLY as JSON:
+{
+  "top_issues": [
+    {"issue": "issue name", "count": number, "percentage": number},
+    ...
+  ],
+  "resolution_rate": number,
+  "key_insights": "Your insights as a single text block",
+  "recommendations": "Your recommendations as a single text block",
+  "trend_direction": "improving|declining|stable"
+}
+
+Analysis data:""",
+    },
     # Add more agents here as needed
 }
 

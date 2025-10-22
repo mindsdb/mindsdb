@@ -2,21 +2,26 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from contextlib import contextmanager
 from typing import Dict, Iterator, Optional
 
 import psycopg2
 from psycopg2.extensions import connection as PGConnection
+from dotenv import load_dotenv
 
+load_dotenv()
+
+# Default database configuration (read from environment variables)
 DEFAULT_DB_CONFIG: Dict[str, str | int] = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "demo",
-    "user": "postgresql",
-    "password": "psqlpasswd",
-    "schema": "demo_data",
-    "table": "conversations_summary",
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "database": os.getenv("DB_NAME", "demo"),
+    "user": os.getenv("DB_USER", "postgresql"),
+    "password": os.getenv("DB_PASSWORD", "psqlpasswd"),
+    "schema": os.getenv("DB_SCHEMA", "demo_data"),
+    "table": os.getenv("DB_TABLE", "conversations_summary"),
 }
 
 
@@ -73,6 +78,23 @@ def ensure_table_exists(db_config: Optional[Dict[str, str | int]] = None, verbos
     if created:
         _ensure_jira_columns(config, verbose=verbose)
     return created
+
+
+def init_postgres(db_config: Optional[Dict[str, str | int]] = None, verbose: bool = False) -> bool:
+    """Initialize all PostgreSQL tables (conversations + analytics).
+
+    This is the unified entry point for PostgreSQL initialization.
+    Delegates to the centralized init_postgres module.
+
+    Args:
+        db_config: Database configuration (uses DEFAULT_DB_CONFIG if None)
+        verbose: Print detailed progress messages
+
+    Returns:
+        True if all tables initialized successfully
+    """
+    from .init_postgres import init_postgres as _init_postgres
+    return _init_postgres(db_config=db_config, verbose=verbose)
 
 
 def check_table_exists(db_config: Optional[Dict[str, str | int]] = None, verbose: bool = False) -> bool:

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 from . import services
 from .api import router as api_router
-from .db import ensure_table_exists, DEFAULT_DB_CONFIG
+from .db import init_postgres, DEFAULT_DB_CONFIG
 from .jira_client import JiraClientError, build_default_client
 from .salesforce_client import SalesforceClientError, build_default_client as build_salesforce_client
 from .agents import register_agent, clear_agents
@@ -43,16 +43,16 @@ async def startup_event() -> None:
     print("Starting Banking Customer Service API Server...")
     print("=" * 70)
 
-    # Step 1: Check PostgreSQL database
-    print("\nStep 1: Checking database table...")
+    # Step 1: Initialize PostgreSQL (conversations + analytics tables)
+    print("\nStep 1: Initializing PostgreSQL database...")
     try:
-        if ensure_table_exists(db_config=DEFAULT_DB_CONFIG, verbose=True):
-            print("✓ Database ready")
+        if init_postgres(db_config=DEFAULT_DB_CONFIG, verbose=True):
+            print("✓ PostgreSQL ready")
         else:
-            print("✗ Warning: Could not verify or create database table")
+            print("⚠ PostgreSQL initialization had some issues")
             print("  The server will start, but may encounter errors.")
     except Exception as exc:  # pragma: no cover - startup diagnostics
-        print(f"✗ Error during database check: {exc}")
+        print(f"✗ Error during PostgreSQL initialization: {exc}")
         print("  The server will start, but may encounter errors.")
 
     # Step 2: Initialize MindsDB (create database, engine, agents)
@@ -70,6 +70,7 @@ async def startup_event() -> None:
 
     # Step 3: Connect to MindsDB and register agents
     print("\nStep 3: Connecting to MindsDB and registering agents...")
+    mindsdb_server = None
     try:
         mindsdb_server = mindsdb_sdk.connect(MINDSDB_URL)
         services.set_mindsdb_server(mindsdb_server)
@@ -92,6 +93,18 @@ async def startup_event() -> None:
         except Exception as rec_exc:
             print(f"✗ Recommendation agent not available: {rec_exc}")
             print("  Recommendation features will be disabled.")
+
+        # Initialize analytics JOBs
+        print("\nStep 3.5: Initializing MindsDB analytics JOBs...")
+        try:
+            from .init_mindsdb_jobs import init_mindsdb_jobs
+            jobs_success = init_mindsdb_jobs(mindsdb_server, recreate=False, verbose=True)
+            if jobs_success:
+                print("✓ MindsDB JOBs initialized")
+            else:
+                print("⚠ MindsDB JOBs had some issues")
+        except Exception as jobs_exc:
+            print(f"⚠ MindsDB JOBs initialization failed: {jobs_exc}")
 
     except Exception as exc:  # pragma: no cover - startup diagnostics
         print(f"✗ Error connecting to MindsDB: {exc}")

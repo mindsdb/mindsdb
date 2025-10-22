@@ -9,7 +9,6 @@ from mindsdb_sql_parser.ast import (
     Join,
     Constant,
     Star,
-    Parameter,
     BinaryOperation,
     OrderBy,
     Function,

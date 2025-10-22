@@ -1,10 +1,7 @@
-import pytest
 from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import Identifier, Select, Join, Star, BinaryOperation, Constant, OrderBy, Function
-from mindsdb_sql_parser.utils import JoinType
+from mindsdb_sql_parser.ast import Identifier, Select
 
 from mindsdb.api.executor.planner import plan_query
-from mindsdb.api.executor.planner.plan_join import PlanJoinTablesQuery, TableInfo
 
 
 class TestColumnPruning:

@@ -1,6 +1,6 @@
 import copy
 
-from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Star, Data, BinaryOperation
+from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Data, BinaryOperation
 from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner import plan_query

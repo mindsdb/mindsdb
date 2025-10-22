@@ -1,5 +1,5 @@
 from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Star, Union, BinaryOperation
+from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Union, BinaryOperation
 from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner import plan_query

@@ -442,7 +442,7 @@ class PlanJoinTablesQuery:
         # Skip column pruning for predictors/models
         if table_info.predictor_info is not None:
             return None
-        
+
         # Skip column pruning for subselects with custom projections
         # These already have their SELECT clause defined
         if table_info.sub_select is not None and isinstance(table_info.sub_select, Select):

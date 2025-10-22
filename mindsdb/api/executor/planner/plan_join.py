@@ -36,8 +36,8 @@ from mindsdb.api.executor.planner.plan_join_ts import PlanJoinTSPredictorQuery
 class TableInfo:
     integration: str
     table: Identifier
-    aliases: List[str] = field(default_factory=List)
-    conditions: List = None
+    aliases: list[tuple[str, ...]] = field(default_factory=list)
+    conditions: list = None
     sub_select: ast.ASTNode = None
     predictor_info: dict = None
     join_condition = None
@@ -326,6 +326,7 @@ class PlanJoinTablesQuery:
 
         # get all join tables, form join sequence
         join_sequence = self.get_join_sequence(query.from_table)
+        self.join_sequence = join_sequence
 
         # find tables for identifiers used in query
         def _check_identifiers(node, is_table, **kwargs):
@@ -357,7 +358,7 @@ class PlanJoinTablesQuery:
         for item in join_sequence:
             if isinstance(item, TableInfo):
                 if item.sub_select is not None:
-                    self.process_subselect(item)
+                    self.process_subselect(item, query_in)
                 elif item.predictor_info is not None:
                     self.process_predictor(item, query_in)
                 else:
@@ -384,7 +385,7 @@ class PlanJoinTablesQuery:
         self.close_partition()
         return self.step_stack.pop()
 
-    def process_subselect(self, item):
+    def process_subselect(self, item, query_in):
         # is sub select
         item.sub_select.alias = None
         item.sub_select.parentheses = False
@@ -392,8 +393,12 @@ class PlanJoinTablesQuery:
 
         where = filters_to_bin_op(item.conditions)
 
+        # Column pruning: determine which columns from the subselect are actually needed
+        needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
+        targets = needed_columns if needed_columns else [Star()]
+
         # apply table alias
-        query2 = Select(targets=[Star()], where=where)
+        query2 = Select(targets=targets, where=where)
         if item.table.alias is None:
             raise PlanningException(f"Subselect in join have to be aliased: {item.sub_select.to_string()}")
         table_name = item.table.alias.parts[-1]
@@ -406,15 +411,134 @@ class PlanJoinTablesQuery:
         step2 = self.add_plan_step(step2)
         self.step_stack.append(step2)
 
+    def _collect_from_order_by(self, query_in, alias_map, add_column_callback):
+        """Helper to collect columns from ORDER BY clause, resolving aliases and ordinals."""
+        for order_col in query_in.order_by:
+            field = order_col.field
+            
+            # Handle ORDER BY ordinal (e.g., ORDER BY 1)
+            if isinstance(field, Constant) and isinstance(field.value, int):
+                ordinal = field.value
+                if 1 <= ordinal <= len(query_in.targets):
+                    target_expr = query_in.targets[ordinal - 1]
+                    query_traversal(target_expr, add_column_callback)
+                continue
+            
+            # Handle ORDER BY alias (e.g., ORDER BY alias_name)
+            if isinstance(field, Identifier) and len(field.parts) == 1:
+                alias_name = field.parts[0].lower()
+                if alias_name in alias_map:
+                    query_traversal(alias_map[alias_name], add_column_callback)
+                    continue
+            
+            # Regular column reference
+            query_traversal(field, add_column_callback)
+    
+    def get_columns_for_table(self, table_info, query_in, join_sequence):
+        """
+        Collect all columns needed from a specific table for column pruning optimization.
+        
+        Returns a list of column Identifiers or None if we should fetch all columns.
+        """
+        columns = {}
+        has_qualified_star_for_table = False
+        
+        alias_map = {}
+        if query_in.targets:
+            for target in query_in.targets:
+                if isinstance(target, Identifier) and target.alias:
+                    alias_map[target.alias.parts[-1].lower()] = target
+        
+        def add_column(node, **kwargs):
+            if isinstance(node, Identifier):
+                col_table = self.get_table_for_column(node)
+                if not col_table or col_table.index != table_info.index:
+                    return
+                
+                # Check for qualified star: t1.* or alias.*
+                if node.parts and (node.parts[-1] == '*' or isinstance(node.parts[-1], Star)):
+                    nonlocal has_qualified_star_for_table
+                    has_qualified_star_for_table = True
+                    return
+
+                col_name = node.parts[-1]
+                # Make sure col_name is a string, not a Star object
+                if not isinstance(col_name, str):
+                    return
+
+                is_quoted = node.is_quoted[-1] if node.is_quoted and len(node.is_quoted) == len(node.parts) else False
+                # Store - if already exists, keep it quoted if either reference was quoted
+                if col_name in columns:
+                    columns[col_name] = columns[col_name] or is_quoted
+                else:
+                    columns[col_name] = is_quoted
+            elif isinstance(node, Function):
+                # Traverse window function clauses (PARTITION BY, ORDER BY)
+                if hasattr(node, 'partition_by') and node.partition_by:
+                    query_traversal(node.partition_by, add_column)
+                if hasattr(node, 'order_by') and node.order_by:
+                    for order_item in node.order_by:
+                        query_traversal(order_item.field if hasattr(order_item, 'field') else order_item, add_column)
+        
+        # Check for bare Star() in targets
+        if query_in.targets:
+            for target in query_in.targets:
+                if isinstance(target, Star):
+                    return None
+        
+        # Collect columns from SELECT targets
+        if query_in.targets:
+            query_traversal(query_in.targets, add_column)
+        
+        # Collect columns from WHERE clause
+        if query_in.where:
+            query_traversal(query_in.where, add_column)
+        
+        # Collect columns from ORDER BY (resolve aliases and ordinals)
+        if query_in.order_by:
+            self._collect_from_order_by(query_in, alias_map, add_column)
+        
+        # Collect columns from GROUP BY
+        if query_in.group_by:
+            query_traversal(query_in.group_by, add_column)
+        
+        # Collect columns from HAVING
+        if query_in.having:
+            query_traversal(query_in.having, add_column)
+        
+        # Collect columns from JOIN conditions
+        for seq_item in join_sequence:
+            if isinstance(seq_item, TableInfo) and seq_item.join_condition:
+                query_traversal(seq_item.join_condition, add_column)
+        
+        # If qualified star found for this table, fetch all columns
+        if has_qualified_star_for_table:
+            return None
+        
+        # If we found no columns, fetch all
+        if not columns:
+            return None
+        
+        # Convert column names to Identifier objects, we need to preserve quoting
+        result = []
+        for col, is_quoted in sorted(columns.items()):
+            ident = Identifier(parts=[col])
+            ident.is_quoted = [is_quoted]
+            result.append(ident)
+        return result
+
     def process_table(self, item, query_in):
         table = copy.deepcopy(item.table)
         table.parts.insert(0, item.integration)
         table.is_quoted.insert(0, False)
-        query2 = Select(from_table=table, targets=[Star()])
-        # parts = tuple(map(str.lower, table_name.parts))
+        
+        # Column pruning optimization: only fetch needed columns
+        needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
+        targets = needed_columns if needed_columns else [Star()]
+        
+        query2 = Select(from_table=table, targets=targets)
         conditions = item.conditions
         if "or" in self.query_context["binary_ops"]:
-            # not use conditions
             conditions = []
 
         # For cross-database joins, skip the IN clause optimization

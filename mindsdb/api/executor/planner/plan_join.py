@@ -285,7 +285,7 @@ class PlanJoinTablesQuery:
             use_limit = True
             has_join = False
             regular_table_count = 0
-            
+
             for item in join_sequence:
                 if isinstance(item, TableInfo):
                     # Check if it's a regular table (not a predictor, not a subselect)
@@ -293,12 +293,12 @@ class PlanJoinTablesQuery:
                         regular_table_count += 1
                 elif isinstance(item, Join):
                     has_join = True
-            
+
             # Disable limit pushdown only if joining MULTIPLE regular database tables
             # Allow it for: single table, or table + predictor (predictor generates on-demand)
             if has_join and regular_table_count > 1:
                 use_limit = False
-                
+
         self.query_context["use_limit"] = use_limit
 
     def plan_join_tables(self, query_in):
@@ -415,7 +415,7 @@ class PlanJoinTablesQuery:
         """Helper to collect columns from ORDER BY clause, resolving aliases and ordinals."""
         for order_col in query_in.order_by:
             field = order_col.field
-            
+
             # Handle ORDER BY ordinal (e.g., ORDER BY 1)
             if isinstance(field, Constant) and isinstance(field.value, int):
                 ordinal = field.value
@@ -423,40 +423,40 @@ class PlanJoinTablesQuery:
                     target_expr = query_in.targets[ordinal - 1]
                     query_traversal(target_expr, add_column_callback)
                 continue
-            
+
             # Handle ORDER BY alias (e.g., ORDER BY alias_name)
             if isinstance(field, Identifier) and len(field.parts) == 1:
                 alias_name = field.parts[0].lower()
                 if alias_name in alias_map:
                     query_traversal(alias_map[alias_name], add_column_callback)
                     continue
-            
+
             # Regular column reference
             query_traversal(field, add_column_callback)
-    
+
     def get_columns_for_table(self, table_info, query_in, join_sequence):
         """
         Collect all columns needed from a specific table for column pruning optimization.
-        
+
         Returns a list of column Identifiers or None if we should fetch all columns.
         """
         columns = {}
         has_qualified_star_for_table = False
-        
+
         alias_map = {}
         if query_in.targets:
             for target in query_in.targets:
                 if isinstance(target, Identifier) and target.alias:
                     alias_map[target.alias.parts[-1].lower()] = target
-        
+
         def add_column(node, **kwargs):
             if isinstance(node, Identifier):
                 col_table = self.get_table_for_column(node)
                 if not col_table or col_table.index != table_info.index:
                     return
-                
+
                 # Check for qualified star: t1.* or alias.*
-                if node.parts and (node.parts[-1] == '*' or isinstance(node.parts[-1], Star)):
+                if node.parts and (node.parts[-1] == "*" or isinstance(node.parts[-1], Star)):
                     nonlocal has_qualified_star_for_table
                     has_qualified_star_for_table = True
                     return
@@ -474,51 +474,51 @@ class PlanJoinTablesQuery:
                     columns[col_name] = is_quoted
             elif isinstance(node, Function):
                 # Traverse window function clauses (PARTITION BY, ORDER BY)
-                if hasattr(node, 'partition_by') and node.partition_by:
+                if hasattr(node, "partition_by") and node.partition_by:
                     query_traversal(node.partition_by, add_column)
-                if hasattr(node, 'order_by') and node.order_by:
+                if hasattr(node, "order_by") and node.order_by:
                     for order_item in node.order_by:
-                        query_traversal(order_item.field if hasattr(order_item, 'field') else order_item, add_column)
-        
+                        query_traversal(order_item.field if hasattr(order_item, "field") else order_item, add_column)
+
         # Check for bare Star() in targets
         if query_in.targets:
             for target in query_in.targets:
                 if isinstance(target, Star):
                     return None
-        
+
         # Collect columns from SELECT targets
         if query_in.targets:
             query_traversal(query_in.targets, add_column)
-        
+
         # Collect columns from WHERE clause
         if query_in.where:
             query_traversal(query_in.where, add_column)
-        
+
         # Collect columns from ORDER BY (resolve aliases and ordinals)
         if query_in.order_by:
             self._collect_from_order_by(query_in, alias_map, add_column)
-        
+
         # Collect columns from GROUP BY
         if query_in.group_by:
             query_traversal(query_in.group_by, add_column)
-        
+
         # Collect columns from HAVING
         if query_in.having:
             query_traversal(query_in.having, add_column)
-        
+
         # Collect columns from JOIN conditions
         for seq_item in join_sequence:
             if isinstance(seq_item, TableInfo) and seq_item.join_condition:
                 query_traversal(seq_item.join_condition, add_column)
-        
+
         # If qualified star found for this table, fetch all columns
         if has_qualified_star_for_table:
             return None
-        
+
         # If we found no columns, fetch all
         if not columns:
             return None
-        
+
         # Convert column names to Identifier objects, we need to preserve quoting
         result = []
         for col, is_quoted in sorted(columns.items()):
@@ -531,11 +531,11 @@ class PlanJoinTablesQuery:
         table = copy.deepcopy(item.table)
         table.parts.insert(0, item.integration)
         table.is_quoted.insert(0, False)
-        
+
         # Column pruning optimization: only fetch needed columns
         needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
         targets = needed_columns if needed_columns else [Star()]
-        
+
         query2 = Select(from_table=table, targets=targets)
         conditions = item.conditions
         if "or" in self.query_context["binary_ops"]:
@@ -616,11 +616,11 @@ class PlanJoinTablesQuery:
     def get_filters_from_join_conditions(self, fetch_table):
         """
         Extract filters from join conditions for filter pushdown optimization.
-        
+
         Note: This function is currently disabled (not called) to avoid:
         - Creating massive IN clauses that exceed database query size limits
         - Making arbitrary assumptions about data distribution
-        
+
         For cross-database joins with large tables, users should:
         - Add explicit WHERE clauses to filter data at the source
         - Use indexed/partitioned tables in their databases

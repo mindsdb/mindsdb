@@ -83,7 +83,7 @@ class TestInjectedData:
                 DataStep(data=content),
                 SubSelectStep(
                     query=Select(
-                        targets=[Star()],
+                        targets=[Identifier('a'), Identifier('x')],  # Column pruning: a (WHERE), x (SELECT)
                         where=BinaryOperation(op='=', args=[Identifier('a'), Constant(1)])
                     ),
                     dataframe=Result(0),

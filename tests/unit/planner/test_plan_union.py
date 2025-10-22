@@ -63,7 +63,7 @@ class TestPlanUnion:
                 FetchDataframeStep(
                     integration='int',
                     query=Select(
-                        targets=[Star()],
+                        targets=[Identifier('column1', alias=Identifier('column1'))],  # Column pruning
                         from_table=Identifier('tab1')
                     ),
                 ),

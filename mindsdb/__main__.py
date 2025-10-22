@@ -167,12 +167,14 @@ def clean_mindsdb_tmp_dir():
             try:
                 if file.is_dir():
                     # https://docs.python.org/3/library/shutil.html#shutil.rmtree
-                    shutil.rmtree(file, ignore_errors=True)
+                    shutil.rmtree(file)
                 else:
                     # https://docs.python.org/3/library/pathlib.html#pathlib.Path.unlink
                     file.unlink(missing_ok=True)
-            except Exception as e:
-                logger.error(f"Failed to clean {file}: {e}")
+            except PermissionError as e:
+                logger.error(f"Failed to clean %s: %s{file}: {e}")
+            except FileNotFoundError:
+                logger.error(f"File not found during cleanup: {file}")
     except Exception as e:
         logger.error(f"Failed to clean MindsDB tmp dir: {e}")
 

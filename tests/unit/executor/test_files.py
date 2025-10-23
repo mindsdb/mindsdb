@@ -11,7 +11,6 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 
 
 class TestFiles(BaseExecutorDummyML):
-
     def test_create_table(self):
         df = pd.DataFrame(
             [
@@ -86,10 +85,8 @@ class TestFiles(BaseExecutorDummyML):
 
 
 class TestMultiTableFiles(BaseExecutorDummyML):
-
     @pytest.fixture(autouse=True)
     def create_tables_and_data(self):
-
         self.run_sql(
             """
             CREATE TABLE files.A5 (tab_num INT, shop INT)

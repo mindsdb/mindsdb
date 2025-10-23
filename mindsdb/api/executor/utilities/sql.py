@@ -4,13 +4,14 @@ from typing import List
 import duckdb
 from duckdb import InvalidInputException
 import numpy as np
+import orjson
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log
-from mindsdb.utilities.exception import format_db_error_message
+from mindsdb.utilities.exception import QueryError
 from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
@@ -64,6 +65,9 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
     Returns:
         pandas.DataFrame
         pandas.columns
+
+    Raises:
+        QueryError: Raised when DuckDB fails to execute the query
     """
 
     try:
@@ -86,9 +90,17 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
             else:
                 raise exception
             description = con.description
+    except InvalidInputException as e:
+        raise QueryError(
+            db_type="DuckDB",
+            db_error_msg=f"DuckDB failed to execute query, likely due to inability to determine column data types. Details: {e}",
+            failed_query=query_str,
+            is_external=False,
+            is_expected=False,
+        ) from e
     except Exception as e:
-        raise Exception(
-            format_db_error_message(db_type="DuckDB", db_error_msg=str(e), failed_query=query_str, is_external=False)
+        raise QueryError(
+            db_type="DuckDB", db_error_msg=str(e), failed_query=query_str, is_external=False, is_expected=False
         ) from e
 
     return result_df, description
@@ -164,7 +176,13 @@ def query_df(df, query, session=None):
         query_str = str(query)
 
     if isinstance(query_ast, Select) is False or isinstance(query_ast.from_table, Identifier) is False:
-        raise Exception("Only 'SELECT from TABLE' statements supported for internal query")
+        raise QueryError(
+            db_type="DuckDB",
+            db_error_msg="Only 'SELECT from TABLE' statements supported for internal query",
+            failed_query=query_str,
+            is_external=False,
+            is_expected=False,
+        )
 
     table_name = query_ast.from_table.parts[0]
     query_ast.from_table.parts = ["df"]
@@ -214,27 +232,26 @@ def query_df(df, query, session=None):
             custom_functions_list = [] if user_functions is None else list(user_functions.functions.keys())
             all_functions_list = duckdb_functions_and_kw_list + custom_functions_list
             if len(all_functions_list) > 0 and fnc_name not in all_functions_list:
-                raise Exception(
-                    format_db_error_message(
-                        db_type="DuckDB",
-                        db_error_msg=(
-                            f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
-                            "Please use DuckDB-supported functions instead."
-                        ),
-                        failed_query=query_str,
-                        is_external=False,
-                    )
+                raise QueryError(
+                    db_type="DuckDB",
+                    db_error_msg=(
+                        f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
+                        "Please use DuckDB-supported functions instead."
+                    ),
+                    failed_query=query_str,
+                    is_external=False,
+                    is_expected=False,
                 )
 
     query_traversal(query_ast, adapt_query)
 
-    # convert json columns
-    encoder = CustomJSONEncoder()
-
     def _convert(v):
         if isinstance(v, dict) or isinstance(v, list):
             try:
-                return encoder.encode(v)
+                default_encoder = CustomJSONEncoder().default
+                return orjson.dumps(
+                    v, default=default_encoder, option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME
+                ).decode("utf-8")
             except Exception:
                 pass
         return v
@@ -245,8 +262,8 @@ def query_df(df, query, session=None):
     render = SqlalchemyRender("postgres")
     try:
         query_str = render.get_string(query_ast, with_failback=False)
-    except Exception as e:
-        logger.error(f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}")
+    except Exception:
+        logger.exception(f"Exception during query casting to 'postgres' dialect. Query:\n{str(query)}.\nError:")
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException

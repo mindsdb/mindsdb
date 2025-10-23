@@ -107,8 +107,8 @@ class FileController:
             self.fs_store.put(store_file_path, base_dir=self.dir)
             db.session.commit()
 
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception("An error occurred while saving the file:")
             if file_dir is not None:
                 shutil.rmtree(file_dir)
             raise
@@ -151,7 +151,7 @@ class FileController:
     def delete_file(self, name):
         file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
-            return None
+            raise FileNotFoundError(f"File '{name}' does not exists")
         file_id = file_record.id
         db.session.delete(file_record)
         db.session.commit()
@@ -161,7 +161,7 @@ class FileController:
     def get_file_path(self, name):
         file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
-            raise Exception(f"File '{name}' does not exists")
+            raise FileNotFoundError(f"File '{name}' does not exists")
         file_dir = f"file_{ctx.company_id}_{file_record.id}"
         self.fs_store.get(file_dir, base_dir=self.dir)
         return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))
@@ -176,7 +176,7 @@ class FileController:
         """
         file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
-            raise Exception(f"File '{name}' does not exists")
+            raise FileNotFoundError(f"File '{name}' does not exists")
 
         file_dir = f"file_{ctx.company_id}_{file_record.id}"
         self.fs_store.get(file_dir, base_dir=self.dir)
@@ -217,7 +217,7 @@ class FileController:
 
         file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
-            raise Exception(f"File '{name}' does not exists")
+            raise FileNotFoundError(f"File '{name}' does not exists")
 
         file_dir = f"file_{ctx.company_id}_{file_record.id}"
         self.fs_store.get(file_dir, base_dir=self.dir)

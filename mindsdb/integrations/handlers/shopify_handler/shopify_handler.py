@@ -1,8 +1,5 @@
 import shopify
 import requests
-import json
-
-from pyactiveresource.connection import ClientError, ServerError, ConnectionError as ResourceConnectionError
 
 from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     ProductsTable,
@@ -98,9 +95,7 @@ class ShopifyHandler(APIHandler):
         if self.kwargs.get("connection_data") is None:
             raise MissingConnectionParams("Incomplete parameters passed to Shopify Handler")
 
-        api_session = shopify.Session(
-            self.connection_data["shop_url"].strip(), "2021-10", self.connection_data["access_token"]
-        )
+        api_session = shopify.Session(self.connection_data["shop_url"], "2021-10", self.connection_data["access_token"])
 
         self.yotpo_app_key = self.connection_data["yotpo_app_key"] if "yotpo_app_key" in self.connection_data else None
         self.yotpo_access_token = (
@@ -176,10 +171,9 @@ class ShopifyHandler(APIHandler):
             response.error_message = str(e)
             raise ConnectionFailed("Network connection failed. Please check your internet connection and try again.")
         except Exception as e:
-            # Handle any other unexpected errors
-            logger.error(f"Unexpected error connecting to Shopify: {str(e)}")
+            logger.error("Error connecting to Shopify!")
             response.error_message = str(e)
-            raise ConnectionFailed("Failed to connect to Shopify. Please verify your shop URL and access token.")
+            raise ConnectionFailed("Conenction to Shopify failed.")
 
         if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
             url = f"https://api.yotpo.com/v1/apps/{self.yotpo_app_key}/reviews?count=1&utoken={self.yotpo_access_token}"

@@ -1,3 +1,5 @@
+import sqlalchemy as sa
+
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
 
@@ -13,8 +15,11 @@ class DataCatalogReader(BaseDataCatalog):
         """
         tables = self._read_metadata()
         if not tables:
-            self.logger.warning(f"No metadata found for database '{self.database_name}'")
-            return f"No metadata found for database '{self.database_name}'"
+            # try case independent
+            tables = self._read_metadata(strict_case=False)
+            if not tables:
+                self.logger.warning(f"No metadata found for database '{self.database_name}'")
+                return f"No metadata found for database '{self.database_name}'"
 
         metadata_str = "Data Catalog: \n"
         if hasattr(self.data_handler, "meta_get_handler_info"):
@@ -42,7 +47,7 @@ class DataCatalogReader(BaseDataCatalog):
         """
         return self.data_handler.meta_get_handler_info()
 
-    def _read_metadata(self) -> list:
+    def _read_metadata(self, strict_case=True) -> list:
         """
         Read the metadata from the data catalog and return it in a structured format.
         """
@@ -52,6 +57,12 @@ class DataCatalogReader(BaseDataCatalog):
         query = db.session.query(db.MetaTables).filter_by(integration_id=self.integration_id)
         if self.table_names:
             cleaned_table_names = [name.strip("`").split(".")[-1] for name in self.table_names]
-            query = query.filter(db.MetaTables.name.in_(cleaned_table_names))
+
+            if strict_case:
+                query = query.filter(db.MetaTables.name.in_(cleaned_table_names))
+            else:
+                cleaned_table_names = [name.lower() for name in cleaned_table_names]
+                query = query.filter(sa.func.lower(db.MetaTables.name).in_(cleaned_table_names))
         tables = query.all()
+
         return tables

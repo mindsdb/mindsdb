@@ -13,6 +13,8 @@ from mindsdb_sql_parser.ast import (
     Constant,
     NativeQuery,
     Parameter,
+    Function,
+    Last,
 )
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -220,17 +222,16 @@ class PlanJoinTablesQuery:
                 # try to use second arg, could be: 'x'=col
                 col_idx = 1
 
-        # check the case col <condition> constant, col between constant and constant
+        # check the case col <condition> value, col between value and value
         for i, arg in enumerate(node.args):
             if i == col_idx:
                 if not isinstance(arg, Identifier):
                     return
             else:
-                if not isinstance(arg, (Constant, Parameter)):
+                if not self.can_be_table_filter(arg):
                     return
 
         # checked, find table and store condition
-
         node2 = copy.deepcopy(node)
 
         arg1 = node2.args[col_idx]
@@ -247,6 +248,19 @@ class PlanJoinTablesQuery:
 
         node2._orig_node = node
         table_info.conditions.append(node2)
+
+    def can_be_table_filter(self, node):
+        """
+        Check if node can be used as a filter.
+        It can contain only: Constant, Parameter, Function (with Last)
+        """
+        if isinstance(node, (Constant, Parameter)):
+            return True
+        if isinstance(node, Function):
+            # `Last` must be in args
+            if not any(isinstance(arg, Last) for arg in node.args):
+                return False
+            return all([self.can_be_table_filter(arg) for arg in node.args])
 
     def check_query_conditions(self, query):
         # get conditions for tables

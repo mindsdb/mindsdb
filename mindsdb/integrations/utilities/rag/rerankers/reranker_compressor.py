@@ -36,7 +36,7 @@ class LLMReranker(BaseDocumentCompressor, BaseLLMReranker):
             return []
 
         # Stream reranking update.
-        dispatch_custom_event('rerank_begin', {'num_documents': len(documents)})
+        dispatch_custom_event("rerank_begin", {"num_documents": len(documents)})
 
         try:
             # Prepare query-document pairs
@@ -73,10 +73,10 @@ class LLMReranker(BaseDocumentCompressor, BaseLLMReranker):
             return filtered_docs
 
         except Exception as e:
-            error_msg = f"Error during async document compression: {str(e)}"
-            log.error(error_msg)
+            error_msg = "Error during async document compression:"
+            log.exception(error_msg)
             if callbacks:
-                await callbacks.on_retriever_error(error_msg)
+                await callbacks.on_retriever_error(f"{error_msg} {e}")
             return documents  # Return original documents on error
 
     def compress_documents(

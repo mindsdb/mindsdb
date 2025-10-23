@@ -550,8 +550,8 @@ class MetaAPIHandler(APIHandler):
                     if hasattr(table_class, "meta_get_tables"):
                         table_metadata = table_class.meta_get_tables(table_name, **kwargs)
                         df = pd.concat([df, pd.DataFrame([table_metadata])], ignore_index=True)
-                except Exception as e:
-                    logger.error(f"Error retrieving metadata for table {table_name}: {e}")
+                except Exception:
+                    logger.exception(f"Error retrieving metadata for table {table_name}:")
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -572,8 +572,8 @@ class MetaAPIHandler(APIHandler):
                     if hasattr(table_class, "meta_get_columns"):
                         column_metadata = table_class.meta_get_columns(table_name, **kwargs)
                         df = pd.concat([df, pd.DataFrame(column_metadata)], ignore_index=True)
-                except Exception as e:
-                    logger.error(f"Error retrieving column metadata for table {table_name}: {e}")
+                except Exception:
+                    logger.exception(f"Error retrieving column metadata for table {table_name}:")
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -594,8 +594,8 @@ class MetaAPIHandler(APIHandler):
                     if hasattr(table_class, "meta_get_column_statistics"):
                         column_statistics = table_class.meta_get_column_statistics(table_name, **kwargs)
                         df = pd.concat([df, pd.DataFrame(column_statistics)], ignore_index=True)
-                except Exception as e:
-                    logger.error(f"Error retrieving column statistics for table {table_name}: {e}")
+                except Exception:
+                    logger.exception(f"Error retrieving column statistics for table {table_name}:")
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -616,8 +616,8 @@ class MetaAPIHandler(APIHandler):
                     if hasattr(table_class, "meta_get_primary_keys"):
                         primary_key_metadata = table_class.meta_get_primary_keys(table_name, **kwargs)
                         df = pd.concat([df, pd.DataFrame(primary_key_metadata)], ignore_index=True)
-                except Exception as e:
-                    logger.error(f"Error retrieving primary keys for table {table_name}: {e}")
+                except Exception:
+                    logger.exception(f"Error retrieving primary keys for table {table_name}:")
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -641,8 +641,8 @@ class MetaAPIHandler(APIHandler):
                             table_name, all_tables=table_names if table_names else all_tables, **kwargs
                         )
                         df = pd.concat([df, pd.DataFrame(foreign_key_metadata)], ignore_index=True)
-                except Exception as e:
-                    logger.error(f"Error retrieving foreign keys for table {table_name}: {e}")
+                except Exception:
+                    logger.exception(f"Error retrieving foreign keys for table {table_name}:")
 
         return Response(RESPONSE_TYPE.TABLE, df)
 

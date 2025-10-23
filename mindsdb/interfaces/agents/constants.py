@@ -260,8 +260,6 @@ MINDSDB_PREFIX = """You are an AI assistant powered by MindsDB. You have access 
 
 For factual questions, ALWAYS use the available tools to look up information rather than relying on your internal knowledge.
 
-Here is the user's question: {{question}}   
-
 TOOLS:
 ------
 

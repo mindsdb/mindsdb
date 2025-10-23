@@ -1,4 +1,7 @@
 import unittest
+from unittest.mock import patch, MagicMock, Mock
+from collections import OrderedDict
+
 import pytest
 
 try:
@@ -6,9 +9,6 @@ try:
     from mindsdb.integrations.handlers.databricks_handler.databricks_handler import DatabricksHandler
 except ImportError:
     pytestmark = pytest.mark.skip("Databricks handler not installed")
-
-from unittest.mock import patch, MagicMock, Mock
-from collections import OrderedDict
 
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -109,10 +109,21 @@ class TestDatabricksHandler(unittest.TestCase):
 
         self.handler.get_tables()
 
-        expected_query = """
-            SHOW TABLES;
-        """
+        # expected_query = """
+        #     SHOW TABLES;
+        # """
 
+        expected_query = """
+            SELECT
+                table_schema,
+                table_name,
+                table_type
+            FROM
+                information_schema.tables
+            WHERE
+                table_schema != 'information_schema'
+                and table_schema = current_schema()
+        """
         self.handler.native_query.assert_called_once_with(expected_query)
 
     def test_get_columns(self):
@@ -124,7 +135,27 @@ class TestDatabricksHandler(unittest.TestCase):
         table_name = "mock_table"
         self.handler.get_columns(table_name)
 
-        expected_query = f"""DESCRIBE TABLE {table_name};"""
+        expected_query = f"""
+            SELECT
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                null as CHARACTER_SET_NAME,
+                null as COLLATION_NAME
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{table_name}'
+            AND
+                table_schema = current_schema()
+        """
 
         self.handler.native_query.assert_called_once_with(expected_query)
 

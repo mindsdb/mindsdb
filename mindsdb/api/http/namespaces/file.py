@@ -160,7 +160,11 @@ class File(Resource):
                             "Сan't determine remote file size",
                         )
                     if file_size > MAX_FILE_SIZE:
-                        return http_error(400, "File is too big", f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB")
+                        return http_error(
+                            400,
+                            "File is too big",
+                            f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB",
+                        )
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:
                     return http_error(400, "Error getting file", f"Got status code: {r.status_code}")
@@ -192,6 +196,8 @@ class File(Resource):
                 return http_error(400, "Wrong content.", "Archive must contain data file in root.")
 
         try:
+            if not Path(mindsdb_file_name).suffix == "":
+                return http_error(400, "Error", "File name cannot contain extension.")
             ca.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
         except FileProcessingError as e:
             return http_error(400, "Error", str(e))
@@ -209,11 +215,18 @@ class File(Resource):
 
         try:
             ca.file_controller.delete_file(name)
-        except Exception as e:
-            logger.error(e)
+        except FileNotFoundError:
+            logger.exception(f"Error when deleting file '{name}'")
             return http_error(
                 400,
                 "Error deleting file",
-                f"There was an error while tring to delete file with name '{name}'",
+                f"There was an error while trying to delete file with name '{name}'",
+            )
+        except Exception as e:
+            logger.error(e)
+            return http_error(
+                500,
+                "Error occured while deleting file",
+                f"There was an error while trying to delete file with name '{name}'",
             )
         return "", 200

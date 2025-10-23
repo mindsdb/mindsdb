@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Union, AsyncIterable, List, Dict
-from ...common.types import Task
 from ...common.types import (
+    Task,
     JSONRPCResponse,
     TaskIdParams,
     TaskQueryParams,
@@ -29,6 +29,7 @@ from ...common.types import (
     JSONRPCError,
     TaskPushNotificationConfig,
     InternalError,
+    MessageStreamRequest,
 )
 from ...common.server.utils import new_not_implemented_error
 from mindsdb.utilities import log
@@ -72,6 +73,12 @@ class TaskManager(ABC):
     async def on_resubscribe_to_task(
         self, request: TaskResubscriptionRequest
     ) -> Union[AsyncIterable[SendTaskResponse], JSONRPCResponse]:
+        pass
+
+    @abstractmethod
+    async def on_message_stream(
+        self, request: MessageStreamRequest, user_info: Dict
+    ) -> Union[AsyncIterable[SendTaskStreamingResponse], JSONRPCResponse]:
         pass
 
 
@@ -152,8 +159,8 @@ class InMemoryTaskManager(TaskManager):
                 task_notification_params.id,
                 task_notification_params.pushNotificationConfig,
             )
-        except Exception as e:
-            logger.error(f"Error while setting push notification info: {e}")
+        except Exception:
+            logger.exception("Error while setting push notification info:")
             return JSONRPCResponse(
                 id=request.id,
                 error=InternalError(message="An error occurred while setting push notification info"),
@@ -169,8 +176,8 @@ class InMemoryTaskManager(TaskManager):
 
         try:
             notification_info = await self.get_push_notification_info(task_params.id)
-        except Exception as e:
-            logger.error(f"Error while getting push notification info: {e}")
+        except Exception:
+            logger.exception("Error while getting push notification info:")
             return GetTaskPushNotificationResponse(
                 id=request.id,
                 error=InternalError(message="An error occurred while getting push notification info"),

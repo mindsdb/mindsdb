@@ -20,6 +20,7 @@ import struct
 import sys
 import tempfile
 import traceback
+import logging
 from functools import partial
 from typing import List
 from dataclasses import dataclass
@@ -67,11 +68,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 )
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    ErWrongCharset,
-    SqlApiException,
-)
-from mindsdb.api.executor import exceptions as exec_exc
+from mindsdb.api.executor import exceptions as executor_exceptions
 
 from mindsdb.api.common.middleware import check_auth
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
@@ -81,7 +78,9 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.otel import increment_otel_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
+from mindsdb.utilities.exception import QueryError
 from mindsdb.api.mysql.mysql_proxy.utilities.dump import dump_result_set_to_mysql, column_to_mysql_column_dict
+from mindsdb.api.executor.exceptions import WrongCharsetError
 
 logger = log.getLogger(__name__)
 
@@ -126,6 +125,14 @@ class SQLAnswer:
             }
         else:
             raise ValueError(f"Unsupported response type for dump HTTP response: {self.resp_type}")
+
+
+class MysqlTCPServer(SocketServer.ThreadingTCPServer):
+    """
+    Custom TCP Server with increased request queue size
+    """
+
+    request_queue_size = 30
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):
@@ -428,7 +435,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         try:
             return text.decode("utf-8")
         except Exception:
-            raise ErWrongCharset(f"SQL contains non utf-8 values: {text}")
+            raise WrongCharsetError(f"SQL contains non utf-8 values: {text}")
 
     def is_cloud_connection(self):
         """Determine source of connection. Must be call before handshake.
@@ -489,6 +496,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     @profiler.profile()
     def process_query(self, sql) -> SQLAnswer:
+        log.log_ram_info(logger)
         executor = Executor(session=self.session, sqlserver=self)
         executor.query_execute(sql)
         executor_answer = executor.executor_answer
@@ -647,8 +655,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             try:
                 success = p.get()
             except Exception:
-                logger.error("Session closed, on packet read error")
-                logger.error(traceback.format_exc())
+                logger.exception("Session closed, on packet read error:")
                 return
 
             if success is False:
@@ -712,59 +719,28 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 else:
                     logger.warning("Command has no specific handler, return OK msg")
                     logger.debug(str(p))
-                    # p.pprintPacket() TODO: Make a version of print packet
-                    # that sends it to debug instead
                     response = SQLAnswer(RESPONSE_TYPE.OK)
 
-            except SqlApiException as e:
-                # classified error
-                error_type = "expected"
-
-                response = SQLAnswer(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_code=e.err_code,
-                    error_message=str(e),
-                )
-
-            except exec_exc.ExecutorException as e:
-                # unclassified
-                error_type = "expected"
-
-                if isinstance(e, exec_exc.NotSupportedYet):
-                    error_code = ERR.ER_NOT_SUPPORTED_YET
-                elif isinstance(e, exec_exc.KeyColumnDoesNotExist):
-                    error_code = ERR.ER_KEY_COLUMN_DOES_NOT_EXIST
-                elif isinstance(e, exec_exc.TableNotExistError):
-                    error_code = ERR.ER_TABLE_EXISTS_ERROR
-                elif isinstance(e, exec_exc.WrongArgumentError):
-                    error_code = ERR.ER_WRONG_ARGUMENTS
-                elif isinstance(e, exec_exc.LogicError):
-                    error_code = ERR.ER_WRONG_USAGE
-                elif isinstance(e, (exec_exc.BadDbError, exec_exc.BadTableError)):
-                    error_code = ERR.ER_BAD_DB_ERROR
+            except (QueryError, executor_exceptions.ExecutorException, executor_exceptions.UnknownError) as e:
+                error_type = "expected" if e.is_expected else "unexpected"
+                error_code = e.mysql_error_code
+                if e.is_expected:
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.info("Query execution failed with expected error:", exc_info=True)
+                    else:
+                        logger.info(f"Query execution failed with expected error: {e}")
                 else:
-                    error_code = ERR.ER_SYNTAX_ERROR
-
+                    logger.exception("Query execution failed with error")
                 response = SQLAnswer(
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_code=error_code,
                     error_message=str(e),
                 )
-            except exec_exc.UnknownError as e:
-                # unclassified
-                error_type = "unexpected"
-
-                response = SQLAnswer(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_code=ERR.ER_UNKNOWN_ERROR,
-                    error_message=str(e),
-                )
 
             except Exception as e:
-                # any other exception
                 error_type = "unexpected"
                 error_traceback = traceback.format_exc()
-                logger.error(f"ERROR while executing query\n{error_traceback}\n{e}")
+                logger.exception("ERROR while executing query:")
                 error_code = ERR.ER_SYNTAX_ERROR
                 response = SQLAnswer(
                     resp_type=RESPONSE_TYPE.ERROR,
@@ -856,7 +832,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         logger.info(f"Starting MindsDB Mysql proxy server on tcp://{host}:{port}")
 
         SocketServer.TCPServer.allow_reuse_address = True
-        server = SocketServer.ThreadingTCPServer((host, port), MysqlProxy)
+        server = MysqlTCPServer((host, port), MysqlProxy)
         server.mindsdb_config = config
         server.check_auth = partial(check_auth, config=config)
         server.cert_path = cert_path

@@ -62,7 +62,9 @@ class ChatCompletionResponse(BaseModel):
     created: int = 0
     model: str
     choices: List[ChatCompletionChoice]
-    usage: Dict[str, int] = Field(default_factory=lambda: {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
+    usage: Dict[str, int] = Field(
+        default_factory=lambda: {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    )
 
 
 class DirectSQLRequest(BaseModel):
@@ -74,14 +76,14 @@ async def chat_completions(request: ChatCompletionRequest):
     global agent_wrapper
 
     if agent_wrapper is None:
-        raise HTTPException(status_code=500, detail="Agent not initialized. Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
+        raise HTTPException(
+            status_code=500,
+            detail="Agent not initialized. Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http",
+        )
 
     try:
         # Convert request to messages format
-        messages = [
-            {"role": msg.role, "content": msg.content}
-            for msg in request.messages
-        ]
+        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
 
         if request.stream:
             # Return a streaming response
@@ -90,9 +92,10 @@ async def chat_completions(request: ChatCompletionRequest):
                     async for chunk in agent_wrapper.acompletion_stream(messages, model=request.model):
                         yield f"data: {json.dumps(chunk)}\n\n"
                     yield "data: [DONE]\n\n"
-                except Exception as e:
-                    logger.error(f"Streaming error: {str(e)}")
+                except Exception:
+                    logger.exception("Streaming error:")
                     yield "data: {{'error': 'Streaming failed due to an internal error.'}}\n\n"
+
             return StreamingResponse(generate(), media_type="text/event-stream")
         else:
             # Return a regular response
@@ -105,16 +108,11 @@ async def chat_completions(request: ChatCompletionRequest):
 
             # Transform to proper OpenAI format
             return ChatCompletionResponse(
-                model=request.model,
-                choices=[
-                    ChatCompletionChoice(
-                        message={"role": "assistant", "content": content}
-                    )
-                ]
+                model=request.model, choices=[ChatCompletionChoice(message={"role": "assistant", "content": content})]
             )
 
     except Exception as e:
-        logger.error(f"Error in chat completion: {str(e)}")
+        logger.exception("Error in chat completion:")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -124,7 +122,9 @@ async def direct_sql(request: DirectSQLRequest, background_tasks: BackgroundTask
     global agent_wrapper, mcp_session
 
     if agent_wrapper is None and mcp_session is None:
-        raise HTTPException(status_code=500, detail="No MCP session available. Make sure MindsDB server is running with MCP enabled.")
+        raise HTTPException(
+            status_code=500, detail="No MCP session available. Make sure MindsDB server is running with MCP enabled."
+        )
 
     try:
         # First try to use the agent's session if available
@@ -140,7 +140,7 @@ async def direct_sql(request: DirectSQLRequest, background_tasks: BackgroundTask
             raise HTTPException(status_code=500, detail="No MCP session available")
 
     except Exception as e:
-        logger.error(f"Error executing direct SQL: {str(e)}")
+        logger.exception("Error executing direct SQL:")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -150,32 +150,12 @@ async def list_models():
     global agent_wrapper
 
     if agent_wrapper is None:
-        return {
-            "object": "list",
-            "data": [
-                {
-                    "id": "mcp-agent",
-                    "object": "model",
-                    "created": 0,
-                    "owned_by": "mindsdb"
-                }
-            ]
-        }
+        return {"object": "list", "data": [{"id": "mcp-agent", "object": "model", "created": 0, "owned_by": "mindsdb"}]}
 
     # Return the actual model name if available
     model_name = agent_wrapper.agent.args.get("model_name", "mcp-agent")
 
-    return {
-        "object": "list",
-        "data": [
-            {
-                "id": model_name,
-                "object": "model",
-                "created": 0,
-                "owned_by": "mindsdb"
-            }
-        ]
-    }
+    return {"object": "list", "data": [{"id": model_name, "object": "model", "created": 0, "owned_by": "mindsdb"}]}
 
 
 @app.get("/health")
@@ -189,7 +169,9 @@ async def health_check():
     }
 
     if agent_wrapper is not None:
-        health_status["mcp_connected"] = hasattr(agent_wrapper.agent, "session") and agent_wrapper.agent.session is not None
+        health_status["mcp_connected"] = (
+            hasattr(agent_wrapper.agent, "session") and agent_wrapper.agent.session is not None
+        )
         health_status["agent_name"] = agent_wrapper.agent.agent.name
         health_status["model_name"] = agent_wrapper.agent.args.get("model_name", "unknown")
 
@@ -209,7 +191,7 @@ async def test_mcp_connection():
                 return {
                     "status": "ok",
                     "message": "Successfully connected to MCP server",
-                    "tools": [tool.name for tool in tools_response.tools]
+                    "tools": [tool.name for tool in tools_response.tools],
                 }
             except Exception:
                 # If error, close existing session and create a new one
@@ -217,11 +199,7 @@ async def test_mcp_connection():
                 mcp_session = None
 
         # Create a new MCP session - connect to running server
-        server_params = StdioServerParameters(
-            command="python",
-            args=["-m", "mindsdb", "--api=mcp"],
-            env=None
-        )
+        server_params = StdioServerParameters(command="python", args=["-m", "mindsdb", "--api=mcp"], env=None)
 
         stdio_transport = await exit_stack.enter_async_context(stdio_client(server_params))
         stdio, write = stdio_transport
@@ -238,11 +216,11 @@ async def test_mcp_connection():
         return {
             "status": "ok",
             "message": "Successfully connected to MCP server",
-            "tools": [tool.name for tool in tools_response.tools]
+            "tools": [tool.name for tool in tools_response.tools],
         }
     except Exception as e:
-        logger.error(f"Error connecting to MCP server: {str(e)}")
-        error_detail = f"Error connecting to MCP server: {str(e)}. Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http"
+        logger.exception("Error connecting to MCP server:")
+        error_detail = f"Error connecting to MCP server: {str(e)}. Make sure MindsDB server is running with HTTP enabled: python -m mindsdb --api=http"
         raise HTTPException(status_code=500, detail=error_detail)
 
 
@@ -256,16 +234,13 @@ async def init_agent(agent_name: str, project_name: str, mcp_host: str, mcp_port
         logger.info("Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
 
         agent_wrapper = create_mcp_agent(
-            agent_name=agent_name,
-            project_name=project_name,
-            mcp_host=mcp_host,
-            mcp_port=mcp_port
+            agent_name=agent_name, project_name=project_name, mcp_host=mcp_host, mcp_port=mcp_port
         )
 
         logger.info("Agent initialized successfully")
         return True
-    except Exception as e:
-        logger.error(f"Failed to initialize agent: {str(e)}")
+    except Exception:
+        logger.exception("Failed to initialize agent:")
         return False
 
 
@@ -286,7 +261,7 @@ async def run_server_async(
     mcp_host: str = "127.0.0.1",
     mcp_port: int = 47337,
     host: str = "0.0.0.0",
-    port: int = 8000
+    port: int = 8000,
 ):
     """Run the FastAPI server"""
     # Initialize the agent
@@ -304,12 +279,13 @@ def run_server(
     mcp_host: str = "127.0.0.1",
     mcp_port: int = 47337,
     host: str = "0.0.0.0",
-    port: int = 8000
+    port: int = 8000,
 ):
     """Run the FastAPI server"""
     logger.info("Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
     # Initialize database
     from mindsdb.interfaces.storage import db
+
     db.init()
 
     # Run initialization in the event loop
@@ -341,5 +317,5 @@ if __name__ == "__main__":
         mcp_host=args.mcp_host,
         mcp_port=args.mcp_port,
         host=args.host,
-        port=args.port
+        port=args.port,
     )

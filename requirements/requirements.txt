@@ -14,8 +14,8 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql-parser ~= 0.11.3
-pydantic == 2.9.2
+mindsdb-sql-parser ~= 0.12.0
+pydantic == 2.11.4
 mindsdb-evaluator == 0.0.20
 duckdb == 1.3.0; sys_platform == "win32"
 duckdb ~= 1.3.2; sys_platform != "win32"
@@ -29,14 +29,14 @@ boto3 >= 1.34.131
 python-dateutil
 scikit-learn==1.5.2
 hierarchicalforecast~=0.4.0
-langchain==0.3.7
-langchain-community==0.3.5
-langchain-core==0.3.35
-langchain-experimental==0.3.3
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-core==0.3.72
+langchain-experimental==0.3.4
 langchain-nvidia-ai-endpoints==0.3.3
 langchain-openai==0.3.6
 langchain-anthropic==0.2.4
-langchain-text-splitters==0.3.5
+langchain-text-splitters==0.3.9
 langchain-google-genai>=2.0.0
 langchain_writer==0.3.2 # Required for Writer agent
 lark
@@ -48,6 +48,7 @@ openai<1.100.0,>=1.58.1
 pyaml==23.12.0
 mcp~=1.10.1
 starlette>=0.27     # Required for A2A, MCP servers
+a2wsgi ~= 1.10.10  # WSGI wrapper for flask+starlette
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
 uvicorn>=0.30.0, <1.0.0   # For all HTTP-based APIs
 
@@ -58,7 +59,7 @@ charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
 aipdf==0.0.5
 pyarrow<=19.0.0 # used by pandas to read feather files in Files handler
-
+orjson==3.11.3
 
 # A2A server
 httpx==0.28.1
@@ -66,4 +67,4 @@ sse-starlette==2.3.3
 typing-extensions==4.13.2
 jwcrypto==1.5.6
 pyjwt==2.10.1
-pydantic_core>=2.23.2
+pydantic_core>=2.33.2

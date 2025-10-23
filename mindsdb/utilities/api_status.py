@@ -19,9 +19,9 @@ def _get_api_status_file():
         if os.path.exists(_api_status_file):
             try:
                 os.remove(_api_status_file)
-            except OSError as e:
-                logger.error(f"Error removing existing API status file: {_api_status_file} - {e}")
-                pass
+            except OSError:
+                logger.exception(f"Error removing existing API status file: {_api_status_file}")
+
     return _api_status_file
 
 

@@ -274,8 +274,8 @@ class SkillToolController:
                     else:
                         for table_name in response.data_frame.iloc[:, name_idx]:
                             tables_list.append(f"{database}.{escape_table_name(table_name)}")
-                except Exception as e:
-                    logger.warning(f"Could not get tables from database {database}: {str(e)}")
+                except Exception:
+                    logger.warning(f"Could not get tables from database {database}:", exc_info=True)
                 continue
 
             # Handle table restrictions

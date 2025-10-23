@@ -118,7 +118,6 @@ def clean_unlinked_process_marks() -> List[int]:
 
         except psutil.AccessDenied:
             logger.warning(f"access to {process_id} denied")
-
             continue
 
         except psutil.NoSuchProcess:

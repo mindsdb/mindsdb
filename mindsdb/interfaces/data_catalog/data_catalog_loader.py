@@ -19,9 +19,7 @@ class DataCatalogLoader(BaseDataCatalog):
         if not self.is_data_catalog_supported():
             return
 
-        loaded_table_names = self._get_loaded_table_names()
-
-        tables = self._load_table_metadata(loaded_table_names)
+        tables = self._load_table_metadata()
 
         if tables:
             columns = self._load_column_metadata(tables)
@@ -34,7 +32,7 @@ class DataCatalogLoader(BaseDataCatalog):
 
         self.logger.info(f"Metadata loading completed for {self.database_name}.")
 
-    def _get_loaded_table_names(self) -> List[str]:
+    def _get_loaded_table_names(self, in_table_names) -> List[str]:
         """
         Retrieve the names of tables that are already present in the data catalog for the current integration.
         If table_names are provided, only those tables will be checked.
@@ -43,8 +41,8 @@ class DataCatalogLoader(BaseDataCatalog):
             List[str]: Names of tables already loaded in the data catalog.
         """
         query = db.session.query(db.MetaTables).filter_by(integration_id=self.integration_id)
-        if self.table_names:
-            query = query.filter(db.MetaTables.name.in_(self.table_names))
+        if in_table_names:
+            query = query.filter(db.MetaTables.name.in_(in_table_names))
 
         tables = query.all()
         table_names = [table.name for table in tables]
@@ -54,7 +52,7 @@ class DataCatalogLoader(BaseDataCatalog):
 
         return table_names
 
-    def _load_table_metadata(self, loaded_table_names: List[str] = None) -> List[Union[db.MetaTables, None]]:
+    def _load_table_metadata(self) -> List[Union[db.MetaTables, None]]:
         """
         Load the table metadata from the handler.
         """
@@ -75,6 +73,7 @@ class DataCatalogLoader(BaseDataCatalog):
         df.columns = df.columns.str.lower()
 
         # Filter out tables that are already loaded in the data catalog
+        loaded_table_names = self._get_loaded_table_names(list(df["table_name"]))
         if loaded_table_names:
             df = df[~df["table_name"].isin(loaded_table_names)]
 
@@ -109,8 +108,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(tables)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add tables: {e}")
+        except Exception:
+            self.logger.exception("Failed to add tables:")
             db.session.rollback()
             raise
         return tables
@@ -157,8 +156,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(columns)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add columns: {e}")
+        except Exception:
+            self.logger.exception("Failed to add columns:")
             db.session.rollback()
             raise
         return columns
@@ -223,8 +222,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(column_statistics)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add column statistics: {e}")
+        except Exception:
+            self.logger.exception("Failed to add column statistics:")
             db.session.rollback()
             raise
 
@@ -275,8 +274,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(primary_keys)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add primary keys: {e}")
+        except Exception:
+            self.logger.exception("Failed to add primary keys:")
             db.session.rollback()
             raise
 
@@ -344,8 +343,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(foreign_keys)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add foreign keys: {e}")
+        except Exception:
+            self.logger.exception("Failed to add foreign keys:")
             db.session.rollback()
             raise
 

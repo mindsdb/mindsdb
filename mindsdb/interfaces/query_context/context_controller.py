@@ -7,7 +7,7 @@ import pandas as pd
 
 from mindsdb_sql_parser import Select, Star, OrderBy
 
-from mindsdb_sql_parser.ast import Identifier, BinaryOperation, Last, Constant, ASTNode
+from mindsdb_sql_parser.ast import Identifier, BinaryOperation, Last, Constant, ASTNode, Function
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.cache import get_cache
 
@@ -312,9 +312,21 @@ class QueryContextController:
         def replace_lasts(node, **kwargs):
             # find last in where
             if isinstance(node, BinaryOperation):
-                if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Last):
+                arg1, arg2 = node.args
+                if not isinstance(arg1, Identifier):
+                    arg1, arg2 = arg2, arg1
+
+                # one of the args must be identifier
+                if not isinstance(arg1, Identifier):
+                    return
+
+                # another must be LAST or function with LAST in args
+                if isinstance(arg2, Last) or (
+                    isinstance(arg2, Function) and any(isinstance(arg, Last) for arg in arg2.args)
+                ):
                     node.args = [Constant(0), Constant(0)]
                     node.op = "="
+                    return node
 
         # find lasts
         query_traversal(query, replace_lasts)

@@ -98,7 +98,7 @@ def query(query: str, context: dict | None = None) -> dict[str, Any]:
             return {"type": SQL_RESPONSE_TYPE.ERROR, "error_code": 0, "error_message": "Unknown response type"}
 
     except Exception as e:
-        logger.error(f"Error processing query: {str(e)}")
+        logger.exception("Error processing query:")
         return {"type": SQL_RESPONSE_TYPE.ERROR, "error_code": 0, "error_message": str(e)}
 
 
@@ -138,6 +138,7 @@ def list_databases() -> list[str]:
             return data
 
     except Exception as e:
+        logger.exception("Error while retrieving list of databases")
         return {
             "type": "error",
             "error_code": 0,

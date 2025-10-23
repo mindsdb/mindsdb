@@ -13,7 +13,6 @@ from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
-    FilterByJsonFieldCondition,
     FilterOperator,
     TableField,
     VectorStoreHandler,
@@ -178,53 +177,51 @@ class ChromaDBHandler(VectorStoreHandler):
 
         return mapping[operator]
 
-    def _translate_metadata_condition(
-        self, conditions: List[Union[FilterCondition, FilterByJsonFieldCondition]]
-    ) -> Optional[dict]:
+    def _translate_metadata_condition(self, conditions: List[FilterCondition]) -> Optional[dict]:
         """
-        Translates a list of FilterCondition objects into a dict for ChromaDB's 'where' filter.
-        Correctly handles nested metadata fields using dot notation.
-        """
-        if not conditions:
-            return None
-
-        # We assume TableField.METADATA.value is a string like 'metadata'
-        metadata_prefix = f"{TableField.METADATA.value}."
-
-        # 1. Filter for all conditions that apply to metadata.
-        # This includes both simple metadata columns and JSON field conditions.
-        metadata_conditions = [
-            c
-            for c in conditions
-            if isinstance(c, FilterByJsonFieldCondition)
-            or (isinstance(c, FilterCondition) and c.column.startswith(metadata_prefix))
+        Translate a list of FilterCondition objects a dict that can be used by ChromaDB.
+        E.g.,
+        [
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.LESS_THAN,
+                value="2020-01-01",
+            ),
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.GREATER_THAN,
+                value="2019-01-01",
+            )
         ]
-
-        if not metadata_conditions:
+        -->
+        {
+            "$and": [
+                {"created_at": {"$lt": "2020-01-01"}},
+                {"created_at": {"$gt": "2019-01-01"}}
+            ]
+        }
+        """
+        # we ignore all non-metadata conditions
+        if conditions is None:
+            return None
+        metadata_conditions = [
+            condition for condition in conditions if condition.column.startswith(TableField.METADATA.value)
+        ]
+        if len(metadata_conditions) == 0:
             return None
 
-        # 2. Translate each condition into the ChromaDB dictionary format.
+        # we translate each metadata condition into a dict
         chroma_db_conditions = []
         for condition in metadata_conditions:
-            if isinstance(condition, FilterByJsonFieldCondition):
-                # Used for `->>` operations. Assumes field_name is the dot-notated path.
-                # E.g., 'details.country'
-                metadata_key = condition.field_name
-            else:  # It's a FilterCondition
-                # Used for direct metadata queries. We strip the 'metadata.' prefix.
-                # E.g., 'metadata.details.country' becomes 'details.country'
-                metadata_key = condition.column[len(metadata_prefix) :]
+            metadata_key = condition.column.split(".")[-1]
 
-            chroma_operator = self._get_chromadb_operator(condition.op)
+            chroma_db_conditions.append({metadata_key: {self._get_chromadb_operator(condition.op): condition.value}})
 
-            # Use full format for all other operators: {"field": {"$op": "value"}}
-            chroma_db_conditions.append({metadata_key: {chroma_operator: condition.value}})
-
-        # 3. Combine multiple conditions with '$and', as required by ChromaDB.
-        if len(chroma_db_conditions) > 1:
-            return {"$and": chroma_db_conditions}
-
-        return chroma_db_conditions[0]
+        # we combine all metadata conditions into a single dict
+        metadata_condition = (
+            {"$and": chroma_db_conditions} if len(chroma_db_conditions) > 1 else chroma_db_conditions[0]
+        )
+        return metadata_condition
 
     def select(
         self,

@@ -55,7 +55,14 @@ class ListFilesTable(APIResource):
 
             # If the 'content' column is explicitly requested, fetch the content of the file.
             if targets and "content" in targets:
-                item["content"] = client.get_item_content(file["path"])
+                # Use item_id and drive_id if available (for file picker items)
+                item_id = file.get("id")
+                drive_id = file.get("drive_id")
+                item["content"] = client.get_item_content(
+                    file["path"],
+                    item_id=item_id,
+                    drive_id=drive_id
+                )
 
             # If a SELECT * query is executed, i.e., targets is empty, set the content to None.
             elif not targets:

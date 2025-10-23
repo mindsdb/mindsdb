@@ -29,7 +29,9 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         access_token: Text,
         refresh_callback: Optional[Callable[[], Optional[str]]] = None,
         authority: str = "common",
-        page_size: int = 200
+        page_size: int = 200,
+        scope_type: str = "all",
+        selected_items: Optional[List[Dict]] = None
     ) -> None:
         """
         Initialize the OneDrive client.
@@ -39,6 +41,8 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             refresh_callback: Optional callback to invoke when token needs refresh
             authority: Azure AD authority (common, organizations, or tenant ID)
             page_size: Number of items per page for pagination
+            scope_type: Scope type for file filtering ('all' or 'specific')
+            selected_items: List of selected items from file picker (for scope_type='specific')
         """
         super().__init__(access_token)
         self.refresh_callback = refresh_callback
@@ -46,6 +50,8 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         self.PAGINATION_COUNT = page_size
         self._retry_count = 0
         self._max_retries = 1  # One automatic retry after token refresh
+        self.scope_type = scope_type
+        self.selected_items = selected_items or []
 
     def update_access_token(self, new_token: str) -> None:
         """
@@ -98,10 +104,19 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
     def get_all_items(self) -> List[Dict]:
         """
         Retrieves all items of the user's OneDrive.
+        Respects scope_type setting:
+        - 'all': Returns all items from OneDrive (default behavior)
+        - 'specific': Returns only items in selected_items list
 
         Returns:
-            List[Dict]: All items of the user's OneDrive.
+            List[Dict]: All items of the user's OneDrive based on scope.
         """
+        # Check if we should use file picker scope
+        if self.scope_type == "specific" and self.selected_items:
+            logger.info(f"Using specific scope with {len(self.selected_items)} selected items")
+            return self.get_items_from_selection(self.selected_items)
+
+        # Default behavior: get all items
         all_items = []
         for root_item in self.get_root_items():
             if "folder" in root_item:
@@ -153,17 +168,29 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
 
         return child_items
 
-    def get_item_content(self, path: Text) -> bytes:
+    def get_item_content(self, path: Text, item_id: Optional[str] = None, drive_id: Optional[str] = None) -> bytes:
         """
         Retrieves the content of the specified item.
 
         Args:
             path (Text): The path of the item whose content is to be retrieved.
+            item_id (Optional[str]): The ID of the item (alternative to path).
+            drive_id (Optional[str]): The drive ID for cross-drive access.
 
         Returns:
             bytes: The content of the specified item.
         """
-        return self.fetch_data_content(f"me/drive/root:/{path}:/content")
+        # If item_id is provided, use ID-based endpoint
+        if item_id:
+            if drive_id:
+                endpoint = f"drives/{drive_id}/items/{item_id}/content"
+            else:
+                endpoint = f"me/drive/items/{item_id}/content"
+        else:
+            # Use path-based endpoint
+            endpoint = f"me/drive/root:/{path}:/content"
+
+        return self.fetch_data_content(endpoint)
 
     def get_delta_items(
         self,
@@ -332,3 +359,164 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
                 break
 
         return items
+
+    def get_item_by_id(
+        self,
+        item_id: str,
+        drive_id: Optional[str] = None,
+        sharepoint_endpoint: Optional[str] = None
+    ) -> Dict:
+        """
+        Get a specific item by ID, optionally using a SharePoint endpoint.
+
+        Args:
+            item_id: The ID of the item
+            drive_id: Optional drive ID for cross-drive access
+            sharepoint_endpoint: Optional SharePoint endpoint URL
+
+        Returns:
+            Dict: Item metadata
+        """
+        if sharepoint_endpoint:
+            # Use SharePoint endpoint directly
+            # SharePoint endpoints are typically in format: https://tenant.sharepoint.com/sites/sitename/_api/v2.0
+            # We need to extract the path after the base URL and append to our Graph API call
+            logger.info(f"Using SharePoint endpoint for item {item_id}")
+            # For SharePoint items, use drives/{driveId}/items/{itemId}
+            if drive_id:
+                endpoint = f"drives/{drive_id}/items/{item_id}"
+            else:
+                endpoint = f"me/drive/items/{item_id}"
+        elif drive_id:
+            # Use drive-specific endpoint
+            endpoint = f"drives/{drive_id}/items/{item_id}"
+        else:
+            # Use default user drive endpoint
+            endpoint = f"me/drive/items/{item_id}"
+
+        response = self._fetch_data(endpoint)
+        return response.json()
+
+    def get_item_children_by_id(
+        self,
+        item_id: str,
+        drive_id: Optional[str] = None,
+        sharepoint_endpoint: Optional[str] = None,
+        path_prefix: str = ""
+    ) -> List[Dict]:
+        """
+        Recursively get all children of a folder item by ID.
+
+        Args:
+            item_id: The ID of the folder item
+            drive_id: Optional drive ID for cross-drive access
+            sharepoint_endpoint: Optional SharePoint endpoint URL
+            path_prefix: Current path prefix for building full paths
+
+        Returns:
+            List[Dict]: List of all child items (files only, not folders)
+        """
+        if sharepoint_endpoint and drive_id:
+            endpoint = f"drives/{drive_id}/items/{item_id}/children"
+        elif drive_id:
+            endpoint = f"drives/{drive_id}/items/{item_id}/children"
+        else:
+            endpoint = f"me/drive/items/{item_id}/children"
+
+        child_items = []
+
+        for items in self.fetch_paginated_data(endpoint):
+            for item in items:
+                # Build full path
+                item_name = item.get('name', '')
+                child_path = f"{path_prefix}/{item_name}" if path_prefix else item_name
+
+                if "folder" in item:
+                    # Recursively get children of this folder
+                    child_items.extend(
+                        self.get_item_children_by_id(
+                            item["id"],
+                            drive_id=drive_id,
+                            sharepoint_endpoint=sharepoint_endpoint,
+                            path_prefix=child_path
+                        )
+                    )
+                else:
+                    # Add path to file item
+                    item["path"] = child_path
+                    # Store drive_id for content retrieval
+                    if drive_id:
+                        item['drive_id'] = drive_id
+                    child_items.append(item)
+
+        return child_items
+
+    def get_items_from_selection(self, selected_items: List[Dict]) -> List[Dict]:
+        """
+        Get all items based on a file picker selection.
+
+        Args:
+            selected_items: List of selected item objects with structure:
+                {
+                    "id": "item_id",
+                    "name": "item_name",  # optional
+                    "parentReference": {"driveId": "drive_id"},
+                    "@sharePoint.endpoint": "https://..."  # optional
+                }
+
+        Returns:
+            List[Dict]: List of all items (expanding folders recursively)
+        """
+        all_items = []
+
+        for selected_item in selected_items:
+            item_id = selected_item.get('id')
+            if not item_id:
+                logger.warning(f"Skipping item without ID: {selected_item}")
+                continue
+
+            # Extract drive ID from parentReference
+            parent_ref = selected_item.get('parentReference', {})
+            drive_id = parent_ref.get('driveId')
+
+            # Extract SharePoint endpoint
+            sharepoint_endpoint = selected_item.get('@sharePoint.endpoint')
+
+            try:
+                # Get the item metadata to check if it's a file or folder
+                item_metadata = self.get_item_by_id(
+                    item_id,
+                    drive_id=drive_id,
+                    sharepoint_endpoint=sharepoint_endpoint
+                )
+
+                # Use name from metadata if not provided in selection
+                item_name = selected_item.get('name', item_metadata.get('name', ''))
+
+                if "folder" in item_metadata:
+                    # It's a folder, recursively get all children
+                    logger.info(f"Fetching children of folder: {item_name}")
+                    children = self.get_item_children_by_id(
+                        item_id,
+                        drive_id=drive_id,
+                        sharepoint_endpoint=sharepoint_endpoint,
+                        path_prefix=item_name
+                    )
+                    # Store drive_id in children metadata for content retrieval
+                    for child in children:
+                        if drive_id and 'drive_id' not in child:
+                            child['drive_id'] = drive_id
+                    all_items.extend(children)
+                else:
+                    # It's a file, add it directly
+                    item_metadata["path"] = item_name
+                    # Store drive_id for content retrieval
+                    if drive_id:
+                        item_metadata['drive_id'] = drive_id
+                    all_items.append(item_metadata)
+
+            except Exception as e:
+                logger.error(f"Error fetching item {item_id}: {e}")
+                continue
+
+        return all_items

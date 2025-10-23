@@ -2,6 +2,7 @@ from typing import Any, Dict, Text, Optional, List
 import time
 import json
 import hashlib
+from datetime import datetime
 
 import msal
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -58,6 +59,8 @@ class MSOneDriveHandler(APIHandler):
                     - Legacy: client_id, client_secret, tenant_id, code
                     - Modern: access_token, refresh_token, expires_at, tenant_id, account_id
                     - Optional: authority (default: 'common'), scopes, enable_files_read_all
+                    - File Picker: selected_items (list of item objects from file picker)
+                      Note: scope_type is auto-set to 'specific' when selected_items is provided
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
@@ -71,6 +74,11 @@ class MSOneDriveHandler(APIHandler):
         self.connection = None
         self.is_connected = False
         self._token_metadata = None
+
+        # Parse file picker parameters
+        # Auto-detect scope type based on selected_items presence
+        self.selected_items = connection_data.get('selected_items', [])
+        self.scope_type = 'specific' if self.selected_items else connection_data.get('scope_type', 'all')
 
     def _generate_connection_id(self) -> str:
         """
@@ -88,6 +96,43 @@ class MSOneDriveHandler(APIHandler):
         ]
         key_string = '_'.join(filter(None, key_parts))
         return hashlib.sha256(key_string.encode()).hexdigest()[:16]
+
+    def _parse_expires_at(self, expires_at: Any) -> float:
+        """
+        Parse expires_at value to Unix timestamp.
+
+        Args:
+            expires_at: Can be Unix timestamp (int/float) or datetime string
+
+        Returns:
+            float: Unix timestamp
+        """
+        if expires_at is None:
+            # Default to 1 hour from now
+            return time.time() + 3600
+
+        # If already a number (Unix timestamp), return it
+        if isinstance(expires_at, (int, float)):
+            return float(expires_at)
+
+        # If it's a string, parse it
+        if isinstance(expires_at, str):
+            try:
+                # Try parsing different datetime formats
+                # Format: "2025-10-23 21:41:33.683305 +0000"
+                dt = datetime.strptime(expires_at.split('.')[0] + ' +0000', '%Y-%m-%d %H:%M:%S %z')
+                return dt.timestamp()
+            except ValueError:
+                try:
+                    # Try ISO format
+                    dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    return dt.timestamp()
+                except ValueError:
+                    logger.warning(f"Could not parse expires_at: {expires_at}, defaulting to 1 hour")
+                    return time.time() + 3600
+
+        # Fallback
+        return time.time() + 3600
 
     def _get_token_cache_key(self) -> str:
         """Returns the storage key for per-connection token cache."""
@@ -246,7 +291,9 @@ class MSOneDriveHandler(APIHandler):
         # Create the Graph API client with automatic token refresh callback
         self.connection = MSGraphAPIOneDriveClient(
             access_token=access_token,
-            refresh_callback=self._on_token_refresh_needed
+            refresh_callback=self._on_token_refresh_needed,
+            scope_type=self.scope_type,
+            selected_items=self.selected_items
         )
 
         self.is_connected = True
@@ -279,10 +326,13 @@ class MSOneDriveHandler(APIHandler):
             if not access_token:
                 raise ValueError("access_token is required for token injection authentication")
 
+            # Parse expires_at to Unix timestamp
+            expires_at_timestamp = self._parse_expires_at(expires_at)
+
             self._token_metadata = {
                 'access_token': access_token,
                 'refresh_token': self.connection_data.get('refresh_token'),
-                'expires_at': expires_at or (time.time() + 3600),  # Default 1 hour if not provided
+                'expires_at': expires_at_timestamp,
                 'tenant_id': self.connection_data.get('tenant_id'),
                 'account_id': self.connection_data.get('account_id')
             }
@@ -364,6 +414,7 @@ class MSOneDriveHandler(APIHandler):
     def _fetch_and_store_identity(self) -> None:
         """
         Fetch user identity from Graph API and store in connection metadata table.
+        This is optional metadata and failure here does not prevent the handler from working.
         """
         try:
             if not self.connection:
@@ -394,8 +445,12 @@ class MSOneDriveHandler(APIHandler):
 
             logger.info(f"Stored identity for connection {self.connection_id}: {identity_data.get('email')}")
 
+        except RequestException as e:
+            # API error - log details but don't fail the connection
+            logger.warning(f"Failed to fetch identity metadata (API error): {e}. This does not affect file operations.")
         except Exception as e:
-            logger.warning(f"Failed to fetch and store identity: {e}")
+            # Other errors - log but don't fail the connection
+            logger.warning(f"Failed to fetch and store identity: {e}. This does not affect file operations.")
 
     def check_connection(self) -> StatusResponse:
         """

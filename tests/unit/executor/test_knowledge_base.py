@@ -176,6 +176,15 @@ class TestKB(BaseExecutorDummyML):
         assert ret["product"][0] == record["product"]
         assert ret["url"][0] == record["url"]
 
+        # using json operator in filter
+        ret = self.run_sql(
+            "select metadata->>'product' as product, metadata->>'url' as url "
+            "from kb_review where metadata->>'product' = 'probook'"
+        )
+        assert len(ret) == 1
+        assert ret["product"][0] == record["product"]
+        assert ret["url"][0] == record["url"]
+
         # ---  case 2: kb with defined columns ---
         self._create_kb(
             "kb_review", content_columns=["review", "product"], id_column="url", metadata_columns=["specs", "id"]

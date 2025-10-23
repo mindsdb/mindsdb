@@ -170,7 +170,7 @@ class TestKB(BaseExecutorDummyML):
 
         # product/url in metadata
         ret = self.run_sql(
-            "select metadata->>'product' as product, metadata->>'url' as url from kb_review where product = 'probook'"
+            "select metadata->>'product' as product, metadata->>'url' as url from kb_review where metadata->>'product' = 'probook'"
         )
         assert len(ret) == 1
         assert ret["product"][0] == record["product"]

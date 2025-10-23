@@ -24,7 +24,15 @@ class MindsDBAgent:
         self.agent_name = agent_name
         self.project_name = project_name
         port = config.get("api", {}).get("http", {}).get("port", 47334)
-        self.base_url = f"http://localhost:{port}"
+        host = config.get("api", {}).get("http", {}).get("host", "127.0.0.1")
+
+        # Use 127.0.0.1 instead of localhost for better compatibility
+        if host in ("0.0.0.0", ""):
+            url = f"http://127.0.0.1:{port}/"
+        else:
+            url = f"http://{host}:{port}/"
+
+        self.base_url = url
         self.agent_url = f"{self.base_url}/api/projects/{project_name}/agents/{agent_name}"
         self.sql_url = f"{self.base_url}/api/sql/query"
         self.headers = {k: v for k, v in user_info.items() if v is not None} or {}

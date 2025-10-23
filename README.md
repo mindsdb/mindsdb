@@ -5,12 +5,12 @@
 <div align="center">
 	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release"></a>
 	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
-	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
-	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">
 	<a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
 
   <br />
   <br />
+
+  <a href="https://trendshift.io/repositories/3068" target="_blank"><img src="https://trendshift.io/api/badge/repositories/3068" alt="mindsdb%2Fmindsdb | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
   <a href="https://github.com/mindsdb/mindsdb">
     <img src="/docs/assets/mindsdb_logo.png" alt="MindsDB" width="300">
@@ -31,21 +31,23 @@
 ----------------------------------------
 
 
-MindsDB enables humans, AI, agents, and applications to get highly accurate answers across sprawled and large scale data sources.
+MindsDB enables humans, AI, agents, and applications to get highly accurate answers across large scale data sources.
 
-![image](https://github.com/user-attachments/assets/a796276a-2d3e-4aa2-9a52-25bf44cf32e7)
+<a href="https://www.youtube.com/watch?v=MX3OKpnsoLM" target="_blank">
+  <img src="https://github.com/user-attachments/assets/119e7b82-f901-4214-a26f-ff7c5ad86064" alt="MindsDB Demo">
+	
+</a>
 
 
-[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
- 
 ## Install MindsDB Server 
 
 MindsDB is an open-source server that can be deployed anywhere - from your laptop to the cloud, and everywhere in between. And yes, you can customize it to your heart's content.
 
   * [Using Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop). This is the fastest and recommended way to get started and have it all running.
   * [Using Docker](https://docs.mindsdb.com/setup/self-hosted/docker). This is also simple, but gives you more flexibility on how to further customize your server.
-  * [Using PyPI](https://docs.mindsdb.com/contribute/install). This option enables you to contribute to MindsDB.
 
+[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
+ 
 ----------------------------------------
 
 # Core Philosophy: Connect, Unify, Respond
@@ -58,13 +60,12 @@ You can connect to hundreds of enterprise [data sources (learn more)](https://do
 
 ## [Unify](https://docs.mindsdb.com/mindsdb_sql/overview) Your Data
 
-Once connected, these data sources can be queried using a full SQL dialect, as if they were all part of a single database. MindsDB’s federated query engine translates your SQL queries and executes them on the appropriate connected data sources.
 
-When working with many data sources, it’s important to prepare and unify your data before generating responses from it. MindsDB SQL offers virtual tables (views, knowledge bases, ml-models) to allow working with heterogeneous data as if it were unified in a single organized system.
+In many situations, it’s important to be able to prepare and unify data before generating responses from it. MindsDB SQL offers knowledge bases and views that allow indexing and organizing structured and unstructured data as if it were unified in a single system.
 
+* [**KNOWLEDGE BASES**](https://docs.mindsdb.com/mindsdb_sql/knowledge-bases) – Index and organize unstructured data for efficient Q&A.
 * [**VIEWS**](https://docs.mindsdb.com/mindsdb_sql/sql/create/view) – Simplify data access by creating unified views across different sources (no-ETL).
-* [**KNOWLEDGE BASES**](https://docs.mindsdb.com/mindsdb_sql/knowledge-bases) – Index and organize unstructured data for efficient retrieval.
-* [**ML MODELS**](https://docs.mindsdb.com/mindsdb_sql/sql/create/model) – Apply AI/ML transformations to gain insights from your data.
+
 
 Unification of data can be automated using JOBs
 

@@ -1,16 +1,16 @@
-from dataclasses import dataclass, astuple
-import traceback
-import json
 import csv
-from io import BytesIO, StringIO, IOBase
-from pathlib import Path
+import json
 import codecs
+from io import BytesIO, StringIO, IOBase
 from typing import List, Generator
+from pathlib import Path
+from dataclasses import dataclass, astuple
 
 import filetype
 import pandas as pd
 from charset_normalizer import from_bytes
 
+from mindsdb.interfaces.knowledge_base.preprocessing.text_splitter import TextSplitter
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -75,7 +75,7 @@ def decode(file_obj: IOBase) -> StringIO:
 
                 data_str = StringIO(byte_str.decode(encoding, errors))
     except Exception as e:
-        logger.error(traceback.format_exc())
+        logger.exception("Error during file decode:")
         raise FileProcessingError("Could not load into string") from e
 
     return data_str
@@ -322,40 +322,25 @@ class FileReader(FormatDetector):
     @staticmethod
     def read_txt(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
         # the lib is heavy, so import it only when needed
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
 
         file_obj = decode(file_obj)
 
-        try:
-            from langchain_core.documents import Document
-        except ImportError:
-            raise FileProcessingError(
-                "To import TXT document please install 'langchain-community':\n    pip install langchain-community"
-            )
         text = file_obj.read()
 
-        metadata = {"source_file": name, "file_format": "txt"}
-        documents = [Document(page_content=text, metadata=metadata)]
+        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP
-        )
-
-        docs = text_splitter.split_documents(documents)
-        return pd.DataFrame([{"content": doc.page_content, "metadata": doc.metadata} for doc in docs])
+        docs = text_splitter.split_text(text)
+        return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "txt"}} for doc in docs])
 
     @staticmethod
     def read_pdf(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
         # the libs are heavy, so import it only when needed
         import fitz  # pymupdf
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
 
         with fitz.open(stream=file_obj.read()) as pdf:  # open pdf
             text = chr(12).join([page.get_text() for page in pdf])
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP
-        )
+        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
 
         split_text = text_splitter.split_text(text)
 

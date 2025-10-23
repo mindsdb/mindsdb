@@ -34,41 +34,31 @@ class ZendeskUsersTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'users',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "users", self.get_columns())
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = (
-            select_statement_parser.parse_query()
-        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
-                if op != '=':
+                if op != "=":
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        count = 0
-        result = self.handler.zen_client.users(**subset_where_conditions)
+        result = self.handler.zen_client.users(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for user in result:
+                response.append(user.to_dict())
         else:
             response.append(result.to_dict())
 
         df = pd.DataFrame(response, columns=self.get_columns())
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -85,15 +75,43 @@ class ZendeskUsersTable(APITable):
         """
 
         return [
-            "active", "alias", "chat_only", "created_at", "custom_role_id",
-            "details", "email", "external_id", "id", "last_login_at",
-            "locale", "locale_id", "moderator", "name", "notes",
-            "only_private_comments", "organization_id", "phone", "photo",
-            "restricted_agent", "role", "shared", "shared_agent",
-            "signature", "suspended", "tags", "ticket_restriction",
-            "time_zone", "two_factor_auth_enabled", "updated_at", "url",
-            "verified", "iana_time_zone", "shared_phone_number", "role_type",
-            "default_group_id", "report_csv"
+            "active",
+            "alias",
+            "chat_only",
+            "created_at",
+            "custom_role_id",
+            "details",
+            "email",
+            "external_id",
+            "id",
+            "last_login_at",
+            "locale",
+            "locale_id",
+            "moderator",
+            "name",
+            "notes",
+            "only_private_comments",
+            "organization_id",
+            "phone",
+            "photo",
+            "restricted_agent",
+            "role",
+            "shared",
+            "shared_agent",
+            "signature",
+            "suspended",
+            "tags",
+            "ticket_restriction",
+            "time_zone",
+            "two_factor_auth_enabled",
+            "updated_at",
+            "url",
+            "verified",
+            "iana_time_zone",
+            "shared_phone_number",
+            "role_type",
+            "default_group_id",
+            "report_csv",
         ]
 
 
@@ -119,41 +137,31 @@ class ZendeskTicketsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'tickets',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "tickets", self.get_columns())
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = (
-            select_statement_parser.parse_query()
-        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
-                if op != '=':
+                if op != "=":
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        count = 0
-        result = self.handler.zen_client.tickets(**subset_where_conditions)
+        result = self.handler.zen_client.tickets(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for ticket in result:
+                response.append(ticket.to_dict())
         else:
             response.append(result.to_dict())
 
         df = pd.DataFrame(response, columns=self.get_columns())
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -170,20 +178,54 @@ class ZendeskTicketsTable(APITable):
         """
 
         return [
-            "assignee_id", "brand_id", "collaborator_ids", "created_at",
-            "custom_fields", "description", "due_at", "external_id",
-            "fields", "forum_topic_id", "group_id", "has_incidents", "id",
-            "organization_id", "priority", "problem_id", "raw_subject",
-            "recipient", "requester_id", "sharing_agreement_ids", "status",
-            "subject", "submitter_id", "tags", "type", "updated_at", "url",
-            "generated_timestamp", "follower_ids", "email_cc_ids", "is_public",
-            "custom_status_id", "followup_ids", "ticket_form_id",
-            "allow_channelback", "allow_attachments", "from_messaging_channel",
-            "satisfaction_rating.assignee_id", "satisfaction_rating.created_at",
-            "satisfaction_rating.group_id", "satisfaction_rating.id",
-            "satisfaction_rating.requester_id", "satisfaction_rating.score",
-            "satisfaction_rating.ticket_id", "satisfaction_rating.updated_at",
-            "satisfaction_rating.url", "via.channel", "via.source.rel"
+            "assignee_id",
+            "brand_id",
+            "collaborator_ids",
+            "created_at",
+            "custom_fields",
+            "description",
+            "due_at",
+            "external_id",
+            "fields",
+            "forum_topic_id",
+            "group_id",
+            "has_incidents",
+            "id",
+            "organization_id",
+            "priority",
+            "problem_id",
+            "raw_subject",
+            "recipient",
+            "requester_id",
+            "sharing_agreement_ids",
+            "status",
+            "subject",
+            "submitter_id",
+            "tags",
+            "type",
+            "updated_at",
+            "url",
+            "generated_timestamp",
+            "follower_ids",
+            "email_cc_ids",
+            "is_public",
+            "custom_status_id",
+            "followup_ids",
+            "ticket_form_id",
+            "allow_channelback",
+            "allow_attachments",
+            "from_messaging_channel",
+            "satisfaction_rating.assignee_id",
+            "satisfaction_rating.created_at",
+            "satisfaction_rating.group_id",
+            "satisfaction_rating.id",
+            "satisfaction_rating.requester_id",
+            "satisfaction_rating.score",
+            "satisfaction_rating.ticket_id",
+            "satisfaction_rating.updated_at",
+            "satisfaction_rating.url",
+            "via.channel",
+            "via.source.rel",
         ]
 
 
@@ -209,41 +251,31 @@ class ZendeskTriggersTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'triggers',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "triggers", self.get_columns())
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = (
-            select_statement_parser.parse_query()
-        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
-                if op != '=':
+                if op != "=":
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        count = 0
-        result = self.handler.zen_client.triggers(**subset_where_conditions)
+        result = self.handler.zen_client.triggers(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for trigger in result:
+                response.append(trigger.to_dict())
         else:
             response.append(result.to_dict())
 
         df = pd.DataFrame(response, columns=self.get_columns())
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -260,9 +292,20 @@ class ZendeskTriggersTable(APITable):
         """
 
         return [
-            "actions", "active", "description", "id", "position", "title",
-            "url", "updated_at", "created_at", "default", "raw_title",
-            "category_id", "conditions.all", "conditions.any"
+            "actions",
+            "active",
+            "description",
+            "id",
+            "position",
+            "title",
+            "url",
+            "updated_at",
+            "created_at",
+            "default",
+            "raw_title",
+            "category_id",
+            "conditions.all",
+            "conditions.any",
         ]
 
 
@@ -288,41 +331,31 @@ class ZendeskActivitiesTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'activities',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "activities", self.get_columns())
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = (
-            select_statement_parser.parse_query()
-        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
-                if op != '=':
+                if op != "=":
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        count = 0
-        result = self.handler.zen_client.activities(**subset_where_conditions)
+        result = self.handler.zen_client.activities(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for activity in result:
+                response.append(activity.to_dict())
         else:
             response.append(result.to_dict())
 
         df = pd.DataFrame(response, columns=self.get_columns())
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -459,5 +492,5 @@ class ZendeskActivitiesTable(APITable):
             "target.ticket.type",
             "target.ticket.updated_at",
             "target.ticket.url",
-            "target.ticket.via"
+            "target.ticket.via",
         ]

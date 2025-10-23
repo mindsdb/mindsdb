@@ -9,7 +9,15 @@ import numpy as np
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm.attributes import flag_modified
 
-from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
+from mindsdb_sql_parser.ast import (
+    BinaryOperation,
+    Constant,
+    Identifier,
+    Select,
+    Update,
+    Delete,
+    Star,
+)
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
@@ -22,19 +30,36 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
 )
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get_validated_jwt
+from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import (
+    get_validated_jwt,
+)
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
-from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
+from mindsdb.interfaces.agents.constants import (
+    DEFAULT_EMBEDDINGS_MODEL_CLASS,
+    MAX_INSERT_BATCH_SIZE,
+)
+from mindsdb.interfaces.agents.langchain_agent import (
+    create_chat_model,
+    get_llm_provider,
+)
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
-from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
-from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
+from mindsdb.interfaces.knowledge_base.preprocessing.models import (
+    PreprocessingConfig,
+    Document,
+)
+from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import (
+    PreprocessorFactory,
+)
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.knowledge_base.executor import KnowledgeBaseQueryExecutor
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
+from mindsdb.integrations.utilities.sql_utils import (
+    FilterCondition,
+    FilterOperator,
+    KeywordSearchArgs,
+)
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 
@@ -74,7 +99,9 @@ def get_model_params(model_params: dict, default_config_key: str):
             raise ValueError("Model parameters must be passed as a JSON object")
 
         # if provider mismatches - don't use default values
-        if "provider" in model_params and model_params["provider"] != combined_model_params.get("provider"):
+        if "provider" in model_params and model_params[
+            "provider"
+        ] != combined_model_params.get("provider"):
             return model_params
 
         combined_model_params.update(model_params)
@@ -90,7 +117,9 @@ def adapt_embedding_model_params(embedding_model_params: dict):
     """
     params_copy = copy.deepcopy(embedding_model_params)
     provider = params_copy.pop("provider", None).lower()
-    api_key = get_api_key(provider, params_copy, strict=False) or params_copy.get("api_key")
+    api_key = get_api_key(provider, params_copy, strict=False) or params_copy.get(
+        "api_key"
+    )
     # Underscores are replaced because the provider name ultimately gets mapped to a class name.
     # This is mostly to support Azure OpenAI (azure_openai); the mapped class name is 'AzureOpenAIEmbeddings'.
     params_copy["class"] = provider.replace("_", "")
@@ -183,7 +212,11 @@ class KnowledgeBaseTable:
         self.document_loader = None
         self.model_params = None
 
-        self.kb_to_vector_columns = {"id": "_original_doc_id", "chunk_id": "id", "chunk_content": "content"}
+        self.kb_to_vector_columns = {
+            "id": "_original_doc_id",
+            "chunk_id": "id",
+            "chunk_content": "content",
+        }
         if self._kb.params.get("version", 0) < 2:
             self.kb_to_vector_columns["id"] = "original_doc_id"
 
@@ -200,12 +233,18 @@ class KnowledgeBaseTable:
                 config["json_chunking_config"]["content_column"] = "content"
 
         preprocessing_config = PreprocessingConfig(**config)
-        self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
+        self.document_preprocessor = PreprocessorFactory.create_preprocessor(
+            preprocessing_config
+        )
 
         # set doc_id column name
-        self.document_preprocessor.config.doc_id_column_name = self.kb_to_vector_columns["id"]
+        self.document_preprocessor.config.doc_id_column_name = (
+            self.kb_to_vector_columns["id"]
+        )
 
-        logger.debug(f"Created preprocessor of type: {type(self.document_preprocessor)}")
+        logger.debug(
+            f"Created preprocessor of type: {type(self.document_preprocessor)}"
+        )
 
     def select_query(self, query: Select) -> pd.DataFrame:
         """
@@ -228,7 +267,11 @@ class KnowledgeBaseTable:
                 meta_data = pd.json_normalize(df["metadata"])
                 # exclude absent columns and used colunns
                 df_columns = list(df.columns)
-                meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
+                meta_columns = list(
+                    set(meta_columns)
+                    .intersection(meta_data.columns)
+                    .difference(df_columns)
+                )
 
                 # add columns
                 df = df.join(meta_data[meta_columns])
@@ -293,26 +336,38 @@ class KnowledgeBaseTable:
         hybrid_search_alpha = None
         if query_conditions is not None:
             for item in query_conditions:
-                if (item.column == "relevance") and (item.op.value in relevance_threshold_allowed_operators):
+                if (item.column == "relevance") and (
+                    item.op.value in relevance_threshold_allowed_operators
+                ):
                     try:
                         relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
                         if not (0 <= relevance_threshold <= 1):
-                            raise ValueError(f"relevance_threshold must be between 0 and 1, got: {relevance_threshold}")
+                            raise ValueError(
+                                f"relevance_threshold must be between 0 and 1, got: {relevance_threshold}"
+                            )
                         if item.op.value == FilterOperator.GREATER_THAN.value:
                             gt_filtering = True
-                        logger.debug(f"Found relevance_threshold in query: {relevance_threshold}")
+                        logger.debug(
+                            f"Found relevance_threshold in query: {relevance_threshold}"
+                        )
                     except (ValueError, TypeError) as e:
-                        error_msg = f"Invalid relevance_threshold value: {item.value}. {e}"
+                        error_msg = (
+                            f"Invalid relevance_threshold value: {item.value}. {e}"
+                        )
                         logger.error(error_msg)
                         raise ValueError(error_msg) from e
-                elif (item.column == "relevance") and (item.op.value not in relevance_threshold_allowed_operators):
+                elif (item.column == "relevance") and (
+                    item.op.value not in relevance_threshold_allowed_operators
+                ):
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only the following operators are allowed: "
                         f"{','.join(relevance_threshold_allowed_operators)}."
                     )
                 elif item.column == "reranking":
-                    if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
+                    if item.value is False or (
+                        isinstance(item.value, str) and item.value.lower() == "false"
+                    ):
                         disable_reranking = True
                 elif item.column == "hybrid_search":
                     if item.value:
@@ -321,10 +376,14 @@ class KnowledgeBaseTable:
                 elif item.column == "hybrid_search_alpha":
                     # validate item.value is a float
                     if not isinstance(item.value, (float, int)):
-                        raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be a float or int.")
+                        raise ValueError(
+                            f"Invalid hybrid_search_alpha value: {item.value}. Must be a float or int."
+                        )
                     # validate hybrid search alpha is between 0 and 1
                     if not (0 <= item.value <= 1):
-                        raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1.")
+                        raise ValueError(
+                            f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1."
+                        )
                     hybrid_search_alpha = item.value
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
@@ -337,10 +396,14 @@ class KnowledgeBaseTable:
                             op=FilterOperator.EQUAL,
                         )
                     )
-                    keyword_search_cols_and_values.append((TableField.CONTENT.value, item.value))
+                    keyword_search_cols_and_values.append(
+                        (TableField.CONTENT.value, item.value)
+                    )
                 else:
                     conditions.append(item)
-                    keyword_search_conditions.append(item)  # keyword search conditions do not use embeddings
+                    keyword_search_conditions.append(
+                        item
+                    )  # keyword search conditions do not use embeddings
 
         if len(keyword_search_cols_and_values) > 1:
             raise ValueError(
@@ -374,12 +437,16 @@ class KnowledgeBaseTable:
             hybrid_search_alpha = 1
 
         if hybrid_search_alpha > 0:
-            df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
+            df = db_handler.dispatch_select(
+                query, conditions, allowed_metadata_columns=allowed_metadata_columns
+            )
             df = self.addapt_result_columns(df)
             logger.debug(f"Query returned {len(df)} rows")
             logger.debug(f"Columns in response: {df.columns.tolist()}")
         else:
-            df = pd.DataFrame([], columns=["id", "chunk_id", "chunk_content", "metadata", "distance"])
+            df = pd.DataFrame(
+                [], columns=["id", "chunk_id", "chunk_content", "metadata", "distance"]
+            )
 
         # check if db_handler inherits from KeywordSearchBase
         if hybrid_search_alpha < 1:
@@ -390,7 +457,9 @@ class KnowledgeBaseTable:
 
             # If query_text is present, use it for keyword search
             logger.debug(f"Performing keyword search with query text: {query_text}")
-            keyword_search_args = KeywordSearchArgs(query=query_text, column=TableField.CONTENT.value)
+            keyword_search_args = KeywordSearchArgs(
+                query=query_text, column=TableField.CONTENT.value
+            )
             keyword_query_obj = copy.deepcopy(query)
 
             keyword_query_obj.targets = [
@@ -407,19 +476,27 @@ class KnowledgeBaseTable:
             )
             df_keyword = self.addapt_result_columns(df_keyword)
             logger.debug(f"Keyword search returned {len(df_keyword)} rows")
-            logger.debug(f"Columns in keyword search response: {df_keyword.columns.tolist()}")
+            logger.debug(
+                f"Columns in keyword search response: {df_keyword.columns.tolist()}"
+            )
             # ensure df and df_keyword_select have exactly the same columns
             if not df_keyword.empty:
                 if df.empty:
                     df = df_keyword
                 else:
-                    df_keyword[TableField.DISTANCE.value] = hybrid_search_alpha * df_keyword[TableField.DISTANCE.value]
-                    df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[TableField.DISTANCE.value]
+                    df_keyword[TableField.DISTANCE.value] = (
+                        hybrid_search_alpha * df_keyword[TableField.DISTANCE.value]
+                    )
+                    df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[
+                        TableField.DISTANCE.value
+                    ]
 
                     df = pd.concat([df, df_keyword], ignore_index=True)
                     # sort by distance if distance column exists
                     if TableField.DISTANCE.value in df.columns:
-                        df = df.sort_values(by=TableField.DISTANCE.value, ascending=True)
+                        df = df.sort_values(
+                            by=TableField.DISTANCE.value, ascending=True
+                        )
                     # if chunk_id column exists remove duplicates based on chunk_id
                     if "chunk_id" in df.columns:
                         df = df.drop_duplicates(subset=["chunk_id"])
@@ -454,11 +531,20 @@ class KnowledgeBaseTable:
         reranker = get_reranking_model_from_params(reranking_model_params)
         return reranker.get_scores(query_text, documents)
 
-    def add_relevance(self, df, query_text, relevance_threshold=None, disable_reranking=False):
+    def add_relevance(
+        self, df, query_text, relevance_threshold=None, disable_reranking=False
+    ):
         relevance_column = TableField.RELEVANCE.value
 
-        reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_reranking_model")
-        if reranking_model_params and query_text and len(df) > 0 and not disable_reranking:
+        reranking_model_params = get_model_params(
+            self._kb.params.get("reranking_model"), "default_reranking_model"
+        )
+        if (
+            reranking_model_params
+            and query_text
+            and len(df) > 0
+            and not disable_reranking
+        ):
             # Use reranker for relevance score
 
             new_api_key = rotate_provider_api_key(reranking_model_params)
@@ -534,13 +620,17 @@ class KnowledgeBaseTable:
         if documents:
             self.insert_documents(documents)
 
-    def insert_web_pages(self, urls: List[str], crawl_depth: int, limit: int, filters: List[str] = None):
+    def insert_web_pages(
+        self, urls: List[str], crawl_depth: int, limit: int, filters: List[str] = None
+    ):
         """Process and insert web pages"""
         if not self.document_loader:
             raise ValueError("Document loader not configured")
 
         documents = list(
-            self.document_loader.load_web_pages(urls, limit=limit, crawl_depth=crawl_depth, filters=filters)
+            self.document_loader.load_web_pages(
+                urls, limit=limit, crawl_depth=crawl_depth, filters=filters
+            )
         )
         if documents:
             self.insert_documents(documents)
@@ -608,7 +698,9 @@ class KnowledgeBaseTable:
                 if processed_chunks:
                     content.value = processed_chunks[0].content
 
-            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content.value))
+            query.update_columns[emb_col] = Constant(
+                self._content_to_embeddings(content.value)
+            )
 
         if "metadata" not in query.update_columns:
             query.update_columns["metadata"] = Constant({})
@@ -693,7 +785,9 @@ class KnowledgeBaseTable:
 
         # First adapt column names to identify content and metadata columns
         adapted_df = self._adapt_column_names(df)
-        content_columns = self._kb.params.get("content_columns", [TableField.CONTENT.value])
+        content_columns = self._kb.params.get(
+            "content_columns", [TableField.CONTENT.value]
+        )
 
         # Convert DataFrame rows to documents, creating separate documents for each content column
         raw_documents = []
@@ -711,15 +805,21 @@ class KnowledgeBaseTable:
 
                     metadata = {
                         **base_metadata,
-                        "_original_row_index": str(idx),  # provide link to original row index
+                        "_original_row_index": str(
+                            idx
+                        ),  # provide link to original row index
                         "_content_column": col,
                     }
 
-                    raw_documents.append(Document(content=content_str, id=doc_id, metadata=metadata))
+                    raw_documents.append(
+                        Document(content=content_str, id=doc_id, metadata=metadata)
+                    )
 
         # Apply preprocessing to all documents if preprocessor exists
         if self.document_preprocessor:
-            processed_chunks = self.document_preprocessor.process_documents(raw_documents)
+            processed_chunks = self.document_preprocessor.process_documents(
+                raw_documents
+            )
         else:
             processed_chunks = raw_documents  # Use raw documents if no preprocessing
 
@@ -741,18 +841,24 @@ class KnowledgeBaseTable:
 
         # Check if we should skip existing items (before calculating embeddings)
         if params is not None and params.get("kb_skip_existing", False):
-            logger.debug(f"Checking for existing items to skip before processing {len(df)} items")
+            logger.debug(
+                f"Checking for existing items to skip before processing {len(df)} items"
+            )
             db_handler = self.get_vector_db()
 
             # Get list of IDs from current batch
             current_ids = df[TableField.ID.value].dropna().astype(str).tolist()
             if current_ids:
                 # Check which IDs already exist
-                existing_ids = db_handler.check_existing_ids(self._kb.vector_database_table, current_ids)
+                existing_ids = db_handler.check_existing_ids(
+                    self._kb.vector_database_table, current_ids
+                )
                 if existing_ids:
                     # Filter out existing items
                     df = df[~df[TableField.ID.value].astype(str).isin(existing_ids)]
-                    logger.info(f"Skipped {len(existing_ids)} existing items, processing {len(df)} new items")
+                    logger.info(
+                        f"Skipped {len(existing_ids)} existing items, processing {len(df)} new items"
+                    )
 
                     if df.empty:
                         logger.info("All items already exist, nothing to insert")
@@ -779,7 +885,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Input DataFrame first row: {df.iloc[0].to_dict()}")
 
         params = self._kb.params
-        columns = list(df.columns)
+        columns = df.columns
 
         # -- prepare id --
         id_column = params.get("id_column")
@@ -811,24 +917,32 @@ class KnowledgeBaseTable:
         content_columns = params.get("content_columns", [TableField.CONTENT.value])
         metadata_columns = params.get("metadata_columns")
 
-        logger.debug(f"Processing with: content_columns={content_columns}, metadata_columns={metadata_columns}")
+        logger.debug(
+            f"Processing with: content_columns={content_columns}, metadata_columns={metadata_columns}"
+        )
 
         # Handle SQL query result columns
         if content_columns:
             # Ensure content columns are case-insensitive
             column_map = {col.lower(): col for col in columns}
-            content_columns = [column_map.get(col.lower(), col) for col in content_columns]
+            content_columns = [
+                column_map.get(col.lower(), col) for col in content_columns
+            ]
             logger.debug(f"Mapped content columns: {content_columns}")
 
         if metadata_columns:
             # Ensure metadata columns are case-insensitive
             column_map = {col.lower(): col for col in columns}
-            metadata_columns = [column_map.get(col.lower(), col) for col in metadata_columns]
+            metadata_columns = [
+                column_map.get(col.lower(), col) for col in metadata_columns
+            ]
             logger.debug(f"Mapped metadata columns: {metadata_columns}")
 
         content_columns = list(set(content_columns).intersection(columns))
         if len(content_columns) == 0:
-            raise ValueError(f"Content columns {params.get('content_columns')} not found in dataset: {columns}")
+            raise ValueError(
+                f"Content columns {params.get('content_columns')} not found in dataset: {columns}"
+            )
 
         if metadata_columns is not None:
             metadata_columns = list(set(metadata_columns).intersection(columns))
@@ -856,11 +970,15 @@ class KnowledgeBaseTable:
                     value = row[col]
                     value_type = type(value)
                     # Convert numpy/pandas types to Python native types
-                    if safe_pandas_is_datetime(value) or isinstance(value, pd.Timestamp):
+                    if safe_pandas_is_datetime(value) or isinstance(
+                        value, pd.Timestamp
+                    ):
                         value = str(value)
                     elif pd.api.types.is_integer_dtype(value_type):
                         value = int(value)
-                    elif pd.api.types.is_float_dtype(value_type) or isinstance(value, decimal.Decimal):
+                    elif pd.api.types.is_float_dtype(value_type) or isinstance(
+                        value, decimal.Decimal
+                    ):
                         value = float(value)
                     elif pd.api.types.is_bool_dtype(value_type):
                         value = bool(value)
@@ -876,18 +994,24 @@ class KnowledgeBaseTable:
             df_out[TableField.METADATA.value] = metadata_dict
 
         logger.debug(f"Output DataFrame columns: {df_out.columns}")
-        logger.debug(f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}")
-
+        logger.debug(
+            f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}"
+        )
+        df_out.columns = [c.lower() for c in df_out.columns]
         return df_out
 
     def _replace_query_content(self, node, **kwargs):
         if isinstance(node, BinaryOperation):
-            if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Constant):
+            if isinstance(node.args[0], Identifier) and isinstance(
+                node.args[1], Constant
+            ):
                 col_name = node.args[0].parts[-1]
                 if col_name.lower() == TableField.CONTENT.value:
                     # replace
                     node.args[0].parts = [TableField.EMBEDDINGS.value]
-                    node.args[1].value = [self._content_to_embeddings(node.args[1].value)]
+                    node.args[1].value = [
+                        self._content_to_embeddings(node.args[1].value)
+                    ]
 
     def get_vector_db(self) -> VectorStoreHandler:
         """
@@ -898,7 +1022,9 @@ class KnowledgeBaseTable:
             if database is None:
                 raise ValueError("Vector database not found. Is it deleted?")
             database_name = database.name
-            self._vector_db = self.session.integration_controller.get_data_handler(database_name)
+            self._vector_db = self.session.integration_controller.get_data_handler(
+                database_name
+            )
         return self._vector_db
 
     def get_vector_db_table_name(self) -> str:
@@ -923,7 +1049,9 @@ class KnowledgeBaseTable:
 
         if model_id is None:
             messages = list(df[TableField.CONTENT.value])
-            embedding_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
+            embedding_params = get_model_params(
+                self._kb.params.get("embedding_model", {}), "default_embedding_model"
+            )
 
             llm_client = LLMClient(embedding_params, session=self.session)
             results = llm_client.embeddings(messages)
@@ -935,7 +1063,9 @@ class KnowledgeBaseTable:
         model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
 
         assert model_rec is not None, f"Model not found: {model_id}"
-        model_project = db.session.query(db.Project).filter_by(id=model_rec.project_id).first()
+        model_project = (
+            db.session.query(db.Project).filter_by(id=model_rec.project_id).first()
+        )
 
         project_datanode = self.session.datahub.get(model_project.name)
 
@@ -947,7 +1077,9 @@ class KnowledgeBaseTable:
         if input_col is not None and input_col != TableField.CONTENT.value:
             df = df.rename(columns={TableField.CONTENT.value: input_col})
 
-        df_out = project_datanode.predict(model_name=model_rec.name, df=df, params=self.model_params)
+        df_out = project_datanode.predict(
+            model_name=model_rec.name, df=df, params=self.model_params
+        )
 
         target = model_rec.to_predict[0]
         if target != TableField.EMBEDDINGS.value:
@@ -980,7 +1112,9 @@ class KnowledgeBaseTable:
 
         module = session.integration_controller.get_handler_module("litellm")
         if module is None or module.Handler is None:
-            raise ValueError(f'Unable to use "{engine}" provider. Litellm handler is not installed')
+            raise ValueError(
+                f'Unable to use "{engine}" provider. Litellm handler is not installed'
+            )
         return module.Handler.embeddings(engine, llm_model, messages, args)
 
     def build_rag_pipeline(self, retrieval_config: dict):
@@ -1003,19 +1137,29 @@ class KnowledgeBaseTable:
         from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
         from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 
-        embedding_model_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
+        embedding_model_params = get_model_params(
+            self._kb.params.get("embedding_model", {}), "default_embedding_model"
+        )
         if self._kb.embedding_model:
             # Extract embedding model args from knowledge base table
             embedding_args = self._kb.embedding_model.learn_args.get("using", {})
             # Construct the embedding model directly
             embeddings_model = construct_model_from_args(embedding_args)
-            logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
+            logger.debug(
+                f"Using knowledge base embedding model with args: {embedding_args}"
+            )
         elif embedding_model_params:
-            embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
-            logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
+            embeddings_model = construct_model_from_args(
+                adapt_embedding_model_params(embedding_model_params)
+            )
+            logger.debug(
+                f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}"
+            )
         else:
             embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
-            logger.debug("Using default embedding model as knowledge base has no embedding model")
+            logger.debug(
+                "Using default embedding model as knowledge base has no embedding model"
+            )
 
         # Update retrieval config with knowledge base parameters
         kb_params = {"vector_store_config": {"kb_table": self}}
@@ -1052,11 +1196,15 @@ class KnowledgeBaseTable:
 
                 return ast.literal_eval(base_metadata)
             except (SyntaxError, ValueError):
-                logger.warning(f"Could not parse metadata: {base_metadata}. Using empty dict.")
+                logger.warning(
+                    f"Could not parse metadata: {base_metadata}. Using empty dict."
+                )
                 return {}
         return {}
 
-    def _generate_document_id(self, content: str, content_column: str, provided_id: str = None) -> str:
+    def _generate_document_id(
+        self, content: str, content_column: str, provided_id: str = None
+    ) -> str:
         """Generate a deterministic document ID using the utility function."""
         from mindsdb.interfaces.knowledge_base.utils import generate_document_id
 
@@ -1076,7 +1224,9 @@ class KnowledgeBaseTable:
             return None
 
         # Handle pandas/numpy types
-        if pd.api.types.is_datetime64_any_dtype(value) or isinstance(value, pd.Timestamp):
+        if pd.api.types.is_datetime64_any_dtype(value) or isinstance(
+            value, pd.Timestamp
+        ):
             return str(value)
         elif pd.api.types.is_integer_dtype(type(value)):
             return int(value)
@@ -1179,7 +1329,9 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
+        embedding_params = get_model_params(
+            params.get("embedding_model", {}), "default_embedding_model"
+        )
         params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
@@ -1195,7 +1347,9 @@ class KnowledgeBaseController:
         if isinstance(reranking_model_params, bool) and not reranking_model_params:
             params["reranking_model"] = {}
 
-        reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
+        reranking_model_params = get_model_params(
+            reranking_model_params, "default_reranking_model"
+        )
         params["reranking_model"] = reranking_model_params
         if reranking_model_params:
             # Get reranking model from params.
@@ -1238,8 +1392,12 @@ class KnowledgeBaseController:
         # create table in vectordb before creating KB
         vector_store_handler.create_table(vector_table_name)
         if keyword_search_enabled:
-            vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)
-        vector_database_id = self.session.integration_controller.get(vector_db_name)["id"]
+            vector_store_handler.add_full_text_index(
+                vector_table_name, TableField.CONTENT.value
+            )
+        vector_database_id = self.session.integration_controller.get(vector_db_name)[
+            "id"
+        ]
 
         # Store sparse vector settings in params if specified
         if is_sparse:
@@ -1326,7 +1484,9 @@ class KnowledgeBaseController:
             if new_config is False:
                 # disable reranking
                 rerank_params = {}
-            elif "provider" in new_config and new_config["provider"] != rerank_params.get("provider"):
+            elif "provider" in new_config and new_config[
+                "provider"
+            ] != rerank_params.get("provider"):
                 # use new config (and include default config)
                 rerank_params = get_model_params(new_config, "default_reranking_model")
             else:
@@ -1339,7 +1499,12 @@ class KnowledgeBaseController:
             kb.params["reranking_model"] = rerank_params
 
         # update other keys
-        for key in ["id_column", "metadata_columns", "content_columns", "preprocessing"]:
+        for key in [
+            "id_column",
+            "metadata_columns",
+            "content_columns",
+            "preprocessing",
+        ]:
             if key in params:
                 kb.params[key] = params[key]
 
@@ -1353,7 +1518,10 @@ class KnowledgeBaseController:
             reranker = get_reranking_model_from_params(params)
             reranker.get_scores("test", ["test"])
         except (ValueError, RuntimeError) as e:
-            if params["provider"] in ("azure_openai", "openai") and params.get("method") != "no-logprobs":
+            if (
+                params["provider"] in ("azure_openai", "openai")
+                and params.get("method") != "no-logprobs"
+            ):
                 # check with no-logprobs
                 params["method"] = "no-logprobs"
                 self._test_reranking(params)
@@ -1371,7 +1539,9 @@ class KnowledgeBaseController:
         if self.session.integration_controller.get(vector_store_name):
             return vector_store_name
 
-        self.session.integration_controller.add(vector_store_name, "pgvector", params or {})
+        self.session.integration_controller.add(
+            vector_store_name, "pgvector", params or {}
+        )
         return vector_store_name
 
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):
@@ -1386,7 +1556,9 @@ class KnowledgeBaseController:
         if self.session.integration_controller.get(vector_store_name):
             return vector_store_name
 
-        self.session.integration_controller.add(vector_store_name, engine, connection_args)
+        self.session.integration_controller.add(
+            vector_store_name, engine, connection_args
+        )
         return vector_store_name
 
     def _check_embedding_model(self, project_name, params: dict = None, kb_name=""):
@@ -1395,7 +1567,9 @@ class KnowledgeBaseController:
         # if mindsdb model from old KB exists - drop it
         model_name = f"kb_embedding_{kb_name}"
         try:
-            model = self.session.model_controller.get_model(model_name, project_name=project_name)
+            model = self.session.model_controller.get_model(
+                model_name, project_name=project_name
+            )
             if model is not None:
                 self.session.model_controller.delete_model(model_name, project_name)
         except PredictorRecordNotFound:
@@ -1405,7 +1579,14 @@ class KnowledgeBaseController:
             raise ValueError("'provider' parameter is required for embedding model")
 
         # check available providers
-        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "ollama")
+        avail_providers = (
+            "openai",
+            "azure_openai",
+            "bedrock",
+            "gemini",
+            "google",
+            "ollama",
+        )
         if params["provider"] not in avail_providers:
             raise ValueError(
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
@@ -1444,14 +1625,20 @@ class KnowledgeBaseController:
         # drop objects if they were created automatically
         if "default_vector_storage" in kb.params:
             try:
-                handler = self.session.datahub.get(kb.params["default_vector_storage"]).integration_handler
+                handler = self.session.datahub.get(
+                    kb.params["default_vector_storage"]
+                ).integration_handler
                 handler.drop_table(kb.vector_database_table)
-                self.session.integration_controller.delete(kb.params["default_vector_storage"])
+                self.session.integration_controller.delete(
+                    kb.params["default_vector_storage"]
+                )
             except EntityNotExistsError:
                 pass
         if "created_embedding_model" in kb.params:
             try:
-                self.session.model_controller.delete_model(kb.params["created_embedding_model"], project_name)
+                self.session.model_controller.delete_model(
+                    kb.params["created_embedding_model"], project_name
+                )
             except EntityNotExistsError:
                 pass
 
@@ -1470,7 +1657,9 @@ class KnowledgeBaseController:
         )
         return kb
 
-    def get_table(self, name: str, project_id: int, params: dict = None) -> KnowledgeBaseTable:
+    def get_table(
+        self, name: str, project_id: int, params: dict = None
+    ) -> KnowledgeBaseTable:
         """
         Returns kb table object with properly configured preprocessing
         :param name: table name
@@ -1488,7 +1677,9 @@ class KnowledgeBaseController:
             if kb.params and "preprocessing" in kb.params:
                 table.configure_preprocessing(kb.params["preprocessing"])
             else:
-                table.configure_preprocessing(None)  # This ensures default preprocessor is created
+                table.configure_preprocessing(
+                    None
+                )  # This ensures default preprocessor is created
 
             return table
 
@@ -1522,7 +1713,9 @@ class KnowledgeBaseController:
         kb_table = self.get_table(table_name, project_id)
         kb_table.create_index()
 
-    def evaluate(self, table_name: str, project_name: str, params: dict = None) -> pd.DataFrame:
+    def evaluate(
+        self, table_name: str, project_name: str, params: dict = None
+    ) -> pd.DataFrame:
         """
         Run evaluate and/or create test data for evaluation
         :param table_name: name of KB

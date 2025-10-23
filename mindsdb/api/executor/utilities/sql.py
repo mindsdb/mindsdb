@@ -184,14 +184,12 @@ def query_df(df, query, session=None):
             is_expected=False,
         )
 
-    table_name = query_ast.from_table.parts[0]
     query_ast.from_table.parts = ["df"]
 
     return query_dfs({"df": df}, query_ast, session=session)
 
 
 def query_dfs(dataframes, query_ast, session=None):
-
     json_columns = set()
 
     if session is not None:
@@ -274,7 +272,11 @@ def query_dfs(dataframes, query_ast, session=None):
 
         if len(df) > 0:
             # workaround to prevent duckdb.TypeMismatchException
-            for sys_name, sys_col in (("models", "TRAINING_OPTIONS"), ("predictors", "TRAINING_OPTIONS"), ("ml_engines", "CONNECTION_DATA")):
+            for sys_name, sys_col in (
+                ("models", "TRAINING_OPTIONS"),
+                ("predictors", "TRAINING_OPTIONS"),
+                ("ml_engines", "CONNECTION_DATA"),
+            ):
                 if table_name.lower() in sys_name and sys_col in df.columns:
                     df[sys_col] = df[sys_col].astype("string")
 

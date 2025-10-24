@@ -898,17 +898,49 @@ class TestKB(BaseExecutorDummyML):
         self.save_file("oracle_products", df)
 
         self._create_kb(
-            "kb_oracle_dbg",
+            "kb_oracle_uppercase",
+            content_columns=["PRODUCT_NAME", "DESCRIPTION"],
+            id_column="PRODUCT_ID",
+            metadata_columns=["CATEGORY", "PRICE"],
+        )
+        self.run_sql(
+            """
+            insert into kb_oracle_uppercase
+            select * from files.oracle_products
+        """
+        )
+
+        ret = self.run_sql("select * from kb_oracle_uppercase")
+        assert len(ret) == 2
+
+        # -- lowercase source columns
+        self._create_kb(
+            "kb_oracle_lowercase",
             content_columns=["product_name", "description"],
             id_column="product_id",
             metadata_columns=["category", "price"],
         )
         self.run_sql(
             """
-            insert into kb_oracle_dbg
+            insert into kb_oracle_lowercase
             select * from files.oracle_products
         """
         )
+        ret = self.run_sql("select * from kb_oracle_lowercase")
+        assert len(ret) == 2
 
-        ret = self.run_sql("select * from kb_oracle_dbg")
+        # -- mixed case source columns
+        self._create_kb(
+            "kb_oracle_mixedcase",
+            content_columns=["Product_Name", "DESCRIPTION"],
+            id_column="Product_ID",
+            metadata_columns=["Category", "price"],
+        )
+        self.run_sql(
+            """
+            insert into kb_oracle_mixedcase
+            select * from files.oracle_products
+        """
+        )
+        ret = self.run_sql("select * from kb_oracle_mixedcase")
         assert len(ret) == 2

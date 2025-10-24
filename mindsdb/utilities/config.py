@@ -233,7 +233,17 @@ class Config:
 
         # region storage root path
         if os.environ.get("MINDSDB_STORAGE_DIR", "") != "":
-            self._env_config["paths"] = {"root": Path(os.environ["MINDSDB_STORAGE_DIR"])}
+            storage_root_path = Path(os.environ["MINDSDB_STORAGE_DIR"])
+            self._env_config["paths"] = {
+                "root": storage_root_path,
+                "content": storage_root_path / "content",
+                "storage": storage_root_path / "storage",
+                "static": storage_root_path / "static",
+                "tmp": storage_root_path / "tmp",
+                "log": storage_root_path / "log",
+                "cache": storage_root_path / "cache",
+                "locks": storage_root_path / "locks",
+            }
         # endregion
 
         # region vars: permanent storage disabled?

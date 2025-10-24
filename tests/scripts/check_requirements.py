@@ -105,8 +105,6 @@ OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
 
-OLLAMA_EP002_IGNORE_HANDLER_DEPS = ["transformers"]
-
 # upper version of numba is fixed in statsforecast handler to prevent installing numba==0.62.0 (its import fails on windows)
 STATSFORECAST_EP002_IGNORE_HANDLER_DEPS = ["numba"]
 
@@ -128,7 +126,6 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
-        + OLLAMA_EP002_IGNORE_HANDLER_DEPS
         + STATSFORECAST_EP002_IGNORE_HANDLER_DEPS
     )
 )

@@ -113,9 +113,7 @@ class SqlalchemyRender:
                         lc_value in self.reserved_words
                         or value[0] in self.illegal_initial_characters
                         or not self.legal_characters.match(str(value))
-                        # For PostgreSQL, quote identifiers with uppercase to preserve case
-                        # This prevents PostgreSQL from lowercasing unquoted identifiers
-                        or (self.dialect.name == 'postgresql' and lc_value != value)
+                        or (self.dialect.name == 'postgresql' and any(c.isupper() for c in value))
                     )
 
             dialect.preparer = MDBPreparer

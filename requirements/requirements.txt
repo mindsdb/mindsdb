@@ -70,4 +70,4 @@ pyjwt==2.10.1
 pydantic_core>=2.33.2
 
 # When using agents, some LLMs may require the 'transformers' library (like Ollama):
-#transformers >= 4.42.4
+transformers >= 4.42.4

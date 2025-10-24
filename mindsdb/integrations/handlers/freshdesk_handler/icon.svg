@@ -1,0 +1,26 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Freshdesk brand colors and style -->
+  <rect width="128" height="128" rx="16" fill="#21A5E6"/>
+  
+  <!-- Ticket/Document icon -->
+  <rect x="32" y="28" width="64" height="72" rx="4" fill="white"/>
+  
+  <!-- Lines representing text content -->
+  <rect x="40" y="40" width="48" height="3" rx="1.5" fill="#21A5E6"/>
+  <rect x="40" y="48" width="40" height="3" rx="1.5" fill="#21A5E6"/>
+  <rect x="40" y="56" width="44" height="3" rx="1.5" fill="#21A5E6"/>
+  <rect x="40" y="64" width="36" height="3" rx="1.5" fill="#21A5E6"/>
+  
+  <!-- Agent/Support icon -->
+  <circle cx="48" cy="80" r="6" fill="#21A5E6"/>
+  <path d="M36 92 C36 86, 42 82, 48 82 C54 82, 60 86, 60 92" fill="#21A5E6"/>
+  
+  <!-- Connection/Workflow arrows -->
+  <path d="M70 76 L76 76 L74 74 M76 76 L74 78" stroke="white" stroke-width="2" fill="none"/>
+  
+  <!-- Database/Analytics icon -->
+  <rect x="80" y="72" width="12" height="8" rx="2" fill="white"/>
+  <rect x="82" y="76" width="2" height="12" fill="white"/>
+  <rect x="86" y="74" width="2" height="14" fill="white"/>
+  <rect x="90" y="78" width="2" height="10" fill="white"/>
+</svg>

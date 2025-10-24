@@ -73,6 +73,10 @@ def get_model_params(model_params: dict, default_config_key: str):
         if not isinstance(model_params, dict):
             raise ValueError("Model parameters must be passed as a JSON object")
 
+        # if provider mismatches - don't use default values
+        if "provider" in model_params and model_params["provider"] != combined_model_params.get("provider"):
+            return model_params
+
         combined_model_params.update(model_params)
 
     combined_model_params.pop("use_default_llm", None)
@@ -217,6 +221,22 @@ class KnowledgeBaseTable:
         executor = KnowledgeBaseQueryExecutor(self)
         df = executor.run(query)
 
+        # copy metadata to columns
+        if "metadata" in df.columns:
+            meta_columns = self._get_allowed_metadata_columns()
+            if meta_columns:
+                meta_data = pd.json_normalize(df["metadata"])
+                # exclude absent columns and used colunns
+                df_columns = list(df.columns)
+                meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
+
+                # add columns
+                df = df.join(meta_data[meta_columns])
+
+                # put metadata in the end
+                df_columns.remove("metadata")
+                df = df[df_columns + meta_columns + ["metadata"]]
+
         if (
             query_copy.group_by is not None
             or query_copy.order_by is not None
@@ -269,9 +289,8 @@ class KnowledgeBaseTable:
             FilterOperator.GREATER_THAN.value,
         ]
         gt_filtering = False
-        hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
-        hybrid_search_alpha = None  # Default to None, meaning no alpha weighted blending
+        hybrid_search_alpha = None
         if query_conditions is not None:
             for item in query_conditions:
                 if (item.column == "relevance") and (item.op.value in relevance_threshold_allowed_operators):
@@ -296,12 +315,9 @@ class KnowledgeBaseTable:
                     if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
                         disable_reranking = True
                 elif item.column == "hybrid_search":
-                    hybrid_search_enabled_flag = item.value
-                    # cast to boolean
-                    if isinstance(hybrid_search_enabled_flag, str):
-                        hybrid_search_enabled_flag = hybrid_search_enabled_flag.lower() not in ("false")
-                    if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
-                        disable_reranking = True
+                    if item.value:
+                        if hybrid_search_alpha is None:
+                            hybrid_search_alpha = 0.5
                 elif item.column == "hybrid_search_alpha":
                     # validate item.value is a float
                     if not isinstance(item.value, (float, int)):
@@ -353,15 +369,25 @@ class KnowledgeBaseTable:
             query.limit = Constant(query_limit)
 
         allowed_metadata_columns = self._get_allowed_metadata_columns()
-        df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
-        df = self.addapt_result_columns(df)
-        logger.debug(f"Query returned {len(df)} rows")
-        logger.debug(f"Columns in response: {df.columns.tolist()}")
 
-        if hybrid_search_enabled_flag and not isinstance(db_handler, KeywordSearchBase):
-            raise ValueError(f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. ")
+        if hybrid_search_alpha is None:
+            hybrid_search_alpha = 1
+
+        if hybrid_search_alpha > 0:
+            df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
+            df = self.addapt_result_columns(df)
+            logger.debug(f"Query returned {len(df)} rows")
+            logger.debug(f"Columns in response: {df.columns.tolist()}")
+        else:
+            df = pd.DataFrame([], columns=["id", "chunk_id", "chunk_content", "metadata", "distance"])
+
         # check if db_handler inherits from KeywordSearchBase
-        if hybrid_search_enabled_flag and isinstance(db_handler, KeywordSearchBase):
+        if hybrid_search_alpha < 1:
+            if not isinstance(db_handler, KeywordSearchBase):
+                raise ValueError(
+                    f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. "
+                )
+
             # If query_text is present, use it for keyword search
             logger.debug(f"Performing keyword search with query text: {query_text}")
             keyword_search_args = KeywordSearchArgs(query=query_text, column=TableField.CONTENT.value)
@@ -373,31 +399,30 @@ class KnowledgeBaseTable:
                 Identifier(TableField.METADATA.value),
             ]
 
-            df_keyword_select = db_handler.dispatch_select(
-                keyword_query_obj, keyword_search_conditions, keyword_search_args=keyword_search_args
+            df_keyword = db_handler.dispatch_select(
+                keyword_query_obj,
+                keyword_search_conditions,
+                allowed_metadata_columns=allowed_metadata_columns,
+                keyword_search_args=keyword_search_args,
             )
-            df_keyword_select = self.addapt_result_columns(df_keyword_select)
-            logger.debug(f"Keyword search returned {len(df_keyword_select)} rows")
-            logger.debug(f"Columns in keyword search response: {df_keyword_select.columns.tolist()}")
+            df_keyword = self.addapt_result_columns(df_keyword)
+            logger.debug(f"Keyword search returned {len(df_keyword)} rows")
+            logger.debug(f"Columns in keyword search response: {df_keyword.columns.tolist()}")
             # ensure df and df_keyword_select have exactly the same columns
-            if not df_keyword_select.empty:
-                if set(df.columns) != set(df_keyword_select.columns):
-                    raise ValueError(
-                        f"Keyword search returned different columns: {df_keyword_select.columns} "
-                        f"than expected: {df.columns}"
-                    )
-                if hybrid_search_alpha:
-                    df_keyword_select[TableField.DISTANCE.value] = (
-                        hybrid_search_alpha * df_keyword_select[TableField.DISTANCE.value]
-                    )
+            if not df_keyword.empty:
+                if df.empty:
+                    df = df_keyword
+                else:
+                    df_keyword[TableField.DISTANCE.value] = hybrid_search_alpha * df_keyword[TableField.DISTANCE.value]
                     df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[TableField.DISTANCE.value]
-                df = pd.concat([df, df_keyword_select], ignore_index=True)
-                # sort by distance if distance column exists
-                if TableField.DISTANCE.value in df.columns:
-                    df = df.sort_values(by=TableField.DISTANCE.value, ascending=True)
-                # if chunk_id column exists remove duplicates based on chunk_id
-                if "chunk_id" in df.columns:
-                    df = df.drop_duplicates(subset=["chunk_id"])
+
+                    df = pd.concat([df, df_keyword], ignore_index=True)
+                    # sort by distance if distance column exists
+                    if TableField.DISTANCE.value in df.columns:
+                        df = df.sort_values(by=TableField.DISTANCE.value, ascending=True)
+                    # if chunk_id column exists remove duplicates based on chunk_id
+                    if "chunk_id" in df.columns:
+                        df = df.drop_duplicates(subset=["chunk_id"])
 
         # Check if we have a rerank_model configured in KB params
         df = self.add_relevance(df, query_text, relevance_threshold, disable_reranking)
@@ -1088,29 +1113,8 @@ class KnowledgeBaseController:
     def __init__(self, session) -> None:
         self.session = session
 
-    def add(
-        self,
-        name: str,
-        project_name: str,
-        storage: Identifier,
-        params: dict,
-        preprocessing_config: Optional[dict] = None,
-        if_not_exists: bool = False,
-        keyword_search_enabled: bool = False,
-        # embedding_model: Identifier = None, # Legacy: Allow MindsDB models to be passed as embedding_model.
-    ) -> db.KnowledgeBase:
-        """
-        Add a new knowledge base to the database
-        :param preprocessing_config: Optional preprocessing configuration to validate and store
-        :param is_sparse: Whether to use sparse vectors for embeddings
-        :param vector_size: Optional size specification for vectors, required when is_sparse=True
-        """
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
-
-        # fill variables
-        params = variables_controller.fill_parameters(params)
-
+    def _check_kb_input_params(self, params):
+        # check names and types KB params
         try:
             KnowledgeBaseInputParams.model_validate(params)
         except ValidationError as e:
@@ -1129,11 +1133,34 @@ class KnowledgeBaseController:
                 msg = "\n" + msg
             raise ValueError(f"Problem with knowledge base parameters: {msg}") from e
 
+    def add(
+        self,
+        name: str,
+        project_name: str,
+        storage: Identifier,
+        params: dict,
+        preprocessing_config: Optional[dict] = None,
+        if_not_exists: bool = False,
+        keyword_search_enabled: bool = False,
+        # embedding_model: Identifier = None, # Legacy: Allow MindsDB models to be passed as embedding_model.
+    ) -> db.KnowledgeBase:
+        """
+        Add a new knowledge base to the database
+        :param preprocessing_config: Optional preprocessing configuration to validate and store
+        :param is_sparse: Whether to use sparse vectors for embeddings
+        :param vector_size: Optional size specification for vectors, required when is_sparse=True
+        """
+
+        # fill variables
+        params = variables_controller.fill_parameters(params)
+
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
             params = params or {}
             params["preprocessing"] = preprocessing_config
+
+        self._check_kb_input_params(params)
 
         # Check if vector_size is provided when using sparse vectors
         is_sparse = params.get("is_sparse")
@@ -1145,8 +1172,6 @@ class KnowledgeBaseController:
         project = self.session.database_controller.get_project(project_name)
         project_id = project.id
 
-        # not difference between cases in sql
-        name = name.lower()
         # check if knowledge base already exists
         kb = self.get(name, project_id)
         if kb is not None:
@@ -1158,7 +1183,7 @@ class KnowledgeBaseController:
         params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
-        self._create_embedding_model(
+        self._check_embedding_model(
             project.name,
             params=embedding_params,
             kb_name=name,
@@ -1168,9 +1193,6 @@ class KnowledgeBaseController:
         reranking_model_params = params.get("reranking_model", {})
 
         if isinstance(reranking_model_params, bool) and not reranking_model_params:
-            params["reranking_model"] = {}
-        # if params.get("reranking_model", {}) is string and false in any case we evaluate it to empty dictionary
-        if isinstance(reranking_model_params, str) and reranking_model_params.lower() == "false":
             params["reranking_model"] = {}
 
         reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
@@ -1239,12 +1261,99 @@ class KnowledgeBaseController:
         db.session.commit()
         return kb
 
+    def update(
+        self,
+        name: str,
+        project_name: str,
+        params: dict,
+        preprocessing_config: Optional[dict] = None,
+    ) -> db.KnowledgeBase:
+        """
+        Update the knowledge base
+        :param name: The name of the knowledge base
+        :param project_name: Current project name
+        :param params: The parameters to update
+        :param preprocessing_config: Optional preprocessing configuration to validate and store
+        """
+
+        # fill variables
+        params = variables_controller.fill_parameters(params)
+
+        # Validate preprocessing config first if provided
+        if preprocessing_config is not None:
+            PreprocessingConfig(**preprocessing_config)  # Validate before storing
+            params = params or {}
+            params["preprocessing"] = preprocessing_config
+
+        self._check_kb_input_params(params)
+
+        # get project id
+        project = self.session.database_controller.get_project(project_name)
+        project_id = project.id
+
+        # get existed KB
+        kb = self.get(name.lower(), project_id)
+        if kb is None:
+            raise EntityNotExistsError("Knowledge base doesn't exists", name)
+
+        if "embedding_model" in params:
+            new_config = params["embedding_model"]
+            # update embedding
+            embed_params = kb.params.get("embedding_model", {})
+            if not embed_params:
+                # maybe old version of KB
+                raise ValueError("No embedding config to update")
+
+            # some parameters are not allowed to update
+            for key in ("provider", "model_name"):
+                if key in new_config and new_config[key] != embed_params.get(key):
+                    raise ValueError(f"You can't update '{key}' setting")
+
+            embed_params.update(new_config)
+
+            self._check_embedding_model(
+                project.name,
+                params=embed_params,
+                kb_name=name,
+            )
+            kb.params["embedding_model"] = embed_params
+
+        if "reranking_model" in params:
+            new_config = params["reranking_model"]
+            # update embedding
+            rerank_params = kb.params.get("reranking_model", {})
+
+            if new_config is False:
+                # disable reranking
+                rerank_params = {}
+            elif "provider" in new_config and new_config["provider"] != rerank_params.get("provider"):
+                # use new config (and include default config)
+                rerank_params = get_model_params(new_config, "default_reranking_model")
+            else:
+                # update current config
+                rerank_params.update(new_config)
+
+            if rerank_params:
+                self._test_reranking(rerank_params)
+
+            kb.params["reranking_model"] = rerank_params
+
+        # update other keys
+        for key in ["id_column", "metadata_columns", "content_columns", "preprocessing"]:
+            if key in params:
+                kb.params[key] = params[key]
+
+        flag_modified(kb, "params")
+        db.session.commit()
+
+        return self.get(name.lower(), project_id)
+
     def _test_reranking(self, params):
         try:
             reranker = get_reranking_model_from_params(params)
             reranker.get_scores("test", ["test"])
         except (ValueError, RuntimeError) as e:
-            if params["provider"] in ("azure_openai", "openai"):
+            if params["provider"] in ("azure_openai", "openai") and params.get("method") != "no-logprobs":
                 # check with no-logprobs
                 params["method"] = "no-logprobs"
                 self._test_reranking(params)
@@ -1280,11 +1389,11 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_embedding_model(self, project_name, params: dict = None, kb_name=""):
-        """create a default embedding model for knowledge base, if not specified"""
-        model_name = f"kb_embedding_{kb_name}"
+    def _check_embedding_model(self, project_name, params: dict = None, kb_name=""):
+        """check embedding model for knowledge base"""
 
-        # drop if exists - parameters can be different
+        # if mindsdb model from old KB exists - drop it
+        model_name = f"kb_embedding_{kb_name}"
         try:
             model = self.session.model_controller.get_model(model_name, project_name=project_name)
             if model is not None:
@@ -1412,12 +1521,6 @@ class KnowledgeBaseController:
         project_id = self.session.database_controller.get_project(project_name).id
         kb_table = self.get_table(table_name, project_id)
         kb_table.create_index()
-
-    def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
-        """
-        Update a knowledge base record
-        """
-        raise NotImplementedError()
 
     def evaluate(self, table_name: str, project_name: str, params: dict = None) -> pd.DataFrame:
         """

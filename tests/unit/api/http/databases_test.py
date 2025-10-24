@@ -27,17 +27,17 @@ def test_get_database(client):
     # Get a newly created integration.
     integration_data = {
         "database": {
-            "name": "test_get_database",
+            "name": "TEST_get_database",
             "engine": "postgres",
             "parameters": {"user": "ricky_sanchez", "password": "florpglorp"},
         }
     }
     response = client.post("/api/databases", json=integration_data, follow_redirects=True)
-    response = client.get("/api/databases/test_get_database", follow_redirects=True)
+    response = client.get("/api/databases/TEST_get_database", follow_redirects=True)
 
     integration_db = response.get_json()
     expected_db = {
-        "name": "test_get_database",
+        "name": "TEST_get_database",
         "type": "data",
         "engine": "postgres",
         "connection_data": {"user": "ricky_sanchez", "password": "florpglorp"},

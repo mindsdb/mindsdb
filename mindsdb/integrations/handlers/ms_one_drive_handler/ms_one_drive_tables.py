@@ -48,6 +48,7 @@ class ListFilesTable(APIResource):
         data = []
         for file in files:
             item = {
+                "id": file.get("id"),
                 "name": file["name"],
                 "path": file["path"],
                 "extension": file["name"].split(".")[-1]
@@ -55,7 +56,14 @@ class ListFilesTable(APIResource):
 
             # If the 'content' column is explicitly requested, fetch the content of the file.
             if targets and "content" in targets:
-                item["content"] = client.get_item_content(file["path"])
+                # Use item_id and drive_id if available (for file picker items)
+                item_id = file.get("id")
+                drive_id = file.get("drive_id")
+                item["content"] = client.get_item_content(
+                    file["path"],
+                    item_id=item_id,
+                    drive_id=drive_id
+                )
 
             # If a SELECT * query is executed, i.e., targets is empty, set the content to None.
             elif not targets:
@@ -67,7 +75,7 @@ class ListFilesTable(APIResource):
         return df
 
     def get_columns(self):
-        return ["name", "path", "extension", "content"]
+        return ["id", "name", "path", "extension", "content"]
 
 
 class FileTable(APIResource):
@@ -88,7 +96,27 @@ class FileTable(APIResource):
         """
         client = self.handler.connect()
 
-        file_content = client.get_item_content(table_name)
+        # Try to find the file in all items to get its item_id and drive_id
+        # This is necessary for SharePoint organization sites
+        item_id = None
+        drive_id = None
+
+        try:
+            all_items = client.get_all_items()
+            for item in all_items:
+                # Match by ID first (primary method), fallback to name or path for backward compatibility
+                if (item.get("id") == table_name or
+                    item.get("name") == table_name or
+                    item.get("path") == table_name):
+                    item_id = item.get("id")
+                    drive_id = item.get("drive_id")
+                    logger.info(f"Found file {table_name} with item_id={item_id}, drive_id={drive_id}")
+                    break
+        except Exception as e:
+            logger.warning(f"Could not retrieve item metadata for {table_name}: {e}. Falling back to path-based retrieval.")
+
+        # Get file content using item_id and drive_id if available
+        file_content = client.get_item_content(table_name, item_id=item_id, drive_id=drive_id)
 
         reader = FileReader(file=BytesIO(file_content), name=table_name)
 

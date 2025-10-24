@@ -41,7 +41,7 @@ def get_integration_record(name: str) -> db.Integration:
 
 @profiler.profile()
 def get_project_record(name: str) -> db.Project:
-    company_id = ctx.company_id if ctx.company_id is not None else 0
+    company_id = ctx.company_id if ctx.company_id is not None else "0"
 
     project_record = (
         db.session.query(db.Project)
@@ -56,7 +56,7 @@ def get_project_record(name: str) -> db.Project:
 
 @profiler.profile()
 def get_project_records() -> List[db.Project]:
-    company_id = ctx.company_id if ctx.company_id is not None else 0
+    company_id = ctx.company_id if ctx.company_id is not None else "0"
 
     return (
         db.session.query(db.Project)

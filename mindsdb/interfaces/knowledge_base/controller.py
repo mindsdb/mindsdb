@@ -907,6 +907,8 @@ class KnowledgeBaseTable:
 
         logger.debug(f"Output DataFrame columns: {df_out.columns}")
         logger.debug(f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}")
+
+        # return adapted dataframe and normalized case insensitive columns
         return df_out, {
             "content_columns": content_columns,
             "metadata_columns": metadata_columns,

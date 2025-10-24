@@ -110,7 +110,7 @@ target "images" {
       },
       {
         name = "devel"
-        extras = ".[lightwood]"  # Required for running integration tests
+        extras = ".[lightwood] transformers"  # Required for running integration tests
         target = "dev"
       },
       {

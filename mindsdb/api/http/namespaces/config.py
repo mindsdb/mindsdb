@@ -183,6 +183,13 @@ class Integration(Resource):
                 export = decrypt(storage.encode(), secret_key)
                 handler.handler_storage.import_files(export)
 
+        except ValueError as e:
+            # Return a 400 Bad Request for validation errors (e.g. name must be lowercase)
+            logger.error(str(e))
+            if temp_dir is not None:
+                shutil.rmtree(temp_dir)
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong argument", f"Error during config update: {str(e)}")
+
         except Exception as e:
             logger.exception("An error occurred during the creation of the integration:")
             if temp_dir is not None:

@@ -95,7 +95,25 @@ class FileTable(APIResource):
         """
         client = self.handler.connect()
 
-        file_content = client.get_item_content(table_name)
+        # Try to find the file in all items to get its item_id and drive_id
+        # This is necessary for SharePoint organization sites
+        item_id = None
+        drive_id = None
+
+        try:
+            all_items = client.get_all_items()
+            for item in all_items:
+                # Match by name (table_name) or path
+                if item.get("name") == table_name or item.get("path") == table_name:
+                    item_id = item.get("id")
+                    drive_id = item.get("drive_id")
+                    logger.info(f"Found file {table_name} with item_id={item_id}, drive_id={drive_id}")
+                    break
+        except Exception as e:
+            logger.warning(f"Could not retrieve item metadata for {table_name}: {e}. Falling back to path-based retrieval.")
+
+        # Get file content using item_id and drive_id if available
+        file_content = client.get_item_content(table_name, item_id=item_id, drive_id=drive_id)
 
         reader = FileReader(file=BytesIO(file_content), name=table_name)
 

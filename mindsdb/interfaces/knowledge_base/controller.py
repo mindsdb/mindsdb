@@ -9,7 +9,15 @@ import numpy as np
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm.attributes import flag_modified
 
-from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
+from mindsdb_sql_parser.ast import (
+    BinaryOperation,
+    Constant,
+    Identifier,
+    Select,
+    Update,
+    Delete,
+    Star,
+)
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
@@ -22,19 +30,36 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
 )
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get_validated_jwt
+from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import (
+    get_validated_jwt,
+)
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
-from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
+from mindsdb.interfaces.agents.constants import (
+    DEFAULT_EMBEDDINGS_MODEL_CLASS,
+    MAX_INSERT_BATCH_SIZE,
+)
+from mindsdb.interfaces.agents.langchain_agent import (
+    create_chat_model,
+    get_llm_provider,
+)
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
-from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
-from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
+from mindsdb.interfaces.knowledge_base.preprocessing.models import (
+    PreprocessingConfig,
+    Document,
+)
+from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import (
+    PreprocessorFactory,
+)
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.knowledge_base.executor import KnowledgeBaseQueryExecutor
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
+from mindsdb.integrations.utilities.sql_utils import (
+    FilterCondition,
+    FilterOperator,
+    KeywordSearchArgs,
+)
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 
@@ -183,7 +208,11 @@ class KnowledgeBaseTable:
         self.document_loader = None
         self.model_params = None
 
-        self.kb_to_vector_columns = {"id": "_original_doc_id", "chunk_id": "id", "chunk_content": "content"}
+        self.kb_to_vector_columns = {
+            "id": "_original_doc_id",
+            "chunk_id": "id",
+            "chunk_content": "content",
+        }
         if self._kb.params.get("version", 0) < 2:
             self.kb_to_vector_columns["id"] = "original_doc_id"
 
@@ -692,8 +721,9 @@ class KnowledgeBaseTable:
             ...
 
         # First adapt column names to identify content and metadata columns
-        adapted_df = self._adapt_column_names(df)
-        content_columns = self._kb.params.get("content_columns", [TableField.CONTENT.value])
+        adapted_df, normalized_columns = self._adapt_column_names(df)
+        content_columns = normalized_columns["content_columns"]
+        # metadata_columns = normalized_columns["metadata_columns"]
 
         # Convert DataFrame rows to documents, creating separate documents for each content column
         raw_documents = []
@@ -878,7 +908,11 @@ class KnowledgeBaseTable:
         logger.debug(f"Output DataFrame columns: {df_out.columns}")
         logger.debug(f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}")
 
-        return df_out
+        # return adapted dataframe and normalized case insensitive columns
+        return df_out, {
+            "content_columns": content_columns,
+            "metadata_columns": metadata_columns,
+        }
 
     def _replace_query_content(self, node, **kwargs):
         if isinstance(node, BinaryOperation):
@@ -1339,7 +1373,12 @@ class KnowledgeBaseController:
             kb.params["reranking_model"] = rerank_params
 
         # update other keys
-        for key in ["id_column", "metadata_columns", "content_columns", "preprocessing"]:
+        for key in [
+            "id_column",
+            "metadata_columns",
+            "content_columns",
+            "preprocessing",
+        ]:
             if key in params:
                 kb.params[key] = params[key]
 
@@ -1405,7 +1444,14 @@ class KnowledgeBaseController:
             raise ValueError("'provider' parameter is required for embedding model")
 
         # check available providers
-        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "ollama")
+        avail_providers = (
+            "openai",
+            "azure_openai",
+            "bedrock",
+            "gemini",
+            "google",
+            "ollama",
+        )
         if params["provider"] not in avail_providers:
             raise ValueError(
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"

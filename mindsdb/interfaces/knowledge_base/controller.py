@@ -784,10 +784,9 @@ class KnowledgeBaseTable:
             ...
 
         # First adapt column names to identify content and metadata columns
-        adapted_df = self._adapt_column_names(df)
-        content_columns = self._kb.params.get(
-            "content_columns", [TableField.CONTENT.value]
-        )
+        adapted_df, normalized_columns = self._adapt_column_names(df)
+        content_columns = normalized_columns["content_columns"]
+        # metadata_columns = normalized_columns["metadata_columns"]
 
         # Convert DataFrame rows to documents, creating separate documents for each content column
         raw_documents = []
@@ -885,7 +884,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Input DataFrame first row: {df.iloc[0].to_dict()}")
 
         params = self._kb.params
-        columns = df.columns
+        columns = list(df.columns)
 
         # -- prepare id --
         id_column = params.get("id_column")
@@ -997,8 +996,10 @@ class KnowledgeBaseTable:
         logger.debug(
             f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}"
         )
-        df_out.columns = [c.lower() for c in df_out.columns]
-        return df_out
+        return df_out, {
+            "content_columns": content_columns,
+            "metadata_columns": metadata_columns,
+        }
 
     def _replace_query_content(self, node, **kwargs):
         if isinstance(node, BinaryOperation):

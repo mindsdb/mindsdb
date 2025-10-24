@@ -48,6 +48,7 @@ class ListFilesTable(APIResource):
         data = []
         for file in files:
             item = {
+                "id": file.get("id"),
                 "name": file["name"],
                 "path": file["path"],
                 "extension": file["name"].split(".")[-1]
@@ -74,7 +75,7 @@ class ListFilesTable(APIResource):
         return df
 
     def get_columns(self):
-        return ["name", "path", "extension", "content"]
+        return ["id", "name", "path", "extension", "content"]
 
 
 class FileTable(APIResource):
@@ -103,8 +104,10 @@ class FileTable(APIResource):
         try:
             all_items = client.get_all_items()
             for item in all_items:
-                # Match by name (table_name) or path
-                if item.get("name") == table_name or item.get("path") == table_name:
+                # Match by ID first (primary method), fallback to name or path for backward compatibility
+                if (item.get("id") == table_name or
+                    item.get("name") == table_name or
+                    item.get("path") == table_name):
                     item_id = item.get("id")
                     drive_id = item.get("drive_id")
                     logger.info(f"Found file {table_name} with item_id={item_id}, drive_id={drive_id}")

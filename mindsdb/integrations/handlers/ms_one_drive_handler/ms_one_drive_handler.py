@@ -516,13 +516,12 @@ class MSOneDriveHandler(APIHandler):
             # For any other table name, query the file content via the 'FileTable' class.
             # Only the supported file formats can be queried.
             else:
-                extension = table_name.split('.')[-1]
-                if extension not in self.supported_file_formats:
-                    logger.error(f'The file format {extension} is not supported!')
-                    raise ValueError(f'The file format {extension} is not supported!')
-
-                table = FileTable(self, table_name=table_name)
-                df = table.select(query)
+                try:
+                    table = FileTable(self, table_name=table_name)
+                    df = table.select(query)
+                except ValueError as e:
+                    logger.error(f"Failed to query file {table_name}: {e}")
+                    raise
 
             return Response(
                 RESPONSE_TYPE.TABLE,
@@ -558,9 +557,9 @@ class MSOneDriveHandler(APIHandler):
         connection = self.connect()
 
         # Get only the supported file formats.
-        # Wrap the file names with backticks to prevent SQL syntax errors.
+        # Use file IDs as table names to avoid Unicode issues with file names.
         supported_files = [
-            f"`{file['path']}`"
+            f"`{file['id']}`"
             for file in connection.get_all_items()
             if file['path'].split('.')[-1] in self.supported_file_formats
         ]

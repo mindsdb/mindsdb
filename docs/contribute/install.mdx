@@ -16,7 +16,7 @@ Here are the steps to install MindsDB from source. You can either
 follow the steps below or visit the provided link.
 
 <Info>
-Before installing MindsDB from source, ensure that you use one of the following Python versions: `3.10.x`, `3.11.x`, `3.12.x`, `3.13.x`.
+Before installing MindsDB from source, ensure that you use one of the following Python versions: `3.10.x`, `3.11.x`, `3.12.x`, or `3.13.x`.
 </Info>
 
 1. Fork the [MindsDB repository from GitHub](https://github.com/mindsdb/mindsdb).
@@ -29,23 +29,47 @@ Before installing MindsDB from source, ensure that you use one of the following 
 
 3. Create a virtual environment:
 
-   ```bash
-   python -m venv mindsdb-venv
-   ```
+   - Cross-platform (recommended):
+
+     ```bash
+     python -m venv .venv
+     ```
+
+   - Windows (also works with the `py` launcher):
+
+     ```powershell
+     py -3 -m venv .venv
+     ```
 
 4. Activate the virtual environment:
 
-   Windows:
+   - Windows (PowerShell):
 
-     ```bash
-     .\mindsdb-venv\Scripts\activate
+     ```powershell
+     .\.venv\Scripts\Activate.ps1
      ```
 
-   macOS/Linux:
+   - Windows (CMD):
+
+     ```bat
+     .\.venv\Scripts\activate.bat
+     ```
+
+   - macOS/Linux (bash/zsh):
 
      ```bash
-     source mindsdb-venv/bin/activate
+     source .venv/bin/activate
      ```
+
+<Tip>
+Windows PowerShell may block script execution. If activation fails with a policy error, run PowerShell "as Administrator" once and execute:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+Then retry activating the environment.
+</Tip>
 
 5. Install MindsDB with its local development dependencies:
 
@@ -53,8 +77,8 @@ Before installing MindsDB from source, ensure that you use one of the following 
 
    ```bash
    cd mindsdb
-   pip install -e .
-   pip install -r requirements/requirements-dev.txt
+   python -m pip install -e .
+   python -m pip install -r requirements/requirements-dev.txt
    ```
    
 6. Start MindsDB:

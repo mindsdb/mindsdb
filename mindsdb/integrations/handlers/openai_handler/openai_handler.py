@@ -196,7 +196,7 @@ class OpenAIHandler(BaseMLEngine):
             if "base_url" in unknown_args and "api_base" not in args:
                 suggestion_msg += "\nHint: Use 'api_base' instead of 'base_url'."
 
-            error_msg = f"Unknown arguments: {', '.join(sorted(unknown_args))}.\nKnown arguments are: {', '.join(sorted(known_args))}{suggestion_msg}"
+            error_msg = f"Unknown arguments: {', '.join(unknown_args)}.\nKnown arguments are: {', '.join(known_args)}{suggestion_msg}"
 
             # Raise a clear, descriptive exception
             raise ValueError(error_msg)

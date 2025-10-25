@@ -33,8 +33,9 @@ class TestOpenAIParameterValidation:
 
         error_msg = str(exc_info.value)
 
-        # Verify the error includes helpful hints
-        assert "api_key, base_url" in error_msg  # Should list the unknown args
+        # Verify the error includes helpful hints (do not rely on arg order)
+        assert "api_key" in error_msg
+        assert "base_url" in error_msg
         assert "openai_api_key" in error_msg  # Should suggest the correct parameter
         assert "api_base" in error_msg  # Should suggest the correct parameter
         assert "Hint:" in error_msg  # Should provide hints

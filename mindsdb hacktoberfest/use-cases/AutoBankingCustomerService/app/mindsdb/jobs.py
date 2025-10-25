@@ -1,5 +1,4 @@
-"""
-Initialize MindsDB JOBs for automated analytics processing.
+"""MindsDB JOB management for automated analytics processing.
 
 This module creates scheduled JOBs that run periodically to:
 1. Analyze daily conversation data
@@ -10,7 +9,15 @@ from typing import Optional
 
 
 def check_job_exists(server, job_name: str) -> bool:
-    """Check if a JOB exists in MindsDB."""
+    """Check if a JOB exists in MindsDB.
+
+    Args:
+        server: MindsDB server connection
+        job_name: Name of the JOB to check
+
+    Returns:
+        True if JOB exists, False otherwise
+    """
     try:
         result = server.query("SHOW JOBS")
         data = result.fetch()
@@ -21,7 +28,15 @@ def check_job_exists(server, job_name: str) -> bool:
 
 
 def drop_job_if_exists(server, job_name: str) -> bool:
-    """Drop a JOB if it exists (for recreating with updated logic)."""
+    """Drop a JOB if it exists (for recreating with updated logic).
+
+    Args:
+        server: MindsDB server connection
+        job_name: Name of the JOB to drop
+
+    Returns:
+        True if operation was successful
+    """
     try:
         if check_job_exists(server, job_name):
             server.query(f"DROP JOB {job_name}")

@@ -1,19 +1,18 @@
-"""MindsDB initialization for AutoBankingCustomerService.
+"""MindsDB connection and database setup utilities.
 
 This module handles:
-1. PostgreSQL database connection setup
-2. OpenAI ML engine creation
-3. Agent creation and registration
+1. MindsDB server connection management
+2. PostgreSQL database connection setup in MindsDB
+3. OpenAI ML engine creation
 """
 
 import os
-import sys
+from typing import Any, Optional
 
 import mindsdb_sdk
 from dotenv import load_dotenv
 
-from .db import DEFAULT_DB_CONFIG
-from .agents import create_agents
+from ..db import DEFAULT_DB_CONFIG
 
 load_dotenv()
 
@@ -29,9 +28,66 @@ PG_USER = DEFAULT_DB_CONFIG.get("user", "postgresql")
 PG_PASSWORD = DEFAULT_DB_CONFIG.get("password", "psqlpasswd")
 PG_SCHEMA = DEFAULT_DB_CONFIG.get("schema", "demo_data")
 
+# Global MindsDB server instance
+_mindsdb_server: Optional[Any] = None
+
+
+def get_mindsdb_server() -> Optional[Any]:
+    """Get the current MindsDB server connection.
+
+    Returns:
+        MindsDB server instance or None if not connected
+    """
+    return _mindsdb_server
+
+
+def set_mindsdb_server(server: Any) -> None:
+    """Set the MindsDB server instance.
+
+    Args:
+        server: MindsDB server connection
+    """
+    global _mindsdb_server
+    _mindsdb_server = server
+
+
+def connect_to_mindsdb(url: Optional[str] = None, verbose: bool = True) -> Optional[Any]:
+    """Connect to MindsDB server.
+
+    Args:
+        url: MindsDB URL (uses MINDSDB_URL env var if not provided)
+        verbose: Whether to print connection messages
+
+    Returns:
+        MindsDB server instance or None if connection failed
+    """
+    target_url = url or MINDSDB_URL
+
+    if verbose:
+        print(f"Connecting to MindsDB at {target_url}...")
+
+    try:
+        server = mindsdb_sdk.connect(target_url)
+        set_mindsdb_server(server)
+        if verbose:
+            print("✓ Successfully connected to MindsDB")
+        return server
+    except Exception as e:
+        print(f"✗ Failed to connect to MindsDB: {e}")
+        print(f"\nPlease ensure MindsDB is running at {target_url}")
+        return None
+
 
 def check_database_exists(server, db_name: str) -> bool:
-    """Check if a database connection exists in MindsDB."""
+    """Check if a database connection exists in MindsDB.
+
+    Args:
+        server: MindsDB server connection
+        db_name: Name of the database to check
+
+    Returns:
+        True if database exists, False otherwise
+    """
     try:
         databases = server.list_databases()
         return db_name in [db.name for db in databases]
@@ -41,7 +97,15 @@ def check_database_exists(server, db_name: str) -> bool:
 
 
 def check_ml_engine_exists(server, engine_name: str) -> bool:
-    """Check if an ML engine exists in MindsDB."""
+    """Check if an ML engine exists in MindsDB.
+
+    Args:
+        server: MindsDB server connection
+        engine_name: Name of the ML engine to check
+
+    Returns:
+        True if ML engine exists, False otherwise
+    """
     try:
         result = server.query(
             f"SELECT * FROM information_schema.ml_engines WHERE name = '{engine_name}'"
@@ -53,10 +117,16 @@ def check_ml_engine_exists(server, engine_name: str) -> bool:
         return False
 
 
-def create_postgres_connection(server) -> bool:
-    """Create PostgreSQL database connection in MindsDB."""
-    db_name = "banking_postgres_db"
+def create_postgres_connection(server, db_name: str = "banking_postgres_db") -> bool:
+    """Create PostgreSQL database connection in MindsDB.
 
+    Args:
+        server: MindsDB server connection
+        db_name: Name for the database connection (default: banking_postgres_db)
+
+    Returns:
+        True if connection was created successfully or already exists
+    """
     if check_database_exists(server, db_name):
         print(f"✓ Database '{db_name}' already exists, skipping creation")
         return True
@@ -85,10 +155,16 @@ def create_postgres_connection(server) -> bool:
         return False
 
 
-def create_openai_engine(server) -> bool:
-    """Create OpenAI ML engine in MindsDB."""
-    engine_name = "openai_engine"
+def create_openai_engine(server, engine_name: str = "openai_engine") -> bool:
+    """Create OpenAI ML engine in MindsDB.
 
+    Args:
+        server: MindsDB server connection
+        engine_name: Name for the ML engine (default: openai_engine)
+
+    Returns:
+        True if engine was created successfully or already exists
+    """
     if not OPENAI_API_KEY:
         print(f"\n⚠ OPENAI_API_KEY not found in environment variables")
         print(f"⚠ Skipping OpenAI engine creation")
@@ -123,66 +199,3 @@ def create_openai_engine(server) -> bool:
     except Exception as e:
         print(f"✗ Failed to create ML engine: {e}")
         return False
-
-
-def init_mindsdb(verbose: bool = True) -> bool:
-    """Initialize MindsDB with all required components.
-
-    Args:
-        verbose: Whether to print detailed logs
-
-    Returns:
-        True if initialization was successful
-    """
-    if verbose:
-        print("=" * 70)
-        print("MindsDB Initialization")
-        print("=" * 70)
-        print(f"\nConnecting to MindsDB at {MINDSDB_URL}...")
-
-    try:
-        server = mindsdb_sdk.connect(MINDSDB_URL)
-        if verbose:
-            print("✓ Successfully connected to MindsDB")
-    except Exception as e:
-        print(f"✗ Failed to connect to MindsDB: {e}")
-        print(f"\nPlease ensure MindsDB is running at {MINDSDB_URL}")
-        return False
-
-    # Step 1: Create PostgreSQL connection
-    success = create_postgres_connection(server)
-    if not success and verbose:
-        print("\n⚠ PostgreSQL connection setup failed, but continuing...")
-
-    # Step 2: Create OpenAI engine
-    success = create_openai_engine(server)
-    if not success and verbose:
-        print("\n⚠ OpenAI engine setup failed, but continuing...")
-
-    # Step 3: Create all agents
-    agent_results = create_agents(server)
-
-    if verbose:
-        print("\n" + "=" * 70)
-        print("✓ MindsDB initialization completed!")
-        print("=" * 70)
-        print("\nAvailable components:")
-        print("  - Database: banking_postgres_db")
-        print("  - ML Engine: openai_engine")
-        print("  - Agents:")
-        for agent_name, success in agent_results.items():
-            status = "✓" if success else "✗"
-            print(f"    {status} {agent_name}")
-
-    return True
-
-
-def main(verbose: bool = True) -> bool:
-    """Main entry point for standalone execution."""
-    success = init_mindsdb(verbose=verbose)
-    return success
-
-
-if __name__ == "__main__":
-    success = main(verbose=True)
-    sys.exit(0 if success else 1)

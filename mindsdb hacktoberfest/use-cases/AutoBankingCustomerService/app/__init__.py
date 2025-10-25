@@ -13,7 +13,7 @@ from .api import router as api_router
 from .db import init_postgres, DEFAULT_DB_CONFIG
 from .jira_client import JiraClientError, build_default_client
 from .salesforce_client import SalesforceClientError, build_default_client as build_salesforce_client
-from .agents import register_agent, clear_agents
+from .mindsdb import register_agent, clear_agents
 
 load_dotenv()
 
@@ -58,8 +58,8 @@ async def startup_event() -> None:
     # Step 2: Initialize MindsDB (create database, engine, agents)
     print("\nStep 2: Initializing MindsDB...")
     try:
-        from .init_mindsdb import init_mindsdb
-        init_success = init_mindsdb(verbose=True)
+        from .mindsdb import init_mindsdb
+        init_success = init_mindsdb(verbose=True, init_jobs=False)
         if init_success:
             print("✓ MindsDB initialization completed")
         else:
@@ -97,7 +97,7 @@ async def startup_event() -> None:
         # Initialize analytics JOBs
         print("\nStep 3.5: Initializing MindsDB analytics JOBs...")
         try:
-            from .init_mindsdb_jobs import init_mindsdb_jobs
+            from .mindsdb import init_mindsdb_jobs
             jobs_success = init_mindsdb_jobs(mindsdb_server, recreate=False, verbose=True)
             if jobs_success:
                 print("✓ MindsDB JOBs initialized")

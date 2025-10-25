@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from fastapi import HTTPException
 
 from . import db
-from .agents import get_agent, query_classification_agent, query_recommendation_agent
+from .mindsdb import get_agent, query_classification_agent, query_recommendation_agent
 from .jira_client import JiraClient, JiraClientError
 from .salesforce_client import SalesforceClient, SalesforceClientError
 

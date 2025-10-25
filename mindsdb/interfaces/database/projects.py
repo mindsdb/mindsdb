@@ -38,7 +38,7 @@ class Project:
         return p
 
     def create(self, name: str):
-        company_id = ctx.company_id if ctx.company_id is not None else 0
+        company_id = ctx.company_id if ctx.company_id is not None else "0"
 
         existing_record = db.Integration.query.filter(
             db.Integration.name == name, db.Integration.company_id == ctx.company_id
@@ -500,7 +500,7 @@ class ProjectController:
         pass
 
     def get_list(self) -> List[Project]:
-        company_id = ctx.company_id if ctx.company_id is not None else 0
+        company_id = ctx.company_id if ctx.company_id is not None else "0"
         records = db.Project.query.filter(
             (db.Project.company_id == company_id) & (db.Project.deleted_at == sa.null())
         ).order_by(db.Project.name)
@@ -534,7 +534,7 @@ class ProjectController:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' can't be provided at the same time")
 
-        company_id = ctx.company_id if ctx.company_id is not None else 0
+        company_id = ctx.company_id if ctx.company_id is not None else "0"
         q = db.Project.query.filter_by(company_id=company_id)
 
         if id is not None:

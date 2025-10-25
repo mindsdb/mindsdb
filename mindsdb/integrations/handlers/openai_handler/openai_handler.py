@@ -189,10 +189,17 @@ class OpenAIHandler(BaseMLEngine):
 
         unknown_args = set(args.keys()) - known_args
         if unknown_args:
-            # return a list of unknown args as a string
-            raise Exception(
-                f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
-            )
+            # Handle common parameter mapping for OpenAI-compatible APIs
+            suggestion_msg = ""
+            if "api_key" in unknown_args and "openai_api_key" not in args:
+                suggestion_msg += "\nHint: Use 'openai_api_key' instead of 'api_key'."
+            if "base_url" in unknown_args and "api_base" not in args:
+                suggestion_msg += "\nHint: Use 'api_base' instead of 'base_url'."
+
+            error_msg = f"Unknown arguments: {', '.join(sorted(unknown_args))}.\nKnown arguments are: {', '.join(sorted(known_args))}{suggestion_msg}"
+
+            # Raise a clear, descriptive exception
+            raise ValueError(error_msg)
 
         engine_storage = kwargs["handler_storage"]
         connection_args = engine_storage.get_connection_args()

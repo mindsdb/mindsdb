@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import uuid
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -10,16 +9,16 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from fastapi import HTTPException
 
 from . import db
+from .mindsdb import get_agent, query_classification_agent, query_recommendation_agent
 from .jira_client import JiraClient, JiraClientError
 from .salesforce_client import SalesforceClient, SalesforceClientError
-from .recommendation_client import RecommendationClient, RecommendationClientError
 
+# Legacy support - keep for backward compatibility
 classification_agent = None
 _mindsdb_server = None
 _db_config_override: Optional[Dict[str, Any]] = None
 _jira_client: Optional[JiraClient] = None
 _salesforce_client: Optional[SalesforceClient] = None
-_recommendation_client: Optional[RecommendationClient] = None
 
 
 def set_agent(agent: Any) -> None:
@@ -49,55 +48,43 @@ def set_salesforce_client(client: Optional[SalesforceClient]) -> None:
     _salesforce_client = client
 
 
-def set_recommendation_client(client: Optional[RecommendationClient]) -> None:
-    """Lifecycle hook used during app startup to inject the recommendation client."""
-    global _recommendation_client
-    _recommendation_client = client
-
-
 def get_db_config() -> Optional[Dict[str, Any]]:
     return _db_config_override
 
 
 def clear_state() -> None:
-    global classification_agent, _mindsdb_server, _jira_client, _salesforce_client, _recommendation_client
+    global classification_agent, _mindsdb_server, _jira_client, _salesforce_client
     classification_agent = None
     _mindsdb_server = None
     _jira_client = None
     _salesforce_client = None
-    _recommendation_client = None
 
 
 def query_agent(conversation_text: str) -> Dict[str, Any]:
-    if classification_agent is None:
+    """Query classification agent to analyze a conversation.
+
+    This function uses the new agent registry system but falls back to
+    the legacy global agent variable for backward compatibility.
+    """
+    # Try new agent registry first
+    agent = get_agent("classification_agent")
+
+    # Fall back to legacy global variable
+    if agent is None:
+        agent = classification_agent
+
+    if agent is None:
         raise HTTPException(
             status_code=503,
             detail="Classification agent not initialized. Make sure MindsDB is running.",
         )
 
     try:
-        completion = classification_agent.completion(
-            [
-                {
-                    "question": conversation_text,
-                    "answer": None,
-                }
-            ]
-        )
-    except Exception as exc:  # pragma: no cover - network failure guard
-        raise HTTPException(status_code=500, detail=f"Agent query failed: {exc}") from exc
-
-    response_text = completion.content
-
-    summary_match = re.search(r"Summary:\s*(.+?)(?=Status:)", response_text, re.DOTALL)
-    status_match = re.search(
-        r"Status:\s*(RESOLVED|UNRESOLVED)", response_text, re.IGNORECASE
-    )
-
-    summary = summary_match.group(1).strip() if summary_match else response_text.strip()
-    status = status_match.group(1).upper() if status_match else "UNRESOLVED"
-
-    return {"summary": summary, "resolved": status == "RESOLVED"}
+        return query_classification_agent(agent, conversation_text)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 def process_conversation(conversation_text: str) -> Dict[str, Any]:
@@ -140,15 +127,21 @@ def process_conversation(conversation_text: str) -> Dict[str, Any]:
 
     # Get recommendation for unresolved issues
     if not analysis["resolved"]:
-        if _recommendation_client is None:
-            recommendation_error = "Recommendation client not configured; skipped recommendation generation."
+        # Get recommendation agent from registry
+        recommendation_agent = get_agent("recommendation_agent")
+
+        if recommendation_agent is None:
+            recommendation_error = "Recommendation agent not configured; skipped recommendation generation."
         else:
             try:
-                recommendation = _recommendation_client.get_recommendation(
-                    conversation_text=conversation_text,
-                    summary=analysis["summary"] or "No summary generated"
+                recommendation = query_recommendation_agent(
+                    recommendation_agent,
+                    conversation_summary=analysis["summary"] or "No summary generated",
+                    conversation_text=conversation_text
                 )
-            except RecommendationClientError as exc:
+            except ValueError as exc:
+                recommendation_error = f"Recommendation agent not available: {exc}"
+            except RuntimeError as exc:
                 recommendation_error = f"Failed to get recommendation: {exc}"
             except Exception as exc:  # pragma: no cover - guard against unexpected errors
                 recommendation_error = f"Unexpected recommendation error: {exc}"

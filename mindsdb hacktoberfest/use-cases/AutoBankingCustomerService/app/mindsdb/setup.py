@@ -21,13 +21,16 @@ from .connection import (
     create_postgres_connection,
 )
 from .jobs import init_mindsdb_jobs
+from .knowledge_bases import init_knowledge_bases
 
 
 def init_mindsdb(
     url: Optional[str] = None,
     verbose: bool = True,
     init_jobs: bool = True,
-    recreate_jobs: bool = False
+    recreate_jobs: bool = False,
+    init_kbs: bool = True,
+    recreate_kbs: bool = False
 ) -> bool:
     """Initialize MindsDB with all required components.
 
@@ -37,12 +40,15 @@ def init_mindsdb(
     3. Creates OpenAI ML engine
     4. Creates all agents (classification, recommendation, analytics)
     5. Initializes scheduled analytics JOBs (optional)
+    6. Initializes knowledge bases for Confluence integration (optional)
 
     Args:
         url: MindsDB URL (uses MINDSDB_URL env var if not provided)
         verbose: Whether to print detailed logs
         init_jobs: Whether to initialize scheduled JOBs
         recreate_jobs: If True, drop and recreate existing JOBs
+        init_kbs: Whether to initialize knowledge bases
+        recreate_kbs: If True, drop and recreate existing knowledge bases
 
     Returns:
         True if initialization was successful
@@ -94,6 +100,18 @@ def init_mindsdb(
             if verbose:
                 print(f"\n⚠ JOB initialization failed: {jobs_exc}")
 
+    # Step 6: Initialize knowledge bases (optional)
+    if init_kbs:
+        if verbose:
+            print("\nStep 6: Initializing knowledge bases...")
+        try:
+            kbs_success = init_knowledge_bases(server, recreate=recreate_kbs, verbose=verbose)
+            if not kbs_success and verbose:
+                print("\n⚠ Some knowledge bases had issues during initialization")
+        except Exception as kbs_exc:
+            if verbose:
+                print(f"\n⚠ Knowledge base initialization failed: {kbs_exc}")
+
     # Summary
     if verbose:
         print("\n" + "=" * 70)
@@ -110,6 +128,9 @@ def init_mindsdb(
             print("  - Analytics JOBs:")
             print("    • daily_conversation_analysis (Daily at 23:00)")
             print("    • weekly_trends_analysis (Sunday at 23:30)")
+        if init_kbs:
+            print("  - Knowledge Bases:")
+            print("    • my_confluence_kb (Confluence documentation)")
 
     return True
 

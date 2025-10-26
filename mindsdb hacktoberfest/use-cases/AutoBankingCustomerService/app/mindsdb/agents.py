@@ -143,23 +143,20 @@ def create_agent(server, agent_name: str, config: Optional[Dict[str, Any]] = Non
 
     print(f"\nCreating agent '{agent_name}'...")
 
-    # Escape single quotes in prompt
-    prompt = agent_config["prompt_template"].replace("'", "''")
+    # Use SDK API instead of SQL to create agent
     model = agent_config["model"]
-
-    sql = f"""
-    CREATE AGENT {agent_name}
-    USING
-        model = {{
-            "provider": "{model['provider']}",
-            "model_name": "{model['model_name']}",
-            "api_key": "{model['api_key']}"
-        }},
-        prompt_template = '{prompt}';
-    """
+    prompt = agent_config["prompt_template"]
 
     try:
-        server.query(sql)
+        server.agents.create(
+            name=agent_name,
+            model={
+                "provider": model["provider"],
+                "model_name": model["model_name"],
+                "api_key": model["api_key"]
+            },
+            prompt_template=prompt
+        )
         print(f"✓ Successfully created agent '{agent_name}'")
         return True
     except Exception as e:

@@ -4,6 +4,7 @@ This package provides:
 - Agent management (classification, recommendation, analytics)
 - Database connection setup
 - Job scheduling for automated analytics
+- Knowledge base management for Confluence integration
 - Initialization and orchestration
 
 Usage:
@@ -42,6 +43,13 @@ from .jobs import (
     drop_job_if_exists,
     init_mindsdb_jobs,
 )
+from .knowledge_bases import (
+    check_kb_exists,
+    create_confluence_database,
+    create_confluence_kb,
+    drop_kb_if_exists,
+    init_knowledge_bases,
+)
 from .setup import init_mindsdb
 
 __all__ = [
@@ -70,4 +78,10 @@ __all__ = [
     "create_weekly_trends_job",
     "drop_job_if_exists",
     "init_mindsdb_jobs",
+    # Knowledge base functions
+    "check_kb_exists",
+    "create_confluence_database",
+    "create_confluence_kb",
+    "drop_kb_if_exists",
+    "init_knowledge_bases",
 ]

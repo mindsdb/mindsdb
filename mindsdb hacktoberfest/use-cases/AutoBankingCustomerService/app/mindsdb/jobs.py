@@ -71,9 +71,8 @@ def create_daily_analytics_job(server, recreate: bool = False) -> bool:
 
     print(f"\nCreating JOB '{job_name}'...")
 
-    # MindsDB JOB SQL - runs daily at 23:00
-    sql = f"""
-    CREATE JOB {job_name} (
+    # MindsDB JOB query - runs daily at 23:00
+    query = """
         INSERT INTO banking_postgres_db.daily_analytics (
             analysis_date,
             total_conversations,
@@ -133,12 +132,15 @@ def create_daily_analytics_job(server, recreate: bool = False) -> bool:
         WHERE DATE(created_at) = CURRENT_DATE
         AND summary IS NOT NULL
         GROUP BY DATE(created_at)
-    )
-    EVERY 1 day AT '23:00';
     """
 
     try:
-        server.query(sql)
+        # Use SDK API instead of SQL CREATE JOB
+        server.create_job(
+            name=job_name,
+            query_str=query,
+            repeat_str='1 day'
+        )
         print(f"✓ Successfully created JOB '{job_name}'")
         print(f"  Schedule: Daily at 23:00")
         return True
@@ -170,9 +172,8 @@ def create_weekly_trends_job(server, recreate: bool = False) -> bool:
 
     print(f"\nCreating JOB '{job_name}'...")
 
-    # MindsDB JOB SQL - runs weekly on Sunday at 23:30
-    sql = f"""
-    CREATE JOB {job_name} (
+    # MindsDB JOB query - runs weekly on Sunday at 23:30
+    query = """
         INSERT INTO banking_postgres_db.weekly_trends (
             week_start_date,
             week_end_date,
@@ -264,12 +265,15 @@ def create_weekly_trends_job(server, recreate: bool = False) -> bool:
         WHERE analysis_date >= DATE_TRUNC('week', CURRENT_DATE)
         AND analysis_date <= CURRENT_DATE
         GROUP BY DATE_TRUNC('week', CURRENT_DATE)
-    )
-    EVERY 1 week ON Sunday AT '23:30';
     """
 
     try:
-        server.query(sql)
+        # Use SDK API instead of SQL CREATE JOB
+        server.create_job(
+            name=job_name,
+            query_str=query,
+            repeat_str='1 week'
+        )
         print(f"✓ Successfully created JOB '{job_name}'")
         print(f"  Schedule: Weekly on Sunday at 23:30")
         return True

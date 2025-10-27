@@ -232,8 +232,6 @@ class Integration(Base):
     data = Column(Json)
     company_id = Column(String)
 
-    meta_tables = relationship("MetaTables", back_populates="integration")
-
     __table_args__ = (UniqueConstraint("name", "company_id", name="unique_integration_name_company_id"),)
 
 

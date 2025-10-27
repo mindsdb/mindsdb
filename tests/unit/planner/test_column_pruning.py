@@ -287,24 +287,6 @@ class TestColumnPruning:
         assert "quantity" in query_str
         assert "discount" in query_str
 
-    def test_predictor_join_with_pruning(self):
-        """Test that column pruning works with predictor joins."""
-        query = parse_sql("""
-            SELECT t1.id, pred.prediction
-            FROM int1.table1 t1
-            JOIN mindsdb.my_predictor pred
-        """)
-
-        plan = plan_query(
-            query, integrations=["int1"], predictor_namespace="mindsdb", predictor_metadata={"my_predictor": {}}
-        )
-
-        # Table should only fetch 'id'
-        query_str = str(plan.steps[0].query)
-        assert "`id`" in query_str or "id" in query_str
-        assert "SELECT *" not in query_str
-
-
 class TestColumnPruningEdgeCases:
     """Test edge cases and error conditions."""
 

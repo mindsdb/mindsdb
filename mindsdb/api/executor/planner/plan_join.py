@@ -439,6 +439,13 @@ class PlanJoinTablesQuery:
             # Regular column reference
             query_traversal(field, add_column_callback)
 
+    def _join_has_predictor(self, join_sequence) -> bool:
+        """Check if the join sequence contains any predictor."""
+        for item in join_sequence:
+            if isinstance(item, TableInfo) and item.predictor_info is not None:
+                return True
+        return False
+
     def _can_prune_columns(self, table_info) -> bool:
         """
         Determine if column pruning can be applied to this table.
@@ -449,6 +456,11 @@ class PlanJoinTablesQuery:
         """
         # Predictors/models: cannot prune (need all input features)
         if table_info.predictor_info is not None:
+            return False
+
+        # If this table is part of a join with a predictor: cannot prune
+        # Predictors may need all columns from joined tables as input features
+        if hasattr(self, 'join_sequence') and self._join_has_predictor(self.join_sequence):
             return False
 
         # For subselects: can only prune if they have pure SELECT * (no other columns)

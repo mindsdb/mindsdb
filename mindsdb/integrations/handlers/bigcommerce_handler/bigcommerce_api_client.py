@@ -82,6 +82,114 @@ class BigCommerceAPIClient:
         response = self._make_request("GET", urljoin(self.base_url, "v3/products"), params={"limit": 1})
         return response["meta"]["pagination"]["total"]
 
+    def get_categories(
+        self,
+        filter: dict = None,
+        limit: int = 999999999,
+    ):
+        # doc: https://developer.bigcommerce.com/docs/rest-catalog/category-trees/categories#get-all-categories
+        params = {
+            "limit": limit,
+        }
+        if filter is not None:
+            params.update(filter)
+        return self._make_request_v3("GET", "catalog/trees/categories", params=params)
+
+    def get_categories_count(self) -> int:
+        response = self._make_request("GET", urljoin(self.base_url, "v3/catalog/trees/categories"), params={"limit": 1})
+        return response.get("meta", {}).get("pagination", {}).get("total", 0)
+
+    def get_pickups(
+        self,
+        filter: dict = None,
+        limit: int = 999999999,
+    ):
+        # doc: https://developer.bigcommerce.com/docs/rest-management/pickup#get-pickups
+        params = {
+            "limit": limit,
+        }
+        if filter is not None:
+            params.update(filter)
+        return self._make_request_v3("GET", "orders/pickups", params=params)
+
+    def get_pickups_count(self) -> int:
+        response = self._make_request("GET", urljoin(self.base_url, "v3/pickups"), params={"limit": 1})
+        return response.get("meta", {}).get("pagination", {}).get("total", 0)
+
+    def get_promotions(
+        self,
+        filter: dict = None,
+        sort_condition: dict = None,
+        limit: int = 999999999,
+    ):
+        # doc: https://developer.bigcommerce.com/docs/rest-management/promotions/promotions-bulk#get-all-promotions
+        params = {
+            "limit": limit,
+        }
+        if filter is not None:
+            params.update(filter)
+        if sort_condition is not None:
+            params.update(sort_condition)
+        return self._make_request_v3("GET", "promotions", params=params)
+
+    def get_promotions_count(self) -> int:
+        response = self._make_request("GET", urljoin(self.base_url, "v3/promotions"), params={"limit": 1})
+        return response.get("meta", {}).get("pagination", {}).get("total", 0)
+
+    def get_wishlists(
+        self,
+        filter: dict = None,
+        limit: int = 999999999,
+    ):
+        # doc: https://developer.bigcommerce.com/docs/rest-management/wishlists#get-all-wishlists
+        params = {
+            "limit": limit,
+        }
+        if filter is not None:
+            params.update(filter)
+        return self._make_request_v3("GET", "wishlists", params=params)
+
+    def get_wishlists_count(self) -> int:
+        response = self._make_request("GET", urljoin(self.base_url, "v3/wishlists"), params={"limit": 1})
+        return response.get("meta", {}).get("pagination", {}).get("total", 0)
+
+    def get_segments(
+        self,
+        filter: dict = None,
+        limit: int = 999999999,
+    ):
+        # doc: https://developer.bigcommerce.com/docs/rest-management/customer-segmentation/segments#get-all-segments
+        params = {
+            "limit": limit,
+        }
+        if filter is not None:
+            params.update(filter)
+        return self._make_request_v3("GET", "segments", params=params)
+
+    def get_segments_count(self) -> int:
+        response = self._make_request("GET", urljoin(self.base_url, "v3/segments"), params={"limit": 1})
+        return response.get("meta", {}).get("pagination", {}).get("total", 0)
+
+    def get_brands(
+        self,
+        filter: dict = None,
+        sort_condition: dict = None,
+        limit: int = 999999999,
+    ):
+        # doc: https://developer.bigcommerce.com/docs/rest-catalog/brands#get-all-brands
+        params = {
+            "limit": limit,
+        }
+        if filter is not None:
+            params.update(filter)
+        if sort_condition is not None:
+            params.update(sort_condition)
+        return self._make_request_v3("GET", "catalog/brands", params=params)
+
+    def get_brands_count(self) -> int:
+        response = self._make_request("GET", urljoin(self.base_url, "v3/catalog/brands"), params={"limit": 1})
+        return response.get("meta", {}).get("pagination", {}).get("total", 0)
+
     def _make_request_v2(self, method: str, url: str, *args, **kwargs) -> list[dict]:
         url = urljoin(urljoin(self.base_url, "v2/"), url)
         response = self._make_request(method, url, *args, **kwargs)

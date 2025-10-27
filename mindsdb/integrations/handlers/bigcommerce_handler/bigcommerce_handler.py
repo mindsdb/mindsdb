@@ -5,6 +5,12 @@ from mindsdb.integrations.handlers.bigcommerce_handler.bigcommerce_tables import
     BigCommerceOrdersTable,
     BigCommerceProductsTable,
     BigCommerceCustomersTable,
+    BigCommerceCategoriesTable,
+    BigCommercePickupsTable,
+    BigCommercePromotionsTable,
+    BigCommerceWishlistsTable,
+    BigCommerceSegmentsTable,
+    BigCommerceBrandsTable,
 )
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
@@ -41,6 +47,12 @@ class BigCommerceHandler(MetaAPIHandler):
         self._register_table("orders", BigCommerceOrdersTable(self))
         self._register_table("products", BigCommerceProductsTable(self))
         self._register_table("customers", BigCommerceCustomersTable(self))
+        self._register_table("categories", BigCommerceCategoriesTable(self))
+        self._register_table("pickups", BigCommercePickupsTable(self))
+        self._register_table("promotions", BigCommercePromotionsTable(self))
+        self._register_table("wishlists", BigCommerceWishlistsTable(self))
+        self._register_table("segments", BigCommerceSegmentsTable(self))
+        self._register_table("brands", BigCommerceBrandsTable(self))
 
     def connect(self) -> BigCommerceAPIClient:
         """

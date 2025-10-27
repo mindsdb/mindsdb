@@ -12,6 +12,89 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
+def _make_filter(conditions: list[FilterCondition], op_map: dict) -> dict:
+    """Creates a filter dictionary, that can be used in the BigCommerce API.
+
+    Args:
+        conditions (list[FilterCondition]): The list of parsed filter conditions.
+        op_map (dict): The mapping of filter operators to API parameters.
+
+    Returns:
+        dict: The filter dictionary.
+    """
+    filter = {}
+    for condition in conditions:
+        simple_op = op_map.get((condition.column, condition.op))
+        if simple_op:
+            value = condition.value
+            if isinstance(value, list):
+                value = ",".join(map(str, value))
+            filter[simple_op] = value
+            condition.applied = True
+    return filter
+
+
+def _make_df(result: list[dict], table: MetaAPIResource):
+    """Converts a list of dictionaries to a pandas DataFrame.
+    If the list is empty, an empty DataFrame is returned with the columns from the table.
+
+    Args:
+        result (list[dict]): The list of dictionaries to convert.
+        table (MetaAPIResource): The table class.
+
+    Returns:
+        pd.DataFrame: The resulting DataFrame.
+    """
+    if len(result) == 0:
+        result = pd.DataFrame([], columns=table.get_columns())
+    else:
+        result = pd.DataFrame(result)
+    return result
+
+
+def _make_sort_condition_v3(sort: list[SortColumn], sortable_columns: list[str]):
+    """Creates a sort condition for the BigCommerce API v3.
+
+    Args:
+        sort (list[SortColumn]): The list of parsed sort columns.
+        sortable_columns (list[str]): The list of sortable columns.
+
+    Returns:
+        dict: The sort condition, that can be used in the BigCommerce API v3.
+    """
+    sort_condition = None
+    if isinstance(sort, list) and len(sort) == 1 and sort[0].column in sortable_columns:
+        sort_column = sort[0]
+        sort_column.applied = True
+        sort_condition = {
+            "sort": sort_column.column,
+            "direction": "asc" if sort_column.ascending else "desc",
+        }
+    return sort_condition
+
+
+def _make_sort_condition_v2(sort: list[SortColumn], sortable_columns: list[str]):
+    """Creates a sort condition for the BigCommerce API v2.
+
+    Args:
+        sort (list[SortColumn]): The list of parsed sort columns.
+        sortable_columns (list[str]): The list of sortable columns.
+
+    Returns:
+        dict: The sort condition, that can be used in the BigCommerce API v2.
+    """
+    sort_condition = None
+    if (
+        isinstance(sort, list)
+        and len(sort) == 0
+        and sort[0].column in sortable_columns
+    ):
+        sort_column = sort[0]
+        sort_column.applied = True
+        sort_condition = f"{sort_column.column}:{'asc' if sort_column.ascending else 'desc'}"
+    return sort_condition
+
+
 class BigCommerceOrdersTable(MetaAPIResource):
     """
     The table abstraction for the 'orders' resource of the BigCommerce API.
@@ -21,16 +104,20 @@ class BigCommerceOrdersTable(MetaAPIResource):
 
     def list(
         self,
-        conditions: List[FilterCondition] = None,
+        conditions: list[FilterCondition] = None,
         limit: int = None,
-        sort: List[SortColumn] = None,
+        sort: list[SortColumn] = None,
         **kwargs,
     ):
-        """
+        """ Executes a parsed SELECT SQL query on the 'orders' resource of the BigCommerce API.
+
         Args:
-            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            conditions (list[FilterCondition]): The list of parsed filter conditions.
             limit (int): The maximum number of records to return.
-            sort (List[SortColumn]): The list of parsed sort columns.
+            sort (list[SortColumn]): The list of parsed sort columns.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame.
         """
         client: BigCommerceAPIClient = self.handler.connect()
 
@@ -52,34 +139,22 @@ class BigCommerceOrdersTable(MetaAPIResource):
             ("external_order_id", FilterOperator.EQUAL): "external_order_id",
         }
 
-        filter = {}
-        for condition in conditions:
-            simple_op = simple_op_map.get((condition.column, condition.op))
-            if simple_op:
-                value = condition.value
-                if isinstance(value, list):
-                    value = ",".join(map(str, value))
-                filter[simple_op] = value
-                condition.applied = True
+        filter = _make_filter(conditions, simple_op_map)
 
-        sort_condition = None
-        if sort:
-            if len(sort) > 1:
-                raise ValueError("Only one column may by used for order by")
-            sort_column = sort[0]
-            if sort_column.column not in [
-                "id",
-                "customer_id",
-                "date_created",
-                "date_modified",
-                "status_id",
-                "channel_id",
-                "external_id",
-            ]:
-                raise ValueError(f"Unsupported sort column: {sort_column.column}")
-            sort_condition = {"sort": sort_column.column, "direction": "asc" if sort_column.ascending else "desc"}
+        sortable_columns = [
+            "id",
+            "customer_id",
+            "date_created",
+            "date_modified",
+            "status_id",
+            "channel_id",
+            "external_id",
+        ]
+        sort_condition = _make_sort_condition_v3(sort, sortable_columns)
 
         result = client.get_orders(filter=filter, sort_condition=sort_condition, limit=limit)
+        result = _make_df(result, self)
+
         decimal_columns = [
             "base_handling_cost",
             "base_shipping_cost",
@@ -107,13 +182,9 @@ class BigCommerceOrdersTable(MetaAPIResource):
             "wrapping_cost_inc_tax",
             "wrapping_cost_tax",
         ]
-        if len(result) == 0:
-            result = pd.DataFrame([], columns=self.get_columns())
-        else:
-            result = pd.DataFrame(result)
-            for column_name in decimal_columns:
-                if column_name in result:
-                    result[column_name] = result[column_name].apply(Decimal)
+        for column_name in decimal_columns:
+            if column_name in result:
+                result[column_name] = result[column_name].apply(Decimal)
 
         return result
 
@@ -122,7 +193,7 @@ class BigCommerceOrdersTable(MetaAPIResource):
         Retrieves the attributes (columns) of the 'orders' resource.
 
         Returns:
-            List[str]: A list of attributes (columns) of the 'orders' resource.
+            list[str]: A list of attributes (columns) of the 'orders' resource.
         """
         columns = self.meta_get_columns()
         return [column["COLUMN_NAME"] for column in columns]
@@ -137,7 +208,7 @@ class BigCommerceOrdersTable(MetaAPIResource):
             "row_count": orders_count,
         }
 
-    def meta_get_columns(self, *args, **kwargs):
+    def meta_get_columns(self, *args, **kwargs) -> List[str]:
         return [
             {"TABLE_NAME": "orders", "COLUMN_NAME": "id", "DATA_TYPE": "INT"},
             {"TABLE_NAME": "orders", "COLUMN_NAME": "customer_id", "DATA_TYPE": "INT"},
@@ -229,20 +300,23 @@ class BigCommerceProductsTable(MetaAPIResource):
 
     def list(
         self,
-        conditions: List[FilterCondition] = None,
+        conditions: list[FilterCondition] = None,
         limit: int = None,
-        sort: List[SortColumn] = None,
-        targets: List[str] = None,
+        sort: list[SortColumn] = None,
+        targets: list[str] = None,
         **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'products' resource of the BigCommerce API.
 
         Args:
-            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            conditions (list[FilterCondition]): The list of parsed filter conditions.
             limit (int): The maximum number of records to return.
-            sort (List[SortColumn]): The list of parsed sort columns.
-            targets (List[str]): The list of target columns to return.
+            sort (list[SortColumn]): The list of parsed sort columns.
+            targets (list[str]): The list of target columns to return.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame.
         """
         client: BigCommerceAPIClient = self.handler.connect()
 
@@ -302,6 +376,8 @@ class BigCommerceProductsTable(MetaAPIResource):
                 filter[simple_op] = value
                 condition.applied = True
 
+        filter = _make_filter(conditions, simple_op_map)
+
         if targets:
             available_columns = self.get_columns()
             for column_name in targets:
@@ -309,41 +385,34 @@ class BigCommerceProductsTable(MetaAPIResource):
                     raise ValueError(f"Field '{column_name}' does not exists")
             filter["include_fields"] = ",".join(targets)
 
-        sort_condition = None
-        if sort:
-            if len(sort) > 1:
-                raise ValueError("Only one column may by used for order by")
-            sort_column = sort[0]
-            if sort_column.column not in [
-                "id",
-                "name",
-                "sku",
-                "price",
-                "date_modified",
-                "date_last_imported",
-                "inventory_level",
-                "is_visible",
-                "total_sold",
-                "calculated_price",
-            ]:
-                raise ValueError(f"Unsupported sort column: {sort_column.column}")
-            sort_condition = {"sort": sort_column.column, "direction": "asc" if sort_column.ascending else "desc"}
+        sortable_columns = [
+            "id",
+            "name",
+            "sku",
+            "price",
+            "date_modified",
+            "date_last_imported",
+            "inventory_level",
+            "is_visible",
+            "total_sold",
+            "calculated_price",
+        ]
+        sort_condition = _make_sort_condition_v3(sort, sortable_columns)
 
         result = client.get_products(
             filter=filter,
             sort_condition=sort_condition,
             limit=limit,
         )
-        result = pd.DataFrame(result)
+        result = _make_df(result, self)
 
         return result
 
     def get_columns(self) -> List[str]:
-        """
-        Retrieves the attributes (columns) of the 'products' resource.
+        """Retrieves the columns names of the 'products' resource.
 
         Returns:
-            List[Text]: A list of attributes (columns) of the 'products' resource.
+            list[str]: A list of columns names of the 'products' resource.
         """
         columns = self.meta_get_columns()
         return [column["COLUMN_NAME"] for column in columns]
@@ -358,7 +427,7 @@ class BigCommerceProductsTable(MetaAPIResource):
             "row_count": products_count,
         }
 
-    def meta_get_columns(self, *args, **kwargs):
+    def meta_get_columns(self, *args, **kwargs) -> List[str]:
         return [
             {"TABLE_NAME": "products", "COLUMN_NAME": "id", "DATA_TYPE": "INT"},
             {"TABLE_NAME": "products", "COLUMN_NAME": "name", "DATA_TYPE": "TEXT"},
@@ -440,20 +509,21 @@ class BigCommerceCustomersTable(MetaAPIResource):
 
     def list(
         self,
-        conditions: List[FilterCondition] = None,
+        conditions: list[FilterCondition] = None,
         limit: int = None,
-        sort: List[SortColumn] = None,
-        targets: List[str] = None,
+        sort: list[SortColumn] = None,
         **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'customers' resource of the BigCommerce API.
 
         Args:
-            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            conditions (list[FilterCondition]): The list of parsed filter conditions.
             limit (int): The maximum number of records to return.
-            sort (List[SortColumn]): The list of parsed sort columns.
-            targets (List[str]): The list of target columns to return.
+            sort (list[SortColumn]): The list of parsed sort columns.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame.
         """
         # doc: https://developer.bigcommerce.com/docs/rest-management/customers
         client: BigCommerceAPIClient = self.handler.connect()
@@ -475,41 +545,25 @@ class BigCommerceCustomersTable(MetaAPIResource):
             ("registration_ip_address", FilterOperator.IN): "registration_ip_address:in",
         }
 
-        filter = {}
-        for condition in conditions:
-            simple_op = simple_op_map.get((condition.column, condition.op))
-            if simple_op:
-                value = condition.value
-                if isinstance(value, list):
-                    value = ",".join(map(str, value))
-                filter[simple_op] = value
-                condition.applied = True
+        filter = _make_filter(conditions, simple_op_map)
 
-        sort_condition = None
-        if (
-            isinstance(sort, list)
-            and len(sort) == 0
-            and sort[0].column in ["date_created", "last_name", "date_modified"]
-        ):
-            sort_column = sort[0]
-            sort_column.applied = True
-            sort_condition = f"{sort_column.column}:{'asc' if sort_column.ascending else 'desc'}"
+        sortable_columns = ["date_created", "last_name", "date_modified"]
+        sort_condition = _make_sort_condition_v2(sort, sortable_columns)
 
         result = client.get_customers(
             filter=filter,
             sort_condition=sort_condition,
             limit=limit,
         )
-        result = pd.DataFrame(result)
+        result = _make_df(result, self)
 
         return result
 
     def get_columns(self) -> List[str]:
-        """
-        Retrieves the attributes (columns) of the 'customers' resource.
+        """Retrieves the columns names of the 'customers' resource.
 
         Returns:
-            List[Text]: A list of attributes (columns) of the 'customers' resource.
+            list[str]: A list of columns names of the 'customers' resource.
         """
         columns = self.meta_get_columns()
         return [column["COLUMN_NAME"] for column in columns]
@@ -524,7 +578,7 @@ class BigCommerceCustomersTable(MetaAPIResource):
             "row_count": customers_count,
         }
 
-    def meta_get_columns(self, *args, **kwargs):
+    def meta_get_columns(self, *args, **kwargs) -> List[str]:
         return [
             {"TABLE_NAME": "customers", "COLUMN_NAME": "id", "DATA_TYPE": "INT"},
             {"TABLE_NAME": "customers", "COLUMN_NAME": "authentication", "DATA_TYPE": "JSON"},
@@ -546,4 +600,496 @@ class BigCommerceCustomersTable(MetaAPIResource):
             },
             {"TABLE_NAME": "customers", "COLUMN_NAME": "origin_channel_id", "DATA_TYPE": "INT"},
             {"TABLE_NAME": "customers", "COLUMN_NAME": "channel_ids", "DATA_TYPE": "JSON"},
+        ]
+
+
+class BigCommerceCategoriesTable(MetaAPIResource):
+    """
+    The table abstraction for the 'categories' resource of the BigCommerce API.
+    """
+
+    name = "categories"
+
+    def list(
+        self,
+        conditions: list[FilterCondition] = None,
+        limit: int = None,
+        targets: list[str] = None,
+        **kwargs,
+    ):
+        """ Executes a parsed SELECT SQL query on the 'categories' resource of the BigCommerce API.
+
+        Args:
+            conditions (list[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            targets (list[str]): The list of target columns to return.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame.
+        """
+        # doc: https://developer.bigcommerce.com/docs/rest-catalog/category-trees/categories#get-all-categories
+        client: BigCommerceAPIClient = self.handler.connect()
+
+        simple_op_map = {
+            ("category_id", FilterOperator.IN): "category_id:in",
+            ("category_id", FilterOperator.NOT_IN): "category_id:not_in",
+            ("tree_id", FilterOperator.IN): "tree_id:in",
+            ("tree_id", FilterOperator.NOT_IN): "tree_id:not_in",
+            ("parent_id", FilterOperator.IN): "parent_id:in",
+            ("parent_id", FilterOperator.NOT_IN): "parent_id:not_in",
+            ("page_title", FilterOperator.EQUAL): "page_title",
+            ("page_title", FilterOperator.LIKE): "page_title:like",
+            ("name", FilterOperator.EQUAL): "name",
+            ("name", FilterOperator.LIKE): "name:like",
+            ("keyword", FilterOperator.EQUAL): "keyword",
+            ("is_visible", FilterOperator.EQUAL): "is_visible",
+        }
+
+        filter = _make_filter(conditions, simple_op_map)
+
+        if targets:
+            available_columns = self.get_columns()
+            for column_name in targets:
+                if column_name not in available_columns:
+                    raise ValueError(f"Field '{column_name}' does not exists")
+            filter["include_fields"] = ",".join(targets)
+
+        result = client.get_categories(
+            filter=filter,
+            limit=limit,
+        )
+        result = _make_df(result, self)
+
+        return result
+
+    def get_columns(self) -> List[str]:
+        """Retrieves the columns names of the 'categories' resource.
+
+        Returns:
+            list[str]: A list of columns names of the 'categories' resource.
+        """
+        columns = self.meta_get_columns()
+        return [column["COLUMN_NAME"] for column in columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        client: BigCommerceAPIClient = self.handler.connect()
+        categories_count = client.get_categories_count()
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "",
+            "row_count": categories_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs) -> List[str]:
+        return [
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "category_id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "parent_id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "tree_id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "name", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "description", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "views", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "sort_order", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "page_title", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "search_keywords", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "meta_keywords", "DATA_TYPE": "JSON"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "meta_description", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "layout_file", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "is_visible", "DATA_TYPE": "BOOL"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "default_product_sort", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "url", "DATA_TYPE": "JSON"},
+            {"TABLE_NAME": "categories", "COLUMN_NAME": "image_url", "DATA_TYPE": "VARCHAR"},
+        ]
+
+
+class BigCommercePickupsTable(MetaAPIResource):
+    """
+    The table abstraction for the 'pickups' resource of the BigCommerce API.
+    """
+
+    name = "pickups"
+
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        **kwargs,
+    ):
+        """ Executes a parsed SELECT SQL query on the 'pickups' resource of the BigCommerce API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame.
+        """
+        client: BigCommerceAPIClient = self.handler.connect()
+
+        simple_op_map = {
+            ("order_id", FilterOperator.IN): "order_id:in",
+            ("pickup_id", FilterOperator.IN): "pickup_id:in",
+        }
+
+        filter = _make_filter(conditions, simple_op_map)
+
+        result = client.get_pickups(
+            filter=filter,
+            limit=limit,
+        )
+        result = _make_df(result, self)
+
+        return result
+
+    def get_columns(self) -> List[str]:
+        """Retrieves the columns names of the 'pickups' resource.
+
+        Returns:
+            list[str]: A list of columns names of the 'pickups' resource.
+        """
+        columns = self.meta_get_columns()
+        return [column["COLUMN_NAME"] for column in columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        client: BigCommerceAPIClient = self.handler.connect()
+        pickups_count = client.get_pickups_count()
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "",
+            "row_count": pickups_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs):
+        return [
+            {"TABLE_NAME": "pickups", "COLUMN_NAME": "id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "pickups", "COLUMN_NAME": "pickup_method_id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "pickups", "COLUMN_NAME": "order_id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "pickups", "COLUMN_NAME": "ready_at", "DATA_TYPE": "DATETIME"},
+            {"TABLE_NAME": "pickups", "COLUMN_NAME": "created_at", "DATA_TYPE": "DATETIME"},
+            {"TABLE_NAME": "pickups", "COLUMN_NAME": "updated_at", "DATA_TYPE": "DATETIME"},
+            {"TABLE_NAME": "pickups", "COLUMN_NAME": "pickup_items", "DATA_TYPE": "JSON"},
+        ]
+
+
+class BigCommercePromotionsTable(MetaAPIResource):
+    """
+    The table abstraction for the 'promotions' resource of the BigCommerce API.
+    """
+
+    name = "promotions"
+
+    def list(
+        self,
+        conditions: list[FilterCondition] = None,
+        limit: int = None,
+        sort: list[SortColumn] = None,
+        targets: list[str] = None,
+        **kwargs,
+    ):
+        """ Executes a parsed SELECT SQL query on the 'promotions' resource of the BigCommerce API.
+
+        Args:
+            conditions (list[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (list[SortColumn]): The list of parsed sort columns.
+            targets (list[str]): The list of target columns to return.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame.
+        """
+        client: BigCommerceAPIClient = self.handler.connect()
+
+        simple_op_map = {
+            ("id", FilterOperator.EQUAL): "id",
+            ("name", FilterOperator.EQUAL): "name",
+            ("currency_code", FilterOperator.EQUAL): "currency_code",
+            ("redemption_type", FilterOperator.EQUAL): "redemption_type",
+            ("status", FilterOperator.EQUAL): "status",
+            ("channels", FilterOperator.IN): "channels",
+        }
+
+        filter = _make_filter(conditions, simple_op_map)
+
+        sortable_columns = ["id", "name", "start_date", "priority"]
+        sort_condition = _make_sort_condition_v3(sort, sortable_columns)
+
+        result = client.get_promotions(
+            filter=filter,
+            sort_condition=sort_condition,
+            limit=limit,
+        )
+        result = _make_df(result, self)
+
+        return result
+
+    def get_columns(self) -> List[str]:
+        """Retrieves the columns names of the 'promotions' resource.
+
+        Returns:
+            list[str]: A list of columns names of the 'promotions' resource.
+        """
+        columns = self.meta_get_columns()
+        return [column["COLUMN_NAME"] for column in columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        client: BigCommerceAPIClient = self.handler.connect()
+        promotions_count = client.get_promotions_count()
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "",
+            "row_count": promotions_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs) -> List[str]:
+        return [
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "redemption_type", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "name", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "display_name", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "channels", "DATA_TYPE": "JSON"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "customer", "DATA_TYPE": "JSON"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "rules", "DATA_TYPE": "JSON"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "current_uses", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "max_uses", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "status", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "start_date", "DATA_TYPE": "DATETIME"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "end_date", "DATA_TYPE": "DATETIME"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "stop", "DATA_TYPE": "BOOL"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "can_be_used_with_other_promotions", "DATA_TYPE": "BOOL"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "currency_code", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "notifications", "DATA_TYPE": "JSON"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "shipping_address", "DATA_TYPE": "JSON"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "schedule", "DATA_TYPE": "JSON"},
+            {"TABLE_NAME": "promotions", "COLUMN_NAME": "created_from", "DATA_TYPE": "TEXT"},
+        ]
+
+
+class BigCommerceWishlistsTable(MetaAPIResource):
+    """
+    The table abstraction for the 'wishlists' resource of the BigCommerce API.
+    """
+
+    name = "wishlists"
+
+    def list(
+        self,
+        conditions: list[FilterCondition] = None,
+        limit: int = None,
+        **kwargs,
+    ):
+        """Executes a parsed SELECT SQL query on the 'wishlists' resource of the BigCommerce API.
+
+        Args:
+            conditions (list[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame.
+        """
+        client: BigCommerceAPIClient = self.handler.connect()
+
+        simple_op_map = {
+            ("customer_id", FilterOperator.IN): "customer_id:in",
+        }
+
+        filter = _make_filter(conditions, simple_op_map)
+
+        result = client.get_wishlists(
+            filter=filter,
+            limit=limit,
+        )
+        result = _make_df(result, self)
+
+        return result
+
+    def get_columns(self) -> List[str]:
+        """Retrieves the columns names of the 'wishlists' resource.
+
+        Returns:
+            list[str]: A list of columns names of the 'wishlists' resource.
+        """
+        columns = self.meta_get_columns()
+        return [column["COLUMN_NAME"] for column in columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        client: BigCommerceAPIClient = self.handler.connect()
+        wishlists_count = client.get_wishlists_count()
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "",
+            "row_count": wishlists_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs) -> List[str]:
+        return [
+            {"TABLE_NAME": "wishlists", "COLUMN_NAME": "id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "wishlists", "COLUMN_NAME": "customer_id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "wishlists", "COLUMN_NAME": "name", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "wishlists", "COLUMN_NAME": "is_public", "DATA_TYPE": "BOOL"},
+            {"TABLE_NAME": "wishlists", "COLUMN_NAME": "token", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "wishlists", "COLUMN_NAME": "items", "DATA_TYPE": "JSON"},
+        ]
+
+
+class BigCommerceSegmentsTable(MetaAPIResource):
+    """
+    The table abstraction for the 'segments' (customer segmentation) resource of the BigCommerce API.
+    """
+
+    name = "segments"
+
+    def list(
+        self,
+        conditions: list[FilterCondition] = None,
+        limit: int = None,
+        **kwargs,
+    ):
+        """Executes a parsed SELECT SQL query on the 'segments' resource of the BigCommerce API.
+
+        Args:
+            conditions (list[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame.
+        """
+        client: BigCommerceAPIClient = self.handler.connect()
+
+        simple_op_map = {
+            ("id", FilterOperator.IN): "id:in",
+        }
+
+        filter = _make_filter(conditions, simple_op_map)
+
+        result = client.get_segments(
+            filter=filter,
+            limit=limit,
+        )
+        result = _make_df(result, self)
+
+        return result
+
+    def get_columns(self) -> List[str]:
+        """Retrieves the columns names of the 'segments' resource.
+
+        Returns:
+            list[str]: A list of columns names of the 'segments' resource.
+        """
+        columns = self.meta_get_columns()
+        return [column["COLUMN_NAME"] for column in columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        client: BigCommerceAPIClient = self.handler.connect()
+        segments_count = client.get_segments_count()
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "",
+            "row_count": segments_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs) -> List[str]:
+        return [
+            {"TABLE_NAME": "segments", "COLUMN_NAME": "id", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "segments", "COLUMN_NAME": "name", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "segments", "COLUMN_NAME": "description", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "segments", "COLUMN_NAME": "created_at", "DATA_TYPE": "DATETIME"},
+            {"TABLE_NAME": "segments", "COLUMN_NAME": "updated_at", "DATA_TYPE": "DATETIME"},
+        ]
+
+
+class BigCommerceBrandsTable(MetaAPIResource):
+    """
+    The table abstraction for the 'brands' resource of the BigCommerce API.
+    """
+
+    name = "brands"
+
+    def list(
+        self,
+        conditions: list[FilterCondition] = None,
+        limit: int = None,
+        sort: list[SortColumn] = None,
+        targets: list[str] = None,
+        **kwargs,
+    ):
+        """Executes a parsed SELECT SQL query on the 'brands' resource of the BigCommerce API.
+
+        Args:
+            conditions (list[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (list[SortColumn]): The list of parsed sort columns.
+            targets (list[str]): The list of target columns to return.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame.
+        """
+        client: BigCommerceAPIClient = self.handler.connect()
+
+        simple_op_map = {
+            ("id", FilterOperator.EQUAL): "id",
+            ("id", FilterOperator.IN): "id:in",
+            ("id", FilterOperator.NOT_IN): "id:not_in",
+            ("id", FilterOperator.GREATER_THAN): "id:greater",
+            ("id", FilterOperator.LESS_THAN): "id:less",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:min",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:max",
+            ("name", FilterOperator.EQUAL): "name",
+            ("name", FilterOperator.LIKE): "name:like",
+            ("page_title", FilterOperator.EQUAL): "page_title",
+        }
+
+        filter = _make_filter(conditions, simple_op_map)
+
+        if targets:
+            available_columns = self.get_columns()
+            for column_name in targets:
+                if column_name not in available_columns:
+                    raise ValueError(f"Field '{column_name}' does not exists")
+            filter["include_fields"] = ",".join(targets)
+
+        sortable_columns = ["name"]
+        sort_condition = _make_sort_condition_v3(sort, sortable_columns)
+
+        result = client.get_brands(
+            filter=filter,
+            sort_condition=sort_condition,
+            limit=limit,
+        )
+        result = _make_df(result, self)
+
+        return result
+
+    def get_columns(self) -> List[str]:
+        """Retrieves the columns names of the 'brands' resource.
+
+        Returns:
+            list[str]: A list of columns names of the 'brands' resource.
+        """
+        columns = self.meta_get_columns()
+        return [column["COLUMN_NAME"] for column in columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        client: BigCommerceAPIClient = self.handler.connect()
+        brands_count = client.get_brands_count()
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "",
+            "row_count": brands_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs) -> List[str]:
+        return [
+            {"TABLE_NAME": "brands", "COLUMN_NAME": "id", "DATA_TYPE": "INT"},
+            {"TABLE_NAME": "brands", "COLUMN_NAME": "name", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "brands", "COLUMN_NAME": "page_title", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "brands", "COLUMN_NAME": "meta_keywords", "DATA_TYPE": "JSON"},
+            {"TABLE_NAME": "brands", "COLUMN_NAME": "meta_description", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "brands", "COLUMN_NAME": "search_keywords", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "brands", "COLUMN_NAME": "image_url", "DATA_TYPE": "TEXT"},
+            {"TABLE_NAME": "brands", "COLUMN_NAME": "custom_url", "DATA_TYPE": "JSON"},
         ]

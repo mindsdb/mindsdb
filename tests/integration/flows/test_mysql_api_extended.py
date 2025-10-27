@@ -5,6 +5,7 @@ import time
 from .test_mysql_api import BaseStuff
 import mysql.connector
 
+
 @pytest.fixture(scope="module")
 def setup_local_db():
     """Module-scoped fixture to create a writeable DB for table tests."""
@@ -12,13 +13,7 @@ def setup_local_db():
     helper = BaseStuff()
     helper.use_binary = False
 
-    params = {
-        "user": "postgres",
-        "password": "postgres",
-        "host": "postgres",
-        "port": 5432,
-        "database": "postgres"
-    }
+    params = {"user": "postgres", "password": "postgres", "host": "postgres", "port": 5432, "database": "postgres"}
 
     print(f"\n--> [Fixture setup_local_db] Setting up local database: {db_name} on {params['host']}:{params['port']}")
     try:
@@ -26,18 +21,19 @@ def setup_local_db():
         create_datasource_sql_via_connector(helper, db_name, "postgres", params)
         yield db_name
     except mysql.connector.Error as e:
-         pytest.skip(
-             f"\n\n--- FIXTURE SETUP FAILED ---\n"
-             f"Could not connect to the PostgreSQL container ('{params['host']}').\n"
-             f"Please ensure your Docker Compose environment is running correctly.\n"
-             f"Original Error: {e}\n"
-         )
+        pytest.skip(
+            f"\n\n--- FIXTURE SETUP FAILED ---\n"
+            f"Could not connect to the PostgreSQL container ('{params['host']}').\n"
+            f"Please ensure your Docker Compose environment is running correctly.\n"
+            f"Original Error: {e}\n"
+        )
     finally:
         print(f"\n--> [Fixture setup_local_db] Tearing down database: {db_name}")
         try:
             helper.query(f"DROP DATABASE IF EXISTS {db_name};")
         except mysql.connector.Error:
             pass
+
 
 def create_datasource_sql_via_connector(helper_instance, db_name, engine, parameters):
     """Helper to create a datasource via a CREATE DATABASE query."""
@@ -49,9 +45,11 @@ def create_datasource_sql_via_connector(helper_instance, db_name, engine, parame
     time.sleep(5)
     print(f"    [Helper create_datasource] DATABASE {db_name} created.")
 
+
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLTables(BaseStuff):
     """Test suite for Table operations."""
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -64,17 +62,19 @@ class TestMySQLTables(BaseStuff):
             create_table_query = f"CREATE TABLE {db_name}.{table_name} (id INT, value VARCHAR(255));"
             self.query(create_table_query)
             result = self.query(f"SHOW TABLES FROM {db_name};")
-            assert table_name in [row['Tables_in_' + db_name] for row in result]
+            assert table_name in [row["Tables_in_" + db_name] for row in result]
             replace_query = f"CREATE OR REPLACE TABLE {db_name}.{table_name} (SELECT 2 as id, 'new_data' as value);"
             self.query(replace_query)
             result = self.query(f"SELECT * FROM {db_name}.{table_name};")
-            assert result and result[0]['id'] == 2 and result[0]['value'] == 'new_data'
+            assert result and result[0]["id"] == 2 and result[0]["value"] == "new_data"
         finally:
             self.query(f"DROP TABLE IF EXISTS {db_name}.{table_name};")
+
 
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLTablesNegative(BaseStuff):
     """Negative tests for Table operations."""
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -106,9 +106,11 @@ class TestMySQLTablesNegative(BaseStuff):
             self.query(f"DROP TABLE {db_name}.{table_name};")
         assert "does not exist" in str(e.value).lower()
 
+
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLViews(BaseStuff):
     """Test suite for View operations."""
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -123,23 +125,29 @@ class TestMySQLViews(BaseStuff):
             """
             self.query(create_db_query)
             time.sleep(5)
-            create_view_query = f"CREATE VIEW {view_name} AS (SELECT * FROM {db_name}.home_rentals WHERE number_of_rooms = 2);"
+            create_view_query = (
+                f"CREATE VIEW {view_name} AS (SELECT * FROM {db_name}.home_rentals WHERE number_of_rooms = 2);"
+            )
             self.query(create_view_query)
             result = self.query("SHOW VIEWS;")
-            assert view_name in [row.get('Name', row.get('NAME')) for row in result]
+            assert view_name in [row.get("Name", row.get("NAME")) for row in result]
             result = self.query(f"SELECT * FROM {view_name};")
-            assert len(result) > 0 and all(row['number_of_rooms'] == 2 for row in result)
-            alter_view_query = f"ALTER VIEW {view_name} AS (SELECT * FROM {db_name}.home_rentals WHERE number_of_rooms = 1);"
+            assert len(result) > 0 and all(row["number_of_rooms"] == 2 for row in result)
+            alter_view_query = (
+                f"ALTER VIEW {view_name} AS (SELECT * FROM {db_name}.home_rentals WHERE number_of_rooms = 1);"
+            )
             self.query(alter_view_query)
             result_after_alter = self.query(f"SELECT * FROM {view_name};")
-            assert len(result_after_alter) > 0 and all(row['number_of_rooms'] == 1 for row in result_after_alter)
+            assert len(result_after_alter) > 0 and all(row["number_of_rooms"] == 1 for row in result_after_alter)
         finally:
             self.query(f"DROP VIEW IF EXISTS {view_name};")
             self.query(f"DROP DATABASE IF EXISTS {db_name};")
 
+
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLViewsNegative(BaseStuff):
     """Negative tests for View operations."""
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -170,9 +178,11 @@ class TestMySQLViewsNegative(BaseStuff):
         error_str = str(e.value).lower()
         assert "view not found" in error_str or "unknown view" in error_str
 
+
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLKnowledgeBases(BaseStuff):
     """Test suite for Knowledge Base operations."""
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -192,17 +202,19 @@ class TestMySQLKnowledgeBases(BaseStuff):
             """
             self.query(create_kb_query)
             result = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
-            assert result and result[0]['NAME'] == kb_name and embedding_model in result[0]['EMBEDDING_MODEL']
+            assert result and result[0]["NAME"] == kb_name and embedding_model in result[0]["EMBEDDING_MODEL"]
             self.query(f"INSERT INTO {kb_name} (content) VALUES ('{content_to_insert}');")
             time.sleep(45)
             result = self.query(f"SELECT chunk_content FROM {kb_name} WHERE content = 'What is MindsDB?';")
-            assert result and "MindsDB" in result[0]['chunk_content']
+            assert result and "MindsDB" in result[0]["chunk_content"]
         finally:
             self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
 
     def test_create_kb_with_invalid_provider(self, use_binary):
         kb_name = f"test_invalid_provider_{uuid.uuid4().hex[:8]}"
-        create_query = f'CREATE KNOWLEDGE_BASE {kb_name} USING embedding_model = {{"provider": "non_existent_provider"}};'
+        create_query = (
+            f'CREATE KNOWLEDGE_BASE {kb_name} USING embedding_model = {{"provider": "non_existent_provider"}};'
+        )
         with pytest.raises(Exception) as e:
             self.query(create_query)
         assert "wrong embedding provider" in str(e.value).lower()
@@ -212,7 +224,9 @@ class TestMySQLKnowledgeBases(BaseStuff):
         create_query = f'CREATE KNOWLEDGE_BASE {kb_name} USING embedding_model = {{"provider": "openai", "api_key": "this_is_a_fake_key"}};'
         with pytest.raises(Exception) as e:
             self.query(create_query)
-        assert "problem with embedding model config" in str(e.value).lower() or "invalid api key" in str(e.value).lower()
+        assert (
+            "problem with embedding model config" in str(e.value).lower() or "invalid api key" in str(e.value).lower()
+        )
 
     def test_insert_into_non_existent_kb(self, use_binary):
         kb_name = f"non_existent_kb_{uuid.uuid4().hex[:8]}"
@@ -247,23 +261,20 @@ class TestMySQLKnowledgeBases(BaseStuff):
         finally:
             self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
 
+
 @pytest.fixture(scope="function")
 def setup_trigger_db():
     """Function-scoped fixture to ensure a clean DB for each trigger test."""
     db_name = f"trigger_test_db_{uuid.uuid4().hex[:8]}"
-    params = {
-        "user": "postgres",
-        "password": "postgres",
-        "host": "postgres",
-        "port": 5432,
-        "database": "postgres"
-    }
+    params = {"user": "postgres", "password": "postgres", "host": "postgres", "port": 5432, "database": "postgres"}
     source_table_name = f"source_table_{uuid.uuid4().hex[:8]}"
     target_table_name = f"target_table_{uuid.uuid4().hex[:8]}"
     helper = BaseStuff()
     helper.use_binary = False
     try:
-        print(f"\n--> [Fixture setup_trigger_db] Setting up local database: {db_name} on {params['host']}:{params['port']}")
+        print(
+            f"\n--> [Fixture setup_trigger_db] Setting up local database: {db_name} on {params['host']}:{params['port']}"
+        )
         helper.query(f"DROP DATABASE IF EXISTS {db_name}")
         create_datasource_sql_via_connector(helper, db_name, "postgres", params)
 
@@ -281,9 +292,11 @@ def setup_trigger_db():
         except mysql.connector.Error:
             pass
 
+
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLTriggers(BaseStuff):
     """Test suite for Trigger operations."""
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -317,14 +330,16 @@ class TestMySQLTriggers(BaseStuff):
 
             assert result, f"No result found in target table for id {test_id}."
             assert len(result) == 1, "Trigger fired more or less than once."
-            assert result[0]['id'] == test_id
-            assert result[0]['message'] == updated_message
+            assert result[0]["id"] == test_id
+            assert result[0]["message"] == updated_message
         finally:
             self.query(f"DROP TRIGGER {trigger_name};")
+
 
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLTriggersNegative(BaseStuff):
     """Negative tests for Trigger operations."""
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -357,4 +372,3 @@ class TestMySQLTriggersNegative(BaseStuff):
             self.query(f"DROP TRIGGER {trigger_name};")
         error_str = str(e.value).lower()
         assert "doesn't exist" in error_str or "unknown trigger" in error_str
-        

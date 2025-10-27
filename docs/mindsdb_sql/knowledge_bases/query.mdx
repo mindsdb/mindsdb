@@ -133,7 +133,7 @@ Alternatively, users can filter by the `chunk_content` column of the knowledge b
 ```sql
 SELECT *
 FROM my_kb
-WHERE chunk_content = '%color%'
+WHERE chunk_content LIKE '%color%'
 ```
 
 Here is the output:

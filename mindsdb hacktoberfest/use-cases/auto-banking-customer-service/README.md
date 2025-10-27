@@ -20,7 +20,7 @@ An intelligent automated customer service pipeline for banking operations that s
 
 ---
 
-## 🎯 Problem Statement
+## Problem Statement
 
 ### The Challenge
 
@@ -58,7 +58,7 @@ AutoBankingCustomerService automates the entire post-interaction workflow using 
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### System Architecture Diagram
 ![1](./assets/arch.png)
@@ -119,7 +119,7 @@ AutoBankingCustomerService automates the entire post-interaction workflow using 
 
 ---
 
-## 📚 Knowledge Base Schema
+## Knowledge Base Schema
 
 ### Overview
 
@@ -238,105 +238,6 @@ docker-compose down
 # Stop and remove all data
 docker-compose down -v
 ```
-
----
-
-## 🌟 MindsDB Features Demonstrated
-
-This use case showcases several key MindsDB capabilities:
-
-### 1. **Declarative AI Agent Creation**
-
-Instead of building custom LLM orchestration logic, define agents with SQL:
-
-```sql
-CREATE AGENT classification_agent
-USING
-    data = {
-        "tables": ["banking_postgres_db.conversations_summary"]
-    },
-    prompt_template = 'Analyze this conversation and provide summary + status...',
-    timeout = 30;
-```
-
-**What MindsDB handles automatically:**
-- Prompt template management
-- Model API calls and retry logic
-- Response parsing and validation
-- Agent versioning and observability
-
-### 2. **Zero-Infrastructure RAG**
-
-Traditional RAG setup requires:
-```python
-# ❌ Without MindsDB: ~500+ lines of custom code
-vector_db = Pinecone(...)
-embeddings = OpenAIEmbeddings(...)
-documents = load_and_chunk_docs(...)
-vectors = embeddings.embed_documents(documents)
-vector_db.add_vectors(vectors)
-# ...plus retrieval logic, reranking, context injection, etc.
-```
-
-With MindsDB:
-```sql
--- ✅ With MindsDB: 3 SQL statements
-CREATE KNOWLEDGE_BASE my_confluence_kb USING embedding_model = {...};
-INSERT INTO my_confluence_kb (SELECT * FROM my_confluence.pages);
-CREATE AGENT recommendation_agent USING data = {"knowledge_bases": ["my_confluence_kb"]};
-```
-
-### 3. **Unified Data Access**
-
-Query AI agents, databases, and APIs with the same SQL interface:
-
-```sql
--- Query PostgreSQL database
-SELECT * FROM banking_postgres_db.conversations_summary WHERE resolved = FALSE;
-
--- Query AI agent
-SELECT answer FROM classification_agent WHERE question = 'conversation text';
-
--- Query Confluence (via MindsDB connector)
-SELECT * FROM my_confluence.pages WHERE title LIKE '%complaint%';
-```
-
-### 4. **Built-in Observability**
-
-Every agent interaction is traceable through MindsDB's UI:
-- Input prompts and retrieved context
-- Model reasoning steps
-- Generated outputs
-- Execution time and token usage
-
-This transparency is critical for debugging and compliance in regulated industries like banking.
-
----
-
-## 🛠️ Technology Stack
-
-### Core Platform
-- **MindsDB** (v24.x): AI/ML orchestration platform
-  - AI Agent management
-  - RAG Knowledge Base engine
-  - Enterprise data connectors
-
-### Data Sources
-- **PostgreSQL** (v13): Conversation data storage
-- **Confluence**: Knowledge base documentation
-- **Salesforce**: CRM integration (output)
-- **Jira**: Issue tracking (output)
-
-### Application Layer
-- **FastAPI**: Python web framework for API endpoints
-- **Python 3.11+**: Application logic and orchestration
-- **Docker**: Containerized deployment
-
-### AI Models
-- **OpenAI GPT-4o**: Classification and recommendation agents
-- **OpenAI text-embedding-3-small**: Knowledge Base embeddings
-
----
 
 ## Results & Impact
 

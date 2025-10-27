@@ -10,12 +10,12 @@ An intelligent automated customer service pipeline for banking operations that s
 
 ## 📑 Table of Contents
 
-- [Problem Statement](#-problem-statement)
-- [Architecture Overview](#-architecture-overview)
-- [Knowledge Base Schema](#-knowledge-base-schema)
-- [Getting Started](#-getting-started)
-- [Results & Impact](#-results--impact)
-- [Project Structure](#-project-structure)
+- [Problem Statement](#problem-statement)
+- [Architecture Overview](#architecture-overview)
+- [Knowledge Base Schema](#knowledge-base-schema)
+- [Results & Impact](#results--impact)
+- [Project Structure](#project-structure)
+- [API Endpoints](#-api-endpoints)
 - [Related Resources](#-related-resources)
 
 ---

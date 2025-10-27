@@ -128,6 +128,14 @@ FROM my_kb
 WHERE content = 'color'
 ```
 
+Alternatively, users can filter by the `chunk_content` column of the knowledge base.
+
+```sql
+SELECT *
+FROM my_kb
+WHERE chunk_content = '%color%'
+```
+
 Here is the output:
 
 ```sql

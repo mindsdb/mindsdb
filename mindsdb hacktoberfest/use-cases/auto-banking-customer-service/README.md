@@ -22,38 +22,11 @@ An intelligent automated customer service pipeline for banking operations that s
 
 ## Problem Statement
 
-### The Challenge
+In banking customer support, agents are required to listen to customer issues while simultaneously taking notes, organizing information, and entering data across multiple systems. This workflow is cumbersome and inefficient. When a case is not resolved during the interaction, business teams must manually review it and create Jira tickets, relying heavily on human judgment. As a result, issue classification can be inconsistent, escalations may be delayed, and key information may be missed. For more complex cases, the process from call completion to proper documentation and escalation often takes more than 15 minutes, leading to lower agent productivity, unstable customer experience, and rising operational costs.
 
-When a customer contacts a bank for support, the manual process involves significant overhead:
+AutoBankingCustomerService uses MindsDB’s AI orchestration to automate the entire post-call workflow. The system automatically summarizes each interaction, determines whether the issue has been resolved, and, when needed, generates recommended next steps using internal knowledge bases. For unresolved cases, Jira tickets with clear action guidance are created automatically, eliminating the need for manual intervention.
 
-**Current Manual Workflow Problems:**
-- **Time-intensive**: Customer service agents must simultaneously listen, take notes, type into CRM systems (Salesforce), and classify issues
-- **Context switching**: Agents juggle multiple applications and interfaces during each interaction
-- **Manual escalation**: Business owners manually review unresolved cases in Salesforce and create Jira stories for tracking
-- **Human fatigue**: Repetitive tasks lead to inconsistent categorization and missed escalations
-- **Delayed resolution**: Manual triaging and ticket creation can take 15+ minutes per complex case
-
-**Business Impact:**
-- Reduced agent productivity due to administrative overhead
-- Inconsistent case classification and prioritization
-- Delayed escalation of critical issues
-- Poor visibility into customer satisfaction trends
-- High operational costs for routine case management
-
-### The Solution
-
-AutoBankingCustomerService automates the entire post-interaction workflow using MindsDB's AI agent orchestration platform:
-
-1. **Automatic Summarization**: Every customer call is automatically summarized into concise, actionable text
-2. **Intelligent Classification**: AI determines whether issues are Resolved or Unresolved based on conversation context
-3. **Context-Aware Recommendations**: Unresolved cases trigger RAG-powered recommendations based on enterprise knowledge bases (Confluence)
-4. **Automatic Escalation**: Unresolved issues are automatically converted into Jira tickets with recommended actions
-
-**Key Results:**
-- **84% time reduction**: Cases that required 15+ minutes of manual work now complete in under 2 minutes
-- **Zero manual intervention**: Complete automation from transcript to ticket creation
-- **Consistent quality**: Standardized classification and recommendation logic across all cases
-- **Rapid deployment**: Built and deployed production-ready system in 48 hours
+This solution reduces processing time from roughly 15 minutes to under 2 minutes, ensures consistent classification and escalation logic, and delivers full automation from conversation transcript to task assignment—implemented and deployed in just 48 hours.
 
 ---
 

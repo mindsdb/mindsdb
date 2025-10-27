@@ -199,7 +199,7 @@ class TestColumnPruning:
         assert "created_at" in query_str
 
     def test_subselect_pruning(self):
-        """Test that subselects also get column pruning applied."""
+        """Test that subselects with SELECT * get column pruning applied."""
         query = parse_sql("""
             SELECT sub.id 
             FROM (SELECT * FROM int1.table1) AS sub
@@ -208,6 +208,7 @@ class TestColumnPruning:
 
         plan = plan_query(query, integrations=["int1", "int2"])
 
+        # Subselects with pure SELECT * should be pruned to only needed columns
         found_pruned_subselect = False
         for step in plan.steps:
             step_str = str(step)
@@ -381,8 +382,8 @@ class TestColumnPruningEdgeCases:
         query_str = str(plan.steps[0].query)
         assert query_str.count("status") >= 1
 
-    def test_mixed_star_and_columns_in_subselect(self):
-        """Test that subselects with mixed Star and columns (SELECT *, col1) still allow pruning."""
+    def test_subselect_with_mixed_star(self):
+        """Test that SubSelectStep passes through all columns (no pruning at SubSelect level)."""
         query = parse_sql("""
             SELECT sub.id 
             FROM (SELECT *, 'dummy' as extra FROM int1.table1) AS sub
@@ -390,13 +391,16 @@ class TestColumnPruningEdgeCases:
         """)
 
         plan = plan_query(query, integrations=["int1", "int2"])
-        found_pruned_subselect = False
+        
+        # SubSelectStep should use SELECT * to pass through all columns
+        # Column pruning happens at the table fetch level, not at SubSelectStep
+        found_subselect_with_star = False
         for step in plan.steps:
             step_str = str(step)
-            # Look for SubSelectStep with id column but not SELECT *
-            if "SubSelect" in step_str and "id" in step_str:
-                found_pruned_subselect = True
+            if "SubSelect" in step_str and "SELECT *" in step_str:
+                found_subselect_with_star = True
                 break
-        assert found_pruned_subselect, (
-            f"Expected pruning for mixed Star subselect. Steps: {[str(s) for s in plan.steps]}"
+        
+        assert found_subselect_with_star, (
+            f"Expected SubSelectStep to use SELECT * (no pruning). Steps: {[str(s) for s in plan.steps]}"
         )

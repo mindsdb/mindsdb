@@ -392,15 +392,17 @@ class PlanJoinTablesQuery:
 
         where = filters_to_bin_op(item.conditions)
 
-        # Column pruning: only apply to subselects that have SELECT *
-        # If subselect has explicit columns, respect that projection
+        # Column pruning for subselects:
+        # - If subselect has pure SELECT *, we can prune to only needed columns
+        # - If subselect has explicit columns (SELECT a, b, c), pass through all (don't prune)
+        # This preserves column aliases and prevents breaking explicit projections
         targets = [Star()]
         if (
             item.sub_select.targets
             and len(item.sub_select.targets) == 1
             and isinstance(item.sub_select.targets[0], Star)
         ):
-            # Subselect has SELECT *, we can prune to only needed columns
+            # Pure SELECT * - safe to apply column pruning
             needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
             if needed_columns:
                 targets = needed_columns
@@ -450,6 +452,12 @@ class PlanJoinTablesQuery:
         """
         # Skip column pruning for predictors/models
         if table_info.predictor_info is not None:
+            return None
+
+        # Skip column pruning for project tables (KB tables, views, etc.)
+        # Project tables often have special column handling (e.g., KB tables map chunk_content->content)
+        # and need to receive SELECT * to work correctly
+        if table_info.integration and table_info.integration in self.planner.projects:
             return None
 
         # Skip column pruning for subselects with custom projections (specific columns, no *)

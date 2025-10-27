@@ -12,7 +12,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-def _make_filter(conditions: list[FilterCondition], op_map: dict) -> dict:
+def _make_filter(conditions: list[FilterCondition] | None, op_map: dict) -> dict:
     """Creates a filter dictionary, that can be used in the BigCommerce API.
 
     Args:
@@ -23,6 +23,8 @@ def _make_filter(conditions: list[FilterCondition], op_map: dict) -> dict:
         dict: The filter dictionary.
     """
     filter = {}
+    if conditions is None:
+        return filter
     for condition in conditions:
         simple_op = op_map.get((condition.column, condition.op))
         if simple_op:
@@ -86,7 +88,7 @@ def _make_sort_condition_v2(sort: list[SortColumn], sortable_columns: list[str])
     sort_condition = None
     if (
         isinstance(sort, list)
-        and len(sort) == 0
+        and len(sort) == 1
         and sort[0].column in sortable_columns
     ):
         sort_column = sort[0]

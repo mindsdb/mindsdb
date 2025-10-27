@@ -4,6 +4,20 @@
 
 An intelligent automated customer service pipeline for banking operations that showcases MindsDB's AI agent orchestration, RAG knowledge base, and enterprise integration capabilities.
 
+✨ **[Read the Blog Post on DEV](https://dev.to/jiaqicheng1998/building-agentic-workflow-auto-banking-customer-service-with-mindsdb-484p)**
+
+---
+
+## 📑 Table of Contents
+
+- [Problem Statement](#-problem-statement)
+- [Architecture Overview](#-architecture-overview)
+- [Knowledge Base Schema](#-knowledge-base-schema)
+- [Getting Started](#-getting-started)
+- [Results & Impact](#-results--impact)
+- [Project Structure](#-project-structure)
+- [Related Resources](#-related-resources)
+
 ---
 
 ## 🎯 Problem Statement
@@ -47,62 +61,8 @@ AutoBankingCustomerService automates the entire post-interaction workflow using 
 ## 🏗️ Architecture Overview
 
 ### System Architecture Diagram
+![1](./assets/arch.PNG)
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         DATA SOURCES LAYER                          │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
-│  │  PostgreSQL  │  │  Confluence  │  │   Salesforce │            │
-│  │  (Call Data) │  │  (Knowledge) │  │   (CRM)      │            │
-│  └──────┬───────┘  └──────┬───────┘  └──────▲───────┘            │
-│         │                  │                  │                     │
-└─────────┼──────────────────┼──────────────────┼─────────────────────┘
-          │                  │                  │
-          │                  │                  │
-┌─────────▼──────────────────▼──────────────────┼─────────────────────┐
-│                      MINDSDB LAYER                                  │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────┐      │
-│  │         Knowledge Base (RAG Engine)                     │      │
-│  │  - Embedded Confluence policies                         │      │
-│  │  - Vector search & retrieval                            │      │
-│  │  - Automatic context injection                          │      │
-│  └─────────────────────┬───────────────────────────────────┘      │
-│                        │                                            │
-│  ┌────────────────────┴────────────────────┐                      │
-│  │                                          │                      │
-│  ▼                                          ▼                      │
-│  ┌──────────────────────┐     ┌──────────────────────────┐       │
-│  │ Classification Agent │     │  Recommendation Agent     │       │
-│  │ - Summarize calls    │     │  - Query knowledge base   │       │
-│  │ - Classify status    │     │  - Generate action plan   │       │
-│  └──────────┬───────────┘     └──────────┬───────────────┘       │
-│             │                             │                        │
-└─────────────┼─────────────────────────────┼────────────────────────┘
-              │                             │
-              │                             │
-┌─────────────▼─────────────────────────────▼────────────────────────┐
-│                   ORCHESTRATION LAYER (Python)                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────┐     │
-│  │                  FastAPI Server (server.py)              │     │
-│  │  - Receive call transcripts                              │     │
-│  │  - Coordinate MindsDB agent queries                      │     │
-│  │  - Orchestrate Salesforce/Jira writes                    │     │
-│  └───┬──────────────────────────────────────────────┬───────┘     │
-│      │                                              │               │
-└──────┼──────────────────────────────────────────────┼───────────────┘
-       │                                              │
-       │                                              │
-┌──────▼──────────────┐                    ┌─────────▼──────────────┐
-│   Salesforce CRM    │                    │    Jira Tickets        │
-│  (All conversations)│                    │ (Unresolved cases only)│
-└─────────────────────┘                    └────────────────────────┘
-```
 
 ### Architecture Components
 
@@ -195,26 +155,6 @@ INSERT INTO my_confluence_kb (
 );
 ```
 
-### Knowledge Base Tables
-
-#### Source: `my_confluence.pages`
-
-| Column              | Type    | Description                              |
-|---------------------|---------|------------------------------------------|
-| `id`                | VARCHAR | Unique Confluence page ID                |
-| `title`             | TEXT    | Page title                               |
-| `body_storage_value`| TEXT    | Full page content (HTML/Markdown)        |
-
-#### Indexed: `my_confluence_kb`
-
-| Column           | Type      | Description                                   |
-|------------------|-----------|-----------------------------------------------|
-| `id`             | VARCHAR   | Original Confluence page ID                   |
-| `title`          | TEXT      | Page title (metadata)                         |
-| `chunk_content`  | TEXT      | Chunked page content for embedding            |
-| `chunk_id`       | INTEGER   | Chunk sequence number                         |
-| `embedding`      | VECTOR    | Vector embedding (generated automatically)    |
-
 ### Knowledge Base Queries
 
 ```sql
@@ -253,15 +193,6 @@ USING
     {{question}}';
 ```
 
-**How it works:**
-
-When the agent is queried, MindsDB automatically:
-1. Generates embeddings for the input question
-2. Performs vector similarity search against `my_confluence_kb`
-3. Retrieves top-k most relevant chunks
-4. Injects retrieved content into the agent's context window
-5. Agent generates response based on retrieved policies
-
 ### Content Sources
 
 Our Knowledge Base contains two key Confluence pages:
@@ -271,87 +202,6 @@ Our Knowledge Base contains two key Confluence pages:
 | 360449  | Customer Complaints Management Policy  | Official complaint handling procedures       |
 | 589825  | Complaint Handling Framework           | Escalation workflows and resolution criteria |
 
-### Update Strategy
-
-To refresh Knowledge Base content:
-
-```sql
--- Option 1: Delete and re-insert (full refresh)
-DELETE FROM my_confluence_kb WHERE id IN ('360449', '589825');
-INSERT INTO my_confluence_kb (
-    SELECT id, title, body_storage_value
-    FROM my_confluence.pages
-    WHERE id IN ('360449', '589825')
-);
-
--- Option 2: Schedule automatic updates via Python cron job
-```
-
-### Infrastructure Replacement
-
-**Traditional RAG implementations require:**
-- ❌ Vector database deployment (Pinecone, Weaviate, Chroma)
-- ❌ Embedding pipeline infrastructure
-- ❌ Custom retrieval logic
-- ❌ Prompt engineering for context injection
-- ❌ Monitoring and observability setup
-
-**MindsDB Knowledge Base provides:**
-- ✅ Built-in vector storage
-- ✅ Automatic embedding generation
-- ✅ Native semantic search
-- ✅ Zero-code context injection
-- ✅ Built-in query tracing and debugging
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **Docker & Docker Compose**: For running MindsDB and PostgreSQL
-- **Python 3.11+**: For running the application server
-- **OpenAI API Key**: Required for AI agents (get from [platform.openai.com](https://platform.openai.com/api-keys))
-- **Salesforce/Jira accounts** (Optional): For testing full integration
-
-### Quick Start
-
-We provide a **docker-compose** setup that handles all infrastructure:
-
-```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd AutoBankingCustomerService
-
-# 2. Configure environment variables
-cp .env.example .env
-# Edit .env and add your OpenAI API key (required)
-# Other integrations (Salesforce, Jira, Confluence) are optional
-
-# 3. Start all services with Docker Compose
-docker-compose up -d
-
-# This starts:
-# - PostgreSQL (port 5432)
-# - MindsDB (port 47334 for HTTP, 47335 for MySQL)
-
-# 4. Verify services are running
-docker-compose ps
-
-# 5. Initialize database with sample data
-pip install -r requirements.txt
-python3.11 script/import_banking_data.py
-
-# 6. Setup MindsDB agents (via web interface or SQL)
-# Open http://localhost:47334 in your browser
-# Execute the SQL commands in mindsdb_setup.sql to create:
-#   - PostgreSQL database connection
-#   - Classification agent
-#   - Confluence knowledge base (optional)
-#   - Recommendation agent
-
-# 7. Start the FastAPI application server
-python3.11 server.py
-```
 
 ### Environment Variables
 
@@ -488,26 +338,14 @@ This transparency is critical for debugging and compliance in regulated industri
 
 ---
 
-## 📊 Results & Impact
+## Results & Impact
 
 ### Operational Efficiency
 - **84% time reduction**: From 15+ minutes to under 2 minutes per case
 - **Zero manual intervention**: Complete end-to-end automation
 - **Automated routing**: Intelligent escalation to appropriate teams
 
-### Customer Satisfaction
-- **Proactive issue detection**: Identify problems before escalation
-- **Faster resolution times**: Through intelligent recommendations
-- **Consistent quality**: Standardized analysis across all interactions
-
-### Business Intelligence
-- **Real-time analytics**: Monitor customer sentiment trends
-- **Data-driven insights**: Identify systemic issues from conversation patterns
-- **Audit trail**: Complete tracking from transcript to resolution
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 AutoBankingCustomerService/

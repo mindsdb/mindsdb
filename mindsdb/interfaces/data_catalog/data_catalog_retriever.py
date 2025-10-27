@@ -238,7 +238,7 @@ class DataCatalogRetriever:
         Construct a formatted string representation of the foreign keys for a single table.
         """
         pad = " " * 4
-        foreign_keys_str = f"\n\nKey Relationships:"
+        foreign_keys_str = "\n\nKey Relationships:"
         for _, fk_row in foreign_keys_df.iterrows():
             # Avoid relationships where the current table is the child table to prevent redundancy.
             if fk_row["CHILD_TABLE_NAME"] == table_name:

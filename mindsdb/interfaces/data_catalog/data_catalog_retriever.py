@@ -1,17 +1,18 @@
 import pandas as pd
 from typing import List, Optional, Union
 
-from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from mindsdb.utilities import log
 
 
+logger = log.getLogger("mindsdb")
 
-class DataCatalogRetriever(BaseDataCatalog):
+
+class DataCatalogRetriever:
     """
     This class is responsible for retrieving (data catalog) metadata directly from the data source via the handler.
-    This is different from the DataCatalogReader, which relies on the fact that the metadata is already stored in the database.
     """
     
     def __init__(self, database_name: str, table_names: Optional[List[str]] = None) -> None:
@@ -40,6 +41,213 @@ class DataCatalogRetriever(BaseDataCatalog):
         self.table_names = table_names
 
         self.logger = logger
+        
+    def retrieve_metadata_as_string(self) -> str:
+        """
+        Retrieve the metadata as a formatted string.
+        """
+        tables_df = self.retrieve_tables()
+        if tables_df.empty:
+            return f"No metadata found for database '{self.database_name}'"
+
+        metadata_str = "Data Catalog: \n"
+        handler_info = self.retrieve_handler_info()
+        if handler_info:
+            metadata_str += handler_info + "\n\n"
+
+        columns_df = self.retrieve_columns()
+        column_stats_df = self.retrieve_column_statistics()
+        primary_keys_df = self.retrieve_primary_keys()
+        foreign_keys_df = self.retrieve_foreign_keys()
+
+        metadata_str += self._construct_metadata_string_for_tables(
+            tables_df,
+            columns_df,
+            column_stats_df,
+            primary_keys_df,
+            foreign_keys_df,
+        )
+        return metadata_str
+
+    def _construct_metadata_string_for_tables(
+        self,
+        tables_df: pd.DataFrame,
+        columns_df: pd.DataFrame,
+        column_stats_df: pd.DataFrame,
+        primary_keys_df: pd.DataFrame,
+        foreign_keys_df: pd.DataFrame,
+    ) -> str:
+        """
+        Construct a formatted string representation of the metadata for the given tables.
+        """
+        tables_metadata_str = ""
+
+        # Convert all DataFrame column names to uppercase for consistency.
+        tables_df.columns = tables_df.columns.str.upper()
+        columns_df.columns = columns_df.columns.str.upper()
+        column_stats_df.columns = column_stats_df.columns.str.upper()
+        primary_keys_df.columns = primary_keys_df.columns.str.upper()
+        foreign_keys_df.columns = foreign_keys_df.columns.str.upper()
+
+        for _, table_row in tables_df.iterrows():
+            table_columns_df = columns_df[columns_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
+            table_column_stats_df = column_stats_df[column_stats_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
+            table_primary_keys_df = primary_keys_df[primary_keys_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
+            table_foreign_keys_df = foreign_keys_df[foreign_keys_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
+            tables_metadata_str += self._construct_metadata_string_for_table(
+                table_row,
+                table_columns_df,
+                table_column_stats_df,
+                table_primary_keys_df,
+                table_foreign_keys_df,
+            )
+        return tables_metadata_str
+    
+    def _construct_metadata_string_for_table(
+        self,
+        table_row: pd.Series,
+        columns_df: pd.DataFrame,
+        column_stats_df: pd.DataFrame,
+        primary_keys_df: pd.DataFrame,
+        foreign_keys_df: pd.DataFrame,
+    ) -> str:
+        """
+        Construct a formatted string representation of the metadata for a single table.
+        """
+        table_metadata_str = f"`{self.database_name}`.`{table_row['TABLE_NAME']}`"
+        
+        if "TABLE_TYPE" in table_row and pd.notna(table_row["TABLE_TYPE"]):
+            table_metadata_str += f" ({self.type})"
+        if "TABLE_DESCRIPTION" in table_row and pd.notna(table_row["TABLE_DESCRIPTION"]):
+            table_metadata_str += f": {table_row['TABLE_DESCRIPTION']}"
+        if "TABLE_SCHEMA" in table_row and pd.notna(table_row["TABLE_SCHEMA"]):
+            table_metadata_str += f"\nSchema: {table_row['TABLE_SCHEMA']}"
+        if "ROW_COUNT" in table_row and pd.notna(table_row["ROW_COUNT"]) and table_row["ROW_COUNT"] > 0:
+            table_metadata_str += f"\nEstimated Row Count: {int(table_row['ROW_COUNT'])}"
+            
+        if not primary_keys_df.empty:
+            table_metadata_str += self._construct_metadata_string_for_primary_keys(primary_keys_df)
+
+        if not columns_df.empty:
+            table_metadata_str += self._construct_metadata_string_for_columns(
+                columns_df,
+                column_stats_df
+            )
+            
+        if not foreign_keys_df.empty:
+            table_metadata_str += self._construct_metadata_string_for_foreign_keys(
+                foreign_keys_df,
+                table_row["TABLE_NAME"],
+            )
+
+        return table_metadata_str
+            
+    def _construct_metadata_string_for_primary_keys(
+        self,
+        primary_keys_df: pd.DataFrame,
+    ) -> str:
+        """
+        Construct a formatted string representation of the primary keys for a single table.
+        """
+        primary_keys_str = "\nPrimary Keys (in defined order): "
+        if "ORDINAL_POSITION" in primary_keys_df.columns:
+            primary_keys_df.sort_values(by="ORDINAL_POSITION", inplace=True)
+        primary_keys = primary_keys_df["COLUMN_NAME"].tolist()
+        primary_keys_str += ", ".join([f"`{pk}`" for pk in primary_keys])
+        return primary_keys_str
+
+    def _construct_metadata_string_for_columns(
+        self,
+        columns_df: pd.DataFrame,
+        column_stats_df: pd.DataFrame,
+    ) -> str:
+        """
+        Construct a formatted string representation of the columns for a single table.
+        """
+        columns_str = "\n\nColumns:"
+        for _, column_row in columns_df.iterrows():
+            stats_row = column_stats_df[column_stats_df["COLUMN_NAME"] == column_row["COLUMN_NAME"]]
+            columns_str += self._construct_metadata_string_for_column(
+                column_row,
+                stats_row,
+            )
+        return columns_str
+    
+    def _construct_metadata_string_for_column(
+        self,
+        column_row: pd.Series,
+        column_stats_row: pd.DataFrame,
+    ) -> str:
+        """
+        Construct a formatted string representation of a single column.
+        """
+        pad = " " * 4
+        column_str = f"{column_row['COLUMN_NAME']} ({column_row['DATA_TYPE']}):"
+        
+        if "COLUMN_DESCRIPTION" in column_row and pd.notna(column_row["COLUMN_DESCRIPTION"]):
+            column_str += f": {column_row['COLUMN_DESCRIPTION']}"
+        if "IS_NULLABLE" in column_row and pd.notna(column_row["IS_NULLABLE"]):
+            column_str += f"{pad}- Nullable: {column_row['IS_NULLABLE']}\n"
+        if "COLUMN_DEFAULT" in column_row and pd.notna(column_row["COLUMN_DEFAULT"]):
+            column_str += f"{pad}- Default Value: {column_row['COLUMN_DEFAULT']}\n"
+
+        if not column_stats_row.empty:
+            column_str += self._construct_metadata_string_for_column_statistics(column_stats_row, pad)
+
+        return column_str
+    
+    def _construct_metadata_string_for_column_statistics(
+        self,
+        stats_row: pd.DataFrame,
+        pad: str,
+    ) -> str:
+        """
+        Construct a formatted string representation of the column statistics for a single column.
+        """
+        inner_pad = pad + " " * 4
+        stats_str = f"\n\n{pad}- Column Statistics:"
+
+        most_common_values = stats_row.get("MOST_COMMON_VALUES")
+        most_common_frequencies = stats_row.get("MOST_COMMON_FREQUENCIES")
+        if pd.notna(most_common_values).all() and pd.notna(most_common_frequencies).all():
+            for i in range(min(10, len(most_common_values))):
+                freq = most_common_frequencies[i]
+                try:
+                    percent = float(freq) * 100
+                    freq_str = f"{percent:.2f}%"
+                except (ValueError, TypeError):
+                    freq_str = str(freq)
+                    
+                stats_str += f"\n{inner_pad}- {most_common_values[i]}: {freq_str}"
+            stats_str += "\n"
+            
+        if "NULL_PERCENTAGE" in stats_row and pd.notna(stats_row["NULL_PERCENTAGE"]):
+            stats_str += f"{pad}- Null Percentage: {stats_row["NULL_PERCENTAGE"]}\n"
+        if "DISTINCT_VALUES_COUNT" in stats_row and pd.notna(stats_row["DISTINCT_VALUES_COUNT"]):
+            stats_str += f"{pad}- No. of Distinct Values: {stats_row["DISTINCT_VALUES_COUNT"]}\n"
+        if "MINIMUM_VALUE" in stats_row and pd.notna(stats_row["MINIMUM_VALUE"]):
+            stats_str += f"{pad}- Minimum Value: {stats_row["MINIMUM_VALUE"]}\n"
+        if "MAXIMUM_VALUE" in stats_row and pd.notna(stats_row["MAXIMUM_VALUE"]):
+            stats_str += f"{pad}- Maximum Value: {stats_row["MAXIMUM_VALUE"]}"
+
+        return stats_str
+
+    def _construct_metadata_string_for_foreign_keys(
+        self,
+        foreign_keys_df: pd.DataFrame,
+        table_name: str,
+    ) -> str:
+        """
+        Construct a formatted string representation of the foreign keys for a single table.
+        """
+        pad = " " * 4
+        foreign_keys_str = f"\n\nKey Relationships:"
+        for _, fk_row in foreign_keys_df.iterrows():
+            # Avoid relationships where the current table is the child table to prevent redundancy.
+            if fk_row["CHILD_TABLE_NAME"] == table_name:
+                continue
+            foreign_keys_str += f"{pad}-{fk_row['CHILD_COLUMN_NAME']} in `{fk_row['CHILD_TABLE_NAME']}` references {fk_row['PARENT_COLUMN_NAME']} in `{fk_row['PARENT_TABLE_NAME']}`\n"
+        return foreign_keys_str
 
     def retrieve_tables(self) -> pd.DataFrame:
         """

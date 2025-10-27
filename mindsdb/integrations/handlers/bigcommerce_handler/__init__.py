@@ -5,6 +5,7 @@ from .connection_args import connection_args, connection_args_example
 
 try:
     from .bigcommerce_handler import BigCommerceHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None

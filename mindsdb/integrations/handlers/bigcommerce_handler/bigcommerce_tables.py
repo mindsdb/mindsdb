@@ -86,11 +86,7 @@ def _make_sort_condition_v2(sort: list[SortColumn], sortable_columns: list[str])
         dict: The sort condition, that can be used in the BigCommerce API v2.
     """
     sort_condition = None
-    if (
-        isinstance(sort, list)
-        and len(sort) == 1
-        and sort[0].column in sortable_columns
-    ):
+    if isinstance(sort, list) and len(sort) == 1 and sort[0].column in sortable_columns:
         sort_column = sort[0]
         sort_column.applied = True
         sort_condition = f"{sort_column.column}:{'asc' if sort_column.ascending else 'desc'}"
@@ -111,7 +107,7 @@ class BigCommerceOrdersTable(MetaAPIResource):
         sort: list[SortColumn] = None,
         **kwargs,
     ):
-        """ Executes a parsed SELECT SQL query on the 'orders' resource of the BigCommerce API.
+        """Executes a parsed SELECT SQL query on the 'orders' resource of the BigCommerce API.
 
         Args:
             conditions (list[FilterCondition]): The list of parsed filter conditions.
@@ -560,7 +556,7 @@ class BigCommerceCustomersTable(MetaAPIResource):
         result = _make_df(result, self)
 
         # 'name' is added to use server-side filtering
-        result['name'] = result['first_name'] + " " + result['last_name']
+        result["name"] = result["first_name"] + " " + result["last_name"]
 
         return result
 
@@ -624,7 +620,7 @@ class BigCommerceCategoriesTable(MetaAPIResource):
         targets: list[str] = None,
         **kwargs,
     ):
-        """ Executes a parsed SELECT SQL query on the 'categories' resource of the BigCommerce API.
+        """Executes a parsed SELECT SQL query on the 'categories' resource of the BigCommerce API.
 
         Args:
             conditions (list[FilterCondition]): The list of parsed filter conditions.
@@ -722,7 +718,7 @@ class BigCommercePickupsTable(MetaAPIResource):
         limit: int = None,
         **kwargs,
     ):
-        """ Executes a parsed SELECT SQL query on the 'pickups' resource of the BigCommerce API.
+        """Executes a parsed SELECT SQL query on the 'pickups' resource of the BigCommerce API.
 
         Args:
             conditions (List[FilterCondition]): The list of parsed filter conditions.
@@ -794,7 +790,7 @@ class BigCommercePromotionsTable(MetaAPIResource):
         targets: list[str] = None,
         **kwargs,
     ):
-        """ Executes a parsed SELECT SQL query on the 'promotions' resource of the BigCommerce API.
+        """Executes a parsed SELECT SQL query on the 'promotions' resource of the BigCommerce API.
 
         Args:
             conditions (list[FilterCondition]): The list of parsed filter conditions.

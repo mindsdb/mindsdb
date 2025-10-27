@@ -61,7 +61,7 @@ AutoBankingCustomerService automates the entire post-interaction workflow using 
 ## 🏗️ Architecture Overview
 
 ### System Architecture Diagram
-![1](./assets/arch.PNG)
+![1](./assets/arch.png)
 
 
 ### Architecture Components

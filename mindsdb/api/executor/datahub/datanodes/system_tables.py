@@ -774,8 +774,8 @@ class MetaHandlerInfoTable(Table):
 
         data = []
         for database in databases:
-            data_catalog_reader = DataCatalogRetriever(database_name=database, table_names=tables)
-            handler_info = data_catalog_reader.retrieve_handler_info()
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
+            handler_info = data_catalog_retriever.retrieve_handler_info()
             data.append({"HANDLER_INFO": str(handler_info) if handler_info else None, "TABLE_SCHEMA": database})
 
         df = pd.DataFrame(data, columns=cls.columns)

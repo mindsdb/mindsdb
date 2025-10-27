@@ -287,6 +287,7 @@ class TestColumnPruning:
         assert "quantity" in query_str
         assert "discount" in query_str
 
+
 class TestColumnPruningEdgeCases:
     """Test edge cases and error conditions."""
 

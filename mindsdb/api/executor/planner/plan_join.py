@@ -460,7 +460,7 @@ class PlanJoinTablesQuery:
 
         # If this table is part of a join with a predictor: cannot prune
         # Predictors may need all columns from joined tables as input features
-        if hasattr(self, 'join_sequence') and self._join_has_predictor(self.join_sequence):
+        if hasattr(self, "join_sequence") and self._join_has_predictor(self.join_sequence):
             return False
 
         # For subselects: can only prune if they have pure SELECT * (no other columns)

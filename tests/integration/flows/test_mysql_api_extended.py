@@ -317,24 +317,34 @@ class TestMySQLTriggers(BaseStuff):
                 (INSERT INTO {db_name}.{target_table_name} (id, message) SELECT id, message FROM TABLE_DELTA);
             """
             self.query(create_trigger_query)
-            time.sleep(5)
+            time.sleep(5) # Allow time for trigger creation
 
             # Activate Trigger
             self.query(f"UPDATE {db_name}.{source_table_name} SET message = '{updated_message}' WHERE id = {test_id};")
             self.query("COMMIT;")
 
-            time.sleep(20)  # Wait for Trigger to process
+            # Poll the target table for the result
+            result = []
+            max_wait_time = 30 
+            poll_interval = 2   
+            start_time = time.time()
+            while time.time() - start_time < max_wait_time:
+                result = self.query(f"SELECT * FROM {db_name}.{target_table_name} WHERE id = {test_id};")
+                if result:
+                    print(f"\n[DEBUG] Found result after {time.time() - start_time:.2f} seconds.")
+                    break 
+                print(f"[DEBUG] Polling... time elapsed: {time.time() - start_time:.2f}s")
+                time.sleep(poll_interval)
+            else: 
+                 print(f"\n[DEBUG] Polling timed out after {max_wait_time} seconds.")
 
             # Verify Action
-            result = self.query(f"SELECT * FROM {db_name}.{target_table_name} WHERE id = {test_id};")
-
-            assert result, f"No result found in target table for id {test_id}."
+            assert result, f"No result found in target table for id {test_id} after polling for {max_wait_time}s."
             assert len(result) == 1, "Trigger fired more or less than once."
-            assert result[0]["id"] == test_id
-            assert result[0]["message"] == updated_message
+            assert result[0]['id'] == test_id
+            assert result[0]['message'] == updated_message
         finally:
             self.query(f"DROP TRIGGER {trigger_name};")
-
 
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLTriggersNegative(BaseStuff):

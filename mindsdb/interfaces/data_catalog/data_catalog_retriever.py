@@ -1,7 +1,11 @@
 import pandas as pd
+from typing import List, Optional, Union
 
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
+
 
 
 class DataCatalogRetriever(BaseDataCatalog):
@@ -9,6 +13,33 @@ class DataCatalogRetriever(BaseDataCatalog):
     This class is responsible for retrieving (data catalog) metadata directly from the data source via the handler.
     This is different from the DataCatalogReader, which relies on the fact that the metadata is already stored in the database.
     """
+    
+    def __init__(self, database_name: str, table_names: Optional[List[str]] = None) -> None:
+        """
+        Initialize the DataCatalogRetriever.
+
+        Args:
+            database_name (str): The data source to retrieve metadata from.
+            table_names (Optional[List[str]]): The list of table names to retrieve metadata for. If None, all tables will be read.
+        """
+        from mindsdb.api.executor.controllers.session_controller import (
+            SessionController,
+        )
+
+        session = SessionController()
+
+        self.database_name = database_name
+        self.data_handler: Union[MetaDatabaseHandler, MetaAPIHandler] = session.integration_controller.get_data_handler(
+            database_name
+        )
+        integration = session.integration_controller.get(database_name)
+        self.integration_id = integration["id"]
+        self.integration_engine = integration["engine"]
+        # TODO: Handle situations where a schema is provided along with the database name, e.g., 'schema.table'.
+        # TODO: Handle situations where a file path is provided with integrations like S3, e.g., 'dir/file.csv'.
+        self.table_names = table_names
+
+        self.logger = logger
 
     def retrieve_tables(self) -> pd.DataFrame:
         """

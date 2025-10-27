@@ -91,9 +91,22 @@ class DataCatalogRetriever:
 
         for _, table_row in tables_df.iterrows():
             table_columns_df = columns_df[columns_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
-            table_column_stats_df = column_stats_df[column_stats_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
-            table_primary_keys_df = primary_keys_df[primary_keys_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
-            table_foreign_keys_df = foreign_keys_df[foreign_keys_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
+            # If no columns are found for the table,
+            # looking for column stats, primary keys, and foreign keys is redundant.
+            if not table_columns_df.empty:
+                if not column_stats_df.empty:
+                    table_column_stats_df = column_stats_df[column_stats_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
+                else:
+                    table_column_stats_df = pd.DataFrame()
+                if not primary_keys_df.empty:
+                    table_primary_keys_df = primary_keys_df[primary_keys_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
+                else:
+                    table_primary_keys_df = pd.DataFrame()
+                if not foreign_keys_df.empty:
+                    table_foreign_keys_df = foreign_keys_df[foreign_keys_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
+                else:
+                    table_foreign_keys_df = pd.DataFrame()
+
             tables_metadata_str += self._construct_metadata_string_for_table(
                 table_row,
                 table_columns_df,
@@ -117,7 +130,7 @@ class DataCatalogRetriever:
         table_metadata_str = f"`{self.database_name}`.`{table_row['TABLE_NAME']}`"
 
         if "TABLE_TYPE" in table_row and pd.notna(table_row["TABLE_TYPE"]):
-            table_metadata_str += f" ({self.type})"
+            table_metadata_str += f" ({table_row['TABLE_TYPE']})"
         if "TABLE_DESCRIPTION" in table_row and pd.notna(table_row["TABLE_DESCRIPTION"]):
             table_metadata_str += f": {table_row['TABLE_DESCRIPTION']}"
         if "TABLE_SCHEMA" in table_row and pd.notna(table_row["TABLE_SCHEMA"]):
@@ -184,12 +197,14 @@ class DataCatalogRetriever:
         if "COLUMN_DESCRIPTION" in column_row and pd.notna(column_row["COLUMN_DESCRIPTION"]):
             column_str += f": {column_row['COLUMN_DESCRIPTION']}"
         if "IS_NULLABLE" in column_row and pd.notna(column_row["IS_NULLABLE"]):
-            column_str += f"{pad}- Nullable: {column_row['IS_NULLABLE']}\n"
+            column_str += f"\n{pad}- Nullable: {column_row['IS_NULLABLE']}"
         if "COLUMN_DEFAULT" in column_row and pd.notna(column_row["COLUMN_DEFAULT"]):
-            column_str += f"{pad}- Default Value: {column_row['COLUMN_DEFAULT']}\n"
+            column_str += f"\n{pad}- Default Value: {column_row['COLUMN_DEFAULT']}"
 
         if not column_stats_row.empty:
             column_str += self._construct_metadata_string_for_column_statistics(column_stats_row, pad)
+            
+        column_str += "\n\n"
 
         return column_str
 
@@ -202,30 +217,37 @@ class DataCatalogRetriever:
         Construct a formatted string representation of the column statistics for a single column.
         """
         inner_pad = pad + " " * 4
-        stats_str = f"\n\n{pad}- Column Statistics:"
+        inner_inner_pad = inner_pad + " " * 4
+        stats_str = f"\n{pad}- Column Statistics:"
 
         most_common_values = stats_row.get("MOST_COMMON_VALUES")
         most_common_frequencies = stats_row.get("MOST_COMMON_FREQUENCIES")
-        if pd.notna(most_common_values).all() and pd.notna(most_common_frequencies).all():
+        if not most_common_values.empty and most_common_values.iloc[0]:
+            most_common_values = most_common_values.iloc[0]
+            stats_str += f"\n{inner_pad}- Top 10 Most Common Values and Frequencies:"
             for i in range(min(10, len(most_common_values))):
-                freq = most_common_frequencies[i]
-                try:
-                    percent = float(freq) * 100
-                    freq_str = f"{percent:.2f}%"
-                except (ValueError, TypeError):
-                    freq_str = str(freq)
+                if not most_common_frequencies.empty and most_common_frequencies.iloc[0]:
+                    most_common_frequencies = most_common_frequencies.iloc[0]
+                    freq = most_common_frequencies[i]
+                    try:
+                        percent = float(freq) * 100
+                        freq_str = f"{percent:.2f}%"
+                    except (ValueError, TypeError):
+                        freq_str = str(freq)
+                else:
+                    freq_str = ""
 
-                stats_str += f"\n{inner_pad}- {most_common_values[i]}: {freq_str}"
+                stats_str += f"\n{inner_inner_pad}- {most_common_values[i]}" + (f": {freq_str}" if freq_str else "")
             stats_str += "\n"
 
-        if "NULL_PERCENTAGE" in stats_row and pd.notna(stats_row["NULL_PERCENTAGE"]):
-            stats_str += f"{pad}- Null Percentage: {stats_row['NULL_PERCENTAGE']}\n"
-        if "DISTINCT_VALUES_COUNT" in stats_row and pd.notna(stats_row["DISTINCT_VALUES_COUNT"]):
-            stats_str += f"{pad}- No. of Distinct Values: {stats_row['DISTINCT_VALUES_COUNT']}\n"
-        if "MINIMUM_VALUE" in stats_row and pd.notna(stats_row["MINIMUM_VALUE"]):
-            stats_str += f"{pad}- Minimum Value: {stats_row['MINIMUM_VALUE']}\n"
-        if "MAXIMUM_VALUE" in stats_row and pd.notna(stats_row["MAXIMUM_VALUE"]):
-            stats_str += f"{pad}- Maximum Value: {stats_row['MAXIMUM_VALUE']}"
+        if "NULL_PERCENTAGE" in stats_row and pd.notna(stats_row.iloc[0]["NULL_PERCENTAGE"]):
+            stats_str += f"\n{inner_pad}- Null Percentage: {stats_row.iloc[0]['NULL_PERCENTAGE']}"
+        if "DISTINCT_VALUES_COUNT" in stats_row and pd.notna(stats_row.iloc[0]["DISTINCT_VALUES_COUNT"]):
+            stats_str += f"\n{inner_pad}- No. of Distinct Values: {stats_row.iloc[0]['DISTINCT_VALUES_COUNT']}"
+        if "MINIMUM_VALUE" in stats_row and pd.notna(stats_row.iloc[0]["MINIMUM_VALUE"]):
+            stats_str += f"\n{inner_pad}- Minimum Value: {stats_row.iloc[0]['MINIMUM_VALUE']}"
+        if "MAXIMUM_VALUE" in stats_row and pd.notna(stats_row.iloc[0]["MAXIMUM_VALUE"]):
+            stats_str += f"\n{inner_pad}- Maximum Value: {stats_row.iloc[0]['MAXIMUM_VALUE']}"
 
         return stats_str
 

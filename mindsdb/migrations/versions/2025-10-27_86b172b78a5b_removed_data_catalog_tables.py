@@ -5,6 +5,7 @@ Revises: 54ed56beb47a
 Create Date: 2025-10-27 11:14:14.671837
 
 """
+
 from alembic import op
 import sqlalchemy as sa
 import mindsdb.interfaces.storage.db  # noqa
@@ -12,8 +13,8 @@ from mindsdb.interfaces.storage.db import Array
 
 
 # revision identifiers, used by Alembic.
-revision = '86b172b78a5b'
-down_revision = '54ed56beb47a'
+revision = "86b172b78a5b"
+down_revision = "54ed56beb47a"
 branch_labels = None
 depends_on = None
 

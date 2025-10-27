@@ -14,7 +14,7 @@ class DataCatalogRetriever:
     """
     This class is responsible for retrieving (data catalog) metadata directly from the data source via the handler.
     """
-    
+
     def __init__(self, database_name: str, table_names: Optional[List[str]] = None) -> None:
         """
         Initialize the DataCatalogRetriever.
@@ -41,7 +41,7 @@ class DataCatalogRetriever:
         self.table_names = table_names
 
         self.logger = logger
-        
+
     def retrieve_metadata_as_string(self) -> str:
         """
         Retrieve the metadata as a formatted string.
@@ -102,7 +102,7 @@ class DataCatalogRetriever:
                 table_foreign_keys_df,
             )
         return tables_metadata_str
-    
+
     def _construct_metadata_string_for_table(
         self,
         table_row: pd.Series,
@@ -115,7 +115,7 @@ class DataCatalogRetriever:
         Construct a formatted string representation of the metadata for a single table.
         """
         table_metadata_str = f"`{self.database_name}`.`{table_row['TABLE_NAME']}`"
-        
+
         if "TABLE_TYPE" in table_row and pd.notna(table_row["TABLE_TYPE"]):
             table_metadata_str += f" ({self.type})"
         if "TABLE_DESCRIPTION" in table_row and pd.notna(table_row["TABLE_DESCRIPTION"]):
@@ -124,16 +124,13 @@ class DataCatalogRetriever:
             table_metadata_str += f"\nSchema: {table_row['TABLE_SCHEMA']}"
         if "ROW_COUNT" in table_row and pd.notna(table_row["ROW_COUNT"]) and table_row["ROW_COUNT"] > 0:
             table_metadata_str += f"\nEstimated Row Count: {int(table_row['ROW_COUNT'])}"
-            
+
         if not primary_keys_df.empty:
             table_metadata_str += self._construct_metadata_string_for_primary_keys(primary_keys_df)
 
         if not columns_df.empty:
-            table_metadata_str += self._construct_metadata_string_for_columns(
-                columns_df,
-                column_stats_df
-            )
-            
+            table_metadata_str += self._construct_metadata_string_for_columns(columns_df, column_stats_df)
+
         if not foreign_keys_df.empty:
             table_metadata_str += self._construct_metadata_string_for_foreign_keys(
                 foreign_keys_df,
@@ -141,7 +138,7 @@ class DataCatalogRetriever:
             )
 
         return table_metadata_str
-            
+
     def _construct_metadata_string_for_primary_keys(
         self,
         primary_keys_df: pd.DataFrame,
@@ -172,7 +169,7 @@ class DataCatalogRetriever:
                 stats_row,
             )
         return columns_str
-    
+
     def _construct_metadata_string_for_column(
         self,
         column_row: pd.Series,
@@ -183,7 +180,7 @@ class DataCatalogRetriever:
         """
         pad = " " * 4
         column_str = f"{column_row['COLUMN_NAME']} ({column_row['DATA_TYPE']}):"
-        
+
         if "COLUMN_DESCRIPTION" in column_row and pd.notna(column_row["COLUMN_DESCRIPTION"]):
             column_str += f": {column_row['COLUMN_DESCRIPTION']}"
         if "IS_NULLABLE" in column_row and pd.notna(column_row["IS_NULLABLE"]):
@@ -195,7 +192,7 @@ class DataCatalogRetriever:
             column_str += self._construct_metadata_string_for_column_statistics(column_stats_row, pad)
 
         return column_str
-    
+
     def _construct_metadata_string_for_column_statistics(
         self,
         stats_row: pd.DataFrame,
@@ -217,18 +214,18 @@ class DataCatalogRetriever:
                     freq_str = f"{percent:.2f}%"
                 except (ValueError, TypeError):
                     freq_str = str(freq)
-                    
+
                 stats_str += f"\n{inner_pad}- {most_common_values[i]}: {freq_str}"
             stats_str += "\n"
-            
+
         if "NULL_PERCENTAGE" in stats_row and pd.notna(stats_row["NULL_PERCENTAGE"]):
-            stats_str += f"{pad}- Null Percentage: {stats_row["NULL_PERCENTAGE"]}\n"
+            stats_str += f"{pad}- Null Percentage: {stats_row['NULL_PERCENTAGE']}\n"
         if "DISTINCT_VALUES_COUNT" in stats_row and pd.notna(stats_row["DISTINCT_VALUES_COUNT"]):
-            stats_str += f"{pad}- No. of Distinct Values: {stats_row["DISTINCT_VALUES_COUNT"]}\n"
+            stats_str += f"{pad}- No. of Distinct Values: {stats_row['DISTINCT_VALUES_COUNT']}\n"
         if "MINIMUM_VALUE" in stats_row and pd.notna(stats_row["MINIMUM_VALUE"]):
-            stats_str += f"{pad}- Minimum Value: {stats_row["MINIMUM_VALUE"]}\n"
+            stats_str += f"{pad}- Minimum Value: {stats_row['MINIMUM_VALUE']}\n"
         if "MAXIMUM_VALUE" in stats_row and pd.notna(stats_row["MAXIMUM_VALUE"]):
-            stats_str += f"{pad}- Maximum Value: {stats_row["MAXIMUM_VALUE"]}"
+            stats_str += f"{pad}- Maximum Value: {stats_row['MAXIMUM_VALUE']}"
 
         return stats_str
 

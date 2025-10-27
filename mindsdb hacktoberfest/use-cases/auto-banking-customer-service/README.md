@@ -46,9 +46,8 @@ AutoBankingCustomerService automates the entire post-interaction workflow using 
 
 1. **Automatic Summarization**: Every customer call is automatically summarized into concise, actionable text
 2. **Intelligent Classification**: AI determines whether issues are Resolved or Unresolved based on conversation context
-3. **Seamless Integration**: All conversations are automatically logged to Salesforce for CRM tracking
-4. **Context-Aware Recommendations**: Unresolved cases trigger RAG-powered recommendations based on enterprise knowledge bases (Confluence)
-5. **Automatic Escalation**: Unresolved issues are automatically converted into Jira tickets with recommended actions
+3. **Context-Aware Recommendations**: Unresolved cases trigger RAG-powered recommendations based on enterprise knowledge bases (Confluence)
+4. **Automatic Escalation**: Unresolved issues are automatically converted into Jira tickets with recommended actions
 
 **Key Results:**
 - **84% time reduction**: Cases that required 15+ minutes of manual work now complete in under 2 minutes
@@ -71,7 +70,7 @@ AutoBankingCustomerService automates the entire post-interaction workflow using 
   - Table: `banking_conversations` (raw messages)
   - Table: `banking_conversations_preprocessed` (aggregated conversations)
 - **Confluence**: Enterprise knowledge base with customer complaint handling policies
-- **Salesforce**: CRM system for case management (write-only from our system)
+
 
 #### 2. **MindsDB Layer** (AI Orchestration Hub)
 

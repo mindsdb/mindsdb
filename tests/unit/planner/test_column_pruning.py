@@ -391,7 +391,7 @@ class TestColumnPruningEdgeCases:
         """)
 
         plan = plan_query(query, integrations=["int1", "int2"])
-        
+
         # SubSelectStep should use SELECT * to pass through all columns
         # Column pruning happens at the table fetch level, not at SubSelectStep
         found_subselect_with_star = False
@@ -400,7 +400,7 @@ class TestColumnPruningEdgeCases:
             if "SubSelect" in step_str and "SELECT *" in step_str:
                 found_subselect_with_star = True
                 break
-        
+
         assert found_subselect_with_star, (
             f"Expected SubSelectStep to use SELECT * (no pruning). Steps: {[str(s) for s in plan.steps]}"
         )

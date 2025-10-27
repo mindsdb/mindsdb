@@ -35,8 +35,8 @@ class TestPlanJoinPredictor:
                 FetchDataframeStep(
                     integration="int",
                     query=Select(
-                        targets=[Identifier("column1", alias=Identifier("column1"))], from_table=Identifier("tab1")
-                    ),  # Column pruning
+                        targets=[Star()], from_table=Identifier("tab1")
+                    ),  # No column pruning with predictor joins (predictors may need all columns)
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
                 JoinStep(
@@ -70,9 +70,9 @@ class TestPlanJoinPredictor:
                 FetchDataframeStep(
                     integration="int",
                     query=Select(
-                        targets=[Identifier("column1", alias=Identifier("column1"))],
+                        targets=[Star()],
                         from_table=Identifier("tab1", alias=Identifier("ta")),
-                    ),  # Column pruning
+                    ),  # No column pruning with predictor joins
                 ),
                 ApplyPredictorStep(
                     namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred", alias=Identifier("tb"))

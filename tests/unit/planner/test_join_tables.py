@@ -654,7 +654,9 @@ class TestPlanJoinTables:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(integration="int1", query=parse_sql("select * from tbl1")),
-                SubSelectStep(dataframe=Result(0), query=parse_sql("SELECT `id`"), table_name="t1"),  # Column pruning
+                SubSelectStep(
+                    dataframe=Result(0), query=parse_sql("SELECT *"), table_name="t1"
+                ),  # TODO: CTE column pruning optimization
                 FetchDataframeStep(integration="int2", query=parse_sql("select * from tbl2 as t2")),
                 JoinStep(
                     left=Result(1),

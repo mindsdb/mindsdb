@@ -1,6 +1,6 @@
 import copy
 
-from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Data, BinaryOperation
+from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Data, BinaryOperation, Star
 from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner import plan_query
@@ -70,7 +70,7 @@ class TestInjectedData:
                 DataStep(data=content),
                 SubSelectStep(
                     query=Select(
-                        targets=[Identifier("a"), Identifier("x")],
+                        targets=[Star()],  # No column pruning with predictor joins
                         where=BinaryOperation(op="=", args=[Identifier("a"), Constant(1)]),
                     ),
                     dataframe=Result(0),

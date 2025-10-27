@@ -1,5 +1,5 @@
 from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Union, BinaryOperation
+from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Union, BinaryOperation, Star
 from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner import plan_query
@@ -53,12 +53,10 @@ class TestPlanUnion:
                         ),
                     ),
                 ),
-                # Query 2
+                # Query 2 (no column pruning with predictor joins)
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(
-                        targets=[Identifier("column1", alias=Identifier("column1"))], from_table=Identifier("tab1")
-                    ),
+                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(1), predictor=Identifier("pred")),
                 JoinStep(

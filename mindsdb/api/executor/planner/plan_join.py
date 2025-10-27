@@ -392,9 +392,16 @@ class PlanJoinTablesQuery:
 
         where = filters_to_bin_op(item.conditions)
 
-        # Column pruning: determine which columns from the subselect are actually needed
-        needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
-        targets = needed_columns if needed_columns else [Star()]
+        # Column pruning: only apply to subselects that have SELECT *
+        # If subselect has explicit columns, respect that projection
+        targets = [Star()]
+        if (item.sub_select.targets and 
+            len(item.sub_select.targets) == 1 and 
+            isinstance(item.sub_select.targets[0], Star)):
+            # Subselect has SELECT *, we can prune to only needed columns
+            needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
+            if needed_columns:
+                targets = needed_columns
 
         # apply table alias
         query2 = Select(targets=targets, where=where)
@@ -443,10 +450,12 @@ class PlanJoinTablesQuery:
         if table_info.predictor_info is not None:
             return None
 
-        # Skip column pruning for subselects with custom projections
-        # These already have their SELECT clause defined
+        # Skip column pruning for subselects with custom projections (specific columns, no *)
+        # If the subselect has SELECT * (or mixed like SELECT *, col1), we can still prune
+        # If the subselect has specific columns only (SELECT col1, col2), respect that and skip pruning
         if table_info.sub_select is not None and isinstance(table_info.sub_select, Select):
             if table_info.sub_select.targets and not any(isinstance(t, Star) for t in table_info.sub_select.targets):
+                # Subselect has only specific columns (no Star), so skip column pruning
                 return None
 
         # Skip column pruning if query uses LAST

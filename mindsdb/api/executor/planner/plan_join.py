@@ -395,9 +395,11 @@ class PlanJoinTablesQuery:
         # Column pruning: only apply to subselects that have SELECT *
         # If subselect has explicit columns, respect that projection
         targets = [Star()]
-        if (item.sub_select.targets and 
-            len(item.sub_select.targets) == 1 and 
-            isinstance(item.sub_select.targets[0], Star)):
+        if (
+            item.sub_select.targets
+            and len(item.sub_select.targets) == 1
+            and isinstance(item.sub_select.targets[0], Star)
+        ):
             # Subselect has SELECT *, we can prune to only needed columns
             needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
             if needed_columns:

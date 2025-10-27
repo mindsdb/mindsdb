@@ -32,6 +32,8 @@ class _SINGLE_PAGE_FORMAT:
     MD: str = "md"
     DOC: str = "doc"
     DOCX: str = "docx"
+    PPTX: str = "pptx"
+    PPT: str = "ppt"
     PARQUET: str = "parquet"
 
 
@@ -173,6 +175,12 @@ class FormatDetector:
 
             if file_type.mime == "application/msword":
                 return SINGLE_PAGE_FORMAT.DOC
+
+            if file_type.mime == "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+                return SINGLE_PAGE_FORMAT.PPTX
+
+            if file_type.mime == "application/vnd.ms-powerpoint":
+                return SINGLE_PAGE_FORMAT.PPT
 
         file_obj = decode(self.file_obj)
 
@@ -435,6 +443,125 @@ class FileReader(FormatDetector):
 
         docs = text_splitter.split_text(text)
         return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "doc"}} for doc in docs])
+
+    @staticmethod
+    def read_pptx(file_obj: BytesIO, name: str | None = None, chunk_size: int | None = None, chunk_overlap: int | None = None, **kwargs) -> pd.DataFrame:
+        # the lib is heavy, so import it only when needed
+        try:
+            from pptx import Presentation
+        except ImportError as e:
+            raise FileProcessingError(
+                "python-pptx package is required to read PPTX files. "
+                "Install it with: pip install python-pptx"
+            ) from e
+
+        prs = Presentation(file_obj)
+
+        # Extract text from all slides
+        text_parts = []
+        for slide in prs.slides:
+            # Extract text from all shapes in the slide
+            for shape in slide.shapes:
+                if hasattr(shape, "text") and shape.text.strip():
+                    text_parts.append(shape.text)
+
+                # Extract text from tables if present
+                if shape.shape_type == 19:  # Table shape type
+                    try:
+                        for row in shape.table.rows:
+                            for cell in row.cells:
+                                if cell.text.strip():
+                                    text_parts.append(cell.text)
+                    except Exception:
+                        pass
+
+            # Extract notes if present
+            if slide.has_notes_slide:
+                try:
+                    notes_text = slide.notes_slide.notes_text_frame.text
+                    if notes_text.strip():
+                        text_parts.append(notes_text)
+                except Exception:
+                    pass
+
+        text = "\n".join(text_parts)
+
+        # If chunk_size is 0 or negative, return full text without chunking
+        if chunk_size is not None and chunk_size <= 0:
+            return pd.DataFrame([{"content": text, "metadata": {"source_file": name, "file_format": "pptx"}}])
+
+        # Use provided chunk_size and chunk_overlap if available, otherwise use defaults
+        _chunk_size = chunk_size if chunk_size is not None else DEFAULT_CHUNK_SIZE
+        _chunk_overlap = chunk_overlap if chunk_overlap is not None else DEFAULT_CHUNK_OVERLAP
+
+        text_splitter = TextSplitter(chunk_size=_chunk_size, chunk_overlap=_chunk_overlap)
+
+        docs = text_splitter.split_text(text)
+        return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "pptx"}} for doc in docs])
+
+    @staticmethod
+    def read_ppt(file_obj: BytesIO, name: str | None = None, chunk_size: int | None = None, chunk_overlap: int | None = None, **kwargs) -> pd.DataFrame:
+        # PPT files (older PowerPoint format) are binary and more complex
+        # Try to use python-pptx which sometimes works with .ppt files
+        try:
+            from pptx import Presentation
+        except ImportError as e:
+            raise FileProcessingError(
+                "python-pptx package is required to read PPT files. "
+                "Install it with: pip install python-pptx"
+            ) from e
+
+        try:
+            prs = Presentation(file_obj)
+
+            # Extract text from all slides (same logic as PPTX)
+            text_parts = []
+            for slide in prs.slides:
+                # Extract text from all shapes in the slide
+                for shape in slide.shapes:
+                    if hasattr(shape, "text") and shape.text.strip():
+                        text_parts.append(shape.text)
+
+                    # Extract text from tables if present
+                    if shape.shape_type == 19:  # Table shape type
+                        try:
+                            for row in shape.table.rows:
+                                for cell in row.cells:
+                                    if cell.text.strip():
+                                        text_parts.append(cell.text)
+                        except Exception:
+                            pass
+
+                # Extract notes if present
+                if slide.has_notes_slide:
+                    try:
+                        notes_text = slide.notes_slide.notes_text_frame.text
+                        if notes_text.strip():
+                            text_parts.append(notes_text)
+                    except Exception:
+                        pass
+
+            text = "\n".join(text_parts)
+        except Exception as e:
+            # If python-pptx fails with PPT format, raise an informative error
+            raise FileProcessingError(
+                f"Unable to read PPT file '{name}'. The PPT format (older PowerPoint) "
+                "is a complex binary format. Consider converting it to PPTX format first. "
+                f"Error: {str(e)}"
+            ) from e
+
+        # If chunk_size is 0 or negative, return full text without chunking
+        if chunk_size is not None and chunk_size <= 0:
+            return pd.DataFrame([{"content": text, "metadata": {"source_file": name, "file_format": "ppt"}}])
+
+        # Use provided chunk_size and chunk_overlap if available, otherwise use defaults
+        _chunk_size = chunk_size if chunk_size is not None else DEFAULT_CHUNK_SIZE
+        _chunk_overlap = chunk_overlap if chunk_overlap is not None else DEFAULT_CHUNK_OVERLAP
+
+        text_splitter = TextSplitter(chunk_size=_chunk_size, chunk_overlap=_chunk_overlap)
+
+        docs = text_splitter.split_text(text)
+        return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "ppt"}} for doc in docs])
 
     @staticmethod
     def read_pdf(file_obj: BytesIO, name: str | None = None, chunk_size: int | None = None, chunk_overlap: int | None = None, **kwargs) -> pd.DataFrame:

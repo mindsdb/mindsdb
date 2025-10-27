@@ -81,8 +81,8 @@ class S3Handler(APIHandler):
 
     name = "s3"
     # Structured formats use DuckDB, text formats use FileReader
-    supported_file_formats = ["csv", "tsv", "json", "parquet", "txt", "pdf", "md", "doc", "docx"]
-    text_file_formats = ["txt", "pdf", "md", "doc", "docx"]
+    supported_file_formats = ["csv", "tsv", "json", "parquet", "txt", "pdf", "md", "doc", "docx", "pptx", "ppt"]
+    text_file_formats = ["txt", "pdf", "md", "doc", "docx", "pptx", "ppt"]
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         """

@@ -295,6 +295,9 @@ class TestMySQLTriggers(BaseStuff):
         test_id = 101
         updated_message = "this message was updated"
         try:
+            # Ensure the target table is empty before each test run.
+            self.query(f"DELETE FROM {db_name}.{target_table_name};")
+
             create_trigger_query = f"""
                 CREATE TRIGGER {trigger_name}
                 ON {db_name}.{source_table_name}
@@ -303,10 +306,13 @@ class TestMySQLTriggers(BaseStuff):
             self.query(create_trigger_query)
             time.sleep(5)
 
+            # Activate Trigger
             self.query(f"UPDATE {db_name}.{source_table_name} SET message = '{updated_message}' WHERE id = {test_id};")
             self.query("COMMIT;")
-            time.sleep(10)
 
+            time.sleep(20)  # Wait for Trigger to process
+
+            # Verify Action
             result = self.query(f"SELECT * FROM {db_name}.{target_table_name} WHERE id = {test_id};")
 
             assert result, f"No result found in target table for id {test_id}."

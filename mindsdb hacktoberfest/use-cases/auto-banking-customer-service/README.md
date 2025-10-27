@@ -6,7 +6,7 @@ An intelligent automated customer service pipeline for banking operations that s
 
 ✨ **[Read the Blog Post on DEV](https://dev.to/jiaqicheng1998/building-agentic-workflow-auto-banking-customer-service-with-mindsdb-484p)**
 ✨ **[Watch the Demo on Youtube](https://www.youtube.com/watch?v=cu2ElOprpBE)**
-
+✨ **[Interact with Us on LinkedIn](https://www.linkedin.com/feed/update/urn:li:activity:7388469604718854145/)**
 ---
 
 ## 📑 Table of Contents

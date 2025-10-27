@@ -203,7 +203,7 @@ class DataCatalogRetriever:
 
         if not column_stats_row.empty:
             column_str += self._construct_metadata_string_for_column_statistics(column_stats_row, pad)
-            
+
         column_str += "\n\n"
 
         return column_str

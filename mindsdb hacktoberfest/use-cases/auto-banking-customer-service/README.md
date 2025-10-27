@@ -5,6 +5,7 @@
 An intelligent automated customer service pipeline for banking operations that showcases MindsDB's AI agent orchestration, RAG knowledge base, and enterprise integration capabilities.
 
 ✨ **[Read the Blog Post on DEV](https://dev.to/jiaqicheng1998/building-agentic-workflow-auto-banking-customer-service-with-mindsdb-484p)**
+✨ **[Watch the Demo on Youtube](https://www.youtube.com/watch?v=cu2ElOprpBE)**
 
 ---
 

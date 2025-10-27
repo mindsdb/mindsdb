@@ -380,3 +380,22 @@ class TestColumnPruningEdgeCases:
         # Should fetch 'status' (used in SELECT, WHERE, ORDER BY)
         query_str = str(plan.steps[0].query)
         assert query_str.count("status") >= 1
+
+    def test_mixed_star_and_columns_in_subselect(self):
+        """Test that subselects with mixed Star and columns (SELECT *, col1) are NOT pruned."""
+        query = parse_sql("""
+            SELECT sub.id 
+            FROM (SELECT *, 'dummy' as extra FROM int1.table1) AS sub
+            JOIN int2.table2 t2 ON sub.id = t2.id
+        """)
+
+        plan = plan_query(query, integrations=["int1", "int2"])
+        # Mixed Star subselects have explicit column expressions, so they should NOT be pruned
+        found_unpruned_subselect = False
+        for step in plan.steps:
+            step_str = str(step)
+            # Look for SubSelectStep with SELECT * (not pruned)
+            if "SubSelect" in step_str and "SELECT *" in step_str:
+                found_unpruned_subselect = True
+                break
+        assert found_unpruned_subselect, f"Expected no pruning for mixed Star subselect. Steps: {[str(s) for s in plan.steps]}"

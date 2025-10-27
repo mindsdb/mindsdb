@@ -199,7 +199,7 @@ class TestColumnPruning:
         assert "created_at" in query_str
 
     def test_subselect_pruning(self):
-        """Test that subselects with SELECT * get column pruning applied."""
+        """Test that subselects with pure SELECT * get column pruning applied."""
         query = parse_sql("""
             SELECT sub.id 
             FROM (SELECT * FROM int1.table1) AS sub
@@ -217,7 +217,9 @@ class TestColumnPruning:
                 found_pruned_subselect = True
                 break
 
-        assert found_pruned_subselect, f"Subselect should be pruned. Steps: {[str(s) for s in plan.steps]}"
+        assert found_pruned_subselect, (
+            f"Subselect with pure SELECT * should be pruned. Steps: {[str(s) for s in plan.steps]}"
+        )
 
     def test_three_table_join_pruning(self):
         """Test column pruning with 3-table join."""

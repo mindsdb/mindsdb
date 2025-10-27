@@ -397,12 +397,7 @@ class PlanJoinTablesQuery:
         # - If subselect has explicit columns (SELECT a, b, c), pass through all (don't prune)
         # This preserves column aliases and prevents breaking explicit projections
         targets = [Star()]
-        if (
-            item.sub_select.targets
-            and len(item.sub_select.targets) == 1
-            and isinstance(item.sub_select.targets[0], Star)
-        ):
-            # Pure SELECT * - safe to apply column pruning
+        if self._can_prune_columns(item):
             needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
             if needed_columns:
                 targets = needed_columns
@@ -444,30 +439,45 @@ class PlanJoinTablesQuery:
             # Regular column reference
             query_traversal(field, add_column_callback)
 
+    def _can_prune_columns(self, table_info) -> bool:
+        """
+        Determine if column pruning can be applied to this table.
+
+        Returns:
+            True if column pruning can be applied
+            False if we should skip pruning (use SELECT *)
+        """
+        # Predictors/models: cannot prune (need all input features)
+        if table_info.predictor_info is not None:
+            return False
+
+        # For subselects: can only prune if they have pure SELECT * (no other columns)
+        sub = table_info.sub_select
+        if sub is not None and isinstance(sub, Select):
+            targets = getattr(sub, "targets", None) or []
+            # Can prune only if subselect has PURE SELECT * (one target that is Star)
+            # Cannot prune if:
+            #   - Mixed: SELECT *, col1 (has Star but also other columns)
+            if len(targets) == 1 and isinstance(targets[0], Star):
+                return True  # Pure SELECT * - can prune
+            return False
+
+        # For project tables (KB tables, views, etc.): cannot prune
+        # Project tables need SELECT * for proper column mapping
+        if table_info.integration and table_info.integration in self.planner.projects:
+            return False
+
+        # Regular integration tables: can prune
+        return True
+
     def get_columns_for_table(self, table_info, query_in, join_sequence):
         """
         Collect all columns needed from a specific table for column pruning optimization.
 
+        Note: Caller should check _can_prune_columns() before calling this method.
+
         Returns a list of column Identifiers or None if we should fetch all columns.
         """
-        # Skip column pruning for predictors/models
-        if table_info.predictor_info is not None:
-            return None
-
-        # Skip column pruning for project tables (KB tables, views, etc.)
-        # Project tables often have special column handling (e.g., KB tables map chunk_content->content)
-        # and need to receive SELECT * to work correctly
-        if table_info.integration and table_info.integration in self.planner.projects:
-            return None
-
-        # Skip column pruning for subselects with custom projections (specific columns, no *)
-        # If the subselect has SELECT * (or mixed like SELECT *, col1), we can still prune
-        # If the subselect has specific columns only (SELECT col1, col2), respect that and skip pruning
-        if table_info.sub_select is not None and isinstance(table_info.sub_select, Select):
-            if table_info.sub_select.targets and not any(isinstance(t, Star) for t in table_info.sub_select.targets):
-                # Subselect has only specific columns (no Star), so skip column pruning
-                return None
-
         # Skip column pruning if query uses LAST
         # TODO: We need to improve this
         if query_in.where:
@@ -573,9 +583,11 @@ class PlanJoinTablesQuery:
         table.parts.insert(0, item.integration)
         table.is_quoted.insert(0, False)
 
-        # Column pruning optimization: only fetch needed columns
-        needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
-        targets = needed_columns if needed_columns else [Star()]
+        if self._can_prune_columns(item):
+            needed_columns = self.get_columns_for_table(item, query_in, self.join_sequence)
+            targets = needed_columns if needed_columns else [Star()]
+        else:
+            targets = [Star()]
 
         query2 = Select(from_table=table, targets=targets)
         conditions = item.conditions

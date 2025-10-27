@@ -68,7 +68,7 @@ class BigCommerceAPIClient:
         if sort_condition:
             params["sort"] = sort_condition
 
-        return self._make_request_v2("GET", "orders", params=filter)
+        return self._make_request_v2("GET", "orders", params=params)
 
     def get_orders_count(self) -> int:
         response = self._make_request_v2("GET", "orders/count")

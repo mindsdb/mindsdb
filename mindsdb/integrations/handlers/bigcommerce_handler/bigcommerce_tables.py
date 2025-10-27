@@ -557,6 +557,9 @@ class BigCommerceCustomersTable(MetaAPIResource):
         )
         result = _make_df(result, self)
 
+        # 'name' is added to use server-side filtering
+        result['name'] = result['first_name'] + " " + result['last_name']
+
         return result
 
     def get_columns(self) -> List[str]:
@@ -587,6 +590,8 @@ class BigCommerceCustomersTable(MetaAPIResource):
             {"TABLE_NAME": "customers", "COLUMN_NAME": "email", "DATA_TYPE": "VARCHAR"},
             {"TABLE_NAME": "customers", "COLUMN_NAME": "first_name", "DATA_TYPE": "VARCHAR"},
             {"TABLE_NAME": "customers", "COLUMN_NAME": "last_name", "DATA_TYPE": "VARCHAR"},
+            # 'name' is added to use server-side filtering: first_name + last_name
+            {"TABLE_NAME": "customers", "COLUMN_NAME": "name", "DATA_TYPE": "VARCHAR"},
             {"TABLE_NAME": "customers", "COLUMN_NAME": "notes", "DATA_TYPE": "VARCHAR"},
             {"TABLE_NAME": "customers", "COLUMN_NAME": "phone", "DATA_TYPE": "VARCHAR"},
             {"TABLE_NAME": "customers", "COLUMN_NAME": "registration_ip_address", "DATA_TYPE": "VARCHAR"},

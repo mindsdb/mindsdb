@@ -33,6 +33,8 @@ from sqlalchemy.sql.schema import ForeignKey
 
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.config import config
+from mindsdb.utilities.functions import encrypt_json, decrypt_json
+from mindsdb.utilities.kms_wrapper import create_kms_wrapper
 
 
 class Base:
@@ -138,6 +140,67 @@ class Json(types.TypeDecorator):
         return json.loads(value) if value is not None else None
 
 
+class EncryptedJson(types.TypeDecorator):
+    """JSON Type that optionally encrypts data using KMS if configured"""
+
+    impl = types.LargeBinary
+
+    def _get_kms_wrapper(self):
+        """Get or create KMS wrapper instance."""
+        if not hasattr(self, '_kms_wrapper'):
+            kms_config = config.get('kms', {})
+            self._kms_wrapper = create_kms_wrapper(kms_config)
+        return self._kms_wrapper
+
+    def process_bind_param(self, value, dialect):  # insert
+        if value is None:
+            return None
+        
+        # Check if KMS encryption is enabled
+        kms_config = config.get('kms', {})
+        if kms_config.get('enabled', False):
+            try:
+                # Use KMS wrapper for encryption
+                kms_wrapper = self._get_kms_wrapper()
+                return kms_wrapper.encrypt(value)
+            except Exception as e:
+                # Fall back to local encryption if KMS fails
+                from mindsdb.utilities import log
+                logger = log.getLogger(__name__)
+                logger.warning(f"KMS encryption failed, falling back to local encryption: {e}")
+                secret_key = kms_config.get('secret_key', config.get('secret_key', 'dummy-key'))
+                return encrypt_json(value, secret_key)
+        else:
+            # Store as regular JSON string
+            return json.dumps(value, cls=NumpyEncoder).encode('utf-8')
+
+    def process_result_value(self, value, dialect):  # select
+        if value is None:
+            return None
+        
+        # Check if KMS encryption is enabled
+        kms_config = config.get('kms', {})
+        if kms_config.get('enabled', False):
+            try:
+                # Use KMS wrapper for decryption
+                kms_wrapper = self._get_kms_wrapper()
+                return kms_wrapper.decrypt(value)
+            except Exception as e:
+                # Fall back to local decryption if KMS fails
+                from mindsdb.utilities import log
+                logger = log.getLogger(__name__)
+                logger.warning(f"KMS decryption failed, falling back to local decryption: {e}")
+                secret_key = kms_config.get('secret_key', config.get('secret_key', 'dummy-key'))
+                return decrypt_json(value, secret_key)
+        else:
+            # Parse as regular JSON
+            if isinstance(value, bytes):
+                value = value.decode('utf-8')
+            if isinstance(value, dict):
+                return value
+            return json.loads(value) if value is not None else None
+
+
 class PREDICTOR_STATUS:
     __slots__ = ()
     COMPLETE = "complete"
@@ -229,7 +292,7 @@ class Integration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
-    data = Column(Json)
+    data = Column(EncryptedJson)
     company_id = Column(Integer)
 
     meta_tables = relationship("MetaTables", back_populates="integration")

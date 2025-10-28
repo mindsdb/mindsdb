@@ -69,8 +69,8 @@ jobs:
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
           target: cloud-cpu
-          #platforms: linux/amd64
-          #push-cache: false
+          platforms: linux/amd64
+          push-cache: false
 
   # Push cache layers to docker registry
   # This is separate to the build step so we can do other stuff in parallel

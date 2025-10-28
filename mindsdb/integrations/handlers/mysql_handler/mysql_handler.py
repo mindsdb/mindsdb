@@ -221,7 +221,7 @@ class MySQLHandler(MetaDatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except mysql.connector.Error as e:
-            logger.error(f"Error connecting to MySQL {self.connection_data['database']}, {e}!")
+            logger.error(f"Error connecting to MySQL {self.connection_data.get('database', 'unknown')}! Error: {e}")
             result.error_message = str(e)
 
         if result.success and need_to_close:
@@ -251,8 +251,10 @@ class MySQLHandler(MetaDatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
         except mysql.connector.Error as e:
-            logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            logger.error(
+                f"Error running query: {query} on {self.connection_data.get('database', 'unknown')}! Error: {e}"
+            )
+            response = Response(RESPONSE_TYPE.ERROR, error_code=e.errno or 1, error_message=str(e))
             if connection is not None and connection.is_connected():
                 connection.rollback()
 

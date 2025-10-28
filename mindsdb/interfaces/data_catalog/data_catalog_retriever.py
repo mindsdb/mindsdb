@@ -1,3 +1,4 @@
+import ast
 import pandas as pd
 from typing import List, Optional, Union
 
@@ -174,7 +175,8 @@ class DataCatalogRetriever:
         """
         columns_str = "\n\nColumns:"
         for _, column_row in columns_df.iterrows():
-            stats_row = column_stats_df[column_stats_df["COLUMN_NAME"] == column_row["COLUMN_NAME"]]
+            # Ideally, there should be only one stats row per column.
+            stats_row = column_stats_df[column_stats_df["COLUMN_NAME"] == column_row["COLUMN_NAME"]].iloc[0]
             columns_str += self._construct_metadata_string_for_column(
                 column_row,
                 stats_row,
@@ -184,7 +186,7 @@ class DataCatalogRetriever:
     def _construct_metadata_string_for_column(
         self,
         column_row: pd.Series,
-        column_stats_row: pd.DataFrame,
+        column_stats_row: pd.Series,
     ) -> str:
         """
         Construct a formatted string representation of a single column.
@@ -208,7 +210,7 @@ class DataCatalogRetriever:
 
     def _construct_metadata_string_for_column_statistics(
         self,
-        stats_row: pd.DataFrame,
+        stats_row: pd.Series,
         pad: str,
     ) -> str:
         """
@@ -218,36 +220,75 @@ class DataCatalogRetriever:
         inner_inner_pad = inner_pad + " " * 4
         stats_str = f"\n{pad}- Column Statistics:"
 
-        most_common_values = stats_row.get("MOST_COMMON_VALUES")
-        most_common_frequencies = stats_row.get("MOST_COMMON_FREQUENCIES")
-        if not most_common_values.empty and most_common_values.iloc[0]:
-            most_common_values = most_common_values.iloc[0]
-            stats_str += f"\n{inner_pad}- Top 10 Most Common Values and Frequencies:"
-            for i in range(min(10, len(most_common_values))):
-                if not most_common_frequencies.empty and most_common_frequencies.iloc[0]:
-                    most_common_frequencies = most_common_frequencies.iloc[0]
-                    freq = most_common_frequencies[i]
-                    try:
-                        percent = float(freq) * 100
-                        freq_str = f"{percent:.2f}%"
-                    except (ValueError, TypeError):
-                        freq_str = str(freq)
-                else:
-                    freq_str = ""
+        # Most common values is expected to be a list, hence the check for non-null.
+        if "MOST_COMMON_VALUES" in stats_row and stats_row["MOST_COMMON_VALUES"]:
+            most_common_values = stats_row["MOST_COMMON_VALUES"]
+            # Handle case where most_common_values is a string representation of a list or other formats.
+            if isinstance(most_common_values, str):
+                most_common_values = self._parse_list_from_string(most_common_values)
+            elif isinstance(most_common_values, (list, tuple, pd.Series)):
+                most_common_values = list(most_common_values)
+            else:
+                most_common_values = [most_common_values]
 
-                stats_str += f"\n{inner_inner_pad}- {most_common_values[i]}" + (f": {freq_str}" if freq_str else "")
-            stats_str += "\n"
+            if most_common_values and pd.notna(most_common_values).any():
+                stats_str += f"\n{inner_pad}- Top 10 Most Common Values and Frequencies:"
 
-        if "NULL_PERCENTAGE" in stats_row and pd.notna(stats_row.iloc[0]["NULL_PERCENTAGE"]):
-            stats_str += f"\n{inner_pad}- Null Percentage: {stats_row.iloc[0]['NULL_PERCENTAGE']}"
-        if "DISTINCT_VALUES_COUNT" in stats_row and pd.notna(stats_row.iloc[0]["DISTINCT_VALUES_COUNT"]):
-            stats_str += f"\n{inner_pad}- No. of Distinct Values: {stats_row.iloc[0]['DISTINCT_VALUES_COUNT']}"
-        if "MINIMUM_VALUE" in stats_row and pd.notna(stats_row.iloc[0]["MINIMUM_VALUE"]):
-            stats_str += f"\n{inner_pad}- Minimum Value: {stats_row.iloc[0]['MINIMUM_VALUE']}"
-        if "MAXIMUM_VALUE" in stats_row and pd.notna(stats_row.iloc[0]["MAXIMUM_VALUE"]):
-            stats_str += f"\n{inner_pad}- Maximum Value: {stats_row.iloc[0]['MAXIMUM_VALUE']}"
+                # Most common frequencies is also expected to be a list.
+                most_common_frequencies = []
+                if "MOST_COMMON_FREQUENCIES" in stats_row and stats_row["MOST_COMMON_FREQUENCIES"]:
+                    most_common_frequencies = stats_row["MOST_COMMON_FREQUENCIES"]
+                    if isinstance(most_common_frequencies, str):
+                        most_common_frequencies = self._parse_list_from_string(most_common_frequencies)
+                    elif isinstance(most_common_frequencies, (list, tuple, pd.Series)):
+                        most_common_frequencies = list(most_common_frequencies)
+                    else:
+                        most_common_frequencies = [most_common_frequencies]
+
+                for i in range(min(10, len(most_common_values))):
+                    if most_common_frequencies and pd.notna(most_common_frequencies).any() and i < len(most_common_frequencies):
+                        freq = most_common_frequencies[i]
+                        try:
+                            percent = float(freq) * 100
+                            freq_str = f"{percent:.2f}%"
+                        except (ValueError, TypeError):
+                            freq_str = str(freq)
+                    else:
+                        freq_str = ""
+
+                    stats_str += f"\n{inner_inner_pad}- {most_common_values[i]}" + (f": {freq_str}" if freq_str else "")
+                stats_str += "\n"
+
+        if "NULL_PERCENTAGE" in stats_row and pd.notna(stats_row["NULL_PERCENTAGE"]):
+            stats_str += f"\n{inner_pad}- Null Percentage: {stats_row['NULL_PERCENTAGE']}"
+        if "DISTINCT_VALUES_COUNT" in stats_row and pd.notna(stats_row["DISTINCT_VALUES_COUNT"]):
+            stats_str += f"\n{inner_pad}- No. of Distinct Values: {stats_row['DISTINCT_VALUES_COUNT']}"
+        if "MINIMUM_VALUE" in stats_row and pd.notna(stats_row["MINIMUM_VALUE"]):
+            stats_str += f"\n{inner_pad}- Minimum Value: {stats_row['MINIMUM_VALUE']}"
+        if "MAXIMUM_VALUE" in stats_row and pd.notna(stats_row["MAXIMUM_VALUE"]):
+            stats_str += f"\n{inner_pad}- Maximum Value: {stats_row['MAXIMUM_VALUE']}"
 
         return stats_str
+    
+    def _parse_list_from_string(self, list_str: str) -> List[str]:
+        """
+        Safely parse a string representation of a list into an actual list.
+        This is used to handle most common values and frequencies stored as strings.
+        """
+        # Try to safely parse python-like list strings: "['a','b']" or '["a","b"]'.
+        try:
+            parsed = ast.literal_eval(list_str)
+            if isinstance(parsed, (list, tuple)):
+                lst = [x for x in parsed if not pd.isna(x)]
+            else:
+                # fallback: treat parsed as scalar
+                if not pd.isna(parsed):
+                    lst = [parsed]
+        except (ValueError, SyntaxError):
+            # fallback to splitting on comma for simpler string formats
+            s = list_str.strip("[]")
+            lst = [v.strip() for v in s.split(",") if v.strip()]
+        return lst
 
     def _construct_metadata_string_for_foreign_keys(
         self,

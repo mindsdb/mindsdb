@@ -444,7 +444,7 @@ To use Area51's MCP server in Cursor:
   "mcpServers": {
     "area51-support-agent": {
       "command": "uv",
-      "args": ["run", "fastmcp", "run", "/path/to/area51/server.py", "--transport=sse"],
+      "args": ["run", "fastmcp", "run", "/path/to/enterprise-search/server.py", "--transport=sse"],
       "env": {
         "MINDSDB_URL": "http://localhost:47334"
       }
@@ -453,12 +453,12 @@ To use Area51's MCP server in Cursor:
 }
 ```
 
-4. Update the path to match your Area51 installation
+4. Update the path to match your installation directory
 5. Restart Cursor
 
 Once configured, you can ask Cursor: "Search for authentication errors in Zendesk" and it will use the MCP server to query your knowledge bases.
 
-![MCP Integration](architecture/MCP-Invoke.png)
+![MCP Integration](architecture/MCP%20Invoke.png)
 
 **Session Management**
 
@@ -471,7 +471,7 @@ For Claude Desktop, configure in `~/.claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "area51": {
+    "enterprise-search": {
       "command": "uv",
       "args": ["run", "fastmcp", "run", "server.py", "--transport=sse"]
     }
@@ -500,7 +500,7 @@ The result: a production-ready, multi-source RAG system built in days instead of
 ## Project Structure
 
 ```
-area51/
+enterprise-search/
 ├── agent.py                 # LangGraph conversational agent
 ├── server.py                # MCP server for AI assistants
 ├── server_langgraph.py      # LangGraph server implementation

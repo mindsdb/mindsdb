@@ -1,5 +1,5 @@
 [project]
-name = "area51"
+name = "enterprise-search"
 version = "0.1.0"
 description = "Zendesk + JIRA + Confluence integration with semantic search"
 requires-python = ">=3.11"

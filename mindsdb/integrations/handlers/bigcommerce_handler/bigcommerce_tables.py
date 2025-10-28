@@ -65,9 +65,8 @@ def _make_sort_condition_v3(sort: list[SortColumn], sortable_columns: list[str])
         dict: The sort condition, that can be used in the BigCommerce API v3.
     """
     sort_condition = None
-    if isinstance(sort, list) and len(sort) == 1 and sort[0].column in sortable_columns:
+    if isinstance(sort, list) and len(sort) > 1 and sort[0].column in sortable_columns:
         sort_column = sort[0]
-        sort_column.applied = True
         sort_condition = {
             "sort": sort_column.column,
             "direction": "asc" if sort_column.ascending else "desc",
@@ -139,6 +138,15 @@ class BigCommerceOrdersTable(MetaAPIResource):
 
         filter = _make_filter(conditions, simple_op_map)
 
+        for condition in conditions:
+            if condition.applied:
+                continue
+            # region special case for filter "id = x"
+            if condition.op == FilterOperator.EQUAL and condition.column == "id":
+                filter["min_id"] = condition.value
+                filter["max_id"] = condition.value
+            # endregion
+
         sortable_columns = [
             "id",
             "customer_id",
@@ -153,33 +161,7 @@ class BigCommerceOrdersTable(MetaAPIResource):
         result = client.get_orders(filter=filter, sort_condition=sort_condition, limit=limit)
         result = _make_df(result, self)
 
-        decimal_columns = [
-            "base_handling_cost",
-            "base_shipping_cost",
-            "base_wrapping_cost",
-            "coupon_discount",
-            "currency_exchange_rate",
-            "discount_amount",
-            "gift_certificate_amount",
-            "handling_cost_ex_tax",
-            "handling_cost_inc_tax",
-            "handling_cost_tax",
-            "refunded_amount",
-            "shipping_cost_ex_tax",
-            "shipping_cost_inc_tax",
-            "shipping_cost_tax",
-            "store_credit_amount",
-            "store_default_to_transactional_exchange_rate",
-            "subtotal_ex_tax",
-            "subtotal_inc_tax",
-            "subtotal_tax",
-            "total_ex_tax",
-            "total_inc_tax",
-            "total_tax",
-            "wrapping_cost_ex_tax",
-            "wrapping_cost_inc_tax",
-            "wrapping_cost_tax",
-        ]
+        decimal_columns = [meta['COLUMN_NAME'] for meta in self.meta_get_columns() if meta["DATA_TYPE"] == "DECIMAL"]
         for column_name in decimal_columns:
             if column_name in result:
                 result[column_name] = result[column_name].apply(Decimal)
@@ -433,7 +415,7 @@ class BigCommerceOrdersTable(MetaAPIResource):
             {
                 "TABLE_NAME": "orders",
                 "COLUMN_NAME": "ebay_order_id",
-                "DATA_TYPE": "DECIMAL",
+                "DATA_TYPE": "TEXT",
                 "COLUMN_DESCRIPTION": "If the order was placed through eBay, the eBay order number will be included. Otherwise, the value will be 0.",
             },
             {
@@ -849,8 +831,11 @@ class BigCommerceCustomersTable(MetaAPIResource):
         client: BigCommerceAPIClient = self.handler.connect()
 
         simple_op_map = {
+            ("id", FilterOperator.EQUAL): "id:in",  # custom filter
             ("id", FilterOperator.IN): "id:in",
+            ("company", FilterOperator.EQUAL): "company:in",  # custom filter
             ("company", FilterOperator.IN): "company:in",
+            ("customer_group_id", FilterOperator.EQUAL): "customer_group_id:in",   # custom filter
             ("customer_group_id", FilterOperator.IN): "customer_group_id:in",
             ("date_created", FilterOperator.EQUAL): "date_created",
             ("date_created", FilterOperator.LESS_THAN): "date_created:max",
@@ -858,10 +843,13 @@ class BigCommerceCustomersTable(MetaAPIResource):
             ("date_modified", FilterOperator.EQUAL): "date_modified",
             ("date_modified", FilterOperator.LESS_THAN): "date_modified:max",
             ("date_modified", FilterOperator.GREATER_THAN): "date_modified:min",
+            ("email", FilterOperator.EQUAL): "email:in",  # custom filter
             ("email", FilterOperator.IN): "email:in",
             ("name", FilterOperator.IN): "name:in",
             ("name", FilterOperator.LIKE): "name:like",
+            ("phone", FilterOperator.EQUAL): "phone:in",  # custom filter
             ("phone", FilterOperator.IN): "phone:in",
+            ("registration_ip_address", FilterOperator.EQUAL): "registration_ip_address:in",  # custom filter
             ("registration_ip_address", FilterOperator.IN): "registration_ip_address:in",
         }
 
@@ -956,10 +944,13 @@ class BigCommerceCategoriesTable(MetaAPIResource):
         client: BigCommerceAPIClient = self.handler.connect()
 
         simple_op_map = {
+            ("category_id", FilterOperator.EQUAL): "category_id:in",  # custom filter
             ("category_id", FilterOperator.IN): "category_id:in",
             ("category_id", FilterOperator.NOT_IN): "category_id:not_in",
+            ("tree_id", FilterOperator.EQUAL): "tree_id:in",  # custom filter
             ("tree_id", FilterOperator.IN): "tree_id:in",
             ("tree_id", FilterOperator.NOT_IN): "tree_id:not_in",
+            ("parent_id", FilterOperator.EQUAL): "parent_id:in",  # custom filter
             ("parent_id", FilterOperator.IN): "parent_id:in",
             ("parent_id", FilterOperator.NOT_IN): "parent_id:not_in",
             ("page_title", FilterOperator.EQUAL): "page_title",
@@ -1052,7 +1043,9 @@ class BigCommercePickupsTable(MetaAPIResource):
         client: BigCommerceAPIClient = self.handler.connect()
 
         simple_op_map = {
+            ("order_id", FilterOperator.EQUAL): "order_id:in",  # custom filter
             ("order_id", FilterOperator.IN): "order_id:in",
+            ("pickup_id", FilterOperator.EQUAL): "pickup_id:in",  # custom filter
             ("pickup_id", FilterOperator.IN): "pickup_id:in",
         }
 
@@ -1131,6 +1124,7 @@ class BigCommercePromotionsTable(MetaAPIResource):
             ("currency_code", FilterOperator.EQUAL): "currency_code",
             ("redemption_type", FilterOperator.EQUAL): "redemption_type",
             ("status", FilterOperator.EQUAL): "status",
+            ("channels", FilterOperator.EQUAL): "channels",  # custom filter
             ("channels", FilterOperator.IN): "channels",
         }
 

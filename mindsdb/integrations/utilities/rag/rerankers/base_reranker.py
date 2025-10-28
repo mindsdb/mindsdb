@@ -7,7 +7,6 @@ import math
 import os
 import random
 from abc import ABC
-from textwrap import dedent
 from typing import Any, List, Optional, Tuple
 
 from openai import AsyncOpenAI, AsyncAzureOpenAI
@@ -87,7 +86,9 @@ class BaseLLMReranker(BaseModel, ABC):
             elif self.provider in ("openai", "ollama"):
                 if self.provider == "ollama":
                     self.method = "no-logprobs"
-                    self.logprobs = False
+                    if self.api_key is None:
+                        self.api_key = "n/a"
+
                 api_key_var: str = "OPENAI_API_KEY"
                 openai_api_key = self.api_key or os.getenv(api_key_var)
                 if not openai_api_key:
@@ -229,13 +230,11 @@ class BaseLLMReranker(BaseModel, ABC):
         return rerank_data
 
     async def search_relevancy_no_logprob(self, query: str, document: str) -> Any:
-        prompt = dedent(
-            f"""
-            Score the relevance between search query and user message on scale between 0 and 100 per cents.
-            Consider semantic meaning, key concepts, and contextual relevance.
-            Return ONLY a numerical score between 0 and 100 per cents. No other text. Stop after sending a number
-            Search query: {query}
-        """
+        prompt = (
+            f"Score the relevance between search query and user message on scale between 0 and 100 per cents. "
+            f"Consider semantic meaning, key concepts, and contextual relevance. "
+            f"Return ONLY a numerical score between 0 and 100 per cents. No other text. Stop after sending a number. "
+            f"Search query: {query}"
         )
 
         response = await self._call_llm(

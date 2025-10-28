@@ -17,7 +17,8 @@
               "group": "Get Started",
               "pages": [
                 "mindsdb",
-                "quickstart-tutorial"
+                "quickstart-tutorial",
+                "releases"
               ]
             },
             {
@@ -681,17 +682,12 @@
               "group": "Contribute",
               "pages": [
                 "contribute/contribute",
-                "contribute/issues",
-                "contribute/issue-labels",
                 "contribute/install",
                 "contribute/python-coding-standards",
                 "contribute/data-handlers",
                 "contribute/app-handlers",
-                "contribute/tests",
                 "contribute/integrations-readme",
-                "contribute/tutorials",
                 "contribute/docs",
-                "contribute/docs-rules",
                 "contribute/community"
               ]
             }

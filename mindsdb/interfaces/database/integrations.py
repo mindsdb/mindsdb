@@ -1,5 +1,4 @@
 import os
-import sys
 import base64
 import shutil
 import ast
@@ -33,125 +32,9 @@ from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
 from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
+from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
 
 logger = log.getLogger(__name__)
-
-
-class HandlersCache:
-    """Cache for data handlers that keep connections opened during ttl time from handler last use"""
-
-    def __init__(self, ttl: int = 60):
-        """init cache
-
-        Args:
-            ttl (int): time to live (in seconds) for record in cache
-        """
-        self.ttl = ttl
-        self.handlers = {}
-        self._lock = threading.RLock()
-        self._stop_event = threading.Event()
-        self.cleaner_thread = None
-
-    def __del__(self):
-        self._stop_clean()
-
-    def _start_clean(self) -> None:
-        """start worker that close connections after ttl expired"""
-        if isinstance(self.cleaner_thread, threading.Thread) and self.cleaner_thread.is_alive():
-            return
-        self._stop_event.clear()
-        self.cleaner_thread = threading.Thread(target=self._clean, name="HandlersCache.clean")
-        self.cleaner_thread.daemon = True
-        self.cleaner_thread.start()
-
-    def _stop_clean(self) -> None:
-        """stop clean worker"""
-        self._stop_event.set()
-
-    def set(self, handler: DatabaseHandler):
-        """add (or replace) handler in cache
-
-        NOTE: If the handler is not thread-safe, then use a lock when making connection. Otherwise, make connection in
-        the same thread without using a lock to speed up parallel queries. (They don't need to wait for a connection in
-        another thread.)
-
-        Args:
-            handler (DatabaseHandler)
-        """
-        thread_safe = getattr(handler, "thread_safe", False)
-        with self._lock:
-            try:
-                # If the handler is defined to be thread safe, set 0 as the last element of the key, otherwise set the thrad ID.
-                key = (
-                    handler.name,
-                    ctx.company_id,
-                    0 if thread_safe else threading.get_native_id(),
-                )
-                self.handlers[key] = {"handler": handler, "expired_at": time.time() + self.ttl}
-                if thread_safe:
-                    handler.connect()
-            except Exception:
-                pass
-            self._start_clean()
-        try:
-            if not thread_safe:
-                handler.connect()
-        except Exception:
-            pass
-
-    def get(self, name: str) -> Optional[DatabaseHandler]:
-        """get handler from cache by name
-
-        Args:
-            name (str): handler name
-
-        Returns:
-            DatabaseHandler
-        """
-        with self._lock:
-            # If the handler is not thread safe, the thread ID will be assigned to the last element of the key.
-            key = (name, ctx.company_id, threading.get_native_id())
-            if key not in self.handlers:
-                # If the handler is thread safe, a 0 will be assigned to the last element of the key.
-                key = (name, ctx.company_id, 0)
-            if key not in self.handlers or self.handlers[key]["expired_at"] < time.time():
-                return None
-            self.handlers[key]["expired_at"] = time.time() + self.ttl
-            return self.handlers[key]["handler"]
-
-    def delete(self, name: str) -> None:
-        """delete handler from cache
-
-        Args:
-            name (str): handler name
-        """
-        with self._lock:
-            key = (name, ctx.company_id, threading.get_native_id())
-            if key in self.handlers:
-                try:
-                    self.handlers[key].disconnect()
-                except Exception:
-                    pass
-                del self.handlers[key]
-            if len(self.handlers) == 0:
-                self._stop_clean()
-
-    def _clean(self) -> None:
-        """worker that delete from cache handlers that was not in use for ttl"""
-        while self._stop_event.wait(timeout=3) is False:
-            with self._lock:
-                for key in list(self.handlers.keys()):
-                    if (
-                        self.handlers[key]["expired_at"] < time.time()
-                        and sys.getrefcount(self.handlers[key]) == 2  # returned ref count is always 1 higher
-                    ):
-                        try:
-                            self.handlers[key].disconnect()
-                        except Exception:
-                            pass
-                        del self.handlers[key]
-                if len(self.handlers) == 0:
-                    self._stop_event.set()
 
 
 class IntegrationController:
@@ -182,9 +65,6 @@ class IntegrationController:
             ctx.company_id,
         )
         handler_meta = self.get_handler_meta(engine)
-
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
 
         accept_connection_args = handler_meta.get("connection_args")
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
@@ -541,6 +421,7 @@ class IntegrationController:
         """
         handler = self.handlers_cache.get(name)
         if handler is not None:
+            ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
             return handler
 
         integration_record = self._get_integration_record(name, case_sensitive)
@@ -614,6 +495,7 @@ class IntegrationController:
         if connect:
             self.handlers_cache.set(handler)
 
+        ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
         return handler
 
     def reload_handler_module(self, handler_name):

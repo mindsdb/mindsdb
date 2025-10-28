@@ -50,7 +50,7 @@ class HandlerResponse:
         error_message: str | None = None,
         affected_rows: int | None = None,
         mysql_types: list[MYSQL_DATA_TYPE] | None = None,
-        is_acceptable_error: bool = False,
+        is_expected_error: bool = False,
     ) -> None:
         self.resp_type = resp_type
         self.query = query
@@ -61,7 +61,7 @@ class HandlerResponse:
         if isinstance(self.affected_rows, int) is False or self.affected_rows < 0:
             self.affected_rows = 0
         self.mysql_types = mysql_types
-        self.is_acceptable_error = is_acceptable_error
+        self.is_expected_error = is_expected_error
         self.exception = None
         current_exception = sys.exc_info()
         if current_exception[0] is not None:

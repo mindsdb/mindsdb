@@ -178,7 +178,7 @@ class TestPlanJoinTables:
                 left=Identifier('int.tab1'),
                 right=Identifier('int2.tab2'),
                 condition=BinaryOperation(op='>', args=[Identifier('tab1.column1'), Identifier('tab2.column1')]),
-                join_type=JoinType.INNER_JOIN
+                join_type=JoinType.LEFT_JOIN
             ),
             limit=Constant(10),
             offset=Constant(15),
@@ -218,7 +218,7 @@ class TestPlanJoinTables:
                             args=[Identifier('tab1.column1'),
                                   Identifier('tab2.column1')]
                         ),
-                        join_type=JoinType.INNER_JOIN
+                        join_type=JoinType.LEFT_JOIN
                     )
                 ),
                 QueryStep(subquery, from_table=Result(2), strict_where=False),

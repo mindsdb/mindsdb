@@ -284,16 +284,15 @@ class PlanJoinTablesQuery:
         # if only models
         use_limit = False
         if query_in.having is None or query_in.group_by is None and query_in.limit is not None:
-            join = None
+            prev_table = None
             use_limit = True
             for item in join_sequence:
                 if isinstance(item, TableInfo):
-                    if item.predictor_info is None and item.sub_select is None:
-                        if join is not None:
-                            if join.join_type.upper() != "LEFT JOIN":
-                                use_limit = False
-                elif isinstance(item, Join):
-                    join = item
+                    prev_table = item
+                elif isinstance(item, Join) and prev_table is not None:
+                    if prev_table.predictor_info is None and prev_table.sub_select is None:
+                        if item.join_type.upper() != "LEFT JOIN":
+                            use_limit = False
         self.query_context["use_limit"] = use_limit
 
     def plan_join_tables(self, query_in):

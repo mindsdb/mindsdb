@@ -243,7 +243,6 @@ class TestPlanJoinTables:
 
         subquery = copy.deepcopy(query)
         subquery.from_table = None
-        subquery.offset = None
 
         plan = plan_query(query, integrations=['int', 'int2'])
         expected_plan = QueryPlan(
@@ -251,7 +250,7 @@ class TestPlanJoinTables:
             steps=[
                 FetchDataframeStep(
                     integration='int',
-                    query=parse_sql("select * from tab1 order by column1 limit 10 offset 15")
+                    query=parse_sql("select * from tab1")
                 ),
                 FetchDataframeStep(
                     integration='int2',

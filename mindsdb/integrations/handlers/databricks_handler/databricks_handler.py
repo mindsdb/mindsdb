@@ -297,9 +297,9 @@ class DatabricksHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the metadata information, formatted as per the `Response` class.
         """
-        
-        schema_name = self.connection_data.get('schema', 'default')
-        
+
+        schema_name = self.connection_data.get("schema", "default")
+
         query = f"""
             SELECT
                 table_catalog AS TABLE_CATALOG,
@@ -325,7 +325,7 @@ class DatabricksHandler(MetaDatabaseHandler):
             result.data_frame["TABLE_SCHEMA"] = self.name
 
         return result
-    
+
     def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
         """
         Retrieves column metadata for the specified tables (or all tables if no list is provided).
@@ -336,10 +336,10 @@ class DatabricksHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the column metadata.
         """
-        
+
         # Get the schema from connection data or use 'default'
-        schema_name = self.connection_data.get('schema', 'default')
-        
+        schema_name = self.connection_data.get("schema", "default")
+
         # Use only columns that exist in Databricks information_schema.columns
         query = f"""
             SELECT
@@ -370,7 +370,7 @@ class DatabricksHandler(MetaDatabaseHandler):
     def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
         """
         Retrieves basic column statistics: null %, distinct count.
-        
+
         Args:
             table_names (list): A list of table names for which to retrieve column statistics metadata.
 
@@ -378,8 +378,8 @@ class DatabricksHandler(MetaDatabaseHandler):
             Response: A response object containing the column statistics metadata.
         """
         # Get the schema from connection data or use 'default'
-        schema_name = self.connection_data.get('schema', 'default')
-        
+        schema_name = self.connection_data.get("schema", "default")
+
         columns_query = f"""
             SELECT table_name AS TABLE_NAME, column_name AS COLUMN_NAME
             FROM information_schema.columns
@@ -404,36 +404,40 @@ class DatabricksHandler(MetaDatabaseHandler):
             select_parts = []
             for _, row in group.iterrows():
                 col = row["COLUMN_NAME"]
-                quoted_col = f'`{col}`'
-                select_parts.extend([
-                    f'SUM(CASE WHEN {quoted_col} IS NULL THEN 1 ELSE 0 END) AS `nulls_{col}`',
-                    f'APPROX_COUNT_DISTINCT({quoted_col}) AS `distincts_{col}`',
-                    f'MIN({quoted_col}) AS `min_{col}`',
-                    f'MAX({quoted_col}) AS `max_{col}`',
-                ])
+                quoted_col = f"`{col}`"
+                select_parts.extend(
+                    [
+                        f"SUM(CASE WHEN {quoted_col} IS NULL THEN 1 ELSE 0 END) AS `nulls_{col}`",
+                        f"APPROX_COUNT_DISTINCT({quoted_col}) AS `distincts_{col}`",
+                        f"MIN({quoted_col}) AS `min_{col}`",
+                        f"MAX({quoted_col}) AS `max_{col}`",
+                    ]
+                )
 
-            quoted_table_name = f'`{table_name}`'
+            quoted_table_name = f"`{table_name}`"
             stats_query = f"""
             SELECT COUNT(*) AS `total_rows`, {", ".join(select_parts)}
             FROM {quoted_table_name}
             """
-            
+
             try:
                 stats_res = self.native_query(stats_query)
                 if stats_res.type != RESPONSE_TYPE.TABLE or stats_res.data_frame is None or stats_res.data_frame.empty:
                     logger.warning(f"Could not retrieve stats for table {table_name}")
                     # Add placeholder stats if query fails
                     for _, row in group.iterrows():
-                        all_stats.append({
-                            "table_name": table_name,
-                            "column_name": row["COLUMN_NAME"],
-                            "null_percentage": None,
-                            "distinct_values_count": None,
-                            "most_common_values": [],
-                            "most_common_frequencies": [],
-                            "minimum_value": None,
-                            "maximum_value": None,
-                        })
+                        all_stats.append(
+                            {
+                                "table_name": table_name,
+                                "column_name": row["COLUMN_NAME"],
+                                "null_percentage": None,
+                                "distinct_values_count": None,
+                                "most_common_values": [],
+                                "most_common_frequencies": [],
+                                "minimum_value": None,
+                                "maximum_value": None,
+                            }
+                        )
                     continue
 
                 stats_data = stats_res.data_frame.iloc[0]
@@ -447,29 +451,33 @@ class DatabricksHandler(MetaDatabaseHandler):
                     max_val = stats_data.get(f"max_{col}", None)
                     null_pct = (nulls / total_rows) * 100 if total_rows > 0 else None
 
-                    all_stats.append({
-                        "table_name": table_name,
-                        "column_name": col,
-                        "null_percentage": null_pct,
-                        "distinct_values_count": distincts,
-                        "most_common_values": [],
-                        "most_common_frequencies": [],
-                        "minimum_value": min_val,
-                        "maximum_value": max_val,
-                    })
+                    all_stats.append(
+                        {
+                            "table_name": table_name,
+                            "column_name": col,
+                            "null_percentage": null_pct,
+                            "distinct_values_count": distincts,
+                            "most_common_values": [],
+                            "most_common_frequencies": [],
+                            "minimum_value": min_val,
+                            "maximum_value": max_val,
+                        }
+                    )
             except Exception as e:
                 logger.error(f"Exception while fetching statistics for table {table_name}: {e}")
                 for _, row in group.iterrows():
-                    all_stats.append({
-                        "table_name": table_name,
-                        "column_name": row["COLUMN_NAME"],
-                        "null_percentage": None,
-                        "distinct_values_count": None,
-                        "most_common_values": [],
-                        "most_common_frequencies": [],
-                        "minimum_value": None,
-                        "maximum_value": None,
-                    })
+                    all_stats.append(
+                        {
+                            "table_name": table_name,
+                            "column_name": row["COLUMN_NAME"],
+                            "null_percentage": None,
+                            "distinct_values_count": None,
+                            "most_common_values": [],
+                            "most_common_frequencies": [],
+                            "minimum_value": None,
+                            "maximum_value": None,
+                        }
+                    )
         if not all_stats:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame())
 
@@ -480,13 +488,15 @@ class DatabricksHandler(MetaDatabaseHandler):
         Databricks doesn't have primary key constraints in data warehouses.
         Return empty result like Snowflake does when no keys exist.
         """
-        empty_df = pd.DataFrame({
-            'table_name': pd.Series([], dtype='object'),
-            'column_name': pd.Series([], dtype='object'),
-            'ordinal_position': pd.Series([], dtype='Int64'),
-            'constraint_name': pd.Series([], dtype='object')
-        })
-        
+        empty_df = pd.DataFrame(
+            {
+                "table_name": pd.Series([], dtype="object"),
+                "column_name": pd.Series([], dtype="object"),
+                "ordinal_position": pd.Series([], dtype="Int64"),
+                "constraint_name": pd.Series([], dtype="object"),
+            }
+        )
+
         return Response(RESPONSE_TYPE.TABLE, data_frame=empty_df)
 
     def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
@@ -494,11 +504,13 @@ class DatabricksHandler(MetaDatabaseHandler):
         Databricks doesn't have foreign key constraints in data warehouses.
         Return empty result like Snowflake does when no keys exist.
         """
-        empty_df = pd.DataFrame({
-            'child_table_name': pd.Series([], dtype='object'),
-            'child_column_name': pd.Series([], dtype='object'),
-            'parent_table_name': pd.Series([], dtype='object'),
-            'parent_column_name': pd.Series([], dtype='object')
-        })
-        
+        empty_df = pd.DataFrame(
+            {
+                "child_table_name": pd.Series([], dtype="object"),
+                "child_column_name": pd.Series([], dtype="object"),
+                "parent_table_name": pd.Series([], dtype="object"),
+                "parent_column_name": pd.Series([], dtype="object"),
+            }
+        )
+
         return Response(RESPONSE_TYPE.TABLE, data_frame=empty_df)

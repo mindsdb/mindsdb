@@ -1,0 +1,61 @@
+[project]
+name = "area51"
+version = "0.1.0"
+description = "Zendesk + JIRA + Confluence integration with semantic search"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.0.0",
+    "anthropic>=0.18.0",
+    "requests>=2.31.0",
+    "pydantic>=2.5.0",
+    "tenacity>=8.2.0",
+    "mindsdb-sdk>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "fastmcp>=2.12.5",
+    "ipykernel>=7.0.1",
+    "langgraph>=1.0.1",
+    "langchain>=1.0.2",
+    "langchain-openai>=1.0.1",
+    "langgraph-cli>=0.4.4",
+    "langgraph-api>=0.4.46",
+    "matplotlib>=3.7.0",
+    "atlassian-python-api>=4.0.7",
+    "zenpy>=2.0.56",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.0.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["integrations", "tools", "models"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | utils
+)/
+'''
+
+

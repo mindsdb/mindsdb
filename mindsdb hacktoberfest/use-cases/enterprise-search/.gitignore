@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+test.ipynb
+test (2).ipynb
+
+.langgraph_api/
+uv.lock

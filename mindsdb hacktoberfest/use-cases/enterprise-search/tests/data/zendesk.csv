@@ -1,0 +1,7 @@
+id,key,project_id,project_key,project_name,summary,priority,creator,assignee,status,description
+"10000","CPG-1","10000","CPG","Production Issues","What a beautful summary","Medium","vignesh","[NULL]","In Progress","Implement secure user authentication for the payment gateway."
+"10001","CPG-2","10000","CPG","Production Issues","(Sample) Payment Processing","Medium","vignesh","[NULL]","In Progress","Develop the core payment processing functionality."
+"10002","CPG-3","10000","CPG","Production Issues","(Sample) Implement OAuth 2.0 Authentication","[NULL]","vignesh","[NULL]","In Review","Integrate OAuth 2.0 for user authentication to enhance security."
+"10003","CPG-4","10000","CPG","Production Issues","(Sample) Implement Two-Factor Authentication","[NULL]","vignesh","[NULL]","In Progress","Add two-factor authentication for enhanced security."
+"10004","CPG-5","10000","CPG","Production Issues","(Sample) Integrate Cryptocurrency Payment APIs","[NULL]","vignesh","[NULL]","In Progress","Integrate APIs for processing cryptocurrency payments."
+"10005","CPG-6","10000","CPG","Production Issues","(Sample) Implement Transaction History Feature","[NULL]","vignesh","[NULL]","To Do","Allow users to view their transaction history."

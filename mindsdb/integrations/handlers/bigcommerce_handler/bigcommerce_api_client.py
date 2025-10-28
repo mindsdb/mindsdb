@@ -65,9 +65,7 @@ class BigCommerceAPIClient:
         limit: int = None,
     ):
         # doc: https://developer.bigcommerce.com/docs/rest-management/orders#get-all-orders
-        params = {
-            "limit": limit or DEFAULT_LIMIT
-        }
+        params = {"limit": limit or DEFAULT_LIMIT}
         if filter:
             params.update(filter)
         if sort_condition:

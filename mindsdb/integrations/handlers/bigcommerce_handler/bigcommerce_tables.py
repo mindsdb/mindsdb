@@ -161,7 +161,7 @@ class BigCommerceOrdersTable(MetaAPIResource):
         result = client.get_orders(filter=filter, sort_condition=sort_condition, limit=limit)
         result = _make_df(result, self)
 
-        decimal_columns = [meta['COLUMN_NAME'] for meta in self.meta_get_columns() if meta["DATA_TYPE"] == "DECIMAL"]
+        decimal_columns = [meta["COLUMN_NAME"] for meta in self.meta_get_columns() if meta["DATA_TYPE"] == "DECIMAL"]
         for column_name in decimal_columns:
             if column_name in result:
                 result[column_name] = result[column_name].apply(Decimal)
@@ -835,7 +835,7 @@ class BigCommerceCustomersTable(MetaAPIResource):
             ("id", FilterOperator.IN): "id:in",
             ("company", FilterOperator.EQUAL): "company:in",  # custom filter
             ("company", FilterOperator.IN): "company:in",
-            ("customer_group_id", FilterOperator.EQUAL): "customer_group_id:in",   # custom filter
+            ("customer_group_id", FilterOperator.EQUAL): "customer_group_id:in",  # custom filter
             ("customer_group_id", FilterOperator.IN): "customer_group_id:in",
             ("date_created", FilterOperator.EQUAL): "date_created",
             ("date_created", FilterOperator.LESS_THAN): "date_created:max",

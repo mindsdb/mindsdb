@@ -6,6 +6,7 @@ import tempfile
 import datetime
 import textwrap
 import subprocess
+from enum import Enum
 import concurrent.futures
 from typing import Text, Tuple, Dict, List, Optional, Any
 import openai
@@ -36,6 +37,13 @@ from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 
 logger = log.getLogger(__name__)
+
+
+class CompletionMode(Enum):
+    image = "image"
+    embedding = "embedding"
+    chat = "chat"
+    normal = "normal"
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -184,6 +192,7 @@ class OpenAIHandler(BaseMLEngine):
                 "api_base",
                 "api_version",
                 "provider",
+                "completion_mode",
             }
         )
 
@@ -512,14 +521,24 @@ class OpenAIHandler(BaseMLEngine):
             kwargs = {
                 "model": model_name,
             }
-            if model_name in IMAGE_MODELS:
-                return _submit_image_completion(kwargs, prompts, api_args)
-            elif model_name == "embedding":
-                return _submit_embedding_completion(kwargs, prompts, api_args)
-            elif self.is_chat_model(model_name):
-                if model_name == "gpt-3.5-turbo-instruct":
-                    return _submit_normal_completion(kwargs, prompts, api_args)
+            try:
+                completion_mode = CompletionMode[args.get("completion_mode")]
+            except KeyError:
+                if model_name in IMAGE_MODELS:
+                    completion_mode = CompletionMode.image
+                elif model_name == "embedding":
+                    completion_mode = CompletionMode.embedding
+                elif self.is_chat_model(model_name) and model_name != "gpt-3.5-turbo-instruct":
+                    completion_mode = CompletionMode.chat
                 else:
+                    completion_mode = CompletionMode.normal
+
+            match completion_mode:
+                case CompletionMode.image:
+                    return _submit_image_completion(kwargs, prompts, api_args)
+                case CompletionMode.embedding:
+                    return _submit_embedding_completion(kwargs, prompts, api_args)
+                case CompletionMode.chat:
                     return _submit_chat_completion(
                         kwargs,
                         prompts,
@@ -527,8 +546,8 @@ class OpenAIHandler(BaseMLEngine):
                         df,
                         mode=args.get("mode", "conversational"),
                     )
-            else:
-                return _submit_normal_completion(kwargs, prompts, api_args)
+                case CompletionMode.normal:
+                    return _submit_normal_completion(kwargs, prompts, api_args)
 
         def _log_api_call(params: Dict, response: Any) -> None:
             """

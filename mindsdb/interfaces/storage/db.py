@@ -30,6 +30,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 from sqlalchemy.sql.schema import ForeignKey
+from mind_castle.sqlalchemy_type import SecretData
 
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.config import config
@@ -229,7 +230,7 @@ class Integration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
-    data = Column(Json)
+    data = Column(SecretData("awskms"))
     company_id = Column(String)
 
     meta_tables = relationship("MetaTables", back_populates="integration")

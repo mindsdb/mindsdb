@@ -246,7 +246,11 @@ class DataCatalogRetriever:
                         most_common_frequencies = [most_common_frequencies]
 
                 for i in range(min(10, len(most_common_values))):
-                    if most_common_frequencies and pd.notna(most_common_frequencies).any() and i < len(most_common_frequencies):
+                    if (
+                        most_common_frequencies
+                        and pd.notna(most_common_frequencies).any()
+                        and i < len(most_common_frequencies)
+                    ):
                         freq = most_common_frequencies[i]
                         try:
                             percent = float(freq) * 100
@@ -269,7 +273,7 @@ class DataCatalogRetriever:
             stats_str += f"\n{inner_pad}- Maximum Value: {stats_row['MAXIMUM_VALUE']}"
 
         return stats_str
-    
+
     def _parse_list_from_string(self, list_str: str) -> List[str]:
         """
         Safely parse a string representation of a list into an actual list.

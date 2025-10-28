@@ -157,7 +157,8 @@ class Config:
                         "maxBytes": 1 << 19,  # 0.5 Mb
                         "backupCount": 3,
                     },
-                }
+                },
+                "resources_log": {"enabled": False, "level": "INFO", "interval": 60},
             },
             "gui": {"open_on_start": True, "autoupdate": True},
             "debug": False,

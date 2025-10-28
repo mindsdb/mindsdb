@@ -67,6 +67,11 @@ class PATAuthMiddleware(BaseHTTPMiddleware):
         if config.get("auth", {}).get("http_auth_enabled", False) is False:
             return await call_next(request)
 
+        # Allow CORS preflight requests to pass through unchallenged
+        # so that CORSMiddleware can add the appropriate headers.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         token = self._extract_bearer(request)
         if not token or not verify_pat(token):
             return JSONResponse({"detail": "Unauthorized"}, status_code=HTTPStatus.UNAUTHORIZED)

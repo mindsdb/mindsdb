@@ -26,6 +26,7 @@ from ...common.types import (
 )
 from pydantic import ValidationError
 from ...common.server.task_manager import TaskManager
+from mindsdb.utilities.config import config
 
 from mindsdb.utilities import log
 
@@ -48,10 +49,20 @@ class A2AServer:
                 Route("/status", self._get_status, methods=["GET"]),
             ]
         )
-        # TODO: Remove this when we have a proper CORS policy
+        # Configure CORS with explicit origins to support credentials
+        cors_cfg = config.get("api", {}).get("cors", {})
+        allowed_origins = cors_cfg.get(
+            "allow_origins",
+            [
+                "http://localhost:3001",
+                "http://127.0.0.1:3001",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+            ],
+        )
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
+            allow_origins=allowed_origins,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],

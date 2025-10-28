@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres_cyberintel
+    restart: always
+    environment:
+      POSTGRES_USER: mindsdb_user
+      POSTGRES_PASSWORD: mindsdb_pass
+      POSTGRES_DB: cyber_threat_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mindsdb:
+    image: mindsdb/mindsdb
+    container_name: mindsdb_container
+    restart: always
+    environment:
+      MINDSDB_APIS: "http,mysql"
+    ports:
+      - "47334:47334" # HTTP API
+      - "47335:47335" # MySQL API
+    depends_on:
+      - postgres

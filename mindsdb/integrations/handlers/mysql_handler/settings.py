@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, AnyUrl, TypeAdapter, model_validator, field_validator
+from pydantic import BaseModel, AnyUrl, TypeAdapter, model_validator, field_validator, ConfigDict
 from urllib.parse import urlparse
 
 
@@ -118,7 +118,4 @@ class ConnectionConfig(BaseModel):
 
         return values
 
-    class Config:
-        str_min_length = 1
-        str_strip_whitespace = True
-        validate_assignment = True
+    model_config = ConfigDict(str_min_length=1, str_strip_whitespace=True, validate_assignment=True)

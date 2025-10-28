@@ -627,8 +627,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         mock_cursor.description = description
         response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.data_frame.dtypes[0], "Int64")
-        self.assertEqual(response.data_frame.dtypes[1], "Int64")
+        self.assertEqual(response.data_frame.dtypes.iloc[0], "Int64")
+        self.assertEqual(response.data_frame.dtypes.iloc[1], "Int64")
         self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
         self.assertEqual(response.data_frame.iloc[0, 1], 1)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)

@@ -79,6 +79,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.otel import increment_otel_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.exception import QueryError
+from mindsdb.utilities.functions import mark_process
 from mindsdb.api.mysql.mysql_proxy.utilities.dump import dump_result_set_to_mysql, column_to_mysql_column_dict
 from mindsdb.api.executor.exceptions import WrongCharsetError
 
@@ -689,7 +690,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     sql = clear_sql(sql)
                     logger.debug(f"Incoming query: {sql}")
                     profiler.set_meta(query=sql, api="mysql", environment=config.get("environment"))
-                    with profiler.Context("mysql_query_processing"):
+                    with profiler.Context("mysql_query_processing"), mark_process("mysql_query"):
                         response = self.process_query(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     sql = self.decode_utf(p.sql.value)

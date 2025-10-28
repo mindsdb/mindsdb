@@ -91,21 +91,19 @@ class DataCatalogRetriever:
 
         for _, table_row in tables_df.iterrows():
             table_columns_df = columns_df[columns_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
+
+            table_column_stats_df = pd.DataFrame()
+            table_primary_keys_df = pd.DataFrame()
+            table_foreign_keys_df = pd.DataFrame()
             # If no columns are found for the table,
             # looking for column stats, primary keys, and foreign keys is redundant.
             if not table_columns_df.empty:
                 if not column_stats_df.empty:
                     table_column_stats_df = column_stats_df[column_stats_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
-                else:
-                    table_column_stats_df = pd.DataFrame()
                 if not primary_keys_df.empty:
                     table_primary_keys_df = primary_keys_df[primary_keys_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
-                else:
-                    table_primary_keys_df = pd.DataFrame()
                 if not foreign_keys_df.empty:
                     table_foreign_keys_df = foreign_keys_df[foreign_keys_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
-                else:
-                    table_foreign_keys_df = pd.DataFrame()
 
             tables_metadata_str += self._construct_metadata_string_for_table(
                 table_row,

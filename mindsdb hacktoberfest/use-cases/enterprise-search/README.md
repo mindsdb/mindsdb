@@ -31,7 +31,7 @@ Area51 solves this by creating a unified semantic search layer that understands 
 
 Area51 integrates Zendesk, Jira, and Confluence through MindsDB Knowledge Bases, using hybrid semantic search to provide intelligent results across all sources.
 
-![Architecture Diagram](architecture/Area51%20Architecture.png)
+![Architecture Diagram](architecture/Area51-Architecture.png)
 
 ### Core Components
 
@@ -458,7 +458,7 @@ To use Area51's MCP server in Cursor:
 
 Once configured, you can ask Cursor: "Search for authentication errors in Zendesk" and it will use the MCP server to query your knowledge bases.
 
-![MCP Integration](architecture/MCP%20Invoke.png)
+![MCP Integration](architecture/MCP-Invoke.png)
 
 **Session Management**
 

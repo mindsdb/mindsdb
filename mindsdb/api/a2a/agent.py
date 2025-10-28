@@ -4,6 +4,7 @@ import requests
 import httpx
 from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
 from mindsdb.api.a2a.constants import DEFAULT_STREAM_TIMEOUT
+from mindsdb.api.a2a.common.types import A2AClientError, A2AClientHTTPError
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 
@@ -96,22 +97,43 @@ class MindsDBAgent:
     async def streaming_invoke(self, messages, timeout=DEFAULT_STREAM_TIMEOUT):
         url = f"{self.base_url}/api/projects/{self.project_name}/agents/{self.agent_name}/completions/stream"
         logger.debug(f"Sending streaming request to MindsDB agent: {self.agent_name}")
-        async with httpx.AsyncClient(timeout=timeout, headers=self.headers) as client:
-            async with client.stream("POST", url, json={"messages": to_serializable(messages)}) as response:
-                response.raise_for_status()
-                async for line in response.aiter_lines():
-                    if not line.strip():
-                        continue
-                    # Only process actual SSE data lines
-                    if line.startswith("data:"):
-                        payload = line[len("data:") :].strip()
-                        try:
-                            yield json.loads(payload)
-                        except Exception as e:
-                            logger.exception(f"Failed to parse SSE JSON payload: {e}; line: {payload}")
-                    # Ignore comments or control lines
-                # Signal the end of the stream
-                yield {"is_task_complete": True}
+        try:
+            async with httpx.AsyncClient(timeout=timeout, headers=self.headers) as client:
+                async with client.stream("POST", url, json={"messages": to_serializable(messages)}) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if not line.strip():
+                            continue
+                        # Only process actual SSE data lines
+                        if line.startswith("data:"):
+                            payload = line[len("data:") :].strip()
+                            try:
+                                yield json.loads(payload)
+                            except Exception as e:
+                                logger.exception(f"Failed to parse SSE JSON payload: {e}; line: {payload}")
+                        # Ignore comments or control lines
+                    # Signal the end of the stream
+                    yield {"is_task_complete": True}
+        except httpx.ReadTimeout:
+            error_msg = f"Request timed out after {timeout} seconds while streaming from agent '{self.agent_name}'"
+            logger.error(error_msg)
+            raise TimeoutError(error_msg)
+        except httpx.ConnectTimeout:
+            error_msg = f"Connection timeout while connecting to agent '{self.agent_name}' at {url}"
+            logger.error(error_msg)
+            raise ConnectionError(error_msg)
+        except httpx.ConnectError as e:
+            error_msg = f"Failed to connect to agent '{self.agent_name}' at {url}: {str(e)}"
+            logger.error(error_msg)
+            raise ConnectionError(error_msg)
+        except httpx.HTTPStatusError as e:
+            error_msg = f"HTTP error {e.response.status_code} from agent '{self.agent_name}': {str(e)}"
+            logger.error(error_msg)
+            raise A2AClientHTTPError(status_code=e.response.status_code, message=error_msg)
+        except httpx.RequestError as e:
+            error_msg = f"Request error while streaming from agent '{self.agent_name}': {str(e)}"
+            logger.error(error_msg)
+            raise A2AClientError(error_msg)
 
     async def stream(
         self,

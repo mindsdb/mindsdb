@@ -83,7 +83,7 @@ class BaseStuff:
 
     def upload_ds(self, df, name):
         """Upload pandas df as csv file."""
-        self.query(f"DROP TABLE files.{name};")
+        self.query(f"DROP TABLE IF EXISTS files.{name};")
         with tempfile.NamedTemporaryFile(mode="w+", newline="", delete=False) as f:
             df.to_csv(f, index=False)
             filename = f.name

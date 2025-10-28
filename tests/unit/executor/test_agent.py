@@ -799,7 +799,6 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("select * from my_agent where question = 'test'")
         assert "files" not in mock_openai.agent_calls[1]
 
-
     @patch("openai.OpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_agent_new_syntax(self, mock_litellm_embedding, mock_openai):

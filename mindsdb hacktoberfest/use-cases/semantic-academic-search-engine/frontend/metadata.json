@@ -1,0 +1,5 @@
+{
+  "name": "Semantica",
+  "description": "A semantic search engine for ArXiv, allowing users to explore research papers with an intuitive and visually appealing interface. Search by paper ID, URL, or keyword and browse results in a clean card-based layout.",
+  "requestFramePermissions": []
+}

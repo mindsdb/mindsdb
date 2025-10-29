@@ -192,7 +192,7 @@ def get_available_models(client) -> List[Text]:
     """
     res = client.models.list()
 
-    if "api.writer.com" in str(client.base_url.netloc).lower():
+    if str(client.base_url.netloc).lower() == "api.writer.com":
         return [models["id"] for models in res.models]
 
     return [models.id for models in res.data]

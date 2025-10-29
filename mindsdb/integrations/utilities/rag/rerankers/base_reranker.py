@@ -654,3 +654,19 @@ class ListwiseLLMReranker(BaseLLMReranker):
         if length <= 0:
             return []
         return [max(0.0, (length - idx) / length) for idx in range(length)]
+
+    def get_scores(self, query: str, documents: list[str]):
+        """Override to ensure proper event loop handling for listwise reranking."""
+        query_document_pairs = [(query, doc) for doc in documents]
+
+        # Get or create event loop
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs))
+
+        scores = [score for _, score in documents_and_scores]
+        return scores

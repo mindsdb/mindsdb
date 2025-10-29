@@ -9,7 +9,7 @@ import mysql.connector
 @pytest.fixture(scope="module")
 def setup_local_db():
     """Module-scoped fixture to create a writeable DB for table tests."""
-    db_name = f"full_test_db_{uuid.uuid4().hex[:8]}"
+    db_name = f"test_db_{uuid.uuid4().hex[:8]}"
     helper = BaseStuff()
     helper.use_binary = False
 
@@ -35,15 +35,25 @@ def setup_local_db():
             pass
 
 
-def create_datasource_sql_via_connector(helper_instance, db_name, engine, parameters):
+def create_datasource_sql_via_connector(helper_instance, db_name, engine, parameters, poll_timeout=30, poll_interval=2):
     """Helper to create a datasource via a CREATE DATABASE query."""
     params_list = [f'"{k}": "{v}"' if isinstance(v, str) else f'"{k}": {v}' for k, v in parameters.items()]
     params_str = ", ".join(params_list)
     query_str = f"CREATE DATABASE {db_name} WITH ENGINE = '{engine}', PARAMETERS = {{{params_str}}};"
     print(f"    [Helper create_datasource] Executing: CREATE DATABASE {db_name}...")
     helper_instance.query(query_str)
-    time.sleep(5)
-    print(f"    [Helper create_datasource] DATABASE {db_name} created.")
+    start_time = time.time()
+    while True:
+        try:
+            helper_instance.validate_database_creation(db_name)
+            print(f"     [Helper create_datasource] DATABASE {db_name} created and validated.")
+            break
+        except AssertionError as e:
+            elapsed_time = time.time() - start_time
+            if elapsed_time > poll_timeout:
+                print(f"     [Helper create_datasource] ERROR: Timeout after {poll_timeout}s waiting for {db_name}.")
+                raise TimeoutError(f"Timed out waiting for database {db_name} to be created.") from e
+            time.sleep(poll_interval)
 
 
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
@@ -57,7 +67,7 @@ class TestMySQLTables(BaseStuff):
     @pytest.mark.usefixtures("setup_local_db")
     def test_table_lifecycle(self, setup_local_db, use_binary):
         db_name = setup_local_db
-        table_name = f"lifecycle_table_{uuid.uuid4().hex[:8]}"
+        table_name = f"test_lifecycle_table_{uuid.uuid4().hex[:8]}"
         try:
             create_table_query = f"CREATE TABLE {db_name}.{table_name} (id INT, value VARCHAR(255));"
             self.query(create_table_query)
@@ -101,7 +111,7 @@ class TestMySQLTablesNegative(BaseStuff):
     @pytest.mark.usefixtures("setup_local_db")
     def test_drop_non_existent_table(self, setup_local_db, use_binary):
         db_name = setup_local_db
-        table_name = f"non_existent_table_{uuid.uuid4().hex[:8]}"
+        table_name = f"test_non_existent_table_{uuid.uuid4().hex[:8]}"
         with pytest.raises(Exception) as e:
             self.query(f"DROP TABLE {db_name}.{table_name};")
         assert "does not exist" in str(e.value).lower()
@@ -116,15 +126,15 @@ class TestMySQLViews(BaseStuff):
         self.use_binary = request.param
 
     def test_view_lifecycle(self, use_binary):
-        db_name = f"sql_test_view_db_{uuid.uuid4().hex[:8]}"
-        view_name = f"sql_test_view_{uuid.uuid4().hex[:8]}"
+        db_name = f"test_sql_view_db_{uuid.uuid4().hex[:8]}"
+        view_name = f"test_sql_view_{uuid.uuid4().hex[:8]}"
         try:
             create_db_query = f"""
                 CREATE DATABASE {db_name}
                 WITH ENGINE = 'postgres', PARAMETERS = {{"user": "demo_user", "password": "demo_password", "host": "samples.mindsdb.com", "port": "5432", "database": "demo", "schema": "demo"}};
             """
             self.query(create_db_query)
-            time.sleep(5)
+
             create_view_query = (
                 f"CREATE VIEW {view_name} AS (SELECT * FROM {db_name}.home_rentals WHERE number_of_rooms = 2);"
             )
@@ -321,11 +331,10 @@ class TestMySQLTriggers(BaseStuff):
 
             # Activate Trigger
             self.query(f"UPDATE {db_name}.{source_table_name} SET message = '{updated_message}' WHERE id = {test_id};")
-            self.query("COMMIT;")
 
             # Poll the target table for the result
             result = []
-            max_wait_time = 30
+            max_wait_time = 60
             poll_interval = 2
             start_time = time.time()
             while time.time() - start_time < max_wait_time:

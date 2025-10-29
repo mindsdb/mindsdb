@@ -79,7 +79,7 @@ class TestSQLRetriever:
             description='Links documents to the power plant they are relevant to',
             columns=[
                 ColumnSchema(name='DocumentId', type='int', description='The ID of the document associated with the unit'),
-                ColumnSchema(name='UnitKey', type='int', description='The ID of the unit the documnet is associated with')
+                ColumnSchema(name='UnitKey', type='int', description='The ID of the unit the document is associated with')
             ]
         )
         all_schemas = [source_schema, unit_schema, plant_schema, document_unit_schema]
@@ -178,7 +178,7 @@ class TestSQLRetriever:
             description='Links documents to the power plant they are relevant to',
             columns=[
                 ColumnSchema(name='DocumentId', type='int', description='The ID of the document associated with the unit'),
-                ColumnSchema(name='UnitKey', type='int', description='The ID of the unit the documnet is associated with')
+                ColumnSchema(name='UnitKey', type='int', description='The ID of the unit the document is associated with')
             ]
         )
         all_schemas = [source_schema, unit_schema, plant_schema, document_unit_schema]
@@ -274,7 +274,7 @@ class TestSQLRetriever:
             description='Links documents to the power plant they are relevant to',
             columns=[
                 ColumnSchema(name='DocumentId', type='int', description='The ID of the document associated with the unit'),
-                ColumnSchema(name='UnitKey', type='int', description='The ID of the unit the documnet is associated with')
+                ColumnSchema(name='UnitKey', type='int', description='The ID of the unit the document is associated with')
             ]
         )
         all_schemas = [source_schema, unit_schema, plant_schema, document_unit_schema]

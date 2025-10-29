@@ -53,8 +53,8 @@ PARAMETERS = {
 Required connection parameters include the following (at least one of these parameters should be provided):
 
 * `hosts`: The IP address and port where ElasticSearch is deployed.
-* `user`: The user used to autheticate access.
-* `password`: The password used to autheticate access.
+* `user`: The user used to authenticate access.
+* `password`: The password used to authenticate access.
 </Tip>
 
 ## Usage

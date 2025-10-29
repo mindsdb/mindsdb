@@ -1,6 +1,7 @@
 import json
 import orjson
 import datetime
+import os
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -230,7 +231,7 @@ class Integration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
-    data = Column(SecretData("awskms"))
+    data = Column(SecretData(os.environ.get("MINDSDB_DATA_ENCRYPTION_TYPE", "localencryption")))
     company_id = Column(String)
 
     meta_tables = relationship("MetaTables", back_populates="integration")

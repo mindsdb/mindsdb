@@ -31,7 +31,6 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
-from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
 from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
 
 logger = log.getLogger(__name__)
@@ -159,14 +158,6 @@ class IntegrationController:
         for model in engine_models:
             if model.deleted_at is not None:
                 model.integration_id = None
-
-        # Remove the integration metadata from the data catalog (if enabled).
-        # TODO: Can this be handled via cascading delete in the database?
-        if self.get_handler_meta(integration_record.engine).get("type") == HANDLER_TYPE.DATA and Config().get(
-            "data_catalog", {}
-        ).get("enabled", False):
-            data_catalog_reader = DataCatalogLoader(database_name=name)
-            data_catalog_reader.unload_metadata()
 
         db.session.delete(integration_record)
         db.session.commit()

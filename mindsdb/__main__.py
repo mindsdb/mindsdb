@@ -250,7 +250,7 @@ def validate_default_project() -> None:
     """
     new_default_project_name = config.get("default_project")
     logger.debug(f"Checking if default project {new_default_project_name} exists")
-    filter_company_id = ctx.company_id if ctx.company_id is not None else 0
+    filter_company_id = ctx.company_id if ctx.company_id is not None else "0"
 
     current_default_project: db.Project | None = db.Project.query.filter(
         db.Project.company_id == filter_company_id,

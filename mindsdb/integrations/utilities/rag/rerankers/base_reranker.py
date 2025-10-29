@@ -448,29 +448,8 @@ class ListwiseLLMReranker(BaseLLMReranker):
             log.info(f"Batching {len(documents)} documents into groups of {self.max_documents_per_batch}")
             return await self._rank_with_batching(query, documents, rerank_callback)
 
-        messages = self._build_messages(query, documents)
-        ranked_results: List[Tuple[str, float]] = []
-
-        for attempt in range(self.max_retries):
-            try:
-                response = await self._call_llm(messages)
-                content = response.choices[0].message.content
-                scores = self._extract_scores(content, len(documents))
-                ranked_results = list(zip(documents, scores))
-
-                if rerank_callback is not None:
-                    for doc, score in sorted(ranked_results, key=lambda item: item[1], reverse=True):
-                        rerank_callback({"document": doc, "relevance_score": score})
-
-                return ranked_results
-            except Exception as exc:
-                if attempt == self.max_retries - 1:
-                    log.error(f"Failed listwise reranking after {self.max_retries} attempts: {exc}")
-                    raise
-                retry_delay = self.retry_delay * (2**attempt) + random.uniform(0, 0.1)
-                await asyncio.sleep(retry_delay)
-
-        return ranked_results
+        # Use _rank_single_batch for consistency
+        return await self._rank_single_batch(query_document_pairs, rerank_callback)
 
     async def _rank_with_batching(
         self, query: str, documents: List[str], rerank_callback=None
@@ -654,19 +633,3 @@ class ListwiseLLMReranker(BaseLLMReranker):
         if length <= 0:
             return []
         return [max(0.0, (length - idx) / length) for idx in range(length)]
-
-    def get_scores(self, query: str, documents: list[str]):
-        """Override to ensure proper event loop handling for listwise reranking."""
-        query_document_pairs = [(query, doc) for doc in documents]
-
-        # Get or create event loop
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs))
-
-        scores = [score for _, score in documents_and_scores]
-        return scores

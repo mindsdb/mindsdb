@@ -1,7 +1,10 @@
 import pytest
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler
+
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
+    StatsForecastHandler,
+)
 from mindsdb.integrations.libs.base import ArgProbeMixin
 
 """

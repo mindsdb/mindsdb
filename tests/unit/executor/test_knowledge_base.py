@@ -212,9 +212,9 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
+        # metadata as columns
         ret = self.run_sql("""
-                select chunk_content,
-                 metadata->>'specs' as specs, metadata->>'product' as product, metadata->>'url' as url
+                select chunk_content, specs, product, url
                 from kb_review 
                 where _original_doc_id = 123 -- id is id
         """)
@@ -765,3 +765,29 @@ class TestKB(BaseExecutorDummyML):
 
         # default model was saved
         assert "dummy_model" in ret["EMBEDDING_MODEL"][0]
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_relevance_filtering_gt_operator(self, mock_litellm_embedding):
+        """Test relevance filtering with GREATER_THAN operator"""
+        set_litellm_embedding(mock_litellm_embedding)
+
+        test_data = [
+            {"id": "1", "content": "This is about machine learning and AI"},
+            {"id": "2", "content": "This is about cooking recipes"},
+            {"id": "3", "content": "This is about artificial intelligence and neural networks"},
+            {"id": "4", "content": "This is about gardening tips"},
+        ]
+        df = pd.DataFrame(test_data)
+        self.save_file("test_docs", df)
+        self._create_kb("kb_relevance_test")
+        self.run_sql("""
+            insert into kb_relevance_test
+            select id, content from files.test_docs
+        """)
+
+        ret = self.run_sql("""
+            select * from kb_relevance_test
+            where content = 'machine learning'
+            and relevance > 0.5
+        """)
+        assert isinstance(ret, pd.DataFrame)

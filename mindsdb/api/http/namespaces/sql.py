@@ -1,5 +1,4 @@
 from http import HTTPStatus
-import traceback
 
 from flask import request
 from flask_restx import Resource
@@ -18,6 +17,7 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import QueryError
 
 logger = log.getLogger(__name__)
 
@@ -29,18 +29,14 @@ class Query(Resource):
         super().__init__(*args, **kwargs)
 
     @ns_conf.doc("query")
-    @api_endpoint_metrics('POST', '/sql/query')
+    @api_endpoint_metrics("POST", "/sql/query")
     def post(self):
         query = request.json["query"]
         context = request.json.get("context", {})
 
         if isinstance(query, str) is False or isinstance(context, dict) is False:
-            return http_error(
-                HTTPStatus.BAD_REQUEST,
-                'Wrong arguments',
-                'Please provide "query" with the request.'
-            )
-        logger.debug(f'Incoming query: {query}')
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" with the request.')
+        logger.debug(f"Incoming query: {query}")
 
         if context.get("profiling") is True:
             profiler.enable()
@@ -50,9 +46,7 @@ class Query(Resource):
         error_text = None
         error_traceback = None
 
-        profiler.set_meta(
-            query=query, api="http", environment=Config().get("environment")
-        )
+        profiler.set_meta(query=query, api="http", environment=Config().get("environment"))
         with profiler.Context("http_query_processing"):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
@@ -67,8 +61,18 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error query processing: \n{traceback.format_exc()}")
-
+                logger.warning(f"Error query processing: {e}")
+            except QueryError as e:
+                error_type = "expected" if e.is_expected else "unexpected"
+                query_response = {
+                    "type": SQL_RESPONSE_TYPE.ERROR,
+                    "error_code": 0,
+                    "error_message": str(e),
+                }
+                if e.is_expected:
+                    logger.warning(f"Query failed due to expected reason: {e}")
+                else:
+                    logger.exception("Error query processing:")
             except UnknownError as e:
                 # unclassified
                 error_type = "unexpected"
@@ -77,7 +81,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error query processing: \n{traceback.format_exc()}")
+                logger.exception("Error query processing:")
 
             except Exception as e:
                 error_type = "unexpected"
@@ -86,7 +90,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error query processing: \n{traceback.format_exc()}")
+                logger.exception("Error query processing:")
 
             if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
                 error_type = "expected"
@@ -115,7 +119,7 @@ class Query(Resource):
 @ns_conf.param("list_databases", "lists databases of mindsdb")
 class ListDatabases(Resource):
     @ns_conf.doc("list_databases")
-    @api_endpoint_metrics('GET', '/sql/list_databases')
+    @api_endpoint_metrics("GET", "/sql/list_databases")
     def get(self):
         listing_query = "SHOW DATABASES"
         mysql_proxy = FakeMysqlProxy()
@@ -133,17 +137,21 @@ class ListDatabases(Resource):
                 listing_query_response = {"type": "ok"}
             elif result.type == SQL_RESPONSE_TYPE.TABLE:
                 listing_query_response = {
-                    "data": [{
-                        "name": db_row[0],
-                        "tables": [
-                            table_row[0]
-                            for table_row in mysql_proxy.process_query(
-                                "SHOW TABLES FROM `{}`".format(db_row[0])
-                            ).result_set.to_lists()
-                        ]
-                    } for db_row in result.result_set.to_lists()]
+                    "data": [
+                        {
+                            "name": db_row[0],
+                            "tables": [
+                                table_row[0]
+                                for table_row in mysql_proxy.process_query(
+                                    "SHOW TABLES FROM `{}`".format(db_row[0])
+                                ).result_set.to_lists()
+                            ],
+                        }
+                        for db_row in result.result_set.to_lists()
+                    ]
                 }
         except Exception as e:
+            logger.exception("Error while retrieving list of databases")
             listing_query_response = {
                 "type": "error",
                 "error_code": 0,

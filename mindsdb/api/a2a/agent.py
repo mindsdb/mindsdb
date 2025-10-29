@@ -24,7 +24,15 @@ class MindsDBAgent:
         self.agent_name = agent_name
         self.project_name = project_name
         port = config.get("api", {}).get("http", {}).get("port", 47334)
-        self.base_url = f"http://localhost:{port}"
+        host = config.get("api", {}).get("http", {}).get("host", "127.0.0.1")
+
+        # Use 127.0.0.1 instead of localhost for better compatibility
+        if host in ("0.0.0.0", ""):
+            url = f"http://127.0.0.1:{port}/"
+        else:
+            url = f"http://{host}:{port}/"
+
+        self.base_url = url
         self.agent_url = f"{self.base_url}/api/projects/{project_name}/agents/{agent_name}"
         self.sql_url = f"{self.base_url}/api/sql/query"
         self.headers = {k: v for k, v in user_info.items() if v is not None} or {}
@@ -73,17 +81,15 @@ class MindsDBAgent:
                     "parts": [{"type": "text", "text": error_msg}],
                 }
         except requests.exceptions.RequestException as e:
-            error_msg = f"Error connecting to MindsDB: {str(e)}"
-            logger.error(error_msg)
+            logger.exception("Error connecting to MindsDB:")
             return {
-                "content": error_msg,
+                "content": f"Error connecting to MindsDB: {e}",
                 "parts": [{"type": "text", "text": error_msg}],
             }
         except Exception as e:
-            error_msg = f"Error: {str(e)}"
-            logger.error(error_msg)
+            logger.exception("Error: ")
             return {
-                "content": error_msg,
+                "content": f"Error: {e}",
                 "parts": [{"type": "text", "text": error_msg}],
             }
 
@@ -102,7 +108,7 @@ class MindsDBAgent:
                         try:
                             yield json.loads(payload)
                         except Exception as e:
-                            logger.error(f"Failed to parse SSE JSON payload: {e}; line: {payload}")
+                            logger.exception(f"Failed to parse SSE JSON payload: {e}; line: {payload}")
                     # Ignore comments or control lines
                 # Signal the end of the stream
                 yield {"is_task_complete": True}
@@ -129,13 +135,13 @@ class MindsDBAgent:
                 wrapped_chunk = {"is_task_complete": False, "content": content_value, "metadata": {}}
                 yield wrapped_chunk
         except Exception as e:
-            logger.error(f"Error in streaming: {str(e)}")
+            logger.exception(f"Error in streaming: {e}")
             yield {
                 "is_task_complete": True,
                 "parts": [
                     {
                         "type": "text",
-                        "text": f"Error: {str(e)}",
+                        "text": f"Error: {e}",
                     }
                 ],
                 "metadata": {

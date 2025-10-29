@@ -211,9 +211,9 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
+        # metadata as columns
         ret = self.run_sql("""
-                select chunk_content,
-                 metadata->>'specs' as specs, metadata->>'product' as product, metadata->>'url' as url
+                select chunk_content, specs, product, url
                 from kb_review 
                 where _original_doc_id = 123 -- id is id
         """)
@@ -497,6 +497,20 @@ class TestKB(BaseExecutorDummyML):
             assert "white" in item["chunk_content"]
             assert item["metadata"]["num"] in (3, 4)
 
+        # -- chunk_content and '%'
+        ret = self.run_sql("""
+           select * from kb_alg where
+               (chunk_content like '%green%' and size='big') 
+            or (chunk_content like '%white%' and size='small') 
+            or (chunk_content is null)
+           limit 3
+        """)
+        for content in ret["chunk_content"]:
+            if "green" in content:
+                assert "big" in content
+            else:
+                assert "small" in content
+
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_select_allowed_columns(self, mock_litellm_embedding):
         set_litellm_embedding(mock_litellm_embedding)
@@ -670,3 +684,80 @@ class TestKB(BaseExecutorDummyML):
 
         # default model was saved
         assert "dummy_model" in ret["EMBEDDING_MODEL"][0]
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_relevance_filtering_gt_operator(self, mock_litellm_embedding):
+        """Test relevance filtering with GREATER_THAN operator"""
+        set_litellm_embedding(mock_litellm_embedding)
+
+        test_data = [
+            {"id": "1", "content": "This is about machine learning and AI"},
+            {"id": "2", "content": "This is about cooking recipes"},
+            {"id": "3", "content": "This is about artificial intelligence and neural networks"},
+            {"id": "4", "content": "This is about gardening tips"},
+        ]
+        df = pd.DataFrame(test_data)
+        self.save_file("test_docs", df)
+        self._create_kb("kb_relevance_test")
+        self.run_sql("""
+            insert into kb_relevance_test
+            select id, content from files.test_docs
+        """)
+
+        ret = self.run_sql("""
+            select * from kb_relevance_test
+            where content = 'machine learning'
+            and relevance > 0.5
+        """)
+        assert isinstance(ret, pd.DataFrame)
+
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_alter_kb(self, mock_litellm_embedding, mock_get_scores):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb(
+            "kb1",
+            embedding_model={
+                "provider": "bedrock",
+                "model_name": "dummy_model",
+                "api_key": "embed-key-1",
+            },
+            reranking_model={"provider": "openai", "model_name": "gpt-3", "api_key": "rerank-key-1"},
+        )
+
+        # update KB
+        self.run_sql("""
+            ALTER KNOWLEDGE BASE kb1
+            USING 
+                reranking_model={'api_key': 'rerank-key-2'},
+                embedding_model={'api_key': 'embed-key-2'},
+                id_column='my_id',
+                content_columns=['my_content'],                
+                metadata_columns=['my_meta']
+        """)
+
+        # check updated values in database
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+        assert kb.params["id_column"] == "my_id"
+        assert kb.params["content_columns"] == ["my_content"]
+        assert kb.params["metadata_columns"] == ["my_meta"]
+
+        assert kb.params["reranking_model"]["model_name"] == "gpt-3"
+        assert kb.params["reranking_model"]["api_key"] == "rerank-key-2"
+
+        assert kb.params["embedding_model"]["api_key"] == "embed-key-2"
+
+        # update embedding fails
+        with pytest.raises(ValueError):
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'model_name': 'my_model'}")
+
+        with pytest.raises(ValueError):
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'provider': 'ollama'}")
+
+        # different provider: params are replaced
+        self.run_sql("ALTER KNOWLEDGE BASE kb1 USING reranking_model={'provider': 'ollama', 'model_name': 'mistral'}")
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+
+        assert kb.params["reranking_model"]["provider"] == "ollama"
+        assert "api_key" not in kb.params["reranking_model"]

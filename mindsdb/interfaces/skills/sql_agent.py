@@ -16,7 +16,7 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities.config import config
-from mindsdb.interfaces.data_catalog.data_catalog_reader import DataCatalogReader
+from mindsdb.interfaces.data_catalog.data_catalog_retriever import DataCatalogRetriever
 
 logger = log.getLogger(__name__)
 
@@ -475,10 +475,11 @@ class SQLAgent:
                 database_table_map.setdefault(parts[0], []).append(parts[1])
 
             data_catalog_str = ""
+            # TODO: Introduce caching mechanism to avoid repeated retrievals?
             for database_name, table_names in database_table_map.items():
-                data_catalog_reader = DataCatalogReader(database_name=database_name, table_names=table_names)
+                data_catalog_retriever = DataCatalogRetriever(database_name=database_name, table_names=table_names)
 
-                result = data_catalog_reader.read_metadata_as_string()
+                result = data_catalog_retriever.retrieve_metadata_as_string()
                 data_catalog_str += str(result or "")
 
             return data_catalog_str

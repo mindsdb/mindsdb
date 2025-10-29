@@ -177,6 +177,15 @@ class TestKB(BaseExecutorDummyML):
         assert ret["product"][0] == record["product"]
         assert ret["url"][0] == record["url"]
 
+        # using json operator in filter
+        ret = self.run_sql(
+            "select metadata->>'product' as product, metadata->>'url' as url "
+            "from kb_review where metadata->>'product' = 'probook'"
+        )
+        assert len(ret) == 1
+        assert ret["product"][0] == record["product"]
+        assert ret["url"][0] == record["url"]
+
         # ---  case 2: kb with defined columns ---
         self._create_kb(
             "kb_review", content_columns=["review", "product"], id_column="url", metadata_columns=["specs", "id"]
@@ -592,6 +601,20 @@ class TestKB(BaseExecutorDummyML):
             assert "white" in item["chunk_content"]
             assert item["metadata"]["num"] in (3, 4)
 
+        # -- chunk_content and '%'
+        ret = self.run_sql("""
+           select * from kb_alg where
+               (chunk_content like '%green%' and size='big') 
+            or (chunk_content like '%white%' and size='small') 
+            or (chunk_content is null)
+           limit 3
+        """)
+        for content in ret["chunk_content"]:
+            if "green" in content:
+                assert "big" in content
+            else:
+                assert "small" in content
+
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_select_allowed_columns(self, mock_litellm_embedding):
         set_litellm_embedding(mock_litellm_embedding)
@@ -791,3 +814,54 @@ class TestKB(BaseExecutorDummyML):
             and relevance > 0.5
         """)
         assert isinstance(ret, pd.DataFrame)
+
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_alter_kb(self, mock_litellm_embedding, mock_get_scores):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb(
+            "kb1",
+            embedding_model={
+                "provider": "bedrock",
+                "model_name": "dummy_model",
+                "api_key": "embed-key-1",
+            },
+            reranking_model={"provider": "openai", "model_name": "gpt-3", "api_key": "rerank-key-1"},
+        )
+
+        # update KB
+        self.run_sql("""
+            ALTER KNOWLEDGE BASE kb1
+            USING 
+                reranking_model={'api_key': 'rerank-key-2'},
+                embedding_model={'api_key': 'embed-key-2'},
+                id_column='my_id',
+                content_columns=['my_content'],                
+                metadata_columns=['my_meta']
+        """)
+
+        # check updated values in database
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+        assert kb.params["id_column"] == "my_id"
+        assert kb.params["content_columns"] == ["my_content"]
+        assert kb.params["metadata_columns"] == ["my_meta"]
+
+        assert kb.params["reranking_model"]["model_name"] == "gpt-3"
+        assert kb.params["reranking_model"]["api_key"] == "rerank-key-2"
+
+        assert kb.params["embedding_model"]["api_key"] == "embed-key-2"
+
+        # update embedding fails
+        with pytest.raises(ValueError):
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'model_name': 'my_model'}")
+
+        with pytest.raises(ValueError):
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'provider': 'ollama'}")
+
+        # different provider: params are replaced
+        self.run_sql("ALTER KNOWLEDGE BASE kb1 USING reranking_model={'provider': 'ollama', 'model_name': 'mistral'}")
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+
+        assert kb.params["reranking_model"]["provider"] == "ollama"
+        assert "api_key" not in kb.params["reranking_model"]

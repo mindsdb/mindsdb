@@ -1,4 +1,4 @@
-from typing import Optional, List, Literal
+from typing import Optional, Literal
 from dataclasses import dataclass, fields
 
 import pandas as pd
@@ -8,7 +8,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
-from mindsdb.interfaces.data_catalog.data_catalog_reader import DataCatalogReader
+from mindsdb.interfaces.data_catalog.data_catalog_retriever import DataCatalogRetriever
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, MYSQL_DATA_TYPE_COLUMNS_DEFAULT
 from mindsdb.api.executor.datahub.classes.tables_row import TABLES_ROW_TYPE, TablesRow
 
@@ -511,20 +511,6 @@ class CollationsTable(Table):
 # TODO: Should these be placed in a separate schema?
 
 
-def _get_records_from_data_catalog(databases: List, tables: Optional[List[str]] = None) -> List:
-    """Get records from the data catalog based on the specified databases and tables."""
-    # TODO: Should we allow to query all databases?
-    if not databases:
-        raise ValueError("At least one database must be specified in the query.")
-
-    records = []
-    for database in databases:
-        data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
-        records.extend(data_catalog_reader.read_metadata_as_records())
-
-    return records
-
-
 # TODO: Combine with existing 'TablesTable'?
 class MetaTablesTable(Table):
     name = "META_TABLES"
@@ -533,23 +519,23 @@ class MetaTablesTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, _ = _get_scope(query)
+        databases, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases)
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
 
-        data = []
-        for record in records:
-            item = {
-                "TABLE_CATALOG": "def",
-                "TABLE_SCHEMA": record.integration.name,
-                "TABLE_NAME": record.name,
-                "TABLE_TYPE": record.type,
-                "TABLE_DESCRIPTION": record.description or "",
-                "ROW_COUNT": record.row_count,
-            }
-            data.append(item)
+        df = pd.DataFrame()
+        for database in databases:
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
+            table_df = data_catalog_retriever.retrieve_tables()
+            # Table schema may be returned as a column name.
+            table_df.columns = table_df.columns.str.upper()
+            table_df["TABLE_CATALOG"] = "def"
+            table_df["TABLE_SCHEMA"] = database
+            df = pd.concat([df, table_df])
 
-        df = pd.DataFrame(data, columns=cls.columns)
+        df = df.reindex(columns=cls.columns, fill_value=None)
+
         return df
 
 
@@ -572,28 +558,22 @@ class MetaColumnsTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
 
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            columns = record.meta_columns
+        df = pd.DataFrame()
+        for database in databases:
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
+            columns_df = data_catalog_retriever.retrieve_columns()
+            columns_df["TABLE_CATALOG"] = "def"
+            columns_df["TABLE_SCHEMA"] = database
+            df = pd.concat([df, columns_df])
 
-            for column in columns:
-                item = {
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": column.name,
-                    "DATA_TYPE": column.data_type,
-                    "COLUMN_DESCRIPTION": column.description or "",
-                    "COLUMN_DEFAULT": column.default_value,
-                    "IS_NULLABLE": "YES" if column.is_nullable else "NO",
-                }
-                data.append(item)
+        df.columns = df.columns.str.upper()
 
-        df = pd.DataFrame(data, columns=cls.columns)
+        df = df.reindex(columns=cls.columns, fill_value=None)
+        df["IS_NULLABLE"] = df["IS_NULLABLE"].map({True: "YES", False: "NO"})
+
         return df
 
 
@@ -615,38 +595,32 @@ class MetaColumnStatisticsTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
 
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            columns = record.meta_columns
+        df = pd.DataFrame()
+        for database in databases:
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
+            columns_df = data_catalog_retriever.retrieve_column_statistics()
+            columns_df["TABLE_CATALOG"] = "def"
+            columns_df["TABLE_SCHEMA"] = database
+            df = pd.concat([df, columns_df])
 
-            for column in columns:
-                column_statistics = column.meta_column_statistics[0] if column.meta_column_statistics else None
+        df.columns = df.columns.str.upper()
 
-                item = {
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": column.name,
-                }
+        df.rename(
+            columns={
+                "NULL_PERCENTAGE": "NULL_FRAC",
+                "MOST_COMMON_VALUES": "MOST_COMMON_VALS",
+                "MOST_COMMON_FREQUENCIES": "MOST_COMMON_FREQS",
+                "DISTINCT_VALUES_COUNT": "N_DISTINCT",
+                "MINIMUM_VALUE": "MIN_VALUE",
+                "MAXIMUM_VALUE": "MAX_VALUE",
+            },
+            inplace=True,
+        )
 
-                if column_statistics:
-                    item.update(
-                        {
-                            "MOST_COMMON_VALS": column_statistics.most_common_values,
-                            "MOST_COMMON_FREQS": column_statistics.most_common_frequencies,
-                            "NULL_FRAC": column_statistics.null_percentage,
-                            "N_DISTINCT": column_statistics.distinct_values_count,
-                            "MIN_VALUE": column_statistics.minimum_value,
-                            "MAX_VALUE": column_statistics.maximum_value,
-                        }
-                    )
-
-                data.append(item)
-
-        df = pd.DataFrame(data, columns=cls.columns)
+        df = df.reindex(columns=cls.columns, fill_value=None)
         return df
 
 
@@ -666,50 +640,51 @@ class MetaTableConstraintsTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
 
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            primary_keys = record.meta_primary_keys
-            foreign_keys_children = record.meta_foreign_keys_children
-            foreign_keys_parents = record.meta_foreign_keys_parents
+        df = pd.DataFrame()
+        for database in databases:
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
 
-            for pk in primary_keys:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": pk.constraint_name,
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "CONSTRAINT_TYPE": "PRIMARY KEY",
-                }
-                data.append(item)
+            primary_keys_df = data_catalog_retriever.retrieve_primary_keys()
+            if not primary_keys_df.empty:
+                primary_keys_df["CONSTRAINT_CATALOG"] = "def"
+                primary_keys_df[["CONSTRAINT_SCHEMA", "TABLE_SCHEMA"]] = database
+                primary_keys_df["CONSTRAINT_TYPE"] = "PRIMARY KEY"
 
-            for fk in foreign_keys_children:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": fk.constraint_name,
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "CONSTRAINT_TYPE": "FOREIGN KEY",
-                }
-                data.append(item)
+                primary_keys_df.columns = primary_keys_df.columns.str.upper()
 
-            for fk in foreign_keys_parents:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": fk.constraint_name,
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "CONSTRAINT_TYPE": "FOREIGN KEY",
-                }
-                data.append(item)
+                df = pd.concat([df, primary_keys_df])
 
-        df = pd.DataFrame(data, columns=cls.columns)
+            foreign_keys_df = data_catalog_retriever.retrieve_foreign_keys()
+            if not foreign_keys_df.empty:
+                foreign_keys_df["CONSTRAINT_CATALOG"] = "def"
+                foreign_keys_df[["CONSTRAINT_SCHEMA", "TABLE_SCHEMA"]] = database
+                foreign_keys_df["CONSTRAINT_TYPE"] = "FOREIGN KEY"
+
+                foreign_keys_df.columns = foreign_keys_df.columns.str.upper()
+
+                parent_constraints_df = foreign_keys_df.copy(deep=True)
+                child_constraints_df = foreign_keys_df.copy(deep=True)
+
+                parent_constraints_df.rename(
+                    columns={
+                        "PARENT_TABLE_NAME": "TABLE_NAME",
+                    },
+                    inplace=True,
+                )
+                child_constraints_df.rename(
+                    columns={
+                        "CHILD_TABLE_NAME": "TABLE_NAME",
+                    },
+                    inplace=True,
+                )
+
+                df = pd.concat([df, parent_constraints_df, child_constraints_df])
+
+        df = df.reindex(columns=cls.columns, fill_value=None)
+
         return df
 
 
@@ -734,70 +709,55 @@ class MetaColumnUsageTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
 
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            primary_keys = record.meta_primary_keys
-            foreign_keys_children = record.meta_foreign_keys_children
-            foreign_keys_parents = record.meta_foreign_keys_parents
+        df = pd.DataFrame()
+        for database in databases:
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
 
-            for pk in primary_keys:
-                column = pk.meta_columns
+            primary_keys_df = data_catalog_retriever.retrieve_primary_keys()
+            if not primary_keys_df.empty:
+                primary_keys_df[["CONSTRAINT_CATALOG", "TABLE_CATALOG"]] = "def"
+                primary_keys_df[["CONSTRAINT_SCHEMA", "TABLE_SCHEMA"]] = database
 
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": pk.constraint_name,
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": column.name,
-                    "ORDINAL_POSITION": pk.ordinal_position,
-                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
-                    "REFERENCED_TABLE_SCHEMA": None,
-                    "REFERENCED_TABLE_NAME": None,
-                    "REFERENCED_COLUMN_NAME": None,
-                }
-                data.append(item)
+                primary_keys_df.columns = primary_keys_df.columns.str.upper()
 
-            for fk in foreign_keys_children:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": fk.constraint_name,
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": fk.child_column.name,
-                    "ORDINAL_POSITION": None,
-                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
-                    "REFERENCED_TABLE_SCHEMA": fk.parent_table.integration.name if fk.parent_table else None,
-                    "REFERENCED_TABLE_NAME": fk.parent_table.name if fk.parent_table else None,
-                    "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.parent_column else None,
-                }
-                data.append(item)
+                df = pd.concat([df, primary_keys_df])
 
-            for fk in foreign_keys_parents:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": fk.constraint_name,
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": fk.child_column.name,
-                    "ORDINAL_POSITION": None,
-                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
-                    "REFERENCED_TABLE_SCHEMA": fk.child_table.integration.name if fk.child_table else None,
-                    "REFERENCED_TABLE_NAME": fk.child_table.name if fk.child_table else None,
-                    "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.child_column else None,
-                }
-                data.append(item)
+            foreign_keys_df = data_catalog_retriever.retrieve_foreign_keys()
+            if not foreign_keys_df.empty:
+                foreign_keys_df[["CONSTRAINT_CATALOG", "TABLE_CATALOG"]] = "def"
+                foreign_keys_df[["TABLE_SCHEMA", "REFERENCED_TABLE_SCHEMA"]] = database
 
-        df = pd.DataFrame(data, columns=cls.columns)
+                foreign_keys_df.columns = foreign_keys_df.columns.str.upper()
+
+                parent_constraints_df = foreign_keys_df.copy(deep=True)
+                child_constraints_df = foreign_keys_df.copy(deep=True)
+
+                parent_constraints_df.rename(
+                    columns={
+                        "PARENT_TABLE_NAME": "TABLE_NAME",
+                        "PARENT_COLUMN_NAME": "COLUMN_NAME",
+                        "CHILD_TABLE_NAME": "REFERENCED_TABLE_NAME",
+                        "CHILD_COLUMN_NAME": "REFERENCED_COLUMN_NAME",
+                    },
+                    inplace=True,
+                )
+                child_constraints_df.rename(
+                    columns={
+                        "CHILD_TABLE_NAME": "TABLE_NAME",
+                        "CHILD_COLUMN_NAME": "COLUMN_NAME",
+                        "PARENT_TABLE_NAME": "REFERENCED_TABLE_NAME",
+                        "PARENT_COLUMN_NAME": "REFERENCED_COLUMN_NAME",
+                    },
+                    inplace=True,
+                )
+
+                df = pd.concat([df, parent_constraints_df, child_constraints_df])
+
+        df = df.reindex(columns=cls.columns, fill_value=None)
+
         return df
 
 
@@ -809,11 +769,14 @@ class MetaHandlerInfoTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
+
         data = []
         for database in databases:
-            data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
-            handler_info = data_catalog_reader.get_handler_info()
-            data.append({"HANDLER_INFO": str(handler_info), "TABLE_SCHEMA": database})
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
+            handler_info = data_catalog_retriever.retrieve_handler_info()
+            data.append({"HANDLER_INFO": str(handler_info) if handler_info else None, "TABLE_SCHEMA": database})
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df

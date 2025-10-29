@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-latest}
+    container_name: mindsdb_postgres
+    environment:
+      # Read from .env file with defaults
+      POSTGRES_USER: ${DB_USER:-postgresql}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-psqlpasswd}
+      POSTGRES_DB: ${DB_NAME:-demo}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: Initialize with schema on first run
+      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgresql}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mindsdb_network
+
+  # MindsDB Server
+  mindsdb:
+    image: mindsdb/mindsdb:${MINDSDB_VERSION:-latest}
+    container_name: mindsdb_container
+    environment:
+      MINDSDB_APIS: http,mysql
+      # Pass OpenAI API key to MindsDB container (optional)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "47334:47334"  # HTTP API
+      - "47335:47335"  # MySQL API
+    volumes:
+      - mindsdb_data:/root/mindsdb_storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:47334/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mindsdb_network
+    # Restart policy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  mindsdb_data:
+    driver: local
+
+networks:
+  mindsdb_network:
+    driver: bridge

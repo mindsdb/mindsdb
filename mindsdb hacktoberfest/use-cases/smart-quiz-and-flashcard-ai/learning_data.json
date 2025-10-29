@@ -1,0 +1,239 @@
+{
+    "flashcards": {
+        "math": [
+            {
+                "question": "What is the quadratic formula used to solve equations of the form ax\u00b2 + bx + c = 0?",
+                "answer": "x = [-b \u00b1 \u221a(b\u00b2 - 4ac)] / (2a)",
+                "tags": [
+                    "Algebra",
+                    "Formulas"
+                ]
+            },
+            {
+                "question": "State the Pythagorean theorem for a right-angled triangle with legs a, b and hypotenuse c.",
+                "answer": "a\u00b2 + b\u00b2 = c\u00b2",
+                "tags": [
+                    "Geometry",
+                    "Theorems"
+                ]
+            },
+            {
+                "question": "What is the derivative of f(x) = x\u00b3 with respect to x?",
+                "answer": "3x\u00b2",
+                "tags": [
+                    "Calculus",
+                    "Derivatives"
+                ]
+            },
+            {
+                "question": "What is the formula for the area of a circle with radius r?",
+                "answer": "\u03c0r\u00b2",
+                "tags": [
+                    "Geometry",
+                    "Formulas"
+                ]
+            },
+            {
+                "question": "What is the sum of the interior angles of any triangle?",
+                "answer": "180 degrees",
+                "tags": [
+                    "Geometry",
+                    "Properties"
+                ]
+            }
+        ],
+        "mathematics": [
+            {
+                "question": "What is the quadratic formula used to solve equations of the form ax\u00b2 + bx + c = 0?",
+                "answer": "x = [-b \u00b1 \u221a(b\u00b2 - 4ac)] / (2a)",
+                "tags": [
+                    "Algebra",
+                    "Formulas"
+                ]
+            },
+            {
+                "question": "What is the Pythagorean theorem for a right-angled triangle with legs a, b and hypotenuse c?",
+                "answer": "a\u00b2 + b\u00b2 = c\u00b2",
+                "tags": [
+                    "Geometry",
+                    "Theorems"
+                ]
+            },
+            {
+                "question": "What is the derivative of sin(x) with respect to x?",
+                "answer": "cos(x)",
+                "tags": [
+                    "Calculus",
+                    "Derivatives"
+                ]
+            },
+            {
+                "question": "What is the formula for the area of a triangle given base b and height h?",
+                "answer": "A = (1/2) * b * h",
+                "tags": [
+                    "Geometry",
+                    "Formulas"
+                ]
+            },
+            {
+                "question": "What does the acronym 'SOHCAHTOA' represent in trigonometry?",
+                "answer": "Sine = Opposite/Hypotenuse, Cosine = Adjacent/Hypotenuse, Tangent = Opposite/Adjacent",
+                "tags": [
+                    "Trigonometry",
+                    "Mnemonics"
+                ]
+            },
+            {
+                "question": "What is the value of e (Euler's number) approximately?",
+                "answer": "2.71828",
+                "tags": [
+                    "Constants",
+                    "Calculus"
+                ]
+            },
+            {
+                "question": "What is the fundamental theorem of calculus primarily concerned with?",
+                "answer": "The relationship between differentiation and integration, showing they are inverse operations",
+                "tags": [
+                    "Calculus",
+                    "Theorems"
+                ]
+            }
+        ],
+        "AtomicBomb": [
+            {
+                "question": "What was the code name for the U.S. project to develop the atomic bomb during World War II?",
+                "answer": "The Manhattan Project",
+                "tags": [
+                    "History",
+                    "WWII"
+                ]
+            },
+            {
+                "question": "Which two Japanese cities were targeted by atomic bombs in August 1945?",
+                "answer": "Hiroshima and Nagasaki",
+                "tags": [
+                    "History",
+                    "WWII"
+                ]
+            },
+            {
+                "question": "What is the primary nuclear reaction that powers an atomic bomb?",
+                "answer": "Nuclear fission of uranium-235 or plutonium-239",
+                "tags": [
+                    "Physics",
+                    "Nuclear"
+                ]
+            },
+            {
+                "question": "Who is often referred to as the 'father of the atomic bomb' for his role as director of the Los Alamos Laboratory?",
+                "answer": "J. Robert Oppenheimer",
+                "tags": [
+                    "History",
+                    "Science"
+                ]
+            },
+            {
+                "question": "What was the name of the atomic bomb dropped on Hiroshima on August 6, 1945?",
+                "answer": "Little Boy",
+                "tags": [
+                    "History",
+                    "WWII"
+                ]
+            },
+            {
+                "question": "What immediate effect did the atomic bombings have on Japan's decision to end World War II?",
+                "answer": "Japan announced its surrender on August 15, 1945, leading to the official end of WWII on September 2, 1945",
+                "tags": [
+                    "History",
+                    "WWII"
+                ]
+            }
+        ],
+        "Capitals of country": [
+            {
+                "question": "What is the capital city of France?",
+                "answer": "Paris",
+                "tags": [
+                    "Geography",
+                    "Capitals"
+                ]
+            },
+            {
+                "question": "What is the capital city of Japan?",
+                "answer": "Tokyo",
+                "tags": [
+                    "Geography",
+                    "Capitals"
+                ]
+            },
+            {
+                "question": "What is the capital city of Brazil?",
+                "answer": "Bras\u00edlia",
+                "tags": [
+                    "Geography",
+                    "Capitals"
+                ]
+            },
+            {
+                "question": "What is the capital city of Australia?",
+                "answer": "Canberra",
+                "tags": [
+                    "Geography",
+                    "Capitals"
+                ]
+            },
+            {
+                "question": "What is the capital city of Canada?",
+                "answer": "Ottawa",
+                "tags": [
+                    "Geography",
+                    "Capitals"
+                ]
+            }
+        ]
+    },
+    "quizzes": {
+        "INdianHistory": [
+            {
+                "question": "During which period did the Indus Valley Civilization reach its peak?",
+                "options": [
+                    "2500-1900 BCE",
+                    "3000-2500 BCE",
+                    "1500-1000 BCE",
+                    "2000-1500 BCE"
+                ],
+                "answer": "2500-1900 BCE",
+                "tags": [
+                    "Ancient India"
+                ]
+            },
+            {
+                "question": "Who served as the first Prime Minister of independent India?",
+                "options": [
+                    "Mahatma Gandhi",
+                    "Jawaharlal Nehru",
+                    "Sardar Vallabhbhai Patel",
+                    "Indira Gandhi"
+                ],
+                "answer": "Jawaharlal Nehru",
+                "tags": [
+                    "Modern India"
+                ]
+            },
+            {
+                "question": "In which year did the Battle of Plassey take place, marking the beginning of British colonial rule in India?",
+                "options": [
+                    "1757",
+                    "1857",
+                    "1764",
+                    "1773"
+                ],
+                "answer": "1757",
+                "tags": [
+                    "Colonial Era"
+                ]
+            }
+        ]
+    }
+}

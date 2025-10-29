@@ -80,10 +80,11 @@ def retry_with_exponential_backoff(
                 except status_errors as e:
                     error_message = e.body
                     if isinstance(error_message, dict):
-                        error_message = error_message.get('message', 'Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.')
-                    raise Exception(
-                        f"Error status {e.status_code} raised by OpenAI API: {error_message}"
-                    )
+                        error_message = error_message.get(
+                            "message",
+                            "Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.",
+                        )
+                    raise Exception(f"Error status {e.status_code} raised by OpenAI API: {error_message}")
 
                 except wait_errors:
                     num_retries += 1

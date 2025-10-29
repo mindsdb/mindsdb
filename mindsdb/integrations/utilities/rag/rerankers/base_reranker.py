@@ -411,12 +411,16 @@ class BaseLLMReranker(BaseModel, ABC):
 
 
 def _strip_code_fences(text: str) -> str:
+    """Strip code fences from text, handling cases where first line has content after fence."""
     stripped = text.strip()
     if stripped.startswith("```") and stripped.endswith("```"):
         lines = stripped.splitlines()
-        # drop first fence line
-        lines = lines[1:]
-        # drop trailing fence lines
+        # Check if first line has content after the fence (e.g., ```json)
+        first_line = lines[0] if lines else ""
+        if first_line.strip() == "```" or (first_line.startswith("```") and len(first_line.strip()) > 3):
+            # Drop first fence line (with or without language specifier)
+            lines = lines[1:]
+        # Drop trailing fence lines
         while lines and lines[-1].strip().startswith("```"):
             lines.pop()
         stripped = "\n".join(lines).strip()
@@ -426,6 +430,8 @@ def _strip_code_fences(text: str) -> str:
 class ListwiseLLMReranker(BaseLLMReranker):
     mode: RerankerMode = RerankerMode.LISTWISE
     max_document_characters: int = 3000
+    max_documents_per_batch: int = 50  # Maximum documents to rank in a single LLM call
+    document_separator: str = "\n---DOCUMENT_SEPARATOR---\n"  # Unique separator to avoid conflicts
 
     async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:
         if not query_document_pairs:
@@ -433,6 +439,11 @@ class ListwiseLLMReranker(BaseLLMReranker):
 
         query = query_document_pairs[0][0]
         documents = [document for _, document in query_document_pairs]
+
+        # Handle large document sets by batching
+        if len(documents) > self.max_documents_per_batch:
+            log.info(f"Batching {len(documents)} documents into groups of {self.max_documents_per_batch}")
+            return await self._rank_with_batching(query, documents, rerank_callback)
 
         messages = self._build_messages(query, documents)
         ranked_results: List[Tuple[str, float]] = []
@@ -458,13 +469,64 @@ class ListwiseLLMReranker(BaseLLMReranker):
 
         return ranked_results
 
+    async def _rank_with_batching(
+        self, query: str, documents: List[str], rerank_callback=None
+    ) -> List[Tuple[str, float]]:
+        """Rank documents in batches to avoid overwhelming the LLM with too many documents."""
+        batch_size = self.max_documents_per_batch
+        num_batches = (len(documents) + batch_size - 1) // batch_size
+
+        all_results: List[Tuple[str, float]] = []
+
+        for batch_idx in range(num_batches):
+            start_idx = batch_idx * batch_size
+            end_idx = min(start_idx + batch_size, len(documents))
+            batch_docs = documents[start_idx:end_idx]
+
+            # Create query-document pairs for this batch
+            batch_pairs = [(query, doc) for doc in batch_docs]
+
+            # Rank this batch
+            batch_results = await self._rank_single_batch(batch_pairs, rerank_callback)
+            all_results.extend(batch_results)
+
+        # Sort all results by score to get final ranking
+        all_results.sort(key=lambda item: item[1], reverse=True)
+        return all_results
+
+    async def _rank_single_batch(
+        self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None
+    ) -> List[Tuple[str, float]]:
+        """Rank a single batch of documents."""
+        query = query_document_pairs[0][0]
+        documents = [document for _, document in query_document_pairs]
+
+        messages = self._build_messages(query, documents)
+
+        for attempt in range(self.max_retries):
+            try:
+                response = await self._call_llm(messages)
+                content = response.choices[0].message.content
+                scores = self._extract_scores(content, len(documents))
+                return list(zip(documents, scores))
+            except Exception as exc:
+                if attempt == self.max_retries - 1:
+                    log.error(f"Failed listwise reranking batch after {self.max_retries} attempts: {exc}")
+                    raise
+                retry_delay = self.retry_delay * (2**attempt) + random.uniform(0, 0.1)
+                await asyncio.sleep(retry_delay)
+
+        return []
+
     def _build_messages(self, query: str, documents: List[str]) -> List[dict]:
         document_blocks = []
         for idx, document in enumerate(documents, start=1):
-            truncated = self._truncate_document(document)
+            # Remove any existing 'Document [N]:' prefix from content
+            cleaned_doc = self._clean_document_prefix(document)
+            truncated = self._truncate_document(cleaned_doc)
             document_blocks.append(f"Document {idx}:\n{truncated}")
 
-        docs_text = "\n\n".join(document_blocks)
+        docs_text = self.document_separator.join(document_blocks)
         system_prompt = (
             "You are an expert reranker. Given a user query and a list of candidate "
             "documents, you must rank the documents from most to least relevant. "
@@ -488,6 +550,11 @@ class ListwiseLLMReranker(BaseLLMReranker):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
+
+    def _clean_document_prefix(self, document: str) -> str:
+        """Remove 'Document [N]:' prefix if present in the document content."""
+        pattern = r"^Document\s+\d+:\s*"
+        return re.sub(pattern, "", document, count=1)
 
     def _truncate_document(self, document: str) -> str:
         if len(document) <= self.max_document_characters:

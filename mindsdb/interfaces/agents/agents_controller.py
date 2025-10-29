@@ -10,7 +10,6 @@ import pandas as pd
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import Predictor
 from mindsdb.utilities.context import context as ctx
-from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
@@ -337,12 +336,6 @@ class AgentsController:
                 db.session.rollback()
                 raise ValueError(f"Skill with name does not exist: {skill_name}")
 
-            # Run Data Catalog loader if enabled.
-            if include_tables:
-                self._run_data_catalog_loader_for_table_entries(include_tables, project_name, skill=existing_skill)
-            else:
-                self._run_data_catalog_loader_for_skill(existing_skill, project_name, tables=parameters.get("tables"))
-
             if existing_skill.type == "sql":
                 # Add table restrictions if this is a text2sql skill
                 if include_tables:
@@ -486,13 +479,6 @@ class AgentsController:
 
             # add skills
             for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
-                # Run Data Catalog loader if enabled for the new skill
-                self._run_data_catalog_loader_for_skill(
-                    skill_name,
-                    project_name,
-                    tables=next((x for x in skills_to_add if x["name"] == skill_name), {}).get("tables"),
-                )
-
                 skill_parameters = next(x for x in skills_to_add if x["name"] == skill_name).copy()
                 del skill_parameters["name"]
                 association = db.AgentSkillsAssociation(
@@ -511,22 +497,9 @@ class AgentsController:
                 else:
                     existing_skill_names.add(rel.skill.name)
                     skill_parameters = skill_name_to_parameters[rel.skill.name]
-
-                    # Run Data Catalog loader if enabled for the updated skill
-                    self._run_data_catalog_loader_for_skill(
-                        rel.skill.name, project_name, tables=skill_parameters.get("tables")
-                    )
-
                     rel.parameters = skill_parameters
                     flag_modified(rel, "parameters")
             for new_skill_name in set(skill_name_to_parameters) - existing_skill_names:
-                # Run Data Catalog loader if enabled for the new skill
-                self._run_data_catalog_loader_for_skill(
-                    new_skill_name,
-                    project_name,
-                    tables=skill_name_to_parameters[new_skill_name].get("tables"),
-                )
-
                 association = db.AgentSkillsAssociation(
                     parameters=skill_name_to_parameters[new_skill_name],
                     agent=existing_agent,
@@ -535,14 +508,6 @@ class AgentsController:
                 db.session.add(association)
 
         if params is not None:
-            if params.get("data", {}).get("tables"):
-                new_table_entries = set(params["data"]["tables"]) - set(
-                    existing_params.get("data", {}).get("tables", [])
-                )
-                if new_table_entries:
-                    # Run Data Catalog loader for new table entries if enabled.
-                    self._run_data_catalog_loader_for_table_entries(new_table_entries, project_name)
-
             # Merge params on update
             existing_params.update(params)
             # Remove None values entirely.
@@ -554,86 +519,6 @@ class AgentsController:
         db.session.commit()
 
         return existing_agent
-
-    def _run_data_catalog_loader_for_skill(
-        self,
-        skill: Union[str, db.Skills],
-        project_name: str,
-        tables: List[str] = None,
-    ):
-        """
-        Runs Data Catalog loader for a skill if enabled in the config.
-        This is used to load metadata for SQL skills when they are added or updated.
-        """
-        if not config.get("data_catalog", {}).get("enabled", False):
-            return
-
-        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, project_name)
-        if skill.type == "sql":
-            if "database" in skill.params:
-                valid_table_names = skill.params.get("tables") if skill.params.get("tables") else tables
-                data_catalog_loader = DataCatalogLoader(
-                    database_name=skill.params["database"], table_names=valid_table_names
-                )
-                data_catalog_loader.load_metadata()
-            else:
-                raise ValueError(
-                    "Data Catalog loading is enabled, but the provided parameters for the new skills are insufficient to load metadata. "
-                )
-
-    def _run_data_catalog_loader_for_table_entries(
-        self,
-        table_entries: List[str],
-        project_name: str,
-        skill: Union[str, db.Skills] = None,
-    ):
-        """
-        Runs Data Catalog loader for a list of table entries if enabled in the config.
-        This is used to load metadata for SQL skills when they are added or updated.
-        """
-        if not config.get("data_catalog", {}).get("enabled", False):
-            return
-
-        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, project_name)
-        if not skill or skill.type == "sql":
-            database_table_map = {}
-            for table_entry in table_entries:
-                parts = table_entry.split(".", 1)
-
-                # Ensure the table name is in 'database.table' format.
-                if len(parts) != 2:
-                    logger.warning(
-                        f"Invalid table name format: {table_entry}. Expected 'database.table' format."
-                        "Metadata will not be loaded for this entry."
-                    )
-                    continue
-
-                database, table = parts[0], parts[1]
-
-                # Wildcards in database names are not supported at the moment by data catalog loader.
-                if "*" in database:
-                    logger.warning(
-                        f"Invalid database name format: {database}. Wildcards are not supported."
-                        "Metadata will not be loaded for this entry."
-                    )
-                    continue
-
-                # Wildcards in table names are supported either.
-                # However, the table name itself can be a wildcard representing all tables.
-                if table == "*":
-                    table = None
-                elif "*" in table:
-                    logger.warning(
-                        f"Invalid table name format: {table}. Wildcards are not supported."
-                        "Metadata will not be loaded for this entry."
-                    )
-                    continue
-
-                database_table_map[database] = database_table_map.get(database, []) + [table]
-
-            for database_name, table_names in database_table_map.items():
-                data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
-                data_catalog_loader.load_metadata()
 
     def delete_agent(self, agent_name: str, project_name: str = default_project):
         """

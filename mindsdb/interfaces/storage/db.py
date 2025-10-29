@@ -1,4 +1,5 @@
 import json
+import orjson
 import datetime
 from typing import Dict, List, Optional
 
@@ -47,10 +48,20 @@ def init(connection_str: str = None):
     global Base, session, engine
     if connection_str is None:
         connection_str = config["storage_db"]
+    # Use orjson with our CustomJSONEncoder.default for JSON serialization
+    _default_json = CustomJSONEncoder().default
+
+    def _json_serializer(value):
+        return orjson.dumps(
+            value,
+            default=_default_json,
+            option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
+        ).decode("utf-8")
+
     base_args = {
         "pool_size": 30,
         "max_overflow": 200,
-        "json_serializer": CustomJSONEncoder().encode,
+        "json_serializer": _json_serializer,
     }
     engine = create_engine(connection_str, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
@@ -151,7 +162,7 @@ class Predictor(Base):
     name = Column(String)
     data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
-    company_id = Column(Integer)
+    company_id = Column(String)
     mindsdb_version = Column(String)
     native_version = Column(String)
     integration_id = Column(ForeignKey("integration.id", name="fk_integration_id"))
@@ -206,7 +217,7 @@ class Project(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     deleted_at = Column(DateTime)
     name = Column(String, nullable=False)
-    company_id = Column(Integer, default=0)
+    company_id = Column(String, default="0")
     metadata_: dict = Column("metadata", JSON, nullable=True)
     __table_args__ = (UniqueConstraint("name", "company_id", name="unique_project_name_company_id"),)
 
@@ -219,7 +230,7 @@ class Integration(Base):
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
     data = Column(Json)
-    company_id = Column(Integer)
+    company_id = Column(String)
 
     meta_tables = relationship("MetaTables", back_populates="integration")
 
@@ -230,7 +241,7 @@ class File(Base):
     __tablename__ = "file"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    company_id = Column(Integer)
+    company_id = Column(String)
     source_file_path = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
     row_count = Column(Integer, nullable=False)
@@ -245,7 +256,7 @@ class View(Base):
     __tablename__ = "view"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    company_id = Column(Integer)
+    company_id = Column(String)
     query = Column(String, nullable=False)
     project_id = Column(Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False)
     __table_args__ = (UniqueConstraint("name", "company_id", name="unique_view_name_company_id"),)
@@ -259,7 +270,7 @@ class JsonStorage(Base):
     name = Column(String)
     content = Column(JSON)
     encrypted_content = Column(LargeBinary, nullable=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
 
     def to_dict(self) -> Dict:
         return {
@@ -276,7 +287,7 @@ class JsonStorage(Base):
 class Jobs(Base):
     __tablename__ = "jobs"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
     user_class = Column(Integer, nullable=True)
     active = Column(Boolean, default=True)
 
@@ -297,7 +308,7 @@ class Jobs(Base):
 class JobsHistory(Base):
     __tablename__ = "jobs_history"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
 
     job_id = Column(Integer)
 
@@ -374,7 +385,7 @@ class Triggers(Base):
 class Tasks(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
     user_class = Column(Integer, nullable=True)
 
     # trigger, chatbot
@@ -433,7 +444,7 @@ class Agents(Base):
     __tablename__ = "agents"
     id = Column(Integer, primary_key=True)
     skills_relationships: Mapped[List["Skills"]] = relationship(AgentSkillsAssociation, back_populates="agent")
-    company_id = Column(Integer, nullable=True)
+    company_id = Column(String, nullable=True)
     user_class = Column(Integer, nullable=True)
 
     name = Column(String, nullable=False)
@@ -534,11 +545,10 @@ class KnowledgeBase(Base):
         reranking_model = params.pop("reranking_model", None)
 
         if not with_secrets:
-            if embedding_model and "api_key" in embedding_model:
-                embedding_model["api_key"] = "******"
-
-            if reranking_model and "api_key" in reranking_model:
-                reranking_model["api_key"] = "******"
+            for key in ("api_key", "private_key"):
+                for el in (embedding_model, reranking_model):
+                    if el and key in el:
+                        el[key] = "******"
 
         return {
             "id": self.id,
@@ -561,7 +571,7 @@ class KnowledgeBase(Base):
 class QueryContext(Base):
     __tablename__ = "query_context"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=True)
+    company_id: int = Column(String, nullable=True)
 
     query: str = Column(String, nullable=False)
     context_name: str = Column(String, nullable=False)
@@ -574,7 +584,7 @@ class QueryContext(Base):
 class Queries(Base):
     __tablename__ = "queries"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=True)
+    company_id: int = Column(String, nullable=True)
 
     sql: str = Column(String, nullable=False)
     database: str = Column(String, nullable=True)
@@ -594,7 +604,7 @@ class Queries(Base):
 class LLMLog(Base):
     __tablename__ = "llm_log"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=False)
+    company_id: int = Column(String, nullable=False)
     api_key: str = Column(String, nullable=True)
     model_id: int = Column(Integer, nullable=True)
     model_group: str = Column(String, nullable=True)

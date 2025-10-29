@@ -1,0 +1,120 @@
+# ==========================
+# OS / Editor / Tooling
+# ==========================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VS Code (keep common workspace files allowed below)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# JetBrains
+.idea/
+
+# ==========================
+# Python
+# ==========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-wheel-metadata/
+
+# Unit test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+.cache/
+nosetests.xml
+coverage.xml
+htmlcov/
+
+# Type checkers / linters
+.mypy_cache/
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+.jupyter/lab/workspaces/
+
+# Streamlit
+.streamlit/
+
+# ==========================
+# Environment & secrets
+# ==========================
+# Ignore local env files but keep examples
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# ==========================
+# Project data & artifacts
+# ==========================
+# Large/local data files generated during ingestion or experiments
+# (Tracked examples: keep small placeholders like README.md or .gitkeep.)
+/data/**/*.duckdb
+/data/**/*.db
+/data/**/*.sqlite
+/data/**/*.parquet
+/data/**/*.feather
+/data/**/*.csv
+/data/**/*.tsv
+/data/**/*.jsonl
+/data/**/*.log
+/data/**/*.tmp
+/data/**/*.lock
+
+# MindsDB state (if ever mounted locally)
+/root/mindsdb/
+
+# Logs
+logs/
+*.log
+
+# Notebooks checkpoints already ignored above; keep notebooks/*.ipynb tracked
+
+# ==========================
+# Docker
+# ==========================
+# Ignore any local overrides
+docker-compose.override.yml
+
+# ==========================
+# Misc
+# ==========================
+*.swp
+*.swo

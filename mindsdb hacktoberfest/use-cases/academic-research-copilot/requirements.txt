@@ -1,0 +1,16 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+streamlit==1.28.0
+duckdb==0.9.0
+requests==2.31.0
+pandas==2.0.3
+numpy==1.24.3
+pytest==7.4.3
+python-dotenv==1.0.0
+httpx==0.25.1
+aiofiles==23.2.1
+arxiv==2.1.0
+mindsdb-sdk==3.4.8
+sentence-transformers==2.7.0  # Free local embeddings for semantic search (compatible with Python 3.9)

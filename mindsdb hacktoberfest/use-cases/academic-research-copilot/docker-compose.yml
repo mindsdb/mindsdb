@@ -1,0 +1,60 @@
+services:
+  academic_research_copilot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./notebooks:/app/notebooks
+      - ./scripts:/app/scripts
+      - ./tests:/app/tests
+      - ./docs:/app/docs
+    ports:
+      - "8000:8000"  # FastAPI
+      - "8501:8501"  # Streamlit
+    environment:
+      - MINDSDB_HOST=mindsdb
+      - MINDSDB_PORT=${MINDSDB_PORT:-47334}
+      - MINDSDB_USER=${MINDSDB_USER:-mindsdb}
+      - MINDSDB_PASSWORD=${MINDSDB_PASSWORD:-}
+      - DUCKDB_PATH=/app/data/academic_papers.duckdb
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - STREAMLIT_HOST=0.0.0.0
+      - STREAMLIT_PORT=8501
+      - GEMINI_API_KEY=${GEMINI_API_KEY}  # Required for Knowledge Base embeddings
+    command: ["/app/start.sh"]
+    depends_on:
+      mindsdb:
+        condition: service_started
+    networks:
+      - academic_copilot_network
+    
+  # MindsDB service
+  mindsdb:
+    image: mindsdb/mindsdb:latest
+    ports:
+      - "47334:47334"
+      - "47335:47335"
+    volumes:
+      - mindsdb_data:/root/mindsdb
+      - ./data:/app/data  # Share data directory with app container
+    environment:
+      - MINDSDB_STORAGE_DIR=/root/mindsdb
+      - GEMINI_API_KEY=${GEMINI_API_KEY} 
+    networks:
+      - academic_copilot_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:47334"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  academic_copilot_network:
+    driver: bridge
+
+volumes:
+  mindsdb_data:

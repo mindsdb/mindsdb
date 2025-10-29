@@ -1,0 +1,14 @@
+[project]
+name = "rest-api-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.120.1",
+    "mindsdb-sdk>=3.4.8",
+    "psycopg2-binary>=2.9.11",
+    "python-dotenv>=1.2.1",
+    "pyyaml>=6.0.3",
+    "uvicorn>=0.38.0",
+]

@@ -34,13 +34,12 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -qy \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
-    freetds-dev freetds-bin libpq5 curl unixodbc unixodbc-dev gnupg lsb-release # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
+    freetds-dev freetds-bin libpq5 curl unixodbc unixodbc-dev gnupg # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
 
 # Install Microsoft ODBC Driver 18 for SQL Server
-# Detect Debian version and configure Microsoft repository accordingly
+# Use Debian 12 (bookworm) repo as it's the latest stable version supported by Microsoft
 RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
-    && DEBIAN_VERSION=$(lsb_release -rs | cut -d. -f1) \
-    && echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/${DEBIAN_VERSION}/prod ${DEBIAN_CODENAME:-$(lsb_release -cs)} main" > /etc/apt/sources.list.d/mssql-release.list \
+    && echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
     && ACCEPT_EULA=Y apt-get install -y msodbcsql18
 

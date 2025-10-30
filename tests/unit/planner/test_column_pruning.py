@@ -2,6 +2,7 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import Identifier, Select
 
 from mindsdb.api.executor.planner import plan_query
+from mindsdb.api.executor.planner.steps import SubSelectStep
 
 
 class TestColumnPruning:
@@ -211,11 +212,12 @@ class TestColumnPruning:
         # Subselects with pure SELECT * should be pruned to only needed columns
         found_pruned_subselect = False
         for step in plan.steps:
-            step_str = str(step)
             # Look for SubSelectStep with id column (not SELECT *)
-            if "SubSelect" in step_str and ("id" in step_str) and "SELECT *" not in step_str:
-                found_pruned_subselect = True
-                break
+            if isinstance(step, SubSelectStep):
+                query_str = str(step.query)
+                if "id" in query_str and "SELECT *" not in query_str:
+                    found_pruned_subselect = True
+                    break
 
         assert found_pruned_subselect, (
             f"Subselect with pure SELECT * should be pruned. Steps: {[str(s) for s in plan.steps]}"
@@ -381,10 +383,11 @@ class TestColumnPruningEdgeCases:
         # Column pruning happens at the table fetch level, not at SubSelectStep
         found_subselect_with_star = False
         for step in plan.steps:
-            step_str = str(step)
-            if "SubSelect" in step_str and "SELECT *" in step_str:
-                found_subselect_with_star = True
-                break
+            if isinstance(step, SubSelectStep):
+                query_str = str(step.query)
+                if "SELECT *" in query_str:
+                    found_subselect_with_star = True
+                    break
 
         assert found_subselect_with_star, (
             f"Expected SubSelectStep to use SELECT * (no pruning). Steps: {[str(s) for s in plan.steps]}"

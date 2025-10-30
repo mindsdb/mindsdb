@@ -291,7 +291,10 @@ class PlanJoinTablesQuery:
                     if item.predictor_info is None and item.sub_select is None:
                         regular_table_count += 1
                 elif isinstance(item, Join):
-                    has_join = True
+                    # LEFT JOIN preserves left table row count - LIMIT pushdown is safe
+                    join_type = str(item.join_type).upper() if item.join_type else ""
+                    if join_type not in ("LEFT JOIN", "LEFT OUTER JOIN"):
+                        has_join = True
 
             # Disable limit pushdown only if joining MULTIPLE regular database tables
             # Allow it for: single table, or table + predictor (predictor generates on-demand)

@@ -137,7 +137,7 @@ target "images" {
       },
       {
         name = "cloud-cpu"
-        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,pgvector,rag,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
+        extras = ".[lightwood,huggingface-cpu,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,pgvector,rag,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
         target = ""
       },
     ]

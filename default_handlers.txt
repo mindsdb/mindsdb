@@ -52,6 +52,7 @@ twillio
 twitter
 web
 youtube
+xero
 zendesk
 zipcodebase
 zotero

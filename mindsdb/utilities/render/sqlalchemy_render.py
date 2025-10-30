@@ -215,7 +215,6 @@ class SqlalchemyRender:
             if t.alias:
                 alias_name = self.get_alias(t.alias)
                 # Skip self-referencing aliases (e.g., "column AS column")
-                # Some databases like DuckDB don't support them
                 if len(t.parts) == 1 and t.parts[0] == alias_name:
                     pass  # Don't add alias if it matches the column name
                 else:

@@ -490,19 +490,6 @@ class PlanJoinTablesQuery:
 
         Returns a list of column Identifiers or None if we should fetch all columns.
         """
-        # Skip column pruning if query uses LAST
-        # TODO: We need to improve this
-        if query_in.where:
-            result = [False]
-
-            def check_last(node, **kwargs):
-                if isinstance(node, Last):
-                    result[0] = True
-
-            query_traversal(query_in.where, check_last)
-            if result[0]:
-                return None
-
         columns = {}
         has_qualified_star_for_table = False
 

@@ -54,7 +54,8 @@ def create_datasource_sql_via_connector(helper_instance, db_name, engine, parame
                 print(f"     [Helper create_datasource] ERROR: Timeout after {poll_timeout}s waiting for {db_name}.")
                 raise TimeoutError(f"Timed out waiting for database {db_name} to be created.") from e
             time.sleep(poll_interval)
-            
+
+
 def wait_for_trigger(self, db_name, trigger_name, timeout=30):
     start = time.time()
     while time.time() - start < timeout:
@@ -64,6 +65,7 @@ def wait_for_trigger(self, db_name, trigger_name, timeout=30):
             return True
         time.sleep(2)
     raise TimeoutError(f"Trigger {trigger_name} not found after {timeout}s")
+
 
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLTables(BaseStuff):
@@ -349,9 +351,7 @@ class TestMySQLTriggers(BaseStuff):
             start_time = time.time()
             result = []
             while time.time() - start_time < max_wait_time:
-                result = self.query(
-                    f"SELECT id, message FROM {db_name}.{target_table_name} WHERE id = {test_id};"
-                )
+                result = self.query(f"SELECT id, message FROM {db_name}.{target_table_name} WHERE id = {test_id};")
                 if result:
                     break
                 time.sleep(interval)

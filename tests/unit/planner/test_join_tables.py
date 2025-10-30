@@ -9,7 +9,6 @@ from mindsdb_sql_parser.ast import (
     Join,
     Constant,
     Star,
-    Parameter,
     BinaryOperation,
     OrderBy,
     Function,
@@ -409,9 +408,6 @@ class TestPlanJoinTables:
         subquery = copy.deepcopy(query)
         subquery.from_table = None
 
-        q_table3 = parse_sql("select * from tbl3 where id in 0")
-        q_table3.where.args[1] = Parameter(Result(5))
-
         plan = plan_query(
             query,
             integrations=["int1", "int2", "proj"],
@@ -441,11 +437,11 @@ class TestPlanJoinTables:
                     right=Result(3),
                     query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
                 ),
-                SubSelectStep(dataframe=Result(0), query=Select(targets=[Identifier("id")], distinct=True)),
-                FetchDataframeStep(integration="proj", query=q_table3),
+                # IN clause filter optimization is disabled - fetch full table
+                FetchDataframeStep(integration="proj", query=parse_sql("select * from tbl3")),
                 JoinStep(
                     left=Result(4),
-                    right=Result(6),
+                    right=Result(5),
                     query=Join(
                         left=Identifier("tab1"),
                         right=Identifier("tab2"),
@@ -453,7 +449,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.LEFT_JOIN,
                     ),
                 ),
-                QueryStep(subquery, from_table=Result(7), strict_where=False),
+                QueryStep(subquery, from_table=Result(6), strict_where=False),
             ]
         )
 

@@ -719,11 +719,12 @@ class TestPredictorParams:
     def test_complex_subselect(self):
         sql = """
                 select t2.x, m.id, (select a from int.tab0 where x=0) from int.tab1 t1
-                join int.tab2 t2 on t1.x = t2.a
+                left join int.tab2 t2 on t1.x = t2.a
                 join mindsdb.pred m
                 where m.a=(select a from int.tab3 where x=3)
                   and t2.x=(select a from int.tab4 where x=4)
                   and t1.b=1 and t2.b=2 and t1.a = t2.a
+                limit 3  
         """
 
         q_table2 = parse_sql("select * from tab2 as t2 where x=0 and b=2 AND a IN 1")
@@ -737,6 +738,7 @@ class TestPredictorParams:
                 where 0=0
                       and t2.x=x
                       and t1.b=1 and t2.b=2 and t1.a = t2.a
+                limit 3
             """
         )
         subquery.from_table = None
@@ -751,7 +753,7 @@ class TestPredictorParams:
                 FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab3 where x=3")),
                 FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab4 where x=4")),
                 # tables
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as t1 where b=1")),
+                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as t1 where b=1 limit 3")),
                 SubSelectStep(dataframe=Result(3), query=Select(targets=[Identifier("x")], distinct=True)),
                 FetchDataframeStep(integration="int", query=q_table2),
                 JoinStep(
@@ -760,7 +762,7 @@ class TestPredictorParams:
                     query=Join(
                         left=Identifier("tab1"),
                         right=Identifier("tab2"),
-                        join_type=JoinType.JOIN,
+                        join_type=JoinType.LEFT_JOIN,
                         condition=BinaryOperation(op="=", args=[Identifier("t1.x"), Identifier("t2.a")]),
                     ),
                 ),

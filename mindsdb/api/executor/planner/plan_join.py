@@ -282,21 +282,22 @@ class PlanJoinTablesQuery:
         use_limit = False
         if query_in.having is None and query_in.group_by is None and query_in.limit is not None:
             use_limit = True
-            has_join = False
-            regular_table_count = 0
+            has_predictor = False
 
             for item in join_sequence:
                 if isinstance(item, TableInfo):
-                    # Check if it's a regular table (not a predictor, not a subselect)
-                    if item.predictor_info is None and item.sub_select is None:
-                        regular_table_count += 1
-                elif isinstance(item, Join):
-                    has_join = True
+                    if item.predictor_info is not None:
+                        has_predictor = True
+                elif isinstance(item, Join) and not has_predictor:
+                    join_type = (
+                        item.join_type.upper() if hasattr(item.join_type, "upper") else str(item.join_type).upper()
+                    )
+                    # LEFT JOIN preserves left table row count - LIMIT pushdown is safe
+                    if join_type in ("LEFT JOIN", "LEFT OUTER JOIN"):
+                        continue
 
-            # Disable limit pushdown only if joining MULTIPLE regular database tables
-            # Allow it for: single table, or table + predictor (predictor generates on-demand)
-            if has_join and regular_table_count > 1:
-                use_limit = False
+                    # INNER/RIGHT JOIN: can't push LIMIT down
+                    use_limit = False
 
         self.query_context["use_limit"] = use_limit
 

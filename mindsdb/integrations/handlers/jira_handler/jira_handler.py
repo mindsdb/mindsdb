@@ -3,7 +3,12 @@ from typing import Any, Dict
 from atlassian import Jira
 from requests.exceptions import HTTPError
 
-from mindsdb.integrations.handlers.jira_handler.jira_tables import JiraProjectsTable, JiraIssuesTable, JiraUsersTable, JiraGroupsTable
+from mindsdb.integrations.handlers.jira_handler.jira_tables import (
+    JiraProjectsTable,
+    JiraIssuesTable,
+    JiraUsersTable,
+    JiraGroupsTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -60,26 +65,24 @@ class JiraHandler(APIHandler):
 
         if is_cloud:
             # Jira Cloud supports API token authentication.
-            if not all(key in self.connection_data for key in ['username', 'api_token', 'url']):
+            if not all(key in self.connection_data for key in ["username", "api_token", "url"]):
                 raise ValueError("Required parameters (username, api_token, url) must be provided.")
 
             config = {
-                "username": self.connection_data['username'],
-                "password": self.connection_data['api_token'],
-                "url": self.connection_data['url'],
+                "username": self.connection_data["username"],
+                "password": self.connection_data["api_token"],
+                "url": self.connection_data["url"],
+                "cloud": is_cloud,
             }
         else:
             # Jira Server supports personal access token authentication or open access.
-            if 'url' not in self.connection_data:
+            if "url" not in self.connection_data:
                 raise ValueError("Required parameter 'url' must be provided.")
 
-            config = {
-                "url": self.connection_data['url'],
-                "cloud": False
-            }
+            config = {"url": self.connection_data["url"], "cloud": False}
 
-            if 'personal_access_token' in self.connection_data:
-                config['session'] = ({"Authorization": f"Bearer {self.connection_data['personal_access_token']}"})
+            if "personal_access_token" in self.connection_data:
+                config["session"] = {"Authorization": f"Bearer {self.connection_data['personal_access_token']}"}
 
         try:
             self.connection = Jira(**config)
@@ -103,10 +106,10 @@ class JiraHandler(APIHandler):
             connection.myself()
             response.success = True
         except (HTTPError, ValueError) as known_error:
-            logger.error(f'Connection check to Jira failed, {known_error}!')
+            logger.error(f"Connection check to Jira failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to Jira failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to Jira failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         self.is_connected = response.success
@@ -127,24 +130,13 @@ class JiraHandler(APIHandler):
 
         try:
             results = connection.jql(query)
-            df = JiraIssuesTable(self).normalize(results['issues'])
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                df
-            )
+            df = JiraIssuesTable(self).normalize(results["issues"])
+            response = Response(RESPONSE_TYPE.TABLE, df)
         except HTTPError as http_error:
-            logger.error(f'Error running query: {query} on Jira, {http_error}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_code=0,
-                error_message=str(http_error)
-            )
+            logger.error(f"Error running query: {query} on Jira, {http_error}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(http_error))
         except Exception as unknown_error:
-            logger.error(f'Error running query: {query} on Jira, {unknown_error}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_code=0,
-                error_message=str(unknown_error)
-            )
+            logger.error(f"Error running query: {query} on Jira, {unknown_error}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(unknown_error))
 
         return response

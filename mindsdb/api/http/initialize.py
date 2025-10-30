@@ -350,13 +350,6 @@ def initialize_app(is_restart: bool = False):
         except Exception:
             user_id = 0
 
-        if company_id is not None:
-            try:
-                company_id = int(company_id)
-            except Exception as e:
-                logger.error(f"Could not parse company id: {company_id} | exception: {e}")
-                company_id = None
-
         if user_class is not None:
             try:
                 user_class = int(user_class)

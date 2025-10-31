@@ -117,7 +117,7 @@ class TestMySQLTablesNegative(BaseStuff):
         create_query = "CREATE TABLE non_existent_db.non_existent_table (id INT);"
         with pytest.raises(Exception) as e:
             self.query(create_query)
-        assert "non_existent_db" in str(e.value).lower()
+        assert "Database not found" in str(e.value).lower()
 
     @pytest.mark.usefixtures("setup_local_db")
     def test_drop_non_existent_table(self, setup_local_db, use_binary):

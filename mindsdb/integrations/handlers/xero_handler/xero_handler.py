@@ -125,8 +125,9 @@ class XeroHandler(APIHandler):
 
         Supports:
         - Direct token use if not expired
-        - Automatic refresh if refresh_token provided
+        - Automatic refresh if refresh_token and client credentials provided
         - Grace period of 5 minutes before token expiry
+        - Token refresh skipped if client credentials not available (use access_token as-is)
 
         Returns:
             dict: Token data with access_token, refresh_token, expires_at, tenant_id
@@ -149,12 +150,24 @@ class XeroHandler(APIHandler):
 
         # Check if token needs refresh
         if self._is_token_expired(token_data) and refresh_token:
-            token_data = self._refresh_tokens(refresh_token)
-            self._store_tokens(token_data)
+            # Only refresh if we have client credentials
+            if self.client_id and self.client_secret:
+                token_data = self._refresh_tokens(refresh_token)
+                self._store_tokens(token_data)
+            else:
+                # No credentials available for refresh - warn but continue with expired token
+                # The API call will fail if token is truly invalid
+                pass
         elif not access_token and refresh_token:
-            # No access token but have refresh token - get new one
-            token_data = self._refresh_tokens(refresh_token)
-            self._store_tokens(token_data)
+            # No access token but have refresh token - try to get new one
+            if self.client_id and self.client_secret:
+                token_data = self._refresh_tokens(refresh_token)
+                self._store_tokens(token_data)
+            else:
+                raise ValueError(
+                    "Cannot refresh token: access_token is missing and client credentials (client_id/client_secret) "
+                    "are not provided. Please provide either a valid access_token or both client credentials."
+                )
         elif access_token:
             # Use provided access token
             self._store_tokens(token_data)
@@ -337,9 +350,16 @@ class XeroHandler(APIHandler):
             dict: Updated token data with access_token, refresh_token, expires_at, tenant_id
 
         Raises:
-            Exception: If token refresh fails
+            Exception: If token refresh fails or credentials are missing
         """
         token_url = "https://identity.xero.com/connect/token"
+
+        # Validate that client credentials are available
+        if not self.client_id or not self.client_secret:
+            raise ValueError(
+                "Client ID and Client Secret are required to refresh tokens. "
+                "Please provide these credentials in your connection configuration."
+            )
 
         # Create Basic Authentication header
         auth_string = base64.b64encode(

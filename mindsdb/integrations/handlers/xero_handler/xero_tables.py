@@ -106,7 +106,7 @@ class BudgetsTable(XeroTable):
 
         try:
             # Fetch budgets
-            budgets = api.get_budgets(tenant_id=self.handler.tenant_id)
+            budgets = api.get_budgets(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(budgets.budgets or [])
         except Exception as e:
             raise Exception(f"Failed to fetch budgets: {str(e)}")
@@ -115,8 +115,9 @@ class BudgetsTable(XeroTable):
         parser = SELECTQueryParser(
             query, "budgets", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()
 
 
 class ContactsTable(XeroTable):
@@ -152,7 +153,7 @@ class ContactsTable(XeroTable):
 
         try:
             # Fetch contacts
-            contacts = api.get_contacts(tenant_id=self.handler.tenant_id)
+            contacts = api.get_contacts(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(contacts.contacts or [])
         except Exception as e:
             raise Exception(f"Failed to fetch contacts: {str(e)}")
@@ -161,8 +162,9 @@ class ContactsTable(XeroTable):
         parser = SELECTQueryParser(
             query, "contacts", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()
 
 
 class InvoicesTable(XeroTable):
@@ -200,7 +202,7 @@ class InvoicesTable(XeroTable):
 
         try:
             # Fetch invoices
-            invoices = api.get_invoices(tenant_id=self.handler.tenant_id)
+            invoices = api.get_invoices(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(invoices.invoices or [])
         except Exception as e:
             raise Exception(f"Failed to fetch invoices: {str(e)}")
@@ -209,8 +211,9 @@ class InvoicesTable(XeroTable):
         parser = SELECTQueryParser(
             query, "invoices", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()
 
 
 class ItemsTable(XeroTable):
@@ -243,7 +246,7 @@ class ItemsTable(XeroTable):
 
         try:
             # Fetch items
-            items = api.get_items(tenant_id=self.handler.tenant_id)
+            items = api.get_items(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(items.items or [])
         except Exception as e:
             raise Exception(f"Failed to fetch items: {str(e)}")
@@ -252,8 +255,9 @@ class ItemsTable(XeroTable):
         parser = SELECTQueryParser(
             query, "items", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()
 
 
 class OverpaymentsTable(XeroTable):
@@ -286,7 +290,7 @@ class OverpaymentsTable(XeroTable):
 
         try:
             # Fetch overpayments
-            overpayments = api.get_overpayments(tenant_id=self.handler.tenant_id)
+            overpayments = api.get_overpayments(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(overpayments.overpayments or [])
         except Exception as e:
             raise Exception(f"Failed to fetch overpayments: {str(e)}")
@@ -295,8 +299,9 @@ class OverpaymentsTable(XeroTable):
         parser = SELECTQueryParser(
             query, "overpayments", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()
 
 
 class PaymentsTable(XeroTable):
@@ -330,7 +335,7 @@ class PaymentsTable(XeroTable):
 
         try:
             # Fetch payments
-            payments = api.get_payments(tenant_id=self.handler.tenant_id)
+            payments = api.get_payments(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(payments.payments or [])
         except Exception as e:
             raise Exception(f"Failed to fetch payments: {str(e)}")
@@ -339,8 +344,9 @@ class PaymentsTable(XeroTable):
         parser = SELECTQueryParser(
             query, "payments", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()
 
 
 class PurchaseOrdersTable(XeroTable):
@@ -375,7 +381,7 @@ class PurchaseOrdersTable(XeroTable):
 
         try:
             # Fetch purchase orders
-            purchase_orders = api.get_purchase_orders(tenant_id=self.handler.tenant_id)
+            purchase_orders = api.get_purchase_orders(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(purchase_orders.purchase_orders or [])
         except Exception as e:
             raise Exception(f"Failed to fetch purchase orders: {str(e)}")
@@ -384,8 +390,9 @@ class PurchaseOrdersTable(XeroTable):
         parser = SELECTQueryParser(
             query, "purchase_orders", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()
 
 
 class QuotesTable(XeroTable):
@@ -421,7 +428,7 @@ class QuotesTable(XeroTable):
 
         try:
             # Fetch quotes
-            quotes = api.get_quotes(tenant_id=self.handler.tenant_id)
+            quotes = api.get_quotes(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(quotes.quotes or [])
         except Exception as e:
             raise Exception(f"Failed to fetch quotes: {str(e)}")
@@ -430,8 +437,9 @@ class QuotesTable(XeroTable):
         parser = SELECTQueryParser(
             query, "quotes", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()
 
 
 class RepeatingInvoicesTable(XeroTable):
@@ -464,7 +472,7 @@ class RepeatingInvoicesTable(XeroTable):
 
         try:
             # Fetch repeating invoices
-            repeating_invoices = api.get_repeating_invoices(tenant_id=self.handler.tenant_id)
+            repeating_invoices = api.get_repeating_invoices(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(repeating_invoices.repeating_invoices or [])
         except Exception as e:
             raise Exception(f"Failed to fetch repeating invoices: {str(e)}")
@@ -473,8 +481,9 @@ class RepeatingInvoicesTable(XeroTable):
         parser = SELECTQueryParser(
             query, "repeating_invoices", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()
 
 
 class AccountsTable(XeroTable):
@@ -509,7 +518,7 @@ class AccountsTable(XeroTable):
 
         try:
             # Fetch accounts
-            accounts = api.get_accounts(tenant_id=self.handler.tenant_id)
+            accounts = api.get_accounts(xero_tenant_id=self.handler.tenant_id)
             df = self._convert_response_to_dataframe(accounts.accounts or [])
         except Exception as e:
             raise Exception(f"Failed to fetch accounts: {str(e)}")
@@ -518,5 +527,6 @@ class AccountsTable(XeroTable):
         parser = SELECTQueryParser(
             query, "accounts", columns=self.get_columns()
         )
-        executor = SELECTQueryExecutor(df, parser)
-        return executor.execute()
+        selected_columns, where_conditions, order_by_conditions, result_limit = parser.parse_query()
+        executor = SELECTQueryExecutor(df, selected_columns, where_conditions, order_by_conditions, result_limit)
+        return executor.execute_query()

@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+venv/
+
+# MindsDB data
+backend/mdb_data/
+
+# OS-specific
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

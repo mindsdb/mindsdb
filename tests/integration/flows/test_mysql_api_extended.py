@@ -117,7 +117,7 @@ class TestMySQLTablesNegative(BaseStuff):
         create_query = "CREATE TABLE non_existent_db.non_existent_table (id INT);"
         with pytest.raises(Exception) as e:
             self.query(create_query)
-        assert "create_table" in str(e.value).lower()
+        assert "non_existent_db" in str(e.value).lower()
 
     @pytest.mark.usefixtures("setup_local_db")
     def test_drop_non_existent_table(self, setup_local_db, use_binary):
@@ -225,7 +225,6 @@ class TestMySQLKnowledgeBases(BaseStuff):
             result = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
             assert result and result[0]["NAME"] == kb_name and embedding_model in result[0]["EMBEDDING_MODEL"]
             self.query(f"INSERT INTO {kb_name} (content) VALUES ('{content_to_insert}');")
-            time.sleep(45)
             result = self.query(f"SELECT chunk_content FROM {kb_name} WHERE content = 'What is MindsDB?';")
             assert result and "MindsDB" in result[0]["chunk_content"]
         finally:

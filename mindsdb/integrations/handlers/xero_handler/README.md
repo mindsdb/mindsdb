@@ -90,6 +90,51 @@ PARAMETERS = {
 
 If not specified, the handler will use the first accessible organization.
 
+## Token Injection (Backend Integration)
+
+For backend systems that manage OAuth2 tokens centrally, you can inject tokens directly without going through the authorization flow:
+
+### Basic Token Injection
+
+If you have a valid access token:
+
+```sql
+CREATE DATABASE xero_backend
+WITH ENGINE = 'xero',
+PARAMETERS = {
+    'client_id': 'your_client_id',
+    'client_secret': 'your_client_secret',
+    'access_token': 'xero_access_token',
+    'tenant_id': 'xero_tenant_id'
+};
+```
+
+### Token Injection with Refresh
+
+For better reliability, provide both access and refresh tokens. The handler will automatically refresh the access token when needed:
+
+```sql
+CREATE DATABASE xero_backend
+WITH ENGINE = 'xero',
+PARAMETERS = {
+    'client_id': 'your_client_id',
+    'client_secret': 'your_client_secret',
+    'access_token': 'xero_access_token',
+    'refresh_token': 'xero_refresh_token',
+    'expires_at': '2024-11-30T12:00:00',  -- Optional: ISO 8601 format or Unix timestamp
+    'tenant_id': 'xero_tenant_id'
+};
+```
+
+### How Token Injection Works
+
+1. **Token Validation**: The handler checks if the provided access token is expired or expiring soon (within 5 minutes)
+2. **Automatic Refresh**: If expired and a refresh_token is provided, the handler automatically refreshes the token
+3. **Token Storage**: Refreshed tokens are stored for future use
+4. **Grace Period**: Tokens are considered expired if they expire within 5 minutes, allowing proactive refresh
+
+**Note:** Token refresh requires valid `client_id` and `client_secret` in the connection parameters, even when using token injection.
+
 ## Usage Examples
 
 ### Select All Contacts

@@ -290,6 +290,7 @@ class IntegrationController:
         for record in integration_records:
             if record is None or record.data is None:
                 continue
+            logger.info(f"Returning integration record: {record.name} | {record.data} | {isinstance(record.data, dict)} | {type(record.data)}")
             integration_dict[record.name] = self._get_integration_record_data(record, show_secrets)
         return integration_dict
 

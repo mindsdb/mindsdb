@@ -52,11 +52,27 @@ class HubspotHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        access_token = self.connection_data["access_token"]
+        # Check for access token authentication (direct token)
+        if "access_token" in self.connection_data:
+            access_token = self.connection_data["access_token"]
+            self.connection = HubSpot(access_token=access_token)
 
-        self.connection = HubSpot(access_token=access_token)
+        # Check for OAuth authentication (client_id and client_secret)
+        elif "client_id" in self.connection_data and "client_secret" in self.connection_data:
+            client_id = self.connection_data["client_id"]
+            client_secret = self.connection_data["client_secret"]
+
+            # Initialize HubSpot client with OAuth credentials
+            # Note: This sets up the client for OAuth, but actual token exchange
+            # would need to be handled separately in a full OAuth flow
+            self.connection = HubSpot(client_id=client_id, client_secret=client_secret)
+        else:
+            raise ValueError(
+                "Authentication credentials missing. Provide either 'access_token' "
+                "or both 'client_id' and 'client_secret' for OAuth authentication."
+            )
+
         self.is_connected = True
-
         return self.connection
 
     def check_connection(self) -> StatusResponse:

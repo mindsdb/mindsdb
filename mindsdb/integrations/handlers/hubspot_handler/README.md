@@ -12,7 +12,9 @@ HubSpot handler for MindsDB provides interfaces to connect to HubSpot via APIs a
   - [HubSpot Handler Implementation](#hubspot-handler-implementation)
   - [HubSpot Handler Initialization](#hubspot-handler-initialization)
   - [Implemented Features](#implemented-features)
+  - [TODO](#todo)
   - [Example Usage](#example-usage)
+    - [Querying the Companies Data](#querying-the-companies-data)
 
 ---
 
@@ -77,7 +79,9 @@ The first step is to create a database with the new `hubspot` engine by passing 
 CREATE DATABASE hubspot_datasource
 WITH ENGINE = 'hubspot',
 PARAMETERS = {
-  "access_token": "..."
+  "access_token": "...",
+  "client_secret": "...",
+  "client_id": "..." -- Optional
 };
 ~~~~
 

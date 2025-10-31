@@ -17,7 +17,6 @@ COPY mindsdb/__about__.py mindsdb/
 # Now this stage only contains a few files and the layer hash will be the same if they don't change.
 # Which will mean the next stage can be cached, even if the cache for the above stage was invalidated.
 
-
 # Use the stage from above to install our deps with as much caching as possible
 FROM python:3.10 AS build
 WORKDIR /mindsdb
@@ -81,8 +80,6 @@ ENV PATH=/venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
-
-
 
 # Same as extras image, but with dev dependencies installed.
 # This image is used in our docker-compose

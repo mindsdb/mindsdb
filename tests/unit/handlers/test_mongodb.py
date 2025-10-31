@@ -311,6 +311,67 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(df.columns.tolist(), ["_id", "name", "location"])
         self.assertEqual(df["name"].tolist(), ["Cinema City"])
 
+    def test_query_select_with_complex_subquery_success(self):
+        """
+        Test if the `query` method returns a response object with a data frame containing the query result for a select with complex subquery.
+        e.g. SELECT * FROM (SELECT CAST(customer_id AS VARCHAR) AS cust_id, CAST(first_name AS VARCHAR) AS fname FROM mongo_db.customers)
+        """
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["customers"]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "customers"
+        ].aggregate.return_value = [
+            {
+                "cust_id": "C001",
+                "fname": "John",
+            }
+        ]
+
+        subquery = ast.Select(
+            targets=[
+                ast.Alias(
+                    expression=ast.Function(
+                        name="CAST",
+                        args=[
+                            ast.Identifier("customer_id"),
+                            ast.Constant("VARCHAR"),
+                        ],
+                    ),
+                    alias_name="cust_id",
+                ),
+                ast.Alias(
+                    expression=ast.Function(
+                        name="CAST",
+                        args=[
+                            ast.Identifier("first_name"),
+                            ast.Constant("VARCHAR"),
+                        ],
+                    ),
+                    alias_name="fname",
+                ),
+            ],
+            from_table=ast.Identifier("customers"),
+        )
+
+        main_query = ast.Select(
+            targets=[
+                Star(),
+            ],
+            from_table=subquery,
+        )
+
+        response = self.handler.query(main_query)
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.columns.tolist(), ["cust_id", "fname"])
+        self.assertEqual(df["cust_id"].tolist(), ["C001"])
+
 
 if __name__ == "__main__":
     unittest.main()

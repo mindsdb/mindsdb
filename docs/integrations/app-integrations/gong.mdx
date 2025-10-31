@@ -159,33 +159,6 @@ WHERE c.date >= '2024-01-01'
 LIMIT 100;
 ```
 
-### Querying the Data Catalog
-
-The handler supports `INFORMATION_SCHEMA` queries for AI agents to discover available tables and columns:
-
-```sql
--- Get all available tables
-SELECT * 
-FROM INFORMATION_SCHEMA.TABLES 
-WHERE TABLE_SCHEMA = 'gong_datasource';
-
--- Get columns for a specific table
-SELECT * 
-FROM INFORMATION_SCHEMA.COLUMNS 
-WHERE TABLE_SCHEMA = 'gong_datasource' 
-  AND TABLE_NAME = 'calls';
-
--- Get foreign key relationships
-SELECT * 
-FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
-WHERE TABLE_SCHEMA = 'gong_datasource' 
-  AND CONSTRAINT_NAME LIKE 'fk_%';
-```
-
-<Note>
-The above examples utilize `gong_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
-</Note>
-
 ## Data Schema
 
 ### calls Table

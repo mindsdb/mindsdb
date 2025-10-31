@@ -126,7 +126,7 @@ class MongodbRender(NonRelationalRender):
         """
         # if not isinstance(node.from_table, Identifier):
         #     raise NotImplementedError(f"Not supported from {node.from_table}")
-        collection = self._parse_select(node.from_table)
+        collection, subs, proj = self._parse_select(node.from_table)
 
         filters = {}
 

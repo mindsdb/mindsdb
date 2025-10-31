@@ -138,6 +138,7 @@ class Json(types.TypeDecorator):
             return value
         return json.loads(value) if value is not None else None
 
+
 # Hack to make mind-castle use mindsdb's "Json" type decorator as a backend
 # We need to switch this column to be a postgres json column in future
 class SecretDataJson(SecretData):

@@ -186,7 +186,7 @@ class MongodbRender(NonRelationalRender):
         if node.where is not None:
             filters = self.handle_where(node.where)
 
-        group = {}
+        group: Dict[str, Any] = {}
         project = {
             "_id": 0
         }  # Hide _id field when it has not been explicitly requested.

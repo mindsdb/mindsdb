@@ -378,6 +378,90 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(df["cust_id"].tolist(), ["C001"])
         self.assertEqual(df["fname"].tolist(), ["John"])
 
+    def test_query_select_with_where_operators(self):
+        """
+        Test SELECT with various WHERE operators (>, <, >=, <=, !=)
+        """
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].aggregate.return_value = [
+            {
+                "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
+                "name": "Inception",
+                "runtime": 148,
+            }
+        ]
+
+        query = ast.Select(
+            targets=[
+                Star(),
+            ],
+            from_table=ast.Identifier("movies"),
+            where=ast.BinaryOperation(
+                args=[ast.Identifier("runtime"), ast.Constant(150)], op="<"
+            ),
+        )
+
+        response = self.handler.query(query)
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.columns.tolist(), ["_id", "name", "runtime"])
+        self.assertEqual(df["name"].tolist(), ["Inception"])
+
+    def test_query_select_with_and_or_conditions(self):
+        """
+        Test SELECT with AND/OR conditions in WHERE clause
+        """
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].aggregate.return_value = [
+            {
+                "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
+                "name": "The Matrix",
+                "runtime": 136,
+            }
+        ]
+
+        query = ast.Select(
+            targets=[
+                Star(),
+            ],
+            from_table=ast.Identifier("movies"),
+            where=ast.BinaryOperation(
+                args=[
+                    ast.BinaryOperation(
+                        args=[ast.Identifier("runtime"), ast.Constant(140)], op="<"
+                    ),
+                    ast.BinaryOperation(
+                        args=[ast.Identifier("name"), ast.Constant("The Matrix")],
+                        op="=",
+                    ),
+                ],
+                op="AND",
+            ),
+        )
+
+        response = self.handler.query(query)
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.columns.tolist(), ["_id", "name", "runtime"])
+        self.assertEqual(df["name"].tolist(), ["The Matrix"])
 
 if __name__ == "__main__":
     unittest.main()

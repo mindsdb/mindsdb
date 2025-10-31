@@ -14,7 +14,7 @@ services:
 
   mindsdb:
     <<: *autoRestartOnFailure
-    image: mindsdb/mindsdb:devel
+    image: mindsdb
 
     depends_on:
       postgres:
@@ -44,27 +44,27 @@ services:
       # SENTRY_IO_FORCE_RUN: "true" # Uncomment me to force-start sentry on local development. Good for profiling, but may annoy other devs on sentry.io with the "noise"
       # MINDSDB_LOG_LEVEL: "DEBUG"
       # OPENAI_API_KEY: "..."
-      LANGFUSE_HOST: "http://langfuse:3000" # Define the host for langfuse
-      LANGFUSE_PUBLIC_KEY: "pk-lf-1234567890" # Define the public key for langfuse
-      LANGFUSE_SECRET_KEY: "sk-lf-1234567890" # Define the secret key for langfuse
-      LANGFUSE_ENVIRONMENT: "local"
-      LANGFUSE_RELEASE: "local"
-      # LANGFUSE_DEBUG: "True"
-      LANGFUSE_TIMEOUT: "10"
-      LANGFUSE_SAMPLE_RATE: "1.0"
+      # LANGFUSE_HOST: "http://langfuse:3000" # Define the host for langfuse
+      # LANGFUSE_PUBLIC_KEY: "pk-lf-1234567890" # Define the public key for langfuse
+      # LANGFUSE_SECRET_KEY: "sk-lf-1234567890" # Define the secret key for langfuse
+      # LANGFUSE_ENVIRONMENT: "local"
+      # LANGFUSE_RELEASE: "local"
+      # # LANGFUSE_DEBUG: "True"
+      # LANGFUSE_TIMEOUT: "10"
+      # LANGFUSE_SAMPLE_RATE: "1.0"
       # LANGFUSE_FORCE_RUN: "True"
-      OTEL_EXPORTER_TYPE: "console" # or "console" # Define the exporter type (console/otlp)
+      # OTEL_EXPORTER_TYPE: "console" # or "console" # Define the exporter type (console/otlp)
       # OTEL_EXPORTER_PROTOCOL: "grpc" # or "http" # Define the protocol for the otlp exporter.
       # OTEL_OTLP_ENDPOINT: "http://otel-collector:4317" # Define the endpoint for the otlp exporter.
       # OTEL_OTLP_LOGGING_ENDPOINT: "http://otel-collector:4317" # Define if log exporter is different from OTEL_OTLP_ENDPOINT.
       # OTEL_OTLP_TRACING_ENDPOINT: "http://otel-collector:4317" # Define if tracing exporter is different from OTEL_OTLP_ENDPOINT.
       # OTEL_OTLP_METRICS_ENDPOINT: "http://otel-collector:4317" # Define if metrics exporter is different from OTEL_OTLP_ENDPOINT.
-      OTEL_SERVICE_NAME: "mindsdb" # Define the service name
-      OTEL_SERVICE_INSTANCE_ID: "mindsdb-instance" # Define the service instance id
-      OTEL_SERVICE_ENVIRONMENT: "local" # Define the service environment
-      OTEL_SERVICE_RELEASE: "local" # Define the service release
-      OTEL_TRACE_SAMPLE_RATE: "1.0" # Define the trace sample rate
-      OTEL_EXTRA_ATTRIBUTES: "" # Define the extra attributes
+      # OTEL_SERVICE_NAME: "mindsdb" # Define the service name
+      # OTEL_SERVICE_INSTANCE_ID: "mindsdb-instance" # Define the service instance id
+      # OTEL_SERVICE_ENVIRONMENT: "local" # Define the service environment
+      # OTEL_SERVICE_RELEASE: "local" # Define the service release
+      # OTEL_TRACE_SAMPLE_RATE: "1.0" # Define the trace sample rate
+      # OTEL_EXTRA_ATTRIBUTES: "" # Define the extra attributes
       # OTEL_SDK_DISABLED: "false" # Define if the sdk is disabled
       # OTEL_LOGGING_DISABLED: "false" # Define if the logging is disabled.
       # OTEL_TRACING_DISABLED: "false" # Define if the tracing is disabled.
@@ -81,50 +81,50 @@ services:
       timeout: 4s
       retries: 100
 
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.116.1
-    environment:
-      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
-    volumes:
-      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
-    ports:
-      - 1888:1888 # pprof extension
-      - 8888:8888 # Prometheus metrics exposed by the Collector
-      - 8889:8889 # Prometheus exporter metrics
-      - 13133:13133 # health_check extension
-      - 4317:4317 # OTLP gRPC receiver
-      - 4318:4318 # OTLP http receiver
-      - 55679:55679 # zpages extension
+  # otel-collector:
+  #   image: otel/opentelemetry-collector-contrib:0.116.1
+  #   environment:
+  #     OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
+  #   volumes:
+  #     - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+  #   ports:
+  #     - 1888:1888 # pprof extension
+  #     - 8888:8888 # Prometheus metrics exposed by the Collector
+  #     - 8889:8889 # Prometheus exporter metrics
+  #     - 13133:13133 # health_check extension
+  #     - 4317:4317 # OTLP gRPC receiver
+  #     - 4318:4318 # OTLP http receiver
+  #     - 55679:55679 # zpages extension
 
-  langfuse:
-    <<: *autoRestartOnFailure
-    image: langfuse/langfuse:2.87.0
-    restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "3000:3000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/public/health"]
-      interval: 3s
-      timeout: 3s
-      retries: 10
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres/langfuse
-      - NEXTAUTH_SECRET=secret # generate secret with at least 256 entropy using `openssl rand -base64 32`.
-      - SALT=salt # generate secret with at least 256 entropy using `openssl rand -base64 32`.
-      - ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000 # generate secret with at least 256 bits and 64 characters in hex format using `openssl rand -hex 32`.
-      - NEXTAUTH_URL=http://localhost:3000 # URL of the frontend
-      - LANGFUSE_INIT_ORG_ID=mindsdb # Organization ID
-      - LANGFUSE_INIT_ORG_NAME=MindsDB # Organization name
-      - LANGFUSE_INIT_PROJECT_ID=23152f1d-9604-4629-a69d-27790d47b7fa # Project ID (UUID)
-      - LANGFUSE_INIT_PROJECT_NAME=MindsDB # Project name
-      - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-1234567890 # Project public key
-      - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-1234567890 # Project secret key
-      - LANGFUSE_INIT_USER_EMAIL=admin@langfuse.com # User email
-      - LANGFUSE_INIT_USER_NAME=User # User name
-      - LANGFUSE_INIT_USER_PASSWORD=password # User password
+  # langfuse:
+  #   <<: *autoRestartOnFailure
+  #   image: langfuse/langfuse:2.87.0
+  #   restart: always
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   ports:
+  #     - "3000:3000"
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -f http://localhost:3000/api/public/health"]
+  #     interval: 3s
+  #     timeout: 3s
+  #     retries: 10
+  #   environment:
+  #     - DATABASE_URL=postgresql://postgres:postgres@postgres/langfuse
+  #     - NEXTAUTH_SECRET=secret # generate secret with at least 256 entropy using `openssl rand -base64 32`.
+  #     - SALT=salt # generate secret with at least 256 entropy using `openssl rand -base64 32`.
+  #     - ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000 # generate secret with at least 256 bits and 64 characters in hex format using `openssl rand -hex 32`.
+  #     - NEXTAUTH_URL=http://localhost:3000 # URL of the frontend
+  #     - LANGFUSE_INIT_ORG_ID=mindsdb # Organization ID
+  #     - LANGFUSE_INIT_ORG_NAME=MindsDB # Organization name
+  #     - LANGFUSE_INIT_PROJECT_ID=23152f1d-9604-4629-a69d-27790d47b7fa # Project ID (UUID)
+  #     - LANGFUSE_INIT_PROJECT_NAME=MindsDB # Project name
+  #     - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-1234567890 # Project public key
+  #     - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-1234567890 # Project secret key
+  #     - LANGFUSE_INIT_USER_EMAIL=admin@langfuse.com # User email
+  #     - LANGFUSE_INIT_USER_NAME=User # User name
+  #     - LANGFUSE_INIT_USER_PASSWORD=password # User password
 
   postgres:
     <<: *autoRestartOnFailure

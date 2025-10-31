@@ -138,6 +138,11 @@ class Json(types.TypeDecorator):
             return value
         return json.loads(value) if value is not None else None
 
+# Hack to make mind-castle use mindsdb's "Json" type decorator as a backend
+# We need to switch this column to be a postgres json column in future
+class SecretDataJson(SecretData):
+    impl = Json
+
 
 class PREDICTOR_STATUS:
     __slots__ = ()
@@ -230,7 +235,7 @@ class Integration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
-    data = Column(SecretData(os.environ.get("MINDSDB_DATA_ENCRYPTION_TYPE", "none")))
+    data = Column(SecretDataJson(os.environ.get("MINDSDB_DATA_ENCRYPTION_TYPE", "none")))
     company_id = Column(String)
 
     __table_args__ = (UniqueConstraint("name", "company_id", name="unique_integration_name_company_id"),)

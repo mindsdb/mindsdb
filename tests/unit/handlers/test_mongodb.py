@@ -463,5 +463,31 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(df.columns.tolist(), ["_id", "name", "runtime"])
         self.assertEqual(df["name"].tolist(), ["The Matrix"])
 
+    def test_unsupported_select_query_(self):
+        """
+        NotImplementedError for unsupported inner subselect:
+        SELECT * FROM (SELECT COUNT(*) FROM movies);
+        """
+        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = ["movies"]
+
+        inner = ast.Select(
+            targets=[
+                ast.Function(op="COUNT", args=[ast.Star()], distinct=False, from_arg=None),
+            ],
+            from_table=ast.Identifier(parts=["movies"]),
+        )
+
+        outer = ast.Select(
+            targets=[ast.Star()],
+            from_table=inner,
+        )
+
+        with self.assertRaises(NotImplementedError) as ctx:
+            self.handler.query(outer)
+
+        self.assertIn("Unsupported inner target", str(ctx.exception))
+
+
+
 if __name__ == "__main__":
     unittest.main()

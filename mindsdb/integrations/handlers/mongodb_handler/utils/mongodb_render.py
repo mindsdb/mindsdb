@@ -122,7 +122,7 @@ class MongodbRender(NonRelationalRender):
                         pre_project[alias] = self._convert_type_cast(t)
                     else:
                         raise NotImplementedError(
-                            f"Unsupported inner target: {type(t)}"
+                            f"Unsupported inner target: {t}"
                         )
                 if saw_star:
                     pre_project = {}

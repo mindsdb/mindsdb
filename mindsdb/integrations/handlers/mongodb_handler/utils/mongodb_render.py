@@ -1,5 +1,5 @@
 import datetime as dt
-from typing import Dict, Union, Any, Optional
+from typing import Dict, Union, Any, Optional, Tuple as TypingTuple
 
 from bson.objectid import ObjectId
 from mindsdb_sql_parser.ast import (
@@ -30,7 +30,7 @@ class MongodbRender(NonRelationalRender):
 
     def _parse_select(
         self, from_table: Any
-    ) -> (str, Dict[str, Any], Optional[Dict[str, Any]]):
+    ) -> TypingTuple[str, Dict[str, Any], Optional[Dict[str, Any]]]:
         """
         Parses the from_table to extract the collection name
         If from_table is subquery, transform it for MongoDB

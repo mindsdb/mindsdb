@@ -1,5 +1,5 @@
 import datetime as dt
-from typing import Dict, Union, Any
+from typing import Dict, Union, Any, Optional
 
 from bson.objectid import ObjectId
 from mindsdb_sql_parser.ast import (
@@ -126,7 +126,7 @@ class MongodbRender(NonRelationalRender):
         """
         # if not isinstance(node.from_table, Identifier):
         #     raise NotImplementedError(f"Not supported from {node.from_table}")
-        collection = _parse_select(node.from_table)
+        collection = self._parse_select(node.from_table)
 
         filters = {}
 

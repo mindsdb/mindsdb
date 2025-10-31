@@ -319,58 +319,64 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.mock_connect.return_value[
             self.dummy_connection_data["database"]
         ].list_collection_names.return_value = ["customers"]
-
         self.mock_connect.return_value[self.dummy_connection_data["database"]][
             "customers"
-        ].aggregate.return_value = [
-            {
-                "cust_id": "C001",
-                "fname": "John",
-            }
-        ]
+        ].aggregate.return_value = [{"cust_id": "C001", "fname": "John"}]
+
+        cust_cast = ast.TypeCast(
+            arg=ast.Identifier(parts=["customer_id"]),
+            type_name="VARCHAR",
+            precision=None,
+        )
+        cust_cast.alias = ast.Identifier(parts=["cust_id"])
+
+        fname_cast = ast.TypeCast(
+            arg=ast.Identifier(parts=["first_name"]),
+            type_name="VARCHAR",
+            precision=None,
+        )
+        fname_cast.alias = ast.Identifier(parts=["fname"])
 
         subquery = ast.Select(
-            targets=[
-                ast.Alias(
-                    expression=ast.Function(
-                        name="CAST",
-                        args=[
-                            ast.Identifier("customer_id"),
-                            ast.Constant("VARCHAR"),
-                        ],
-                    ),
-                    alias_name="cust_id",
-                ),
-                ast.Alias(
-                    expression=ast.Function(
-                        name="CAST",
-                        args=[
-                            ast.Identifier("first_name"),
-                            ast.Constant("VARCHAR"),
-                        ],
-                    ),
-                    alias_name="fname",
-                ),
-            ],
-            from_table=ast.Identifier("customers"),
+            targets=[cust_cast, fname_cast],
+            from_table=ast.Identifier(parts=["mongo_db", "customers"]),
+            where=None,
+            group_by=None,
+            having=None,
+            order_by=None,
+            limit=None,
+            offset=None,
+            distinct=False,
+            modifiers=None,
+            cte=None,
+            mode=None,
         )
 
         main_query = ast.Select(
-            targets=[
-                Star(),
-            ],
+            targets=[ast.Star()],
             from_table=subquery,
+            where=None,
+            group_by=None,
+            having=None,
+            order_by=None,
+            limit=ast.Constant(50),
+            offset=None,
+            distinct=False,
+            modifiers=None,
+            cte=None,
+            mode=None,
         )
 
         response = self.handler.query(main_query)
 
-        assert isinstance(response, Response)
+        self.assertIsInstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
         self.assertEqual(len(df), 1)
         self.assertEqual(df.columns.tolist(), ["cust_id", "fname"])
         self.assertEqual(df["cust_id"].tolist(), ["C001"])
+        self.assertEqual(df["fname"].tolist(), ["John"])
 
 
 if __name__ == "__main__":

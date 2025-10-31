@@ -143,11 +143,6 @@ class Json(types.TypeDecorator):
 # We need to switch this column to be a postgres json column in future
 class SecretDataJson(SecretData):
     impl = Json
-    
-    def __init__(self, store_type: str, secret_key_prefix: str = "", *args, **kwargs):
-        super().__init__(store_type, secret_key_prefix, *args, **kwargs)
-        self.secret_type = store_type
-        self.secret_key_prefix = secret_key_prefix
 
 
 class PREDICTOR_STATUS:

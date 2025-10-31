@@ -68,15 +68,18 @@ class BaseAccessHandlerTest(unittest.TestCase):
             mock_col.column_name = col_name
             mock_col.type_name = type_name
             mock_columns.append(mock_col)
+
         mock_cursor.columns.return_value = mock_columns
 
 
 class TestAccessHandlerConnection(BaseAccessHandlerTest):
     """Test suite for Access Handler connection management."""
 
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_connect_success(self, mock_connect):
+    def test_connect_success(self, mock_connect, mock_platform):
         """Test successful connection to Access database."""
+        mock_platform.return_value = "Windows"
         mock_connection, _ = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -85,6 +88,7 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         mock_connect.assert_called_once_with(
             r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=" + self.TEST_DB_PATH
         )
+
         self.assertTrue(self.handler.is_connected)
         self.assertEqual(result, mock_connection)
 
@@ -100,9 +104,11 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         mock_connect.assert_not_called()
         self.assertEqual(result, mock_connection)
 
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_connect_failure(self, mock_connect):
+    def test_connect_failure(self, mock_connect, mock_platform):
         """Test connection failure handling."""
+        mock_platform.return_value = "Windows"
         error_msg = "Driver not found"
         mock_connect.side_effect = Exception(error_msg)
 
@@ -110,6 +116,17 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
             self.handler.connect()
 
         self.assertIn(error_msg, str(context.exception))
+        self.assertFalse(self.handler.is_connected)
+
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
+    def test_connect_non_windows_platform(self, mock_platform):
+        """Test connection failure on non-Windows platforms."""
+        mock_platform.return_value = "Linux"
+
+        with self.assertRaises(Exception) as context:
+            self.handler.connect()
+
+        self.assertIn("Microsoft Access handler is only supported on Windows platforms", str(context.exception))
         self.assertFalse(self.handler.is_connected)
 
     def test_disconnect_when_connected(self):
@@ -132,9 +149,11 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
 
         self.assertIsNone(result)
 
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_check_connection_success(self, mock_connect):
+    def test_check_connection_success(self, mock_connect, mock_platform):
         """Test successful connection check."""
+        mock_platform.return_value = "Windows"
         mock_connection, _ = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -144,9 +163,11 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertTrue(result.success)
         self.assertFalse(self.handler.is_connected)  # Should disconnect after check
 
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_check_connection_failure(self, mock_connect):
+    def test_check_connection_failure(self, mock_connect, mock_platform):
         """Test connection check failure."""
+        mock_platform.return_value = "Windows"
         error_message = "Cannot open database"
         mock_connect.side_effect = Exception(error_message)
 
@@ -156,13 +177,27 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertFalse(result.success)
         self.assertIn(error_message, result.error_message)
 
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
+    def test_check_connection_non_windows_platform(self, mock_platform):
+        """Test check_connection failure on non-Windows platforms."""
+        mock_platform.return_value = "Darwin"  # macOS
+
+        result = self.handler.check_connection()
+
+        self.assertIsInstance(result, StatusResponse)
+        self.assertFalse(result.success)
+        self.assertIn("Microsoft Access handler is only supported on Windows platforms", result.error_message)
+        self.assertFalse(self.handler.is_connected)
+
 
 class TestAccessHandlerQueries(BaseAccessHandlerTest):
     """Test suite for Access Handler query execution."""
 
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_native_query_select_success(self, mock_connect):
+    def test_native_query_select_success(self, mock_connect, mock_platform):
         """Test successful SELECT query execution."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -281,6 +316,19 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 
         self.assertEqual(result.type, RESPONSE_TYPE.OK)
         mock_renderer.get_string.assert_called_once_with(ast_query, with_failback=True)
+
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.HAS_ACCESS_DIALECT", False)
+    def test_query_without_access_dialect(self):
+        """Test query method when AccessDialect is not available."""
+        from mindsdb_sql_parser import parse_sql
+        from mindsdb.integrations.libs.response import RESPONSE_TYPE
+
+        ast_query = parse_sql("SELECT * FROM test_table")
+        result = self.handler.query(ast_query)
+
+        self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
+        self.assertIn("AccessDialect is not available", result.error_message)
+        self.assertIn("Windows", result.error_message)
 
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
     def test_native_query_with_special_characters(self, mock_connect):

@@ -1,12 +1,20 @@
 from typing import Optional
+import platform
 
 import pandas as pd
 import pyodbc
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from sqlalchemy_access.base import AccessDialect
 from mindsdb.integrations.libs.base import DatabaseHandler
+
+try:
+    from sqlalchemy_access.base import AccessDialect
+
+    HAS_ACCESS_DIALECT = True
+except ImportError:
+    AccessDialect = None
+    HAS_ACCESS_DIALECT = False
 
 from mindsdb_sql_parser.ast.base import ASTNode
 
@@ -48,15 +56,20 @@ class AccessHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> StatusResponse:
+    def connect(self):
         """
         Set up the connection required by the handler.
         Returns:
-            HandlerStatusResponse
+            pyodbc.Connection: A connection object to the Access database.
         """
-
         if self.is_connected is True:
             return self.connection
+
+        if platform.system() != "Windows":
+            raise Exception(
+                "Microsoft Access handler is only supported on Windows platforms. "
+                "Access databases (.mdb, .accdb) and required ODBC drivers are Windows-only."
+            )
 
         self.connection = pyodbc.connect(
             r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=" + self.connection_data["db_file"]
@@ -69,7 +82,6 @@ class AccessHandler(DatabaseHandler):
         """
         Close any existing connections.
         """
-
         if self.is_connected is False:
             return
 
@@ -83,7 +95,6 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -109,7 +120,6 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         need_to_close = self.is_connected is False
 
         connection = self.connect()
@@ -144,6 +154,11 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+        if not HAS_ACCESS_DIALECT:
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message="AccessDialect is not available. This handler requires Windows and sqlalchemy-access package.",
+            )
 
         renderer = SqlalchemyRender(AccessDialect)
         query_str = renderer.get_string(query, with_failback=True)
@@ -155,7 +170,6 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         connection = self.connect()
         with connection.cursor() as cursor:
             df = pd.DataFrame([table.table_name for table in cursor.tables(tableType="Table")], columns=["table_name"])
@@ -172,7 +186,6 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         connection = self.connect()
         with connection.cursor() as cursor:
             df = pd.DataFrame(

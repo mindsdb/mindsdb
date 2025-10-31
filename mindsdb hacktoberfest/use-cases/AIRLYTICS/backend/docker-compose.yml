@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  mindsdb:
+    image: mindsdb/mindsdb
+    container_name: mindsdb_container
+    ports:
+      - "47334:47334"  # Port for MindsDB GUI and HTTP API
+      - "47335:47335"  # Port for MindsDB MySQL API
+    volumes:
+      - ./mdb_data:/root/mdb_storage  # Persist data on host machine
+    environment:
+      - MKL_SERVICE_FORCE_INTEL=1  # Fix issues related to MKL if necessary
+    restart: unless-stopped
+
+

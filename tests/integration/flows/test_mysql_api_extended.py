@@ -78,7 +78,7 @@ class TestMySQLTables(BaseStuff):
     @pytest.mark.usefixtures("setup_local_db")
     def test_table_lifecycle(self, setup_local_db, use_binary):
         db_name = setup_local_db
-        table_name = f"test_lifecycle_table_{uuid.uuid4().hex[:8]}"
+        table_name = "test_lifecycle_table"
         try:
             create_table_query = f"CREATE TABLE {db_name}.{table_name} (id INT, value VARCHAR(255));"
             self.query(create_table_query)
@@ -103,7 +103,7 @@ class TestMySQLTablesNegative(BaseStuff):
     @pytest.mark.usefixtures("setup_local_db")
     def test_create_duplicate_table(self, setup_local_db, use_binary):
         db_name = setup_local_db
-        table_name = f"test_duplicate_table_{uuid.uuid4().hex[:8]}"
+        table_name = "test_duplicate_table"
         create_query = f"CREATE TABLE {db_name}.{table_name} (id INT);"
         try:
             self.query(create_query)
@@ -122,7 +122,7 @@ class TestMySQLTablesNegative(BaseStuff):
     @pytest.mark.usefixtures("setup_local_db")
     def test_drop_non_existent_table(self, setup_local_db, use_binary):
         db_name = setup_local_db
-        table_name = f"test_non_existent_table_{uuid.uuid4().hex[:8]}"
+        table_name = "test_non_existent_table"
         with pytest.raises(Exception) as e:
             self.query(f"DROP TABLE {db_name}.{table_name};")
         assert "does not exist" in str(e.value).lower()
@@ -137,8 +137,8 @@ class TestMySQLViews(BaseStuff):
         self.use_binary = request.param
 
     def test_view_lifecycle(self, use_binary):
-        db_name = f"test_sql_view_db_{uuid.uuid4().hex[:8]}"
-        view_name = f"test_sql_view_{uuid.uuid4().hex[:8]}"
+        db_name = "test_sql_view_db"
+        view_name = "test_sql_view"
         try:
             create_db_query = f"""
                 CREATE DATABASE {db_name}
@@ -174,7 +174,7 @@ class TestMySQLViewsNegative(BaseStuff):
         self.use_binary = request.param
 
     def test_create_duplicate_view(self, use_binary):
-        view_name = f"test_duplicate_view_{uuid.uuid4().hex[:8]}"
+        view_name = "test_duplicate_view"
         create_query = f"CREATE VIEW {view_name} AS (SELECT 1);"
         try:
             self.query(create_query)
@@ -185,7 +185,7 @@ class TestMySQLViewsNegative(BaseStuff):
             self.query(f"DROP VIEW IF EXISTS {view_name};")
 
     def test_create_view_on_non_existent_table(self, use_binary):
-        view_name = f"test_bad_source_view_{uuid.uuid4().hex[:8]}"
+        view_name = "test_bad_source_view"
         create_query = f"CREATE VIEW {view_name} AS (SELECT * FROM non_existent_db.non_existent_table);"
         with pytest.raises(Exception) as e:
             self.query(create_query)
@@ -193,7 +193,7 @@ class TestMySQLViewsNegative(BaseStuff):
         assert "not found in the database" in error_str or "table name should contain only one part" in error_str
 
     def test_drop_non_existent_view(self, use_binary):
-        view_name = f"non_existent_view_{uuid.uuid4().hex[:8]}"
+        view_name = "non_existent_view"
         with pytest.raises(Exception) as e:
             self.query(f"DROP VIEW {view_name};")
         error_str = str(e.value).lower()
@@ -213,7 +213,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         if not openai_api_key:
             pytest.skip("OPENAI_API_KEY environment variable not set. Skipping Knowledge Base lifecycle test.")
 
-        kb_name = f"test_kb_sql_{uuid.uuid4().hex[:8]}"
+        kb_name = "test_kb_sql"
         content_to_insert = "MindsDB helps developers build AI-powered applications."
         embedding_model = "text-embedding-3-small"
         try:
@@ -231,7 +231,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
             self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
 
     def test_create_kb_with_invalid_provider(self, use_binary):
-        kb_name = f"test_invalid_provider_{uuid.uuid4().hex[:8]}"
+        kb_name = "test_invalid_provider"
         create_query = (
             f'CREATE KNOWLEDGE_BASE {kb_name} USING embedding_model = {{"provider": "non_existent_provider"}};'
         )
@@ -249,14 +249,14 @@ class TestMySQLKnowledgeBases(BaseStuff):
         )
 
     def test_insert_into_non_existent_kb(self, use_binary):
-        kb_name = f"non_existent_kb_{uuid.uuid4().hex[:8]}"
+        kb_name = "non_existent_kb"
         with pytest.raises(Exception) as e:
             self.query(f"INSERT INTO {kb_name} (content) VALUES ('some data');")
         error_str = str(e.value).lower()
         assert "can't create table" in error_str or "doesn't exist" in error_str or "unknown table" in error_str
 
     def test_query_non_existent_kb(self, use_binary):
-        kb_name = f"non_existent_kb_{uuid.uuid4().hex[:8]}"
+        kb_name = "non_existent_kb"
         with pytest.raises(Exception) as e:
             self.query(f"SELECT * FROM {kb_name} WHERE content = 'some query';")
         error_str = str(e.value).lower()
@@ -267,7 +267,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         if not openai_api_key:
             pytest.skip("OPENAI_API_KEY environment variable not set. Skipping duplicate KB test.")
 
-        kb_name = f"test_duplicate_kb_{uuid.uuid4().hex[:8]}"
+        kb_name = "test_duplicate_kb"
         embedding_model = "text-embedding-3-small"
         create_query = f"""
             CREATE KNOWLEDGE_BASE {kb_name}
@@ -324,7 +324,7 @@ class TestMySQLTriggers(BaseStuff):
     @pytest.mark.usefixtures("setup_trigger_db")
     def test_trigger_lifecycle_update(self, setup_trigger_db, use_binary):
         db_name, source_table_name, target_table_name = setup_trigger_db
-        trigger_name = f"test_update_trigger_{uuid.uuid4().hex[:8]}"
+        trigger_name = "test_update_trigger"
         test_id = 101
         updated_message = "this message was updated"
         try:
@@ -374,7 +374,7 @@ class TestMySQLTriggersNegative(BaseStuff):
     @pytest.mark.usefixtures("setup_trigger_db")
     def test_create_duplicate_trigger(self, setup_trigger_db, use_binary):
         db_name, source_table_name, _ = setup_trigger_db
-        trigger_name = f"duplicate_trigger_{uuid.uuid4().hex[:8]}"
+        trigger_name = "duplicate_trigger"
         create_query = f"CREATE TRIGGER {trigger_name} ON {db_name}.{source_table_name} (SELECT 1);"
         try:
             self.query(create_query)
@@ -394,7 +394,7 @@ class TestMySQLTriggersNegative(BaseStuff):
         assert "no integration with name" in error_str or "unknown database" in error_str
 
     def test_drop_non_existent_trigger(self, use_binary):
-        trigger_name = f"non_existent_trigger_{uuid.uuid4().hex[:8]}"
+        trigger_name = "non_existent_trigger"
         with pytest.raises(Exception) as e:
             self.query(f"DROP TRIGGER {trigger_name};")
         error_str = str(e.value).lower()

@@ -244,7 +244,7 @@ class SqlServerHandler(MetaDatabaseHandler):
         if not all(key in self.connection_args for key in ["host", "user", "password", "database"]):
             raise ValueError("Required parameters (host, user, password, database) must be provided.")
 
-        driver = self.connection_args.get("driver", "ODBC Driver 17 for SQL Server")
+        driver = self.connection_args.get("driver", "ODBC Driver 18 for SQL Server")
         host = self.connection_args.get("host")
         port = self.connection_args.get("port", 1433)
         database = self.connection_args.get("database")

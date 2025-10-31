@@ -29,6 +29,26 @@ connection_args = OrderedDict(
         "description": "The API key for authentication with the Elasticsearch server.",
         "secret": True,
     },
+    ca_certs={
+        "type": ARG_TYPE.STR,
+        "description": "Path to CA certificate file for SSL verification.",
+    },
+    client_cert={
+        "type": ARG_TYPE.STR,
+        "description": "Path to client certificate file for SSL authentication.",
+    },
+    client_key={
+        "type": ARG_TYPE.STR,
+        "description": "Path to client private key file for SSL authentication.",
+    },
+    verify_certs={
+        "type": ARG_TYPE.BOOL,
+        "description": "Whether to verify SSL certificates. Default: true",
+    },
+    timeout={
+        "type": ARG_TYPE.INT,
+        "description": "Request timeout in seconds. Default: 30",
+    },
 )
 
 connection_args_example = OrderedDict(

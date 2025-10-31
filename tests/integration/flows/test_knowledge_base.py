@@ -157,25 +157,38 @@ class KBTestBase:
             table_name = kb.storage.name
 
             self.con.knowledge_bases.drop(name)
-        except Exception:
-            ...
+        except AttributeError as e:
+            if "KnowledgeBase doesn't exist" in str(e):
+                pass
+            else:
+                raise
 
         #  -- drop db --
 
         try:
             db = self.con.databases.get(db_name)
-        except Exception:
-            db = None
+        except AttributeError as e:
+            if "Database doesn't exist" in str(e):
+                db = None
+                pass
+            else:
+                raise
 
         if db is not None:
             try:
                 db.tables.drop(table_name)
-            except Exception:
-                ...
+            except AttributeError as e:
+                if "Table doesn't exist" in str(e):
+                    pass
+                else:
+                    raise
             try:
                 self.con.databases.drop(db_name)
-            except Exception:
-                ...
+            except AttributeError as e:
+                if "Database doesn't exist" in str(e):
+                    pass
+                else:
+                    raise
 
         # -- create --
 

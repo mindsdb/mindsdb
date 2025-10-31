@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: mindsdb-pgvector
+    environment:
+      POSTGRES_PASSWORD: mindsdb
+      POSTGRES_USER: mindsdb
+      POSTGRES_DB: mindsdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mindsdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mindsdb:
+    build: .
+    container_name: area51-mindsdb
+    ports:
+      - "47334-47335:47334-47335"
+    depends_on:
+      pgvector:
+        condition: service_healthy
+    volumes:
+      - mindsdb_data:/data
+    environment:
+      - MINDSDB_STORAGE_PATH=/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import requests; requests.get(\"http://localhost:47334/api/status\")' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  pgvector_data:
+  mindsdb_data:
+

@@ -1,17 +1,137 @@
 import datetime as dt
-from typing import Dict, Union, Any
+from typing import Dict, Union, Any, Optional, Tuple as TypingTuple
 
 from bson.objectid import ObjectId
-from mindsdb_sql_parser.ast import Select, Update, Identifier, Star, Constant, Tuple, BinaryOperation, Latest, TypeCast
+from mindsdb_sql_parser.ast import (
+    Select,
+    Update,
+    Identifier,
+    Star,
+    Constant,
+    Tuple,
+    BinaryOperation,
+    Latest,
+    TypeCast,
+)
 from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_query import MongoQuery
 
 
-class MongodbRender:
+# TODO: Create base NonRelationalRender as SqlAlchemyRender
+class NonRelationalRender:
+    pass
+
+
+class MongodbRender(NonRelationalRender):
     """
     Renderer to convert SQL queries represented as ASTNodes to MongoQuery instances.
     """
+
+    def _parse_inner_query(self, node: ASTNode) -> Dict[str, Any]:
+        """
+        Return field ref like "$field" or constant for projection expressions.
+        """
+        if isinstance(node, Identifier):
+            return f"${node.parts[-1]}"
+        elif isinstance(node, Constant):
+            return node.value
+        else:
+            raise NotImplementedError(f"Not supported inner query {node}")
+
+    def _convert_type_cast(self, node: TypeCast) -> Dict[str, Any]:
+        """
+        Converts a TypeCast ASTNode to a MongoDB-compatible format.
+
+        Args:
+            node (TypeCast): The TypeCast node to be converted.
+
+        Returns:
+            Dict[str, Any]: The converted type cast representation.
+        """
+        inner_query = self._parse_inner_query(node.arg)
+        type_name = node.type_name.upper()
+
+        if type_name in ("VARCHAR", "TEXT", "STRING"):
+            return {"$convert": {"input": inner_query, "to": "string", "onError": None}}
+
+        if type_name in ("INT", "INTEGER", "BIGINT", "LONG"):
+            return {"$convert": {"input": inner_query, "to": "long", "onError": None}}
+
+        if type_name in ("DOUBLE", "FLOAT", "DECIMAL", "NUMERIC"):
+            return {"$convert": {"input": inner_query, "to": "double", "onError": None}}
+
+        if type_name in ("DATE", "DATETIME", "TIMESTAMP"):
+            return {"$convert": {"input": inner_query, "to": "date", "onError": None}}
+
+        return inner_query
+
+    def _parse_select(
+        self, from_table: Any
+    ) -> TypingTuple[str, Dict[str, Any], Optional[Dict[str, Any]]]:
+        """
+        Parses the from_table to extract the collection name
+        If from_table is subquery, transform it for MongoDB
+        Args:
+            from_table (Any): The from_table to be parsed.
+        Returns:
+            str: The collection name.
+            Dict[str, Any]: The query filters.
+            Optional[Dict[str, Any]]: The projection fields.
+        """
+        # Simple collection
+        if isinstance(from_table, Identifier):
+            return from_table.parts[-1], {}, None
+
+        # Trivial subselect
+        if isinstance(from_table, Select):
+            # reject complex forms early
+            if from_table.group_by is not None or from_table.having is not None:
+                raise NotImplementedError(f"Not supported FROM as {from_table}")
+
+            if not isinstance(from_table.from_table, Identifier):
+                raise NotImplementedError(f"Not supported FROM as {from_table}")
+
+            collection = from_table.from_table.parts[-1]
+
+            pre_match: Dict[str, Any] = {}
+            if from_table.where is not None:
+                pre_match = self.handle_where(from_table.where)
+
+            pre_project: Optional[Dict[str, Any]] = {"_id": 0}
+            if from_table.targets is not None:
+                saw_star = False
+                for t in from_table.targets:
+                    if isinstance(t, Star):
+                        saw_star = True
+                        break
+                    if isinstance(t, Identifier):
+                        name = t.parts[-1]
+                        alias = name if t.alias is None else t.alias.parts[-1]
+                        pre_project[alias] = f"${name}"
+                    elif isinstance(t, Constant):
+                        val = str(t.value)
+                        alias = val if t.alias is None else t.alias.parts[-1]
+                        pre_project[alias] = val
+                    elif isinstance(t, TypeCast):
+                        alias = (
+                            t.alias.parts[-1]
+                            if t.alias is not None
+                            else t.arg.parts[-1]
+                        )
+                        pre_project[alias] = self._convert_type_cast(t)
+                    else:
+                        raise NotImplementedError(
+                            f"Unsupported inner target: {t}"
+                        )
+                if saw_star:
+                    pre_project = {}
+            else:
+                pre_project = {"_id": 0}
+
+            return collection, pre_match, pre_project
+
+        raise NotImplementedError(f"Not supported from {from_table}")
 
     def to_mongo_query(self, node: ASTNode) -> MongoQuery:
         """
@@ -57,18 +177,19 @@ class MongodbRender:
         Returns:
             MongoQuery: The converted MongoQuery instance.
         """
-        if not isinstance(node.from_table, Identifier):
-            raise NotImplementedError(f"Not supported from {node.from_table}")
-
-        collection = node.from_table.parts[-1]
+        # if not isinstance(node.from_table, Identifier):
+        #     raise NotImplementedError(f"Not supported from {node.from_table}")
+        collection, subs, proj = self._parse_select(node.from_table)
 
         filters = {}
 
         if node.where is not None:
             filters = self.handle_where(node.where)
 
-        group = {}
-        project = {"_id": 0}  # Hide _id field when it has not been explicitly requested.
+        group: Dict[str, Any] = {}
+        project = {
+            "_id": 0
+        }  # Hide _id field when it has not been explicitly requested.
         if node.distinct:
             # Group by distinct fields.
             group = {"_id": {}}
@@ -94,7 +215,9 @@ class MongodbRender:
                         group[name] = {"$first": f"${name}"}  # Show field.
 
                 elif isinstance(col, Constant):
-                    val = str(col.value)  # Convert to string becuase it is interpreted as an index.
+                    val = str(
+                        col.value
+                    )  # Convert to string becuase it is interpreted as an index.
                     if col.alias is None:
                         alias = val
                     else:
@@ -228,7 +351,9 @@ class MongodbRender:
 
         return {"$expr": {op2: [val1, val2]}}
 
-    def where_element_convert(self, node: Union[Identifier, Latest, Constant, TypeCast]) -> Any:
+    def where_element_convert(
+        self, node: Union[Identifier, Latest, Constant, TypeCast]
+    ) -> Any:
         """
         Converts a WHERE element to the corresponding MongoDB query element.
 
@@ -248,7 +373,10 @@ class MongodbRender:
             return "LATEST"
         elif isinstance(node, Constant):
             return node.value
-        elif isinstance(node, TypeCast) and node.type_name.upper() in ("DATE", "DATETIME"):
+        elif isinstance(node, TypeCast) and node.type_name.upper() in (
+            "DATE",
+            "DATETIME",
+        ):
             formats = ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%f"]
             for format in formats:
                 try:

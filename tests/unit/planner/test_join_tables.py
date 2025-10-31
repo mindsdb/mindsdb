@@ -3,7 +3,16 @@ import copy
 import pytest
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Star, BinaryOperation, OrderBy, Function
+from mindsdb_sql_parser.ast import (
+    Identifier,
+    Select,
+    Join,
+    Constant,
+    Star,
+    BinaryOperation,
+    OrderBy,
+    Function,
+)
 from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
@@ -37,11 +46,20 @@ class TestPlanJoinTables:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(
+                        targets=[Identifier("column1", alias=Identifier("column1"))],  # Column pruning
+                        from_table=Identifier("tab1"),
+                    ),
                 ),
                 FetchDataframeStep(
                     integration="int2",
-                    query=Select(targets=[Star()], from_table=Identifier("tab2")),
+                    query=Select(
+                        targets=[
+                            Identifier("column1", alias=Identifier("column1")),
+                            Identifier("column2", alias=Identifier("column2")),
+                        ],  # Column pruning
+                        from_table=Identifier("tab2"),
+                    ),
                 ),
                 JoinStep(
                     left=Result(0),
@@ -85,8 +103,16 @@ class TestPlanJoinTables:
         expected_plan = QueryPlan(
             integrations=["int"],
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("SELECT * FROM tab1 WHERE (column1 = 1)")),
-                FetchDataframeStep(integration="int2", query=parse_sql("SELECT * FROM tab2 WHERE (column1 = 0)")),
+                FetchDataframeStep(
+                    integration="int",
+                    query=parse_sql("SELECT column1 AS column1, column3 AS column3 FROM tab1 WHERE (column1 = 1)"),
+                ),
+                FetchDataframeStep(
+                    integration="int2",
+                    query=parse_sql(
+                        "SELECT column1 AS column1, column2 AS column2, column3 AS column3 FROM tab2 WHERE (column1 = 0)"
+                    ),
+                ),
                 JoinStep(
                     left=Result(0),
                     right=Result(1),
@@ -132,11 +158,20 @@ class TestPlanJoinTables:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(
+                        targets=[Identifier("column1", alias=Identifier("column1"))],  # Column pruning
+                        from_table=Identifier("tab1"),
+                    ),
                 ),
                 FetchDataframeStep(
                     integration="int2",
-                    query=Select(targets=[Star()], from_table=Identifier("tab2")),
+                    query=Select(
+                        targets=[
+                            Identifier("column1", alias=Identifier("column1")),
+                            Identifier("column2", alias=Identifier("column2")),
+                        ],  # Column pruning
+                        from_table=Identifier("tab2"),
+                    ),
                 ),
                 JoinStep(
                     left=Result(0),
@@ -178,14 +213,20 @@ class TestPlanJoinTables:
                 FetchDataframeStep(
                     integration="int",
                     query=Select(
-                        targets=[Star()],
+                        targets=[Identifier("column1", alias=Identifier("column1"))],  # Column pruning
                         from_table=Identifier("tab1"),
                         # LIMIT should NOT be pushed down to individual table fetches in joins
                     ),
                 ),
                 FetchDataframeStep(
                     integration="int2",
-                    query=Select(targets=[Star()], from_table=Identifier("tab2")),
+                    query=Select(
+                        targets=[
+                            Identifier("column1", alias=Identifier("column1")),
+                            Identifier("column2", alias=Identifier("column2")),
+                        ],  # Column pruning
+                        from_table=Identifier("tab2"),
+                    ),
                 ),
                 JoinStep(
                     left=Result(0),
@@ -230,14 +271,20 @@ class TestPlanJoinTables:
                 FetchDataframeStep(
                     integration="int",
                     query=Select(
-                        targets=[Star()],
+                        targets=[Identifier("column1", alias=Identifier("column1"))],  # Column pruning
                         from_table=Identifier("tab1"),
                         # ORDER BY and LIMIT should NOT be pushed down to individual table fetches in joins
                     ),
                 ),
                 FetchDataframeStep(
                     integration="int2",
-                    query=Select(targets=[Star()], from_table=Identifier("tab2")),
+                    query=Select(
+                        targets=[
+                            Identifier("column1", alias=Identifier("column1")),
+                            Identifier("column2", alias=Identifier("column2")),
+                        ],  # Column pruning
+                        from_table=Identifier("tab2"),
+                    ),
                 ),
                 JoinStep(
                     left=Result(0),
@@ -607,7 +654,9 @@ class TestPlanJoinTables:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(integration="int1", query=parse_sql("select * from tbl1")),
-                SubSelectStep(dataframe=Result(0), query=Select(targets=[Star()]), table_name="t1"),
+                SubSelectStep(
+                    dataframe=Result(0), query=parse_sql("SELECT *"), table_name="t1"
+                ),  # TODO: CTE column pruning optimization
                 FetchDataframeStep(integration="int2", query=parse_sql("select * from tbl2 as t2")),
                 JoinStep(
                     left=Result(1),

@@ -34,7 +34,9 @@ class TestPlanJoinPredictor:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(
+                        targets=[Star()], from_table=Identifier("tab1")
+                    ),  # No column pruning with predictor joins (predictors may need all columns)
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
                 JoinStep(
@@ -67,7 +69,10 @@ class TestPlanJoinPredictor:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1", alias=Identifier("ta"))),
+                    query=Select(
+                        targets=[Star()],
+                        from_table=Identifier("tab1", alias=Identifier("ta")),
+                    ),  # No column pruning with predictor joins
                 ),
                 ApplyPredictorStep(
                     namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred", alias=Identifier("tb"))
@@ -105,13 +110,13 @@ class TestPlanJoinPredictor:
                     integration="int",
                     query=parse_sql(
                         """
-                                              select * from tab
-                                              where product_id = 'x' and time between '2021-01-01' and '2021-01-31'
-                                              order by column2
-                                              limit 10
-                                              offset 1
-                                            """
-                    ),
+                            select * from tab
+                            where product_id = 'x' and time between '2021-01-01' and '2021-01-31'
+                            order by column2
+                            limit 10
+                            offset 1
+                        """
+                    ),  # No column pruning with predictor joins
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
                 JoinStep(
@@ -169,7 +174,10 @@ class TestPlanJoinPredictor:
 
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab as t where col1 = 'x'")),
+                FetchDataframeStep(
+                    integration="int",
+                    query=parse_sql("select * from tab as t where col1 = 'x'"),
+                ),  # No column pruning with predictor joins
                 ApplyPredictorStep(
                     namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred", alias=Identifier("m"))
                 ),
@@ -205,7 +213,9 @@ class TestPlanJoinPredictor:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(
+                        targets=[Star()], from_table=Identifier("tab1")
+                    ),  # No column pruning with predictor joins
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
                 JoinStep(
@@ -238,7 +248,9 @@ class TestPlanJoinPredictor:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(
+                        targets=[Star()], from_table=Identifier("tab1")
+                    ),  # No column pruning with predictor joins
                 ),
                 ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
                 JoinStep(
@@ -751,7 +763,7 @@ class TestPredictorParams:
                 FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab0 where x=0")),
                 FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab3 where x=3")),
                 FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab4 where x=4")),
-                # tables (IN clause filter optimization disabled)
+                # tables (no column pruning with predictor joins)
                 FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as t1 where b=1")),
                 FetchDataframeStep(integration="int", query=q_table2),
                 JoinStep(

@@ -2,7 +2,20 @@ from typing import Optional
 import platform
 
 import pandas as pd
-import pyodbc
+
+try:
+    import pyodbc
+
+    HAS_PYODBC = True
+except ImportError:
+
+    class MockPyodbc:
+        @staticmethod
+        def connect(*args, **kwargs):
+            raise ImportError("pyodbc is not available on this platform")
+
+    pyodbc = MockPyodbc()
+    HAS_PYODBC = False
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
@@ -64,6 +77,12 @@ class AccessHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
+
+        if not HAS_PYODBC:
+            raise Exception(
+                "pyodbc library is not available. "
+                "Microsoft Access handler requires pyodbc which needs platform-specific ODBC drivers."
+            )
 
         if platform.system() != "Windows":
             raise Exception(

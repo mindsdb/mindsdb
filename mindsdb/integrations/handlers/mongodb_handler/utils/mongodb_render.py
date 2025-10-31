@@ -2,16 +2,83 @@ import datetime as dt
 from typing import Dict, Union, Any
 
 from bson.objectid import ObjectId
-from mindsdb_sql_parser.ast import Select, Update, Identifier, Star, Constant, Tuple, BinaryOperation, Latest, TypeCast
+from mindsdb_sql_parser.ast import (
+    Select,
+    Update,
+    Identifier,
+    Star,
+    Constant,
+    Tuple,
+    BinaryOperation,
+    Latest,
+    TypeCast,
+)
 from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_query import MongoQuery
 
 
-class MongodbRender:
+# TODO: Create base NonRelationalRender as SqlAlchemyRender
+class NonRelationalRender:
+    pass
+
+
+class MongodbRender(NonRelationalRender):
     """
     Renderer to convert SQL queries represented as ASTNodes to MongoQuery instances.
     """
+
+    def _parse_select(
+        self, from_table: Any
+    ) -> (str, Dict[str, Any], Optional[Dict[str, Any]]):
+        """
+        Parses the from_table to extract the collection name
+        If from_table is subquery, transform it for MongoDB
+        Args:
+            from_table (Any): The from_table to be parsed.
+        Returns:
+            str: The collection name.
+            Dict[str, Any]: The query filters.
+            Optional[Dict[str, Any]]: The projection fields.
+        """
+
+        # Simple collection
+        if isinstance(from_table, Identifier):
+            return from_table.parts[-1], {}, None
+
+        # Subquery
+        if isinstance(from_table.from_table, Identifier):
+            raise NotImplementedError("Subqueries are not supported in this version.")
+
+        if isinstance(from_table, Select):
+            collection = from_table.parts[-1]
+
+            first_part: Dict[str, Any] = {}
+            second_part: Dict[str, Any] = {}
+
+            if from_table.where is not None:
+                first_part = self.handle_where(from_table.where)
+            if from_table.targets is not None:
+                is_star = False
+                for col in from_table.targets:
+                    if isinstance(col, Star):
+                        is_star = True
+                        break
+                    if isinstance(col, Identifier):
+                        name = col.parts[-1]
+                        alias = name if col.alias is None else col.alias.parts[-1]
+                        second_part[alias] = f"${name}"
+                    elif isinstance(col, Constant):
+                        val = str(col.value)
+                        alias = val if col.alias is None else col.alias.parts[-1]
+                        second_part[alias] = f"${val}"
+                    elif isinstance(col, TypeCast):
+                        val = str(col.arg.value)
+                        alias = val if col.alias is None else col.alias.parts[-1]
+                        second_part[alias] = f"${val}"
+                if is_star:
+                    second_part = None
+            return collection, first_part, second_part
 
     def to_mongo_query(self, node: ASTNode) -> MongoQuery:
         """
@@ -57,10 +124,9 @@ class MongodbRender:
         Returns:
             MongoQuery: The converted MongoQuery instance.
         """
-        if not isinstance(node.from_table, Identifier):
-            raise NotImplementedError(f"Not supported from {node.from_table}")
-
-        collection = node.from_table.parts[-1]
+        # if not isinstance(node.from_table, Identifier):
+        #     raise NotImplementedError(f"Not supported from {node.from_table}")
+        collection = _parse_select(node.from_table)
 
         filters = {}
 
@@ -68,7 +134,9 @@ class MongodbRender:
             filters = self.handle_where(node.where)
 
         group = {}
-        project = {"_id": 0}  # Hide _id field when it has not been explicitly requested.
+        project = {
+            "_id": 0
+        }  # Hide _id field when it has not been explicitly requested.
         if node.distinct:
             # Group by distinct fields.
             group = {"_id": {}}
@@ -94,7 +162,9 @@ class MongodbRender:
                         group[name] = {"$first": f"${name}"}  # Show field.
 
                 elif isinstance(col, Constant):
-                    val = str(col.value)  # Convert to string becuase it is interpreted as an index.
+                    val = str(
+                        col.value
+                    )  # Convert to string becuase it is interpreted as an index.
                     if col.alias is None:
                         alias = val
                     else:
@@ -228,7 +298,9 @@ class MongodbRender:
 
         return {"$expr": {op2: [val1, val2]}}
 
-    def where_element_convert(self, node: Union[Identifier, Latest, Constant, TypeCast]) -> Any:
+    def where_element_convert(
+        self, node: Union[Identifier, Latest, Constant, TypeCast]
+    ) -> Any:
         """
         Converts a WHERE element to the corresponding MongoDB query element.
 
@@ -248,7 +320,10 @@ class MongodbRender:
             return "LATEST"
         elif isinstance(node, Constant):
             return node.value
-        elif isinstance(node, TypeCast) and node.type_name.upper() in ("DATE", "DATETIME"):
+        elif isinstance(node, TypeCast) and node.type_name.upper() in (
+            "DATE",
+            "DATETIME",
+        ):
             formats = ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%f"]
             for format in formats:
                 try:

@@ -1,8 +1,6 @@
 from hubspot import HubSpot
 
-from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
-    ContactsTable, CompaniesTable, DealsTable
-)
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import ContactsTable, CompaniesTable, DealsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -16,10 +14,10 @@ logger = log.getLogger(__name__)
 
 class HubspotHandler(APIHandler):
     """
-        A class for handling connections and interactions with the Hubspot API.
+    A class for handling connections and interactions with the Hubspot API.
     """
 
-    name = 'hubspot'
+    name = "hubspot"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -54,11 +52,27 @@ class HubspotHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        access_token = self.connection_data['access_token']
+        # Check for access token authentication (direct token)
+        if "access_token" in self.connection_data:
+            access_token = self.connection_data["access_token"]
+            self.connection = HubSpot(access_token=access_token)
 
-        self.connection = HubSpot(access_token=access_token)
+        # Check for OAuth authentication (client_id and client_secret)
+        elif "client_id" in self.connection_data and "client_secret" in self.connection_data:
+            client_id = self.connection_data["client_id"]
+            client_secret = self.connection_data["client_secret"]
+
+            # Initialize HubSpot client with OAuth credentials
+            # Note: This sets up the client for OAuth, but actual token exchange
+            # would need to be handled separately in a full OAuth flow
+            self.connection = HubSpot(client_id=client_id, client_secret=client_secret)
+        else:
+            raise ValueError(
+                "Authentication credentials missing. Provide either 'access_token' "
+                "or both 'client_id' and 'client_secret' for OAuth authentication."
+            )
+
         self.is_connected = True
-
         return self.connection
 
     def check_connection(self) -> StatusResponse:
@@ -75,7 +89,7 @@ class HubspotHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            logger.error(f'Error connecting to Hubspot: {e}')
+            logger.error(f"Error connecting to Hubspot: {e}")
             response.error_message = e
 
         self.is_connected = response.success

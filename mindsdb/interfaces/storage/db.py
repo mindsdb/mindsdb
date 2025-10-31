@@ -144,6 +144,9 @@ class Json(types.TypeDecorator):
 class SecretDataJson(SecretData):
     impl = Json
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
 class PREDICTOR_STATUS:
     __slots__ = ()

@@ -34,7 +34,12 @@ from mindsdb.utilities.starters import (
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks, create_pid_file, delete_pid_file
+from mindsdb.utilities.fs import (
+    clean_process_marks,
+    clean_unlinked_process_marks,
+    create_pid_file,
+    delete_pid_file,
+)
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
@@ -153,12 +158,25 @@ def close_api_gracefully(trunc_processes_struct):
 
 def clean_mindsdb_tmp_dir():
     """Clean the MindsDB tmp dir at exit."""
-    temp_dir = config["paths"]["tmp"]
-    for file in temp_dir.iterdir():
-        if file.is_dir():
-            shutil.rmtree(file)
-        else:
-            file.unlink()
+    try:
+        temp_dir = config["paths"]["tmp"]
+        if not temp_dir.exists():
+            return
+
+        for file in temp_dir.iterdir():
+            try:
+                if file.is_dir():
+                    # https://docs.python.org/3/library/shutil.html#shutil.rmtree
+                    shutil.rmtree(file)
+                else:
+                    # https://docs.python.org/3/library/pathlib.html#pathlib.Path.unlink
+                    file.unlink(missing_ok=True)
+            except PermissionError as e:
+                logger.error(f"Failed to clean %s: %s{file}: {e}")
+            except FileNotFoundError:
+                logger.error(f"File not found during cleanup: {file}")
+    except Exception as e:
+        logger.error(f"Failed to clean MindsDB tmp dir: {e}")
 
 
 def set_error_model_status_by_pids(unexisting_pids: List[int]):
@@ -442,7 +460,8 @@ if __name__ == "__main__":
             restart_on_failure=http_api_config.get("restart_on_failure", False),
             max_restart_count=http_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=http_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+                "max_restart_interval_seconds",
+                TrunkProcessData.max_restart_interval_seconds,
             ),
         ),
         TrunkProcessEnum.MYSQL: TrunkProcessData(
@@ -453,17 +472,24 @@ if __name__ == "__main__":
             restart_on_failure=mysql_api_config.get("restart_on_failure", False),
             max_restart_count=mysql_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=mysql_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+                "max_restart_interval_seconds",
+                TrunkProcessData.max_restart_interval_seconds,
             ),
         ),
         TrunkProcessEnum.JOBS: TrunkProcessData(
-            name=TrunkProcessEnum.JOBS.value, entrypoint=start_scheduler, args=(config.cmd_args.verbose,)
+            name=TrunkProcessEnum.JOBS.value,
+            entrypoint=start_scheduler,
+            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.TASKS: TrunkProcessData(
-            name=TrunkProcessEnum.TASKS.value, entrypoint=start_tasks, args=(config.cmd_args.verbose,)
+            name=TrunkProcessEnum.TASKS.value,
+            entrypoint=start_tasks,
+            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.ML_TASK_QUEUE: TrunkProcessData(
-            name=TrunkProcessEnum.ML_TASK_QUEUE.value, entrypoint=start_ml_task_queue, args=(config.cmd_args.verbose,)
+            name=TrunkProcessEnum.ML_TASK_QUEUE.value,
+            entrypoint=start_ml_task_queue,
+            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.LITELLM: TrunkProcessData(
             name=TrunkProcessEnum.LITELLM.value,
@@ -473,7 +499,8 @@ if __name__ == "__main__":
             restart_on_failure=litellm_api_config.get("restart_on_failure", False),
             max_restart_count=litellm_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=litellm_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+                "max_restart_interval_seconds",
+                TrunkProcessData.max_restart_interval_seconds,
             ),
         ),
     }
@@ -553,7 +580,11 @@ if __name__ == "__main__":
                         trunc_process_data.process = None
                         if trunc_process_data.name == TrunkProcessEnum.HTTP.value:
                             # do not open GUI on HTTP API restart
-                            trunc_process_data.args = (config.cmd_args.verbose, None, True)
+                            trunc_process_data.args = (
+                                config.cmd_args.verbose,
+                                None,
+                                True,
+                            )
                         start_process(trunc_process_data)
                         api_name, port, started = await wait_api_start(
                             trunc_process_data.name,

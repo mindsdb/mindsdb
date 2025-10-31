@@ -28,6 +28,44 @@ class MongodbRender(NonRelationalRender):
     Renderer to convert SQL queries represented as ASTNodes to MongoQuery instances.
     """
 
+    def _parse_inner_query(self, node: ASTNode) -> Dict[str, Any]:
+        """
+        Return field ref like "$field" or constant for projection expressions.
+        """
+        if isinstance(node, Identifier):
+            return f"${node.parts[-1]}"
+        elif isinstance(node, Constant):
+            return node.value
+        else:
+            raise NotImplementedError(f"Not supported inner query {node}")
+
+    def _convert_type_cast(self, node: TypeCast) -> Dict[str, Any]:
+        """
+        Converts a TypeCast ASTNode to a MongoDB-compatible format.
+
+        Args:
+            node (TypeCast): The TypeCast node to be converted.
+
+        Returns:
+            Dict[str, Any]: The converted type cast representation.
+        """
+        inner_query = self._parse_inner_query(node.arg)
+        type_name = node.type_name.upper()
+
+        if type_name in ("VARCHAR", "TEXT", "STRING"):
+            return {"$convert": {"input": inner_query, "to": "string", "onError": None}}
+
+        if type_name in ("INT", "INTEGER", "BIGINT", "LONG"):
+            return {"$convert": {"input": inner_query, "to": "long", "onError": None}}
+
+        if type_name in ("DOUBLE", "FLOAT", "DECIMAL", "NUMERIC"):
+            return {"$convert": {"input": inner_query, "to": "double", "onError": None}}
+
+        if type_name in ("DATE", "DATETIME", "TIMESTAMP"):
+            return {"$convert": {"input": inner_query, "to": "date", "onError": None}}
+
+        return inner_query
+
     def _parse_select(
         self, from_table: Any
     ) -> TypingTuple[str, Dict[str, Any], Optional[Dict[str, Any]]]:
@@ -41,44 +79,59 @@ class MongodbRender(NonRelationalRender):
             Dict[str, Any]: The query filters.
             Optional[Dict[str, Any]]: The projection fields.
         """
-
         # Simple collection
         if isinstance(from_table, Identifier):
             return from_table.parts[-1], {}, None
 
-        # Subquery
-        if isinstance(from_table.from_table, Identifier):
-            raise NotImplementedError("Subqueries are not supported in this version.")
-
+        # Trivial subselect
         if isinstance(from_table, Select):
-            collection = from_table.parts[-1]
+            # reject complex forms early
+            if from_table.group_by is not None or from_table.having is not None:
+                raise NotImplementedError(f"Not supported FROM as {from_table}")
 
-            first_part: Dict[str, Any] = {}
-            second_part: Dict[str, Any] = {}
+            if not isinstance(from_table.from_table, Identifier):
+                raise NotImplementedError(f"Not supported FROM as {from_table}")
 
+            collection = from_table.from_table.parts[-1]
+
+            pre_match: Dict[str, Any] = {}
             if from_table.where is not None:
-                first_part = self.handle_where(from_table.where)
+                pre_match = self.handle_where(from_table.where)
+
+            pre_project: Optional[Dict[str, Any]] = {"_id": 0}
             if from_table.targets is not None:
-                is_star = False
-                for col in from_table.targets:
-                    if isinstance(col, Star):
-                        is_star = True
+                saw_star = False
+                for t in from_table.targets:
+                    if isinstance(t, Star):
+                        saw_star = True
                         break
-                    if isinstance(col, Identifier):
-                        name = col.parts[-1]
-                        alias = name if col.alias is None else col.alias.parts[-1]
-                        second_part[alias] = f"${name}"
-                    elif isinstance(col, Constant):
-                        val = str(col.value)
-                        alias = val if col.alias is None else col.alias.parts[-1]
-                        second_part[alias] = f"${val}"
-                    elif isinstance(col, TypeCast):
-                        val = str(col.arg.value)
-                        alias = val if col.alias is None else col.alias.parts[-1]
-                        second_part[alias] = f"${val}"
-                if is_star:
-                    second_part = None
-            return collection, first_part, second_part
+                    if isinstance(t, Identifier):
+                        name = t.parts[-1]
+                        alias = name if t.alias is None else t.alias.parts[-1]
+                        pre_project[alias] = f"${name}"
+                    elif isinstance(t, Constant):
+                        val = str(t.value)
+                        alias = val if t.alias is None else t.alias.parts[-1]
+                        pre_project[alias] = val
+                    elif isinstance(t, TypeCast):
+                        alias = (
+                            t.alias.parts[-1]
+                            if t.alias is not None
+                            else t.arg.parts[-1]
+                        )
+                        pre_project[alias] = self._convert_type_cast(t)
+                    else:
+                        raise NotImplementedError(
+                            f"Unsupported inner target: {type(t)}"
+                        )
+                if saw_star:
+                    pre_project = {}
+            else:
+                pre_project = {"_id": 0}
+
+            return collection, pre_match, pre_project
+
+        raise NotImplementedError(f"Not supported from {from_table}")
 
     def to_mongo_query(self, node: ASTNode) -> MongoQuery:
         """
@@ -126,7 +179,6 @@ class MongodbRender(NonRelationalRender):
         """
         # if not isinstance(node.from_table, Identifier):
         #     raise NotImplementedError(f"Not supported from {node.from_table}")
-        breakpoint()
         collection, subs, proj = self._parse_select(node.from_table)
 
         filters = {}

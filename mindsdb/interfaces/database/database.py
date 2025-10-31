@@ -6,9 +6,6 @@ import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.interfaces.database.log import LogDBController
-from mindsdb.utilities import log
-
-logger = log.getLogger(__name__)
 
 
 class DatabaseController:
@@ -76,8 +73,6 @@ class DatabaseController:
                 }
             )
         for key, value in integrations.items():
-            logger.info("===========================================================")
-            logger.info(f"{key} | {value}")
             db_type = value.get("type", "data")
             if db_type != "ml":
                 result.append(

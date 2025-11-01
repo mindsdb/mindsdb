@@ -44,7 +44,7 @@ connection_args = OrderedDict(
     verify={
         'type': ARG_TYPE.BOOL,
         'description': 'Controls certificate verification in https protocol. Possible choices: true/false. Default is true.',
-        'required': True,
+        'required': False,
         'label': 'SSL Verification',
     }
 )

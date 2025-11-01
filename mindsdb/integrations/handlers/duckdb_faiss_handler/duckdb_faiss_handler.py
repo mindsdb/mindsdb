@@ -113,31 +113,6 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             self.connection.close()
             self.is_connected = False
 
-
-    # def _get_faiss_index(self, table_name: str) -> Optional[FaissIndexWithFilter]:
-    #     """Lazy load Faiss index for a table."""
-    #     # if table_name not in self.table_registry:
-    #     #     return None
-    #
-    #     if self.table_registry[table_name]["faiss_index"] is None:
-    #         index_path = os.path.join(self.faiss_indices_path, f"{table_name}.index")
-    #         if os.path.exists(index_path):
-    #             try:
-    #                 self.table_registry[table_name]["faiss_index"] = FaissIndexWithFilter.load(index_path)
-    #             except Exception as e:
-    #                 logger.error(f"Failed to load Faiss index for {table_name}: {e}")
-    #                 return None
-    #         else:
-    #             logger.warning(f"Faiss index not found for table {table_name}")
-    #             return None
-    #
-    #     return self.table_registry[table_name]["faiss_index"]
-
-    # def _generate_id(self, content: str) -> str:
-    #     """Generate ID from content hash."""
-    #     return hashlib.md5(content.encode()).hexdigest()
-
-
     def create_table(self, table_name: str, if_not_exists=True):
         with self.connection.cursor() as cur:
 
@@ -165,7 +140,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
 
 
-    def insert(self, table_name: str, data: pd.DataFrame) -> Response:
+    def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into both DuckDB and Faiss."""
 
         with self.connection.cursor() as cur:
@@ -184,66 +159,6 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         self.faiss_index.insert(vectors, ids)
         self.faiss_index.dump()
-        return
-        try:
-
-
-            # Process each row
-            for _, row in data.iterrows():
-                # Generate ID if not provided
-                if "id" not in row or pd.isna(row["id"]):
-                    content = str(row.get("content", ""))
-                    row["id"] = self._generate_id(content)
-
-                # Prepare DuckDB data (exclude vector columns)
-                duckdb_data = {
-                    "id": str(row["id"]),
-                    "content": str(row.get("content", "")),
-                    "metadata": json.dumps(row.get("metadata", {}))
-                }
-
-                # Add regular columns
-                for col in row.index:
-                    if col not in ["id", "content", "metadata"] and col not in vector_columns:
-                        duckdb_data[col] = row[col]
-
-                # Insert into DuckDB
-                with self.connection.cursor() as cur:
-                    columns = list(duckdb_data.keys())
-                    values = list(duckdb_data.values())
-                    placeholders = ", ".join(["?" for _ in values])
-                    insert_sql = f"INSERT OR REPLACE INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
-                    cur.execute(insert_sql, values)
-
-                # Add vectors to Faiss
-                for col_name, dim in vector_columns.items():
-                    if col_name in row and not pd.isna(row[col_name]):
-                        vector = row[col_name]
-                        if isinstance(vector, str):
-                            vector = json.loads(vector)
-                        elif isinstance(vector, list):
-                            vector = vector
-                        else:
-                            continue
-
-                        # Convert to numpy array
-                        vector_array = [[float(x) for x in vector]]
-                        faiss_index.add(vector_array, [int(row["id"])])
-
-            # Save Faiss index
-            index_path = os.path.join(self.faiss_indices_path, f"{table_name}.index")
-            faiss_index.save(index_path)
-
-            # Sync to handler storage
-            if self.handler_storage:
-                self.handler_storage.folder_sync("duckdb_faiss_data")
-
-            logger.info(f"Inserted {len(data)} rows into {table_name}")
-            return Response(RESPONSE_TYPE.OK)
-
-        except Exception as e:
-            logger.error(f"Error inserting into table {table_name}: {e}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
     def select(
         self,

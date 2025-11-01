@@ -33,7 +33,7 @@ class FaissIndex:
 
         self.config = FaissParams(**config)
 
-        metric = self.config['metric']
+        metric = self.config.metric
         if metric == 'cosine':
             self._normalize_vectors = True
             self.metric = faiss.METRIC_INNER_PRODUCT

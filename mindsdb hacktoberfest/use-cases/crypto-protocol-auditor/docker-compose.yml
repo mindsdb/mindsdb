@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mindsdb:
+    image: mindsdb/mindsdb:latest
+    pull_policy: always
+    ports:
+      - "47334:47334"    # SQL endpoint
+      - "47335:47335"    # HTTP endpoint
+    environment:
+      MINDSDB_CONFIG_CONTENT: |
+        {
+          "default_embedding_model": {
+            "provider": "google",
+            "model_name": "text-embedding-004",
+            "api_key": "${GOOGLE_API_KEY}"
+          }
+        }
+    volumes:
+      - mindsdb_data:/var/lib/mindsdb
+
+  pgvector_db:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5433:5432"      # Host port 5433 to avoid conflicts
+    environment:
+      POSTGRES_USER: mindsdb
+      POSTGRES_PASSWORD: mindsdb
+      POSTGRES_DB: mindsdb
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+
+volumes:
+  mindsdb_data:
+  pgvector_data:

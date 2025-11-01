@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  /* Primary Colors */
+  --color-primary: #6C5CE7;
+  --color-primary-hover: #5849C4;
+  --color-primary-rgb: 108 92 231;
+
+  /* Dark Background Palette */
+  --bg-default: #0D0D0D; /* page background */
+  --bg-surface: #0F1720; /* surface/header */
+  --card-bg: #0F1720; /* card surfaces */
+  --card-hover: #111827;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --bg-light-gray: #111318; /* subtle panel */
+
+  /* Text Colors */
+  --text-primary: #EDEDED;
+  --text-secondary: #BFC4C9;
+  --text-tertiary: #8F96A0;
+
+  /* Accent Colors */
+  --color-success: #00D084;
+  --color-warning: #FF9500;
+  --color-info: #0084FF;
+  --color-error: #FF3B30;
+
+  /* Shadows */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.6);
+  --shadow-elevated: 0 6px 18px rgba(0, 0, 0, 0.7);
+  --shadow-floating: 0 12px 36px rgba(0, 0, 0, 0.75);
+  --shadow-button-hover: 0 6px 18px rgba(108, 92, 231, 0.12);
+
+  /* Border */
+  --border-color: rgba(255, 255, 255, 0.04);
+  --input-border: #22262A;
+}
+
+@theme inline {
+  --color-background: var(--bg-default);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-grupo: var(--font-gruppo), serif;
+}
+
+body {
+  background: var(--bg-default);
+  color: var(--text-primary);
+  font-family: var(--font-gruppo), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography */
+h1 {
+  font-size: 56px;
+  line-height: 64px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 48px;
+  line-height: 56px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 36px;
+  line-height: 44px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+h4 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 36px;
+    line-height: 44px;
+  }
+  
+  h2 {
+    font-size: 32px;
+    line-height: 40px;
+  }
+  
+  h3 {
+    font-size: 28px;
+    line-height: 36px;
+  }
+}
+
+/* Utility Classes */
+.transition-fast {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-medium {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-slow {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.shadow-subtle {
+  box-shadow: var(--shadow-subtle);
+}
+
+.shadow-elevated {
+  box-shadow: var(--shadow-elevated);
+}
+
+.shadow-floating {
+  box-shadow: var(--shadow-floating);
+}
+

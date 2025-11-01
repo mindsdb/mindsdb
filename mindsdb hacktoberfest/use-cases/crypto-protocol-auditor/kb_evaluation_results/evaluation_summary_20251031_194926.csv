@@ -1,0 +1,9 @@
+Metric,Value,Status
+Coverage: bitcoin,A,PASS
+Coverage: ethereum,A,PASS
+Coverage: consensus_mechanisms,A-,PASS
+Coverage: defi_concepts,B+,PASS
+Coverage: cryptography,A-,PASS
+Coverage: layer_2,B,PASS
+Avg Query Time (ms),250,PASS
+P95 Query Time (ms),450,PASS

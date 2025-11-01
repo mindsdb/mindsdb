@@ -1,0 +1,253 @@
+{
+  "evaluation_metadata": {
+    "timestamp": "2025-10-31T19:54:48.678750",
+    "kb_name": "web3_kb",
+    "evaluation_version": "llm_relevancy",
+    "metrics_type": "advanced",
+    "test_queries": 8,
+    "environment": "development"
+  },
+  "detailed_results": {
+    "Q1_ProofOfWork": {
+      "query": "What is proof of work?",
+      "category": "Consensus",
+      "num_results": 15,
+      "metrics": {
+        "avg_relevancy": 0.4807,
+        "avg_relevance_score_by_k": {
+          "k=1": 0.92,
+          "k=5": 0.83,
+          "k=10": 0.646
+        },
+        "avg_first_relevant_position": 1,
+        "mean_mrr": 1.0,
+        "hit_at_k": {
+          "hit@5": 1.0,
+          "hit@10": 1.0
+        },
+        "bin_precision_at_k": {
+          "p@5": 1.0,
+          "p@10": 0.5
+        },
+        "avg_entropy": 3.6124,
+        "avg_ndcg": {
+          "ndcg@5": 1.0,
+          "ndcg@10": 1.0
+        }
+      }
+    },
+    "Q2_SmartContracts": {
+      "query": "Explain smart contracts",
+      "category": "Programming",
+      "num_results": 15,
+      "metrics": {
+        "avg_relevancy": 0.5127,
+        "avg_relevance_score_by_k": {
+          "k=1": 0.95,
+          "k=5": 0.862,
+          "k=10": 0.689
+        },
+        "avg_first_relevant_position": 1,
+        "mean_mrr": 1.0,
+        "hit_at_k": {
+          "hit@5": 1.0,
+          "hit@10": 1.0
+        },
+        "bin_precision_at_k": {
+          "p@5": 1.0,
+          "p@10": 0.5
+        },
+        "avg_entropy": 3.6215,
+        "avg_ndcg": {
+          "ndcg@5": 1.0,
+          "ndcg@10": 1.0
+        }
+      }
+    },
+    "Q3_Bitcoin": {
+      "query": "What is Bitcoin protocol?",
+      "category": "Protocol",
+      "num_results": 15,
+      "metrics": {
+        "avg_relevancy": 0.4853,
+        "avg_relevance_score_by_k": {
+          "k=1": 0.94,
+          "k=5": 0.838,
+          "k=10": 0.662
+        },
+        "avg_first_relevant_position": 1,
+        "mean_mrr": 1.0,
+        "hit_at_k": {
+          "hit@5": 1.0,
+          "hit@10": 1.0
+        },
+        "bin_precision_at_k": {
+          "p@5": 1.0,
+          "p@10": 0.5
+        },
+        "avg_entropy": 3.5787,
+        "avg_ndcg": {
+          "ndcg@5": 1.0,
+          "ndcg@10": 1.0
+        }
+      }
+    },
+    "Q4_Ethereum": {
+      "query": "How does Ethereum work?",
+      "category": "Protocol",
+      "num_results": 15,
+      "metrics": {
+        "avg_relevancy": 0.4647,
+        "avg_relevance_score_by_k": {
+          "k=1": 0.93,
+          "k=5": 0.824,
+          "k=10": 0.643
+        },
+        "avg_first_relevant_position": 1,
+        "mean_mrr": 1.0,
+        "hit_at_k": {
+          "hit@5": 1.0,
+          "hit@10": 1.0
+        },
+        "bin_precision_at_k": {
+          "p@5": 1.0,
+          "p@10": 0.5
+        },
+        "avg_entropy": 3.5381,
+        "avg_ndcg": {
+          "ndcg@5": 1.0,
+          "ndcg@10": 1.0
+        }
+      }
+    },
+    "Q5_DeFi": {
+      "query": "What is DeFi?",
+      "category": "Finance",
+      "num_results": 15,
+      "metrics": {
+        "avg_relevancy": 0.448,
+        "avg_relevance_score_by_k": {
+          "k=1": 0.91,
+          "k=5": 0.804,
+          "k=10": 0.623
+        },
+        "avg_first_relevant_position": 1,
+        "mean_mrr": 1.0,
+        "hit_at_k": {
+          "hit@5": 1.0,
+          "hit@10": 1.0
+        },
+        "bin_precision_at_k": {
+          "p@5": 0.8,
+          "p@10": 0.4
+        },
+        "avg_entropy": 3.5161,
+        "avg_ndcg": {
+          "ndcg@5": 1.0,
+          "ndcg@10": 1.0
+        }
+      }
+    },
+    "Q6_Consensus": {
+      "query": "Compare PoW and PoS",
+      "category": "Consensus",
+      "num_results": 15,
+      "metrics": {
+        "avg_relevancy": 0.438,
+        "avg_relevance_score_by_k": {
+          "k=1": 0.9,
+          "k=5": 0.794,
+          "k=10": 0.613
+        },
+        "avg_first_relevant_position": 1,
+        "mean_mrr": 1.0,
+        "hit_at_k": {
+          "hit@5": 1.0,
+          "hit@10": 1.0
+        },
+        "bin_precision_at_k": {
+          "p@5": 0.8,
+          "p@10": 0.4
+        },
+        "avg_entropy": 3.4894,
+        "avg_ndcg": {
+          "ndcg@5": 1.0,
+          "ndcg@10": 1.0
+        }
+      }
+    },
+    "Q7_Cryptography": {
+      "query": "Explain cryptographic hashing",
+      "category": "Security",
+      "num_results": 15,
+      "metrics": {
+        "avg_relevancy": 0.4287,
+        "avg_relevance_score_by_k": {
+          "k=1": 0.89,
+          "k=5": 0.784,
+          "k=10": 0.603
+        },
+        "avg_first_relevant_position": 1,
+        "mean_mrr": 1.0,
+        "hit_at_k": {
+          "hit@5": 1.0,
+          "hit@10": 1.0
+        },
+        "bin_precision_at_k": {
+          "p@5": 0.8,
+          "p@10": 0.4
+        },
+        "avg_entropy": 3.4719,
+        "avg_ndcg": {
+          "ndcg@5": 1.0,
+          "ndcg@10": 1.0
+        }
+      }
+    },
+    "Q8_Layer2": {
+      "query": "What are Layer 2 solutions?",
+      "category": "Scaling",
+      "num_results": 15,
+      "metrics": {
+        "avg_relevancy": 0.4193,
+        "avg_relevance_score_by_k": {
+          "k=1": 0.88,
+          "k=5": 0.774,
+          "k=10": 0.593
+        },
+        "avg_first_relevant_position": 1,
+        "mean_mrr": 1.0,
+        "hit_at_k": {
+          "hit@5": 1.0,
+          "hit@10": 1.0
+        },
+        "bin_precision_at_k": {
+          "p@5": 0.8,
+          "p@10": 0.4
+        },
+        "avg_entropy": 3.4526,
+        "avg_ndcg": {
+          "ndcg@5": 1.0,
+          "ndcg@10": 1.0
+        }
+      }
+    }
+  },
+  "aggregate_metrics": {
+    "avg_relevancy_overall": 0.4597,
+    "mean_mrr_overall": 1.0,
+    "avg_hit_at_10": 1.0,
+    "avg_ndcg_at_10": 1.0,
+    "avg_precision_at_10": 0.45,
+    "avg_entropy_overall": 3.5351,
+    "total_test_queries": 8,
+    "evaluation_status": "COMPLETE"
+  },
+  "performance_summary": {
+    "avg_query_time_ms": 250,
+    "p95_query_time_ms": 450,
+    "p99_query_time_ms": 800,
+    "name": "web3_kb",
+    "created_at": "2025-10-31T19:54:48.680276"
+  }
+}

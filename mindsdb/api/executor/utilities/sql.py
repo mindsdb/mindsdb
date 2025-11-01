@@ -184,9 +184,12 @@ def query_df(df, query, session=None):
             is_expected=False,
         )
 
-    table_name = query_ast.from_table.parts[0]
     query_ast.from_table.parts = ["df"]
 
+    return query_dfs({"df": df}, query_ast, session=session)
+
+
+def query_dfs(dataframes, query_ast, session=None):
     json_columns = set()
 
     if session is not None:
@@ -256,26 +259,28 @@ def query_df(df, query, session=None):
                 pass
         return v
 
-    for column in json_columns:
-        df[column] = df[column].apply(_convert)
-
     render = SqlalchemyRender("postgres")
     try:
         query_str = render.get_string(query_ast, with_failback=False)
     except Exception:
-        logger.exception(f"Exception during query casting to 'postgres' dialect. Query:\n{str(query)}.\nError:")
+        logger.exception(f"Exception during query casting to 'postgres' dialect. Query:\n{str(query_ast)}.\nError:")
         query_str = render.get_string(query_ast, with_failback=True)
 
-    # workaround to prevent duckdb.TypeMismatchException
-    if len(df) > 0:
-        if table_name.lower() in ("models", "predictors"):
-            if "TRAINING_OPTIONS" in df.columns:
-                df = df.astype({"TRAINING_OPTIONS": "string"})
-        if table_name.lower() == "ml_engines":
-            if "CONNECTION_DATA" in df.columns:
-                df = df.astype({"CONNECTION_DATA": "string"})
+    for table_name, df in dataframes.items():
+        for column in json_columns:
+            df[column] = df[column].apply(_convert)
 
-    result_df, description = query_df_with_type_infer_fallback(query_str, {"df": df}, user_functions=user_functions)
+        if len(df) > 0:
+            # workaround to prevent duckdb.TypeMismatchException
+            for sys_name, sys_col in (
+                ("models", "TRAINING_OPTIONS"),
+                ("predictors", "TRAINING_OPTIONS"),
+                ("ml_engines", "CONNECTION_DATA"),
+            ):
+                if table_name.lower() in sys_name and sys_col in df.columns:
+                    df[sys_col] = df[sys_col].astype("string")
+
+    result_df, description = query_df_with_type_infer_fallback(query_str, dataframes, user_functions=user_functions)
     result_df.replace({np.nan: None}, inplace=True)
     result_df.columns = [x[0] for x in description]
     return result_df

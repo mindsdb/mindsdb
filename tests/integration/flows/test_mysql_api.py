@@ -83,7 +83,7 @@ class BaseStuff:
 
     def upload_ds(self, df, name):
         """Upload pandas df as csv file."""
-        self.query(f"DROP TABLE files.{name};")
+        self.query(f"DROP TABLE IF EXISTS files.{name};")
         with tempfile.NamedTemporaryFile(mode="w+", newline="", delete=False) as f:
             df.to_csv(f, index=False)
             filename = f.name
@@ -579,8 +579,8 @@ class TestMySqlApi(BaseStuff):
             f"""
                SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),
                TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES
-               WHERE TABLE_SCHEMA LIKE '{integration}'
-                AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' ) ORDER BY TABLE_SCHEMA, TABLE_NAME
+               WHERE TABLE_SCHEMA = '{integration}'
+                AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_SCHEMA, TABLE_NAME
             """,
             f"""
                 SELECT SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,

@@ -468,11 +468,15 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         NotImplementedError for unsupported inner subselect:
         SELECT * FROM (SELECT COUNT(*) FROM movies);
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = ["movies"]
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
 
         inner = ast.Select(
             targets=[
-                ast.Function(op="COUNT", args=[ast.Star()], distinct=False, from_arg=None),
+                ast.Function(
+                    op="COUNT", args=[ast.Star()], distinct=False, from_arg=None
+                ),
             ],
             from_table=ast.Identifier(parts=["movies"]),
         )
@@ -487,6 +491,46 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertIn("Unsupported inner target", str(ctx.exception))
 
+    def test_select_with_match_and_projection(self):
+        """
+        Test SELECT with WHERE clause and specific projections
+         if match:
+            arg.append({"$match": match})
+        if match is not None and proj != {}:
+            arg.append({"$project": proj})
+        """
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].aggregate.return_value = [
+            {
+                "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
+                "name": "Interstellar",
+            }
+        ]
+
+        query = ast.Select(
+            targets=[
+                ast.Identifier("name"),
+            ],
+            from_table=ast.Identifier("movies"),
+            where=ast.BinaryOperation(
+                args=[ast.Identifier("runtime"), ast.Constant(170)], op=">"
+            ),
+        )
+
+        response = self.handler.query(query)
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.columns.tolist(), ["_id", "name"])
+        self.assertEqual(df["name"].tolist(), ["Interstellar"])
 
 
 if __name__ == "__main__":

@@ -121,9 +121,7 @@ class MongodbRender(NonRelationalRender):
                         )
                         pre_project[alias] = self._convert_type_cast(t)
                     else:
-                        raise NotImplementedError(
-                            f"Unsupported inner target: {t}"
-                        )
+                        raise NotImplementedError(f"Unsupported inner target: {t}")
                 if saw_star:
                     pre_project = {}
             else:
@@ -179,7 +177,7 @@ class MongodbRender(NonRelationalRender):
         """
         # if not isinstance(node.from_table, Identifier):
         #     raise NotImplementedError(f"Not supported from {node.from_table}")
-        collection, subs, proj = self._parse_select(node.from_table)
+        collection, pre_match, pre_project = self._parse_select(node.from_table)
 
         filters = {}
 
@@ -245,6 +243,11 @@ class MongodbRender(NonRelationalRender):
         if node.modifiers is not None:
             for modifier in node.modifiers:
                 arg.append(modifier)
+
+        if pre_match:
+            arg.append({"$match": pre_match})
+        if pre_project is not None and pre_project != {}:
+            arg.append({"$project": pre_project})
 
         if filters:
             arg.append({"$match": filters})

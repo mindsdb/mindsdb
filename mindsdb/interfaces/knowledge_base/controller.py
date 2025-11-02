@@ -10,7 +10,6 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
-from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
@@ -22,12 +21,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     TableField,
     VectorStoreHandler,
 )
-from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
-    construct_model_from_args,
-)
+from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get_validated_jwt
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
@@ -47,6 +42,7 @@ from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
+from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
 
@@ -56,6 +52,7 @@ class KnowledgeBaseInputParams(BaseModel):
     content_columns: List[str] | None = None
     id_column: str | None = None
     kb_no_upsert: bool = False
+    kb_skip_existing: bool = False
     embedding_model: Dict[Text, Any] | None = None
     is_sparse: bool = False
     vector_size: int | None = None
@@ -76,6 +73,10 @@ def get_model_params(model_params: dict, default_config_key: str):
         if not isinstance(model_params, dict):
             raise ValueError("Model parameters must be passed as a JSON object")
 
+        # if provider mismatches - don't use default values
+        if "provider" in model_params and model_params["provider"] != combined_model_params.get("provider"):
+            return model_params
+
         combined_model_params.update(model_params)
 
     combined_model_params.pop("use_default_llm", None)
@@ -83,9 +84,9 @@ def get_model_params(model_params: dict, default_config_key: str):
     return combined_model_params
 
 
-def get_embedding_model_from_params(embedding_model_params: dict):
+def adapt_embedding_model_params(embedding_model_params: dict):
     """
-    Create embedding model from parameters.
+    Prepare parameters for embedding model.
     """
     params_copy = copy.deepcopy(embedding_model_params)
     provider = params_copy.pop("provider", None).lower()
@@ -106,7 +107,7 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     params_copy.pop("api_key", None)
     params_copy["model"] = params_copy.pop("model_name", None)
 
-    return construct_model_from_args(params_copy)
+    return params_copy
 
 
 def get_reranking_model_from_params(reranking_model_params: dict):
@@ -144,6 +145,28 @@ def to_json(obj):
         return json.dumps(obj)
     except TypeError:
         return obj
+
+
+def rotate_provider_api_key(params):
+    """
+    Check api key for specific providers. At the moment it checks and updated jwt token of snowflake provider
+    :param params: input params, can be modified by this function
+    :return: a new api key if it is refreshed
+    """
+    provider = params.get("provider").lower()
+
+    if provider == "snowflake":
+        api_key = params.get("api_key")
+        api_key2 = get_validated_jwt(
+            api_key,
+            account=params.get("snowflake_account_id"),
+            user=params.get("user"),
+            private_key=params.get("private_key"),
+        )
+        if api_key2 != api_key:
+            # update keys
+            params["api_key"] = api_key2
+            return api_key2
 
 
 class KnowledgeBaseTable:
@@ -197,6 +220,22 @@ class KnowledgeBaseTable:
 
         executor = KnowledgeBaseQueryExecutor(self)
         df = executor.run(query)
+
+        # copy metadata to columns
+        if "metadata" in df.columns:
+            meta_columns = self._get_allowed_metadata_columns()
+            if meta_columns:
+                meta_data = pd.json_normalize(df["metadata"])
+                # exclude absent columns and used colunns
+                df_columns = list(df.columns)
+                meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
+
+                # add columns
+                df = df.join(meta_data[meta_columns])
+
+                # put metadata in the end
+                df_columns.remove("metadata")
+                df = df[df_columns + meta_columns + ["metadata"]]
 
         if (
             query_copy.group_by is not None
@@ -265,9 +304,9 @@ class KnowledgeBaseTable:
                             gt_filtering = True
                         logger.debug(f"Found relevance_threshold in query: {relevance_threshold}")
                     except (ValueError, TypeError) as e:
-                        error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
+                        error_msg = f"Invalid relevance_threshold value: {item.value}. {e}"
                         logger.error(error_msg)
-                        raise ValueError(error_msg)
+                        raise ValueError(error_msg) from e
                 elif (item.column == "relevance") and (item.op.value not in relevance_threshold_allowed_operators):
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only the following operators are allowed: "
@@ -318,13 +357,20 @@ class KnowledgeBaseTable:
         self.addapt_conditions_columns(conditions)
 
         # Set default limit if query is present
+        limit = query.limit.value if query.limit is not None else None
         if query_text is not None:
-            limit = query.limit.value if query.limit is not None else None
             if limit is None:
                 limit = 10
             elif limit > 100:
                 limit = 100
-            query.limit = Constant(limit)
+
+            if not disable_reranking:
+                # expand limit, get more records before reranking usage:
+                #   get twice size of input but not greater than 30
+                query_limit = min(limit * 2, limit + 30)
+            else:
+                query_limit = limit
+            query.limit = Constant(query_limit)
 
         allowed_metadata_columns = self._get_allowed_metadata_columns()
         df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
@@ -375,11 +421,13 @@ class KnowledgeBaseTable:
 
         # Check if we have a rerank_model configured in KB params
         df = self.add_relevance(df, query_text, relevance_threshold, disable_reranking)
+        if limit is not None:
+            df = df[:limit]
 
         # if relevance filtering method is strictly GREATER THAN we filter the df
         if gt_filtering:
             relevance_scores = TableField.RELEVANCE.value
-            df = df[relevance_scores > relevance_threshold]
+            df = df[df[relevance_scores] > relevance_threshold]
 
         return df
 
@@ -397,6 +445,7 @@ class KnowledgeBaseTable:
         return [col.lower() for col in columns]
 
     def score_documents(self, query_text, documents, reranking_model_params):
+        rotate_provider_api_key(reranking_model_params)
         reranker = get_reranking_model_from_params(reranking_model_params)
         return reranker.get_scores(query_text, documents)
 
@@ -407,7 +456,15 @@ class KnowledgeBaseTable:
         if reranking_model_params and query_text and len(df) > 0 and not disable_reranking:
             # Use reranker for relevance score
 
-            logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
+            new_api_key = rotate_provider_api_key(reranking_model_params)
+            if new_api_key:
+                # update key
+                if "reranking_model" not in self._kb.params:
+                    self._kb.params["reranking_model"] = {}
+                self._kb.params["reranking_model"]["api_key"] = new_api_key
+                flag_modified(self._kb, "params")
+                db.session.commit()
+
             # Apply custom filtering threshold if provided
             if relevance_threshold is not None:
                 reranking_model_params["filtering_threshold"] = relevance_threshold
@@ -424,7 +481,6 @@ class KnowledgeBaseTable:
             # Filter by threshold
             scores_array = np.array(scores)
             df = df[scores_array >= reranker.filtering_threshold]
-            logger.debug(f"Applied reranking with params: {reranking_model_params}")
 
         elif "distance" in df.columns:
             # Calculate relevance from distance
@@ -547,7 +603,7 @@ class KnowledgeBaseTable:
                 if processed_chunks:
                     content.value = processed_chunks[0].content
 
-            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
+            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content.value))
 
         if "metadata" not in query.update_columns:
             query.update_columns["metadata"] = Constant({})
@@ -677,6 +733,25 @@ class KnowledgeBaseTable:
         if df.empty:
             logger.warning("No valid content found in any content columns")
             return
+
+        # Check if we should skip existing items (before calculating embeddings)
+        if params is not None and params.get("kb_skip_existing", False):
+            logger.debug(f"Checking for existing items to skip before processing {len(df)} items")
+            db_handler = self.get_vector_db()
+
+            # Get list of IDs from current batch
+            current_ids = df[TableField.ID.value].dropna().astype(str).tolist()
+            if current_ids:
+                # Check which IDs already exist
+                existing_ids = db_handler.check_existing_ids(self._kb.vector_database_table, current_ids)
+                if existing_ids:
+                    # Filter out existing items
+                    df = df[~df[TableField.ID.value].astype(str).isin(existing_ids)]
+                    logger.info(f"Skipped {len(existing_ids)} existing items, processing {len(df)} new items")
+
+                    if df.empty:
+                        logger.info("All items already exist, nothing to insert")
+                        return
 
         # add embeddings and send to vector db
         df_emb = self._df_to_embeddings(df)
@@ -842,10 +917,12 @@ class KnowledgeBaseTable:
         model_id = self._kb.embedding_model_id
 
         if model_id is None:
-            # call litellm handler
             messages = list(df[TableField.CONTENT.value])
             embedding_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
-            results = self.call_litellm_embedding(self.session, embedding_params, messages)
+
+            llm_client = LLMClient(embedding_params, session=self.session)
+            results = llm_client.embeddings(messages)
+
             results = [[val] for val in results]
             return pd.DataFrame(results, columns=[TableField.EMBEDDINGS.value])
 
@@ -915,7 +992,12 @@ class KnowledgeBaseTable:
             ValueError: If the configuration is invalid or required components are missing
         """
         # Get embedding model from knowledge base
-        embeddings_model = None
+        from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
+            construct_model_from_args,
+        )
+        from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
+        from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
+
         embedding_model_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
         if self._kb.embedding_model:
             # Extract embedding model args from knowledge base table
@@ -924,7 +1006,7 @@ class KnowledgeBaseTable:
             embeddings_model = construct_model_from_args(embedding_args)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         elif embedding_model_params:
-            embeddings_model = get_embedding_model_from_params(embedding_model_params)
+            embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
             embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
@@ -952,8 +1034,8 @@ class KnowledgeBaseTable:
             return rag
 
         except Exception as e:
-            logger.error(f"Error building RAG pipeline: {str(e)}")
-            raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
+            logger.exception("Error building RAG pipeline:")
+            raise ValueError(f"Failed to build RAG pipeline: {str(e)}") from e
 
     def _parse_metadata(self, base_metadata):
         """Helper function to robustly parse metadata string to dict"""
@@ -1026,6 +1108,26 @@ class KnowledgeBaseController:
     def __init__(self, session) -> None:
         self.session = session
 
+    def _check_kb_input_params(self, params):
+        # check names and types KB params
+        try:
+            KnowledgeBaseInputParams.model_validate(params)
+        except ValidationError as e:
+            problems = []
+            for error in e.errors():
+                parameter = ".".join([str(i) for i in error["loc"]])
+                param_type = error["type"]
+                if param_type == "extra_forbidden":
+                    msg = f"Parameter '{parameter}' is not allowed"
+                else:
+                    msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
+                problems.append(msg)
+
+            msg = "\n".join(problems)
+            if len(problems) > 1:
+                msg = "\n" + msg
+            raise ValueError(f"Problem with knowledge base parameters: {msg}") from e
+
     def add(
         self,
         name: str,
@@ -1043,35 +1145,17 @@ class KnowledgeBaseController:
         :param is_sparse: Whether to use sparse vectors for embeddings
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
 
         # fill variables
         params = variables_controller.fill_parameters(params)
-
-        try:
-            KnowledgeBaseInputParams.model_validate(params)
-        except ValidationError as e:
-            problems = []
-            for error in e.errors():
-                parameter = ".".join([str(i) for i in error["loc"]])
-                param_type = error["type"]
-                if param_type == "extra_forbidden":
-                    msg = f"Parameter '{parameter}' is not allowed"
-                else:
-                    msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
-                problems.append(msg)
-
-            msg = "\n".join(problems)
-            if len(problems) > 1:
-                msg = "\n" + msg
-            raise ValueError(f"Problem with knowledge base parameters: {msg}")
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
             params = params or {}
             params["preprocessing"] = preprocessing_config
+
+        self._check_kb_input_params(params)
 
         # Check if vector_size is provided when using sparse vectors
         is_sparse = params.get("is_sparse")
@@ -1083,8 +1167,6 @@ class KnowledgeBaseController:
         project = self.session.database_controller.get_project(project_name)
         project_id = project.id
 
-        # not difference between cases in sql
-        name = name.lower()
         # check if knowledge base already exists
         kb = self.get(name, project_id)
         if kb is not None:
@@ -1096,27 +1178,16 @@ class KnowledgeBaseController:
         params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
-        model_name = self._create_embedding_model(
+        self._check_embedding_model(
             project.name,
             params=embedding_params,
             kb_name=name,
         )
-        if model_name is not None:
-            params["created_embedding_model"] = model_name
-
-        embedding_model_id = None
-        if model_name is not None:
-            model = self.session.model_controller.get_model(name=model_name, project_name=project.name)
-            model_record = db.Predictor.query.get(model["id"])
-            embedding_model_id = model_record.id
 
         # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
         reranking_model_params = params.get("reranking_model", {})
 
         if isinstance(reranking_model_params, bool) and not reranking_model_params:
-            params["reranking_model"] = {}
-        # if params.get("reranking_model", {}) is string and false in any case we evaluate it to empty dictionary
-        if isinstance(reranking_model_params, str) and reranking_model_params.lower() == "false":
             params["reranking_model"] = {}
 
         reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
@@ -1124,11 +1195,8 @@ class KnowledgeBaseController:
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
-            try:
-                reranker = get_reranking_model_from_params(reranking_model_params)
-                reranker.get_scores("test", ["test"])
-            except (ValueError, RuntimeError) as e:
-                raise RuntimeError(f"Problem with reranker config: {e}")
+            rotate_provider_api_key(reranking_model_params)
+            self._test_reranking(reranking_model_params)
 
         # search for the vector database table
         if storage is None:
@@ -1138,7 +1206,6 @@ class KnowledgeBaseController:
                 # Add sparse vector support for pgvector
                 vector_db_params = {}
                 # Check both explicit parameter and model configuration
-                is_sparse = is_sparse or model_record.learn_args.get("using", {}).get("sparse")
                 if is_sparse:
                     vector_db_params["is_sparse"] = True
                     if vector_size is not None:
@@ -1182,12 +1249,114 @@ class KnowledgeBaseController:
             project_id=project_id,
             vector_database_id=vector_database_id,
             vector_database_table=vector_table_name,
-            embedding_model_id=embedding_model_id,
+            embedding_model_id=None,
             params=params,
         )
         db.session.add(kb)
         db.session.commit()
         return kb
+
+    def update(
+        self,
+        name: str,
+        project_name: str,
+        params: dict,
+        preprocessing_config: Optional[dict] = None,
+    ) -> db.KnowledgeBase:
+        """
+        Update the knowledge base
+        :param name: The name of the knowledge base
+        :param project_name: Current project name
+        :param params: The parameters to update
+        :param preprocessing_config: Optional preprocessing configuration to validate and store
+        """
+
+        # fill variables
+        params = variables_controller.fill_parameters(params)
+
+        # Validate preprocessing config first if provided
+        if preprocessing_config is not None:
+            PreprocessingConfig(**preprocessing_config)  # Validate before storing
+            params = params or {}
+            params["preprocessing"] = preprocessing_config
+
+        self._check_kb_input_params(params)
+
+        # get project id
+        project = self.session.database_controller.get_project(project_name)
+        project_id = project.id
+
+        # get existed KB
+        kb = self.get(name.lower(), project_id)
+        if kb is None:
+            raise EntityNotExistsError("Knowledge base doesn't exists", name)
+
+        if "embedding_model" in params:
+            new_config = params["embedding_model"]
+            # update embedding
+            embed_params = kb.params.get("embedding_model", {})
+            if not embed_params:
+                # maybe old version of KB
+                raise ValueError("No embedding config to update")
+
+            # some parameters are not allowed to update
+            for key in ("provider", "model_name"):
+                if key in new_config and new_config[key] != embed_params.get(key):
+                    raise ValueError(f"You can't update '{key}' setting")
+
+            embed_params.update(new_config)
+
+            self._check_embedding_model(
+                project.name,
+                params=embed_params,
+                kb_name=name,
+            )
+            kb.params["embedding_model"] = embed_params
+
+        if "reranking_model" in params:
+            new_config = params["reranking_model"]
+            # update embedding
+            rerank_params = kb.params.get("reranking_model", {})
+
+            if new_config is False:
+                # disable reranking
+                rerank_params = {}
+            elif "provider" in new_config and new_config["provider"] != rerank_params.get("provider"):
+                # use new config (and include default config)
+                rerank_params = get_model_params(new_config, "default_reranking_model")
+            else:
+                # update current config
+                rerank_params.update(new_config)
+
+            if rerank_params:
+                self._test_reranking(rerank_params)
+
+            kb.params["reranking_model"] = rerank_params
+
+        # update other keys
+        for key in ["id_column", "metadata_columns", "content_columns", "preprocessing"]:
+            if key in params:
+                kb.params[key] = params[key]
+
+        flag_modified(kb, "params")
+        db.session.commit()
+
+        return self.get(name.lower(), project_id)
+
+    def _test_reranking(self, params):
+        try:
+            reranker = get_reranking_model_from_params(params)
+            reranker.get_scores("test", ["test"])
+        except (ValueError, RuntimeError) as e:
+            if params["provider"] in ("azure_openai", "openai") and params.get("method") != "no-logprobs":
+                # check with no-logprobs
+                params["method"] = "no-logprobs"
+                self._test_reranking(params)
+                logger.warning(
+                    f"logprobs is not supported for this model: {params.get('model_name')}. using no-logprobs mode"
+                )
+            else:
+                raise RuntimeError(f"Problem with reranker config: {e}") from e
 
     def _create_persistent_pgvector(self, params=None):
         """Create default vector database for knowledge base, if not specified"""
@@ -1215,11 +1384,11 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_embedding_model(self, project_name, engine="openai", params: dict = None, kb_name=""):
-        """create a default embedding model for knowledge base, if not specified"""
-        model_name = f"kb_embedding_{kb_name}"
+    def _check_embedding_model(self, project_name, params: dict = None, kb_name=""):
+        """check embedding model for knowledge base"""
 
-        # drop if exists - parameters can be different
+        # if mindsdb model from old KB exists - drop it
+        model_name = f"kb_embedding_{kb_name}"
         try:
             model = self.session.model_controller.get_model(model_name, project_name=project_name)
             if model is not None:
@@ -1231,63 +1400,18 @@ class KnowledgeBaseController:
             raise ValueError("'provider' parameter is required for embedding model")
 
         # check available providers
-        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google")
+        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "ollama")
         if params["provider"] not in avail_providers:
             raise ValueError(
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
             )
 
-        if params["provider"] not in ("openai", "azure_openai"):
-            # try use litellm
-            try:
-                KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
-            except Exception as e:
-                raise RuntimeError(f"Problem with embedding model config: {e}")
-            return
+        llm_client = LLMClient(params, session=self.session)
 
-        params = copy.deepcopy(params)
-        if "provider" in params:
-            engine = params.pop("provider").lower()
-
-        api_key = get_api_key(engine, params, strict=False)
-        if api_key is None:
-            if "api_key" in params:
-                params.pop("api_key")
-            else:
-                raise ValueError("'api_key' parameter is required for embedding model")
-
-        if engine == "azure_openai":
-            engine = "openai"
-            params["provider"] = "azure"
-
-        if engine == "openai":
-            if "question_column" not in params:
-                params["question_column"] = "content"
-            if api_key:
-                params[f"{engine}_api_key"] = api_key
-                if "api_key" in params:
-                    params.pop("api_key")
-            if "base_url" in params:
-                params["api_base"] = params.pop("base_url")
-
-        params["engine"] = engine
-        params["join_learn_process"] = True
-        params["mode"] = "embedding"
-
-        # Include API key if provided.
-        statement = CreatePredictor(
-            name=Identifier(parts=[project_name, model_name]),
-            using=params,
-            targets=[Identifier(parts=[TableField.EMBEDDINGS.value])],
-        )
-
-        command_executor = ExecuteCommands(self.session)
-        resp = command_executor.answer_create_predictor(statement, project_name)
-        # check model status
-        record = resp.data.records[0]
-        if record["STATUS"] == "error":
-            raise ValueError("Embedding model error:" + record["ERROR"])
-        return model_name
+        try:
+            llm_client.embeddings(["test"])
+        except Exception as e:
+            raise RuntimeError(f"Problem with embedding model config: {e}") from e
 
     def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
         """
@@ -1295,8 +1419,8 @@ class KnowledgeBaseController:
         """
         try:
             project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise ValueError(f"Project not found: {project_name}")
+        except ValueError as e:
+            raise ValueError(f"Project not found: {project_name}") from e
         project_id = project.id
 
         # check if knowledge base exists
@@ -1392,12 +1516,6 @@ class KnowledgeBaseController:
         project_id = self.session.database_controller.get_project(project_name).id
         kb_table = self.get_table(table_name, project_id)
         kb_table.create_index()
-
-    def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
-        """
-        Update a knowledge base record
-        """
-        raise NotImplementedError()
 
     def evaluate(self, table_name: str, project_name: str, params: dict = None) -> pd.DataFrame:
         """

@@ -304,8 +304,8 @@ class TestMySqlApi(BaseStuff):
             "t_varchar": "Test",
             "t_text": "Test",
             "t_bytea": "Demo binary data.",
-            "t_json": '{"name": "test"}',
-            "t_jsonb": '{"name": "test"}',
+            "t_json": '{"name":"test"}',
+            "t_jsonb": '{"name":"test"}',
             "t_xml": "<root><element>test</element><nested><value>123</value></nested></root>",
             "t_uuid": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
             # numeric types
@@ -350,6 +350,10 @@ class TestMySqlApi(BaseStuff):
 
             if isinstance(expected_values[column_name], float):
                 assert abs(row[column_name] - expected_values[column_name]) < 1e-5, (
+                    f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
+                )
+            elif column_name in ("t_json", "t_jsonb"):
+                assert json.loads(row[column_name]) == json.loads(expected_values[column_name]), (
                     f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
                 )
             else:

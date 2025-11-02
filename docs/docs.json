@@ -17,7 +17,8 @@
               "group": "Get Started",
               "pages": [
                 "mindsdb",
-                "quickstart-tutorial"
+                "quickstart-tutorial",
+                "releases"
               ]
             },
             {
@@ -263,6 +264,7 @@
                     "pages": [
                       "mindsdb_sql/knowledge_bases/overview",
                       "mindsdb_sql/knowledge_bases/create",
+                      "mindsdb_sql/knowledge_bases/alter",
                       "mindsdb_sql/knowledge_bases/insert_data",
                       "mindsdb_sql/knowledge_bases/query",
                       "mindsdb_sql/knowledge_bases/hybrid_search",
@@ -450,6 +452,7 @@
                           "group": "Knowledge Bases",
                           "pages": [
                             "rest/knowledge_bases/create",
+                            "rest/knowledge_bases/alter",
                             "rest/knowledge_bases/insert",
                             "rest/knowledge_bases/query",
                             "rest/knowledge_bases/list",
@@ -681,17 +684,12 @@
               "group": "Contribute",
               "pages": [
                 "contribute/contribute",
-                "contribute/issues",
-                "contribute/issue-labels",
                 "contribute/install",
                 "contribute/python-coding-standards",
                 "contribute/data-handlers",
                 "contribute/app-handlers",
-                "contribute/tests",
                 "contribute/integrations-readme",
-                "contribute/tutorials",
                 "contribute/docs",
-                "contribute/docs-rules",
                 "contribute/community"
               ]
             }

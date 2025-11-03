@@ -1,0 +1,58 @@
+app:
+  name: "REST API with MindsDB"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  port: 8000
+  debug: true
+  run_startup: true  # Enable/disable startup operations (database, knowledge base, etc.)
+
+mindsdb:
+  url: "http://127.0.0.1:47334"
+
+api:
+  prefix: "/api/v1"
+  title: "MindsDB REST API"
+  description: "REST API for interacting with MindsDB"
+  
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# PostgreSQL pgvector database configuration
+pgvector:
+  database_name: "my_pgvector"
+  engine: "pgvector"
+  parameters:
+    host: "127.0.0.1"
+    port: 5432
+    database: "mydb"
+    user: "psql"
+    password: "psql"
+    distance: "cosine"
+
+# Knowledge base configuration for academic papers
+knowledge_base:
+  name: "kv_kb"
+  storage_table: "pgvector_storage_table"
+  embedding_model:
+    provider: "openai"
+    model_name: "text-embedding-3-small"
+    api_key: ""  # Set in .env file as OPENAI_API_KEY
+  reranking_model:
+    provider: "openai"
+    model_name: "gpt-4o"
+    api_key: ""  # Set in .env file as OPENAI_API_KEY
+  metadata_columns:
+    - "authors"
+    - "categories"
+    - "published_year"
+    - "article_id"
+    - "title"
+    - "abstract"
+    - "source"
+    - "pdf_url"
+  content_columns:
+    - "text"
+
+agent:
+  model: "gpt-4o"

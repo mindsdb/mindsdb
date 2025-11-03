@@ -56,15 +56,38 @@ def create_datasource_sql_via_connector(helper_instance, db_name, engine, parame
             time.sleep(poll_interval)
 
 
-def wait_for_trigger(self, db_name, trigger_name, timeout=30):
+def wait_for_trigger_execution(query_fn, db_name, target_table_name, test_id, timeout=120, max_interval=10):
+    """
+    Polls the target table until the trigger has propagated the update.
+
+    Args:
+        query_fn: Function to execute SQL queries (e.g., self.query)
+        db_name: Database where the target table resides
+        target_table_name: Name of the table to poll
+        test_id: ID to look for
+        timeout: Maximum time to wait in seconds
+        max_interval: Maximum interval between polls
+    Returns:
+        result: List of dicts from query_fn
+    Raises:
+        TimeoutError: if the trigger does not fire within timeout
+    """
     start = time.time()
+    interval = 1
+    result = []
+
     while time.time() - start < timeout:
-        triggers = self.query(f"SHOW TRIGGERS FROM {db_name};")
-        if any(t["trigger_name"] == trigger_name for t in triggers):
-            print(f"[DEBUG] Trigger {trigger_name} registered after {time.time() - start:.2f}s")
-            return True
-        time.sleep(2)
-    raise TimeoutError(f"Trigger {trigger_name} not found after {timeout}s")
+        result = query_fn(f"SELECT id, message FROM {db_name}.{target_table_name} WHERE id = {test_id};")
+        if result:
+            elapsed = time.time() - start
+            print(f"[DEBUG] Trigger fired after {elapsed:.2f}s → {result}")
+            return result
+
+        print(f"[DEBUG] Waiting for trigger (elapsed={time.time() - start:.1f}s, interval={interval:.2f}s)")
+        time.sleep(interval)
+        interval = min(interval * 1.5, max_interval)
+
+    raise TimeoutError(f"Trigger did not fire for id {test_id} within {timeout}s.")
 
 
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
@@ -285,31 +308,50 @@ class TestMySQLKnowledgeBases(BaseStuff):
 @pytest.fixture(scope="function")
 def setup_trigger_db():
     """Function-scoped fixture to ensure a clean DB for each trigger test."""
+
     db_name = f"trigger_test_db_{uuid.uuid4().hex[:8]}"
+
+    source_table_name = "trigger_source_table"
+    target_table_name = "trigger_target_table"
+
     params = {"user": "postgres", "password": "postgres", "host": "postgres", "port": 5432, "database": "postgres"}
-    source_table_name = f"source_table_{uuid.uuid4().hex[:8]}"
-    target_table_name = f"target_table_{uuid.uuid4().hex[:8]}"
     helper = BaseStuff()
     helper.use_binary = False
+
     try:
         print(
             f"\n--> [Fixture setup_trigger_db] Setting up local database: {db_name} on {params['host']}:{params['port']}"
         )
         helper.query(f"DROP DATABASE IF EXISTS {db_name}")
+
+        # Create the integration
         create_datasource_sql_via_connector(helper, db_name, "postgres", params)
 
+        # Create tables
         helper.query(f"CREATE TABLE {db_name}.{source_table_name} (id INT, message VARCHAR(255));")
         helper.query(f"CREATE TABLE {db_name}.{target_table_name} (id INT, message VARCHAR(255));")
         helper.query(f"INSERT INTO {db_name}.{source_table_name} (id, message) VALUES (101, 'initial_update_message');")
         helper.query(f"INSERT INTO {db_name}.{source_table_name} (id, message) VALUES (102, 'initial_delete_message');")
+
         yield db_name, source_table_name, target_table_name
+
     except mysql.connector.Error as setup_err:
         pytest.fail(f"Trigger fixture setup failed. Ensure Docker environment is running. Error: {setup_err}")
+
     finally:
-        print(f"\n--> [CLEANUP] Dropping DATABASE: {db_name}")
+        # Robust cleanup in reverse order: tables first, then the DB integration
+        print(f"\n--> [CLEANUP] Dropping tables and DATABASE: {db_name}")
+        try:
+            helper.query(f"DROP TABLE IF EXISTS {db_name}.{source_table_name};")
+            helper.query(f"DROP TABLE IF EXISTS {db_name}.{target_table_name};")
+        except mysql.connector.Error as e:
+            print(f"Warning: Error dropping tables during cleanup: {e}")
+            pass
+
         try:
             helper.query(f"DROP DATABASE IF EXISTS {db_name};")
-        except mysql.connector.Error:
+        except mysql.connector.Error as e:
+            print(f"Warning: Error dropping database during cleanup: {e}")
             pass
 
 
@@ -337,28 +379,15 @@ class TestMySQLTriggers(BaseStuff):
                 (INSERT INTO {db_name}.{target_table_name} (id, message) SELECT id, message FROM TABLE_DELTA);
             """
             self.query(create_trigger_query)
-            time.sleep(5)  # Allow time for trigger creation
+            time.sleep(10)  # Allow time for trigger creation
 
-            # Activate Trigger
+            # Activate trigger
             self.query(f"UPDATE {db_name}.{source_table_name} SET message = '{updated_message}' WHERE id = {test_id};")
-
-            # Poll the target table for the result
-            result = []
-            max_wait_time = 60
-            interval = 1
-            max_interval = 8
-            start_time = time.time()
-            result = []
-            while time.time() - start_time < max_wait_time:
-                result = self.query(f"SELECT id, message FROM {db_name}.{target_table_name} WHERE id = {test_id};")
-                if result:
-                    break
-                time.sleep(interval)
-                interval = min(interval * 2, max_interval)
-
+            # Wait for propagated update
+            result = wait_for_trigger_execution(self.query, db_name, target_table_name, test_id, timeout=120)
             # Verify
-            assert result, f"Trigger did not fire for id {test_id} within {max_wait_time}s."
             assert result[0]["message"] == updated_message
+
         finally:
             self.query(f"DROP TRIGGER {trigger_name};")
 

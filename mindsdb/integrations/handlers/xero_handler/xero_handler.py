@@ -15,8 +15,6 @@ from xero_python.api_client.configuration import OAuth2Token
 from xero_python.accounting import AccountingApi
 
 from .xero_tables import (
-    BudgetsTable,
-    ContactsTable,
     InvoicesTable,
     ItemsTable,
     OverpaymentsTable,
@@ -27,6 +25,9 @@ from .xero_tables import (
 
 from .tables.accounts_table import AccountsTable
 from .tables.bank_transactions_table import BankTransactionsTable
+from .tables.budgets_table import BudgetsTable
+from .tables.contact_groups_table import ContactGroupsTable
+from .tables.contacts_table import ContactsTable
 from .tables.quotes_table import QuotesTable
 
 class XeroHandler(APIHandler):
@@ -70,6 +71,7 @@ class XeroHandler(APIHandler):
         self._register_table("accounts", AccountsTable(self))
         self._register_table("bank_transactions", BankTransactionsTable(self))
         self._register_table("budgets", BudgetsTable(self))
+        self._register_table("contact_groups", ContactGroupsTable(self))
         self._register_table("contacts", ContactsTable(self))
         self._register_table("invoices", InvoicesTable(self))
         self._register_table("items", ItemsTable(self))

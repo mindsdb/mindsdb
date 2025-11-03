@@ -10,48 +10,47 @@ from mindsdb.integrations.handlers.xero_handler.xero_tables import (
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser
 from xero_python.accounting import AccountingApi
 
-
-class QuotesTable(XeroTable):
-    """Table for Xero Quotes"""
+class ContactsTable(XeroTable):
+    """Table for Xero Contacts"""
 
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
-        "quote_number": {"type": "direct", "param": "quote_number"},
-        "status": {"type": "direct", "param": "status"},
-        "date": {"type": "date", "param": "date_from", "param_upper": "date_to"},
-        "expiry_date": {"type": "date", "param": "expiry_date_from", "param_upper": "expiry_date_to"},
-        "contact_id": {"type": "direct", "param": "contact_id"}
+        "id": {"type": "id_list", "param": "ids"},
+        "name": {"type": "where", "param": "SearchTerm", "value_type": "string"},
+        "first_name": {"type": "where", "param": "SearchTerm", "value_type": "string"},
+        "last_name": {"type": "where", "param": "SearchTerm", "value_type": "string"},
+        "email_address": {"type": "param", "param": "SearchTerm", "value_type": "string"},
+        "contact_number": {"type": "where", "param": "SearchTerm", "value_type": "string"},
+        "company_number": {"type": "where", "param": "SearchTerm", "value_type": "string"},
+        "status": {"type": "where", "param": "status", "value_type": "string"},
     }
+    
+    COLUMN_REMAP = {}
 
     def get_columns(self) -> List[str]:
         return [
-            "quote_id",
-            "quote_number",
-            "reference",
-            "terms",
-            "contact",
-            "line_items",
-            "date",
-            "date_string",
-            "expiry_date",
-            "expiry_date_string",
-            "status",
-            "currency_rate",
-            "currency_code",
-            "sub_total",
-            "total_tax",
-            "total",
-            "total_discount",
-            "title",
-            "summary",
-            "branding_theme_id",
+            "contact_id",
+            "contact_status",
+            "name",
+            "first_name",
+            "last_name",
+            "company_number",
+            "email_address",
+            "bank_account_details",
+            "tax_number",
+            "accounts_receivable_tax_type",
+            "accounts_payable_tax_type",
+            "addresses",
+            "phones",
             "updated_date_utc",
-            "line_amount_types"
+            "is_supplier",
+            "is_customer",
+            "default_currency"
         ]
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
-        Fetch quotes from Xero API
+        Fetch accounts from Xero API
 
         Args:
             query: SELECT query
@@ -73,11 +72,12 @@ class QuotesTable(XeroTable):
             )
 
         try:
-            # Fetch quotes with optimized parameters
-            quotes = api.get_quotes(xero_tenant_id=self.handler.tenant_id, **api_params)
-            df = self._convert_response_to_dataframe(quotes.quotes or [])
+            # Fetch contacts with optimized parameters
+            contacts = api.get_contacts(xero_tenant_id=self.handler.tenant_id, summary_only=False, **api_params)
+            df = self._convert_response_to_dataframe(contacts.contacts or [])
+            df.rename(columns=self.COLUMN_REMAP, inplace=True)
         except Exception as e:
-            raise Exception(f"Failed to fetch quotes: {str(e)}")
+            raise Exception(f"Failed to fetch contacts: {str(e)}")
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
@@ -85,7 +85,7 @@ class QuotesTable(XeroTable):
 
         # Parse and execute query
         parser = SELECTQueryParser(
-            query, "quotes", columns=self.get_columns()
+            query, "contacts", columns=self.get_columns()
         )
         selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
 

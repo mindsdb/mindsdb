@@ -1,7 +1,12 @@
 from typing import List
 import pandas as pd
 from mindsdb_sql_parser import ast
-from mindsdb.integrations.handlers.xero_handler.xero_tables import XeroTable, extract_comparison_conditions
+from mindsdb.integrations.handlers.xero_handler.xero_tables import (
+    XeroTable, 
+    extract_comparison_conditions,
+    filter_dataframe,
+    sort_dataframe
+)
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser
 from xero_python.accounting import AccountingApi
 
@@ -14,7 +19,7 @@ class BankTransactionsTable(XeroTable):
         "type": {"type": "where", "xero_field": "Type", "value_type": "string"},
         "status": {"type": "where", "xero_field": "Status", "value_type": "string"},
         "date": {"type": "where", "xero_field": "Date", "value_type": "date"},
-        "contact_id": {"type": "where", "xero_field": "Contact.ContactID", "value_type": "string"},
+        "contact_id": {"type": "where", "xero_field": "Contact.ContactID", "value_type": "guid"},
     }
 
     COLUMN_REMAP = {
@@ -145,7 +150,6 @@ class BankTransactionsTable(XeroTable):
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query
@@ -163,7 +167,6 @@ class BankTransactionsTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit

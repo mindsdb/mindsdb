@@ -10,48 +10,28 @@ from mindsdb.integrations.handlers.xero_handler.xero_tables import (
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser
 from xero_python.accounting import AccountingApi
 
-
-class QuotesTable(XeroTable):
-    """Table for Xero Quotes"""
+class ContactGroupsTable(XeroTable):
+    """Table for Xero Contact Groups"""
 
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
-        "quote_number": {"type": "direct", "param": "quote_number"},
-        "status": {"type": "direct", "param": "status"},
-        "date": {"type": "date", "param": "date_from", "param_upper": "date_to"},
-        "expiry_date": {"type": "date", "param": "expiry_date_from", "param_upper": "expiry_date_to"},
-        "contact_id": {"type": "direct", "param": "contact_id"}
+        "contact_group_id": {"type": "where", "xero_field": "ContactGroupID", "value_type": "guid"},
+        "name": {"type": "where", "param": "name", "value_type": "string"},
+        "status": {"type": "where", "param": "status", "value_type": "string"},
     }
+    
+    COLUMN_REMAP = {}
 
     def get_columns(self) -> List[str]:
         return [
-            "quote_id",
-            "quote_number",
-            "reference",
-            "terms",
-            "contact",
-            "line_items",
-            "date",
-            "date_string",
-            "expiry_date",
-            "expiry_date_string",
+            "contact_group_id",
+            "name",
             "status",
-            "currency_rate",
-            "currency_code",
-            "sub_total",
-            "total_tax",
-            "total",
-            "total_discount",
-            "title",
-            "summary",
-            "branding_theme_id",
-            "updated_date_utc",
-            "line_amount_types"
         ]
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
-        Fetch quotes from Xero API
+        Fetch accounts from Xero API
 
         Args:
             query: SELECT query
@@ -73,11 +53,12 @@ class QuotesTable(XeroTable):
             )
 
         try:
-            # Fetch quotes with optimized parameters
-            quotes = api.get_quotes(xero_tenant_id=self.handler.tenant_id, **api_params)
-            df = self._convert_response_to_dataframe(quotes.quotes or [])
+            # Fetch budgets with optimized parameters
+            budgets = api.get_budgets(xero_tenant_id=self.handler.tenant_id, **api_params)
+            df = self._convert_response_to_dataframe(budgets.budgets or [])
+            df.rename(columns=self.COLUMN_REMAP, inplace=True)
         except Exception as e:
-            raise Exception(f"Failed to fetch quotes: {str(e)}")
+            raise Exception(f"Failed to fetch budgets: {str(e)}")
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
@@ -85,7 +66,7 @@ class QuotesTable(XeroTable):
 
         # Parse and execute query
         parser = SELECTQueryParser(
-            query, "quotes", columns=self.get_columns()
+            query, "budgets", columns=self.get_columns()
         )
         selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
 

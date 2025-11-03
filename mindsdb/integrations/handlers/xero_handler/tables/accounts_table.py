@@ -1,7 +1,12 @@
 from typing import List
 import pandas as pd
 from mindsdb_sql_parser import ast
-from mindsdb.integrations.handlers.xero_handler.xero_tables import XeroTable, extract_comparison_conditions
+from mindsdb.integrations.handlers.xero_handler.xero_tables import (
+    XeroTable, 
+    extract_comparison_conditions,
+    filter_dataframe,
+    sort_dataframe
+)
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser
 from xero_python.accounting import AccountingApi
 
@@ -11,6 +16,7 @@ class AccountsTable(XeroTable):
 
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
+        "account_id": {"type": "where", "xero_field": "AccountID", "value_type": "guid"},
         "code": {"type": "where", "xero_field": "Code", "value_type": "string"},
         "name": {"type": "where", "xero_field": "Name", "value_type": "string"},
         "type": {"type": "where", "xero_field": "Type", "value_type": "string"},
@@ -75,7 +81,6 @@ class AccountsTable(XeroTable):
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query
@@ -93,7 +98,6 @@ class AccountsTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit

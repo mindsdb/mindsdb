@@ -136,12 +136,12 @@ class BankTransfersTable(XeroTable):
             )
 
         try:
-            # Fetch bank transactions with optimized parameters
-            bank_transactions = api.get_bank_transactions(xero_tenant_id=self.handler.tenant_id, **api_params)
-            df = self._convert_response_to_dataframe(bank_transactions.bank_transactions or [])
+            # Fetch bank transfers with optimized parameters
+            bank_transfers = api.get_bank_transfers(xero_tenant_id=self.handler.tenant_id, **api_params)
+            df = self._convert_response_to_dataframe(bank_transfers.bank_transfers or [])
             df.rename(columns=self.COLUMN_REMAP, inplace=True)
         except Exception as e:
-            raise Exception(f"Failed to fetch bank transactions: {str(e)}")
+            raise Exception(f"Failed to fetch bank transfers: {str(e)}")
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
@@ -150,7 +150,7 @@ class BankTransfersTable(XeroTable):
 
         # Parse and execute query
         parser = SELECTQueryParser(
-            query, "bank_transactions", columns=self.get_columns()
+            query, "bank_transfers", columns=self.get_columns()
         )
         selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
 

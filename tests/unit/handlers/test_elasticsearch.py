@@ -3,6 +3,7 @@ from collections import OrderedDict
 from unittest.mock import MagicMock, Mock, patch
 
 import pandas as pd
+from elasticsearch.exceptions import ConnectionError as ESConnectionError
 
 from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler import (
@@ -35,13 +36,23 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     @property
     def err_to_raise_on_connect_failure(self):
-        return Exception
+        return ESConnectionError("N/A", "Connection Failed", {})
 
     def create_patcher(self):
         return patch("mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.Elasticsearch")
 
     def create_handler(self):
         return ElasticsearchHandler(name="test_elasticsearch", connection_data=self.dummy_connection_data)
+
+    @property
+    def get_tables_query(self):
+        """Elasticsearch doesn't use SQL for listing tables, returns placeholder"""
+        return "SHOW TABLES"
+
+    @property
+    def get_columns_query(self):
+        """Elasticsearch doesn't use SQL for listing columns, returns placeholder"""
+        return f"DESCRIBE {self.mock_table}"
 
     def test_connect_with_ssl(self):
         """Test connection with SSL/TLS parameters"""
@@ -127,11 +138,15 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def test_get_tables(self):
         """Test get_tables returns list of indices"""
         mock_client = MockElasticsearchClient()
-        mock_client.cat.indices.return_value = [
-            {"index": "products"},
-            {"index": "orders"},
-            {"index": ".kibana"},  # System index should be filtered
-        ]
+        # Mock SQL API response for "SHOW TABLES"
+        mock_client.sql.query.return_value = {
+            "columns": [{"name": "name"}, {"name": "type"}, {"name": "kind"}, {"name": "catalog"}],
+            "rows": [
+                ["products", "BASE TABLE", "TABLE", "elasticsearch_test"],
+                ["orders", "BASE TABLE", "TABLE", "elasticsearch_test"],
+                [".kibana", "BASE TABLE", "TABLE", "elasticsearch_test"],  # System index should be filtered
+            ],
+        }
         self.mock_connect.return_value = mock_client
 
         response = self.handler.get_tables()
@@ -139,8 +154,8 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, pd.DataFrame)
         # Should exclude system indices starting with .
-        self.assertTrue(len(response.data_frame) >= 2)
-        table_names = response.data_frame["TABLE_NAME"].tolist()
+        self.assertEqual(len(response.data_frame), 2)
+        table_names = response.data_frame["table_name"].tolist()
         self.assertIn("products", table_names)
         self.assertIn("orders", table_names)
         self.assertNotIn(".kibana", table_names)
@@ -148,18 +163,16 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def test_get_columns(self):
         """Test get_columns returns field mappings for an index"""
         mock_client = MockElasticsearchClient()
-        mock_client.indices.get_mapping.return_value = {
-            "products": {
-                "mappings": {
-                    "properties": {
-                        "id": {"type": "long"},
-                        "name": {"type": "text"},
-                        "price": {"type": "double"},
-                        "created_at": {"type": "date"},
-                        "tags": {"type": "keyword"},
-                    }
-                }
-            }
+        # Mock SQL API response for "DESCRIBE products"
+        mock_client.sql.query.return_value = {
+            "columns": [{"name": "column"}, {"name": "type"}, {"name": "mapping"}],
+            "rows": [
+                ["id", "BIGINT", None],
+                ["name", "TEXT", None],
+                ["price", "DOUBLE", None],
+                ["created_at", "DATETIME", None],
+                ["tags", "KEYWORD", None],
+            ],
         }
         self.mock_connect.return_value = mock_client
 
@@ -179,15 +192,14 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def test_get_columns_with_nested_fields(self):
         """Test get_columns flattens nested object fields with dot notation"""
         mock_client = MockElasticsearchClient()
-        mock_client.indices.get_mapping.return_value = {
-            "products": {
-                "mappings": {
-                    "properties": {
-                        "id": {"type": "long"},
-                        "metadata": {"properties": {"category": {"type": "keyword"}, "rating": {"type": "float"}}},
-                    }
-                }
-            }
+        # Mock SQL API response for "DESCRIBE products" with nested fields
+        mock_client.sql.query.return_value = {
+            "columns": [{"name": "column"}, {"name": "type"}, {"name": "mapping"}],
+            "rows": [
+                ["id", "BIGINT", None],
+                ["metadata.category", "KEYWORD", None],
+                ["metadata.rating", "FLOAT", None],
+            ],
         }
         self.mock_connect.return_value = mock_client
 

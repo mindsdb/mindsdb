@@ -8,6 +8,14 @@ from elasticsearch.exceptions import (
     TransportError,
     RequestError,
 )
+
+# ApiError is only available in Elasticsearch 8+
+try:
+    from elasticsearch.exceptions import ApiError
+except ImportError:
+    ApiError = Exception  # Fallback for ES 7.x compatibility
+
+# ESDialect: SQLAlchemy dialect for Elasticsearch, enables SQL query rendering
 from es.elastic.sqlalchemy import ESDialect
 from pandas import DataFrame
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -89,19 +97,39 @@ class ElasticsearchHandler(DatabaseHandler):
 
         # Connection parameters
         if "hosts" in self.connection_data:
-            config["hosts"] = self.connection_data["hosts"].split(",")
+            hosts_str = self.connection_data["hosts"]
+            hosts = hosts_str.split(",")
+
+            # Validate host:port format
+            for host in hosts:
+                host = host.strip()
+                if ":" not in host:
+                    raise ValueError(
+                        f"Invalid host format '{host}'. Expected format: 'host:port' (e.g., 'localhost:9200')"
+                    )
+                # Additional validation: check port is numeric
+                try:
+                    host_part, port_part = host.rsplit(":", 1)
+                    int(port_part)  # Validate port is numeric
+                except ValueError:
+                    raise ValueError(f"Invalid port in host '{host}'. Port must be numeric")
+
+            config["hosts"] = hosts
         if "cloud_id" in self.connection_data:
             config["cloud_id"] = self.connection_data["cloud_id"]
+
+        # Authentication - API key takes precedence
         if "api_key" in self.connection_data:
             config["api_key"] = self.connection_data["api_key"]
-
-        # Authentication
-        user = self.connection_data.get("user")
-        password = self.connection_data.get("password")
-        if user and password:
-            config["http_auth"] = (user, password)
-        elif user or password:
-            raise ValueError("Both 'user' and 'password' must be provided together")
+            # Skip user/password if API key is provided
+        else:
+            # Only check user/password if API key is not provided
+            user = self.connection_data.get("user")
+            password = self.connection_data.get("password")
+            if user and password:
+                config["http_auth"] = (user, password)
+            elif user or password:
+                raise ValueError("Both 'user' and 'password' must be provided together")
 
         # SSL/TLS configuration (secure by default)
         config["verify_certs"] = self.connection_data.get("verify_certs", True)
@@ -187,13 +215,15 @@ class ElasticsearchHandler(DatabaseHandler):
             records = response["rows"]
             columns = response["columns"]
 
-            # Handle pagination for large result sets
-            while response.get("cursor"):
-                response = connection.sql.query(body={"query": query, "cursor": response["cursor"]})
-                if response["rows"]:
-                    records.extend(response["rows"])
-                else:
+            # Handle pagination for large result sets with safety limit
+            max_pages = 100  # Prevent infinite pagination
+            for _ in range(max_pages):
+                if not response.get("cursor"):
                     break
+                response = connection.sql.query(body={"query": query, "cursor": response["cursor"]})
+                if not response["rows"]:
+                    break
+                records.extend(response["rows"])
 
             column_names = [col["name"] for col in columns]
             if not records:
@@ -201,7 +231,7 @@ class ElasticsearchHandler(DatabaseHandler):
 
             return Response(RESPONSE_TYPE.TABLE, data_frame=DataFrame(records, columns=column_names))
 
-        except (TransportError, RequestError) as e:
+        except (TransportError, RequestError, ApiError) as e:
             error_msg = str(e).lower()
 
             # Intelligent fallback: Check if error is array-related
@@ -245,10 +275,17 @@ class ElasticsearchHandler(DatabaseHandler):
         if not index_name:
             raise ValueError("Could not determine index name from query")
 
+        # Extract LIMIT from query if present
+        limit = self._extract_limit(query)
+        if limit is None:
+            limit = 10000  # Default maximum documents to fetch to prevent memory issues
+
         # Execute search with pagination
+        scroll_id = None
         try:
+            batch_size = min(1000, limit)  # Use smaller batch size if limit is small
             search_body = {
-                "size": 1000,  # Reasonable batch size
+                "size": batch_size,
                 "query": {"match_all": {}},
             }
 
@@ -257,14 +294,19 @@ class ElasticsearchHandler(DatabaseHandler):
             records = []
             all_columns = set()
             scroll_id = response.get("_scroll_id")
+            processed_count = 0
 
-            # Process results in batches
-            while True:
+            # Process results in batches with explicit limit
+            max_batches = (limit // batch_size) + 1  # Calculate max batches needed
+            for _ in range(max_batches):
                 hits = response.get("hits", {}).get("hits", [])
                 if not hits:
                     break
 
                 for hit in hits:
+                    if processed_count >= limit:
+                        break
+
                     doc = hit.get("_source", {})
                     if doc:
                         converted_doc = self._convert_arrays_to_strings(doc)
@@ -272,23 +314,15 @@ class ElasticsearchHandler(DatabaseHandler):
                         if flattened_doc:
                             records.append(flattened_doc)
                             all_columns.update(flattened_doc.keys())
+                            processed_count += 1
 
-                # Get next batch or break
-                if not scroll_id:
+                # Get next batch if we haven't reached the limit
+                if not scroll_id or processed_count >= limit:
                     break
                 try:
                     response = self.connection.scroll(scroll_id=scroll_id, scroll="5m")
-                    if not response.get("hits", {}).get("hits", []):
-                        break
                 except Exception:
                     break
-
-            # Clean up scroll
-            if scroll_id:
-                try:
-                    self.connection.clear_scroll(scroll_id=scroll_id)
-                except Exception:
-                    pass
 
             # Normalize records
             columns = sorted(all_columns) if all_columns else ["no_data"]
@@ -304,6 +338,13 @@ class ElasticsearchHandler(DatabaseHandler):
 
         except Exception as e:
             raise Exception(f"Search API execution failed: {e}")
+        finally:
+            # Clean up scroll - ensures cleanup even if exceptions occur
+            if scroll_id:
+                try:
+                    self.connection.clear_scroll(scroll_id=scroll_id)
+                except Exception:
+                    pass
 
     def _extract_table_name(self, query: str) -> Optional[str]:
         """
@@ -319,6 +360,26 @@ class ElasticsearchHandler(DatabaseHandler):
 
         match = re.search(r'FROM\s+([`"]?)([^`"\s]+)\1', query, re.IGNORECASE)
         return match.group(2) if match else None
+
+    def _extract_limit(self, query: str) -> Optional[int]:
+        """
+        Extracts the LIMIT value from a SQL query.
+
+        Args:
+            query (str): SQL query string
+
+        Returns:
+            Optional[int]: The extracted limit value, or None if not found
+        """
+        import re
+
+        match = re.search(r"LIMIT\s+(\d+)", query, re.IGNORECASE)
+        if match:
+            try:
+                return int(match.group(1))
+            except ValueError:
+                return None
+        return None
 
     def _detect_array_fields(self, index_name: str) -> List[str]:
         """
@@ -490,10 +551,10 @@ class ElasticsearchHandler(DatabaseHandler):
         Retrieves statistics for columns in the specified Elasticsearch index.
 
         This method uses Elasticsearch aggregations to efficiently gather statistics in a single query:
-        - Numeric fields: min, max, avg, sum, count
+        - Numeric fields: min, max, avg (via stats aggregation)
         - Keyword fields: distinct count (cardinality)
         - Text fields: distinct count (cardinality on .keyword multi-field)
-        - Date fields: min, max (as timestamps)
+        - Date fields: min, max (via stats aggregation, as timestamps)
         - All fields: null count (missing values)
         - Object/nested fields: excluded from aggregations, null count only
         - Nested/array fields: treated as text (cardinality on JSON string representation)
@@ -568,18 +629,33 @@ class ElasticsearchHandler(DatabaseHandler):
                 field_type = field_info.get("type", "object")
                 safe_field_name = field_name.replace(".", "_")
 
+                # Skip object/nested types - they don't support aggregations
+                if field_type in ["object", "nested"]:
+                    continue
+
                 # Determine aggregation field (text fields need .keyword suffix)
                 agg_field = field_name
                 if field_type == "text":
-                    # Text fields typically have a .keyword multi-field for aggregations
-                    agg_field = f"{field_name}.keyword"
+                    # Check if .keyword multi-field exists in mapping
+                    multi_fields = field_info.get("fields", {})
+                    if "keyword" in multi_fields:
+                        # Text field has .keyword multi-field for aggregations
+                        agg_field = f"{field_name}.keyword"
+                    else:
+                        # Text field without .keyword - skip this field
+                        # (fielddata would need to be enabled, which is not recommended for text fields)
+                        logger.debug(f"Text field '{field_name}' has no .keyword multi-field, skipping")
+                        continue
 
-                # Cardinality aggregation for all fields (distinct count)
-                # Skip for object/nested types that don't support aggregations
-                if field_type not in ["object", "nested"]:
-                    aggs[f"{safe_field_name}_cardinality"] = {"cardinality": {"field": agg_field}}
+                # Cardinality aggregation for distinct count
+                aggs[f"{safe_field_name}_cardinality"] = {
+                    "cardinality": {
+                        "field": agg_field,
+                        "precision_threshold": 3000,  # Improves performance on large datasets
+                    }
+                }
 
-                # Missing aggregation for all fields (null count)
+                # Missing aggregation for null count
                 aggs[f"{safe_field_name}_missing"] = {"missing": {"field": field_name}}
 
                 # Stats aggregation for numeric and date fields

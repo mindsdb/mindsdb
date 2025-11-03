@@ -902,10 +902,11 @@ class QuotesTable(XeroTable):
 
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
-        "status": {"type": "direct", "param": "status"},
-        "quote_date": {"type": "date", "param": "date_from", "param_upper": "date_to"},
-        "expiry_date": {"type": "date", "param": "expiry_date_from", "param_upper": "expiry_date_to"},
         "quote_number": {"type": "direct", "param": "quote_number"},
+        "status": {"type": "direct", "param": "status"},
+        "quote_date": {"type": "date", "param": "DateFrom", "param_upper": "DateTo"},
+        "expiry_date": {"type": "date", "param": "ExpiryDateFrom", "param_upper": "ExpiryDateTo"},
+        "contact_id": {"type": "direct", "param": "contactId"}
     }
 
     def get_columns(self) -> List[str]:
@@ -913,14 +914,25 @@ class QuotesTable(XeroTable):
             "quote_id",
             "quote_number",
             "reference",
-            "status",
-            "contact_name",
-            "quote_date",
+            "terms",
+            "contact",
+            "line_items",
+            "date",
+            "date_string"
             "expiry_date",
-            "updated_utc",
+            "expiry_date_string",
+            "status",
+            "currency_rate",
             "currency_code",
+            "sub_total",
+            "total_tax",
             "total",
+            "total_discount",
             "title",
+            "summary",
+            "branding_theme_id",
+            "updated_date_utc",
+            "line_amount_types"
         ]
 
     def select(self, query: ast.Select) -> pd.DataFrame:

@@ -138,6 +138,33 @@ class XeroTable(APITable):
         xero_where_clauses = []
 
         for op, column, value in conditions:
+            # Handle BETWEEN operator by converting to >= and <=
+            if op.lower() == "between":
+                if not isinstance(value, (tuple, list)) or len(value) != 2:
+                    remaining_conditions.append([op, column, value])
+                    continue
+                # Convert BETWEEN to two separate conditions: >= lower_bound AND <= upper_bound
+                lower_bound, upper_bound = value
+                # Recursively process the two conditions
+                lower_conditions, _ = self._parse_conditions_for_api(
+                    [[">=", column, lower_bound]], supported_filters
+                )
+                upper_conditions, _ = self._parse_conditions_for_api(
+                    [["<=", column, upper_bound]], supported_filters
+                )
+                # Merge the conditions into api_params
+                for key, val in lower_conditions.items():
+                    if key == "where":
+                        xero_where_clauses.append(val)
+                    else:
+                        api_params[key] = val
+                for key, val in upper_conditions.items():
+                    if key == "where":
+                        xero_where_clauses.append(val)
+                    else:
+                        api_params[key] = val
+                continue
+
             filter_info = supported_filters.get(column)
 
             if not filter_info:
@@ -904,9 +931,9 @@ class QuotesTable(XeroTable):
     SUPPORTED_FILTERS = {
         "quote_number": {"type": "direct", "param": "quote_number"},
         "status": {"type": "direct", "param": "status"},
-        "quote_date": {"type": "date", "param": "DateFrom", "param_upper": "DateTo"},
-        "expiry_date": {"type": "date", "param": "ExpiryDateFrom", "param_upper": "ExpiryDateTo"},
-        "contact_id": {"type": "direct", "param": "contactId"}
+        "date": {"type": "date", "param": "date_from", "param_upper": "date_to"},
+        "expiry_date": {"type": "date", "param": "expiry_date_from", "param_upper": "expiry_date_to"},
+        "contact_id": {"type": "direct", "param": "contact_id"}
     }
 
     def get_columns(self) -> List[str]:
@@ -918,7 +945,7 @@ class QuotesTable(XeroTable):
             "contact",
             "line_items",
             "date",
-            "date_string"
+            "date_string",
             "expiry_date",
             "expiry_date_string",
             "status",

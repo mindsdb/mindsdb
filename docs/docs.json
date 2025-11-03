@@ -79,6 +79,7 @@
                       "integrations/app-integrations/gmail",
                       "integrations/app-integrations/google-calendar",
                       "integrations/app-integrations/google-analytics",
+                      "integrations/app-integrations/gong",
                       "integrations/app-integrations/hackernews",
                       "integrations/app-integrations/instatus",
                       "integrations/app-integrations/intercom",

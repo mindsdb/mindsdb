@@ -16,7 +16,7 @@ class GroqHandler(OpenAIHandler):
     This handler handles connection to the Groq.
     """
 
-    name = 'groq'
+    name = "groq"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,9 +44,9 @@ class GroqHandler(OpenAIHandler):
         except NotFoundError:
             pass
         except AuthenticationError as e:
-            if e.body['code'] == 401:
-                raise Exception('Invalid api key')
-            raise Exception(f'Something went wrong: {e}')
+            if isinstance(e.body, dict) and e.body.get("code") == "invalid_api_key":
+                raise Exception("Invalid api key")
+            raise Exception(f"Something went wrong: {e}")
 
     def create_engine(self, connection_args):
         """
@@ -62,10 +62,10 @@ class GroqHandler(OpenAIHandler):
             None
         """
         connection_args = {k.lower(): v for k, v in connection_args.items()}
-        api_key = connection_args.get('groq_api_key')
+        api_key = connection_args.get("groq_api_key")
         if api_key is not None:
-            org = connection_args.get('api_organization')
-            api_base = connection_args.get('api_base') or os.environ.get('groq_BASE', groq_handler_config.BASE_URL)
+            org = connection_args.get("api_organization")
+            api_base = connection_args.get("api_base") or os.environ.get("GROQ_BASE", groq_handler_config.BASE_URL)
             client = self._get_client(api_key=api_key, base_url=api_base, org=org)
             GroqHandler._check_client_connection(client)
 
@@ -85,20 +85,29 @@ class GroqHandler(OpenAIHandler):
         Returns:
             None
         """
-        if 'using' not in args:
-            raise Exception(
-                "Groq engine requires a USING clause! Refer to its documentation for more details."
-            )
+        if "using" not in args:
+            raise Exception("Groq engine requires a USING clause! Refer to its documentation for more details.")
         else:
-            args = args['using']
+            args = args["using"]
 
-        engine_storage = kwargs['handler_storage']
+        engine_storage = kwargs["handler_storage"]
         connection_args = engine_storage.get_connection_args()
-        api_key = get_api_key('groq', args, engine_storage=engine_storage)
-        api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('GROQ_BASE', groq_handler_config.BASE_URL)
-        org = args.get('api_organization')
+        api_key = get_api_key("groq", args, engine_storage=engine_storage)
+        api_base = (
+            connection_args.get("api_base")
+            or args.get("api_base")
+            or os.environ.get("GROQ_BASE", groq_handler_config.BASE_URL)
+        )
+        org = args.get("api_organization")
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
         GroqHandler._check_client_connection(client)
+
+    @staticmethod
+    def is_chat_model(model_name):
+        """
+        All Groq models use the chat completions endpoint, hence every model is a chat model
+        """
+        return True
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -111,7 +120,7 @@ class GroqHandler(OpenAIHandler):
         Returns:
             pd.DataFrame: Predicted data
         """
-        api_key = get_api_key('groq', args, self.engine_storage)
+        api_key = get_api_key("groq", args, self.engine_storage)
         supported_models = self._get_supported_models(api_key, self.api_base)
         self.chat_completion_models = [model.id for model in supported_models]
         return super().predict(df, args)

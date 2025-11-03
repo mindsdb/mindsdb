@@ -22,11 +22,12 @@ from .xero_tables import (
     OverpaymentsTable,
     PaymentsTable,
     PurchaseOrdersTable,
-    QuotesTable,
     RepeatingInvoicesTable,
-    AccountsTable,
 )
 
+from .tables.accounts_table import AccountsTable
+from .tables.bank_transactions_table import BankTransactionsTable
+from .tables.quotes_table import QuotesTable
 
 class XeroHandler(APIHandler):
     """
@@ -67,6 +68,7 @@ class XeroHandler(APIHandler):
 
         # Register tables
         self._register_table("accounts", AccountsTable(self))
+        self._register_table("bank_transactions", BankTransactionsTable(self))
         self._register_table("budgets", BudgetsTable(self))
         self._register_table("contacts", ContactsTable(self))
         self._register_table("invoices", InvoicesTable(self))

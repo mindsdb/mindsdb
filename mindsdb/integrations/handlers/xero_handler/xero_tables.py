@@ -1,14 +1,16 @@
 import pandas as pd
 from abc import abstractmethod
-from typing import List, Optional, Dict, Tuple, Any
-import datetime
+from typing import List, Dict, Tuple, Any
 from enum import Enum
+from datetime import datetime
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql_parser import ast
-from mindsdb.integrations.utilities.handlers.query_utilities import (
-    SELECTQueryParser,
+from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser
+from mindsdb.integrations.utilities.sql_utils import (
+    extract_comparison_conditions, 
+    filter_dataframe, 
+    sort_dataframe
 )
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from xero_python.accounting import AccountingApi
 
 
@@ -61,14 +63,22 @@ class XeroTable(APITable):
                 row = item
             else:
                 row = item.__dict__
-
+            
             # Parse objects from the model
+            parsed_row = {}
             for key, value in row.items():
                 if isinstance(value, Enum):
-                    row[key] = value.value
-                    
-
-            rows.append(row)
+                    parsed_row.update({key: value.value})
+                    continue
+                if isinstance(value, dict):
+                    for sub_key, sub_value in value.items():
+                        if isinstance(sub_value, Enum):
+                            sub_value = sub_value.value
+                        parsed_row.update({f"{key}_{sub_key}": sub_value})
+                    continue
+                parsed_row.update({key: value})
+            
+            rows.append(parsed_row)
 
         df = pd.DataFrame(rows)
         return df
@@ -111,8 +121,29 @@ class XeroTable(APITable):
         elif value_type == "number":
             return str(value)
         elif value_type == "date":
-            # Convert to Xero date format
-            return f'DateTime.Parse("{value}")'
+            # Convert to Xero date format: DateTime(year, month, day)
+            # Handle various date formats
+            if isinstance(value, datetime):
+                date_obj = value
+            elif isinstance(value, str):
+                # Try parsing common date formats
+                for fmt in ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d", "%d-%m-%Y", "%d/%m/%Y"]:
+                    try:
+                        date_obj = datetime.strptime(value, fmt)
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    # If no format matches, try ISO format parse
+                    try:
+                        date_obj = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+                    except:
+                        raise ValueError(f"Unable to parse date value: {value}")
+            else:
+                raise ValueError(f"Unsupported date type: {type(value)}")
+
+            # Format as Xero expects: DateTime(year, month, day)
+            return f'DateTime({date_obj.year}, {date_obj.month:02d}, {date_obj.day:02d})'
         elif value_type == "guid":
             return f'Guid("{value}")'
         else:
@@ -232,103 +263,6 @@ class XeroTable(APITable):
         pass
 
 
-class AccountsTable(XeroTable):
-    """Table for Xero Chart of Accounts"""
-
-    # Define which columns can be pushed to the Xero API
-    SUPPORTED_FILTERS = {
-        "code": {"type": "where", "xero_field": "Code", "value_type": "string"},
-        "name": {"type": "where", "xero_field": "Name", "value_type": "string"},
-        "type": {"type": "where", "xero_field": "Type", "value_type": "string"},
-        "status": {"type": "where", "xero_field": "Status", "value_type": "string"},
-        "currency_code": {"type": "where", "xero_field": "CurrencyCode", "value_type": "string"},
-        "account_class": {"type": "where", "xero_field": "Class", "value_type": "string"},
-        "system_account": {"type": "where", "xero_field": "SystemAccount", "value_type": "string"},
-        "tax_type": {"type": "where", "xero_field": "TaxType", "value_type": "string"},
-    }
-
-    def get_columns(self) -> List[str]:
-        return [
-            "account_id",
-            "code",
-            "name",
-            "type",
-            "account_class",
-            "tax_type",
-            "description",
-            "currency_code",
-            "bank_account_number",
-            "bank_account_type",
-            "enable_payments_to_account",
-            "show_in_expense_claims",
-            "system_account",
-            "reporting_code",
-            "reporting_code_name",
-            "status",
-            "updated_utc",
-            "has_attachments",
-        ]
-
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-        Fetch accounts from Xero API
-
-        Args:
-            query: SELECT query
-
-        Returns:
-            pd.DataFrame: Query results
-        """
-        self.handler.connect()
-        api = AccountingApi(self.handler.api_client)
-
-        # Extract and parse WHERE conditions
-        api_params = {}
-        remaining_conditions = []
-
-        if query.where:
-            conditions = extract_comparison_conditions(query.where)
-            api_params, remaining_conditions = self._parse_conditions_for_api(
-                conditions, self.SUPPORTED_FILTERS
-            )
-
-        try:
-            # Fetch accounts with optimized parameters
-            accounts = api.get_accounts(xero_tenant_id=self.handler.tenant_id, **api_params)
-            df = self._convert_response_to_dataframe(accounts.accounts or [])
-        except Exception as e:
-            raise Exception(f"Failed to fetch accounts: {str(e)}")
-
-        # Apply remaining filters in memory
-        if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
-            df = filter_dataframe(df, remaining_conditions)
-
-        # Parse and execute query
-        parser = SELECTQueryParser(
-            query, "accounts", columns=self.get_columns()
-        )
-        selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
-
-        # Apply column selection
-        if len(df) == 0:
-            df = pd.DataFrame([], columns=selected_columns)
-        else:
-            available_columns = [col for col in selected_columns if col in df.columns]
-            df = df[available_columns]
-
-        # Apply ordering
-        if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
-            df = sort_dataframe(df, order_by_conditions)
-
-        # Apply limit
-        if result_limit:
-            df = df.head(result_limit)
-
-        return df
-
-
 class BudgetsTable(XeroTable):
     """Table for Xero Budgets"""
 
@@ -383,7 +317,6 @@ class BudgetsTable(XeroTable):
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query
@@ -401,7 +334,6 @@ class BudgetsTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit
@@ -469,7 +401,6 @@ class ContactsTable(XeroTable):
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query
@@ -487,7 +418,6 @@ class ContactsTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit
@@ -567,7 +497,6 @@ class InvoicesTable(XeroTable):
 
         # Apply remaining filters in memory that couldn't be pushed to API
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query for column selection, ordering, and limiting
@@ -586,7 +515,6 @@ class InvoicesTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit if not already done via pagination
@@ -649,7 +577,6 @@ class ItemsTable(XeroTable):
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query
@@ -667,7 +594,6 @@ class ItemsTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit
@@ -730,7 +656,6 @@ class OverpaymentsTable(XeroTable):
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query
@@ -748,7 +673,6 @@ class OverpaymentsTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit
@@ -812,7 +736,6 @@ class PaymentsTable(XeroTable):
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query
@@ -830,7 +753,6 @@ class PaymentsTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit
@@ -896,7 +818,6 @@ class PurchaseOrdersTable(XeroTable):
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query
@@ -914,105 +835,6 @@ class PurchaseOrdersTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
-            df = sort_dataframe(df, order_by_conditions)
-
-        # Apply limit
-        if result_limit:
-            df = df.head(result_limit)
-
-        return df
-
-
-class QuotesTable(XeroTable):
-    """Table for Xero Quotes"""
-
-    # Define which columns can be pushed to the Xero API
-    SUPPORTED_FILTERS = {
-        "quote_number": {"type": "direct", "param": "quote_number"},
-        "status": {"type": "direct", "param": "status"},
-        "date": {"type": "date", "param": "date_from", "param_upper": "date_to"},
-        "expiry_date": {"type": "date", "param": "expiry_date_from", "param_upper": "expiry_date_to"},
-        "contact_id": {"type": "direct", "param": "contact_id"}
-    }
-
-    def get_columns(self) -> List[str]:
-        return [
-            "quote_id",
-            "quote_number",
-            "reference",
-            "terms",
-            "contact",
-            "line_items",
-            "date",
-            "date_string",
-            "expiry_date",
-            "expiry_date_string",
-            "status",
-            "currency_rate",
-            "currency_code",
-            "sub_total",
-            "total_tax",
-            "total",
-            "total_discount",
-            "title",
-            "summary",
-            "branding_theme_id",
-            "updated_date_utc",
-            "line_amount_types"
-        ]
-
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-        Fetch quotes from Xero API
-
-        Args:
-            query: SELECT query
-
-        Returns:
-            pd.DataFrame: Query results
-        """
-        self.handler.connect()
-        api = AccountingApi(self.handler.api_client)
-
-        # Extract and parse WHERE conditions
-        api_params = {}
-        remaining_conditions = []
-
-        if query.where:
-            conditions = extract_comparison_conditions(query.where)
-            api_params, remaining_conditions = self._parse_conditions_for_api(
-                conditions, self.SUPPORTED_FILTERS
-            )
-
-        try:
-            # Fetch quotes with optimized parameters
-            quotes = api.get_quotes(xero_tenant_id=self.handler.tenant_id, **api_params)
-            df = self._convert_response_to_dataframe(quotes.quotes or [])
-        except Exception as e:
-            raise Exception(f"Failed to fetch quotes: {str(e)}")
-
-        # Apply remaining filters in memory
-        if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
-            df = filter_dataframe(df, remaining_conditions)
-
-        # Parse and execute query
-        parser = SELECTQueryParser(
-            query, "quotes", columns=self.get_columns()
-        )
-        selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
-
-        # Apply column selection
-        if len(df) == 0:
-            df = pd.DataFrame([], columns=selected_columns)
-        else:
-            available_columns = [col for col in selected_columns if col in df.columns]
-            df = df[available_columns]
-
-        # Apply ordering
-        if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit
@@ -1075,7 +897,6 @@ class RepeatingInvoicesTable(XeroTable):
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
-            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
             df = filter_dataframe(df, remaining_conditions)
 
         # Parse and execute query
@@ -1093,7 +914,6 @@ class RepeatingInvoicesTable(XeroTable):
 
         # Apply ordering
         if order_by_conditions:
-            from mindsdb.integrations.utilities.sql_utils import sort_dataframe
             df = sort_dataframe(df, order_by_conditions)
 
         # Apply limit

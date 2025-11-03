@@ -66,6 +66,7 @@ class XeroHandler(APIHandler):
         self.code = self.connection_data.get("code")
 
         # Register tables
+        self._register_table("accounts", AccountsTable(self))
         self._register_table("budgets", BudgetsTable(self))
         self._register_table("contacts", ContactsTable(self))
         self._register_table("invoices", InvoicesTable(self))
@@ -75,7 +76,6 @@ class XeroHandler(APIHandler):
         self._register_table("purchase_orders", PurchaseOrdersTable(self))
         self._register_table("quotes", QuotesTable(self))
         self._register_table("repeating_invoices", RepeatingInvoicesTable(self))
-        self._register_table("accounts", AccountsTable(self))
 
     def _use_token_injection_path(self) -> bool:
         """

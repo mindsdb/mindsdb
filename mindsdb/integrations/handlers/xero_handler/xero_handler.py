@@ -1,7 +1,8 @@
 import requests
 import base64
+import threading
 from typing import Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -36,6 +37,9 @@ class XeroHandler(APIHandler):
     """
 
     name = 'xero'
+
+    # Class-level lock to prevent concurrent token refresh attempts (race condition protection)
+    _refresh_lock = threading.Lock()
 
     def __init__(self, name: str, **kwargs):
         """
@@ -124,53 +128,95 @@ class XeroHandler(APIHandler):
         Handle authentication via token injection from backend systems.
 
         Supports:
-        - Direct token use if not expired
+        - Loading stored tokens from previous refresh operations (most important for rotating refresh tokens!)
+        - Falling back to connection_data tokens if no stored tokens available
         - Automatic refresh if refresh_token and client credentials provided
+        - Race condition protection: only one thread refreshes tokens at a time
         - Grace period of 5 minutes before token expiry
         - Token refresh skipped if client credentials not available (use access_token as-is)
+
+        **Rotating Refresh Token Pattern:**
+        Xero invalidates refresh tokens after each use and returns a new one. This method:
+        1. Tries to load previously stored tokens (which contain the latest refresh token)
+        2. Falls back to connection_data tokens only for initial setup
+        3. Uses a lock to prevent concurrent refresh attempts (critical for rotating tokens)
 
         Returns:
             dict: Token data with access_token, refresh_token, expires_at, tenant_id
         """
-        # Load provided tokens from connection data
-        access_token = self.connection_data.get("access_token")
-        refresh_token = self.connection_data.get("refresh_token")
-        expires_at = self.connection_data.get("expires_at")
+        # Step 1: Try to load previously stored tokens first
+        # This is CRITICAL for rotating refresh tokens - stored tokens have the latest refresh token
+        stored_token_data = self._load_stored_tokens()
 
-        if not access_token and not refresh_token:
-            raise ValueError("At least access_token or refresh_token must be provided for token injection")
+        if stored_token_data:
+            token_data = stored_token_data
+        else:
+            # No stored tokens - use provided tokens from connection data
+            access_token = self.connection_data.get("access_token")
+            refresh_token = self.connection_data.get("refresh_token")
+            expires_at = self.connection_data.get("expires_at")
 
-        # Build token data
-        token_data = {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "expires_at": expires_at,
-            "tenant_id": self.connection_data.get("tenant_id"),
-        }
+            if not access_token and not refresh_token:
+                raise ValueError("At least access_token or refresh_token must be provided for token injection")
 
-        # Check if token needs refresh
-        if self._is_token_expired(token_data) and refresh_token:
-            # Only refresh if we have client credentials
+            # Build initial token data
+            token_data = {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "expires_at": expires_at,
+                "tenant_id": self.connection_data.get("tenant_id"),
+            }
+
+            # Store initial tokens so next connection uses them (important for rotating refresh tokens)
+            self._store_tokens(token_data)
+
+        # Step 2: Check if token needs refresh with race condition protection
+        if self._is_token_expired(token_data) and token_data.get("refresh_token"):
             if self.client_id and self.client_secret:
-                token_data = self._refresh_tokens(refresh_token)
-                self._store_tokens(token_data)
+                # Acquire lock to prevent concurrent token refresh attempts
+                with self._refresh_lock:
+                    # Double-check pattern: re-check stored tokens after acquiring lock
+                    # Another thread may have already refreshed the token
+                    stored_token_data = self._load_stored_tokens()
+                    if stored_token_data and not self._is_token_expired(stored_token_data):
+                        # Token was refreshed by another thread while we waited for the lock
+                        token_data = stored_token_data
+                    else:
+                        # Proceed with refresh
+                        token_data = self._refresh_tokens(token_data["refresh_token"])
+                        self._store_tokens(token_data)
+
+                        # Update connection_data for current session to use new tokens
+                        self.connection_data["access_token"] = token_data["access_token"]
+                        if "refresh_token" in token_data:
+                            self.connection_data["refresh_token"] = token_data["refresh_token"]
+                        if "expires_at" in token_data:
+                            self.connection_data["expires_at"] = token_data["expires_at"]
             else:
                 # No credentials available for refresh - warn but continue with expired token
                 # The API call will fail if token is truly invalid
                 pass
-        elif not access_token and refresh_token:
+        elif not token_data.get("access_token") and token_data.get("refresh_token"):
             # No access token but have refresh token - try to get new one
             if self.client_id and self.client_secret:
-                token_data = self._refresh_tokens(refresh_token)
-                self._store_tokens(token_data)
+                with self._refresh_lock:
+                    # Double-check after acquiring lock
+                    stored_token_data = self._load_stored_tokens()
+                    if stored_token_data and stored_token_data.get("access_token"):
+                        token_data = stored_token_data
+                    else:
+                        token_data = self._refresh_tokens(token_data["refresh_token"])
+                        self._store_tokens(token_data)
+
+                        # Update connection_data for current session
+                        self.connection_data["access_token"] = token_data["access_token"]
+                        if "refresh_token" in token_data:
+                            self.connection_data["refresh_token"] = token_data["refresh_token"]
             else:
                 raise ValueError(
                     "Cannot refresh token: access_token is missing and client credentials (client_id/client_secret) "
                     "are not provided. Please provide either a valid access_token or both client credentials."
                 )
-        elif access_token:
-            # Use provided access token
-            self._store_tokens(token_data)
 
         return token_data
 
@@ -228,6 +274,9 @@ class XeroHandler(APIHandler):
 
             if len(connections) > 0:
                 response.success = True
+                # IMPORTANT: Set copy_storage to persist refreshed tokens between requests
+                # This ensures that tokens refreshed during this connection are saved for future connections
+                response.copy_storage = "success"
             else:
                 response.error_message = "No Xero connections found for this user"
         except AuthException as e:
@@ -331,7 +380,7 @@ class XeroHandler(APIHandler):
         return {
             "access_token": token_response["access_token"],
             "refresh_token": token_response["refresh_token"],
-            "expires_at": datetime.now() + timedelta(seconds=token_response["expires_in"]),
+            "expires_at": datetime.now(timezone.utc) + timedelta(seconds=token_response["expires_in"]),
             "tenant_id": tenant_id,
         }
 
@@ -343,14 +392,21 @@ class XeroHandler(APIHandler):
         - Basic Authentication header with base64(client_id:client_secret)
         - POST request body with grant_type and refresh_token
 
+        **CRITICAL: Xero Rotating Refresh Tokens**
+        - Xero invalidates the refresh token after each use
+        - The response ALWAYS includes a new refresh_token
+        - We MUST extract and use this new token, not fall back to the old one
+        - Using the old token will fail with "Invalid refresh token" on next refresh
+
         Args:
             refresh_token: OAuth2 refresh token
 
         Returns:
-            dict: Updated token data with access_token, refresh_token, expires_at, tenant_id
+            dict: Updated token data with access_token, NEW refresh_token, expires_at, tenant_id
 
         Raises:
-            Exception: If token refresh fails or credentials are missing
+            ValueError: If credentials are missing
+            Exception: If token refresh fails or response doesn't contain new refresh token
         """
         token_url = "https://identity.xero.com/connect/token"
 
@@ -381,6 +437,14 @@ class XeroHandler(APIHandler):
 
         token_response = response.json()
 
+        # CRITICAL: Xero ALWAYS returns a new refresh_token in the response
+        # If it's missing, something went wrong
+        if "refresh_token" not in token_response:
+            raise Exception(
+                f"Xero token refresh response did not include a new refresh_token. "
+                f"This indicates a critical issue with token rotation. Response keys: {list(token_response.keys())}"
+            )
+
         # Preserve tenant_id from connection data or stored tokens
         tenant_id = (
             self.connection_data.get("tenant_id")
@@ -389,8 +453,8 @@ class XeroHandler(APIHandler):
 
         return {
             "access_token": token_response["access_token"],
-            "refresh_token": token_response.get("refresh_token", refresh_token),
-            "expires_at": datetime.now() + timedelta(seconds=token_response["expires_in"]),
+            "refresh_token": token_response["refresh_token"],  # Use NEW refresh token, never fallback to old one
+            "expires_at": datetime.now(timezone.utc) + timedelta(seconds=token_response["expires_in"]),
             "tenant_id": tenant_id,
         }
 
@@ -451,7 +515,7 @@ class XeroHandler(APIHandler):
             return True
 
         # Consider token expired if it expires within 5 minutes (grace period)
-        buffer_time = datetime.now() + timedelta(minutes=5)
+        buffer_time = datetime.now(timezone.utc) + timedelta(minutes=5)
         return buffer_time > expires_at
 
     def _store_tokens(self, token_data: Dict[str, Any]) -> None:

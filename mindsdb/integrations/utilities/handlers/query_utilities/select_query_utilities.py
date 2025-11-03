@@ -69,7 +69,7 @@ class SELECTQueryParser(BaseQueryParser):
         if self.query.limit:
             result_limit = self.query.limit.value
         else:
-            result_limit = 20
+            result_limit = 1000
 
         return result_limit
 

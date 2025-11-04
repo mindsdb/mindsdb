@@ -3,20 +3,6 @@ import platform
 
 import pandas as pd
 
-try:
-    import pyodbc
-
-    HAS_PYODBC = True
-except ImportError:
-
-    class MockPyodbc:
-        @staticmethod
-        def connect(*args, **kwargs):
-            raise ImportError("pyodbc is not available on this platform")
-
-    pyodbc = MockPyodbc()
-    HAS_PYODBC = False
-
 from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -78,17 +64,19 @@ class AccessHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        if not HAS_PYODBC:
-            raise Exception(
-                "pyodbc library is not available. "
-                "Microsoft Access handler requires pyodbc which needs platform-specific ODBC drivers."
-            )
-
         if platform.system() != "Windows":
             raise Exception(
                 "Microsoft Access handler is only supported on Windows platforms. "
                 "Access databases (.mdb, .accdb) and required ODBC drivers are Windows-only."
             )
+
+        try:
+            import pyodbc
+        except ImportError as e:
+            raise ImportError(
+                "pyodbc is not installed. Install it with 'pip install pyodbc' to use Access connections. "
+                "Microsoft Access handler requires pyodbc which needs platform-specific ODBC drivers."
+            ) from e
 
         self.connection = pyodbc.connect(
             r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=" + self.connection_data["db_file"]

@@ -1,15 +1,9 @@
-import sys
 import unittest
 from unittest.mock import MagicMock, patch
 import pandas as pd
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
 
 from mindsdb.integrations.handlers.access_handler.access_handler import AccessHandler
-
-# Mock pyodbc and sqlalchemy_access before importing AccessHandler to avoid import errors
-sys.modules["pyodbc"] = MagicMock()
-sys.modules["sqlalchemy_access"] = MagicMock()
-sys.modules["sqlalchemy_access.base"] = MagicMock()
 
 
 class BaseAccessHandlerTest(unittest.TestCase):
@@ -22,12 +16,22 @@ class BaseAccessHandlerTest(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.connection_data = {"db_file": self.TEST_DB_PATH}
+        # Mock pyodbc module for import
+        self.pyodbc_patcher = patch.dict("sys.modules", {"pyodbc": MagicMock()})
+        # Mock platform to return Windows by default for all tests
+        self.platform_patcher = patch(
+            "mindsdb.integrations.handlers.access_handler.access_handler.platform.system", return_value="Windows"
+        )
+        self.pyodbc_patcher.start()
+        self.platform_patcher.start()
         self.handler = AccessHandler(self.TEST_HANDLER_NAME, self.connection_data)
 
     def tearDown(self):
         """Clean up after tests."""
         if hasattr(self.handler, "is_connected") and self.handler.is_connected:
             self.handler.disconnect()
+        self.platform_patcher.stop()
+        self.pyodbc_patcher.stop()
 
     @staticmethod
     def create_mock_connection_with_cursor():
@@ -75,11 +79,9 @@ class BaseAccessHandlerTest(unittest.TestCase):
 class TestAccessHandlerConnection(BaseAccessHandlerTest):
     """Test suite for Access Handler connection management."""
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_connect_success(self, mock_connect, mock_platform):
+    @patch("pyodbc.connect")
+    def test_connect_success(self, mock_connect):
         """Test successful connection to Access database."""
-        mock_platform.return_value = "Windows"
         mock_connection, _ = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -92,7 +94,7 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertTrue(self.handler.is_connected)
         self.assertEqual(result, mock_connection)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_connect_when_already_connected(self, mock_connect):
         """Test that connect returns existing connection when already connected."""
         mock_connection, _ = self.create_mock_connection_with_cursor()
@@ -104,11 +106,9 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         mock_connect.assert_not_called()
         self.assertEqual(result, mock_connection)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_connect_failure(self, mock_connect, mock_platform):
+    @patch("pyodbc.connect")
+    def test_connect_failure(self, mock_connect):
         """Test connection failure handling."""
-        mock_platform.return_value = "Windows"
         error_msg = "Driver not found"
         mock_connect.side_effect = Exception(error_msg)
 
@@ -118,16 +118,18 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertIn(error_msg, str(context.exception))
         self.assertFalse(self.handler.is_connected)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
-    def test_connect_non_windows_platform(self, mock_platform):
+    def test_connect_non_windows_platform(self):
         """Test connection failure on non-Windows platforms."""
-        mock_platform.return_value = "Linux"
+        # Temporarily override the platform mock to return Linux
+        self.platform_patcher.stop()
+        with patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system", return_value="Linux"):
+            with self.assertRaises(Exception) as context:
+                self.handler.connect()
 
-        with self.assertRaises(Exception) as context:
-            self.handler.connect()
-
-        self.assertIn("Microsoft Access handler is only supported on Windows platforms", str(context.exception))
-        self.assertFalse(self.handler.is_connected)
+            self.assertIn("Microsoft Access handler is only supported on Windows platforms", str(context.exception))
+            self.assertFalse(self.handler.is_connected)
+        # Restart the platform patcher for other tests
+        self.platform_patcher.start()
 
     def test_disconnect_when_connected(self):
         """Test disconnect when connection exists."""
@@ -149,11 +151,9 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
 
         self.assertIsNone(result)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_check_connection_success(self, mock_connect, mock_platform):
+    @patch("pyodbc.connect")
+    def test_check_connection_success(self, mock_connect):
         """Test successful connection check."""
-        mock_platform.return_value = "Windows"
         mock_connection, _ = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -163,11 +163,9 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertTrue(result.success)
         self.assertFalse(self.handler.is_connected)  # Should disconnect after check
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_check_connection_failure(self, mock_connect, mock_platform):
+    @patch("pyodbc.connect")
+    def test_check_connection_failure(self, mock_connect):
         """Test connection check failure."""
-        mock_platform.return_value = "Windows"
         error_message = "Cannot open database"
         mock_connect.side_effect = Exception(error_message)
 
@@ -177,27 +175,29 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertFalse(result.success)
         self.assertIn(error_message, result.error_message)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
-    def test_check_connection_non_windows_platform(self, mock_platform):
+    def test_check_connection_non_windows_platform(self):
         """Test check_connection failure on non-Windows platforms."""
-        mock_platform.return_value = "Darwin"  # macOS
+        # Temporarily override the platform mock to return Darwin (macOS)
+        self.platform_patcher.stop()
+        with patch(
+            "mindsdb.integrations.handlers.access_handler.access_handler.platform.system", return_value="Darwin"
+        ):
+            result = self.handler.check_connection()
 
-        result = self.handler.check_connection()
-
-        self.assertIsInstance(result, StatusResponse)
-        self.assertFalse(result.success)
-        self.assertIn("Microsoft Access handler is only supported on Windows platforms", result.error_message)
-        self.assertFalse(self.handler.is_connected)
+            self.assertIsInstance(result, StatusResponse)
+            self.assertFalse(result.success)
+            self.assertIn("Microsoft Access handler is only supported on Windows platforms", result.error_message)
+            self.assertFalse(self.handler.is_connected)
+        # Restart the platform patcher for other tests
+        self.platform_patcher.start()
 
 
 class TestAccessHandlerQueries(BaseAccessHandlerTest):
     """Test suite for Access Handler query execution."""
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system")
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
-    def test_native_query_select_success(self, mock_connect, mock_platform):
+    @patch("pyodbc.connect")
+    def test_native_query_select_success(self, mock_connect):
         """Test successful SELECT query execution."""
-        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -215,7 +215,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         self.assertEqual(list(result.data_frame.columns), columns)
         mock_cursor.execute.assert_called_once_with(query)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_native_query_insert_success(self, mock_connect):
         """Test successful INSERT query execution."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -229,7 +229,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         mock_cursor.execute.assert_called_once_with(query)
         mock_connection.commit.assert_called_once()
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_native_query_update_success(self, mock_connect):
         """Test successful UPDATE query execution."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -243,7 +243,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         mock_cursor.execute.assert_called_once_with(query)
         mock_connection.commit.assert_called_once()
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_native_query_delete_success(self, mock_connect):
         """Test successful DELETE query execution."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -257,7 +257,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         mock_cursor.execute.assert_called_once_with(query)
         mock_connection.commit.assert_called_once()
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_native_query_empty_result(self, mock_connect):
         """Test query with empty result set."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -269,7 +269,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 
         self.assertEqual(result.type, RESPONSE_TYPE.OK)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_native_query_failure(self, mock_connect):
         """Test query execution failure."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -284,7 +284,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
         self.assertIn(error_message, result.error_message)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_native_query_disconnects_when_needed(self, mock_connect):
         """Test that native_query disconnects when it opened the connection."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -296,8 +296,9 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 
         self.assertFalse(self.handler.is_connected)
 
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.HAS_ACCESS_DIALECT", True)
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.SqlalchemyRender")
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_query_with_ast(self, mock_connect, mock_render):
         """Test query method with AST input."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -330,7 +331,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         self.assertIn("AccessDialect is not available", result.error_message)
         self.assertIn("Windows", result.error_message)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_native_query_with_special_characters(self, mock_connect):
         """Test query with special characters."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -343,7 +344,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
         mock_cursor.execute.assert_called_once_with(query)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_multiple_sequential_queries(self, mock_connect):
         """Test multiple sequential queries."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -360,7 +361,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 class TestAccessHandlerMetadata(BaseAccessHandlerTest):
     """Test suite for Access Handler metadata operations."""
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_get_tables_success(self, mock_connect):
         """Test successful retrieval of table list."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -378,7 +379,7 @@ class TestAccessHandlerMetadata(BaseAccessHandlerTest):
             self.assertIn(name, result.data_frame["table_name"].values)
         mock_cursor.tables.assert_called_once_with(tableType="Table")
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_get_tables_empty(self, mock_connect):
         """Test get_tables with no tables."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -391,7 +392,7 @@ class TestAccessHandlerMetadata(BaseAccessHandlerTest):
         self.assertIsInstance(result.data_frame, pd.DataFrame)
         self.assertEqual(len(result.data_frame), 0)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_get_columns_success(self, mock_connect):
         """Test successful retrieval of column list."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
@@ -410,7 +411,7 @@ class TestAccessHandlerMetadata(BaseAccessHandlerTest):
             self.assertIn(col_name, result.data_frame["column_name"].values)
         mock_cursor.columns.assert_called_once_with(table="customers")
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.pyodbc.connect")
+    @patch("pyodbc.connect")
     def test_get_columns_empty(self, mock_connect):
         """Test get_columns with no columns."""
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()

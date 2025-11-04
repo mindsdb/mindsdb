@@ -56,38 +56,71 @@ def create_datasource_sql_via_connector(helper_instance, db_name, engine, parame
             time.sleep(poll_interval)
 
 
-def wait_for_trigger_execution(query_fn, db_name, target_table_name, test_id, timeout=120, max_interval=10):
+def wait_for_trigger_creation(query_fn, trigger_name, timeout=20, max_interval=5):
     """
-    Polls the target table until the trigger has propagated the update.
-
-    Args:
-        query_fn: Function to execute SQL queries (e.g., self.query)
-        db_name: Database where the target table resides
-        target_table_name: Name of the table to poll
-        test_id: ID to look for
-        timeout: Maximum time to wait in seconds
-        max_interval: Maximum interval between polls
-    Returns:
-        result: List of dicts from query_fn
-    Raises:
-        TimeoutError: if the trigger does not fire within timeout
+    Polls information_schema to see if a trigger is visible.
+    Does not raise an error, returns True (found) or False (not found).
     """
     start = time.time()
     interval = 1
-    result = []
-
+    print(f"\n[DEBUG] Checking for trigger '{trigger_name}' in information_schema (timeout={timeout}s)...")
     while time.time() - start < timeout:
-        result = query_fn(f"SELECT id, message FROM {db_name}.{target_table_name} WHERE id = {test_id};")
-        if result:
-            elapsed = time.time() - start
-            print(f"[DEBUG] Trigger fired after {elapsed:.2f}s → {result}")
-            return result
+        # Try information_schema first
+        try:
+            result = query_fn(f"SELECT 1 FROM information_schema.triggers WHERE trigger_name = '{trigger_name}';")
+            if result:
+                print(f"[DEBUG] Trigger '{trigger_name}' found in information_schema after {time.time() - start:.2f}s.")
+                return True
+        except Exception:
+            pass
 
-        print(f"[DEBUG] Waiting for trigger (elapsed={time.time() - start:.1f}s, interval={interval:.2f}s)")
+        # Try SHOW TRIGGERS as a fallback
+        try:
+            result = query_fn("SHOW TRIGGERS;")
+            if result and trigger_name in [row.get("Trigger", row.get("TRIGGER")) for row in result]:
+                print(f"[DEBUG] Trigger '{trigger_name}' found in SHOW TRIGGERS after {time.time() - start:.2f}s.")
+                return True
+        except Exception:
+            pass  # Suppress errors
+
         time.sleep(interval)
         interval = min(interval * 1.5, max_interval)
 
-    raise TimeoutError(f"Trigger did not fire for id {test_id} within {timeout}s.")
+    print(
+        f"[DEBUG] WARNING: Trigger '{trigger_name}' was not found in metadata after {timeout}s. Proceeding with functional test..."
+    )
+    return False
+
+
+def wait_for_trigger_to_fire(
+    query_fn, db_name, source_table_name, target_table_name, test_id, updated_message, timeout=120, max_interval=10
+):
+    """
+    Polls for a trigger to fire by repeatedly sending the UPDATE command
+    and checking the target table. This is robust against trigger creation lag.
+    """
+    start = time.time()
+    interval = 1
+
+    while time.time() - start < timeout:
+        # 1. Send the UPDATE command
+        print(f"[DEBUG] Firing trigger (elapsed={time.time() - start:.1f}s, interval={interval:.2f}s)...")
+        query_fn(f"UPDATE {db_name}.{source_table_name} SET message = '{updated_message}' WHERE id = {test_id};")
+
+        # 2. Give it a moment to propagate
+        time.sleep(interval)
+
+        # 3. Check the target table
+        result = query_fn(f"SELECT id, message FROM {db_name}.{target_table_name} WHERE id = {test_id};")
+        if result:
+            elapsed = time.time() - start
+            print(f"[DEBUG] Trigger fired and verified after {elapsed:.2f}s → {result}")
+            return result
+
+        print("[DEBUG] Trigger not fired yet. Retrying...")
+        interval = min(interval * 1.5, max_interval)
+
+    raise TimeoutError(f"Trigger did not fire for id {test_id} within {timeout}s despite repeated attempts.")
 
 
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
@@ -231,6 +264,36 @@ class TestMySQLKnowledgeBases(BaseStuff):
     def use_binary(self, request):
         self.use_binary = request.param
 
+    @pytest.fixture
+    def basic_kb(self):
+        """
+        Fixture to create a basic Knowledge Base for alteration tests.
+        Requires OPENAI_API_KEY.
+        """
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        if not openai_api_key:
+            pytest.skip("OPENAI_API_KEY environment variable not set. Skipping KB tests.")
+
+        kb_name = f"test_alter_kb_{uuid.uuid4().hex[:8]}"
+        embedding_model = "text-embedding-3-small"
+
+        create_kb_query = f"""
+            CREATE KNOWLEDGE_BASE {kb_name}
+            USING embedding_model = {{"provider": "openai", "model_name": "{embedding_model}", "api_key": "{openai_api_key}"}};
+        """
+        try:
+            self.query(create_kb_query)
+            # Verify creation
+            result = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
+            assert result and result[0]["NAME"] == kb_name
+
+            # Yield the name for the test to use
+            yield kb_name
+
+        finally:
+            # Cleanup
+            self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
+
     def test_knowledge_base_full_lifecycle(self, use_binary):
         openai_api_key = os.environ.get("OPENAI_API_KEY")
         if not openai_api_key:
@@ -304,6 +367,92 @@ class TestMySQLKnowledgeBases(BaseStuff):
         finally:
             self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
 
+    #     @pytest.mark.usefixtures("basic_kb")
+    def test_alter_kb_embedding_api_key(self, basic_kb, use_binary):
+        """Tests altering the api_key of the embedding_model."""
+        kb_name = basic_kb
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        if not openai_api_key:
+            pytest.skip("OPENAI_API_KEY needed for this alter test.")
+
+        new_api_key = openai_api_key  # Use the same valid key
+
+        alter_query = f"""
+            ALTER KNOWLEDGE_BASE {kb_name}
+            USING
+                embedding_model = {{ 'api_key': '{new_api_key}' }};
+        """
+        self.query(alter_query)
+
+        result = self.query(f"SELECT embedding_model FROM information_schema.knowledge_bases WHERE name = '{kb_name}';")
+        assert result
+        embedding_model_json = result[0].get("embedding_model")
+        assert embedding_model_json is not None
+
+        assert '"provider": "openai"' in embedding_model_json
+        assert '"model_name": "text-embedding-3-small"' in embedding_model_json
+        assert '"api_key": "' in embedding_model_json  # Check the key exists
+
+    @pytest.mark.xfail(
+        reason="Bug: ALTER KNOWLEDGE_BASE does not unset reranking_model. See LINEAR-TICKET-NUMBER: FQE-1716"
+    )
+    @pytest.mark.usefixtures("basic_kb")
+    def test_alter_kb_reranking_model(self, basic_kb, use_binary):
+        """Tests adding and then disabling the reranking_model."""
+        kb_name = basic_kb
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        if not openai_api_key:
+            pytest.skip("OPENAI_API_KEY needed for this alter test.")
+
+        # 1. Add a reranking model
+        alter_query_add = f"""
+            ALTER KNOWLEDGE_BASE {kb_name}
+            USING
+                reranking_model = {{ 'provider': 'openai', 'model_name': 'gpt-4o', 'api_key': '{openai_api_key}' }};
+        """
+        self.query(alter_query_add)
+
+        result_add = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
+        assert result_add and '"provider": "openai"' in result_add[0]["RERANKING_MODEL"]
+
+        # 2. Disable the reranking model by setting to an empty dict
+        alter_query_disable = f"""
+            ALTER KNOWLEDGE_BASE {kb_name}
+            USING
+                reranking_model = false;
+        """
+        self.query(alter_query_disable)
+
+        result_disable = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
+        assert result_disable
+        reranking_model_desc = result_disable[0].get("RERANKING_MODEL")
+        assert reranking_model_desc is None or reranking_model_desc == "{}"
+
+    @pytest.mark.usefixtures("basic_kb")
+    def test_alter_kb_preprocessing(self, basic_kb, use_binary):
+        """Tests altering the preprocessing parameters by checking the PARAMS column."""
+        kb_name = basic_kb
+
+        alter_query = f"""
+            ALTER KNOWLEDGE_BASE {kb_name}
+            USING
+                preprocessing = {{ 'chunk_size': 300, 'chunk_overlap': 50 }};
+        """
+        self.query(alter_query)
+
+        result = self.query(f"SELECT PARAMS FROM information_schema.knowledge_bases WHERE name = '{kb_name}';")
+
+        assert result, "Query to information_schema returned no results."
+
+        # Access the PARAMS column
+        params_json = result[0].get("PARAMS")
+        assert params_json is not None, "PARAMS column is NULL."
+
+        # Verify the preprocessing key and values are now inside the PARAMS JSON
+        assert '"preprocessing":' in params_json, "The 'preprocessing' key was not added to the PARAMS column."
+        assert '"chunk_size": 300' in params_json, "chunk_size was not set correctly in PARAMS."
+        assert '"chunk_overlap": 50' in params_json, "chunk_overlap was not set correctly in PARAMS."
+
 
 @pytest.fixture(scope="function")
 def setup_trigger_db():
@@ -339,7 +488,6 @@ def setup_trigger_db():
         pytest.fail(f"Trigger fixture setup failed. Ensure Docker environment is running. Error: {setup_err}")
 
     finally:
-        # Robust cleanup in reverse order: tables first, then the DB integration
         print(f"\n--> [CLEANUP] Dropping tables and DATABASE: {db_name}")
         try:
             helper.query(f"DROP TABLE IF EXISTS {db_name}.{source_table_name};")
@@ -370,7 +518,7 @@ class TestMySQLTriggers(BaseStuff):
         test_id = 101
         updated_message = "this message was updated"
         try:
-            # Ensure the target table is empty before each test run.
+            # Ensure the target table is empty
             self.query(f"DELETE FROM {db_name}.{target_table_name};")
 
             create_trigger_query = f"""
@@ -378,13 +526,19 @@ class TestMySQLTriggers(BaseStuff):
                 ON {db_name}.{source_table_name}
                 (INSERT INTO {db_name}.{target_table_name} (id, message) SELECT id, message FROM TABLE_DELTA);
             """
+            print("\n[DEBUG] Sending CREATE TRIGGER command...")
             self.query(create_trigger_query)
-            time.sleep(10)  # Allow time for trigger creation
 
-            # Activate trigger
-            self.query(f"UPDATE {db_name}.{source_table_name} SET message = '{updated_message}' WHERE id = {test_id};")
-            # Wait for propagated update
-            result = wait_for_trigger_execution(self.query, db_name, target_table_name, test_id, timeout=120)
+            # Poll for trigger creation
+            wait_for_trigger_creation(self.query, trigger_name, timeout=20)
+
+            print("[DEBUG] Schema check complete. Proceeding to functional firing test...")
+
+            # This function retries the UPDATE and SELECT in a loop.
+            result = wait_for_trigger_to_fire(
+                self.query, db_name, source_table_name, target_table_name, test_id, updated_message, timeout=120
+            )
+
             # Verify
             assert result[0]["message"] == updated_message
 
@@ -428,3 +582,104 @@ class TestMySQLTriggersNegative(BaseStuff):
             self.query(f"DROP TRIGGER {trigger_name};")
         error_str = str(e.value).lower()
         assert "doesn't exist" in error_str or "unknown trigger" in error_str
+
+
+@pytest.mark.parametrize("use_binary", [False, True], indirect=True)
+class TestMySQLQueryComposability(BaseStuff):
+    """Test suite for advanced query composability (CTEs, Subqueries, UNIONs)."""
+
+    db_name = "test_composability_db"
+
+    @pytest.fixture(scope="class")
+    def composability_db(self):
+        """Class-scoped fixture to create the postgres DB."""
+        print(f"\n--> [Fixture composability_db] Setting up database: {self.db_name}")
+        db_details = {
+            "type": "postgres",
+            "connection_data": {
+                "host": "samples.mindsdb.com",
+                "port": "5432",
+                "user": "demo_user",
+                "password": "demo_password",
+                "database": "demo",
+                "schema": "demo",
+            },
+        }
+        try:
+            self.create_database(self.db_name, db_details)
+            self.validate_database_creation(self.db_name)
+            yield self.db_name
+        finally:
+            print(f"\n--> [Fixture composability_db] Tearing down database: {self.db_name}")
+            self.query(f"DROP DATABASE IF EXISTS {self.db_name};")
+
+    @pytest.fixture
+    def use_binary(self, request):
+        self.use_binary = request.param
+
+    @pytest.mark.usefixtures("composability_db")
+    def test_common_table_expression_with(self, use_binary):
+        """
+        Tests a query using a WITH clause (CTE).
+        tests that you can define a temporary result set (cte) and then query that result set.
+        """
+        query = f"""
+            WITH cte AS (
+                SELECT * FROM {self.db_name}.home_rentals WHERE number_of_rooms = 2
+            )
+            SELECT * FROM cte LIMIT 5;
+        """
+        result = self.query(query)
+        assert len(result) > 0
+        assert all(row["number_of_rooms"] == 2 for row in result)
+
+    @pytest.mark.usefixtures("composability_db")
+    def test_union_operator(self, use_binary):
+        """Tests a query using the UNION set operator.
+        It tests that you can combine the results from two separate queries into one list.
+        """
+        query = f"""
+            (SELECT sqft, location, number_of_rooms FROM {self.db_name}.home_rentals WHERE number_of_rooms = 1 LIMIT 5)
+            UNION
+            (SELECT sqft, location, number_of_rooms FROM {self.db_name}.home_rentals WHERE number_of_rooms = 2 LIMIT 5);
+        """
+        result = self.query(query)
+        assert len(result) > 0
+        assert all(row["number_of_rooms"] in (1, 2) for row in result)
+
+    @pytest.mark.usefixtures("composability_db")
+    def test_subquery_with_join_and_cte(self, use_binary):
+        """
+        Tests a subquery rewrite for the unsupported 'WHERE IN (SELECT...)' syntax.
+        This tests CTE, UNION, and JOIN composability.
+        """
+        query = f"""
+            WITH allowed_rooms AS (
+                SELECT 1 as room_num
+                UNION
+                SELECT 3 as room_num
+            )
+            SELECT t1.*
+            FROM {self.db_name}.home_rentals AS t1
+            JOIN allowed_rooms AS t2 ON t1.number_of_rooms = t2.room_num
+            LIMIT 10;
+        """
+        result = self.query(query)
+        assert len(result) > 0
+        assert all(row["number_of_rooms"] in (1, 3) for row in result)
+
+    @pytest.mark.usefixtures("composability_db")
+    def test_from_subquery(self, use_binary):
+        """Tests a subquery in the FROM clause.
+        It tests that you can run a query inside the FROM clause and use its results
+        as the source table for an outer query.
+        """
+        query = f"""
+            SELECT * FROM (
+                SELECT * FROM {self.db_name}.home_rentals WHERE number_of_rooms = 2
+            ) as sub_table
+            LIMIT 5;
+        """
+        result = self.query(query)
+        assert len(result) > 0
+        assert all(row["number_of_rooms"] == 2 for row in result)

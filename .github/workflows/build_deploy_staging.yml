@@ -10,7 +10,6 @@ on:
     types:
       - closed
     branches:
-      - 'main'
       - 'develop'
       - 'release/*'
 

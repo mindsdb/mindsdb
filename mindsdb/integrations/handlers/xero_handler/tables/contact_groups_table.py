@@ -53,12 +53,12 @@ class ContactGroupsTable(XeroTable):
             )
 
         try:
-            # Fetch budgets with optimized parameters
-            budgets = api.get_budgets(xero_tenant_id=self.handler.tenant_id, **api_params)
-            df = self._convert_response_to_dataframe(budgets.budgets or [])
+            # Fetch contact groups with optimized parameters
+            contact_groups = api.get_contact_groups(xero_tenant_id=self.handler.tenant_id, **api_params)
+            df = self._convert_response_to_dataframe(contact_groups.contact_groups or [])
             df.rename(columns=self.COLUMN_REMAP, inplace=True)
         except Exception as e:
-            raise Exception(f"Failed to fetch budgets: {str(e)}")
+            raise Exception(f"Failed to fetch contact groups: {str(e)}")
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
@@ -66,7 +66,7 @@ class ContactGroupsTable(XeroTable):
 
         # Parse and execute query
         parser = SELECTQueryParser(
-            query, "budgets", columns=self.get_columns()
+            query, "contact_groups", columns=self.get_columns()
         )
         selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
 

@@ -29,6 +29,7 @@ from .tables.budgets_table import BudgetsTable
 from .tables.contact_groups_table import ContactGroupsTable
 from .tables.contacts_table import ContactsTable
 from .tables.quotes_table import QuotesTable
+from .tables.credit_notes_table import CreditNotesTable
 
 class XeroHandler(APIHandler):
     """
@@ -73,6 +74,7 @@ class XeroHandler(APIHandler):
         self._register_table("budgets", BudgetsTable(self))
         self._register_table("contact_groups", ContactGroupsTable(self))
         self._register_table("contacts", ContactsTable(self))
+        self._register_table("credit_notes", CreditNotesTable(self))
         self._register_table("invoices", InvoicesTable(self))
         self._register_table("items", ItemsTable(self))
         self._register_table("overpayments", OverpaymentsTable(self))

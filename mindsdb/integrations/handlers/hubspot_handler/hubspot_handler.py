@@ -16,15 +16,7 @@ logger = log.getLogger(__name__)
 
 
 class HubspotHandler(APIHandler):
-    """
-    A class for handling connections and interactions with the Hubspot API.
-
-    Supports enterprise-ready features including:
-    - Comprehensive data catalog support
-    - Secure credential handling
-    - Full CRUD operations on Companies, Contacts, and Deals
-    - Comprehensive error handling and logging
-    """
+    """Hubspot API handler implementation"""
 
     name = "hubspot"
 
@@ -69,7 +61,6 @@ class HubspotHandler(APIHandler):
             return self.connection
 
         try:
-            # Check for access token authentication (direct token)
             if "access_token" in self.connection_data:
                 access_token = self.connection_data["access_token"]
                 if not access_token or not isinstance(access_token, str):
@@ -78,7 +69,6 @@ class HubspotHandler(APIHandler):
                 logger.info("Connecting to HubSpot using access token")
                 self.connection = HubSpot(access_token=access_token)
 
-            # Check for OAuth authentication (client_id and client_secret)
             elif "client_id" in self.connection_data and "client_secret" in self.connection_data:
                 client_id = self.connection_data["client_id"]
                 client_secret = self.connection_data["client_secret"]
@@ -87,9 +77,7 @@ class HubspotHandler(APIHandler):
                     raise ValueError("Invalid OAuth credentials provided")
 
                 logger.info("Connecting to HubSpot using OAuth credentials")
-                # Initialize HubSpot client with OAuth credentials
-                # Note: This sets up the client for OAuth, but actual token exchange
-                # would need to be handled separately in a full OAuth flow
+
                 self.connection = HubSpot(client_id=client_id, client_secret=client_secret)
             else:
                 raise ValueError(
@@ -102,12 +90,10 @@ class HubspotHandler(APIHandler):
             return self.connection
 
         except ValueError:
-            # Re-raise ValueError as-is
-            raise
+            ValueError("Failed to connect to HubSpot API")
         except Exception as e:
-            self.is_connected = False
             logger.error("Failed to connect to HubSpot API")
-            raise Exception(f"Connection to HubSpot failed: {str(e)}") from e
+            ValueError(f"Connection to HubSpot failed: {str(e)}")
 
     def disconnect(self) -> None:
         """Close connection and cleanup resources."""
@@ -124,13 +110,9 @@ class HubspotHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            # Test connection by attempting to connect
             self.connect()
 
-            # Perform a lightweight test operation to verify the connection
-            # We'll try to get a single company to test the API response
             if self.connection:
-                # Test API call - get up to 1 company to verify connection works
                 list(self.connection.crm.companies.get_all(limit=1))
 
             response.success = True
@@ -182,8 +164,6 @@ class HubspotHandler(APIHandler):
 
             for table_name in ["companies", "contacts", "deals"]:
                 try:
-                    # Get a rough estimate of rows by fetching a small sample
-                    # This is a lightweight operation for table discovery
                     table_info = {
                         "TABLE_NAME": table_name,
                         "TABLE_TYPE": "BASE TABLE",
@@ -195,7 +175,7 @@ class HubspotHandler(APIHandler):
 
                 except Exception as e:
                     logger.warning(f"Could not get metadata for table {table_name}: {str(e)}")
-                    # Still include the table with basic info
+
                     tables_data.append(
                         {
                             "TABLE_NAME": table_name,
@@ -233,7 +213,6 @@ class HubspotHandler(APIHandler):
         try:
             self.connect()
 
-            # Get column metadata with statistics
             columns_data = self._get_columns_with_statistics(table_name)
 
             df = pd.DataFrame(columns_data)
@@ -259,10 +238,7 @@ class HubspotHandler(APIHandler):
         """Estimate number of rows in a table using HubSpot API."""
         try:
             if table_name == "companies":
-                # Get a small sample to estimate size
                 companies = self.connection.crm.companies.get_all(limit=100)
-                # Since we can't get total count easily, return None for now
-                # In a real scenario, you might use HubSpot's search API with count
                 return len(list(companies)) if companies else 0
             elif table_name == "contacts":
                 contacts = self.connection.crm.contacts.get_all(limit=100)
@@ -277,7 +253,6 @@ class HubspotHandler(APIHandler):
     def _get_columns_with_statistics(self, table_name: str) -> List[Dict[str, Any]]:
         """Get detailed column information with comprehensive statistics."""
         try:
-            # Get larger sample for better statistics (up to 1000 records)
             sample_data = None
 
             if table_name == "companies":
@@ -290,17 +265,14 @@ class HubspotHandler(APIHandler):
             columns_info = []
 
             if sample_data and len(sample_data) > 0:
-                # Analyze all samples to get comprehensive statistics
                 sample_size = len(sample_data)
                 logger.info(f"Analyzing {sample_size} records for {table_name} column statistics")
 
-                # Get all unique property names across all samples
                 all_properties = set()
                 for item in sample_data:
                     if hasattr(item, "properties") and item.properties:
                         all_properties.update(item.properties.keys())
 
-                # Add ID column (always present and primary key)
                 id_stats = self._calculate_column_statistics("id", [item.id for item in sample_data])
                 columns_info.append(
                     {
@@ -317,13 +289,11 @@ class HubspotHandler(APIHandler):
                     }
                 )
 
-                # Analyze each property column with statistics
                 for prop_name in sorted(all_properties):
                     column_name = prop_name
                     if prop_name == "hs_lastmodifieddate":
                         column_name = "lastmodifieddate"
 
-                    # Extract values for this property from all samples
                     column_values = []
                     for item in sample_data:
                         if hasattr(item, "properties") and item.properties:
@@ -332,11 +302,9 @@ class HubspotHandler(APIHandler):
                         else:
                             column_values.append(None)
 
-                    # Calculate comprehensive statistics
                     stats = self._calculate_column_statistics(prop_name, column_values)
                     data_type = self._infer_data_type_from_samples(column_values)
 
-                    # Determine if this could be a foreign key
                     is_foreign_key = self._is_potential_foreign_key(prop_name, column_values)
 
                     columns_info.append(
@@ -356,7 +324,6 @@ class HubspotHandler(APIHandler):
                         }
                     )
 
-            # Add table-specific columns if no sample data
             if not columns_info:
                 columns_info = self._get_default_columns_with_stats(table_name)
 
@@ -372,7 +339,6 @@ class HubspotHandler(APIHandler):
         non_null_values = [v for v in values if v is not None]
         null_count = total_count - len(non_null_values)
 
-        # Basic statistics
         stats = {
             "null_count": null_count,
             "distinct_count": len(set(str(v) for v in non_null_values)) if non_null_values else 0,
@@ -382,7 +348,6 @@ class HubspotHandler(APIHandler):
         }
 
         if non_null_values:
-            # Convert to strings for consistent comparison
             str_values = [str(v) for v in non_null_values]
             stats["min_value"] = min(str_values)
             stats["max_value"] = max(str_values)

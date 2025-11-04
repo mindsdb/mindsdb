@@ -22,6 +22,8 @@ from .tables.quotes_table import QuotesTable
 from .tables.credit_notes_table import CreditNotesTable
 from .tables.invoices_table import InvoicesTable
 from .tables.items_table import ItemsTable
+from .tables.journals_table import JournalsTable
+from .tables.manual_journals_table import ManualJournalsTable
 
 class XeroHandler(APIHandler):
     """
@@ -69,6 +71,8 @@ class XeroHandler(APIHandler):
         self._register_table("credit_notes", CreditNotesTable(self))
         self._register_table("invoices", InvoicesTable(self))
         self._register_table("items", ItemsTable(self))
+        self._register_table("journals", JournalsTable(self))
+        self._register_table("manual_journals", ManualJournalsTable(self))
         # self._register_table("overpayments", OverpaymentsTable(self))
         # self._register_table("payments", PaymentsTable(self))
         # self._register_table("purchase_orders", PurchaseOrdersTable(self))

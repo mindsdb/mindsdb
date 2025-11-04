@@ -147,7 +147,7 @@ class PaymentsTable(XeroTable):
         # Implement pagination to fetch all required records
         all_data = []
         page = 1
-        page_size = 10  # Xero's maximum page size
+        page_size = 1000  # Xero's maximum page size
         records_fetched = 0
 
         try:

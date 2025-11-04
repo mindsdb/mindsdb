@@ -5,9 +5,6 @@ from hubspot.crm.objects import (
     SimplePublicObjectId as HubSpotObjectId,
     SimplePublicObjectBatchInput as HubSpotObjectBatchInput,
     SimplePublicObjectInputForCreate as HubSpotObjectInputCreate,
-    BatchInputSimplePublicObjectId as HubSpotBatchObjectIdInput,
-    BatchInputSimplePublicObjectBatchInput as HubSpotBatchObjectBatchInput,
-    SimplePublicObjectBatchInputForCreate as HubSpotBatchObjectInputCreate,
 )
 from mindsdb_sql_parser import ast
 
@@ -172,7 +169,7 @@ class CompaniesTable(APITable):
         companies_to_create = [HubSpotObjectInputCreate(properties=company) for company in companies_data]
         try:
             created_companies = hubspot.crm.companies.batch_api.create(
-                HubSpotBatchObjectInputCreate(inputs=companies_to_create),
+                inputs=companies_to_create,
             )
             logger.info(
                 f"Companies created with ID's {[created_company.id for created_company in created_companies.results]}"
@@ -187,7 +184,7 @@ class CompaniesTable(APITable):
         ]
         try:
             updated_companies = hubspot.crm.companies.batch_api.update(
-                HubSpotBatchObjectBatchInput(inputs=companies_to_update),
+                inputs=companies_to_update,
             )
             logger.info(
                 f"Companies with ID {[updated_company.id for updated_company in updated_companies.results]} updated"
@@ -200,7 +197,7 @@ class CompaniesTable(APITable):
         companies_to_delete = [HubSpotObjectId(id=company_id) for company_id in company_ids]
         try:
             hubspot.crm.companies.batch_api.archive(
-                HubSpotBatchObjectIdInput(inputs=companies_to_delete),
+                inputs=companies_to_delete,
             )
             logger.info("Companies deleted")
         except Exception as e:
@@ -351,9 +348,7 @@ class ContactsTable(APITable):
         hubspot = self.handler.connect()
         contacts_to_create = [HubSpotObjectInputCreate(properties=contact) for contact in contacts_data]
         try:
-            created_contacts = hubspot.crm.contacts.batch_api.create(
-                HubSpotBatchObjectInputCreate(inputs=contacts_to_create)
-            )
+            created_contacts = hubspot.crm.contacts.batch_api.create(inputs=contacts_to_create)
             logger.info(
                 f"Contacts created with ID {[created_contact.id for created_contact in created_contacts.results]}"
             )
@@ -367,7 +362,7 @@ class ContactsTable(APITable):
         ]
         try:
             updated_contacts = hubspot.crm.contacts.batch_api.update(
-                HubSpotBatchObjectBatchInput(inputs=contacts_to_update),
+                inputs=contacts_to_update,
             )
             logger.info(
                 f"Contacts with ID {[updated_contact.id for updated_contact in updated_contacts.results]} updated"
@@ -380,7 +375,7 @@ class ContactsTable(APITable):
         contacts_to_delete = [HubSpotObjectId(id=contact_id) for contact_id in contact_ids]
         try:
             hubspot.crm.contacts.batch_api.archive(
-                HubSpotBatchObjectIdInput(inputs=contacts_to_delete),
+                inputs=contacts_to_delete,
             )
             logger.info("Contacts deleted")
         except Exception as e:
@@ -532,7 +527,7 @@ class DealsTable(APITable):
         deals_to_create = [HubSpotObjectInputCreate(properties=deal) for deal in deals_data]
         try:
             created_deals = hubspot.crm.deals.batch_api.create(
-                HubSpotBatchObjectInputCreate(inputs=deals_to_create),
+                inputs=deals_to_create,
             )
             logger.info(f"Deals created with ID's {[created_deal.id for created_deal in created_deals.results]}")
         except Exception as e:
@@ -543,7 +538,7 @@ class DealsTable(APITable):
         deals_to_update = [HubSpotObjectBatchInput(id=deal_id, properties=values_to_update) for deal_id in deal_ids]
         try:
             updated_deals = hubspot.crm.deals.batch_api.update(
-                HubSpotBatchObjectBatchInput(inputs=deals_to_update),
+                inputs=deals_to_update,
             )
             logger.info(f"Deals with ID {[updated_deal.id for updated_deal in updated_deals.results]} updated")
         except Exception as e:
@@ -554,7 +549,7 @@ class DealsTable(APITable):
         deals_to_delete = [HubSpotObjectId(id=deal_id) for deal_id in deal_ids]
         try:
             hubspot.crm.deals.batch_api.archive(
-                HubSpotBatchObjectIdInput(inputs=deals_to_delete),
+                inputs=deals_to_delete,
             )
             logger.info("Deals deleted")
         except Exception as e:

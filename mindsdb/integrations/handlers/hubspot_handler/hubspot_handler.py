@@ -90,10 +90,11 @@ class HubspotHandler(APIHandler):
             return self.connection
 
         except ValueError:
-            ValueError("Failed to connect to HubSpot API")
+            logger.error("Failed to connect to HubSpot API")
+            raise
         except Exception as e:
             logger.error("Failed to connect to HubSpot API")
-            ValueError(f"Connection to HubSpot failed: {str(e)}")
+            raise ValueError(f"Connection to HubSpot failed: {str(e)}")
 
     def disconnect(self) -> None:
         """Close connection and cleanup resources."""
@@ -282,10 +283,12 @@ class HubspotHandler(APIHandler):
                         "COLUMN_DEFAULT": None,
                         "COLUMN_DESCRIPTION": "Unique identifier for the record (Primary Key)",
                         "IS_PRIMARY_KEY": True,
+                        "IS_FOREIGN_KEY": False,
                         "NULL_COUNT": id_stats["null_count"],
                         "DISTINCT_COUNT": id_stats["distinct_count"],
                         "MIN_VALUE": id_stats["min_value"],
                         "MAX_VALUE": id_stats["max_value"],
+                        "AVERAGE_VALUE": id_stats.get("average_value"),
                     }
                 )
 
@@ -420,13 +423,19 @@ class HubspotHandler(APIHandler):
                 str_value.isdigit()
                 or len(str_value) > 10  # Long strings might be IDs
                 or "-" in str_value
-            ):  # UUIDs have dashes
+                or "_" in str_value  # IDs might have underscores like "owner_123"
+            ):
                 id_like_count += 1
 
-        # If more than 70% of values look like IDs and name suggests FK
-        values_suggest_fk = (id_like_count / len(non_null_values)) > 0.7
+        # Calculate percentage of values that look like IDs
+        values_suggest_fk = (id_like_count / len(non_null_values)) > 0.5  # More lenient threshold
 
-        return name_suggests_fk and values_suggest_fk
+        # If name strongly suggests FK (ends with _id or starts with id_) and at least some values look like IDs
+        if name_suggests_fk and (prop_lower.endswith("_id") or prop_lower.startswith("id_")):
+            return values_suggest_fk
+
+        # Otherwise require both name and values to suggest FK with higher threshold
+        return name_suggests_fk and (id_like_count / len(non_null_values)) > 0.7
 
     def _infer_data_type(self, value: Any) -> str:
         """Infer SQL data type from Python value."""

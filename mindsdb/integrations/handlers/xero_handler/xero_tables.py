@@ -3,13 +3,14 @@ import json
 from abc import abstractmethod
 from typing import List, Dict, Tuple, Any
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, date
+from decimal import Decimal
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql_parser import ast
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser
 from mindsdb.integrations.utilities.sql_utils import (
-    extract_comparison_conditions, 
-    filter_dataframe, 
+    extract_comparison_conditions,
+    filter_dataframe,
     sort_dataframe
 )
 from xero_python.accounting import AccountingApi
@@ -42,6 +43,28 @@ class XeroTable(APITable):
         """Delete operations are not supported"""
         raise NotImplementedError("Delete operations are not supported for Xero tables")
 
+    def _json_serialize(self, obj: Any) -> Any:
+        """
+        Convert non-JSON-serializable objects to JSON-serializable types
+
+        Args:
+            obj: Object to serialize
+
+        Returns:
+            JSON-serializable representation of the object
+        """
+        if isinstance(obj, Decimal):
+            return float(obj)
+        elif isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        elif isinstance(obj, Enum):
+            return obj.value
+        elif isinstance(obj, dict):
+            return {k: self._json_serialize(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._json_serialize(item) for item in obj]
+        return obj
+
     def _flatten_dict(self, value: Any, prefix: str = "", depth: int = 0, max_depth: int = 3) -> Dict[str, Any]:
         """
         Recursively flatten nested dictionaries up to a maximum depth
@@ -65,11 +88,19 @@ class XeroTable(APITable):
         if isinstance(value, Enum):
             return {prefix: value.value}
 
+        # Handle Decimal - convert to float
+        if isinstance(value, Decimal):
+            return {prefix: float(value)}
+
+        # Handle datetime/date - convert to ISO string
+        if isinstance(value, (datetime, date)):
+            return {prefix: value.isoformat()}
+
         # Handle dictionaries - recurse if within depth limit
         if isinstance(value, dict):
             if depth >= max_depth:
-                # At max depth, convert to JSON string
-                result[prefix] = json.dumps(value)
+                # At max depth, convert to JSON string with custom serialization
+                result[prefix] = json.dumps(self._json_serialize(value))
             else:
                 for sub_key, sub_value in value.items():
                     new_prefix = f"{prefix}_{sub_key}" if prefix else sub_key
@@ -77,9 +108,9 @@ class XeroTable(APITable):
                     result.update(flattened)
             return result
 
-        # Handle lists - convert to JSON string
+        # Handle lists - convert to JSON string with custom serialization
         if isinstance(value, list):
-            result[prefix] = json.dumps(value)
+            result[prefix] = json.dumps(self._json_serialize(value))
             return result
 
         # Handle primitive values

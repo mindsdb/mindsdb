@@ -29,6 +29,7 @@ from .tables.overpayments_table import OverpaymentsTable
 from .tables.payments_table import PaymentsTable
 from .tables.prepayments_table import PrepaymentsTable
 from .tables.purchase_orders_table import PurchaseOrdersTable
+from .tables.repeating_invoices_table import RepeatingInvoicesTable
 
 class XeroHandler(APIHandler):
     """
@@ -85,7 +86,7 @@ class XeroHandler(APIHandler):
         self._register_table("prepayments", PrepaymentsTable(self))
         self._register_table("purchase_orders", PurchaseOrdersTable(self))
         self._register_table("quotes", QuotesTable(self))
-        # self._register_table("repeating_invoices", RepeatingInvoicesTable(self))
+        self._register_table("repeating_invoices", RepeatingInvoicesTable(self))
 
     def _use_token_injection_path(self) -> bool:
         """

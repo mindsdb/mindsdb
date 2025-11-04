@@ -103,6 +103,12 @@ class PurchaseOrdersTable(XeroTable):
         self.handler.connect()
         api = AccountingApi(self.handler.api_client)
 
+        # Parse query to get result_limit (no default limit)
+        parser = SELECTQueryParser(
+            query, "purchase_orders", columns=self.get_columns(), use_default_limit=False
+        )
+        selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
+
         # Extract and parse WHERE conditions
         api_params = {}
         remaining_conditions = []
@@ -113,26 +119,57 @@ class PurchaseOrdersTable(XeroTable):
                 conditions, self.SUPPORTED_FILTERS
             )
 
+        # Implement pagination to fetch all required records
+        all_data = []
+        page = 1
+        page_size = 1000  # Xero's maximum page size
+        records_fetched = 0
+
         try:
-            # Fetch purchase orders with optimized parameters
-            purchase_orders = api.get_purchase_orders(
-                xero_tenant_id=self.handler.tenant_id,
-                **api_params
-            )
-            df = self._convert_response_to_dataframe(purchase_orders.purchase_orders or [])
-            df.rename(columns=self.COLUMN_REMAP, inplace=True)
+            while result_limit is None or records_fetched < result_limit:
+                # Calculate how many records to fetch in this page
+                if result_limit is not None:
+                    records_to_fetch = min(page_size, result_limit - records_fetched)
+                else:
+                    records_to_fetch = page_size
+
+                # Fetch purchase orders with pagination parameters
+                response = api.get_purchase_orders(
+                    xero_tenant_id=self.handler.tenant_id,
+                    page=page,
+                    page_size=records_to_fetch,
+                    **api_params
+                )
+
+                if not response.purchase_orders:
+                    break  # No more data
+
+                all_data.extend(response.purchase_orders)
+                records_fetched += len(response.purchase_orders)
+
+                # Check pagination metadata to determine if there are more pages
+                if hasattr(response, 'pagination') and response.pagination:
+                    # If we've reached the last page, stop
+                    if page >= response.pagination.page_count:
+                        break
+                else:
+                    # Fallback: If we got fewer records than requested, we've reached the end
+                    if len(response.purchase_orders) < records_to_fetch:
+                        break
+
+                page += 1
+
         except Exception as e:
             raise Exception(f"Failed to fetch purchase orders: {str(e)}")
+
+        # Convert all data to DataFrame
+        df = self._convert_response_to_dataframe(all_data)
+        if len(df) > 0:
+            df.rename(columns=self.COLUMN_REMAP, inplace=True)
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
             df = filter_dataframe(df, remaining_conditions)
-
-        # Parse and execute query
-        parser = SELECTQueryParser(
-            query, "purchase_orders", columns=self.get_columns()
-        )
-        selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
 
         # Apply column selection
         if len(df) == 0:
@@ -145,7 +182,7 @@ class PurchaseOrdersTable(XeroTable):
         if order_by_conditions:
             df = sort_dataframe(df, order_by_conditions)
 
-        # Apply limit
+        # Apply limit (in case filters reduced the result set)
         if result_limit:
             df = df.head(result_limit)
 

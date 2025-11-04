@@ -1,4 +1,4 @@
-from typing import Text, List, Dict, Tuple
+from typing import Text, List, Dict, Tuple, Optional
 
 import pandas as pd
 from mindsdb_sql_parser import ast
@@ -20,13 +20,18 @@ class SELECTQueryParser(BaseQueryParser):
         Name of the table to query.
     columns : List[Text]
         List of columns in the table.
+    use_default_limit : bool, optional
+        If True, applies a default limit of 1000 when no LIMIT clause is specified.
+        If False, returns None when no LIMIT clause is specified (fetch all records).
+        Default is True for backwards compatibility.
     """
-    def __init__(self, query: ast.Select, table: Text, columns: List[Text]):
+    def __init__(self, query: ast.Select, table: Text, columns: List[Text], use_default_limit: bool = True):
         super().__init__(query)
         self.table = table
         self.columns = columns
+        self.use_default_limit = use_default_limit
 
-    def parse_query(self) -> Tuple[List[Text], List[List[Text]], Dict[Text, List[Text]], int]:
+    def parse_query(self) -> Tuple[List[Text], List[List[Text]], Dict[Text, List[Text]], Optional[int]]:
         """
         Parses a SQL SELECT statement into its components: SELECT, WHERE, ORDER BY, LIMIT.
         """
@@ -62,14 +67,16 @@ class SELECTQueryParser(BaseQueryParser):
         else:
             return []
 
-    def parse_limit_clause(self) -> int:
+    def parse_limit_clause(self) -> Optional[int]:
         """
         Parses the LIMIT clause of the query.
+        Returns the LIMIT value if specified, or a default of 1000 if use_default_limit is True,
+        or None if use_default_limit is False (fetch all records).
         """
         if self.query.limit:
             result_limit = self.query.limit.value
         else:
-            result_limit = 1000
+            result_limit = 1000 if self.use_default_limit else None
 
         return result_limit
 

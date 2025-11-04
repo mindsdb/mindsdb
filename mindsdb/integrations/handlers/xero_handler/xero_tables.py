@@ -42,15 +42,59 @@ class XeroTable(APITable):
         """Delete operations are not supported"""
         raise NotImplementedError("Delete operations are not supported for Xero tables")
 
+    def _flatten_dict(self, value: Any, prefix: str = "", depth: int = 0, max_depth: int = 3) -> Dict[str, Any]:
+        """
+        Recursively flatten nested dictionaries up to a maximum depth
+
+        Args:
+            value: The value to flatten (dict, list, or primitive)
+            prefix: Current key prefix for nested keys
+            depth: Current recursion depth
+            max_depth: Maximum depth to recurse (default 3)
+
+        Returns:
+            Dict[str, Any]: Flattened dictionary with underscore-separated keys
+        """
+        result = {}
+
+        # Handle None or empty values - skip creating columns
+        if value is None or (isinstance(value, (dict, list)) and not value):
+            return result
+
+        # Handle Enum at any depth
+        if isinstance(value, Enum):
+            return {prefix: value.value}
+
+        # Handle dictionaries - recurse if within depth limit
+        if isinstance(value, dict):
+            if depth >= max_depth:
+                # At max depth, convert to JSON string
+                result[prefix] = json.dumps(value)
+            else:
+                for sub_key, sub_value in value.items():
+                    new_prefix = f"{prefix}_{sub_key}" if prefix else sub_key
+                    flattened = self._flatten_dict(sub_value, new_prefix, depth + 1, max_depth)
+                    result.update(flattened)
+            return result
+
+        # Handle lists - convert to JSON string
+        if isinstance(value, list):
+            result[prefix] = json.dumps(value)
+            return result
+
+        # Handle primitive values
+        result[prefix] = value
+        return result
+
     def _convert_response_to_dataframe(self, response_data: list) -> pd.DataFrame:
         """
-        Convert API response to DataFrame
+        Convert API response to DataFrame with recursive flattening
 
         Args:
             response_data: List of response objects
 
         Returns:
-            pd.DataFrame: Flattened dataframe
+            pd.DataFrame: Flattened dataframe with nested objects expanded up to 3 levels
         """
         if not response_data:
             return pd.DataFrame()
@@ -64,21 +108,13 @@ class XeroTable(APITable):
                 row = item
             else:
                 row = item.__dict__
-            
-            # Parse objects from the model
+
+            # Recursively flatten the row
             parsed_row = {}
             for key, value in row.items():
-                if isinstance(value, Enum):
-                    parsed_row.update({key: value.value})
-                    continue
-                if isinstance(value, dict):
-                    for sub_key, sub_value in value.items():
-                        if isinstance(sub_value, Enum):
-                            sub_value = sub_value.value
-                        parsed_row.update({f"{key}_{sub_key}": sub_value})
-                    continue
-                parsed_row.update({key: value})
-            
+                flattened = self._flatten_dict(value, key, depth=0, max_depth=3)
+                parsed_row.update(flattened)
+
             rows.append(parsed_row)
 
         df = pd.DataFrame(rows)

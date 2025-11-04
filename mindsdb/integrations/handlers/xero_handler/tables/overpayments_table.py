@@ -77,7 +77,6 @@ class OverpaymentsTable(XeroTable):
             )
 
         try:
-            print("API Params:", api_params)
             # Fetch overpayments with optimized parameters
             overpayments = api.get_overpayments(xero_tenant_id=self.handler.tenant_id, **api_params)
             df = self._convert_response_to_dataframe(overpayments.overpayments or [])

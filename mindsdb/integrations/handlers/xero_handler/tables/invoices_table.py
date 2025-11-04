@@ -101,7 +101,6 @@ class InvoicesTable(XeroTable):
             )
 
         try:
-            print("API Params:", api_params)
             # Fetch invoices with optimized parameters
             invoices = api.get_invoices(xero_tenant_id=self.handler.tenant_id, **api_params)
             df = self._convert_response_to_dataframe(invoices.invoices or [])

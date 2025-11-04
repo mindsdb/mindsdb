@@ -16,8 +16,10 @@ class PaymentsTable(XeroTable):
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
         "payment_id": {"type": "where", "xero_field": "PaymentID", "value_type": "guid"},
-        "batch_payment_id": {"type": "where", "xero_field": "BatchPaymentID", "value_type": "guid"},
+        "status": {"type": "where", "xero_field": "Status", "value_type": "string"},
         "date": {"type": "where", "xero_field": "Date", "value_type": "date"},
+        "invoice_id": {"type": "where", "xero_field": "Invoice.InvoiceID", "value_type": "guid"},
+        "reference": {"type": "where", "xero_field": "Reference", "value_type": "string"},
     }
     
     COLUMN_REMAP = {

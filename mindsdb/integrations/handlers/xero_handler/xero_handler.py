@@ -78,6 +78,7 @@ class XeroHandler(APIHandler):
         self._register_table("manual_journals", ManualJournalsTable(self))
         self._register_table("organisations", OrganisationsTable(self))
         self._register_table("overpayments", OverpaymentsTable(self))
+        # self._register_table("payment_services", PaymentServicesTable(self)) # not supported
         self._register_table("payments", PaymentsTable(self))
         # self._register_table("purchase_orders", PurchaseOrdersTable(self))
         self._register_table("quotes", QuotesTable(self))

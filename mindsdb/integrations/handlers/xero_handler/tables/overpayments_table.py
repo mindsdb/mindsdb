@@ -26,6 +26,7 @@ class OverpaymentsTable(XeroTable):
         "type": {"type": "where", "xero_field": "Type", "value_type": "string"},
         "currency_rate": {"type": "where", "xero_field": "CurrencyRate", "value_type": "number"},
         "remaining_credit": {"type": "where", "xero_field": "RemainingCredit", "value_type": "number"},
+        "contact_id": {"type": "where", "xero_field": "Contact.ContactID", "value_type": "guid"},
     }
     
     COLUMN_REMAP = {

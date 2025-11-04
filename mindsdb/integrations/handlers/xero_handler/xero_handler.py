@@ -27,6 +27,8 @@ from .tables.manual_journals_table import ManualJournalsTable
 from .tables.organisations_table import OrganisationsTable
 from .tables.overpayments_table import OverpaymentsTable
 from .tables.payments_table import PaymentsTable
+from .tables.prepayments_table import PrepaymentsTable
+from .tables.purchase_orders_table import PurchaseOrdersTable
 
 class XeroHandler(APIHandler):
     """
@@ -80,7 +82,8 @@ class XeroHandler(APIHandler):
         self._register_table("overpayments", OverpaymentsTable(self))
         # self._register_table("payment_services", PaymentServicesTable(self)) # not supported
         self._register_table("payments", PaymentsTable(self))
-        # self._register_table("purchase_orders", PurchaseOrdersTable(self))
+        self._register_table("prepayments", PrepaymentsTable(self))
+        self._register_table("purchase_orders", PurchaseOrdersTable(self))
         self._register_table("quotes", QuotesTable(self))
         # self._register_table("repeating_invoices", RepeatingInvoicesTable(self))
 

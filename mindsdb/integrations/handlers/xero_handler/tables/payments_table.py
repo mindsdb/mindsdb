@@ -20,6 +20,7 @@ class PaymentsTable(XeroTable):
         "date": {"type": "where", "xero_field": "Date", "value_type": "date"},
         "invoice_id": {"type": "where", "xero_field": "Invoice.InvoiceID", "value_type": "guid"},
         "reference": {"type": "where", "xero_field": "Reference", "value_type": "string"},
+        "contact_id": {"type": "where", "xero_field": "Invoice.Contact.ContactID", "value_type": "guid"},
     }
     
     COLUMN_REMAP = {

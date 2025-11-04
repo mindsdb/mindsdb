@@ -10,42 +10,36 @@ from mindsdb.integrations.handlers.xero_handler.xero_tables import (
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser
 from xero_python.accounting import AccountingApi
 
-class ContactsTable(XeroTable):
-    """Table for Xero Contacts"""
+class ItemsTable(XeroTable):
+    """Table for Xero Items"""
 
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
-        "contact_id": {"type": "id_list", "param": "i_ds"},
-        "name": {"type": "direct", "param": "search_term", "value_type": "string"},
-        "first_name": {"type": "direct", "param": "search_term", "value_type": "string"},
-        "last_name": {"type": "direct", "param": "search_term", "value_type": "string"},
-        "email_address": {"type": "direct", "param": "search_term", "value_type": "string"},
-        "contact_number": {"type": "direct", "param": "search_term", "value_type": "string"},
-        "company_number": {"type": "direct", "param": "search_term", "value_type": "string"},
-        "status": {"type": "where", "param": "status", "value_type": "string"},
+        "item_id": {"type": "where", "xero_field": "ItemID", "value_type": "guid"},
+        "code": {"type": "where", "xero_field": "Type", "value_type": "string"},
+        "name": {"type": "where", "xero_field": "Name", "value_type": "string"},
+        "is_tracked_as_inventory": {"type": "where", "xero_field": "IsTrackedAsInventory", "value_type": "bool"},
+        "is_sold": {"type": "where", "xero_field": "IsSold", "value_type": "bool"},
+        "is_purchased": {"type": "where", "xero_field": "IsPurchased", "value_type": "bool"}
     }
     
     COLUMN_REMAP = {}
 
     def get_columns(self) -> List[str]:
         return [
-            "contact_id",
-            "contact_status",
-            "name",
-            "first_name",
-            "last_name",
-            "company_number",
-            "email_address",
-            "bank_account_details",
-            "tax_number",
-            "accounts_receivable_tax_type",
-            "accounts_payable_tax_type",
-            "addresses",
-            "phones",
+            "item_id",
+            "code",
+            "description",
+            "purchase_description",
+            "purchase_details",
             "updated_date_utc",
-            "is_supplier",
-            "is_customer",
-            "default_currency"
+            "sales_details_unit_price",
+            "sales_details_account_code",
+            "sales_details_tax_type",
+            "name",
+            "is_tracked_as_inventory",
+            "is_sold",
+            "is_purchased",
         ]
 
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -72,12 +66,12 @@ class ContactsTable(XeroTable):
             )
 
         try:
-            # Fetch contacts with optimized parameters
-            contacts = api.get_contacts(xero_tenant_id=self.handler.tenant_id, summary_only=False, **api_params)
-            df = self._convert_response_to_dataframe(contacts.contacts or [])
+            # Fetch items with optimized parameters
+            items = api.get_items(xero_tenant_id=self.handler.tenant_id, **api_params)
+            df = self._convert_response_to_dataframe(items.items or [])
             df.rename(columns=self.COLUMN_REMAP, inplace=True)
         except Exception as e:
-            raise Exception(f"Failed to fetch contacts: {str(e)}")
+            raise Exception(f"Failed to fetch items: {str(e)}")
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
@@ -85,7 +79,7 @@ class ContactsTable(XeroTable):
 
         # Parse and execute query
         parser = SELECTQueryParser(
-            query, "contacts", columns=self.get_columns()
+            query, "items", columns=self.get_columns()
         )
         selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
 

@@ -10,25 +10,24 @@ from mindsdb.integrations.handlers.xero_handler.xero_tables import (
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser
 from xero_python.accounting import AccountingApi
 
-class CreditNotesTable(XeroTable):
-    """Table for Xero Credit Notes"""
+class InvoicesTable(XeroTable):
+    """Table for Xero Invoices"""
 
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
-        "credit_note_id": {"type": "where", "xero_field": "CreditNoteID", "value_type": "guid"},
-        "credit_note_number": {"type": "where", "xero_field": "CreditNoteNumber", "value_type": "string"},
-        "type": {"type": "where", "xero_field": "Type", "value_type": "string"},
-        "reference": {"type": "where", "xero_field": "Reference", "value_type": "string"},
-        "remaining_credit": {"type": "where", "xero_field": "RemainingCredit", "value_type": "number"},
+        "invoice_id": {"type": "id_list", "param": "i_ds"},
+        # "invoice_number": {"type": "id_list", "param": "invoice_numbers"},
+        "invoice_number": {"type": "direct", "param": "search_term", "value_type": "string"},
+        "contact_id": {"type": "id_list", "param": "contact_i_ds"},
+        "status": {"type": "id_list", "param": "statuses"},
+        "contact_name": {"type": "where", "xero_field": "Contact.Name", "value_type": "string"},
+        "contact_number": {"type": "where", "xero_field": "Contact.ContactNumber", "value_type": "string"},
+        "reference": {"type": "direct", "param": "search_term", "value_type": "string"},
         "date": {"type": "where", "xero_field": "Date", "value_type": "date"},
-        "status": {"type": "where", "xero_field": "Status", "value_type": "string"},
-        "line_amount_types": {"type": "where", "xero_field": "LineAmountTypes", "value_type": "string"},
-        "sub_total": {"type": "where", "xero_field": "SubTotal", "value_type": "number"},
-        "total_tax": {"type": "where", "xero_field": "TotalTax", "value_type": "number"},
-        "total": {"type": "where", "xero_field": "Total", "value_type": "number"},
-        "updated_date_utc": {"type": "where", "xero_field": "UpdatedDateUTC", "value_type": "date"},
-        "currency_code": {"type": "where", "xero_field": "CurrencyCode", "value_type": "string"},
-        "fully_paid_on_date": {"type": "where", "xero_field": "FullyPaidOnDate", "value_type": "date"},
+        "type": {"type": "where", "xero_field": "Type", "value_type": "string"},
+        "amount_due": {"type": "where", "xero_field": "AmountDue", "value_type": "number"},
+        "amount_paid": {"type": "where", "xero_field": "AmountPaid", "value_type": "number"},
+        "due_date": {"type": "where", "xero_field": "DueDate", "value_type": "date"}
     }
     
     COLUMN_REMAP = {
@@ -39,16 +38,23 @@ class CreditNotesTable(XeroTable):
 
     def get_columns(self) -> List[str]:
         return [
-            "credit_note_id",
-            "credit_note_number",
-            "payments",
-            "has_errors",
-            "invoice_addresses",
-            "type",
+            "invoice_id",
+            "invoice_number",
             "reference",
-            "remaining_credit",
-            "allocations",
+            "payments",
+            "credit_notes",
+            "type",
+            "pre_payments",
+            "over_payments",
+            "amount_due",
+            "amount_paid",
+            "amount_credited",
+            "currency_rate",
+            "is_discounted",
             "has_attachments",
+            "invoice_addresses",
+            "hasErrors",
+            "invoice_payment_services",
             "contact_id",
             "contact_name",
             "contact_addresses",
@@ -56,8 +62,11 @@ class CreditNotesTable(XeroTable):
             "contact_groups",
             "contact_persons",
             "contact_has_validation_errors",
-            "date_string",
             "date",
+            "date_string",
+            "due_date",
+            "due_date_string",
+            "branding_theme_id",
             "status",
             "line_amount_types",
             "line_items",
@@ -65,8 +74,7 @@ class CreditNotesTable(XeroTable):
             "total_tax",
             "total",
             "updated_date_utc",
-            "currency_code",
-            "fully_paid_on_date"
+            "currency_code"
         ]
 
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -93,12 +101,13 @@ class CreditNotesTable(XeroTable):
             )
 
         try:
-            # Fetch credit notes with optimized parameters
-            credit_notes = api.get_credit_notes(xero_tenant_id=self.handler.tenant_id, **api_params)
-            df = self._convert_response_to_dataframe(credit_notes.credit_notes or [])
+            print("API Params:", api_params)
+            # Fetch invoices with optimized parameters
+            invoices = api.get_invoices(xero_tenant_id=self.handler.tenant_id, **api_params)
+            df = self._convert_response_to_dataframe(invoices.invoices or [])
             df.rename(columns=self.COLUMN_REMAP, inplace=True)
         except Exception as e:
-            raise Exception(f"Failed to fetch credit notes: {str(e)}")
+            raise Exception(f"Failed to fetch invoices: {str(e)}")
 
         # Apply remaining filters in memory
         if remaining_conditions and len(df) > 0:
@@ -106,7 +115,7 @@ class CreditNotesTable(XeroTable):
 
         # Parse and execute query
         parser = SELECTQueryParser(
-            query, "credit_notes", columns=self.get_columns()
+            query, "invoices", columns=self.get_columns()
         )
         selected_columns, _, order_by_conditions, result_limit = parser.parse_query()
 

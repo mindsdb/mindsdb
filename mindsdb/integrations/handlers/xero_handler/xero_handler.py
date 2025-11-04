@@ -12,16 +12,6 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import Au
 from xero_python.identity import IdentityApi
 from xero_python.api_client import ApiClient, Configuration
 from xero_python.api_client.configuration import OAuth2Token
-from xero_python.accounting import AccountingApi
-
-from .xero_tables import (
-    InvoicesTable,
-    ItemsTable,
-    OverpaymentsTable,
-    PaymentsTable,
-    PurchaseOrdersTable,
-    RepeatingInvoicesTable,
-)
 
 from .tables.accounts_table import AccountsTable
 from .tables.bank_transactions_table import BankTransactionsTable
@@ -30,6 +20,8 @@ from .tables.contact_groups_table import ContactGroupsTable
 from .tables.contacts_table import ContactsTable
 from .tables.quotes_table import QuotesTable
 from .tables.credit_notes_table import CreditNotesTable
+from .tables.invoices_table import InvoicesTable
+from .tables.items_table import ItemsTable
 
 class XeroHandler(APIHandler):
     """
@@ -77,11 +69,11 @@ class XeroHandler(APIHandler):
         self._register_table("credit_notes", CreditNotesTable(self))
         self._register_table("invoices", InvoicesTable(self))
         self._register_table("items", ItemsTable(self))
-        self._register_table("overpayments", OverpaymentsTable(self))
-        self._register_table("payments", PaymentsTable(self))
-        self._register_table("purchase_orders", PurchaseOrdersTable(self))
+        # self._register_table("overpayments", OverpaymentsTable(self))
+        # self._register_table("payments", PaymentsTable(self))
+        # self._register_table("purchase_orders", PurchaseOrdersTable(self))
         self._register_table("quotes", QuotesTable(self))
-        self._register_table("repeating_invoices", RepeatingInvoicesTable(self))
+        # self._register_table("repeating_invoices", RepeatingInvoicesTable(self))
 
     def _use_token_injection_path(self) -> bool:
         """

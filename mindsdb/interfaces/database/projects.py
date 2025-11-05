@@ -166,6 +166,9 @@ class Project:
                 ):
                     return [node]
 
+                # Return empty list for unsupported conditions (e.g., TypeCast, Function, etc.)
+                return []
+
             conditions = get_conditions_to_move(query.where)
 
             if conditions:

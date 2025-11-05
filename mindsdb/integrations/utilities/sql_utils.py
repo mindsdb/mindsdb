@@ -117,6 +117,11 @@ def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False):
                     if isinstance(arg1.args[0], ast.Identifier):
                         arg1 = arg1.args[0]
 
+            # Handle TypeCast by unwrapping to get the underlying identifier
+            if isinstance(arg1, ast.TypeCast):
+                if isinstance(arg1.arg, ast.Identifier):
+                    arg1 = arg1.arg
+
             if not isinstance(arg1, ast.Identifier):
                 # Only support [identifier] =/</>/>=/<=/etc [constant] comparisons.
                 raise NotImplementedError(f"Not implemented arg1: {arg1}")

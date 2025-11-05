@@ -16,7 +16,6 @@ class InvoicesTable(XeroTable):
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
         "invoice_id": {"type": "id_list", "param": "i_ds"},
-        # "invoice_number": {"type": "id_list", "param": "invoice_numbers"},
         "invoice_number": {"type": "direct", "param": "search_term", "value_type": "string"},
         "contact_id": {"type": "id_list", "param": "contact_i_ds"},
         "status": {"type": "id_list", "param": "statuses"},

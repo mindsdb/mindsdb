@@ -89,7 +89,11 @@ class XeroHandler(APIHandler):
         self._register_table("manual_journals", ManualJournalsTable(self))
         self._register_table("organisations", OrganisationsTable(self))
         self._register_table("overpayments", OverpaymentsTable(self))
-        # self._register_table("payment_services", PaymentServicesTable(self)) # not supported
+        # The PaymentServicesTable is not currently supported due to limitations in the Xero API
+        # and/or incomplete implementation in MindsDB. If Xero expands API support for payment services
+        # or if a future release of MindsDB implements the required functionality, this table registration
+        # may be enabled. For now, it remains commented out to avoid exposing unsupported features.
+        # self._register_table("payment_services", PaymentServicesTable(self))
         self._register_table("payments", PaymentsTable(self))
         self._register_table("prepayments", PrepaymentsTable(self))
         self._register_table("purchase_orders", PurchaseOrdersTable(self))

@@ -31,6 +31,14 @@ from .tables.prepayments_table import PrepaymentsTable
 from .tables.purchase_orders_table import PurchaseOrdersTable
 from .tables.repeating_invoices_table import RepeatingInvoicesTable
 
+# Report tables
+from .tables.balance_sheet_report_table import BalanceSheetReportTable
+from .tables.profit_loss_report_table import ProfitLossReportTable
+from .tables.trial_balance_report_table import TrialBalanceReportTable
+from .tables.bank_summary_report_table import BankSummaryReportTable
+from .tables.budget_summary_report_table import BudgetSummaryReportTable
+from .tables.executive_summary_report_table import ExecutiveSummaryReportTable
+
 class XeroHandler(APIHandler):
     """
     Xero Handler for MindsDB
@@ -87,6 +95,14 @@ class XeroHandler(APIHandler):
         self._register_table("purchase_orders", PurchaseOrdersTable(self))
         self._register_table("quotes", QuotesTable(self))
         self._register_table("repeating_invoices", RepeatingInvoicesTable(self))
+
+        # Register report tables
+        self._register_table("balance_sheet_report", BalanceSheetReportTable(self))
+        self._register_table("profit_loss_report", ProfitLossReportTable(self))
+        self._register_table("trial_balance_report", TrialBalanceReportTable(self))
+        self._register_table("bank_summary_report", BankSummaryReportTable(self))
+        self._register_table("budget_summary_report", BudgetSummaryReportTable(self))
+        self._register_table("executive_summary_report", ExecutiveSummaryReportTable(self))
 
     def _use_token_injection_path(self) -> bool:
         """

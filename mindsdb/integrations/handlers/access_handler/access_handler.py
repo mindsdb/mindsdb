@@ -157,7 +157,7 @@ class AccessHandler(DatabaseHandler):
         if not HAS_ACCESS_DIALECT:
             return Response(
                 RESPONSE_TYPE.ERROR,
-                error_message="AccessDialect is not available. This handler requires Windows and sqlalchemy-access package.",
+                error_message="AccessDialect is not available. This handler requires sqlalchemy-access package.",
             )
 
         renderer = SqlalchemyRender(AccessDialect)

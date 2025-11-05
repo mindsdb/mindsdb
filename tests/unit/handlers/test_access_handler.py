@@ -18,19 +18,13 @@ class BaseAccessHandlerTest(unittest.TestCase):
         self.connection_data = {"db_file": self.TEST_DB_PATH}
         # Mock pyodbc module for import
         self.pyodbc_patcher = patch.dict("sys.modules", {"pyodbc": MagicMock()})
-        # Mock platform to return Windows by default for all tests
-        self.platform_patcher = patch(
-            "mindsdb.integrations.handlers.access_handler.access_handler.platform.system", return_value="Windows"
-        )
         self.pyodbc_patcher.start()
-        self.platform_patcher.start()
         self.handler = AccessHandler(self.TEST_HANDLER_NAME, self.connection_data)
 
     def tearDown(self):
         """Clean up after tests."""
         if hasattr(self.handler, "is_connected") and self.handler.is_connected:
             self.handler.disconnect()
-        self.platform_patcher.stop()
         self.pyodbc_patcher.stop()
 
     @staticmethod
@@ -118,19 +112,6 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertIn(error_msg, str(context.exception))
         self.assertFalse(self.handler.is_connected)
 
-    def test_connect_non_windows_platform(self):
-        """Test connection failure on non-Windows platforms."""
-        # Temporarily override the platform mock to return Linux
-        self.platform_patcher.stop()
-        with patch("mindsdb.integrations.handlers.access_handler.access_handler.platform.system", return_value="Linux"):
-            with self.assertRaises(Exception) as context:
-                self.handler.connect()
-
-            self.assertIn("Microsoft Access handler is only supported on Windows platforms", str(context.exception))
-            self.assertFalse(self.handler.is_connected)
-        # Restart the platform patcher for other tests
-        self.platform_patcher.start()
-
     def test_disconnect_when_connected(self):
         """Test disconnect when connection exists."""
         mock_connection, _ = self.create_mock_connection_with_cursor()
@@ -174,22 +155,6 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertIsInstance(result, StatusResponse)
         self.assertFalse(result.success)
         self.assertIn(error_message, result.error_message)
-
-    def test_check_connection_non_windows_platform(self):
-        """Test check_connection failure on non-Windows platforms."""
-        # Temporarily override the platform mock to return Darwin (macOS)
-        self.platform_patcher.stop()
-        with patch(
-            "mindsdb.integrations.handlers.access_handler.access_handler.platform.system", return_value="Darwin"
-        ):
-            result = self.handler.check_connection()
-
-            self.assertIsInstance(result, StatusResponse)
-            self.assertFalse(result.success)
-            self.assertIn("Microsoft Access handler is only supported on Windows platforms", result.error_message)
-            self.assertFalse(self.handler.is_connected)
-        # Restart the platform patcher for other tests
-        self.platform_patcher.start()
 
 
 class TestAccessHandlerQueries(BaseAccessHandlerTest):
@@ -329,7 +294,6 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 
         self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
         self.assertIn("AccessDialect is not available", result.error_message)
-        self.assertIn("Windows", result.error_message)
 
     @patch("pyodbc.connect")
     def test_native_query_with_special_characters(self, mock_connect):

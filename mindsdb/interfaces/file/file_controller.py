@@ -36,7 +36,6 @@ class FileController:
         names = [record[0] for record in db.session.query(db.File.name).filter_by(company_id=ctx.company_id)]
         if lower:
             names = [name.lower() for name in names]
-        print("FILES NAMES:", names)
         return names
 
     def get_file_meta(self, name):
@@ -86,13 +85,11 @@ class FileController:
 
         if file_name is None:
             file_name = Path(file_path).name
-        print("SAVING FILE:", file_path)
-        print("AS NAME:", name)
+
         file_dir = None
         try:
             pages_files, pages_index = self.get_file_pages(file_path)
-            print("PAGES FILES:", pages_files)
-            print("PAGES INDEX:", pages_index)
+
             metadata = {"is_feather": True, "pages": pages_index}
             df = pages_files[0]
             file_record = db.File(

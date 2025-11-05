@@ -18,6 +18,14 @@ concurrency:
 
 jobs:
 
+  start_pipeline:
+    name: Start Dev Build Pipeline
+    runs-on: mdb-dev
+    steps:
+      - name: CI Pipeline Started
+        run: echo "MindsDB Development Build Pipeline Initiated Successfully"
+
+
   changes:
     name: Filter changed files
     runs-on: mdb-dev

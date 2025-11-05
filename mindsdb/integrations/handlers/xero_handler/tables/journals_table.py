@@ -15,7 +15,7 @@ class JournalsTable(XeroTable):
 
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
-        "journal_id": {"type": "where", "xero_field": "ItemID", "value_type": "guid"},
+        "journal_id": {"type": "where", "xero_field": "JournalID", "value_type": "guid"},
         "journal_date": {"type": "where", "xero_field": "Date", "value_type": "date"},
         "journal_number": {"type": "where", "xero_field": "JournalNumber", "value_type": "number"},
         "created_date_utc": {"type": "where", "xero_field": "CreatedDateUTC", "value_type": "date"},

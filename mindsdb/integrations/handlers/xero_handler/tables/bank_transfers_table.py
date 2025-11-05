@@ -45,7 +45,6 @@ class BankTransfersTable(XeroTable):
             "bank_account_system_account",
             "bank_account_tax_type",
             "bank_account_type",
-            "bank_account_type",
             "bank_account_updated_date_utc",
             "bank_account_validation_errors",
             "bank_transaction_id",

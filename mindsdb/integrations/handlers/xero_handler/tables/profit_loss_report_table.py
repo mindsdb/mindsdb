@@ -1,4 +1,5 @@
 from typing import List
+from datetime import datetime, timedelta, date
 import pandas as pd
 from mindsdb_sql_parser import ast
 from mindsdb.integrations.handlers.xero_handler.xero_report_tables import XeroReportTable
@@ -86,10 +87,26 @@ class ProfitLossReportTable(XeroReportTable):
                 conditions, self.SUPPORTED_FILTERS
             )
 
-        # Convert date parameters to proper format
-        if 'from_date' in api_params:
+        # Set default dates if not provided
+        # from_date defaults to beginning of current month
+        # to_date defaults to end of current month
+        now = datetime.now()
+
+        if 'from_date' not in api_params:
+            # First day of current month as date object
+            api_params['from_date'] = date(now.year, now.month, 1)
+        else:
             api_params['from_date'] = self._convert_date_parameter(api_params['from_date'])
-        if 'to_date' in api_params:
+
+        if 'to_date' not in api_params:
+            # Last day of current month as date object
+            # Get first day of next month, then subtract one day
+            if now.month == 12:
+                next_month = date(now.year + 1, 1, 1)
+            else:
+                next_month = date(now.year, now.month + 1, 1)
+            api_params['to_date'] = next_month - timedelta(days=1)
+        else:
             api_params['to_date'] = self._convert_date_parameter(api_params['to_date'])
 
         try:

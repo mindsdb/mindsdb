@@ -16,7 +16,7 @@ class ItemsTable(XeroTable):
     # Define which columns can be pushed to the Xero API
     SUPPORTED_FILTERS = {
         "item_id": {"type": "where", "xero_field": "ItemID", "value_type": "guid"},
-        "code": {"type": "where", "xero_field": "Type", "value_type": "string"},
+        "code": {"type": "where", "xero_field": "Code", "value_type": "string"},
         "name": {"type": "where", "xero_field": "Name", "value_type": "string"},
         "is_tracked_as_inventory": {"type": "where", "xero_field": "IsTrackedAsInventory", "value_type": "bool"},
         "is_sold": {"type": "where", "xero_field": "IsSold", "value_type": "bool"},

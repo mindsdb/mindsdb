@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+import re
 from abc import abstractmethod
 from typing import List, Dict, Tuple, Any
 from enum import Enum
@@ -30,6 +31,22 @@ class XeroTable(APITable):
         """
         super().__init__(handler)
         self.handler = handler
+
+    def _to_snake_case(self, name: str) -> str:
+        """
+        Convert PascalCase or camelCase string to snake_case
+
+        Args:
+            name: String in PascalCase or camelCase
+
+        Returns:
+            str: String in snake_case
+        """
+        # Insert an underscore before any uppercase letter that follows a lowercase letter or digit
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        # Insert an underscore before any uppercase letter that follows a lowercase letter, digit, or uppercase letter followed by lowercase
+        s2 = re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1)
+        return s2.lower()
 
     def insert(self, query: ast.Insert) -> None:
         """Insert operations are not supported"""
@@ -103,7 +120,9 @@ class XeroTable(APITable):
                 result[prefix] = json.dumps(self._json_serialize(value))
             else:
                 for sub_key, sub_value in value.items():
-                    new_prefix = f"{prefix}_{sub_key}" if prefix else sub_key
+                    # Convert sub_key to snake_case
+                    snake_case_key = self._to_snake_case(sub_key)
+                    new_prefix = f"{prefix}_{snake_case_key}" if prefix else snake_case_key
                     flattened = self._flatten_dict(sub_value, new_prefix, depth + 1, max_depth)
                     result.update(flattened)
             return result
@@ -143,7 +162,9 @@ class XeroTable(APITable):
             # Recursively flatten the row
             parsed_row = {}
             for key, value in row.items():
-                flattened = self._flatten_dict(value, key, depth=0, max_depth=3)
+                # Convert the initial key to snake_case as well
+                snake_case_key = self._to_snake_case(key)
+                flattened = self._flatten_dict(value, snake_case_key, depth=0, max_depth=3)
                 parsed_row.update(flattened)
 
             rows.append(parsed_row)

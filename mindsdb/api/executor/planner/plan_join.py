@@ -735,7 +735,6 @@ class PlanJoinTablesQuery:
 
         return conditions
 
-
     def process_predictor(self, item, query_in):
         if len(self.step_stack) == 0:
             raise NotImplementedError("Predictor can't be first element of join syntax")

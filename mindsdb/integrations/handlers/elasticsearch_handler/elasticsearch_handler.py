@@ -20,7 +20,7 @@ from es.elastic.sqlalchemy import ESDialect
 from pandas import DataFrame
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -32,7 +32,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class ElasticsearchHandler(DatabaseHandler):
+class ElasticsearchHandler(MetaDatabaseHandler):
     """
     This handler handles the connection and execution of SQL statements on Elasticsearch
     using a SQL-first architecture with automatic fallback capabilities.
@@ -546,17 +546,19 @@ class ElasticsearchHandler(DatabaseHandler):
 
         return result
 
-    def get_column_statistics(self, table_name: str, column_name: Optional[str] = None) -> Response:
+    def meta_get_column_statistics_for_table(
+        self, table_name: str, column_names: Optional[List[str]] = None
+    ) -> Response:
         """
         Retrieves statistics for columns in the specified Elasticsearch index.
 
         This method uses Elasticsearch aggregations to efficiently gather statistics in a single query:
-        - Numeric fields: min, max, avg (via stats aggregation)
+        - Numeric fields: min, max (via stats aggregation)
         - Keyword fields: distinct count (cardinality)
         - Text fields: distinct count (cardinality on .keyword multi-field)
         - Date fields: min, max (via stats aggregation, as timestamps)
-        - All fields: null count (missing values)
-        - Object/nested fields: excluded from aggregations, null count only
+        - All fields: null percentage (missing values / total docs)
+        - Object/nested fields: excluded from aggregations, null percentage only
         - Nested/array fields: treated as text (cardinality on JSON string representation)
 
         Implementation Details:
@@ -567,29 +569,29 @@ class ElasticsearchHandler(DatabaseHandler):
 
         Args:
             table_name (str): The name of the index to analyze.
-            column_name (Optional[str]): Specific column name. If None, returns statistics for all columns.
+            column_names (Optional[List[str]]): Specific column names. If None, returns statistics for all columns.
 
         Returns:
             Response: DataFrame with columns:
-                - column_name: Field name
-                - data_type: Elasticsearch field type
-                - null_count: Number of documents missing this field (0 if aggregation failed)
-                - distinct_count: Approximate count of unique values (0 if not aggregatable)
-                - min: Minimum value (numeric/date fields, None otherwise)
-                - max: Maximum value (numeric/date fields, None otherwise)
-                - avg: Average value (numeric fields only, None otherwise)
+                - TABLE_NAME: Index name
+                - COLUMN_NAME: Field name
+                - DATA_TYPE: Elasticsearch field type
+                - NULL_PERCENTAGE: Percentage of documents missing this field (0.0-100.0)
+                - DISTINCT_VALUES_COUNT: Approximate count of unique values (0 if not aggregatable)
+                - MINIMUM_VALUE: Minimum value (numeric/date fields, None otherwise)
+                - MAXIMUM_VALUE: Maximum value (numeric/date fields, None otherwise)
 
         Raises:
-            ValueError: If table_name is invalid or column_name not found in index.
+            ValueError: If table_name is invalid or column_names not found in index.
 
         Example:
-            >>> handler.get_column_statistics('kibana_sample_data_flights')
-            >>> handler.get_column_statistics('products', 'price')
+            >>> handler.meta_get_column_statistics_for_table('kibana_sample_data_flights')
+            >>> handler.meta_get_column_statistics_for_table('products', ['price', 'quantity'])
         """
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Table name must be a non-empty string")
 
-        logger.debug(f"Getting column statistics for {table_name}, column: {column_name}")
+        logger.debug(f"Getting column statistics for {table_name}, columns: {column_names}")
         need_to_close = not self.is_connected
         connection = self.connect()
 
@@ -610,18 +612,30 @@ class ElasticsearchHandler(DatabaseHandler):
                 return Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=DataFrame(
-                        columns=["column_name", "data_type", "null_count", "distinct_count", "min", "max", "avg"]
+                        columns=[
+                            "TABLE_NAME",
+                            "COLUMN_NAME",
+                            "DATA_TYPE",
+                            "NULL_PERCENTAGE",
+                            "DISTINCT_VALUES_COUNT",
+                            "MINIMUM_VALUE",
+                            "MAXIMUM_VALUE",
+                        ]
                     ),
                 )
 
-            # Step 2: Flatten nested field mappings and filter by column_name if provided
+            # Step 2: Flatten nested field mappings and filter by column_names if provided
             fields_to_analyze = {}
             self._extract_fields_from_mapping(properties, fields_to_analyze, prefix="")
 
-            if column_name:
-                if column_name not in fields_to_analyze:
-                    raise ValueError(f"Column '{column_name}' not found in index '{table_name}'")
-                fields_to_analyze = {column_name: fields_to_analyze[column_name]}
+            if column_names:
+                # Filter to only requested columns
+                filtered_fields = {}
+                for col_name in column_names:
+                    if col_name not in fields_to_analyze:
+                        raise ValueError(f"Column '{col_name}' not found in index '{table_name}'")
+                    filtered_fields[col_name] = fields_to_analyze[col_name]
+                fields_to_analyze = filtered_fields
 
             # Step 3: Build comprehensive aggregation query
             aggs = {}
@@ -693,13 +707,13 @@ class ElasticsearchHandler(DatabaseHandler):
                     for field_name, field_info in fields_to_analyze.items():
                         stats_data.append(
                             {
-                                "column_name": field_name,
-                                "data_type": field_info.get("type", "object"),
-                                "null_count": None,
-                                "distinct_count": None,
-                                "min": None,
-                                "max": None,
-                                "avg": None,
+                                "TABLE_NAME": table_name,
+                                "COLUMN_NAME": field_name,
+                                "DATA_TYPE": field_info.get("type", "object"),
+                                "NULL_PERCENTAGE": None,
+                                "DISTINCT_VALUES_COUNT": None,
+                                "MINIMUM_VALUE": None,
+                                "MAXIMUM_VALUE": None,
                             }
                         )
                     return Response(RESPONSE_TYPE.TABLE, data_frame=DataFrame(stats_data))
@@ -707,6 +721,13 @@ class ElasticsearchHandler(DatabaseHandler):
                     raise
 
             # Step 5: Parse aggregation results into statistics
+            # Get total document count for NULL_PERCENTAGE calculation
+            total_docs = agg_response.get("hits", {}).get("total", {})
+            if isinstance(total_docs, dict):
+                total_doc_count = total_docs.get("value", 0)
+            else:
+                total_doc_count = total_docs  # ES 6.x returns int directly
+
             stats_data = []
             for field_name, field_info in fields_to_analyze.items():
                 field_type = field_info.get("type", "object")
@@ -719,10 +740,11 @@ class ElasticsearchHandler(DatabaseHandler):
                 cardinality_result = aggregations.get(cardinality_key, {})
                 distinct_count = int(cardinality_result.get("value", 0)) if cardinality_result else 0
 
-                # Extract missing count (null count)
+                # Extract missing count and calculate NULL_PERCENTAGE
                 missing_key = f"{safe_field_name}_missing"
                 missing_result = aggregations.get(missing_key, {})
                 null_count = missing_result.get("doc_count", 0) if missing_result else 0
+                null_percentage = (null_count / total_doc_count * 100.0) if total_doc_count > 0 else 0.0
 
                 # Extract stats for numeric/date fields
                 stats_key = f"{safe_field_name}_stats"
@@ -730,17 +752,16 @@ class ElasticsearchHandler(DatabaseHandler):
 
                 min_val = stats.get("min") if stats else None
                 max_val = stats.get("max") if stats else None
-                avg_val = stats.get("avg") if stats else None
 
                 stats_data.append(
                     {
-                        "column_name": field_name,
-                        "data_type": field_type,
-                        "null_count": null_count,
-                        "distinct_count": distinct_count,
-                        "min": min_val,
-                        "max": max_val,
-                        "avg": avg_val,
+                        "TABLE_NAME": table_name,
+                        "COLUMN_NAME": field_name,
+                        "DATA_TYPE": field_type,
+                        "NULL_PERCENTAGE": null_percentage,
+                        "DISTINCT_VALUES_COUNT": distinct_count,
+                        "MINIMUM_VALUE": min_val,
+                        "MAXIMUM_VALUE": max_val,
                     }
                 )
 
@@ -785,63 +806,177 @@ class ElasticsearchHandler(DatabaseHandler):
                 # Field without type or properties (treat as object)
                 fields[full_field_name] = {"type": "object"}
 
-    def get_primary_keys(self, table_name: str) -> Response:
+    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
         """
-        Retrieves the primary key for the specified Elasticsearch index.
+        Retrieves the primary keys for the specified Elasticsearch indices.
 
         In Elasticsearch, the _id field serves as the implicit primary key for each document.
-        This method always returns _id as the primary key.
+        This method always returns _id as the primary key for each table.
 
         Args:
-            table_name (str): The name of the index.
+            table_names (Optional[List[str]]): List of index names. If None, returns primary keys for all tables.
 
         Returns:
             Response: DataFrame with columns:
-                - constraint_name: Name of the primary key constraint
-                - column_name: The column name (_id)
+                - TABLE_NAME: Name of the index
+                - CONSTRAINT_NAME: Name of the primary key constraint
+                - COLUMN_NAME: The column name (_id)
 
         Example:
-            >>> handler.get_primary_keys('products')
-            # Returns: constraint_name='PRIMARY', column_name='_id'
+            >>> handler.meta_get_primary_keys(['products', 'orders'])
+            # Returns: TABLE_NAME='products', CONSTRAINT_NAME='PRIMARY', COLUMN_NAME='_id'
+            #          TABLE_NAME='orders', CONSTRAINT_NAME='PRIMARY', COLUMN_NAME='_id'
         """
-        if not table_name or not isinstance(table_name, str):
-            raise ValueError("Table name must be a non-empty string")
+        logger.debug(f"Getting primary keys for tables: {table_names}")
 
-        logger.debug(f"Getting primary keys for {table_name}")
+        # If no table names specified, get all tables
+        if not table_names:
+            tables_response = self.get_tables()
+            if tables_response.type == RESPONSE_TYPE.ERROR:
+                return tables_response
+            table_names = tables_response.data_frame["TABLE_NAME"].tolist()
 
         # Elasticsearch always uses _id as the document identifier (primary key)
-        pk_data = [{"constraint_name": "PRIMARY", "column_name": "_id"}]
+        pk_data = []
+        for table_name in table_names:
+            pk_data.append({"TABLE_NAME": table_name, "CONSTRAINT_NAME": "PRIMARY", "COLUMN_NAME": "_id"})
 
         return Response(RESPONSE_TYPE.TABLE, data_frame=DataFrame(pk_data))
 
-    def get_foreign_keys(self, table_name: str) -> Response:
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
         """
-        Retrieves foreign keys for the specified Elasticsearch index.
+        Retrieves foreign keys for the specified Elasticsearch indices.
 
         Elasticsearch is a NoSQL document store and does not support foreign key constraints.
         This method always returns an empty DataFrame with the proper structure.
 
         Args:
-            table_name (str): The name of the index.
+            table_names (Optional[List[str]]): List of index names. If None, applies to all tables.
 
         Returns:
             Response: Empty DataFrame with columns:
-                - constraint_name: Foreign key constraint name
-                - column_name: The column name
-                - referenced_table: The referenced table name
-                - referenced_column: The referenced column name
+                - CHILD_TABLE_NAME: The table containing the foreign key
+                - CHILD_COLUMN_NAME: The column name
+                - PARENT_TABLE_NAME: The referenced table name
+                - PARENT_COLUMN_NAME: The referenced column name
+                - CONSTRAINT_NAME: Foreign key constraint name
 
         Example:
-            >>> handler.get_foreign_keys('products')
+            >>> handler.meta_get_foreign_keys(['products'])
             # Returns: Empty DataFrame (NoSQL has no foreign keys)
         """
-        if not table_name or not isinstance(table_name, str):
-            raise ValueError("Table name must be a non-empty string")
-
-        logger.debug(f"Getting foreign keys for {table_name} (NoSQL - will return empty)")
+        logger.debug(f"Getting foreign keys for tables: {table_names} (NoSQL - will return empty)")
 
         # Elasticsearch is NoSQL and doesn't have foreign key constraints
         return Response(
             RESPONSE_TYPE.TABLE,
-            data_frame=DataFrame(columns=["constraint_name", "column_name", "referenced_table", "referenced_column"]),
+            data_frame=DataFrame(
+                columns=[
+                    "CHILD_TABLE_NAME",
+                    "CHILD_COLUMN_NAME",
+                    "PARENT_TABLE_NAME",
+                    "PARENT_COLUMN_NAME",
+                    "CONSTRAINT_NAME",
+                ]
+            ),
         )
+
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves metadata for tables (indices) in the Elasticsearch host.
+
+        Args:
+            table_names (Optional[List[str]]): List of specific table names to retrieve.
+                If None, returns all non-system tables.
+
+        Returns:
+            Response: DataFrame with columns:
+                - TABLE_NAME: Name of the index
+                - TABLE_TYPE: Type of table (always 'BASE TABLE' for Elasticsearch)
+
+        Example:
+            >>> handler.meta_get_tables(['products', 'orders'])
+            >>> handler.meta_get_tables()  # Returns all tables
+        """
+        logger.debug(f"Getting table metadata for: {table_names}")
+
+        # Get all tables using SHOW TABLES
+        query = "SHOW TABLES"
+        result = self.native_query(query)
+
+        if result.type != RESPONSE_TYPE.TABLE:
+            return result
+
+        df = result.data_frame
+
+        # Filter out system indexes (starting with .)
+        df = df[~df["name"].str.startswith(".")]
+
+        # Filter by requested table names if provided
+        if table_names:
+            df = df[df["name"].isin(table_names)]
+
+        # Drop unnecessary columns and rename to match spec
+        df = df.drop(["catalog", "kind"], axis=1, errors="ignore")
+        df = df.rename(columns={"name": "TABLE_NAME", "type": "TABLE_TYPE"})
+
+        result.data_frame = df
+        return result
+
+    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves column metadata for tables (indices) in the Elasticsearch host.
+
+        Args:
+            table_names (Optional[List[str]]): List of specific table names to retrieve columns for.
+                If None, returns columns for all tables.
+
+        Returns:
+            Response: DataFrame with columns:
+                - TABLE_NAME: Name of the index
+                - COLUMN_NAME: Name of the field/column
+                - DATA_TYPE: Elasticsearch data type
+
+        Example:
+            >>> handler.meta_get_columns(['products'])
+            >>> handler.meta_get_columns()  # Returns columns for all tables
+        """
+        logger.debug(f"Getting column metadata for tables: {table_names}")
+
+        # If no table names specified, get all tables first
+        if not table_names:
+            tables_response = self.meta_get_tables()
+            if tables_response.type == RESPONSE_TYPE.ERROR:
+                return tables_response
+            table_names = tables_response.data_frame["TABLE_NAME"].tolist()
+
+        # Collect columns for each table
+        all_columns_data = []
+        for table_name in table_names:
+            try:
+                query = f"DESCRIBE {table_name}"
+                result = self.native_query(query)
+
+                if result.type == RESPONSE_TYPE.TABLE:
+                    df = result.data_frame
+                    df = df.drop("mapping", axis=1, errors="ignore")
+                    df = df.rename(columns={"column": "COLUMN_NAME", "type": "DATA_TYPE"})
+                    # Add TABLE_NAME column
+                    df["TABLE_NAME"] = table_name
+                    all_columns_data.append(df)
+            except Exception as e:
+                logger.warning(f"Failed to get columns for table {table_name}: {e}")
+                continue
+
+        # Combine all results
+        if all_columns_data:
+            combined_df = DataFrame()
+            for df in all_columns_data:
+                combined_df = combined_df._append(df, ignore_index=True) if not combined_df.empty else df
+            # Reorder columns to match spec
+            combined_df = combined_df[["TABLE_NAME", "COLUMN_NAME", "DATA_TYPE"]]
+            return Response(RESPONSE_TYPE.TABLE, data_frame=combined_df)
+        else:
+            return Response(
+                RESPONSE_TYPE.TABLE, data_frame=DataFrame(columns=["TABLE_NAME", "COLUMN_NAME", "DATA_TYPE"])
+            )

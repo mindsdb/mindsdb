@@ -90,56 +90,6 @@ WHERE product_id = '12345';
 The Elasticsearch handler automatically detects and converts array fields to JSON strings for SQL compatibility. This prevents "Arrays not supported" errors while preserving the original data structure.
 </Tip>
 
-## Schema Discovery
-
-List available indices and columns:
-
-```sql
--- List all indices (tables)
-SELECT table_name FROM information_schema.tables
-WHERE table_schema = 'elasticsearch_conn';
-
--- Get column information
-SELECT column_name, data_type FROM information_schema.columns
-WHERE table_name = 'products' AND table_schema = 'elasticsearch_conn';
-```
-
-## Data Catalog Support
-
-The Elasticsearch handler provides Data Catalog support for enterprise requirements with three key methods:
-
-### Column Statistics
-
-Get detailed statistical information about index fields:
-
-```sql
--- All columns
-SELECT * FROM mindsdb.get_column_statistics('elasticsearch_conn', 'products');
-
--- Specific column
-SELECT * FROM mindsdb.get_column_statistics('elasticsearch_conn', 'products', 'price');
-```
-
-Returns: `column_name`, `data_type`, `null_count`, `distinct_count`, `min`, `max`, `avg`
-
-Supported field types: numeric (with min/max/avg), keyword, text, date, geo_point, ip, nested objects (flattened with dot notation).
-
-### Primary Keys
-
-```sql
-SELECT * FROM mindsdb.get_primary_keys('elasticsearch_conn', 'products');
-```
-
-Returns `_id` as the primary key (Elasticsearch's document identifier).
-
-### Foreign Keys
-
-```sql
-SELECT * FROM mindsdb.get_foreign_keys('elasticsearch_conn', 'products');
-```
-
-Returns empty (NoSQL databases don't have foreign keys).
-
 ## Troubleshooting
 
 <Warning>

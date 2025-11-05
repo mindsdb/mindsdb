@@ -212,7 +212,7 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertIn("metadata.rating", column_names)
 
     def test_get_column_statistics_all_columns(self):
-        """Test get_column_statistics returns stats for all columns"""
+        """Test meta_get_column_statistics_for_table returns stats for all columns"""
         mock_client = MockElasticsearchClient()
 
         # Mock index mapping
@@ -224,8 +224,9 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             }
         }
 
-        # Mock aggregation response
+        # Mock aggregation response with hits total for NULL_PERCENTAGE calculation
         mock_client.search.return_value = {
+            "hits": {"total": {"value": 100}},
             "aggregations": {
                 "id_cardinality": {"value": 100},
                 "id_missing": {"doc_count": 0},
@@ -235,31 +236,39 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 "price_cardinality": {"value": 80},
                 "price_missing": {"doc_count": 10},
                 "price_stats": {"min": 9.99, "max": 999.99, "avg": 99.95},
-            }
+            },
         }
 
         self.mock_connect.return_value = mock_client
 
-        response = self.handler.get_column_statistics("products")
+        response = self.handler.meta_get_column_statistics_for_table("products")
 
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, pd.DataFrame)
         self.assertEqual(len(response.data_frame), 3)
 
-        expected_columns = {"column_name", "data_type", "null_count", "distinct_count", "min", "max", "avg"}
+        expected_columns = {
+            "TABLE_NAME",
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "NULL_PERCENTAGE",
+            "DISTINCT_VALUES_COUNT",
+            "MINIMUM_VALUE",
+            "MAXIMUM_VALUE",
+        }
         self.assertEqual(set(response.data_frame.columns), expected_columns)
 
         # Check numeric field has stats
-        price_row = response.data_frame[response.data_frame["column_name"] == "price"].iloc[0]
-        self.assertEqual(price_row["data_type"], "double")
-        self.assertEqual(price_row["distinct_count"], 80)
-        self.assertEqual(price_row["null_count"], 10)
-        self.assertEqual(price_row["min"], 9.99)
-        self.assertEqual(price_row["max"], 999.99)
-        self.assertEqual(price_row["avg"], 99.95)
+        price_row = response.data_frame[response.data_frame["COLUMN_NAME"] == "price"].iloc[0]
+        self.assertEqual(price_row["TABLE_NAME"], "products")
+        self.assertEqual(price_row["DATA_TYPE"], "double")
+        self.assertEqual(price_row["DISTINCT_VALUES_COUNT"], 80)
+        self.assertEqual(price_row["NULL_PERCENTAGE"], 10.0)  # 10/100 * 100 = 10%
+        self.assertEqual(price_row["MINIMUM_VALUE"], 9.99)
+        self.assertEqual(price_row["MAXIMUM_VALUE"], 999.99)
 
     def test_get_column_statistics_specific_column(self):
-        """Test get_column_statistics for a specific column"""
+        """Test meta_get_column_statistics_for_table for specific columns"""
         mock_client = MockElasticsearchClient()
 
         mock_client.indices.get_mapping.return_value = {
@@ -267,23 +276,24 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         }
 
         mock_client.search.return_value = {
+            "hits": {"total": {"value": 100}},
             "aggregations": {
                 "price_cardinality": {"value": 80},
                 "price_missing": {"doc_count": 10},
                 "price_stats": {"min": 9.99, "max": 999.99, "avg": 99.95},
-            }
+            },
         }
 
         self.mock_connect.return_value = mock_client
 
-        response = self.handler.get_column_statistics("products", "price")
+        response = self.handler.meta_get_column_statistics_for_table("products", ["price"])
 
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertEqual(len(response.data_frame), 1)
-        self.assertEqual(response.data_frame.iloc[0]["column_name"], "price")
+        self.assertEqual(response.data_frame.iloc[0]["COLUMN_NAME"], "price")
 
     def test_get_column_statistics_invalid_column(self):
-        """Test get_column_statistics raises error for invalid column"""
+        """Test meta_get_column_statistics_for_table raises error for invalid column"""
         mock_client = MockElasticsearchClient()
 
         mock_client.indices.get_mapping.return_value = {
@@ -293,51 +303,53 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.mock_connect.return_value = mock_client
 
         with self.assertRaises(ValueError) as context:
-            self.handler.get_column_statistics("products", "nonexistent_column")
+            self.handler.meta_get_column_statistics_for_table("products", ["nonexistent_column"])
 
         self.assertIn("not found", str(context.exception).lower())
 
     def test_get_primary_keys(self):
-        """Test get_primary_keys returns _id as primary key"""
-        response = self.handler.get_primary_keys("products")
+        """Test meta_get_primary_keys returns _id as primary key"""
+        response = self.handler.meta_get_primary_keys(["products"])
 
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, pd.DataFrame)
         self.assertEqual(len(response.data_frame), 1)
 
-        expected_columns = {"constraint_name", "column_name"}
+        expected_columns = {"TABLE_NAME", "CONSTRAINT_NAME", "COLUMN_NAME"}
         self.assertEqual(set(response.data_frame.columns), expected_columns)
 
         row = response.data_frame.iloc[0]
-        self.assertEqual(row["column_name"], "_id")
-        self.assertEqual(row["constraint_name"], "PRIMARY")
+        self.assertEqual(row["TABLE_NAME"], "products")
+        self.assertEqual(row["COLUMN_NAME"], "_id")
+        self.assertEqual(row["CONSTRAINT_NAME"], "PRIMARY")
 
-    def test_get_primary_keys_invalid_input(self):
-        """Test get_primary_keys raises error for invalid input"""
-        with self.assertRaises(ValueError):
-            self.handler.get_primary_keys("")
+    def test_get_primary_keys_multiple_tables(self):
+        """Test meta_get_primary_keys with multiple tables"""
+        response = self.handler.meta_get_primary_keys(["products", "orders"])
 
-        with self.assertRaises(ValueError):
-            self.handler.get_primary_keys(None)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(len(response.data_frame), 2)
+
+        table_names = response.data_frame["TABLE_NAME"].tolist()
+        self.assertIn("products", table_names)
+        self.assertIn("orders", table_names)
 
     def test_get_foreign_keys(self):
-        """Test get_foreign_keys returns empty DataFrame"""
-        response = self.handler.get_foreign_keys("products")
+        """Test meta_get_foreign_keys returns empty DataFrame with correct schema"""
+        response = self.handler.meta_get_foreign_keys(["products"])
 
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, pd.DataFrame)
         self.assertEqual(len(response.data_frame), 0)
 
-        expected_columns = {"constraint_name", "column_name", "referenced_table", "referenced_column"}
+        expected_columns = {
+            "CHILD_TABLE_NAME",
+            "CHILD_COLUMN_NAME",
+            "PARENT_TABLE_NAME",
+            "PARENT_COLUMN_NAME",
+            "CONSTRAINT_NAME",
+        }
         self.assertEqual(set(response.data_frame.columns), expected_columns)
-
-    def test_get_foreign_keys_invalid_input(self):
-        """Test get_foreign_keys raises error for invalid input"""
-        with self.assertRaises(ValueError):
-            self.handler.get_foreign_keys("")
-
-        with self.assertRaises(ValueError):
-            self.handler.get_foreign_keys(None)
 
     def test_check_connection_success(self):
         """Test check_connection returns success when Elasticsearch is reachable"""

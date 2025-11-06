@@ -79,6 +79,7 @@ class FileController:
         Returns:
             int: id of 'file' record in db
         """
+        breakpoint()
         files_metadata = self.get_files()
         if name in [x["name"] for x in files_metadata]:
             raise Exception(f"File already exists: {name}")

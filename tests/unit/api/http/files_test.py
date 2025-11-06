@@ -25,6 +25,18 @@ def test_put_file(client):
     assert response.status_code == HTTPStatus.OK
 
 
+def test_put_file_payload(client):
+    """Test uploading a file via payload"""
+    payload = {"file": "tmp_file.txt", "content": "Hello, World!"}
+    response = client.put(
+        "/api/files/payload_file",
+        json=payload,
+        content_type="application/json",
+        follow_redirects=True,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
 def test_path_traversal(client):
     """Test uploading a file"""
     file = io.BytesIO(b"Hello, World!")
@@ -52,7 +64,10 @@ def test_delete_nonexistent_file(client):
     assert response.status_code == HTTPStatus.BAD_REQUEST
     data = response.get_json()
     assert "Error deleting file" in data["title"]
-    assert "There was an error while trying to delete file with name 'nonexistent.txt'" in data["detail"]
+    assert (
+        "There was an error while trying to delete file with name 'nonexistent.txt'"
+        in data["detail"]
+    )
 
 
 def test_put_file_invalid_url(client):

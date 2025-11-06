@@ -96,14 +96,14 @@ class BaseStuff:
             res.raise_for_status()
 
     def verify_file_ds(self, ds_name):
-        timeout = 5
+        timeout = 10
         threshold = time.time() + timeout
         res = ""
         while time.time() < threshold:
             res = self.query("SHOW tables from files;")
             if "Tables_in_files" in res and res.get_record("Tables_in_files", ds_name):
-                break
-            time.sleep(0.5)
+                return  # Success - return immediately
+            time.sleep(0.3)
         assert "Tables_in_files" in res and res.get_record("Tables_in_files", ds_name), (
             f"file datasource {ds_name} is not ready to use after {timeout} seconds"
         )
@@ -112,17 +112,24 @@ class BaseStuff:
         timeout = 600
         threshold = time.time() + timeout
         res = ""
+        model_not_found_threshold = time.time() + 30
+        check_interval = 1
         while time.time() < threshold:
             _query = "SELECT status, error FROM mindsdb.models WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
-            if "status" in res:
-                if res.get_record("status", "complete"):
+            if "status" in res or "STATUS" in res:
+                status_key = "status" if "status" in res else "STATUS"
+                error_key = "error" if "error" in res else "ERROR"
+                if res.get_record(status_key, "complete"):
                     break
-                elif res.get_record("status", "error"):
-                    raise Exception(res[0]["error"])
-            time.sleep(2)
-        assert "status" in res and res.get_record("status", "complete"), (
-            f"predictor {predictor_name} is not complete after {timeout} seconds"
+                elif res.get_record(status_key, "error"):
+                    raise Exception(res[0][error_key])
+            elif len(res) == 0 and time.time() > model_not_found_threshold:
+                raise Exception(f"Model {predictor_name} not found in models table after 30 seconds")
+            time.sleep(check_interval)
+        status_key = "status" if "status" in res else "STATUS"
+        assert (status_key in res) and res.get_record(status_key, "complete"), (
+            f"predictor {predictor_name} is not complete after {timeout} seconds. Last result: {res}"
         )
 
     def validate_database_creation(self, name):

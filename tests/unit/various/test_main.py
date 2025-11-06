@@ -19,9 +19,7 @@ class TestMainCleanup:
         class ErrorCapture:
             @property
             def text(self):
-                return "\n".join(
-                    r.getMessage() for r in caplog.records if r.levelname == "ERROR"
-                )
+                return "\n".join(r.getMessage() for r in caplog.records if r.levelname == "ERROR")
 
         caplog.clear()
         caplog.set_level("ERROR")
@@ -145,9 +143,7 @@ class TestMainCleanup:
                 raise PermissionError("Cannot delete directory")
             return original_rmtree(path, *args, **kwargs)
 
-        with patch.object(pathlib.Path, "unlink", mock_unlink), patch(
-            "shutil.rmtree", mock_rmtree
-        ):
+        with patch.object(pathlib.Path, "unlink", mock_unlink), patch("shutil.rmtree", mock_rmtree):
             main_mod.clean_mindsdb_tmp_dir()
 
         txt = errors.text
@@ -182,9 +178,6 @@ class TestMainCleanup:
                 raise PermissionError("Test error")
             return original_unlink(self, *args, **kwargs)
 
-        with patch.object(pathlib.Path, "unlink", mock_unlink), patch(
-            "mindsdb.__main__.logger"
-        ) as mock_logger:
+        with patch.object(pathlib.Path, "unlink", mock_unlink), patch("mindsdb.__main__.logger") as mock_logger:
             main_mod.clean_mindsdb_tmp_dir()
             assert mock_logger.error.called or mock_logger.exception.called
-

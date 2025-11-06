@@ -255,7 +255,7 @@ class JsonStorage(Base):
     __tablename__ = "json_storage"
     id = Column(Integer, primary_key=True)
     resource_group = Column(String)
-    resource_id = Column(Integer)
+    resource_id = Column(BigInteger)
     name = Column(String)
     content = Column(JSON)
     encrypted_content = Column(LargeBinary, nullable=True)

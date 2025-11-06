@@ -545,46 +545,26 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertIn("contacts data", self.handler._get_table_description("contacts"))
         self.assertIn("deals data", self.handler._get_table_description("deals"))
 
-    def test_default_columns_structure(self):
-        """Test _get_default_columns method."""
-        companies_cols = self.handler._get_default_columns("companies")
-        self.assertIsInstance(companies_cols, list)
-        self.assertTrue(len(companies_cols) > 0)
-
-        column_names = [col["COLUMN_NAME"] for col in companies_cols]
-        self.assertIn("id", column_names)
-        self.assertIn("name", column_names)
-        self.assertIn("createdate", column_names)
-
-        contacts_cols = self.handler._get_default_columns("contacts")
-        contact_column_names = [col["COLUMN_NAME"] for col in contacts_cols]
-        self.assertIn("email", contact_column_names)
-        self.assertIn("firstname", contact_column_names)
-
-        deals_cols = self.handler._get_default_columns("deals")
-        deal_column_names = [col["COLUMN_NAME"] for col in deals_cols]
-        self.assertIn("dealname", deal_column_names)
-        self.assertIn("amount", deal_column_names)
-
     def test_check_connection_with_api_test(self):
         """Test check_connection method performs actual API test."""
         mock_hubspot_client = MagicMock()
-        mock_companies_data = [
+        mock_contacts_data = [
             SimplePublicObject(
                 id="123",
-                properties={"name": "Test Company"},
+                properties={"email": "test@example.com"},
             )
         ]
 
         self.mock_connect.return_value = mock_hubspot_client
-        mock_hubspot_client.crm.companies.get_all.return_value = mock_companies_data
+        mock_hubspot_client.crm.contacts.get_all.return_value = mock_contacts_data
 
         response = self.handler.check_connection()
 
         self.assertTrue(response.success)
         self.assertIsNone(response.error_message)
 
-        mock_hubspot_client.crm.companies.get_all.assert_called_with(limit=1)
+        # Now check_connection tries contacts first
+        mock_hubspot_client.crm.contacts.get_all.assert_called_with(limit=1)
 
     def test_oauth_connection(self):
         """Test OAuth connection flow."""
@@ -652,23 +632,6 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         null_values = [None, None, None]
         data_type = self.handler._infer_data_type_from_samples(null_values)
         self.assertEqual(data_type, "VARCHAR")
-
-    def test_foreign_key_detection(self):
-        """Test automatic foreign key detection."""
-        # Should detect as foreign key: name suggests it and values look like IDs
-        owner_id_values = ["123456", "789012", "345678", "901234"]
-        is_fk = self.handler._is_potential_foreign_key("hubspot_owner_id", owner_id_values)
-        self.assertTrue(is_fk)
-
-        # Should NOT detect as foreign key: name doesn't suggest it
-        name_values = ["John Doe", "Jane Smith", "Bob Johnson"]
-        is_fk = self.handler._is_potential_foreign_key("firstname", name_values)
-        self.assertFalse(is_fk)
-
-        # Should NOT detect as foreign key: name suggests it but values don't look like IDs
-        fake_id_values = ["apple", "banana", "cherry"]
-        is_fk = self.handler._is_potential_foreign_key("company_id", fake_id_values)
-        self.assertFalse(is_fk)
 
     def test_get_columns_with_standard_schema(self):
         """Test get_columns method returns standard information_schema.columns format."""

@@ -169,6 +169,7 @@ class SqlServerHandler(MetaDatabaseHandler):
         self.connection_args = kwargs.get("connection_data")
         self.dialect = "mssql"
         self.database = self.connection_args.get("database")
+        self.schema = self.connection_args.get("schema")
         self.renderer = SqlalchemyRender("mssql")
 
         # Determine if ODBC should be used
@@ -410,8 +411,11 @@ class SqlServerHandler(MetaDatabaseHandler):
                 table_name,
                 table_type
             FROM {self.database}.INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW');
+            WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW')
         """
+        if self.schema:
+            query += f" AND table_schema = '{self.schema}'"
+
         return self.native_query(query)
 
     def get_columns(self, table_name) -> Response:
@@ -446,6 +450,10 @@ class SqlServerHandler(MetaDatabaseHandler):
             WHERE
                 table_name = '{table_name}'
         """
+
+        if self.schema:
+            query += f" AND table_schema = '{self.schema}'"
+
         result = self.native_query(query)
         result.to_columns_table_response(map_type_fn=_map_type)
         return result
@@ -483,8 +491,12 @@ class SqlServerHandler(MetaDatabaseHandler):
                 AND p.index_id IN (0, 1)
             WHERE t.TABLE_TYPE IN ('BASE TABLE', 'VIEW')
                 AND t.TABLE_SCHEMA NOT IN ('sys', 'INFORMATION_SCHEMA')
-            GROUP BY t.TABLE_NAME, t.TABLE_SCHEMA, t.TABLE_TYPE, ep.value
         """
+
+        if self.schema:
+            query += f" AND t.TABLE_SCHEMA = '{self.schema}'"
+
+        query += " GROUP BY t.TABLE_NAME, t.TABLE_SCHEMA, t.TABLE_TYPE, ep.value"
 
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]
@@ -525,6 +537,9 @@ class SqlServerHandler(MetaDatabaseHandler):
             WHERE c.TABLE_SCHEMA NOT IN ('sys', 'INFORMATION_SCHEMA')
         """
 
+        if self.schema:
+            query += f" AND c.TABLE_SCHEMA = '{self.schema}'"
+
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]
             query += f" AND c.TABLE_NAME IN ({','.join(quoted_names)})"
@@ -552,6 +567,10 @@ class SqlServerHandler(MetaDatabaseHandler):
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]
             table_filter = f" AND t.name IN ({','.join(quoted_names)})"
+
+        schema_filter = ""
+        if self.schema:
+            schema_filter = f" AND s.name = '{self.schema}'"
 
         # Using OUTER APPLY to handle table-valued functions properly
         # This is equivalent to PostgreSQL's pg_stats view approach
@@ -589,6 +608,7 @@ class SqlServerHandler(MetaDatabaseHandler):
                 WHERE st.object_id IS NOT NULL
             ) h
             WHERE s.name NOT IN ('sys', 'INFORMATION_SCHEMA')
+            {schema_filter}
             {table_filter}
             ORDER BY t.name, c.name
         """
@@ -619,6 +639,9 @@ class SqlServerHandler(MetaDatabaseHandler):
                 AND tc.TABLE_NAME = kcu.TABLE_NAME
             WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
         """
+
+        if self.schema:
+            query += f" AND tc.TABLE_SCHEMA = '{self.schema}'"
 
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]
@@ -655,6 +678,9 @@ class SqlServerHandler(MetaDatabaseHandler):
                 ON t.schema_id = s.schema_id
             WHERE s.name NOT IN ('sys', 'INFORMATION_SCHEMA')
         """
+
+        if self.schema:
+            query += f" AND s.name = '{self.schema}'"
 
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]

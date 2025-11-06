@@ -18,7 +18,8 @@ from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT
 
 
 class Dlist(list):
-    """Service class for convenient work with list of dicts(db response)"""
+    """Service class for convenient work with list of dicts(db response).
+    Assumes keys are already normalized to lowercase."""
 
     def __contains__(self, item):
         if len(self) == 0:
@@ -59,7 +60,7 @@ class BaseStuff:
 
                 if cursor.description:
                     description = cursor.description
-                    columns = [i[0] for i in cursor.description]
+                    columns = [i[0].lower() for i in cursor.description]
                     data = cursor.fetchall()
 
                     res = Dlist()
@@ -101,12 +102,10 @@ class BaseStuff:
         res = ""
         while time.time() < threshold:
             res = self.query("SHOW tables from files;")
-            tables_key = "Tables_in_files" if "Tables_in_files" in res else "TABLES_IN_FILES"
-            if (tables_key in res) and res.get_record(tables_key, ds_name):
-                return  # Success - return immediately
+            if "tables_in_files" in res and res.get_record("tables_in_files", ds_name):
+                return
             time.sleep(0.3)
-        tables_key = "Tables_in_files" if "Tables_in_files" in res else "TABLES_IN_FILES"
-        assert (tables_key in res) and res.get_record(tables_key, ds_name), (
+        assert "tables_in_files" in res and res.get_record("tables_in_files", ds_name), (
             f"file datasource {ds_name} is not ready to use after {timeout} seconds"
         )
 
@@ -119,25 +118,21 @@ class BaseStuff:
         while time.time() < threshold:
             _query = "SELECT status, error FROM mindsdb.models WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
-            if "status" in res or "STATUS" in res:
-                status_key = "status" if "status" in res else "STATUS"
-                error_key = "error" if "error" in res else "ERROR"
-                if res.get_record(status_key, "complete"):
+            if "status" in res:
+                if res.get_record("status", "complete"):
                     break
-                elif res.get_record(status_key, "error"):
-                    raise Exception(res[0][error_key])
+                elif res.get_record("status", "error"):
+                    raise Exception(res[0]["error"])
             elif len(res) == 0 and time.time() > model_not_found_threshold:
                 raise Exception(f"Model {predictor_name} not found in models table after 30 seconds")
             time.sleep(check_interval)
-        status_key = "status" if "status" in res else "STATUS"
-        assert (status_key in res) and res.get_record(status_key, "complete"), (
+        assert "status" in res and res.get_record("status", "complete"), (
             f"predictor {predictor_name} is not complete after {timeout} seconds. Last result: {res}"
         )
 
     def validate_database_creation(self, name):
         res = self.query(f"SELECT name FROM information_schema.databases WHERE name='{name}';")
-        name_key = "name" if "name" in res else "NAME"
-        assert (name_key in res) and res.get_record(name_key, name), (
+        assert "name" in res and res.get_record("name", name), (
             f"Expected datasource is not found after creation - {name}: {res}"
         )
 
@@ -422,10 +417,7 @@ class TestMySqlApi(BaseStuff):
             WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500;
         """
         res = self.query(_query)
-        # Check both lowercase and uppercase keys for compatibility
-        price_key = "rental_price" if "rental_price" in res else "RENTAL_PRICE"
-        explain_key = "rental_price_explain" if "rental_price_explain" in res else "RENTAL_PRICE_EXPLAIN"
-        assert (price_key in res) and (explain_key in res), (
+        assert "rental_price" in res and "rental_price_explain" in res, (
             f"error getting prediction from {self.predictor_name} - {res}"
         )
 

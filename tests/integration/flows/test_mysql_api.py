@@ -101,10 +101,12 @@ class BaseStuff:
         res = ""
         while time.time() < threshold:
             res = self.query("SHOW tables from files;")
-            if "Tables_in_files" in res and res.get_record("Tables_in_files", ds_name):
+            tables_key = "Tables_in_files" if "Tables_in_files" in res else "TABLES_IN_FILES"
+            if (tables_key in res) and res.get_record(tables_key, ds_name):
                 return  # Success - return immediately
             time.sleep(0.3)
-        assert "Tables_in_files" in res and res.get_record("Tables_in_files", ds_name), (
+        tables_key = "Tables_in_files" if "Tables_in_files" in res else "TABLES_IN_FILES"
+        assert (tables_key in res) and res.get_record(tables_key, ds_name), (
             f"file datasource {ds_name} is not ready to use after {timeout} seconds"
         )
 
@@ -134,7 +136,8 @@ class BaseStuff:
 
     def validate_database_creation(self, name):
         res = self.query(f"SELECT name FROM information_schema.databases WHERE name='{name}';")
-        assert "name" in res and res.get_record("name", name), (
+        name_key = "name" if "name" in res else "NAME"
+        assert (name_key in res) and res.get_record(name_key, name), (
             f"Expected datasource is not found after creation - {name}: {res}"
         )
 
@@ -419,7 +422,10 @@ class TestMySqlApi(BaseStuff):
             WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500;
         """
         res = self.query(_query)
-        assert "rental_price" in res and "rental_price_explain" in res, (
+        # Check both lowercase and uppercase keys for compatibility
+        price_key = "rental_price" if "rental_price" in res else "RENTAL_PRICE"
+        explain_key = "rental_price_explain" if "rental_price_explain" in res else "RENTAL_PRICE_EXPLAIN"
+        assert (price_key in res) and (explain_key in res), (
             f"error getting prediction from {self.predictor_name} - {res}"
         )
 

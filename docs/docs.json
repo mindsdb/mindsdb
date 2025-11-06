@@ -17,7 +17,8 @@
               "group": "Get Started",
               "pages": [
                 "mindsdb",
-                "quickstart-tutorial"
+                "quickstart-tutorial",
+                "releases"
               ]
             },
             {
@@ -78,6 +79,7 @@
                       "integrations/app-integrations/gmail",
                       "integrations/app-integrations/google-calendar",
                       "integrations/app-integrations/google-analytics",
+                      "integrations/app-integrations/gong",
                       "integrations/app-integrations/hackernews",
                       "integrations/app-integrations/instatus",
                       "integrations/app-integrations/intercom",
@@ -681,17 +683,12 @@
               "group": "Contribute",
               "pages": [
                 "contribute/contribute",
-                "contribute/issues",
-                "contribute/issue-labels",
                 "contribute/install",
                 "contribute/python-coding-standards",
                 "contribute/data-handlers",
                 "contribute/app-handlers",
-                "contribute/tests",
                 "contribute/integrations-readme",
-                "contribute/tutorials",
                 "contribute/docs",
-                "contribute/docs-rules",
                 "contribute/community"
               ]
             }

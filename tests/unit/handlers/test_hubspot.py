@@ -142,6 +142,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
+
         self.assertEqual(len(df), 3)  # companies, contacts, deals
         self.assertIn("TABLE_NAME", df.columns)
         self.assertIn("TABLE_TYPE", df.columns)
@@ -180,7 +181,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         response = self.handler.get_columns("companies")
 
         assert isinstance(response, Response)
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(response.type, RESPONSE_TYPE.COLUMNS_TABLE)
 
         df = response.data_frame
         # Check for comprehensive column metadata
@@ -228,14 +229,13 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         response = self.handler.get_columns("contacts")
 
         assert isinstance(response, Response)
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(response.type, RESPONSE_TYPE.COLUMNS_TABLE)
 
         df = response.data_frame
-        # Check for comprehensive column metadata
+
         self.assertIn("COLUMN_NAME", df.columns)
         self.assertIn("DATA_TYPE", df.columns)
 
-        # Check that expected columns are present
         column_names = df["COLUMN_NAME"].tolist()
         expected_columns = [
             "id",
@@ -276,14 +276,12 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         response = self.handler.get_columns("deals")
 
         assert isinstance(response, Response)
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(response.type, RESPONSE_TYPE.COLUMNS_TABLE)
 
         df = response.data_frame
-        # Check for comprehensive column metadata
         self.assertIn("COLUMN_NAME", df.columns)
         self.assertIn("DATA_TYPE", df.columns)
 
-        # Check that expected columns are present
         column_names = df["COLUMN_NAME"].tolist()
         expected_columns = [
             "id",
@@ -294,7 +292,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
             "dealstage",
             "hubspot_owner_id",
             "createdate",
-            "lastmodifieddate",  # Normalized from hs_lastmodifieddate
+            "lastmodifieddate",
         ]
         for col in expected_columns:
             self.assertIn(col, column_names)
@@ -320,7 +318,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         response = self.handler.native_query(insert_query)
 
         assert isinstance(response, Response)
-        # Should succeed without error
+
         self.assertNotEqual(response.type, RESPONSE_TYPE.ERROR)
 
     def test_native_query_with_update(self):
@@ -348,7 +346,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         response = self.handler.native_query(update_query)
 
         assert isinstance(response, Response)
-        # Should succeed without error
+
         self.assertNotEqual(response.type, RESPONSE_TYPE.ERROR)
 
     def test_native_query_with_delete(self):
@@ -374,7 +372,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         response = self.handler.native_query(delete_query)
 
         assert isinstance(response, Response)
-        # Should succeed without error
+
         self.assertNotEqual(response.type, RESPONSE_TYPE.ERROR)
 
     def test_handler_name(self):
@@ -387,13 +385,11 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_connect_invalid_credentials(self):
         """Test connect method with invalid credentials."""
-        # Test empty access token
         handler = HubspotHandler("hubspot", connection_data={"access_token": ""})
         with self.assertRaises(ValueError) as context:
             handler.connect()
         self.assertIn("Invalid access_token provided", str(context.exception))
 
-        # Test invalid OAuth credentials
         handler = HubspotHandler("hubspot", connection_data={"client_id": "", "client_secret": "secret"})
         with self.assertRaises(ValueError) as context:
             handler.connect()
@@ -404,11 +400,9 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         mock_hubspot_client = MagicMock()
         self.mock_connect.return_value = mock_hubspot_client
 
-        # Connect first
         self.handler.connect()
         self.assertTrue(self.handler.is_connected)
 
-        # Then disconnect
         self.handler.disconnect()
         self.assertFalse(self.handler.is_connected)
         self.assertIsNone(self.handler.connection)
@@ -454,6 +448,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertIsNotNone(response.data_frame)
 
         df = response.data_frame
+
         self.assertEqual(len(df), 3)  # companies, contacts, deals
         self.assertIn("TABLE_NAME", df.columns)
         self.assertIn("TABLE_TYPE", df.columns)
@@ -498,17 +493,30 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.get_columns("companies")
 
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        # After calling to_columns_table_response, type should be COLUMNS_TABLE
+        self.assertEqual(response.type, RESPONSE_TYPE.COLUMNS_TABLE)
         df = response.data_frame
 
-        # Check that we have the expected columns in response
-        self.assertIn("COLUMN_NAME", df.columns)
-        self.assertIn("DATA_TYPE", df.columns)
-        self.assertIn("IS_NULLABLE", df.columns)
-        self.assertIn("COLUMN_DESCRIPTION", df.columns)
+        expected_columns = [
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "ORDINAL_POSITION",
+            "COLUMN_DEFAULT",
+            "IS_NULLABLE",
+            "CHARACTER_MAXIMUM_LENGTH",
+            "CHARACTER_OCTET_LENGTH",
+            "NUMERIC_PRECISION",
+            "NUMERIC_SCALE",
+            "DATETIME_PRECISION",
+            "CHARACTER_SET_NAME",
+            "COLLATION_NAME",
+            "MYSQL_DATA_TYPE",
+        ]
+        for col in expected_columns:
+            self.assertIn(col, df.columns, f"Missing standard column: {col}")
 
-        # Check some expected column names are present
         column_names = df["COLUMN_NAME"].tolist()
+
         self.assertIn("id", column_names)
         self.assertIn("name", column_names)
         self.assertIn("city", column_names)
@@ -524,7 +532,6 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_data_type_inference(self):
         """Test _infer_data_type method."""
-        # Test different data types
         self.assertEqual(self.handler._infer_data_type(None), "VARCHAR")
         self.assertEqual(self.handler._infer_data_type(True), "BOOLEAN")
         self.assertEqual(self.handler._infer_data_type(42), "INTEGER")
@@ -540,24 +547,20 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_default_columns_structure(self):
         """Test _get_default_columns method."""
-        # Test companies table columns
         companies_cols = self.handler._get_default_columns("companies")
         self.assertIsInstance(companies_cols, list)
         self.assertTrue(len(companies_cols) > 0)
 
-        # Check that basic required columns exist
         column_names = [col["COLUMN_NAME"] for col in companies_cols]
         self.assertIn("id", column_names)
         self.assertIn("name", column_names)
         self.assertIn("createdate", column_names)
 
-        # Test contacts table columns
         contacts_cols = self.handler._get_default_columns("contacts")
         contact_column_names = [col["COLUMN_NAME"] for col in contacts_cols]
         self.assertIn("email", contact_column_names)
         self.assertIn("firstname", contact_column_names)
 
-        # Test deals table columns
         deals_cols = self.handler._get_default_columns("deals")
         deal_column_names = [col["COLUMN_NAME"] for col in deals_cols]
         self.assertIn("dealname", deal_column_names)
@@ -580,7 +583,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertTrue(response.success)
         self.assertIsNone(response.error_message)
-        # Verify that the API test call was made
+
         mock_hubspot_client.crm.companies.get_all.assert_called_with(limit=1)
 
     def test_oauth_connection(self):
@@ -597,12 +600,10 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
             self.assertIsNotNone(connection)
             self.assertTrue(handler.is_connected)
-            # Verify HubSpot was called with OAuth credentials
             mock_hubspot.assert_called_with(client_id="test_client_id", client_secret="test_client_secret")
 
     def test_comprehensive_error_handling(self):
         """Test comprehensive error handling in various scenarios."""
-        # Test connection error propagation
         with patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpot") as mock_hubspot:
             mock_hubspot.side_effect = Exception("API Error")
 
@@ -612,18 +613,13 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_secure_logging(self):
         """Test that sensitive credentials are not logged."""
-        # This is more of a best practice check - in real implementation
-        # you would check log outputs to ensure no credentials are exposed
         sensitive_data = {"access_token": "secret_token_12345"}
         handler = HubspotHandler("hubspot", connection_data=sensitive_data)
 
-        # The handler should store connection data but not expose it in logs
         self.assertIn("access_token", handler.connection_data)
-        # In actual implementation, you'd verify logs don't contain the token
 
     def test_column_statistics_calculation(self):
         """Test comprehensive column statistics calculation."""
-        # Test numeric data
         numeric_values = [100, 200, 300, None, 150, 250]
         stats = self.handler._calculate_column_statistics("amount", numeric_values)
 
@@ -637,8 +633,8 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         stats = self.handler._calculate_column_statistics("fruit", string_values)
 
         self.assertEqual(stats["null_count"], 1)
-        self.assertEqual(stats["distinct_count"], 3)  # apple, banana, cherry
-        self.assertEqual(stats["min_value"], "apple")  # alphabetically first
+        self.assertEqual(stats["distinct_count"], 3)
+        self.assertEqual(stats["min_value"], "apple")
 
     def test_data_type_inference_from_samples(self):
         """Test improved data type inference from multiple samples."""
@@ -674,11 +670,11 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         is_fk = self.handler._is_potential_foreign_key("company_id", fake_id_values)
         self.assertFalse(is_fk)
 
-    def test_get_columns_with_comprehensive_statistics(self):
-        """Test get_columns method returns comprehensive statistics."""
+    def test_get_columns_with_standard_schema(self):
+        """Test get_columns method returns standard information_schema.columns format."""
         mock_hubspot_client = MagicMock()
 
-        # Mock larger dataset for statistics
+        # Mock larger dataset
         mock_company_data = []
         for i in range(50):  # Create 50 sample companies
             mock_company_data.append(
@@ -688,8 +684,8 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
                         "name": f"Company {i}",
                         "city": "New York" if i % 2 == 0 else "San Francisco",
                         "industry": "Technology",
-                        "hubspot_owner_id": f"owner_{i % 5}",  # Should be detected as FK
-                        "annual_revenue": str(100000 + i * 1000),  # Numeric values
+                        "hubspot_owner_id": f"owner_{i % 5}",
+                        "annual_revenue": str(100000 + i * 1000),
                         "createdate": f"2023-01-{(i % 28) + 1:02d}T10:00:00Z",
                     },
                 )
@@ -700,11 +696,29 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.get_columns("companies")
 
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(response.type, RESPONSE_TYPE.COLUMNS_TABLE)
         df = response.data_frame
 
-        # Check that statistics columns are present
-        expected_stat_columns = [
+        expected_columns = [
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "ORDINAL_POSITION",
+            "COLUMN_DEFAULT",
+            "IS_NULLABLE",
+            "CHARACTER_MAXIMUM_LENGTH",
+            "CHARACTER_OCTET_LENGTH",
+            "NUMERIC_PRECISION",
+            "NUMERIC_SCALE",
+            "DATETIME_PRECISION",
+            "CHARACTER_SET_NAME",
+            "COLLATION_NAME",
+            "MYSQL_DATA_TYPE",
+        ]
+
+        for col in expected_columns:
+            self.assertIn(col, df.columns, f"Missing standard column: {col}")
+
+        non_standard_columns = [
             "IS_PRIMARY_KEY",
             "IS_FOREIGN_KEY",
             "NULL_COUNT",
@@ -712,35 +726,33 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
             "MIN_VALUE",
             "MAX_VALUE",
             "AVERAGE_VALUE",
+            "COLUMN_DESCRIPTION",
         ]
+        for col in non_standard_columns:
+            self.assertNotIn(col, df.columns, f"Non-standard column should not be present: {col}")
 
-        for stat_col in expected_stat_columns:
-            self.assertIn(stat_col, df.columns, f"Missing statistics column: {stat_col}")
-
-        # Check that ID is marked as primary key
         id_row = df[df["COLUMN_NAME"] == "id"]
         self.assertEqual(len(id_row), 1)
-        self.assertTrue(id_row.iloc[0]["IS_PRIMARY_KEY"])
-        self.assertFalse(id_row.iloc[0]["IS_FOREIGN_KEY"])
-
-        # Check that hubspot_owner_id is detected as foreign key
-        owner_id_rows = df[df["COLUMN_NAME"] == "hubspot_owner_id"]
-        if len(owner_id_rows) > 0:  # Only check if the column exists
-            self.assertTrue(owner_id_rows.iloc[0]["IS_FOREIGN_KEY"])
+        self.assertEqual(id_row.iloc[0]["ORDINAL_POSITION"], 1)
+        self.assertEqual(id_row.iloc[0]["IS_NULLABLE"], "NO")
 
     def test_comprehensive_table_metadata(self):
         """Test that get_tables returns comprehensive metadata."""
         mock_hubspot_client = MagicMock()
 
-        # Mock data for row count estimation
-        mock_companies = [SimplePublicObject(id=f"comp_{i}", properties={}) for i in range(25)]
-        mock_contacts = [SimplePublicObject(id=f"cont_{i}", properties={}) for i in range(15)]
-        mock_deals = [SimplePublicObject(id=f"deal_{i}", properties={}) for i in range(10)]
+        mock_companies_search_result = MagicMock()
+        mock_companies_search_result.total = 1250
+
+        mock_contacts_search_result = MagicMock()
+        mock_contacts_search_result.total = 850
+
+        mock_deals_search_result = MagicMock()
+        mock_deals_search_result.total = 320
 
         self.mock_connect.return_value = mock_hubspot_client
-        mock_hubspot_client.crm.companies.get_all.return_value = mock_companies
-        mock_hubspot_client.crm.contacts.get_all.return_value = mock_contacts
-        mock_hubspot_client.crm.deals.get_all.return_value = mock_deals
+        mock_hubspot_client.crm.companies.search_api.do_search.return_value = mock_companies_search_result
+        mock_hubspot_client.crm.contacts.search_api.do_search.return_value = mock_contacts_search_result
+        mock_hubspot_client.crm.deals.search_api.do_search.return_value = mock_deals_search_result
 
         response = self.handler.get_tables()
 
@@ -752,12 +764,166 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         for col in required_columns:
             self.assertIn(col, df.columns)
 
-        # Check that row counts are estimated
+        # Check that row counts are accurate (from search API)
         companies_row = df[df["TABLE_NAME"] == "companies"]
-        self.assertEqual(companies_row.iloc[0]["ROW_COUNT"], 25)
+        self.assertEqual(companies_row.iloc[0]["ROW_COUNT"], 1250)
 
         contacts_row = df[df["TABLE_NAME"] == "contacts"]
-        self.assertEqual(contacts_row.iloc[0]["ROW_COUNT"], 15)
+        self.assertEqual(contacts_row.iloc[0]["ROW_COUNT"], 850)
+
+        deals_row = df[df["TABLE_NAME"] == "deals"]
+        self.assertEqual(deals_row.iloc[0]["ROW_COUNT"], 320)
+
+    def test_estimate_table_rows_with_search_api(self):
+        """Test that _estimate_table_rows uses search API for accurate counts."""
+        mock_hubspot_client = MagicMock()
+
+        mock_search_result = MagicMock()
+        mock_search_result.total = 5432
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.companies.search_api.do_search.return_value = mock_search_result
+
+        self.handler.connect()
+        row_count = self.handler._estimate_table_rows("companies")
+
+        mock_hubspot_client.crm.companies.search_api.do_search.assert_called_once_with(
+            public_object_search_request={"limit": 1}
+        )
+
+        self.assertEqual(row_count, 5432)
+
+    def test_estimate_table_rows_fallback(self):
+        """Test that _estimate_table_rows handles search API failures gracefully."""
+        mock_hubspot_client = MagicMock()
+
+        mock_hubspot_client.crm.contacts.search_api.do_search.side_effect = Exception("API error")
+        mock_hubspot_client.crm.contacts.get_all.return_value = [SimplePublicObject(id="1", properties={})]
+
+        self.mock_connect.return_value = mock_hubspot_client
+        self.handler.connect()
+
+        row_count = self.handler._estimate_table_rows("contacts")
+
+        self.assertIsNone(row_count)
+
+    def test_meta_get_columns(self):
+        """Test meta_get_columns returns data catalog column metadata."""
+        mock_hubspot_client = MagicMock()
+        mock_company_data = [
+            SimplePublicObject(
+                id="123",
+                properties={
+                    "name": "Test Company",
+                    "city": "New York",
+                    "industry": "Technology",
+                    "createdate": "2023-01-01T00:00:00Z",
+                },
+            )
+        ]
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.companies.get_all.return_value = mock_company_data
+        mock_hubspot_client.crm.contacts.get_all.return_value = []
+        mock_hubspot_client.crm.deals.get_all.return_value = []
+
+        response = self.handler.meta_get_columns(table_names=["companies"])
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        df = response.data_frame
+
+        expected_columns = [
+            "TABLE_NAME",
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "COLUMN_DESCRIPTION",
+            "IS_NULLABLE",
+            "COLUMN_DEFAULT",
+        ]
+        for col in expected_columns:
+            self.assertIn(col, df.columns, f"Missing data catalog column: {col}")
+
+        self.assertIn("companies", df["TABLE_NAME"].tolist())
+
+        column_names = df[df["TABLE_NAME"] == "companies"]["COLUMN_NAME"].tolist()
+        self.assertIn("id", column_names)
+        self.assertIn("name", column_names)
+        self.assertIn("city", column_names)
+
+    def test_meta_get_column_statistics(self):
+        """Test meta_get_column_statistics returns statistical information."""
+        mock_hubspot_client = MagicMock()
+
+        # Create larger sample dataset for statistics
+        mock_contact_data = []
+        for i in range(50):
+            mock_contact_data.append(
+                SimplePublicObject(
+                    id=f"contact_{i}",
+                    properties={
+                        "email": f"user{i}@example.com",
+                        "firstname": "John" if i % 2 == 0 else "Jane",
+                        "lastname": "Doe",
+                        "city": "New York" if i % 3 == 0 else "San Francisco",
+                    },
+                )
+            )
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.contacts.get_all.return_value = mock_contact_data
+        mock_hubspot_client.crm.companies.get_all.return_value = []
+        mock_hubspot_client.crm.deals.get_all.return_value = []
+
+        response = self.handler.meta_get_column_statistics(table_names=["contacts"])
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        df = response.data_frame
+
+        expected_columns = [
+            "TABLE_NAME",
+            "COLUMN_NAME",
+            "NULL_PERCENTAGE",
+            "DISTINCT_VALUES_COUNT",
+            "MINIMUM_VALUE",
+            "MAXIMUM_VALUE",
+            "MOST_COMMON_VALUES",
+            "MOST_COMMON_FREQUENCIES",
+        ]
+        for col in expected_columns:
+            self.assertIn(col, df.columns, f"Missing statistics column: {col}")
+
+        firstname_stats = df[(df["TABLE_NAME"] == "contacts") & (df["COLUMN_NAME"] == "firstname")]
+        self.assertEqual(len(firstname_stats), 1)
+
+        self.assertEqual(firstname_stats.iloc[0]["DISTINCT_VALUES_COUNT"], 2)
+
+        self.assertEqual(firstname_stats.iloc[0]["NULL_PERCENTAGE"], 0.0)
+
+    def test_meta_get_columns_all_tables(self):
+        """Test meta_get_columns with no table filter returns all tables."""
+        mock_hubspot_client = MagicMock()
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.companies.get_all.return_value = [
+            SimplePublicObject(id="1", properties={"name": "Company"})
+        ]
+        mock_hubspot_client.crm.contacts.get_all.return_value = [
+            SimplePublicObject(id="2", properties={"email": "test@example.com"})
+        ]
+        mock_hubspot_client.crm.deals.get_all.return_value = [
+            SimplePublicObject(id="3", properties={"dealname": "Deal"})
+        ]
+
+        response = self.handler.meta_get_columns()  # No table_names specified
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        df = response.data_frame
+
+        tables_present = df["TABLE_NAME"].unique().tolist()
+
+        self.assertIn("companies", tables_present)
+        self.assertIn("contacts", tables_present)
+        self.assertIn("deals", tables_present)
 
 
 if __name__ == "__main__":

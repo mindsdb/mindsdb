@@ -10,10 +10,45 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
+
+
+def _map_type(data_type: str) -> MYSQL_DATA_TYPE:
+    """Map HubSpot data types to MySQL types.
+
+    Args:
+        data_type (str): The HubSpot/SQL data type name
+
+    Returns:
+        MYSQL_DATA_TYPE: The corresponding MySQL data type
+    """
+    if data_type is None:
+        return MYSQL_DATA_TYPE.VARCHAR
+
+    data_type_upper = data_type.upper()
+
+    type_map = {
+        "VARCHAR": MYSQL_DATA_TYPE.VARCHAR,
+        "TEXT": MYSQL_DATA_TYPE.TEXT,
+        "INTEGER": MYSQL_DATA_TYPE.INT,
+        "INT": MYSQL_DATA_TYPE.INT,
+        "BIGINT": MYSQL_DATA_TYPE.BIGINT,
+        "DECIMAL": MYSQL_DATA_TYPE.DECIMAL,
+        "FLOAT": MYSQL_DATA_TYPE.FLOAT,
+        "DOUBLE": MYSQL_DATA_TYPE.DOUBLE,
+        "BOOLEAN": MYSQL_DATA_TYPE.BOOL,
+        "BOOL": MYSQL_DATA_TYPE.BOOL,
+        "DATE": MYSQL_DATA_TYPE.DATE,
+        "DATETIME": MYSQL_DATA_TYPE.DATETIME,
+        "TIMESTAMP": MYSQL_DATA_TYPE.DATETIME,
+        "TIME": MYSQL_DATA_TYPE.TIME,
+    }
+
+    return type_map.get(data_type_upper, MYSQL_DATA_TYPE.VARCHAR)
 
 
 class HubspotHandler(MetaAPIHandler):
@@ -197,14 +232,15 @@ class HubspotHandler(MetaAPIHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve table list: {str(e)}")
 
     def get_columns(self, table_name: str) -> Response:
-        """Return column information for a specific table.
+        """Return column information for a specific table in standard information_schema.columns format.
+
+        This method is used for SQL queries against information_schema.columns.
 
         Args:
             table_name (str): Name of the table to get column information for
 
         Returns:
-            Response: A response containing column metadata including names, types,
-            descriptions, and statistics.
+            Response: A response containing column metadata in standard information_schema.columns format.
         """
         if table_name not in ["companies", "contacts", "deals"]:
             return Response(
@@ -215,17 +251,309 @@ class HubspotHandler(MetaAPIHandler):
         try:
             self.connect()
 
-            columns_data = self._get_columns_with_statistics(table_name)
+            # Get columns in standard information_schema.columns format
+            columns_data = self._get_standard_columns(table_name)
 
             df = pd.DataFrame(columns_data)
             logger.info(f"Retrieved {len(columns_data)} columns for table {table_name}")
-            return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+            result = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+            result.to_columns_table_response(map_type_fn=_map_type)
+            return result
 
         except Exception as e:
             logger.error(f"Failed to get columns for table {table_name}: {str(e)}")
             return Response(
                 RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve columns for table '{table_name}': {str(e)}"
             )
+
+    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
+        """Return column metadata for data catalog.
+
+        Args:
+            table_names (Optional[List[str]]): List of table names to get columns for,
+            or None for all tables
+
+        Returns:
+            Response: A response containing column metadata with fields:
+                     TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_DESCRIPTION,
+                     IS_NULLABLE, COLUMN_DEFAULT
+        """
+        try:
+            self.connect()
+
+            all_tables = ["companies", "contacts", "deals"]
+            if table_names:
+                tables_to_process = [t for t in table_names if t in all_tables]
+            else:
+                tables_to_process = all_tables
+
+            all_columns = []
+
+            for table_name in tables_to_process:
+                try:
+                    # Get sample data to discover columns
+                    sample_data = None
+                    if table_name == "companies":
+                        sample_data = list(self.connection.crm.companies.get_all(limit=100))
+                    elif table_name == "contacts":
+                        sample_data = list(self.connection.crm.contacts.get_all(limit=100))
+                    elif table_name == "deals":
+                        sample_data = list(self.connection.crm.deals.get_all(limit=100))
+
+                    if sample_data and len(sample_data) > 0:
+                        # Get all unique properties
+                        all_properties = set()
+                        for item in sample_data:
+                            if hasattr(item, "properties") and item.properties:
+                                all_properties.update(item.properties.keys())
+
+                        # Add 'id' column first
+                        all_columns.append(
+                            {
+                                "TABLE_NAME": table_name,
+                                "COLUMN_NAME": "id",
+                                "DATA_TYPE": "VARCHAR",
+                                "COLUMN_DESCRIPTION": "Unique identifier for the record (Primary Key)",
+                                "IS_NULLABLE": False,
+                                "COLUMN_DEFAULT": None,
+                            }
+                        )
+
+                        # Add property columns
+                        for prop_name in sorted(all_properties):
+                            column_name = prop_name
+                            if prop_name == "hs_lastmodifieddate":
+                                column_name = "lastmodifieddate"
+
+                            # Collect sample values to infer type and nullability
+                            column_values = []
+                            for item in sample_data:
+                                if hasattr(item, "properties") and item.properties:
+                                    column_values.append(item.properties.get(prop_name))
+                                else:
+                                    column_values.append(None)
+
+                            data_type = self._infer_data_type_from_samples(column_values)
+                            has_null = any(v is None for v in column_values)
+
+                            all_columns.append(
+                                {
+                                    "TABLE_NAME": table_name,
+                                    "COLUMN_NAME": column_name,
+                                    "DATA_TYPE": data_type,
+                                    "COLUMN_DESCRIPTION": f"HubSpot property: {prop_name}",
+                                    "IS_NULLABLE": has_null,
+                                    "COLUMN_DEFAULT": None,
+                                }
+                            )
+                    else:
+                        # Use default columns if no data
+                        default_cols = self._get_default_meta_columns(table_name)
+                        all_columns.extend(default_cols)
+
+                except Exception as e:
+                    logger.warning(f"Could not get columns for table {table_name}: {str(e)}")
+                    # Use default columns on error
+                    default_cols = self._get_default_meta_columns(table_name)
+                    all_columns.extend(default_cols)
+
+            df = pd.DataFrame(all_columns)
+            logger.info(f"Retrieved metadata for {len(all_columns)} columns across {len(tables_to_process)} tables")
+            return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+        except Exception as e:
+            logger.error(f"Failed to get column metadata: {str(e)}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve column metadata: {str(e)}")
+
+    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
+        """Return column statistics for data catalog
+
+        Args:
+            table_names (Optional[List[str]]): List of table names to get statistics for,
+            or None for all tables
+
+        Returns:
+            Response: A response containing column statistics with fields:
+                     TABLE_NAME, COLUMN_NAME, MOST_COMMON_VALUES,
+                     MOST_COMMON_FREQUENCIES, NULL_PERCENTAGE, MINIMUM_VALUE,
+                     MAXIMUM_VALUE, DISTINCT_VALUES_COUNT
+        """
+        try:
+            self.connect()
+
+            all_tables = ["companies", "contacts", "deals"]
+            if table_names:
+                tables_to_process = [t for t in table_names if t in all_tables]
+            else:
+                tables_to_process = all_tables
+
+            all_statistics = []
+
+            for table_name in tables_to_process:
+                try:
+                    # Get sample data for statistics (use larger sample for better accuracy)
+                    sample_data = None
+                    if table_name == "companies":
+                        sample_data = list(self.connection.crm.companies.get_all(limit=1000))
+                    elif table_name == "contacts":
+                        sample_data = list(self.connection.crm.contacts.get_all(limit=1000))
+                    elif table_name == "deals":
+                        sample_data = list(self.connection.crm.deals.get_all(limit=1000))
+
+                    if sample_data and len(sample_data) > 0:
+                        sample_size = len(sample_data)
+                        logger.info(f"Calculating statistics from {sample_size} records for {table_name}")
+
+                        # Get all unique properties
+                        all_properties = set()
+                        for item in sample_data:
+                            if hasattr(item, "properties") and item.properties:
+                                all_properties.update(item.properties.keys())
+
+                        # Calculate statistics for 'id' column
+                        id_values = [item.id for item in sample_data]
+                        id_stats = self._calculate_column_statistics("id", id_values)
+                        all_statistics.append(
+                            {
+                                "TABLE_NAME": table_name,
+                                "COLUMN_NAME": "id",
+                                "NULL_PERCENTAGE": (id_stats["null_count"] / sample_size) * 100
+                                if sample_size > 0
+                                else 0,
+                                "DISTINCT_VALUES_COUNT": id_stats["distinct_count"],
+                                "MINIMUM_VALUE": id_stats["min_value"],
+                                "MAXIMUM_VALUE": id_stats["max_value"],
+                                "MOST_COMMON_VALUES": None,
+                                "MOST_COMMON_FREQUENCIES": None,
+                            }
+                        )
+
+                        # Calculate statistics for each property column
+                        for prop_name in sorted(all_properties):
+                            column_name = prop_name
+                            if prop_name == "hs_lastmodifieddate":
+                                column_name = "lastmodifieddate"
+
+                            # Collect values
+                            column_values = []
+                            for item in sample_data:
+                                if hasattr(item, "properties") and item.properties:
+                                    column_values.append(item.properties.get(prop_name))
+                                else:
+                                    column_values.append(None)
+
+                            stats = self._calculate_column_statistics(prop_name, column_values)
+
+                            # Calculate most common values and their frequencies
+                            most_common_values = None
+                            most_common_frequencies = None
+                            non_null_values = [v for v in column_values if v is not None]
+                            if non_null_values:
+                                from collections import Counter
+
+                                value_counts = Counter(non_null_values)
+                                top_5 = value_counts.most_common(5)
+                                if top_5:
+                                    most_common_values = [str(v) for v, _ in top_5]
+                                    most_common_frequencies = [str(c) for _, c in top_5]
+
+                            all_statistics.append(
+                                {
+                                    "TABLE_NAME": table_name,
+                                    "COLUMN_NAME": column_name,
+                                    "NULL_PERCENTAGE": (stats["null_count"] / sample_size) * 100
+                                    if sample_size > 0
+                                    else 0,
+                                    "DISTINCT_VALUES_COUNT": stats["distinct_count"],
+                                    "MINIMUM_VALUE": stats["min_value"],
+                                    "MAXIMUM_VALUE": stats["max_value"],
+                                    "MOST_COMMON_VALUES": most_common_values,
+                                    "MOST_COMMON_FREQUENCIES": most_common_frequencies,
+                                }
+                            )
+
+                except Exception as e:
+                    logger.warning(f"Could not get statistics for table {table_name}: {str(e)}")
+
+            df = pd.DataFrame(all_statistics)
+            logger.info(
+                f"Retrieved statistics for {len(all_statistics)} columns across {len(tables_to_process)} tables"
+            )
+            return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+        except Exception as e:
+            logger.error(f"Failed to get column statistics: {str(e)}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve column statistics: {str(e)}")
+
+    def _get_default_meta_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        """Get default column metadata for data catalog when data is unavailable
+
+        Args:
+            table_name (str): Name of the table
+
+        Returns:
+            List[Dict[str, Any]]: List of column metadata dictionaries
+        """
+        base_columns = [
+            {
+                "TABLE_NAME": table_name,
+                "COLUMN_NAME": "id",
+                "DATA_TYPE": "VARCHAR",
+                "COLUMN_DESCRIPTION": "Unique identifier (Primary Key)",
+                "IS_NULLABLE": False,
+                "COLUMN_DEFAULT": None,
+            }
+        ]
+
+        table_columns_def = {
+            "companies": [
+                ("name", "VARCHAR", "Company name"),
+                ("domain", "VARCHAR", "Company domain"),
+                ("industry", "VARCHAR", "Industry"),
+                ("city", "VARCHAR", "City"),
+                ("state", "VARCHAR", "State"),
+                ("phone", "VARCHAR", "Phone number"),
+                ("createdate", "TIMESTAMP", "Creation date"),
+                ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+            ],
+            "contacts": [
+                ("email", "VARCHAR", "Email address"),
+                ("firstname", "VARCHAR", "First name"),
+                ("lastname", "VARCHAR", "Last name"),
+                ("phone", "VARCHAR", "Phone number"),
+                ("company", "VARCHAR", "Associated company"),
+                ("website", "VARCHAR", "Website URL"),
+                ("createdate", "TIMESTAMP", "Creation date"),
+                ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+            ],
+            "deals": [
+                ("dealname", "VARCHAR", "Deal name"),
+                ("amount", "DECIMAL", "Deal amount"),
+                ("dealstage", "VARCHAR", "Deal stage"),
+                ("pipeline", "VARCHAR", "Sales pipeline"),
+                ("closedate", "DATE", "Expected close date"),
+                ("hubspot_owner_id", "VARCHAR", "Owner ID"),
+                ("createdate", "TIMESTAMP", "Creation date"),
+                ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+            ],
+        }
+
+        if table_name in table_columns_def:
+            for col_name, data_type, description in table_columns_def[table_name]:
+                base_columns.append(
+                    {
+                        "TABLE_NAME": table_name,
+                        "COLUMN_NAME": col_name,
+                        "DATA_TYPE": data_type,
+                        "COLUMN_DESCRIPTION": description,
+                        "IS_NULLABLE": True,
+                        "COLUMN_DEFAULT": None,
+                    }
+                )
+
+        return base_columns
 
     def _get_table_description(self, table_name: str) -> str:
         """Get description for a table."""
@@ -236,20 +564,217 @@ class HubspotHandler(MetaAPIHandler):
         }
         return descriptions.get(table_name, f"HubSpot {table_name} data")
 
+    def _get_standard_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        """Get column information in standard information_schema.columns format
+
+        Args:
+            table_name (str): Name of the table to get columns for
+
+        Returns:
+            List[Dict[str, Any]]: List of column definitions with standard fields only
+        """
+        try:
+            sample_data = None
+
+            if table_name == "companies":
+                sample_data = list(self.connection.crm.companies.get_all(limit=100))
+            elif table_name == "contacts":
+                sample_data = list(self.connection.crm.contacts.get_all(limit=100))
+            elif table_name == "deals":
+                sample_data = list(self.connection.crm.deals.get_all(limit=100))
+
+            columns_info = []
+            ordinal_position = 1
+
+            if sample_data and len(sample_data) > 0:
+                logger.info(f"Analyzing {len(sample_data)} records for {table_name} column metadata")
+
+                all_properties = set()
+                for item in sample_data:
+                    if hasattr(item, "properties") and item.properties:
+                        all_properties.update(item.properties.keys())
+
+                # Add the 'id' column first
+                columns_info.append(
+                    {
+                        "COLUMN_NAME": "id",
+                        "DATA_TYPE": "VARCHAR",
+                        "ORDINAL_POSITION": ordinal_position,
+                        "COLUMN_DEFAULT": None,
+                        "IS_NULLABLE": "NO",
+                        "CHARACTER_MAXIMUM_LENGTH": None,
+                        "CHARACTER_OCTET_LENGTH": None,
+                        "NUMERIC_PRECISION": None,
+                        "NUMERIC_SCALE": None,
+                        "DATETIME_PRECISION": None,
+                        "CHARACTER_SET_NAME": None,
+                        "COLLATION_NAME": None,
+                    }
+                )
+                ordinal_position += 1
+
+                # Add property columns
+                for prop_name in sorted(all_properties):
+                    column_name = prop_name
+                    if prop_name == "hs_lastmodifieddate":
+                        column_name = "lastmodifieddate"
+
+                    # Collect sample values to infer data type
+                    column_values = []
+                    for item in sample_data:
+                        if hasattr(item, "properties") and item.properties:
+                            value = item.properties.get(prop_name)
+                            column_values.append(value)
+                        else:
+                            column_values.append(None)
+
+                    data_type = self._infer_data_type_from_samples(column_values)
+                    has_null = any(v is None for v in column_values)
+
+                    columns_info.append(
+                        {
+                            "COLUMN_NAME": column_name,
+                            "DATA_TYPE": data_type,
+                            "ORDINAL_POSITION": ordinal_position,
+                            "COLUMN_DEFAULT": None,
+                            "IS_NULLABLE": "YES" if has_null else "NO",
+                            "CHARACTER_MAXIMUM_LENGTH": None,
+                            "CHARACTER_OCTET_LENGTH": None,
+                            "NUMERIC_PRECISION": None,
+                            "NUMERIC_SCALE": None,
+                            "DATETIME_PRECISION": None,
+                            "CHARACTER_SET_NAME": None,
+                            "COLLATION_NAME": None,
+                        }
+                    )
+                    ordinal_position += 1
+
+            # If no data or error, return default columns
+            if not columns_info:
+                columns_info = self._get_default_standard_columns(table_name)
+
+            return columns_info
+
+        except Exception as e:
+            logger.warning(f"Could not retrieve columns from HubSpot API for {table_name}: {str(e)}")
+            return self._get_default_standard_columns(table_name)
+
+    def _get_default_standard_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        """Get default column definitions in standard information_schema.columns format
+
+        Args:
+            table_name (str): Name of the table
+
+        Returns:
+            List[Dict[str, Any]]: List of default column definitions
+        """
+        ordinal_position = 1
+        base_columns = [
+            {
+                "COLUMN_NAME": "id",
+                "DATA_TYPE": "VARCHAR",
+                "ORDINAL_POSITION": ordinal_position,
+                "COLUMN_DEFAULT": None,
+                "IS_NULLABLE": "NO",
+                "CHARACTER_MAXIMUM_LENGTH": None,
+                "CHARACTER_OCTET_LENGTH": None,
+                "NUMERIC_PRECISION": None,
+                "NUMERIC_SCALE": None,
+                "DATETIME_PRECISION": None,
+                "CHARACTER_SET_NAME": None,
+                "COLLATION_NAME": None,
+            }
+        ]
+        ordinal_position += 1
+
+        table_columns_def = {
+            "companies": [
+                ("name", "VARCHAR"),
+                ("domain", "VARCHAR"),
+                ("industry", "VARCHAR"),
+                ("city", "VARCHAR"),
+                ("state", "VARCHAR"),
+                ("phone", "VARCHAR"),
+                ("createdate", "TIMESTAMP"),
+                ("lastmodifieddate", "TIMESTAMP"),
+            ],
+            "contacts": [
+                ("email", "VARCHAR"),
+                ("firstname", "VARCHAR"),
+                ("lastname", "VARCHAR"),
+                ("phone", "VARCHAR"),
+                ("company", "VARCHAR"),
+                ("website", "VARCHAR"),
+                ("createdate", "TIMESTAMP"),
+                ("lastmodifieddate", "TIMESTAMP"),
+            ],
+            "deals": [
+                ("dealname", "VARCHAR"),
+                ("amount", "DECIMAL"),
+                ("dealstage", "VARCHAR"),
+                ("pipeline", "VARCHAR"),
+                ("closedate", "DATE"),
+                ("hubspot_owner_id", "VARCHAR"),
+                ("createdate", "TIMESTAMP"),
+                ("lastmodifieddate", "TIMESTAMP"),
+            ],
+        }
+
+        if table_name in table_columns_def:
+            for col_name, data_type in table_columns_def[table_name]:
+                base_columns.append(
+                    {
+                        "COLUMN_NAME": col_name,
+                        "DATA_TYPE": data_type,
+                        "ORDINAL_POSITION": ordinal_position,
+                        "COLUMN_DEFAULT": None,
+                        "IS_NULLABLE": "YES",
+                        "CHARACTER_MAXIMUM_LENGTH": None,
+                        "CHARACTER_OCTET_LENGTH": None,
+                        "NUMERIC_PRECISION": None,
+                        "NUMERIC_SCALE": None,
+                        "DATETIME_PRECISION": None,
+                        "CHARACTER_SET_NAME": None,
+                        "COLLATION_NAME": None,
+                    }
+                )
+                ordinal_position += 1
+
+        return base_columns
+
     def _estimate_table_rows(self, table_name: str) -> Optional[int]:
-        """Estimate number of rows in a table using HubSpot API."""
+        """Get actual count of rows in a table using HubSpot Search API
+
+        Args:
+            table_name (str): Name of the table (companies, contacts, or deals)
+
+        Returns:
+            Optional[int]: Total number of records, or None if count cannot be determined
+        """
         try:
             if table_name == "companies":
-                companies = self.connection.crm.companies.get_all(limit=100)
-                return len(list(companies)) if companies else 0
+                result = self.connection.crm.companies.search_api.do_search(public_object_search_request={"limit": 1})
+                return result.total if hasattr(result, "total") else None
             elif table_name == "contacts":
-                contacts = self.connection.crm.contacts.get_all(limit=100)
-                return len(list(contacts)) if contacts else 0
+                result = self.connection.crm.contacts.search_api.do_search(public_object_search_request={"limit": 1})
+                return result.total if hasattr(result, "total") else None
             elif table_name == "deals":
-                deals = self.connection.crm.deals.get_all(limit=100)
-                return len(list(deals)) if deals else 0
+                result = self.connection.crm.deals.search_api.do_search(public_object_search_request={"limit": 1})
+                return result.total if hasattr(result, "total") else None
         except Exception as e:
-            logger.warning(f"Could not estimate rows for {table_name}: {str(e)}")
+            logger.warning(f"Could not get row count for {table_name} using search API: {str(e)}")
+            try:
+                if table_name == "companies":
+                    companies = list(self.connection.crm.companies.get_all(limit=1))
+                    return None if not companies else None
+                elif table_name == "contacts":
+                    contacts = list(self.connection.crm.contacts.get_all(limit=1))
+                    return None if not contacts else None
+                elif table_name == "deals":
+                    deals = list(self.connection.crm.deals.get_all(limit=1))
+                    return None if not deals else None
+            except Exception as fallback_error:
+                logger.warning(f"Fallback row count estimation also failed for {table_name}: {str(fallback_error)}")
         return None
 
     def _get_columns_with_statistics(self, table_name: str) -> List[Dict[str, Any]]:
@@ -493,7 +1018,6 @@ class HubspotHandler(MetaAPIHandler):
             self._create_column_def("lastmodifieddate", "TIMESTAMP", "Last modification date"),
         ]
 
-        # Table-specific columns
         table_columns = {
             "companies": [
                 ("name", "VARCHAR", "Company name"),

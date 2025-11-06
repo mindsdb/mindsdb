@@ -459,21 +459,21 @@ class TestMySqlApi(BaseStuff):
         """)
         assert len(ret) == 8
         # TODO FIX STR->INT casting
-        # assert sorted([x['ORDINAL_POSITION'] for x in ret]) == list(range(1, 9))
+        # assert sorted([x['ordinal_position'] for x in ret]) == list(range(1, 9))
 
-        rental_price_column = next(x for x in ret if x["COLUMN_NAME"].lower() == "rental_price")
-        assert rental_price_column["DATA_TYPE"] == "int"
-        assert rental_price_column["COLUMN_TYPE"] == "int"
-        assert rental_price_column["ORIGINAL_TYPE"] == "integer"
-        assert rental_price_column["NUMERIC_PRECISION"] is not None
+        rental_price_column = next(x for x in ret if x["column_name"] == "rental_price")
+        assert rental_price_column["data_type"] == "int"
+        assert rental_price_column["column_type"] == "int"
+        assert rental_price_column["original_type"] == "integer"
+        assert rental_price_column["numeric_precision"] is not None
 
-        location_column = next(x for x in ret if x["COLUMN_NAME"].lower() == "location")
-        assert location_column["DATA_TYPE"] == "varchar"
-        assert location_column["COLUMN_TYPE"].startswith("varchar(")  # varchar(###)
-        assert location_column["ORIGINAL_TYPE"] == "character varying"
-        assert location_column["NUMERIC_PRECISION"] is None
-        assert location_column["CHARACTER_MAXIMUM_LENGTH"] is not None
-        assert location_column["CHARACTER_OCTET_LENGTH"] is not None
+        location_column = next(x for x in ret if x["column_name"] == "location")
+        assert location_column["data_type"] == "varchar"
+        assert location_column["column_type"].startswith("varchar(")  # varchar(###)
+        assert location_column["original_type"] == "character varying"
+        assert location_column["numeric_precision"] is None
+        assert location_column["character_maximum_length"] is not None
+        assert location_column["character_octet_length"] is not None
 
     def test_train_model_from_files(self, use_binary):
         df = pd.DataFrame(

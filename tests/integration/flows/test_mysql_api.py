@@ -91,8 +91,8 @@ class BaseStuff:
 
         with open(filename, "r") as f:
             url = f"{HTTP_API_ROOT}/files/{name}"
-            data = {"name": (name, f, "text/csv")}
-            res = requests.put(url, files=data)
+            files = {"file": (f"{name}.csv", f, "text/csv")}
+            res = requests.put(url, files=files)
             res.raise_for_status()
 
     def verify_file_ds(self, ds_name):

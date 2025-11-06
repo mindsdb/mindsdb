@@ -1,4 +1,5 @@
 from typing import Optional
+import platform
 
 import pandas as pd
 
@@ -62,6 +63,12 @@ class AccessHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
+
+        if platform.system() != "Windows":
+            raise RuntimeError(
+                "Microsoft Access handler is only supported on Windows. "
+                "The Microsoft Access ODBC driver is not available on other operating systems."
+            )
 
         try:
             import pyodbc

@@ -73,9 +73,11 @@ class BaseAccessHandlerTest(unittest.TestCase):
 class TestAccessHandlerConnection(BaseAccessHandlerTest):
     """Test suite for Access Handler connection management."""
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_connect_success(self, mock_connect):
+    def test_connect_success(self, mock_connect, mock_platform):
         """Test successful connection to Access database."""
+        mock_platform.return_value = "Windows"
         mock_connection, _ = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -88,9 +90,11 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertTrue(self.handler.is_connected)
         self.assertEqual(result, mock_connection)
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_connect_when_already_connected(self, mock_connect):
+    def test_connect_when_already_connected(self, mock_connect, mock_platform):
         """Test that connect returns existing connection when already connected."""
+        mock_platform.return_value = "Windows"
         mock_connection, _ = self.create_mock_connection_with_cursor()
         self.handler.connection = mock_connection
         self.handler.is_connected = True
@@ -100,9 +104,11 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         mock_connect.assert_not_called()
         self.assertEqual(result, mock_connection)
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_connect_failure(self, mock_connect):
+    def test_connect_failure(self, mock_connect, mock_platform):
         """Test connection failure handling."""
+        mock_platform.return_value = "Windows"
         error_msg = "Driver not found"
         mock_connect.side_effect = Exception(error_msg)
 
@@ -132,9 +138,11 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
 
         self.assertIsNone(result)
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_check_connection_success(self, mock_connect):
+    def test_check_connection_success(self, mock_connect, mock_platform):
         """Test successful connection check."""
+        mock_platform.return_value = "Windows"
         mock_connection, _ = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -144,9 +152,11 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertTrue(result.success)
         self.assertFalse(self.handler.is_connected)  # Should disconnect after check
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_check_connection_failure(self, mock_connect):
+    def test_check_connection_failure(self, mock_connect, mock_platform):
         """Test connection check failure."""
+        mock_platform.return_value = "Windows"
         error_message = "Cannot open database"
         mock_connect.side_effect = Exception(error_message)
 
@@ -160,9 +170,11 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
 class TestAccessHandlerQueries(BaseAccessHandlerTest):
     """Test suite for Access Handler query execution."""
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_native_query_select_success(self, mock_connect):
+    def test_native_query_select_success(self, mock_connect, mock_platform):
         """Test successful SELECT query execution."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -180,9 +192,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         self.assertEqual(list(result.data_frame.columns), columns)
         mock_cursor.execute.assert_called_once_with(query)
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_native_query_insert_success(self, mock_connect):
+    def test_native_query_insert_success(self, mock_connect, mock_platform):
         """Test successful INSERT query execution."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         self.setup_mock_write_query(mock_cursor)
@@ -194,9 +208,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         mock_cursor.execute.assert_called_once_with(query)
         mock_connection.commit.assert_called_once()
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_native_query_update_success(self, mock_connect):
+    def test_native_query_update_success(self, mock_connect, mock_platform):
         """Test successful UPDATE query execution."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         self.setup_mock_write_query(mock_cursor)
@@ -208,9 +224,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         mock_cursor.execute.assert_called_once_with(query)
         mock_connection.commit.assert_called_once()
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_native_query_delete_success(self, mock_connect):
+    def test_native_query_delete_success(self, mock_connect, mock_platform):
         """Test successful DELETE query execution."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         self.setup_mock_write_query(mock_cursor)
@@ -222,9 +240,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         mock_cursor.execute.assert_called_once_with(query)
         mock_connection.commit.assert_called_once()
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_native_query_empty_result(self, mock_connect):
+    def test_native_query_empty_result(self, mock_connect, mock_platform):
         """Test query with empty result set."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         mock_cursor.fetchall.return_value = []
@@ -234,9 +254,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 
         self.assertEqual(result.type, RESPONSE_TYPE.OK)
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_native_query_failure(self, mock_connect):
+    def test_native_query_failure(self, mock_connect, mock_platform):
         """Test query execution failure."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -249,9 +271,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
         self.assertIn(error_message, result.error_message)
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_native_query_disconnects_when_needed(self, mock_connect):
+    def test_native_query_disconnects_when_needed(self, mock_connect, mock_platform):
         """Test that native_query disconnects when it opened the connection."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         self.setup_mock_write_query(mock_cursor)
@@ -263,9 +287,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.HAS_ACCESS_DIALECT", True)
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.SqlalchemyRender")
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_query_with_ast(self, mock_connect, mock_render):
+    def test_query_with_ast(self, mock_connect, mock_platform, mock_render):
         """Test query method with AST input."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         self.setup_mock_write_query(mock_cursor)
@@ -295,9 +321,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
         self.assertIn("AccessDialect is not available", result.error_message)
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_native_query_with_special_characters(self, mock_connect):
+    def test_native_query_with_special_characters(self, mock_connect, mock_platform):
         """Test query with special characters."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         self.setup_mock_select_query(mock_cursor, ["name"], [("O'Brien",)])
@@ -308,9 +336,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
         mock_cursor.execute.assert_called_once_with(query)
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_multiple_sequential_queries(self, mock_connect):
+    def test_multiple_sequential_queries(self, mock_connect, mock_platform):
         """Test multiple sequential queries."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         self.setup_mock_write_query(mock_cursor)
@@ -325,9 +355,11 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 class TestAccessHandlerMetadata(BaseAccessHandlerTest):
     """Test suite for Access Handler metadata operations."""
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_get_tables_success(self, mock_connect):
+    def test_get_tables_success(self, mock_connect, mock_platform):
         """Test successful retrieval of table list."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -343,9 +375,11 @@ class TestAccessHandlerMetadata(BaseAccessHandlerTest):
             self.assertIn(name, result.data_frame["table_name"].values)
         mock_cursor.tables.assert_called_once_with(tableType="Table")
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_get_tables_empty(self, mock_connect):
+    def test_get_tables_empty(self, mock_connect, mock_platform):
         """Test get_tables with no tables."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         mock_cursor.tables.return_value = []
@@ -356,9 +390,11 @@ class TestAccessHandlerMetadata(BaseAccessHandlerTest):
         self.assertIsInstance(result.data_frame, pd.DataFrame)
         self.assertEqual(len(result.data_frame), 0)
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_get_columns_success(self, mock_connect):
+    def test_get_columns_success(self, mock_connect, mock_platform):
         """Test successful retrieval of column list."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
 
@@ -375,9 +411,11 @@ class TestAccessHandlerMetadata(BaseAccessHandlerTest):
             self.assertIn(col_name, result.data_frame["column_name"].values)
         mock_cursor.columns.assert_called_once_with(table="customers")
 
+    @patch("platform.system")
     @patch("pyodbc.connect")
-    def test_get_columns_empty(self, mock_connect):
+    def test_get_columns_empty(self, mock_connect, mock_platform):
         """Test get_columns with no columns."""
+        mock_platform.return_value = "Windows"
         mock_connection, mock_cursor = self.create_mock_connection_with_cursor()
         mock_connect.return_value = mock_connection
         mock_cursor.columns.return_value = []

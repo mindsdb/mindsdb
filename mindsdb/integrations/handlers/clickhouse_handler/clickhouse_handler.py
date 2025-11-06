@@ -221,7 +221,7 @@ class ClickHouseHandler(MetaDatabaseHandler):
                 type as data_type,
                 comment as column_description,
                 default_expression as column_default,
-                CASE WHEN is_in_primary_key = 1 THEN 0 ELSE 1 END as is_nullable
+                is_nullable as is_nullable
             FROM system.columns
             WHERE database = '{database}'
         """

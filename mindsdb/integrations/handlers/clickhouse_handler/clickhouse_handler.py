@@ -32,7 +32,8 @@ class ClickHouseHandler(MetaDatabaseHandler):
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
-        self.protocol = connection_data.get("protocol", "native")
+        self.protocol = connection_data.get('protocol', 'native')
+        self._has_is_nullable_column = None  # Cache for version check
 
     def __del__(self):
         if self.is_connected is True:
@@ -167,6 +168,36 @@ class ClickHouseHandler(MetaDatabaseHandler):
         result = self.native_query(q)
         return result
 
+    def _check_has_is_nullable_column(self) -> bool:
+        """
+        Checks if the is_nullable column exists in system.columns table.
+        This column was added in ClickHouse 23.x.
+        
+        Returns:
+            bool: True if is_nullable column exists, False otherwise.
+        """
+        if self._has_is_nullable_column is not None:
+            return self._has_is_nullable_column
+        
+        try:
+            check_query = """
+                SELECT name 
+                FROM system.columns 
+                WHERE database = 'system' 
+                    AND table = 'columns' 
+                    AND name = 'is_nullable'
+            """
+            result = self.native_query(check_query)
+            self._has_is_nullable_column = (
+                result.resp_type == RESPONSE_TYPE.TABLE 
+                and not result.data_frame.empty
+            )
+        except Exception as e:
+            logger.warning(f"Could not check for is_nullable column: {e}")
+            self._has_is_nullable_column = False
+        
+        return self._has_is_nullable_column
+
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """
         Retrieves metadata information about the tables in the ClickHouse database
@@ -214,14 +245,23 @@ class ClickHouseHandler(MetaDatabaseHandler):
         """
         database = self.connection_data['database']
         
-        query = f"""
-            SELECT 
+        # Check if is_nullable column is available (ClickHouse 23.x+)
+        has_is_nullable = self._check_has_is_nullable_column()
+        
+        # Build the SELECT clause based on available columns
+        select_clause = """
                 table as table_name,
                 name as column_name,
                 type as data_type,
                 comment as column_description,
-                default_expression as column_default,
-                is_nullable as is_nullable
+                default_expression as column_default"""
+        
+        if has_is_nullable:
+            select_clause += """,
+                is_nullable as is_nullable"""
+        
+        query = f"""
+            SELECT {select_clause}
             FROM system.columns
             WHERE database = '{database}'
         """
@@ -253,7 +293,9 @@ class ClickHouseHandler(MetaDatabaseHandler):
         self, table_name: str, column_names: Optional[List[str]] = None
     ) -> Response:
         """
-        Retrieves column statistics for a specific table.
+        Retrieves column statistics for a specific table using sampling for large tables.
+        Uses ClickHouse's SAMPLE clause to compute statistics on a sample of the data
+        for tables with more than 100,000 rows, significantly reducing query time.
         
         Args:
             table_name (str): The name of the table.
@@ -283,6 +325,30 @@ class ClickHouseHandler(MetaDatabaseHandler):
                 logger.warning(f"No columns found for table {table_name}")
                 return Response(RESPONSE_TYPE.TABLE, pd.DataFrame())
             
+            # Check table size to determine if we should use sampling
+            size_query = f"""
+                SELECT total_rows
+                FROM system.tables
+                WHERE database = '{database}' AND name = '{table_name}'
+            """
+            
+            size_result = self.native_query(size_query)
+            table_row_count = 0
+            use_sampling = False
+            sample_rate = 0.1  # 10% sample by default
+            
+            if size_result.resp_type == RESPONSE_TYPE.TABLE and not size_result.data_frame.empty:
+                table_row_count = size_result.data_frame.iloc[0]['total_rows']
+                # Use sampling for tables with more than 100K rows
+                if table_row_count > 100000:
+                    use_sampling = True
+                    # Adjust sample rate based on table size
+                    if table_row_count > 10000000:  # 10M+ rows
+                        sample_rate = 0.01  # 1% sample
+                    elif table_row_count > 1000000:  # 1M+ rows
+                        sample_rate = 0.05  # 5% sample
+                    logger.info(f"Using {sample_rate * 100}% sampling for table {table_name} with {table_row_count} rows")
+            
             # Build statistics query - collect all stats in one query
             select_parts = []
             for _, row in columns_result.data_frame.iterrows():
@@ -298,12 +364,13 @@ class ClickHouseHandler(MetaDatabaseHandler):
             if not select_parts:
                 return Response(RESPONSE_TYPE.TABLE, pd.DataFrame())
             
-            # Build the query to get stats for all columns at once
+            # Build the query with optional SAMPLE clause
+            sample_clause = f" SAMPLE {sample_rate}" if use_sampling else ""
             stats_query = f"""
                 SELECT 
                     count(*) AS total_rows,
                     {', '.join(select_parts)}
-                FROM `{database}`.`{table_name}`
+                FROM `{database}`.`{table_name}`{sample_clause}
             """
             
             stats_result = self.native_query(stats_query)
@@ -327,7 +394,13 @@ class ClickHouseHandler(MetaDatabaseHandler):
             
             # Parse the stats result
             stats_data = stats_result.data_frame.iloc[0]
-            total_rows = stats_data.get('total_rows', 0)
+            sampled_rows = stats_data.get('total_rows', 0)
+            
+            # If we used sampling, extrapolate the distinct count
+            # Note: null percentage, min, and max are still representative from the sample
+            extrapolation_factor = 1.0
+            if use_sampling and sampled_rows > 0 and table_row_count > 0:
+                extrapolation_factor = table_row_count / sampled_rows
             
             # Build the final statistics DataFrame
             all_stats = []
@@ -338,10 +411,15 @@ class ClickHouseHandler(MetaDatabaseHandler):
                 min_val = stats_data.get(f'min_{col}', None)
                 max_val = stats_data.get(f'max_{col}', None)
                 
-                # Calculate null percentage
+                # Calculate null percentage (based on sample)
                 null_pct = None
-                if total_rows is not None and total_rows > 0:
-                    null_pct = round((nulls / total_rows) * 100, 2)
+                if sampled_rows is not None and sampled_rows > 0:
+                    null_pct = round((nulls / sampled_rows) * 100, 2)
+                
+                # Extrapolate distinct count if we used sampling
+                # Use a conservative estimate: min(extrapolated, table_row_count)
+                if distincts is not None and use_sampling:
+                    distincts = int(min(distincts * extrapolation_factor, table_row_count))
                 
                 all_stats.append({
                     'table_name': table_name,

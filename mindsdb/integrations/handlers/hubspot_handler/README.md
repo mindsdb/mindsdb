@@ -65,9 +65,7 @@ pip install -r requirements.txt
 
 **Required Dependencies:**
 - `hubspot-api-client==12.0.0` - Official HubSpot Python client
-- `pandas>=1.3.0` - Data manipulation and analysis
-- `typing-extensions>=4.0.0` - Enhanced type hints support
-
+  
 ## Authentication
 
 The handler supports two authentication methods with enterprise-grade security:

@@ -4,29 +4,18 @@ from typing import List
 import duckdb
 from duckdb import InvalidInputException
 import numpy as np
+import orjson
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log
-from mindsdb.utilities.exception import format_db_error_message
+from mindsdb.utilities.exception import QueryError
 from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import (
-    adapt_char_fn,
-    adapt_locate_fn,
-    adapt_unhex_fn,
-    adapt_format_fn,
-    adapt_sha2_fn,
-    adapt_length_fn,
-    adapt_regexp_substr_fn,
-    adapt_substring_index_fn,
-    adapt_curtime_fn,
-    adapt_timestampdiff_fn,
-    adapt_extract_fn,
-)
+from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import mysql_to_duckdb_fnc
 
 logger = log.getLogger(__name__)
 
@@ -76,6 +65,9 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
     Returns:
         pandas.DataFrame
         pandas.columns
+
+    Raises:
+        QueryError: Raised when DuckDB fails to execute the query
     """
 
     try:
@@ -98,9 +90,17 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
             else:
                 raise exception
             description = con.description
+    except InvalidInputException as e:
+        raise QueryError(
+            db_type="DuckDB",
+            db_error_msg=f"DuckDB failed to execute query, likely due to inability to determine column data types. Details: {e}",
+            failed_query=query_str,
+            is_external=False,
+            is_expected=False,
+        ) from e
     except Exception as e:
-        raise Exception(
-            format_db_error_message(db_type="DuckDB", db_error_msg=str(e), failed_query=query_str, is_external=False)
+        raise QueryError(
+            db_type="DuckDB", db_error_msg=str(e), failed_query=query_str, is_external=False, is_expected=False
         ) from e
 
     return result_df, description
@@ -176,11 +176,20 @@ def query_df(df, query, session=None):
         query_str = str(query)
 
     if isinstance(query_ast, Select) is False or isinstance(query_ast.from_table, Identifier) is False:
-        raise Exception("Only 'SELECT from TABLE' statements supported for internal query")
+        raise QueryError(
+            db_type="DuckDB",
+            db_error_msg="Only 'SELECT from TABLE' statements supported for internal query",
+            failed_query=query_str,
+            is_external=False,
+            is_expected=False,
+        )
 
-    table_name = query_ast.from_table.parts[0]
     query_ast.from_table.parts = ["df"]
 
+    return query_dfs({"df": df}, query_ast, session=session)
+
+
+def query_dfs(dataframes, query_ast, session=None):
     json_columns = set()
 
     if session is not None:
@@ -196,25 +205,15 @@ def query_df(df, query, session=None):
                 node.parts = [node.parts[-1]]
                 return node
         if isinstance(node, Function):
+            fnc = mysql_to_duckdb_fnc(node)
+            if fnc is not None:
+                node2 = fnc(node)
+                if node2 is not None:
+                    # copy alias
+                    node2.alias = node.alias
+                return node2
+
             fnc_name = node.op.lower()
-
-            mysql_to_duck_fn_map = {
-                "char": adapt_char_fn,
-                "locate": adapt_locate_fn,
-                "insrt": adapt_locate_fn,
-                "unhex": adapt_unhex_fn,
-                "format": adapt_format_fn,
-                "sha2": adapt_sha2_fn,
-                "length": adapt_length_fn,
-                "regexp_substr": adapt_regexp_substr_fn,
-                "substring_index": adapt_substring_index_fn,
-                "curtime": adapt_curtime_fn,
-                "timestampdiff": adapt_timestampdiff_fn,
-                "extract": adapt_extract_fn,
-            }
-            if fnc_name in mysql_to_duck_fn_map:
-                return mysql_to_duck_fn_map[fnc_name](node)
-
             if fnc_name == "database" and len(node.args) == 0:
                 if session is not None:
                     cur_db = session.database
@@ -236,51 +235,52 @@ def query_df(df, query, session=None):
             custom_functions_list = [] if user_functions is None else list(user_functions.functions.keys())
             all_functions_list = duckdb_functions_and_kw_list + custom_functions_list
             if len(all_functions_list) > 0 and fnc_name not in all_functions_list:
-                raise Exception(
-                    format_db_error_message(
-                        db_type="DuckDB",
-                        db_error_msg=(
-                            f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
-                            "Please use DuckDB-supported functions instead."
-                        ),
-                        failed_query=query_str,
-                        is_external=False,
-                    )
+                raise QueryError(
+                    db_type="DuckDB",
+                    db_error_msg=(
+                        f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
+                        "Please use DuckDB-supported functions instead."
+                    ),
+                    failed_query=query_str,
+                    is_external=False,
+                    is_expected=False,
                 )
 
     query_traversal(query_ast, adapt_query)
 
-    # convert json columns
-    encoder = CustomJSONEncoder()
-
     def _convert(v):
         if isinstance(v, dict) or isinstance(v, list):
             try:
-                return encoder.encode(v)
+                default_encoder = CustomJSONEncoder().default
+                return orjson.dumps(
+                    v, default=default_encoder, option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME
+                ).decode("utf-8")
             except Exception:
                 pass
         return v
 
-    for column in json_columns:
-        df[column] = df[column].apply(_convert)
-
     render = SqlalchemyRender("postgres")
     try:
         query_str = render.get_string(query_ast, with_failback=False)
-    except Exception as e:
-        logger.error(f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}")
+    except Exception:
+        logger.exception(f"Exception during query casting to 'postgres' dialect. Query:\n{str(query_ast)}.\nError:")
         query_str = render.get_string(query_ast, with_failback=True)
 
-    # workaround to prevent duckdb.TypeMismatchException
-    if len(df) > 0:
-        if table_name.lower() in ("models", "predictors"):
-            if "TRAINING_OPTIONS" in df.columns:
-                df = df.astype({"TRAINING_OPTIONS": "string"})
-        if table_name.lower() == "ml_engines":
-            if "CONNECTION_DATA" in df.columns:
-                df = df.astype({"CONNECTION_DATA": "string"})
+    for table_name, df in dataframes.items():
+        for column in json_columns:
+            df[column] = df[column].apply(_convert)
 
-    result_df, description = query_df_with_type_infer_fallback(query_str, {"df": df}, user_functions=user_functions)
+        if len(df) > 0:
+            # workaround to prevent duckdb.TypeMismatchException
+            for sys_name, sys_col in (
+                ("models", "TRAINING_OPTIONS"),
+                ("predictors", "TRAINING_OPTIONS"),
+                ("ml_engines", "CONNECTION_DATA"),
+            ):
+                if table_name.lower() in sys_name and sys_col in df.columns:
+                    df[sys_col] = df[sys_col].astype("string")
+
+    result_df, description = query_df_with_type_infer_fallback(query_str, dataframes, user_functions=user_functions)
     result_df.replace({np.nan: None}, inplace=True)
     result_df.columns = [x[0] for x in description]
     return result_df

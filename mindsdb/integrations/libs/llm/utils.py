@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.llm.config import (
     NvidiaNIMConfig,
     MindsdbConfig,
     WriterConfig,
+    BedrockConfig,
 )
 from mindsdb.utilities.config import config
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
@@ -222,6 +223,20 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
             writer_org_id=args.get("writer_org_id", None),
             base_url=args.get("base_url", None),
         )
+    if provider == "bedrock":
+        return BedrockConfig(
+            model_id=args.get("model_name"),
+            temperature=temperature,
+            max_tokens=args.get("max_tokens", None),
+            stop=args.get("stop", None),
+            base_url=args.get("endpoint_url", None),
+            aws_access_key_id=args.get("aws_access_key_id", None),
+            aws_secret_access_key=args.get("aws_secret_access_key", None),
+            aws_session_token=args.get("aws_session_token", None),
+            region_name=args.get("aws_region_name", None),
+            credentials_profile_name=args.get("credentials_profile_name", None),
+            model_kwargs=args.get("model_kwargs", None),
+        )
 
     raise ValueError(f"Provider {provider} is not supported.")
 
@@ -289,10 +304,10 @@ def ft_jsonl_validation(
                     assistant_key=assistant_key,
                 )
             except Exception as e:
-                raise Exception(f"{prefix}{e}")
+                raise Exception(f"{prefix}{e}") from e
 
     except Exception as e:
-        raise Exception(f"Fine-tuning data format is not valid. Got {e}")
+        raise Exception(f"Fine-tuning data format is not valid. Got {e}") from e
 
 
 def ft_chat_format_validation(

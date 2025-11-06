@@ -7,7 +7,7 @@ import pandas as pd
 
 from mindsdb_sql_parser import Select, Star, OrderBy
 
-from mindsdb_sql_parser.ast import Identifier, BinaryOperation, Last, Constant, ASTNode
+from mindsdb_sql_parser.ast import Identifier, BinaryOperation, Last, Constant, ASTNode, Function
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.cache import get_cache
 
@@ -45,7 +45,7 @@ class RunningQuery:
             for df in dn.query_stream(query2, fetch_size=self.batch_size):
                 max_track_value = self.get_max_track_value(df)
                 yield df
-                self.set_progress(df, max_track_value)
+                self.set_progress(max_track_value=max_track_value)
 
         else:
             while True:
@@ -59,7 +59,7 @@ class RunningQuery:
 
                 max_track_value = self.get_max_track_value(df)
                 yield df
-                self.set_progress(df, max_track_value)
+                self.set_progress(max_track_value=max_track_value)
 
     def get_partition_query(self, step_num: int, query: Select, stream=False) -> Select:
         """
@@ -178,24 +178,23 @@ class RunningQuery:
             # stream mode
             return None
 
-    def set_progress(self, df: pd.DataFrame, max_track_value: int):
+    def set_progress(self, processed_rows: int = None, max_track_value: int = None):
         """
         Store progres of the query, it is called after processing of batch
         """
 
-        if len(df) == 0:
-            return
+        if processed_rows is not None and processed_rows > 0:
+            self.record.processed_rows = self.record.processed_rows + processed_rows
+            db.session.commit()
 
-        self.record.processed_rows = self.record.processed_rows + len(df)
-
-        cur_value = self.record.context.get("track_value")
-        new_value = max_track_value
-        if new_value is not None:
-            if cur_value is None or new_value > cur_value:
-                self.record.context["track_value"] = new_value
-                flag_modified(self.record, "context")
-
-        db.session.commit()
+        if max_track_value is not None:
+            cur_value = self.record.context.get("track_value")
+            new_value = max_track_value
+            if new_value is not None:
+                if cur_value is None or new_value > cur_value:
+                    self.record.context["track_value"] = new_value
+                    flag_modified(self.record, "context")
+            db.session.commit()
 
     def on_error(self, error: Exception, step_num: int, steps_data: dict):
         """
@@ -313,9 +312,21 @@ class QueryContextController:
         def replace_lasts(node, **kwargs):
             # find last in where
             if isinstance(node, BinaryOperation):
-                if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Last):
+                arg1, arg2 = node.args
+                if not isinstance(arg1, Identifier):
+                    arg1, arg2 = arg2, arg1
+
+                # one of the args must be identifier
+                if not isinstance(arg1, Identifier):
+                    return
+
+                # another must be LAST or function with LAST in args
+                if isinstance(arg2, Last) or (
+                    isinstance(arg2, Function) and any(isinstance(arg, Last) for arg in arg2.args)
+                ):
                     node.args = [Constant(0), Constant(0)]
                     node.op = "="
+                    return node
 
         # find lasts
         query_traversal(query, replace_lasts)

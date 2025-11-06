@@ -118,7 +118,6 @@ def clean_unlinked_process_marks() -> List[int]:
 
         except psutil.AccessDenied:
             logger.warning(f"access to {process_id} denied")
-
             continue
 
         except psutil.NoSuchProcess:
@@ -133,6 +132,9 @@ def create_pid_file():
     Create mindsdb process pid file. Check if previous process exists and is running
     """
 
+    if os.environ.get("USE_PIDFILE") != "1":
+        return
+
     p = get_tmp_dir()
     p.mkdir(parents=True, exist_ok=True)
     pid_file = p.joinpath("pid")
@@ -141,11 +143,11 @@ def create_pid_file():
         pid = pid_file.read_text().strip()
         try:
             psutil.Process(int(pid))
-            raise Exception(f"Found PID file with existing process: {pid}")
+            raise Exception(f"Found PID file with existing process: {pid} {pid_file}")
         except (psutil.Error, ValueError):
             ...
 
-        logger.warning(f"Found existing PID file ({pid}), removing")
+        logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
         pid_file.unlink()
 
     pid_file.write_text(str(os.getpid()))
@@ -155,15 +157,18 @@ def delete_pid_file():
     """
     Remove existing process pid file if it matches current process
     """
+
+    if os.environ.get("USE_PIDFILE") != "1":
+        return
+
     pid_file = get_tmp_dir().joinpath("pid")
 
     if not pid_file.exists():
-        logger.warning("Mindsdb PID file does not exist")
         return
 
     pid = pid_file.read_text().strip()
     if pid != str(os.getpid()):
-        logger.warning("Process id in PID file doesn't match mindsdb pid")
+        logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
         return
 
     pid_file.unlink()

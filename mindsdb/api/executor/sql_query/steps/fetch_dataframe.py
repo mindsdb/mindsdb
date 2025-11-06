@@ -87,8 +87,7 @@ class FetchDataframeStepCall(BaseStepCall):
         if query is None:
             table_alias = (self.context.get("database"), "result", "result")
 
-            # fetch raw_query
-            response: DataHubResponse = dn.query(native_query=step.raw_query, session=self.session)
+            response: DataHubResponse = dn.query(step.raw_query, session=self.session)
             df = response.data_frame
         else:
             if isinstance(step.query, (Union, Intersect)):
@@ -112,7 +111,7 @@ class FetchDataframeStepCall(BaseStepCall):
 
         # if query registered, set progress
         if self.sql_query.run_query is not None:
-            self.sql_query.run_query.set_progress(df, None)
+            self.sql_query.run_query.set_progress(processed_rows=len(df))
         return ResultSet.from_df(
             df,
             table_name=table_alias[1],

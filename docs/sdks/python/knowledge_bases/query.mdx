@@ -1,0 +1,244 @@
+---
+title: How to Query Knowledge Bases
+sidebarTitle: Query KB
+---
+
+Knowledge Bases support two primary querying approaches: semantic search and metadata filtering, each of which offers different filtering capabilities, including filtering by the relevance score to ensure only data most relevant to the query is returned.
+
+* **Semantic Search** 
+
+    Semantic search enables users to query Knowledge Bases using natural language. When searching semantically, you reference the content column in your SQL statement. MindsDB will interpret the input as a semantic query and use vector-based similarity to find relevant results.
+
+* **Metadata Filtering** 
+
+    It allows users to query Knowledge Bases based on the available metadata fields. These fields can be used in the `WHERE` clause of a SQL statement.
+
+* **Relevance Filtering** 
+
+    Every semantic search result is assigned a relevance score, which indicates how closely a given entry matches your query. You can filter results by this score to ensure only the most relevant entries are returned.
+
+* **Hybrid Search**
+
+    Hybrid search combines the flexibility of semantic search and exact keyword matching. [Learn more here](/mindsdb_sql/knowledge_bases/hybrid_search).
+
+<Tip>
+Learn more about features of [knowledge bases available via SQL API](/mindsdb_sql/knowledge_bases/overview).
+</Tip>
+
+## `find()` Function
+
+Knowledge bases provide an abstraction that enables users to see the stored data.
+
+Note that here a sample knowledge base created and inserted into in the previous **Example** sections is searched.
+
+```python
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb;
+    '''
+)
+
+print(results.fetch())
+```
+
+Here is the sample output:
+
+```sql
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+| Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
+| 3XZ | 3XZ_notes:1of1:0to19 | Gift wrap requested     | {"chunk_index":0,"content_column":"notes","end_char":19,"original_doc_id":"3XZ_notes","original_row_id":"3XZ","product":"Bluetooth Speaker","source":"TextChunkingPreprocessor","start_char":0}     | 0.8010851611432231 | 0.2500003885558766 |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+```
+
+### Data Stored in Knowledge Base
+
+The following columns are stored in the knowledge base.
+
+`id`
+It stores values from the column defined in the `id_column` parameter when creating the knowledge base. These are the source data IDs.
+
+`chunk_id`
+Knowledge bases chunk the inserted data in order to fit the defined chunk size. If the chunking is performed, the following chunk ID format is used: `<id>:<chunk_number>of<total_chunks>:<start_char_number>to<end_char_number>`.
+
+`chunk_content`
+It stores values from the column(s) defined in the `content_columns` parameter when creating the knowledge base.
+
+`metadata`
+It stores the general metadata and the metadata defined in the `metadata_columns` parameter when creating the knowledge base.
+
+`distance`
+It stores the calculated distance between the chunk's content and the search phrase.
+
+`relevance`
+It stores the calculated relevance of the chunk as compared to the search phrase. Its values are between 0 and 1.
+
+<Note>
+Note that the calculation method of `relevance` differs as follows:
+
+- When the ranking model is provided, the default `relevance` is equal or greater than 0, unless defined otherwise in the `WHERE` clause.
+- When the reranking model is not provided and the `relevance` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
+- When the reranking model is not provided but the `relevance` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance` value is compared with this relevance value to filter the output.
+</Note>
+
+### Semantic Search
+
+Users can query a knowledge base using semantic search by providing the search phrase (called `content`) to be searched for.
+
+```python
+results = my_kb.find('color')
+
+print(results.fetch())
+```
+
+Here is the output:
+
+```sql
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+| Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
+| 3XZ | 3XZ_notes:1of1:0to19 | Gift wrap requested     | {"chunk_index":0,"content_column":"notes","end_char":19,"original_doc_id":"3XZ_notes","original_row_id":"3XZ","product":"Bluetooth Speaker","source":"TextChunkingPreprocessor","start_char":0}     | 0.8010851611432231 | 0.2500003885558766 |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+```
+
+<Note>
+When querying a knowledge base, the default values include the following:
+
+* `relevance` <br></br>
+If not provided, its default value is equal to or greater than 0, ensuring there is no filtering of rows based on their relevance.
+
+* `LIMIT` <br></br>
+If not provided, its default value is 10, returning a maximum of 10 rows.
+</Note>
+
+<Tip>
+Note that when specifying both `relevance` and `LIMIT` as follows:
+
+```python
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE content = 'color'
+    AND relevance >= 0.5
+    LIMIT 20;
+    '''
+)
+
+print(results.fetch())
+```
+
+The query extracts 20 rows (as defined in the `LIMIT` clause) that match the defined `content`. Next, these set of rows is filtered out to match the defined `relevance`.
+</Tip>
+
+Users can limit the `relevance` in order to get only the most relevant results.
+
+```python
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE content = 'color'
+    AND relevance >= 0.5;
+    '''
+)
+
+print(results.fetch())
+```
+
+Here is the output:
+
+```sql
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| id  | chunk_id             | chunk_content          | metadata                                                                                                                                                                                     | distance           | relevance          |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | 0.5743341242061104 | 0.5103766499957533 |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+```
+
+By providing the `relevance` filter, the output is limited to only data with relevance score of the provided value. The available values of `relevance` are between 0 and 1, and its default value covers all available relevance values ensuring no filtering based on the relevance score.
+
+Users can limit the number of rows returned.
+
+```python
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE content = 'color'
+    LIMIT 2;
+    '''
+)
+
+print(results.fetch())
+```
+
+Here is the output:
+
+```sql
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+| Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+```
+
+### Metadata Filtering
+
+Besides semantic search features, knowledge bases enable users to filter the result set by the defined metadata.
+
+```python
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE product = 'Wireless Mouse';
+    '''
+)
+
+print(results.fetch())
+```
+
+Here is the output:
+
+```sql
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------+----------+
+| id  | chunk_id             | chunk_content          | metadata                                                                                                                                                                                     | relevance | distance |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------+----------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | [NULL]    | [NULL]   |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------+----------+
+```
+
+Note that when searching by metadata alone, the `relevance` column values are not calculated.
+
+Users can do both, filter by metadata and search by content.
+
+```python
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE product = 'Wireless Mouse'
+    AND content = 'color'
+    AND relevance >= 0.5;
+    '''
+)
+
+print(results.fetch())
+```
+
+Here is the output:
+
+```sql
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+| id  | chunk_id             | chunk_content          | metadata                                                                                                                                                                                     | distance           | relevance         |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | 0.5743341242061104 | 0.504396172197583 |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+```

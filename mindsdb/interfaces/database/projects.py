@@ -8,7 +8,7 @@ import sqlalchemy as sa
 import numpy as np
 
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier
+from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier, BinaryOperation
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.interfaces.storage import db
@@ -38,20 +38,16 @@ class Project:
         return p
 
     def create(self, name: str):
-        name = name.lower()
-
-        company_id = ctx.company_id if ctx.company_id is not None else 0
+        company_id = ctx.company_id if ctx.company_id is not None else "0"
 
         existing_record = db.Integration.query.filter(
-            sa.func.lower(db.Integration.name) == name, db.Integration.company_id == ctx.company_id
+            db.Integration.name == name, db.Integration.company_id == ctx.company_id
         ).first()
         if existing_record is not None:
             raise EntityExistsError("Database exists with this name ", name)
 
         existing_record = db.Project.query.filter(
-            (sa.func.lower(db.Project.name) == name)
-            & (db.Project.company_id == company_id)
-            & (db.Project.deleted_at == sa.null())
+            (db.Project.name == name) & (db.Project.company_id == company_id) & (db.Project.deleted_at == sa.null())
         ).first()
         if existing_record is not None:
             raise EntityExistsError("Project already exists", name)
@@ -137,6 +133,90 @@ class Project:
         view_meta["query_ast"] = parse_sql(view_meta["query"])
         return view_meta
 
+    @staticmethod
+    def combine_view_select(view_query: Select, query: Select) -> Select:
+        """
+        Create a combined query from view's query and outer query.
+        """
+
+        # apply optimizations
+        if query.where is not None:
+            # Get conditions that can be duplicated into view's query
+            # It has to be simple condition with identifier and constant
+            # Also it shouldn't be under the OR condition
+
+            def get_conditions_to_move(node):
+                if not isinstance(node, BinaryOperation):
+                    return []
+                op = node.op.upper()
+                if op == "AND":
+                    conditions = []
+                    conditions.extend(get_conditions_to_move(node.args[0]))
+                    conditions.extend(get_conditions_to_move(node.args[1]))
+                    return conditions
+
+                if op == "OR":
+                    return []
+                if isinstance(node.args[0], (Identifier, Constant)) and isinstance(
+                    node.args[1], (Identifier, Constant)
+                ):
+                    return [node]
+
+            conditions = get_conditions_to_move(query.where)
+
+            if conditions:
+                # analyse targets
+                # if target element has alias
+                #    if element is not identifier or the name is not equal to alias:
+                #         add alias to black list
+                # white list:
+                #     all targets that are identifiers with no alias or equal to its alias
+                # condition can be moved if
+                #     column is not in black list AND (query has star(*) OR column in white list)
+
+                has_star = False
+                white_list, black_list = [], []
+                for target in view_query.targets:
+                    if isinstance(target, Star):
+                        has_star = True
+                    if isinstance(target, Identifier):
+                        name = target.parts[-1].lower()
+                        if target.alias is None or target.alias.parts[-1].lower() == name:
+                            white_list.append(name)
+                    elif target.alias is not None:
+                        black_list.append(target.alias.parts[-1].lower())
+
+                view_where = view_query.where
+                for condition in conditions:
+                    arg1, arg2 = condition.args
+
+                    if isinstance(arg1, Identifier):
+                        name = arg1.parts[-1].lower()
+                        if name in black_list or not (has_star or name in white_list):
+                            continue
+                    if isinstance(arg2, Identifier):
+                        name = arg2.parts[-1].lower()
+                        if name in black_list or not (has_star or name in white_list):
+                            continue
+
+                    # condition can be moved into view
+                    condition2 = BinaryOperation(condition.op, [arg1, arg2])
+                    if view_where is None:
+                        view_where = condition2
+                    else:
+                        view_where = BinaryOperation("AND", args=[view_where, condition2])
+
+                    # disable outer condition
+                    condition.op = "="
+                    condition.args = [Constant(0), Constant(0)]
+
+                view_query.where = view_where
+
+        # combine outer query with view's query
+        view_query.parentheses = True
+        query.from_table = view_query
+        return query
+
     def query_view(self, query: Select, session) -> pd.DataFrame:
         view_meta = self.get_view_meta(query)
 
@@ -145,11 +225,7 @@ class Project:
         try:
             view_query = view_meta["query_ast"]
             if isinstance(view_query, Select):
-                # combine outer query with view's query
-                view_query.parentheses = True
-                query.from_table = view_query
-                view_query = query
-
+                view_query = self.combine_view_select(view_query, query)
                 query_applied = True
 
             sqlquery = SQLQuery(view_query, session=session)
@@ -424,7 +500,7 @@ class ProjectController:
         pass
 
     def get_list(self) -> List[Project]:
-        company_id = ctx.company_id if ctx.company_id is not None else 0
+        company_id = ctx.company_id if ctx.company_id is not None else "0"
         records = db.Project.query.filter(
             (db.Project.company_id == company_id) & (db.Project.deleted_at == sa.null())
         ).order_by(db.Project.name)
@@ -458,7 +534,7 @@ class ProjectController:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' can't be provided at the same time")
 
-        company_id = ctx.company_id if ctx.company_id is not None else 0
+        company_id = ctx.company_id if ctx.company_id is not None else "0"
         q = db.Project.query.filter_by(company_id=company_id)
 
         if id is not None:

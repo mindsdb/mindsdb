@@ -31,6 +31,12 @@ variable "PUSH_CACHE" {
 variable "CACHE_ONLY" {
   default = false
 }
+variable "PRERELEASE" {
+  default = can(regex("v?[0-9]+\\.[0-9]+\\.[0-9]+(a|b|rc)[0-9]+", VERSION))
+}
+variable "RELEASE_CANDIDATE" {
+  default = can(regex("v?[0-9]+\\.[0-9]+\\.[0-9]+rc[0-9]+", VERSION))
+}
 
 function "get_cache_to" {
   params = [image]
@@ -49,19 +55,36 @@ EOT
   ])
 }
 
+function "version_suffix" {
+  params = [image]
+  result = notequal(image, "bare") ? "-${image}" : ""
+}
+function "default_suffix" {
+  params = [image]
+  result = notequal(image, "bare") ? image : "latest"
+}
+
 # Generate the list of tags for a given image.
 # e.g. for the 'cloud' images this generates:
-# - "mindsdb:cloud"        - This functions as a 'latest' tag for the cloud image
-# - "mindsdb:v1.2.3-cloud" - For this specific version
+# - "mindsdb:cloud"           - This functions as a 'latest' tag for the cloud image
+# - "mindsdb:v1.2.3-cloud"    - For this specific version
+# - "mindsdb:v1.2.3rc1-cloud" - For release candidates
+# - "mindsdb:rc-cloud"        - Functions as a 'latest' for cloud release candidates
+# - "mindsdb:rc-latest"       - Functions as a 'latest' for release candidates
 # The same tags are pushed to dockerhub as well if the PUSH_TO_DOCKERHUB variable is set.
 function "get_tags" {
   params = [image]
-  result = [
-    "${ECR_REPO}/${IMAGE}:${VERSION}${notequal(image, "bare") ? "-${image}" : ""}",
-    "${ECR_REPO}/${IMAGE}:${notequal(image, "bare") ? image : "latest"}",
-    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${VERSION}${notequal(image, "bare") ? "-${image}" : ""}" : "",
-    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${notequal(image, "bare") ? image : "latest"}" : ""
-  ]
+  result = compact([
+    # ECR Tags
+    "${ECR_REPO}/${IMAGE}:${VERSION}${version_suffix(image)}",
+    RELEASE_CANDIDATE ? "${ECR_REPO}/${IMAGE}:rc-${default_suffix(image)}" : "${ECR_REPO}/${IMAGE}:${default_suffix(image)}",
+
+    # Dockerhub Tags
+    # Only release versions and release candidates are pushed to dockerhub
+    PUSH_TO_DOCKERHUB && (!PRERELEASE || RELEASE_CANDIDATE) ? "mindsdb/${IMAGE}:${VERSION}${version_suffix(image)}" : "",
+    PUSH_TO_DOCKERHUB && (!PRERELEASE || RELEASE_CANDIDATE) ? "mindsdb/${IMAGE}:rc-${default_suffix(image)}" : "",
+    PUSH_TO_DOCKERHUB && !PRERELEASE ? "mindsdb/${IMAGE}:${default_suffix(image)}" : ""
+  ])
 } 
 
 
@@ -109,12 +132,12 @@ target "images" {
       {
         # If you make any changes here, make them to cloud-cpu as well
         name = "cloud"
-        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
+        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,pgvector,rag,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
         target = ""
       },
       {
         name = "cloud-cpu"
-        extras = ".[lightwood,huggingface_cpu,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
+        extras = ".[lightwood,huggingface_cpu,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,pgvector,rag,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
         target = ""
       },
     ]

@@ -1,7 +1,7 @@
 """convert json_storage resource_id to bigint
 
 Revision ID: b501eaab150f
-Revises: a44643042fe8
+Revises: 608e376c19a7
 Create Date: 2025-11-06 16:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'b501eaab150f'
-down_revision = 'a44643042fe8'
+down_revision = '608e376c19a7'
 branch_labels = None
 depends_on = None
 

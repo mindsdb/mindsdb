@@ -3,7 +3,8 @@ import pandas as pd
 from hubspot import HubSpot
 
 from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import ContactsTable, CompaniesTable, DealsTable
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
+
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -15,7 +16,7 @@ from mindsdb_sql_parser import parse_sql
 logger = log.getLogger(__name__)
 
 
-class HubspotHandler(APIHandler):
+class HubspotHandler(MetaAPIHandler):
     """Hubspot API handler implementation"""
 
     name = "hubspot"
@@ -155,7 +156,7 @@ class HubspotHandler(APIHandler):
 
         Returns:
             Response: A response containing table metadata including table names, types,
-                     estimated row counts, and descriptions.
+            estimated row counts, and descriptions.
         """
         try:
             self.connect()
@@ -203,7 +204,7 @@ class HubspotHandler(APIHandler):
 
         Returns:
             Response: A response containing column metadata including names, types,
-                     descriptions, and statistics.
+            descriptions, and statistics.
         """
         if table_name not in ["companies", "contacts", "deals"]:
             return Response(

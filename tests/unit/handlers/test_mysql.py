@@ -220,6 +220,80 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.disconnect()
         mock_conn.close.assert_not_called()
 
+    def test_check_connection_success(self):
+        """
+        Tests that check_connection returns success status when connection is valid
+        """
+        self.handler.connection_data = self.dummy_connection_data.copy()
+
+        mock_conn = MagicMock()
+        mock_conn.is_connected = MagicMock(return_value=True)
+        self.mock_connect.return_value = mock_conn
+
+        response = self.handler.check_connection()
+
+        self.assertTrue(response.success)
+        self.assertIsNone(response.error_message)
+        self.mock_connect.assert_called_once()
+
+    def test_check_connection_failure(self):
+        """
+        Tests that check_connection returns failure status and error message when connection fails
+        """
+        self.handler.connection_data = self.dummy_connection_data.copy()
+
+        error_message = "Connection failed: Unknown MySQL server host 'invalid-host'"
+        self.mock_connect.side_effect = mysql.connector.Error(error_message)
+
+        response = self.handler.check_connection()
+
+        self.assertFalse(response.success)
+        self.assertIsNotNone(response.error_message)
+        self.assertIn("Connection failed", response.error_message)
+
+    def test_check_connection_closes_on_success(self):
+        """
+        Tests that check_connection closes the connection after successful check if it wasn't already connected
+        """
+        self.handler.connection_data = self.dummy_connection_data.copy()
+        self.handler.connection = None  # Not connected initially
+
+        mock_conn = MagicMock()
+        mock_conn.is_connected = MagicMock(return_value=True)
+        self.mock_connect.return_value = mock_conn
+
+        response = self.handler.check_connection()
+
+        self.assertTrue(response.success)
+        mock_conn.close.assert_called_once()
+
+    def test_connection_with_url(self):
+        """
+        Tests connecting with a URL connection string instead of individual parameters
+        """
+        url_connection_data = {"url": "mysql://root:password@127.0.0.1:3306/test_db"}
+        self.handler.connection_data = url_connection_data
+
+        # Mock ConnectionConfig to process the URL
+        with patch("mindsdb.integrations.handlers.mysql_handler.mysql_handler.ConnectionConfig") as mock_config_class:
+            mock_model = MagicMock()
+            mock_model.model_dump.return_value = {
+                "host": "127.0.0.1",
+                "port": 3306,
+                "user": "root",
+                "password": "password",
+                "database": "test_db",
+                "connection_timeout": 10,
+                "collation": "utf8mb4_general_ci",
+                "use_pure": True,
+            }
+            mock_config_class.return_value = mock_model
+
+            self.handler.connect()
+
+            mock_config_class.assert_called_once_with(**url_connection_data)
+            self.mock_connect.assert_called_once()
+
     def test_unpack_config(self):
         """
         Tests the _unpack_config method to ensure it correctly validates and unpacks connection data
@@ -553,8 +627,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         mock_cursor.description = description
         response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.data_frame.dtypes[0], "Int64")
-        self.assertEqual(response.data_frame.dtypes[1], "Int64")
+        self.assertEqual(response.data_frame.dtypes.iloc[0], "Int64")
+        self.assertEqual(response.data_frame.dtypes.iloc[1], "Int64")
         self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
         self.assertEqual(response.data_frame.iloc[0, 1], 1)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)

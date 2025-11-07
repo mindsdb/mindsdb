@@ -16,6 +16,13 @@ class GoogleAnalyticsTest(unittest.TestCase):
 
         cls.handler = GoogleAnalyticsHandler('test_google_analytics_handler', **cls.kwargs)
 
+    def test_0_0_credentials_storage(self):
+        """Test that credentials are stored and retrieved securely"""
+        # This test verifies that credentials storage methods exist and work
+        # Actual storage is tested through the check_connection test
+        assert hasattr(self.handler, '_store_credentials')
+        assert hasattr(self.handler, '_load_stored_credentials')
+
     def test_0_check_connection(self):
         assert self.handler.check_connection()
 

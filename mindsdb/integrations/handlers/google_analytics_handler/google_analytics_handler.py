@@ -86,18 +86,55 @@ class GoogleAnalyticsHandler(APIHandler):
         self.metadata = metadata
         self._register_table('metadata', metadata)
 
+    def _store_credentials(self, credentials_data: dict) -> None:
+        """
+        Store credentials securely in encrypted storage
+
+        Args:
+            credentials_data: Service account credentials as dictionary
+        """
+        if not self.handler_storage:
+            return
+
+        self.handler_storage.encrypted_json_set("ga_credentials", credentials_data)
+
+    def _load_stored_credentials(self) -> dict:
+        """
+        Load stored credentials from encrypted storage
+
+        Returns:
+            dict: Stored credentials or None if not found
+        """
+        if not self.handler_storage:
+            return None
+
+        try:
+            return self.handler_storage.encrypted_json_get("ga_credentials")
+        except Exception:
+            return None
+
     def _get_creds_json(self):
+        # First, try to load from encrypted storage
+        stored_creds = self._load_stored_credentials()
+        if stored_creds:
+            return stored_creds
+
+        # If not in storage, load from connection args and store securely
         if 'credentials_file' in self.connection_args:
             if os.path.isfile(self.connection_args['credentials_file']) is False:
                 raise Exception("credentials_file must be a file path")
             with open(self.connection_args['credentials_file']) as source:
                 info = json.load(source)
+            # Store credentials for future use
+            self._store_credentials(info)
             return info
         elif 'credentials_json' in self.connection_args:
             info = self.connection_args['credentials_json']
             if not isinstance(info, dict):
                 raise Exception("credentials_json has to be dict")
             info['private_key'] = info['private_key'].replace('\\n', '\n')
+            # Store credentials for future use
+            self._store_credentials(info)
             return info
         else:
             raise Exception('Connection args have to content ether credentials_file or credentials_json')

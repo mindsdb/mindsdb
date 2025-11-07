@@ -12,6 +12,9 @@ and the [Google Analytics Data API](https://developers.google.com/analytics/devg
 * `credentials_json`: optional, credentials file content as json (Service Account Credentials)
 > ⚠️ One of credentials_file or credentials_json has to be chosen.
 
+## Security
+Service account credentials are stored securely using MindsDB's encrypted storage system. Once you provide credentials (either via file or JSON), they are automatically encrypted and stored in the handler's secure storage. Subsequent connections will use the stored encrypted credentials, so you don't need to provide them again.
+
 ## Example: Automate your GA4 Property
 
 To see how the Google Analytics handler is used, let's walk through a simple example to create a model to predict

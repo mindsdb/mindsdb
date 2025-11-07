@@ -2,6 +2,11 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers.google_analytics_handler.google_analytics_tables import ConversionEventsTable
+from mindsdb.integrations.handlers.google_analytics_handler.google_analytics_data_tables import (
+    ReportsTable,
+    RealtimeReportsTable,
+    MetadataTable,
+)
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -11,6 +16,7 @@ import json
 import os
 
 from google.analytics.admin_v1beta import AnalyticsAdminServiceClient
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
@@ -24,13 +30,26 @@ logger = log.getLogger(__name__)
 
 
 class GoogleAnalyticsHandler(APIHandler):
-    """A class for handling connections and interactions with the Google Analytics Admin API.
+    """A class for handling connections and interactions with the Google Analytics Admin API and Data API.
+
+    This handler supports both the Admin API (for managing conversion events) and the Data API (for
+    running reports and accessing analytics data).
 
     Attributes:
+        property_id (str): The Google Analytics 4 property ID.
         credentials_file (str): The path to the Google Auth Credentials file for authentication
-        and interacting with the Google Analytics API on behalf of the user.
+            and interacting with the Google Analytics API on behalf of the user.
+        credentials_json (dict): Alternative to credentials_file, provide credentials as a dictionary.
+        scopes (List[str], Optional): The scopes to use when authenticating with the Google Analytics API.
 
-        Scopes (List[str], Optional): The scopes to use when authenticating with the Google Analytics API.
+    Tables:
+        Admin API:
+            - conversion_events: Manage conversion events (SELECT, INSERT, UPDATE, DELETE)
+
+        Data API:
+            - reports: Run standard GA4 reports with dimensions and metrics (SELECT)
+            - realtime_reports: Run realtime reports for current user activity (SELECT)
+            - metadata: Fetch available dimensions and metrics (SELECT)
     """
 
     name = 'google_analytics'
@@ -44,11 +63,28 @@ class GoogleAnalyticsHandler(APIHandler):
             self.credentials_file = self.connection_args.pop('credentials')
 
         self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
-        self.service = None
+        self.service = None  # Admin API client (for backward compatibility)
+        self.admin_service = None  # Admin API client
+        self.data_service = None  # Data API client
         self.is_connected = False
+
+        # Register Admin API tables
         conversion_events = ConversionEventsTable(self)
         self.conversion_events = conversion_events
         self._register_table('conversion_events', conversion_events)
+
+        # Register Data API tables
+        reports = ReportsTable(self)
+        self.reports = reports
+        self._register_table('reports', reports)
+
+        realtime_reports = RealtimeReportsTable(self)
+        self.realtime_reports = realtime_reports
+        self._register_table('realtime_reports', realtime_reports)
+
+        metadata = MetadataTable(self)
+        self.metadata = metadata
+        self._register_table('metadata', metadata)
 
     def _get_creds_json(self):
         if 'credentials_file' in self.connection_args:
@@ -74,21 +110,26 @@ class GoogleAnalyticsHandler(APIHandler):
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
 
-        return AnalyticsAdminServiceClient(credentials=creds)
+        # Create both Admin API and Data API clients with same credentials
+        admin_client = AnalyticsAdminServiceClient(credentials=creds)
+        data_client = BetaAnalyticsDataClient(credentials=creds)
+
+        return admin_client, data_client
 
     def connect(self):
         """
-        Authenticate with the Google Analytics Admin API using the credential file.
+        Authenticate with the Google Analytics Admin API and Data API using the credential file.
 
         Returns
         -------
         service: object
-            The authenticated Google Analytics Admin API service object.
+            The authenticated Google Analytics Admin API service object (for backward compatibility).
         """
         if self.is_connected is True:
             return self.service
 
-        self.service = self.create_connection()
+        self.admin_service, self.data_service = self.create_connection()
+        self.service = self.admin_service  # For backward compatibility
         self.is_connected = True
 
         return self.service

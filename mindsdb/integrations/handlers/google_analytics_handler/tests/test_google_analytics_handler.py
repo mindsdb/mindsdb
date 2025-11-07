@@ -43,6 +43,49 @@ class GoogleAnalyticsTest(unittest.TestCase):
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.OK
 
+    # Data API Tests
+    def test_6_reports_table_basic_query(self):
+        """Test basic reports table query with date range"""
+        query = "SELECT country, activeUsers, sessions FROM reports WHERE start_date = '7daysAgo' AND end_date = 'today' LIMIT 10"
+        result = self.handler.native_query(query)
+        assert result.type is RESPONSE_TYPE.TABLE
+
+    def test_7_reports_table_with_filter(self):
+        """Test reports table with dimension filter"""
+        query = "SELECT date, eventName, eventCount FROM reports WHERE start_date = '7daysAgo' AND end_date = 'today' AND dimension_eventName = 'first_open' LIMIT 10"
+        result = self.handler.native_query(query)
+        assert result.type is RESPONSE_TYPE.TABLE
+
+    def test_8_reports_table_with_order(self):
+        """Test reports table with ORDER BY clause"""
+        query = "SELECT country, activeUsers FROM reports WHERE start_date = '30daysAgo' AND end_date = 'today' ORDER BY activeUsers DESC LIMIT 5"
+        result = self.handler.native_query(query)
+        assert result.type is RESPONSE_TYPE.TABLE
+
+    def test_9_realtime_reports_table(self):
+        """Test realtime reports table"""
+        query = "SELECT country, activeUsers FROM realtime_reports LIMIT 10"
+        result = self.handler.native_query(query)
+        assert result.type is RESPONSE_TYPE.TABLE
+
+    def test_10_metadata_table(self):
+        """Test metadata table to fetch available dimensions and metrics"""
+        query = "SELECT * FROM metadata"
+        result = self.handler.native_query(query)
+        assert result.type is RESPONSE_TYPE.TABLE
+
+    def test_11_metadata_table_filter_dimensions(self):
+        """Test metadata table filtered by dimension type"""
+        query = "SELECT api_name, ui_name FROM metadata WHERE type = 'dimension'"
+        result = self.handler.native_query(query)
+        assert result.type is RESPONSE_TYPE.TABLE
+
+    def test_12_metadata_table_filter_metrics(self):
+        """Test metadata table filtered by metric type"""
+        query = "SELECT api_name, ui_name FROM metadata WHERE type = 'metric'"
+        result = self.handler.native_query(query)
+        assert result.type is RESPONSE_TYPE.TABLE
+
 
 if __name__ == '__main__':
     unittest.main()

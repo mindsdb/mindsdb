@@ -103,7 +103,7 @@ class IntegrationController:
         # Test the new connection data before applying
         if check_connection:
             try:
-                temp_name = f"{integration_record.name}_{time.time()}".replace(".", "")
+                temp_name = f"{integration_record.name}_update_{time.time()}".replace(".", "")
                 handler = self.create_tmp_handler(
                     temp_name,
                     integration_record.engine,
@@ -114,7 +114,7 @@ class IntegrationController:
                 raise
 
             if status.success is not True:
-                raise Exception(f"Cannot modify integration '{name}': {status.error_message}")
+                raise Exception(f"Connection test failed: {status.error_message}")
 
         integration_record.data = data
         db.session.commit()

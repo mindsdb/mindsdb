@@ -1,4 +1,3 @@
-import time
 import shutil
 import tempfile
 from http import HTTPStatus

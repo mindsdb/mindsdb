@@ -1,40 +1,24 @@
 # HubSpot Handler
 
 HubSpot handler for MindsDB provides interfaces to connect to HubSpot via APIs and pull store data into MindsDB.
+
 ---
 
 ## Table of Contents
 
 - [HubSpot Handler](#hubspot-handler)
-  - [HubSpot handler for MindsDB provides interfaces to connect to HubSpot via APIs and pull store data into MindsDB.](#hubspot-handler-for-mindsdb-provides-interfaces-to-connect-to-hubspot-via-apis-and-pull-store-data-into-mindsdb)
-  - [Table of Contents](#table-of-contents)
   - [About HubSpot](#about-hubspot)
-  - [HubSpot Handler Implementation](#hubspot-handler-implementation)
   - [Installation](#installation)
   - [Authentication](#authentication)
     - [Access Token Authentication](#access-token-authentication)
     - [OAuth Authentication](#oauth-authentication)
-  - [Enterprise Features](#enterprise-features)
   - [Data Catalog Support](#data-catalog-support)
-  - [Implemented Features](#implemented-features)
-    - [🏢 Companies Table](#-companies-table)
-    - [👤 Contacts Table](#-contacts-table)
-    - [💼 Deals Table](#-deals-table)
   - [Available Tables](#available-tables)
   - [Example Usage](#example-usage)
     - [Basic Connection](#basic-connection)
     - [Data Catalog Operations](#data-catalog-operations)
     - [Querying Data](#querying-data)
     - [Data Manipulation](#data-manipulation)
-  - [Error Handling](#error-handling)
-  - [Security](#security)
-  - [Performance](#performance)
-  - [Troubleshooting](#troubleshooting)
-    - [Common Issues](#common-issues)
-    - [Debugging Steps](#debugging-steps)
-    - [Performance Tuning](#performance-tuning)
-  - [Known Limitations](#known-limitations)
-  - [API Coverage](#api-coverage)
 
 ---
 
@@ -44,16 +28,6 @@ HubSpot is a comprehensive CRM platform providing marketing, sales, content mana
 
 **Official Website:** https://www.hubspot.com/products
 **API Documentation:** https://developers.hubspot.com/docs/api/overview
-
-## HubSpot Handler Implementation
-
-This enterprise-ready handler is implemented using the official [HubSpot API Client](https://github.com/HubSpot/hubspot-api-python) with comprehensive enhancements for:
-
-- **Enterprise Security**: Secure credential handling with no sensitive data in logs
-- **Data Catalog**: Complete metadata support including table/column descriptions and statistics
-- **Error Handling**: Comprehensive error handling with detailed logging and recovery
-- **Performance**: Optimized API calls with intelligent caching and batching
-- **Standards Compliance**: Full PEP8 compliance with comprehensive type hints
 
 ## Installation
 
@@ -94,33 +68,6 @@ Recommended for applications requiring user consent and dynamic scope management
 
 **Security Note:** Never expose client secrets in client-side code. Use server-side token exchange.
 
-## Enterprise Features
-
-This integration meets enterprise-ready standards with:
-
-✅ **Data Catalog Support**
-- Complete table and column metadata
-- Column data types and descriptions  
-- Estimated row counts and statistics
-- Primary key identification
-
-✅ **Security & Compliance**
-- Secure credential storage and handling
-- No sensitive data in application logs
-- Comprehensive error handling
-- Input validation and sanitization
-
-✅ **Performance & Reliability**
-- Connection pooling and reuse
-- Intelligent API rate limiting
-- Automatic retry mechanisms
-- Comprehensive logging and monitoring
-
-✅ **API Compatibility**
-- SQL API support
-- REST API support  
-- Python SDK support
-- MCP (Model Context Protocol) support
 
 ## Data Catalog Support
 
@@ -140,28 +87,6 @@ The handler provides comprehensive data catalog capabilities:
 - `COLUMN_DEFAULT`: Default value (if any)
 - `COLUMN_DESCRIPTION`: Column purpose and HubSpot property mapping
 
-## Implemented Features
-
-### 🏢 Companies Table
-- ✅ **SELECT Operations**: Full query support with LIMIT, WHERE, ORDER BY
-- ✅ **INSERT Operations**: Create new companies with property validation
-- ✅ **UPDATE Operations**: Modify existing company records
-- ✅ **DELETE Operations**: Archive company records
-- ✅ **Column Support**: name, domain, industry, city, state, phone, etc.
-
-### 👤 Contacts Table  
-- ✅ **SELECT Operations**: Full query support with filtering and sorting
-- ✅ **INSERT Operations**: Create contacts with email validation
-- ✅ **UPDATE Operations**: Modify contact information
-- ✅ **DELETE Operations**: Archive contact records
-- ✅ **Column Support**: email, firstname, lastname, phone, company, website, etc.
-
-### 💼 Deals Table
-- ✅ **SELECT Operations**: Complete deal pipeline access
-- ✅ **INSERT Operations**: Create deals with amount and stage validation
-- ✅ **UPDATE Operations**: Move deals through pipeline stages
-- ✅ **DELETE Operations**: Archive completed/cancelled deals
-- ✅ **Column Support**: dealname, amount, pipeline, stage, closedate, owner, etc.
 
 ## Available Tables
 
@@ -306,132 +231,3 @@ WHERE dealstage = 'closed-lost'
 DELETE FROM hubspot_datasource.contacts
 WHERE email LIKE '%test%' OR email LIKE '%example%';
 ```
-
-## Error Handling
-
-The handler provides comprehensive error handling:
-
-**Connection Errors:**
-- Invalid credentials: Clear error messages with resolution steps
-- Network timeouts: Automatic retry with exponential backoff
-- API rate limits: Intelligent throttling and queuing
-
-**Query Errors:**
-- Malformed SQL: Detailed syntax error messages
-- Invalid table/column names: Suggestions for correct names
-- Data validation: Field-level validation with specific requirements
-
-**Data Errors:**
-- Missing required fields: List of mandatory columns for operations
-- Invalid data types: Automatic type conversion where possible
-- Constraint violations: Clear violation descriptions with examples
-
-## Security
-
-**Credential Protection:**
-- Credentials stored securely in MindsDB vault
-- No sensitive data in application logs
-- Automatic credential masking in error messages
-- Support for environment variable configuration
-
-**API Security:**
-- HTTPS-only connections to HubSpot
-- Proper SSL certificate validation
-- Request signing and authentication
-- Scope-limited access tokens
-
-## Performance
-
-**Optimization Features:**
-- Connection pooling and reuse
-- Intelligent query batching  
-- Automatic pagination for large result sets
-- Selective column fetching to minimize data transfer
-
-**Monitoring:**
-- Request/response timing logs
-- API quota usage tracking
-- Error rate monitoring
-- Performance metrics collection
-
-## Troubleshooting
-
-### Common Issues
-
-**Authentication Failures:**
-```
-Error: Invalid access_token provided
-Solution: Verify token from HubSpot Private Apps page, ensure proper scopes
-```
-
-**Connection Timeouts:**  
-```
-Error: Connection to HubSpot failed: timeout
-Solution: Check network connectivity, verify API endpoint accessibility
-```
-
-**Permission Errors:**
-```
-Error: Insufficient permissions for contacts
-Solution: Update app scopes in HubSpot, regenerate access token
-```
-
-**Rate Limiting:**
-```
-Error: API rate limit exceeded  
-Solution: Implement delays between requests, use batch operations
-```
-
-### Debugging Steps
-
-1. **Verify Credentials**: Test connection in HubSpot API explorer
-2. **Check Scopes**: Ensure app has required permissions (contacts, companies, deals)
-3. **Validate Network**: Test connectivity to api.hubapi.com
-4. **Review Logs**: Check MindsDB logs for detailed error messages
-5. **Test Queries**: Start with simple SELECT queries before complex operations
-
-### Performance Tuning
-
-**Query Optimization:**
-- Use LIMIT clauses for large datasets
-- Implement WHERE filtering to reduce data transfer
-- Use specific column selection instead of SELECT *
-
-**Batch Operations:**
-- Group multiple INSERT/UPDATE operations
-- Use transaction-like patterns for data consistency
-- Monitor API quota usage during bulk operations
-
-## Known Limitations
-
-**API Limitations:**
-- Rate limits: 100 requests per 10 seconds (varies by HubSpot plan)
-- Data retention: Deleted records may still appear for 90 days
-- Custom properties: Limited to properties available in your HubSpot account
-
-**Integration Limitations:**  
-- Real-time sync: Not available (pull-based only)
-- Complex relationships: Cross-object joins require multiple queries
-- Large datasets: Pagination required for >10,000 records
-
-**Planned Enhancements:**
-- Additional object types (Products, Line Items, Tickets)
-- Real-time webhook support
-- Advanced analytics and reporting functions
-- Custom object support
-
-## API Coverage
-
-| HubSpot API | Coverage | Operations | Notes |
-|-------------|----------|------------|--------|
-| Companies API | ✅ Complete | GET, POST, PATCH, DELETE | Full CRUD operations |
-| Contacts API | ✅ Complete | GET, POST, PATCH, DELETE | Email validation included |
-| Deals API | ✅ Complete | GET, POST, PATCH, DELETE | Pipeline management |
-| Properties API | 🔄 Partial | GET | Used for metadata discovery |
-| Search API | 📋 Planned | GET | Advanced filtering planned |
-| Webhooks | 📋 Planned | Subscription | Real-time updates planned |
-
-**Legend:**
-- ✅ Complete: Fully implemented and tested
-- 🔄 Partial: Basic functionality implemented  
-- 📋 Planned: Scheduled for future releases

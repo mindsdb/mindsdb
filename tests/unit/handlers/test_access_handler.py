@@ -16,15 +16,23 @@ class BaseAccessHandlerTest(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.connection_data = {"db_file": self.TEST_DB_PATH}
+        # Create a mock pyodbc module
+        self.mock_pyodbc = MagicMock()
         # Mock pyodbc module for import
-        self.pyodbc_patcher = patch.dict("sys.modules", {"pyodbc": MagicMock()})
+        self.pyodbc_patcher = patch.dict("sys.modules", {"pyodbc": self.mock_pyodbc})
         self.pyodbc_patcher.start()
+        # Mock pyodbc variable in the handler module - use same mock
+        self.handler_pyodbc_patcher = patch(
+            "mindsdb.integrations.handlers.access_handler.access_handler.pyodbc", self.mock_pyodbc
+        )
+        self.handler_pyodbc_patcher.start()
         self.handler = AccessHandler(self.TEST_HANDLER_NAME, self.connection_data)
 
     def tearDown(self):
         """Clean up after tests."""
         if hasattr(self.handler, "is_connected") and self.handler.is_connected:
             self.handler.disconnect()
+        self.handler_pyodbc_patcher.stop()
         self.pyodbc_patcher.stop()
 
     @staticmethod
@@ -285,7 +293,6 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 
         self.assertFalse(self.handler.is_connected)
 
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.HAS_ACCESS_DIALECT", True)
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.AccessDialect", MagicMock())
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.SqlalchemyRender")
     @patch("platform.system")
@@ -309,18 +316,6 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
 
         self.assertEqual(result.type, RESPONSE_TYPE.OK)
         mock_renderer.get_string.assert_called_once_with(ast_query, with_failback=True)
-
-    @patch("mindsdb.integrations.handlers.access_handler.access_handler.HAS_ACCESS_DIALECT", False)
-    def test_query_without_access_dialect(self):
-        """Test query method when AccessDialect is not available."""
-        from mindsdb_sql_parser import parse_sql
-        from mindsdb.integrations.libs.response import RESPONSE_TYPE
-
-        ast_query = parse_sql("SELECT * FROM test_table")
-        result = self.handler.query(ast_query)
-
-        self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
-        self.assertIn("AccessDialect is not available", result.error_message)
 
     @patch("platform.system")
     @patch("pyodbc.connect")

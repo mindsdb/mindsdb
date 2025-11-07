@@ -14,12 +14,12 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 
-HAS_ACCESS_DIALECT = False
 AccessDialect = None
-try:
-    from sqlalchemy_access.base import AccessDialect
+pyodbc = None
 
-    HAS_ACCESS_DIALECT = True
+try:
+    import pyodbc
+    from sqlalchemy_access.base import AccessDialect
 except ImportError:
     if platform.system() == "Windows":
         raise
@@ -70,13 +70,11 @@ class AccessHandler(DatabaseHandler):
                 "The Microsoft Access ODBC driver is not available on other operating systems."
             )
 
-        try:
-            import pyodbc
-        except ImportError as e:
+        if pyodbc is None:
             raise ImportError(
                 "pyodbc is not installed. Install it with 'pip install pyodbc' to use Access connections. "
                 "Microsoft Access handler requires pyodbc which needs platform-specific ODBC drivers."
-            ) from e
+            )
 
         self.connection = pyodbc.connect(
             r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=" + self.connection_data["db_file"]
@@ -161,12 +159,6 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        if not HAS_ACCESS_DIALECT:
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message="AccessDialect is not available. This handler requires sqlalchemy-access package.",
-            )
-
         renderer = SqlalchemyRender(AccessDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)

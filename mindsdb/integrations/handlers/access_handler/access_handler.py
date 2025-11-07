@@ -4,25 +4,25 @@ import platform
 import pandas as pd
 
 from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
-
-try:
-    from sqlalchemy_access.base import AccessDialect
-
-    HAS_ACCESS_DIALECT = True
-except ImportError:
-    AccessDialect = None
-    HAS_ACCESS_DIALECT = False
-
-from mindsdb_sql_parser.ast.base import ASTNode
-
-from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
+
+HAS_ACCESS_DIALECT = False
+AccessDialect = None
+try:
+    from sqlalchemy_access.base import AccessDialect
+
+    HAS_ACCESS_DIALECT = True
+except ImportError:
+    if platform.system() == "Windows":
+        raise
 
 logger = log.getLogger(__name__)
 

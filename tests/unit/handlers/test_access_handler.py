@@ -286,6 +286,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
         self.assertFalse(self.handler.is_connected)
 
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.HAS_ACCESS_DIALECT", True)
+    @patch("mindsdb.integrations.handlers.access_handler.access_handler.AccessDialect", MagicMock())
     @patch("mindsdb.integrations.handlers.access_handler.access_handler.SqlalchemyRender")
     @patch("platform.system")
     @patch("pyodbc.connect")

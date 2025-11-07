@@ -453,7 +453,6 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertIn("TABLE_NAME", df.columns)
         self.assertIn("TABLE_TYPE", df.columns)
         self.assertIn("TABLE_SCHEMA", df.columns)
-        self.assertIn("TABLE_DESCRIPTION", df.columns)
 
         table_names = df["TABLE_NAME"].tolist()
         self.assertIn("companies", table_names)
@@ -614,7 +613,9 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertEqual(stats["null_count"], 1)
         self.assertEqual(stats["distinct_count"], 3)
-        self.assertEqual(stats["min_value"], "apple")
+        # min_value and max_value are now None to avoid misleading string comparisons
+        self.assertIsNone(stats["min_value"])
+        self.assertIsNone(stats["max_value"])
 
     def test_data_type_inference_from_samples(self):
         """Test improved data type inference from multiple samples."""
@@ -722,20 +723,17 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         df = response.data_frame
 
-        # Check comprehensive metadata columns
-        required_columns = ["TABLE_NAME", "TABLE_TYPE", "TABLE_SCHEMA", "TABLE_DESCRIPTION", "ROW_COUNT"]
+        # Check only the 3 required metadata columns (following postgres handler pattern)
+        required_columns = ["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"]
         for col in required_columns:
             self.assertIn(col, df.columns)
 
-        # Check that row counts are accurate (from search API)
-        companies_row = df[df["TABLE_NAME"] == "companies"]
-        self.assertEqual(companies_row.iloc[0]["ROW_COUNT"], 1250)
-
-        contacts_row = df[df["TABLE_NAME"] == "contacts"]
-        self.assertEqual(contacts_row.iloc[0]["ROW_COUNT"], 850)
-
-        deals_row = df[df["TABLE_NAME"] == "deals"]
-        self.assertEqual(deals_row.iloc[0]["ROW_COUNT"], 320)
+        # Verify all three tables are present
+        table_names = df["TABLE_NAME"].tolist()
+        self.assertEqual(len(table_names), 3)
+        self.assertIn("companies", table_names)
+        self.assertIn("contacts", table_names)
+        self.assertIn("deals", table_names)
 
     def test_estimate_table_rows_with_search_api(self):
         """Test that _estimate_table_rows uses search API for accurate counts."""

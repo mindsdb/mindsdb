@@ -309,10 +309,10 @@ class HubspotHandler(MetaAPIHandler):
             self.connect()
 
             tables_data = []
-            accessible_tables = []
+            accessible_tables = ["companies", "contacts", "deals"]
 
             # Check which tables are accessible based on scopes
-            for table_name in ["companies", "contacts", "deals"]:
+            for table_name in accessible_tables:
                 try:
                     # Try to access each table with a minimal request
                     if table_name == "companies":
@@ -325,27 +325,21 @@ class HubspotHandler(MetaAPIHandler):
                     # If successful, get full metadata
                     try:
                         table_info = {
+                            "TABLE_SCHEMA": "hubspot",
                             "TABLE_NAME": table_name,
                             "TABLE_TYPE": "BASE TABLE",
-                            "TABLE_SCHEMA": "hubspot",
-                            "TABLE_DESCRIPTION": self._get_table_description(table_name),
-                            "ROW_COUNT": self._estimate_table_rows(table_name),
                         }
                         tables_data.append(table_info)
-                        accessible_tables.append(table_name)
                         logger.info(f"Table '{table_name}' is accessible")
                     except Exception as meta_error:
                         # Can access but can't get metadata
                         logger.warning(f"Could not get metadata for table {table_name}: {str(meta_error)}")
                         table_info = {
+                            "TABLE_SCHEMA": "hubspot",
                             "TABLE_NAME": table_name,
                             "TABLE_TYPE": "BASE TABLE",
-                            "TABLE_SCHEMA": "hubspot",
-                            "TABLE_DESCRIPTION": self._get_table_description(table_name),
-                            "ROW_COUNT": None,
                         }
                         tables_data.append(table_info)
-                        accessible_tables.append(table_name)
 
                 except Exception as access_error:
                     # Table is not accessible (likely missing scope)
@@ -543,8 +537,8 @@ class HubspotHandler(MetaAPIHandler):
                                 if sample_size > 0
                                 else 0,
                                 "DISTINCT_VALUES_COUNT": id_stats["distinct_count"],
-                                "MINIMUM_VALUE": id_stats["min_value"],
-                                "MAXIMUM_VALUE": id_stats["max_value"],
+                                "MINIMUM_VALUE": None,
+                                "MAXIMUM_VALUE": None,
                                 "MOST_COMMON_VALUES": None,
                                 "MOST_COMMON_FREQUENCIES": None,
                             }
@@ -587,8 +581,8 @@ class HubspotHandler(MetaAPIHandler):
                                     if sample_size > 0
                                     else 0,
                                     "DISTINCT_VALUES_COUNT": stats["distinct_count"],
-                                    "MINIMUM_VALUE": stats["min_value"],
-                                    "MAXIMUM_VALUE": stats["max_value"],
+                                    "MINIMUM_VALUE": None,
+                                    "MAXIMUM_VALUE": None,
                                     "MOST_COMMON_VALUES": most_common_values,
                                     "MOST_COMMON_FREQUENCIES": most_common_frequencies,
                                 }
@@ -682,14 +676,11 @@ class HubspotHandler(MetaAPIHandler):
                 # Infer data type from samples
                 data_type = self._infer_data_type_from_samples(column_values)
 
-                # Check if column has null values
-                has_null = any(v is None for v in column_values)
-
                 discovered_columns.append(
                     {
                         "column_name": column_name,
                         "data_type": data_type,
-                        "is_nullable": has_null,
+                        "is_nullable": None,
                         "ordinal_position": ordinal_position,
                         "description": f"HubSpot property: {prop_name}",
                         "original_name": prop_name,
@@ -812,18 +803,6 @@ class HubspotHandler(MetaAPIHandler):
                 return result.total if hasattr(result, "total") else None
         except Exception as e:
             logger.warning(f"Could not get row count for {table_name} using search API: {str(e)}")
-            try:
-                if table_name == "companies":
-                    companies = list(self.connection.crm.companies.get_all(limit=1))
-                    return None if not companies else None
-                elif table_name == "contacts":
-                    contacts = list(self.connection.crm.contacts.get_all(limit=1))
-                    return None if not contacts else None
-                elif table_name == "deals":
-                    deals = list(self.connection.crm.deals.get_all(limit=1))
-                    return None if not deals else None
-            except Exception as fallback_error:
-                logger.warning(f"Fallback row count estimation also failed for {table_name}: {str(fallback_error)}")
         return None
 
     def _calculate_column_statistics(self, column_name: str, values: List[Any]) -> Dict[str, Any]:
@@ -841,10 +820,6 @@ class HubspotHandler(MetaAPIHandler):
         }
 
         if non_null_values:
-            str_values = [str(v) for v in non_null_values]
-            stats["min_value"] = min(str_values)
-            stats["max_value"] = max(str_values)
-
             # Try to calculate numeric average for numeric columns
             try:
                 numeric_values = []

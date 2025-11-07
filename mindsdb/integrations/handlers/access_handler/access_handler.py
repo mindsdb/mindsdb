@@ -14,9 +14,6 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 
-AccessDialect = None
-pyodbc = None
-
 try:
     import pyodbc
     from sqlalchemy_access.base import AccessDialect
@@ -68,12 +65,6 @@ class AccessHandler(DatabaseHandler):
             raise RuntimeError(
                 "Microsoft Access handler is only supported on Windows. "
                 "The Microsoft Access ODBC driver is not available on other operating systems."
-            )
-
-        if pyodbc is None:
-            raise ImportError(
-                "pyodbc is not installed. Install it with 'pip install pyodbc' to use Access connections. "
-                "Microsoft Access handler requires pyodbc which needs platform-specific ODBC drivers."
             )
 
         self.connection = pyodbc.connect(

@@ -1,7 +1,17 @@
 import unittest
 from unittest.mock import MagicMock, patch
 import pandas as pd
+import sys
+
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
+
+# Mock pyodbc and sqlalchemy_access before importing the handler
+# This is necessary because the handler imports these at module level
+if "pyodbc" not in sys.modules:
+    sys.modules["pyodbc"] = MagicMock()
+if "sqlalchemy_access" not in sys.modules:
+    sys.modules["sqlalchemy_access"] = MagicMock()
+    sys.modules["sqlalchemy_access.base"] = MagicMock()
 
 from mindsdb.integrations.handlers.access_handler.access_handler import AccessHandler
 
@@ -16,24 +26,12 @@ class BaseAccessHandlerTest(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.connection_data = {"db_file": self.TEST_DB_PATH}
-        # Create a mock pyodbc module
-        self.mock_pyodbc = MagicMock()
-        # Mock pyodbc module for import
-        self.pyodbc_patcher = patch.dict("sys.modules", {"pyodbc": self.mock_pyodbc})
-        self.pyodbc_patcher.start()
-        # Mock pyodbc variable in the handler module - use same mock
-        self.handler_pyodbc_patcher = patch(
-            "mindsdb.integrations.handlers.access_handler.access_handler.pyodbc", self.mock_pyodbc
-        )
-        self.handler_pyodbc_patcher.start()
         self.handler = AccessHandler(self.TEST_HANDLER_NAME, self.connection_data)
 
     def tearDown(self):
         """Clean up after tests."""
         if hasattr(self.handler, "is_connected") and self.handler.is_connected:
             self.handler.disconnect()
-        self.handler_pyodbc_patcher.stop()
-        self.pyodbc_patcher.stop()
 
     @staticmethod
     def create_mock_connection_with_cursor():

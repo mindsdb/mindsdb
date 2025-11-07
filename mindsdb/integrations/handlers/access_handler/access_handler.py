@@ -17,9 +17,12 @@ from mindsdb.integrations.libs.response import (
 try:
     import pyodbc
     from sqlalchemy_access.base import AccessDialect
-except ImportError:
-    if platform.system() == "Windows":
-        raise
+
+    IMPORT_ERROR = None
+except ImportError as e:
+    pyodbc = None
+    AccessDialect = None
+    IMPORT_ERROR = e
 
 logger = log.getLogger(__name__)
 
@@ -60,6 +63,12 @@ class AccessHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
+
+        if IMPORT_ERROR is not None:
+            raise RuntimeError(
+                f"Microsoft Access handler requires pyodbc and sqlalchemy-access packages. "
+                f"Install them with: pip install pyodbc sqlalchemy-access. Error: {IMPORT_ERROR}"
+            )
 
         if platform.system() != "Windows":
             raise RuntimeError(
@@ -150,6 +159,12 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+        if IMPORT_ERROR is not None:
+            raise RuntimeError(
+                f"Microsoft Access handler requires pyodbc and sqlalchemy-access packages. "
+                f"Install them with: pip install pyodbc sqlalchemy-access. Error: {IMPORT_ERROR}"
+            )
+
         renderer = SqlalchemyRender(AccessDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)

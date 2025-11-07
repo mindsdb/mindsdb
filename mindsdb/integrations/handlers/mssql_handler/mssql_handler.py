@@ -8,8 +8,10 @@ from pandas.api import types as pd_types
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
@@ -382,6 +384,26 @@ class SqlServerHandler(MetaDatabaseHandler):
 
         return response
 
+    def _add_schema_to_tables(self, node, is_table=False, **kwargs):
+        """
+        Callback for query_traversal that adds schema prefix to table identifiers.
+
+        Args:
+            node: The AST node being visited
+            is_table: True if this node represents a table reference
+            **kwargs: Other arguments from query_traversal (parent_query, callstack, etc.)
+
+        Returns:
+            None to keep traversing, or a replacement node
+        Note: This is mostly a workaround for Minds but it should still work for FQE
+        """
+        if is_table and isinstance(node, Identifier):
+            # Only add schema if the identifier doesn't already have one (single part)
+            if len(node.parts) == 1:
+                node.parts.insert(0, self.schema)
+                node.is_quoted.insert(0, False)
+        return None
+
     def query(self, query: ASTNode) -> Response:
         """
         Executes a SQL query represented by an ASTNode and retrieves the data.
@@ -392,6 +414,9 @@ class SqlServerHandler(MetaDatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
+        # Add schema prefix to table identifiers if schema is configured
+        if self.schema:
+            query_traversal(query, self._add_schema_to_tables)
 
         query_str = self.renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")

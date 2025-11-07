@@ -104,11 +104,7 @@ class IntegrationController:
         if check_connection:
             try:
                 temp_name = f"{integration_record.name}_update_{time.time()}".replace(".", "")
-                handler = self.create_tmp_handler(
-                    temp_name,
-                    integration_record.engine,
-                    data
-                )
+                handler = self.create_tmp_handler(temp_name, integration_record.engine, data)
                 status = handler.check_connection()
             except ImportError:
                 raise

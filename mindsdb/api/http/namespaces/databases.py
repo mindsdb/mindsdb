@@ -232,9 +232,7 @@ class DatabaseResource(Resource):
             session.integration_controller.modify(database_name, parameters, check_connection=check_connection)
         except Exception as e:
             status = HandlerStatusResponse(success=False, error_message=str(e))
-            return http_error(
-                HTTPStatus.BAD_REQUEST, "Connection error", status.error_message or "Connection error"
-            )
+            return http_error(HTTPStatus.BAD_REQUEST, "Connection error", status.error_message or "Connection error")
 
         return session.integration_controller.get(database_name)
 

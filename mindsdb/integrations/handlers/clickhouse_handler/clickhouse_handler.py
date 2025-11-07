@@ -293,62 +293,35 @@ class ClickHouseHandler(MetaDatabaseHandler):
         self, table_name: str, column_names: Optional[List[str]] = None
     ) -> Response:
         """
-        Retrieves column statistics for a specific table using sampling for large tables.
-        Uses ClickHouse's SAMPLE clause to compute statistics on a sample of the data
-        for tables with more than 100,000 rows, significantly reducing query time.
+        Retrieves column statistics for a specific table.
         
         Args:
             table_name (str): The name of the table.
             column_names (Optional[List[str]]): List of column names to retrieve statistics for. 
                                                   If None, statistics for all columns will be returned.
-
         Returns:
             Response: A response object containing the column statistics for the table.
         """
         database = self.connection_data['database']
-        
+
         # Get the list of columns for this table
         columns_query = f"""
             SELECT name, type
             FROM system.columns
             WHERE database = '{database}' AND table = '{table_name}'
         """
-        
+
         if column_names:
             quoted_names = [f"'{c}'" for c in column_names]
             columns_query += f" AND name IN ({','.join(quoted_names)})"
-        
+
         try:
             columns_result = self.native_query(columns_query)
-            
+
             if columns_result.resp_type == RESPONSE_TYPE.ERROR or columns_result.data_frame.empty:
                 logger.warning(f"No columns found for table {table_name}")
                 return Response(RESPONSE_TYPE.TABLE, pd.DataFrame())
-            
-            # Check table size to determine if we should use sampling
-            size_query = f"""
-                SELECT total_rows
-                FROM system.tables
-                WHERE database = '{database}' AND name = '{table_name}'
-            """
-            
-            size_result = self.native_query(size_query)
-            table_row_count = 0
-            use_sampling = False
-            sample_rate = 0.1  # 10% sample by default
-            
-            if size_result.resp_type == RESPONSE_TYPE.TABLE and not size_result.data_frame.empty:
-                table_row_count = size_result.data_frame.iloc[0]['total_rows']
-                # Use sampling for tables with more than 100K rows
-                if table_row_count > 100000:
-                    use_sampling = True
-                    # Adjust sample rate based on table size
-                    if table_row_count > 10000000:  # 10M+ rows
-                        sample_rate = 0.01  # 1% sample
-                    elif table_row_count > 1000000:  # 1M+ rows
-                        sample_rate = 0.05  # 5% sample
-                    logger.info(f"Using {sample_rate * 100}% sampling for table {table_name} with {table_row_count} rows")
-            
+
             # Build statistics query - collect all stats in one query
             select_parts = []
             for _, row in columns_result.data_frame.iterrows():
@@ -360,21 +333,20 @@ class ClickHouseHandler(MetaDatabaseHandler):
                     f"toString(min(`{col}`)) AS min_{col}",
                     f"toString(max(`{col}`)) AS max_{col}",
                 ])
-            
+
             if not select_parts:
                 return Response(RESPONSE_TYPE.TABLE, pd.DataFrame())
-            
-            # Build the query with optional SAMPLE clause
-            sample_clause = f" SAMPLE {sample_rate}" if use_sampling else ""
+
+            # Build the query to get stats for all columns at once
             stats_query = f"""
                 SELECT 
                     count(*) AS total_rows,
                     {', '.join(select_parts)}
-                FROM `{database}`.`{table_name}`{sample_clause}
+                FROM `{database}`.`{table_name}`
             """
-            
+
             stats_result = self.native_query(stats_query)
-            
+
             if stats_result.resp_type != RESPONSE_TYPE.TABLE or stats_result.data_frame.empty:
                 logger.warning(f"Could not retrieve stats for table {table_name}")
                 # Return placeholder stats
@@ -391,17 +363,11 @@ class ClickHouseHandler(MetaDatabaseHandler):
                         'maximum_value': None,
                     })
                 return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(placeholder_data))
-            
+
             # Parse the stats result
             stats_data = stats_result.data_frame.iloc[0]
-            sampled_rows = stats_data.get('total_rows', 0)
-            
-            # If we used sampling, extrapolate the distinct count
-            # Note: null percentage, min, and max are still representative from the sample
-            extrapolation_factor = 1.0
-            if use_sampling and sampled_rows > 0 and table_row_count > 0:
-                extrapolation_factor = table_row_count / sampled_rows
-            
+            total_rows = stats_data.get('total_rows', 0)
+
             # Build the final statistics DataFrame
             all_stats = []
             for _, row in columns_result.data_frame.iterrows():
@@ -410,17 +376,12 @@ class ClickHouseHandler(MetaDatabaseHandler):
                 distincts = stats_data.get(f'distincts_{col}', None)
                 min_val = stats_data.get(f'min_{col}', None)
                 max_val = stats_data.get(f'max_{col}', None)
-                
-                # Calculate null percentage (based on sample)
+
+                # Calculate null percentage
                 null_pct = None
-                if sampled_rows is not None and sampled_rows > 0:
-                    null_pct = round((nulls / sampled_rows) * 100, 2)
-                
-                # Extrapolate distinct count if we used sampling
-                # Use a conservative estimate: min(extrapolated, table_row_count)
-                if distincts is not None and use_sampling:
-                    distincts = int(min(distincts * extrapolation_factor, table_row_count))
-                
+                if total_rows is not None and total_rows > 0:
+                    null_pct = round((nulls / total_rows) * 100, 2)
+
                 all_stats.append({
                     'table_name': table_name,
                     'column_name': col,
@@ -431,9 +392,9 @@ class ClickHouseHandler(MetaDatabaseHandler):
                     'minimum_value': min_val,
                     'maximum_value': max_val,
                 })
-            
+
             return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(all_stats))
-            
+
         except Exception as e:
             logger.error(f"Exception while fetching statistics for table {table_name}: {e}")
             # Return empty stats on error

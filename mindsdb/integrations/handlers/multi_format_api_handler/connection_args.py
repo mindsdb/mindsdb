@@ -21,6 +21,12 @@ connection_args = OrderedDict(
         'required': False,
         'label': 'Default Timeout',
     },
+    max_content_size={
+        'type': ARG_TYPE.INT,
+        'description': 'Maximum response size in MB. Prevents downloading extremely large files. Default is 100 MB.',
+        'required': False,
+        'label': 'Max Content Size (MB)',
+    },
 )
 
 
@@ -31,4 +37,5 @@ connection_args_example = OrderedDict(
         'X-API-Key': 'your-api-key',
     },
     timeout=60,
+    max_content_size=50,  # 50 MB limit
 )

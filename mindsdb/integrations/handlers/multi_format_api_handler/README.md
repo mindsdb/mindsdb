@@ -74,7 +74,7 @@ WHERE url = 'https://different-api.com/other-feed.xml'
 LIMIT 50;
 ```
 
-#### Option C: With Authentication Headers
+#### Option C: With Authentication Headers and Size Limit
 
 ```sql
 CREATE DATABASE auth_api
@@ -85,7 +85,8 @@ PARAMETERS = {
         "Authorization": "Bearer YOUR_TOKEN",
         "X-API-Key": "your-key"
     },
-    "timeout": 60
+    "timeout": 60,
+    "max_content_size": 50  -- 50 MB limit
 };
 ```
 
@@ -108,13 +109,14 @@ WHERE url = 'https://api.example.com/feed.xml'
 LIMIT 50;
 ```
 
-#### With Custom Timeout
+#### With Custom Timeout and Size Limit
 
 ```sql
 SELECT *
 FROM my_api.data
 WHERE url = 'https://api.example.com/slow-endpoint.csv'
-AND timeout = 60;
+AND timeout = 60
+AND max_content_size = 200;  -- Allow up to 200 MB for this query
 ```
 
 #### With Request-Specific Headers
@@ -290,22 +292,26 @@ Error: Failed to fetch data from URL: 404 Client Error
 
 ### Connection Parameters
 
-| Parameter | Type   | Description                                    | Default |
-|-----------|--------|------------------------------------------------|---------|
-| headers   | dict   | Default headers for all requests               | {}      |
+| Parameter        | Type   | Description                                                      | Default |
+|------------------|--------|------------------------------------------------------------------|---------|
+| url              | string | Default URL for API endpoint (optional)                          | None    |
+| headers          | dict   | Default headers for all requests                                 | {}      |
+| timeout          | int    | Default request timeout in seconds                               | 30      |
+| max_content_size | int    | Maximum response size in MB (prevents large downloads)           | 100     |
 
 ### Query Parameters
 
-| Parameter | Type   | Description                                    | Default |
-|-----------|--------|------------------------------------------------|---------|
-| url       | string | URL to fetch data from (required)              | -       |
-| headers   | string | JSON string of request-specific headers        | {}      |
-| timeout   | int    | Request timeout in seconds                     | 30      |
+| Parameter        | Type   | Description                                                      | Default |
+|------------------|--------|------------------------------------------------------------------|---------|
+| url              | string | URL to fetch data from (required if not set in connection)      | -       |
+| headers          | string | JSON string of request-specific headers                         | {}      |
+| timeout          | int    | Request timeout in seconds                                       | 30      |
+| max_content_size | int    | Maximum response size in MB (overrides connection-level setting) | 100     |
 
 ## Limitations
 
 1. **Dynamic Schemas**: Column schemas are determined at query time based on response content
-2. **Memory**: Large responses are loaded entirely into memory
+2. **Memory**: Large responses are limited by max_content_size parameter (default: 100 MB)
 3. **Rate Limiting**: No built-in rate limiting (use external tools if needed)
 4. **Authentication**: Only header-based auth (no OAuth flows)
 
@@ -321,6 +327,22 @@ Error: Failed to fetch data from URL: 404 Client Error
 **Solution:** Increase timeout parameter:
 ```sql
 WHERE url = 'your-url' AND timeout = 60
+```
+
+### Issue: Content Too Large Errors
+
+**Error:** `Content size exceeds maximum allowed size`
+**Solution:** Increase max_content_size parameter:
+```sql
+-- At connection level
+CREATE DATABASE my_api
+WITH ENGINE = 'multi_format_api',
+PARAMETERS = {"max_content_size": 200};  -- 200 MB
+
+-- Or at query level
+SELECT * FROM my_api.data
+WHERE url = 'your-url'
+AND max_content_size = 200;
 ```
 
 ### Issue: Authentication Required

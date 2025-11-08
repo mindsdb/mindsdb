@@ -43,6 +43,7 @@ class MultiFormatAPITable(APIResource):
         url = None
         headers = {}
         timeout = self.handler.connection_args.get('timeout', 30)
+        max_content_size_mb = self.handler.connection_args.get('max_content_size', 100)
 
         if conditions:
             for condition in conditions:
@@ -65,6 +66,12 @@ class MultiFormatAPITable(APIResource):
                     except:
                         logger.warning(f"Invalid timeout value: {condition.value}")
                     condition.applied = True
+                elif column == 'max_content_size':
+                    try:
+                        max_content_size_mb = float(condition.value)
+                    except:
+                        logger.warning(f"Invalid max_content_size value: {condition.value}")
+                    condition.applied = True
 
         # Use connection-level URL if query-level not provided
         if not url:
@@ -80,6 +87,9 @@ class MultiFormatAPITable(APIResource):
         # Fetch data from URL
         logger.info(f"Fetching data from: {url}")
 
+        # Convert MB to bytes
+        max_content_size_bytes = max_content_size_mb * 1024 * 1024
+
         try:
             # Get default headers from connection args if available
             connection_headers = self.handler.connection_args.get('headers', {})
@@ -90,8 +100,68 @@ class MultiFormatAPITable(APIResource):
             if 'User-Agent' not in headers:
                 headers['User-Agent'] = 'MindsDB Multi-Format API Handler/1.0'
 
-            response = requests.get(url, headers=headers, timeout=timeout)
+            # Stage 1: HEAD request to check Content-Length (fail fast)
+            try:
+                head_response = requests.head(url, headers=headers, timeout=min(10, timeout), allow_redirects=True)
+                content_length = head_response.headers.get('Content-Length')
+
+                if content_length:
+                    content_length = int(content_length)
+                    if content_length > max_content_size_bytes:
+                        raise ValueError(
+                            f"Content size ({content_length / 1024 / 1024:.2f} MB) exceeds maximum allowed "
+                            f"size ({max_content_size_mb} MB). Increase max_content_size parameter if needed."
+                        )
+                    logger.info(f"Content-Length: {content_length / 1024 / 1024:.2f} MB")
+            except requests.exceptions.RequestException as e:
+                # HEAD request failed, proceed with GET but monitor size
+                logger.warning(f"HEAD request failed: {e}. Proceeding with GET request.")
+
+            # Stage 2: GET request with streaming and size monitoring
+            response = requests.get(url, headers=headers, timeout=timeout, stream=True)
             response.raise_for_status()
+
+            # Download in chunks and monitor size
+            content_chunks = []
+            bytes_downloaded = 0
+            chunk_size = 8192  # 8KB chunks
+
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if chunk:  # filter out keep-alive chunks
+                    bytes_downloaded += len(chunk)
+
+                    if bytes_downloaded > max_content_size_bytes:
+                        response.close()
+                        raise ValueError(
+                            f"Content size exceeded {max_content_size_mb} MB during download. "
+                            f"Downloaded {bytes_downloaded / 1024 / 1024:.2f} MB before stopping. "
+                            f"Increase max_content_size parameter if needed."
+                        )
+
+                    content_chunks.append(chunk)
+
+            # Combine chunks and decode
+            content_bytes = b''.join(content_chunks)
+            logger.info(f"Successfully downloaded {bytes_downloaded / 1024 / 1024:.2f} MB from {url}")
+
+            # Create a mock response object for parse_response
+            class MockResponse:
+                def __init__(self, content, headers):
+                    self.text = content
+                    self.headers = headers
+                    self.content = content.encode('utf-8') if isinstance(content, str) else content
+
+            # Decode content
+            try:
+                content_text = content_bytes.decode('utf-8')
+            except UnicodeDecodeError:
+                # Try other encodings
+                try:
+                    content_text = content_bytes.decode('latin-1')
+                except UnicodeDecodeError:
+                    content_text = content_bytes.decode('utf-8', errors='replace')
+
+            mock_response = MockResponse(content_text, response.headers)
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed: {e}")
@@ -99,7 +169,7 @@ class MultiFormatAPITable(APIResource):
 
         # Parse response based on detected format
         try:
-            df = parse_response(response, url)
+            df = parse_response(mock_response, url)
         except ValueError as e:
             logger.error(f"Parsing failed: {e}")
             raise

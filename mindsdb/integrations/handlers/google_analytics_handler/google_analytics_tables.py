@@ -19,24 +19,16 @@ class ConversionEventsTable(APITable):
             query (ast.Select): SQL query to parse.
 
         Returns:
-            Response: Response object containing the results.
+            pandas DataFrame containing the results.
         """
         # Parse the query to get the conditions.
-        conditions = extract_comparison_conditions(query.where)
+        conditions = extract_comparison_conditions(query.where) if query.where else []
         # Get the page size from the conditions.
         params = {}
         for op, arg1, arg2 in conditions:
             if arg1 == 'page_size':
                 params[arg1] = arg2
-            else:
-                raise NotImplementedError
-
-        # Get the order by from the query.
-        if query.order_by is not None:
-            raise NotImplementedError
-
-        if query.limit is not None:
-            raise NotImplementedError
+            # Ignore other conditions - handle them in pandas after fetching data
 
         # Get the conversion events from the Google Analytics Admin API.
         conversion_events = pd.DataFrame(columns=self.get_columns())
@@ -44,6 +36,7 @@ class ConversionEventsTable(APITable):
         conversion_events_data = self.extract_conversion_events_data(result.conversion_events)
         events = self.concat_dataframes(conversion_events, conversion_events_data)
 
+        # Select specific columns
         selected_columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):
@@ -58,8 +51,28 @@ class ConversionEventsTable(APITable):
             events = pd.DataFrame([], columns=selected_columns)
         else:
             events.columns = self.get_columns()
+            # Keep only selected columns
             for col in set(events.columns).difference(set(selected_columns)):
                 events = events.drop(col, axis=1)
+
+        # Apply ORDER BY if specified
+        if query.order_by is not None and len(events) > 0:
+            order_columns = []
+            ascending_flags = []
+            for order in query.order_by:
+                col_name = order.field.parts[-1] if hasattr(order.field, 'parts') else str(order.field)
+                if col_name in events.columns:
+                    order_columns.append(col_name)
+                    ascending_flags.append(order.direction.upper() != 'DESC')
+
+            if order_columns:
+                events = events.sort_values(by=order_columns, ascending=ascending_flags)
+
+        # Apply LIMIT if specified
+        if query.limit is not None and len(events) > 0:
+            limit_value = query.limit.value if hasattr(query.limit, 'value') else query.limit
+            events = events.head(limit_value)
+
         return events
 
     def insert(self, query: ast.Insert):

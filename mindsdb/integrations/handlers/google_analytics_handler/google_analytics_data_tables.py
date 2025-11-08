@@ -270,20 +270,22 @@ class ReportsTable(APITable):
 
         for order in order_by_clause:
             field_name = order.field.parts[-1] if hasattr(order.field, 'parts') else str(order.field)
+            # Convert back to API format (underscore to colon)
+            api_field_name = self._unsanitize_column_name(field_name)
             desc = order.direction.upper() == 'DESC' if hasattr(order, 'direction') and order.direction else False
 
             # Determine if ordering by metric or dimension
             if self._is_metric(field_name):
                 order_bys.append(
                     OrderBy(
-                        metric=OrderBy.MetricOrderBy(metric_name=field_name),
+                        metric=OrderBy.MetricOrderBy(metric_name=api_field_name),
                         desc=desc
                     )
                 )
             else:
                 order_bys.append(
                     OrderBy(
-                        dimension=OrderBy.DimensionOrderBy(dimension_name=field_name),
+                        dimension=OrderBy.DimensionOrderBy(dimension_name=api_field_name),
                         desc=desc
                     )
                 )

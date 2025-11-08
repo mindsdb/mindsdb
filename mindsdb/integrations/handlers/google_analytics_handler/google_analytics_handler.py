@@ -58,6 +58,7 @@ class GoogleAnalyticsHandler(APIHandler):
         super().__init__(name)
         self.page_size = 500
         self.connection_args = kwargs.get('connection_data', {})
+        self.handler_storage = kwargs.get('handler_storage')
         self.property_id = self.connection_args['property_id']
         if self.connection_args.get('credentials'):
             self.credentials_file = self.connection_args.pop('credentials')
@@ -93,10 +94,13 @@ class GoogleAnalyticsHandler(APIHandler):
         Args:
             credentials_data: Service account credentials as dictionary
         """
-        if not self.handler_storage:
+        if not hasattr(self, 'handler_storage') or not self.handler_storage:
             return
 
-        self.handler_storage.encrypted_json_set("ga_credentials", credentials_data)
+        try:
+            self.handler_storage.encrypted_json_set("ga_credentials", credentials_data)
+        except Exception as e:
+            logger.warning(f"Failed to store credentials: {e}")
 
     def _load_stored_credentials(self) -> dict:
         """
@@ -105,12 +109,13 @@ class GoogleAnalyticsHandler(APIHandler):
         Returns:
             dict: Stored credentials or None if not found
         """
-        if not self.handler_storage:
+        if not hasattr(self, 'handler_storage') or not self.handler_storage:
             return None
 
         try:
             return self.handler_storage.encrypted_json_get("ga_credentials")
-        except Exception:
+        except Exception as e:
+            logger.debug(f"No stored credentials found: {e}")
             return None
 
     def _get_creds_json(self):
@@ -129,7 +134,7 @@ class GoogleAnalyticsHandler(APIHandler):
             self._store_credentials(info)
             return info
         elif 'credentials_json' in self.connection_args:
-            info = self.connection_args['credentials_json']
+            info = json.loads(self.connection_args['credentials_json'])
             if not isinstance(info, dict):
                 raise Exception("credentials_json has to be dict")
             info['private_key'] = info['private_key'].replace('\\n', '\n')

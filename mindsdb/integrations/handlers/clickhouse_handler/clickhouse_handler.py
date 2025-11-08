@@ -472,5 +472,6 @@ class ClickHouseHandler(MetaDatabaseHandler):
             "- Does NOT support traditional foreign key constraints (they are not enforced)\n"
             "- Optimized for analytical queries (OLAP) rather than transactional operations (OLTP)\n"
             "- Supports various table engines (MergeTree, ReplacingMergeTree, SummingMergeTree, etc.)\n"
+            "- All ClickHouse functions are case-sensitive\n"
             "- Native support for arrays, nested structures, and approximate algorithms\n"
         )

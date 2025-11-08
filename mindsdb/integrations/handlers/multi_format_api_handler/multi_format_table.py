@@ -42,7 +42,7 @@ class MultiFormatAPITable(APIResource):
         # Extract URL from conditions
         url = None
         headers = {}
-        timeout = 30
+        timeout = self.handler.connection_args.get('timeout', 30)
 
         if conditions:
             for condition in conditions:
@@ -66,10 +66,15 @@ class MultiFormatAPITable(APIResource):
                         logger.warning(f"Invalid timeout value: {condition.value}")
                     condition.applied = True
 
+        # Use connection-level URL if query-level not provided
+        if not url:
+            url = self.handler.connection_args.get('url')
+
         if not url:
             raise ValueError(
-                "URL must be specified in WHERE clause. "
-                "Example: SELECT * FROM multi_format.data WHERE url='https://example.com/api/data'"
+                "URL must be specified either in connection configuration or WHERE clause. "
+                "Connection config: CREATE DATABASE ... WITH ENGINE='multi_format_api', PARAMETERS={'url': '...'} "
+                "OR Query: SELECT * FROM handler.data WHERE url='https://example.com/api/data'"
             )
 
         # Fetch data from URL

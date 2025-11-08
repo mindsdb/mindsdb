@@ -32,21 +32,60 @@ The Multi-Format API handler allows you to fetch and parse data from web APIs an
 
 ### 1. Create a Database Connection
 
+#### Option A: Dynamic URL Mode (Query-Level URL)
+
 ```sql
 CREATE DATABASE my_api
 WITH ENGINE = 'multi_format_api';
 ```
 
-#### With Custom Headers (Optional)
+Then specify URL in each query:
 
 ```sql
-CREATE DATABASE my_api
+SELECT * FROM my_api.data
+WHERE url = 'https://api.example.com/data.json'
+LIMIT 100;
+```
+
+#### Option B: Fixed URL Mode (Connection-Level URL)
+
+```sql
+CREATE DATABASE linkedin_jobs
 WITH ENGINE = 'multi_format_api',
 PARAMETERS = {
+    "url": "https://api.talentify.io/linkedin-slots/feed"
+};
+```
+
+Now queries don't need to specify URL:
+
+```sql
+-- URL is already configured, just query the data
+SELECT title, company, location, date
+FROM linkedin_jobs.data
+LIMIT 100;
+```
+
+You can still override the default URL if needed:
+
+```sql
+SELECT * FROM linkedin_jobs.data
+WHERE url = 'https://different-api.com/other-feed.xml'
+LIMIT 50;
+```
+
+#### Option C: With Authentication Headers
+
+```sql
+CREATE DATABASE auth_api
+WITH ENGINE = 'multi_format_api',
+PARAMETERS = {
+    "url": "https://api.example.com/data",
     "headers": {
         "Authorization": "Bearer YOUR_TOKEN",
-        "Custom-Header": "value"
-    }
+        "X-API-Key": "your-key"
+    },
+    "timeout": 60
 };
 ```
 

@@ -1,0 +1,9 @@
+__title__ = 'MindsDB Multi-Format API handler'
+__package_name__ = 'mindsdb_multi_format_api_handler'
+__version__ = '0.0.1'
+__description__ = "MindsDB handler for fetching and parsing data from web APIs/pages in multiple formats (XML, JSON, CSV)"
+__author__ = 'MindsDB Inc'
+__github__ = 'https://github.com/mindsdb/mindsdb'
+__pypi__ = 'https://pypi.org/project/mindsdb/'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2025- mindsdb'

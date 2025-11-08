@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#4A90E2"/>
+  <g transform="translate(20, 20)">
+    <!-- JSON brackets -->
+    <text x="5" y="25" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">{}</text>
+    <!-- XML tags -->
+    <text x="35" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">&lt;&gt;</text>
+    <!-- CSV icon -->
+    <rect x="5" y="35" width="8" height="8" fill="white"/>
+    <rect x="15" y="35" width="8" height="8" fill="white"/>
+    <rect x="25" y="35" width="8" height="8" fill="white"/>
+    <rect x="35" y="35" width="8" height="8" fill="white"/>
+    <rect x="45" y="35" width="8" height="8" fill="white"/>
+  </g>
+  <text x="50" y="75" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white" text-anchor="middle">API</text>
+</svg>

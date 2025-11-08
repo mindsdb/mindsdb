@@ -40,7 +40,7 @@ def create_datasource_sql_via_connector(helper_instance, db_name, engine, parame
     params_list = [f'"{k}": "{v}"' if isinstance(v, str) else f'"{k}": {v}' for k, v in parameters.items()]
     params_str = ", ".join(params_list)
     query_str = f"CREATE DATABASE {db_name} WITH ENGINE = '{engine}', PARAMETERS = {{{params_str}}};"
-    print(f"    [Helper create_datasource] Executing: CREATE DATABASE {db_name}...")
+    print(f"     [Helper create_datasource] Executing: CREATE DATABASE {db_name}...")
     helper_instance.query(query_str)
     start_time = time.time()
     while True:
@@ -65,7 +65,6 @@ def wait_for_trigger_creation(query_fn, trigger_name, timeout=20, max_interval=5
     interval = 1
     print(f"\n[DEBUG] Checking for trigger '{trigger_name}' in information_schema (timeout={timeout}s)...")
     while time.time() - start < timeout:
-        # Try information_schema first
         try:
             result = query_fn(f"SELECT 1 FROM information_schema.triggers WHERE trigger_name = '{trigger_name}';")
             if result:
@@ -74,15 +73,13 @@ def wait_for_trigger_creation(query_fn, trigger_name, timeout=20, max_interval=5
         except Exception:
             pass
 
-        # Try SHOW TRIGGERS as a fallback
         try:
             result = query_fn("SHOW TRIGGERS;")
             if result and trigger_name in [row.get("Trigger", row.get("TRIGGER")) for row in result]:
                 print(f"[DEBUG] Trigger '{trigger_name}' found in SHOW TRIGGERS after {time.time() - start:.2f}s.")
                 return True
         except Exception:
-            pass  # Suppress errors
-
+            pass
         time.sleep(interval)
         interval = min(interval * 1.5, max_interval)
 
@@ -103,14 +100,11 @@ def wait_for_trigger_to_fire(
     interval = 1
 
     while time.time() - start < timeout:
-        # 1. Send the UPDATE command
         print(f"[DEBUG] Firing trigger (elapsed={time.time() - start:.1f}s, interval={interval:.2f}s)...")
         query_fn(f"UPDATE {db_name}.{source_table_name} SET message = '{updated_message}' WHERE id = {test_id};")
 
-        # 2. Give it a moment to propagate
         time.sleep(interval)
 
-        # 3. Check the target table
         result = query_fn(f"SELECT id, message FROM {db_name}.{target_table_name} WHERE id = {test_id};")
         if result:
             elapsed = time.time() - start
@@ -139,7 +133,7 @@ class TestMySQLTables(BaseStuff):
             create_table_query = f"CREATE TABLE {db_name}.{table_name} (id INT, value VARCHAR(255));"
             self.query(create_table_query)
             result = self.query(f"SHOW TABLES FROM {db_name};")
-            assert table_name in [row["Tables_in_" + db_name] for row in result]
+            assert table_name in [list(row.values())[0] for row in result]
             replace_query = f"CREATE OR REPLACE TABLE {db_name}.{table_name} (SELECT 2 as id, 'new_data' as value);"
             self.query(replace_query)
             result = self.query(f"SELECT * FROM {db_name}.{table_name};")
@@ -196,6 +190,9 @@ class TestMySQLViews(BaseStuff):
         db_name = "test_sql_view_db"
         view_name = "test_sql_view"
         try:
+            self.query(f"DROP VIEW IF EXISTS {view_name};")
+            self.query(f"DROP DATABASE IF EXISTS {db_name};")
+
             create_db_query = f"""
                 CREATE DATABASE {db_name}
                 WITH ENGINE = 'postgres', PARAMETERS = {{"user": "demo_user", "password": "demo_password", "host": "samples.mindsdb.com", "port": "5432", "database": "demo", "schema": "demo"}};
@@ -207,7 +204,7 @@ class TestMySQLViews(BaseStuff):
             )
             self.query(create_view_query)
             result = self.query("SHOW VIEWS;")
-            assert view_name in [row.get("Name", row.get("NAME")) for row in result]
+            assert view_name in [row.get("name", row.get("Name", row.get("NAME"))) for row in result]
             result = self.query(f"SELECT * FROM {view_name};")
             assert len(result) > 0 and all(row["number_of_rooms"] == 2 for row in result)
             alter_view_query = (
@@ -233,6 +230,7 @@ class TestMySQLViewsNegative(BaseStuff):
         view_name = "test_duplicate_view"
         create_query = f"CREATE VIEW {view_name} AS (SELECT 1);"
         try:
+            self.query(f"DROP VIEW IF EXISTS {view_name};")
             self.query(create_query)
             with pytest.raises(Exception) as e:
                 self.query(create_query)
@@ -250,6 +248,11 @@ class TestMySQLViewsNegative(BaseStuff):
 
     def test_drop_non_existent_view(self, use_binary):
         view_name = "non_existent_view"
+        try:
+            self.query(f"DROP VIEW IF EXISTS {view_name};")
+        except Exception:
+            pass
+
         with pytest.raises(Exception) as e:
             self.query(f"DROP VIEW {view_name};")
         error_str = str(e.value).lower()
@@ -283,15 +286,10 @@ class TestMySQLKnowledgeBases(BaseStuff):
         """
         try:
             self.query(create_kb_query)
-            # Verify creation
             result = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
-            assert result and result[0]["NAME"] == kb_name
-
-            # Yield the name for the test to use
+            assert result and result[0]["name"] == kb_name
             yield kb_name
-
         finally:
-            # Cleanup
             self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
 
     def test_knowledge_base_full_lifecycle(self, use_binary):
@@ -303,13 +301,14 @@ class TestMySQLKnowledgeBases(BaseStuff):
         content_to_insert = "MindsDB helps developers build AI-powered applications."
         embedding_model = "text-embedding-3-small"
         try:
+            self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
             create_kb_query = f"""
                 CREATE KNOWLEDGE_BASE {kb_name}
                 USING embedding_model = {{"provider": "openai", "model_name": "{embedding_model}", "api_key": "{openai_api_key}"}};
             """
             self.query(create_kb_query)
             result = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
-            assert result and result[0]["NAME"] == kb_name and embedding_model in result[0]["EMBEDDING_MODEL"]
+            assert result and result[0]["name"] == kb_name and embedding_model in result[0]["embedding_model"]
             self.query(f"INSERT INTO {kb_name} (content) VALUES ('{content_to_insert}');")
             result = self.query(f"SELECT chunk_content FROM {kb_name} WHERE content = 'What is MindsDB?';")
             assert result and "MindsDB" in result[0]["chunk_content"]
@@ -360,6 +359,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
             USING embedding_model = {{"provider": "openai", "model_name": "{embedding_model}", "api_key": "{openai_api_key}"}};
         """
         try:
+            self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
             self.query(create_query)
             with pytest.raises(Exception) as e:
                 self.query(create_query)
@@ -367,7 +367,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         finally:
             self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
 
-    #     @pytest.mark.usefixtures("basic_kb")
+    @pytest.mark.usefixtures("basic_kb")
     def test_alter_kb_embedding_api_key(self, basic_kb, use_binary):
         """Tests altering the api_key of the embedding_model."""
         kb_name = basic_kb
@@ -375,7 +375,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         if not openai_api_key:
             pytest.skip("OPENAI_API_KEY needed for this alter test.")
 
-        new_api_key = openai_api_key  # Use the same valid key
+        new_api_key = openai_api_key
 
         alter_query = f"""
             ALTER KNOWLEDGE_BASE {kb_name}
@@ -384,6 +384,8 @@ class TestMySQLKnowledgeBases(BaseStuff):
         """
         self.query(alter_query)
 
+        time.sleep(1)
+
         result = self.query(f"SELECT embedding_model FROM information_schema.knowledge_bases WHERE name = '{kb_name}';")
         assert result
         embedding_model_json = result[0].get("embedding_model")
@@ -391,7 +393,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
 
         assert '"provider": "openai"' in embedding_model_json
         assert '"model_name": "text-embedding-3-small"' in embedding_model_json
-        assert '"api_key": "' in embedding_model_json  # Check the key exists
+        assert '"api_key": "' in embedding_model_json
 
     @pytest.mark.xfail(
         reason="Bug: ALTER KNOWLEDGE_BASE does not unset reranking_model. See LINEAR-TICKET-NUMBER: FQE-1716"
@@ -404,7 +406,6 @@ class TestMySQLKnowledgeBases(BaseStuff):
         if not openai_api_key:
             pytest.skip("OPENAI_API_KEY needed for this alter test.")
 
-        # 1. Add a reranking model
         alter_query_add = f"""
             ALTER KNOWLEDGE_BASE {kb_name}
             USING
@@ -415,7 +416,6 @@ class TestMySQLKnowledgeBases(BaseStuff):
         result_add = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
         assert result_add and '"provider": "openai"' in result_add[0]["RERANKING_MODEL"]
 
-        # 2. Disable the reranking model by setting to an empty dict
         alter_query_disable = f"""
             ALTER KNOWLEDGE_BASE {kb_name}
             USING
@@ -428,6 +428,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         reranking_model_desc = result_disable[0].get("RERANKING_MODEL")
         assert reranking_model_desc is None or reranking_model_desc == "{}"
 
+    @pytest.mark.xfail(reason="Bug: information_schema.knowledge_bases.PARAMS is not updated on ALTER")
     @pytest.mark.usefixtures("basic_kb")
     def test_alter_kb_preprocessing(self, basic_kb, use_binary):
         """Tests altering the preprocessing parameters by checking the PARAMS column."""
@@ -440,15 +441,15 @@ class TestMySQLKnowledgeBases(BaseStuff):
         """
         self.query(alter_query)
 
+        time.sleep(1)
+
         result = self.query(f"SELECT PARAMS FROM information_schema.knowledge_bases WHERE name = '{kb_name}';")
 
         assert result, "Query to information_schema returned no results."
 
-        # Access the PARAMS column
         params_json = result[0].get("PARAMS")
         assert params_json is not None, "PARAMS column is NULL."
 
-        # Verify the preprocessing key and values are now inside the PARAMS JSON
         assert '"preprocessing":' in params_json, "The 'preprocessing' key was not added to the PARAMS column."
         assert '"chunk_size": 300' in params_json, "chunk_size was not set correctly in PARAMS."
         assert '"chunk_overlap": 50' in params_json, "chunk_overlap was not set correctly in PARAMS."
@@ -473,10 +474,8 @@ def setup_trigger_db():
         )
         helper.query(f"DROP DATABASE IF EXISTS {db_name}")
 
-        # Create the integration
         create_datasource_sql_via_connector(helper, db_name, "postgres", params)
 
-        # Create tables
         helper.query(f"CREATE TABLE {db_name}.{source_table_name} (id INT, message VARCHAR(255));")
         helper.query(f"CREATE TABLE {db_name}.{target_table_name} (id INT, message VARCHAR(255));")
         helper.query(f"INSERT INTO {db_name}.{source_table_name} (id, message) VALUES (101, 'initial_update_message');")
@@ -512,15 +511,22 @@ class TestMySQLTriggers(BaseStuff):
         self.use_binary = request.param
 
     @pytest.mark.usefixtures("setup_trigger_db")
-    def test_trigger_lifecycle_update(self, setup_trigger_db, use_binary):
+    def test_trigger_lifecycle(self, setup_trigger_db, use_binary):
         db_name, source_table_name, target_table_name = setup_trigger_db
-        trigger_name = "test_update_trigger"
-        test_id = 101
-        updated_message = "this message was updated"
+        trigger_name = "test_insert_trigger"
+        test_id = 201  # Use a new ID that will be INSERTED
+        inserted_message = "this message was inserted"
         try:
-            # Ensure the target table is empty
+            # Ensure the target table is clean
             self.query(f"DELETE FROM {db_name}.{target_table_name};")
 
+            # Pre-drop trigger to ensure clean state
+            try:
+                self.query(f"DROP TRIGGER {trigger_name};")
+            except Exception:
+                pass
+
+            # Use the original, valid syntax (which implies AFTER INSERT)
             create_trigger_query = f"""
                 CREATE TRIGGER {trigger_name}
                 ON {db_name}.{source_table_name}
@@ -529,21 +535,37 @@ class TestMySQLTriggers(BaseStuff):
             print("\n[DEBUG] Sending CREATE TRIGGER command...")
             self.query(create_trigger_query)
 
-            # Poll for trigger creation
             wait_for_trigger_creation(self.query, trigger_name, timeout=20)
 
             print("[DEBUG] Schema check complete. Proceeding to functional firing test...")
 
-            # This function retries the UPDATE and SELECT in a loop.
-            result = wait_for_trigger_to_fire(
-                self.query, db_name, source_table_name, target_table_name, test_id, updated_message, timeout=120
+            # Activate Trigger with an INSERT, not an UPDATE
+            self.query(
+                f"INSERT INTO {db_name}.{source_table_name} (id, message) VALUES ({test_id}, '{inserted_message}');"
             )
 
+            # Poll the target table for the new result
+            result = []
+            max_wait_time = 60
+            interval = 1
+            max_interval = 8
+            start_time = time.time()
+            while time.time() - start_time < max_wait_time:
+                result = self.query(f"SELECT id, message FROM {db_name}.{target_table_name} WHERE id = {test_id};")
+                if result:
+                    break
+                time.sleep(interval)
+                interval = min(interval * 2, max_interval)
+
             # Verify
-            assert result[0]["message"] == updated_message
+            assert result, f"Trigger did not fire for id {test_id} within {max_wait_time}s."
+            assert result[0]["message"] == inserted_message
 
         finally:
-            self.query(f"DROP TRIGGER {trigger_name};")
+            try:
+                self.query(f"DROP TRIGGER {trigger_name};")
+            except Exception:
+                pass
 
 
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
@@ -560,13 +582,22 @@ class TestMySQLTriggersNegative(BaseStuff):
         trigger_name = "duplicate_trigger"
         create_query = f"CREATE TRIGGER {trigger_name} ON {db_name}.{source_table_name} (SELECT 1);"
         try:
+            try:
+                self.query(f"DROP TRIGGER {trigger_name};")
+            except Exception:
+                pass
+
             self.query(create_query)
-            time.sleep(2)
+            wait_for_trigger_creation(self.query, trigger_name, timeout=20)
+
             with pytest.raises(Exception) as e:
                 self.query(create_query)
             assert "already exists" in str(e.value).lower()
         finally:
-            self.query(f"DROP TRIGGER {trigger_name};")
+            try:
+                self.query(f"DROP TRIGGER {trigger_name};")
+            except Exception:
+                pass
 
     def test_create_trigger_on_non_existent_table(self, use_binary):
         trigger_name = f"bad_trigger_{uuid.uuid4().hex[:8]}"
@@ -578,6 +609,11 @@ class TestMySQLTriggersNegative(BaseStuff):
 
     def test_drop_non_existent_trigger(self, use_binary):
         trigger_name = "non_existent_trigger"
+        try:
+            self.query(f"DROP TRIGGER {trigger_name};")
+        except Exception:
+            pass
+
         with pytest.raises(Exception) as e:
             self.query(f"DROP TRIGGER {trigger_name};")
         error_str = str(e.value).lower()

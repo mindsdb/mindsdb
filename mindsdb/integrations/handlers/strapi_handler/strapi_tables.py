@@ -329,6 +329,10 @@ class StrapiTable(APITable):
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
 
+        # Default to all columns if no columns are selected
+        if not selected_columns:
+            selected_columns = self.get_columns()
+
         # Build filters from WHERE clause
         filters = {}
         if query.where:
@@ -344,10 +348,15 @@ class StrapiTable(APITable):
         if 'documentId' in filters:
             return self._fetch_by_id(filters['documentId'], selected_columns)
         
-        # Initialize pagination parameters
-        page_size = 50
+        # Initialize pagination parameters with optimized page size
+        # Use Strapi's default maximum page size of 100 for REST API
+        page_size = 100
         limit = query.limit.value if query.limit else None
         result_df = pd.DataFrame(columns=selected_columns)
+        
+        # If limit is specified and smaller than page_size, use limit as page_size to minimize API calls
+        if limit and limit < page_size:
+            page_size = limit
 
         # Prepare initial parameters including filters
         params = {
@@ -356,34 +365,45 @@ class StrapiTable(APITable):
             **filters  # Add any WHERE clause filters
         }
 
-        # First request to check if we get a single item or paginated list
-        df = self.handler.call_strapi_api(
-            method='GET',
-            endpoint=f'/api/{self.name}',
-            params=params
-        )
+        page = 1
+        total_fetched = 0
+        
+        # Fetch data in optimized pagination loop
+        while True:
+            params['pagination[page]'] = page
+            
+            df = self.handler.call_strapi_api(
+                method='GET',
+                endpoint=f'/api/{self.name}',
+                params=params
+            )
 
-        if len(df) > 0:
-            result_df = pd.concat(
-                [result_df, df[selected_columns]], ignore_index=True)
-
-            # If we got less than page_size rows, it might be a single item response
-            # or all the data fits in one page
-            if len(df) >= page_size and not limit:
-                page = 2  # Start from page 2 since we already have page 1
-                while True:
-                    params['pagination[page]'] = page
-                    df = self.handler.call_strapi_api(
-                        method='GET',
-                        endpoint=f'/api/{self.name}',
-                        params=params
-                    )
-
-                    if len(df) == 0:  # No more data to fetch
-                        break
-
-                    result_df = pd.concat([result_df, df[selected_columns]], ignore_index=True)
-                    page += 1
+            # Break if no data returned
+            if len(df) == 0:
+                break
+            
+            # Apply limit constraint if specified
+            rows_to_take = len(df)
+            if limit:
+                remaining_needed = limit - total_fetched
+                if remaining_needed <= 0:
+                    break
+                rows_to_take = min(rows_to_take, remaining_needed)
+            
+            # Take only the needed rows and add to result
+            df_slice = df.head(rows_to_take) if rows_to_take < len(df) else df
+            result_df = pd.concat([result_df, df_slice[selected_columns]], ignore_index=True)
+            
+            total_fetched += rows_to_take
+            
+            # Break conditions:
+            # 1. If we got fewer rows than page_size, we've reached the end
+            # 2. If we have a limit and we've reached it
+            # 3. If we took fewer rows than available due to limit constraint
+            if len(df) < page_size or (limit and total_fetched >= limit) or rows_to_take < len(df):
+                break
+                
+            page += 1
 
         return result_df
 

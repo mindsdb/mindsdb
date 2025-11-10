@@ -170,6 +170,7 @@ class Config:
                     "restart_on_failure": True,
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60,
+                    "a2wsgi": {"workers": 10, "send_queue_size": 10},
                 },
                 "mysql": {
                     "host": api_host,
@@ -180,7 +181,6 @@ class Config:
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60,
                 },
-                "postgres": {"host": api_host, "port": "55432", "database": "mindsdb"},
                 "litellm": {
                     "host": "0.0.0.0",  # API server binds to all interfaces by default
                     "port": "8000",
@@ -233,7 +233,17 @@ class Config:
 
         # region storage root path
         if os.environ.get("MINDSDB_STORAGE_DIR", "") != "":
-            self._env_config["paths"] = {"root": Path(os.environ["MINDSDB_STORAGE_DIR"])}
+            storage_root_path = Path(os.environ["MINDSDB_STORAGE_DIR"])
+            self._env_config["paths"] = {
+                "root": storage_root_path,
+                "content": storage_root_path / "content",
+                "storage": storage_root_path / "storage",
+                "static": storage_root_path / "static",
+                "tmp": storage_root_path / "tmp",
+                "log": storage_root_path / "log",
+                "cache": storage_root_path / "cache",
+                "locks": storage_root_path / "locks",
+            }
         # endregion
 
         # region vars: permanent storage disabled?
@@ -300,12 +310,68 @@ class Config:
             self._env_config["default_reranking_model"] = {
                 "api_key": os.environ["MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY"]
             }
+
+        # Reranker configuration from environment variables
+        reranker_config = {}
+        if os.environ.get("MINDSDB_RERANKER_N", "") != "":
+            try:
+                reranker_config["n"] = int(os.environ["MINDSDB_RERANKER_N"])
+            except ValueError:
+                raise ValueError(f"MINDSDB_RERANKER_N must be an integer, got: {os.environ['MINDSDB_RERANKER_N']}")
+
+        if os.environ.get("MINDSDB_RERANKER_LOGPROBS", "") != "":
+            logprobs_value = os.environ["MINDSDB_RERANKER_LOGPROBS"].lower()
+            if logprobs_value in ("true", "1", "yes", "y"):
+                reranker_config["logprobs"] = True
+            elif logprobs_value in ("false", "0", "no", "n"):
+                reranker_config["logprobs"] = False
+            else:
+                raise ValueError(
+                    f"MINDSDB_RERANKER_LOGPROBS must be a boolean value, got: {os.environ['MINDSDB_RERANKER_LOGPROBS']}"
+                )
+
+        if os.environ.get("MINDSDB_RERANKER_TOP_LOGPROBS", "") != "":
+            try:
+                reranker_config["top_logprobs"] = int(os.environ["MINDSDB_RERANKER_TOP_LOGPROBS"])
+            except ValueError:
+                raise ValueError(
+                    f"MINDSDB_RERANKER_TOP_LOGPROBS must be an integer, got: {os.environ['MINDSDB_RERANKER_TOP_LOGPROBS']}"
+                )
+
+        if os.environ.get("MINDSDB_RERANKER_MAX_TOKENS", "") != "":
+            try:
+                reranker_config["max_tokens"] = int(os.environ["MINDSDB_RERANKER_MAX_TOKENS"])
+            except ValueError:
+                raise ValueError(
+                    f"MINDSDB_RERANKER_MAX_TOKENS must be an integer, got: {os.environ['MINDSDB_RERANKER_MAX_TOKENS']}"
+                )
+
+        if os.environ.get("MINDSDB_RERANKER_VALID_CLASS_TOKENS", "") != "":
+            try:
+                reranker_config["valid_class_tokens"] = os.environ["MINDSDB_RERANKER_VALID_CLASS_TOKENS"].split(",")
+            except ValueError:
+                raise ValueError(
+                    f"MINDSDB_RERANKER_VALID_CLASS_TOKENS must be a comma-separated list of strings, got: {os.environ['MINDSDB_RERANKER_VALID_CLASS_TOKENS']}"
+                )
+
+        if reranker_config:
+            if "default_reranking_model" not in self._env_config:
+                self._env_config["default_reranking_model"] = {}
+            self._env_config["default_reranking_model"].update(reranker_config)
         if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
             self._env_config["data_catalog"] = {"enabled": True}
 
         if os.environ.get("MINDSDB_NO_STUDIO", "").lower() in ("1", "true"):
             self._env_config["gui"]["open_on_start"] = False
             self._env_config["gui"]["autoupdate"] = False
+
+        mindsdb_gui_autoupdate = os.environ.get("MINDSDB_GUI_AUTOUPDATE", "").lower()
+        if mindsdb_gui_autoupdate in ("0", "false"):
+            self._env_config["gui"]["autoupdate"] = False
+        elif mindsdb_gui_autoupdate in ("1", "true"):
+            self._env_config["gui"]["autoupdate"] = True
+        elif mindsdb_gui_autoupdate != "":
+            raise ValueError(f"Wrong value of env var MINDSDB_GUI_AUTOUPDATE={mindsdb_gui_autoupdate}")
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.

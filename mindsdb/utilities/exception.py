@@ -1,7 +1,14 @@
 from textwrap import indent
 
 
-class BaseEntityException(Exception):
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
+
+
+class MindsDBError(Exception):
+    pass
+
+
+class BaseEntityException(MindsDBError):
     """Base exception for entitys errors
 
     Attributes:
@@ -33,6 +40,38 @@ class EntityNotExistsError(BaseEntityException):
         if message is None:
             message = "Entity does not exists error"
         super().__init__(message, entity_name)
+
+
+class ParsingError(MindsDBError):
+    pass
+
+
+class QueryError(MindsDBError):
+    def __init__(
+        self,
+        db_name: str | None = None,
+        db_type: str | None = None,
+        db_error_msg: str | None = None,
+        failed_query: str | None = None,
+        is_external: bool = True,
+        is_expected: bool = False,
+    ) -> None:
+        self.mysql_error_code = ERR.ER_UNKNOWN_ERROR
+        self.db_name = db_name
+        self.db_type = db_type
+        self.db_error_msg = db_error_msg
+        self.failed_query = failed_query
+        self.is_external = is_external
+        self.is_expected = is_expected
+
+    def __str__(self) -> str:
+        return format_db_error_message(
+            db_name=self.db_name,
+            db_type=self.db_type,
+            db_error_msg=self.db_error_msg,
+            failed_query=self.failed_query,
+            is_external=self.is_external,
+        )
 
 
 def format_db_error_message(

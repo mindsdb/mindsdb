@@ -274,8 +274,8 @@ class SkillToolController:
                     else:
                         for table_name in response.data_frame.iloc[:, name_idx]:
                             tables_list.append(f"{database}.{escape_table_name(table_name)}")
-                except Exception as e:
-                    logger.warning(f"Could not get tables from database {database}: {str(e)}")
+                except Exception:
+                    logger.warning(f"Could not get tables from database {database}:", exc_info=True)
                 continue
 
             # Handle table restrictions
@@ -347,7 +347,13 @@ class SkillToolController:
         )
         db = MindsDBSQL.custom_init(sql_agent=sql_agent)
         should_include_kb_tools = include_knowledge_bases is not None and len(include_knowledge_bases) > 0
-        toolkit = MindsDBSQLToolkit(db=db, llm=llm, include_knowledge_base_tools=should_include_kb_tools)
+        should_include_tables_tools = len(databases_struct) > 0 or len(tables_list) > 0
+        toolkit = MindsDBSQLToolkit(
+            db=db,
+            llm=llm,
+            include_tables_tools=should_include_tables_tools,
+            include_knowledge_base_tools=should_include_kb_tools,
+        )
         return toolkit.get_tools()
 
     def _make_retrieval_tools(self, skill: db.Skills, llm, embedding_model):

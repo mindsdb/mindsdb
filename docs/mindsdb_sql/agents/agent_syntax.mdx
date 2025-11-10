@@ -80,6 +80,19 @@ Available models:
 - claude-instant-1.2
 </Accordion>
 
+<Accordion title="Bedrock">
+Available models include all models accessible from Bedrock.
+
+Note that in order to use Bedrock as a model provider, you should ensure the following packages are installed: `langchain_aws` and `transformers`.
+
+The following parameters are specific to this provider:
+
+* `aws_region_name` is a required parameter.
+* `aws_access_key_id` is a required parameter.
+* `aws_secret_access_key` is a required parameter.
+* `aws_session_token` is an optional parameter. It may be required depending on the AWS permissions setup.
+</Accordion>
+
 <Accordion title="Google">
 Available models:
 - gemini-2.5-pro-preview-03-25
@@ -345,6 +358,56 @@ USING
         "provider": "google",
         "model_name" : "gemini-2.5-flash",
         "api_key": "ABc123"
+    };
+```
+
+## `ALTER AGENT` Syntax
+
+Update existing agents with new data, model, or prompt.
+
+```sql
+ALTER AGENT my_agent
+USING
+    model = {
+        "provider": "openai",
+        "model_name" : "gpt-4.1",
+        "api_key": "sk-abc123",
+        "base_url": "http://example.com",
+        "api_version": "2024-02-01"
+    },
+    data = {
+         "knowledge_bases": ["project_name.kb_name", ...],
+         "tables": ["datasource_conn_name.table_name", ...]
+    },
+    prompt_template='describe data';
+```
+
+Note that all parameters are optional. Users can update any combination of parameters.
+
+<Tip>
+See detailed descriptions of parameters in the [`CREATE AGENT` section](/mindsdb_sql/agents/agent_syntax#create-agent-syntax).
+</Tip>
+
+Here is how to connect new data to an agent.
+
+```sql
+ALTER AGENT my_agent
+USING
+    data = {
+         "knowledge_bases": ["mindsdb.sales_kb"],
+         "tables": ["mysql_db.car_sales", "mysql_db.car_info"]
+    };
+```
+
+And here is how to update a model used by the agent.
+
+```sql
+ALTER AGENT my_agent
+USING
+    model = {
+        "provider": "openai",
+        "model_name" : "gpt-4.1",
+        "api_key": "sk-abc123"
     };
 ```
 

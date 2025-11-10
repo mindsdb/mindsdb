@@ -204,10 +204,11 @@ class SnowflakeHandler(MetaDatabaseHandler):
             "user": self.connection_data.get("user"),
             "password": self.connection_data.get("password"),
             "database": self.connection_data.get("database"),
+            "schema": self.connection_data.get("schema", "PUBLIC"),
         }
 
         # Optional connection parameters
-        optional_params = ["schema", "warehouse", "role"]
+        optional_params = ["warehouse", "role"]
         for param in optional_params:
             if param in self.connection_data:
                 config[param] = self.connection_data[param]

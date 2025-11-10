@@ -60,6 +60,27 @@ class TestSelect(BaseExecutorDummyML):
         assert ret.value[0] == ret.VALUE[0]
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_view_conditions(self, data_handler):
+        # test view optimisations
+        df = pd.DataFrame(
+            [
+                {"a": 1, "b": 1},
+                {"a": 1, "b": 2},
+            ]
+        )
+        self.set_handler(data_handler, name="pg", tables={"tbl1": df})
+        self.run_sql("create view v1 (select * from pg.tbl1 where a=1)")
+
+        data_handler.reset_mock()
+        ret = self.run_sql("select * from v1 where b=2 limit 1")
+        assert len(ret) == 1 and ret["b"][0] == 2
+        calls = data_handler().query.call_args_list
+        sql = calls[0][0][0].to_string()
+
+        # both conditions are used in query to database
+        assert "a = 1" in sql and "b = 2" in sql and "LIMIT 1" in sql
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_complex_joins(self, data_handler):
         df1 = pd.DataFrame(
             [
@@ -556,29 +577,49 @@ class TestSelect(BaseExecutorDummyML):
 
         self.set_data("tasks", df)
 
-        sql = """
-            select * from dummy_data.tasks
-            where a > coalesce(last, 1)
-        """
+        # -- create model --
+        self.run_sql(
+            """
+                CREATE model task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            """
+        )
+
+        sqls = [
+            """
+                select * from dummy_data.tasks
+                where a > coalesce(last, 1)
+            """,
+            """
+                select t.* from dummy_data.tasks t
+                join task_model m
+                where t.a > coalesce(last, 1)
+            """,
+        ]
 
         # first call two rows
-        ret = self.run_sql(sql)
-        assert len(ret) == 2
+        for sql in sqls:
+            ret = self.run_sql(sql)
+            assert len(ret) == 2
 
         # second call zero rows
-        ret = self.run_sql(sql)
-        assert len(ret) == 0
+        for sql in sqls:
+            ret = self.run_sql(sql)
+            assert len(ret) == 0
 
         # add rows to dataframe
         df.loc[len(df.index)] = [4, "d"]  # should be tracked
         df.loc[len(df.index)] = [0, "z"]  # not tracked
         self.set_data("tasks", df)
 
-        ret = self.run_sql(sql)
+        for sql in sqls:
+            ret = self.run_sql(sql)
 
-        # have to be one new line
-        assert len(ret) == 1
-        assert ret.a[0] == 4
+            # have to be one new line
+            assert len(ret) == 1
+            assert ret.a[0] == 4
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_interval(self, data_handler):

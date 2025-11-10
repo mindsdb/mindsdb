@@ -85,6 +85,7 @@ Optional connection parameters include the following:
 
 * `port`: The port number for connecting to the Microsoft SQL Server. Default is 1433.
 * `server`: The server name to connect to. Typically only used with named instances or Azure SQL Database.
+* `schema`: The schema in which objects are searched first. If specified, all table references without an explicit schema will be automatically qualified with this schema.
 
 ### ODBC Connection
 

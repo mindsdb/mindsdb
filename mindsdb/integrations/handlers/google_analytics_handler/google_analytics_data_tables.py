@@ -61,6 +61,20 @@ class ReportsTable(APITable):
             pandas DataFrame containing the report data
         """
         try:
+            # DEBUG: Log what we receive
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"DEBUG ReportsTable.select() - query.targets: {query.targets}")
+            logger.error(f"DEBUG ReportsTable.select() - query.targets types: {[type(t).__name__ for t in query.targets]}")
+            if query.targets:
+                for i, target in enumerate(query.targets):
+                    if isinstance(target, ast.Identifier):
+                        logger.error(f"DEBUG Target {i}: Identifier - parts={target.parts}, alias={target.alias}")
+                    elif isinstance(target, ast.Star):
+                        logger.error(f"DEBUG Target {i}: Star")
+                    else:
+                        logger.error(f"DEBUG Target {i}: {type(target).__name__}")
+
             # Extract conditions from WHERE clause
             conditions = extract_comparison_conditions(query.where) if query.where else []
 

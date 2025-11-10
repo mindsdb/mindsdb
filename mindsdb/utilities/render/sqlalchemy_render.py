@@ -212,7 +212,13 @@ class SqlalchemyRender:
             if col is None:
                 col = self.to_column(t)
             if t.alias:
-                col = col.label(self.get_alias(t.alias))
+                alias = self.get_alias(t.alias)
+                # Only apply alias if it differs from the column name
+                # to avoid DuckDB "column cannot be referenced before it is defined" error
+                # with queries like: SELECT DISTINCT col AS col
+                column_name = '.'.join(str(part) for part in t.parts)
+                if alias != column_name:
+                    col = col.label(alias)
         elif isinstance(t, ast.Select):
             sub_stmt = self.prepare_select(t)
             col = sub_stmt.scalar_subquery()

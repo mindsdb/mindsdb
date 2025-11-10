@@ -460,9 +460,27 @@ class APIHandler(BaseHandler):
             # The APIResource class could be used as a base class by overriding the select method, but not the list method.
             table = self._get_table(query.from_table)
             list_method = getattr(table, "list", None)
+
+            # DEBUG logging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"DEBUG APIHandler.query() - table: {table.__class__.__name__}")
+            logger.error(f"DEBUG APIHandler.query() - list_method: {list_method}")
+            logger.error(f"DEBUG APIHandler.query() - has __func__: {hasattr(list_method, '__func__') if list_method else False}")
+            if list_method and hasattr(list_method, '__func__'):
+                logger.error(f"DEBUG APIHandler.query() - list_method.__func__: {list_method.__func__}")
+                logger.error(f"DEBUG APIHandler.query() - APIResource.list: {APIResource.list}")
+                logger.error(f"DEBUG APIHandler.query() - is same: {list_method.__func__ is APIResource.list}")
+            condition = not list_method or (list_method and hasattr(list_method, '__func__') and list_method.__func__ is APIResource.list)
+            logger.error(f"DEBUG APIHandler.query() - condition result: {condition}")
+            logger.error(f"DEBUG APIHandler.query() - BEFORE: query.targets = {query.targets}")
+
             if not list_method or (list_method and list_method.__func__ is APIResource.list):
                 # for back compatibility, targets wasn't passed in previous version
                 query.targets = [Star()]
+                logger.error(f"DEBUG APIHandler.query() - OVERRODE targets to Star()")
+
+            logger.error(f"DEBUG APIHandler.query() - AFTER: query.targets = {query.targets}")
             result = self._get_table(query.from_table).select(query)
         elif isinstance(query, Update):
             result = self._get_table(query.table).update(query)

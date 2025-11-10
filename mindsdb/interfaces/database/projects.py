@@ -142,6 +142,11 @@ class Project:
         """
         Create a combined query from view's query and outer query.
         """
+        # Create deep copies to avoid modifying original query objects
+        # This prevents issues where schema discovery queries (with Star() targets)
+        # affect subsequent user queries
+        view_query = deepcopy(view_query)
+        query = deepcopy(query)
 
         # apply optimizations
         if query.where is not None:
@@ -219,6 +224,12 @@ class Project:
 
                 view_query.where = view_where
 
+        # If the outer query has specific targets (not Star), propagate them to the view query
+        # This ensures that when the query is flattened/optimized, the column selection is preserved
+        if query.targets and not any(isinstance(t, Star) for t in query.targets):
+            # Replace view's Star(*) with the user's specific column selection
+            view_query.targets = deepcopy(query.targets)
+
         # combine outer query with view's query
         view_query.parentheses = True
         query.from_table = view_query
@@ -227,14 +238,25 @@ class Project:
     def query_view(self, query: Select, session) -> pd.DataFrame:
         view_meta = self.get_view_meta(query)
 
+        # DEBUG logging
+        logger.error(f"DEBUG query_view() - INPUT query.targets: {query.targets}")
+        logger.error(f"DEBUG query_view() - INPUT query.from_table: {query.from_table}")
+
         query_context_controller.set_context("view", view_meta["id"])
         query_applied = False
         try:
             view_query = view_meta["query_ast"]
+            logger.error(f"DEBUG query_view() - view_query.targets: {view_query.targets if isinstance(view_query, Select) else 'N/A'}")
+
             if isinstance(view_query, Select):
+                logger.error(f"DEBUG query_view() - BEFORE combine_view_select: query.targets = {query.targets}")
                 view_query = self.combine_view_select(view_query, query)
+                logger.error(f"DEBUG query_view() - AFTER combine_view_select: view_query.targets = {view_query.targets}")
+                logger.error(f"DEBUG query_view() - AFTER combine_view_select: view_query.from_table = {view_query.from_table}")
+                logger.error(f"DEBUG query_view() - AFTER combine_view_select: view_query.from_table.targets = {view_query.from_table.targets if isinstance(view_query.from_table, Select) else 'N/A'}")
                 query_applied = True
 
+            logger.error(f"DEBUG query_view() - About to execute SQLQuery with targets: {view_query.targets if isinstance(view_query, Select) else 'N/A'}")
             sqlquery = SQLQuery(view_query, session=session)
             df = sqlquery.fetched_data.to_df()
         finally:

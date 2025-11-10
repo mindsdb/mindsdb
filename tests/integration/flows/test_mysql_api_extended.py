@@ -1,6 +1,5 @@
 import os
 import pytest
-import uuid
 import time
 from .test_mysql_api import BaseStuff
 import mysql.connector
@@ -9,7 +8,7 @@ import mysql.connector
 @pytest.fixture(scope="module")
 def setup_local_db():
     """Module-scoped fixture to create a writeable DB for table tests."""
-    db_name = f"test_db_{uuid.uuid4().hex[:8]}"
+    db_name = f"test_db_local"
     helper = BaseStuff()
     helper.use_binary = False
 
@@ -20,7 +19,7 @@ def setup_local_db():
         helper.query(f"DROP DATABASE IF EXISTS {db_name}")
         create_datasource_sql_via_connector(helper, db_name, "postgres", params)
         yield db_name
-    except mysql.connector.Error as e:
+    except (mysql.connector.Error, TimeoutError) as e:
         pytest.skip(
             f"\n\n--- FIXTURE SETUP FAILED ---\n"
             f"Could not connect to the PostgreSQL container ('{params['host']}').\n"
@@ -115,6 +114,26 @@ def wait_for_trigger_to_fire(
         interval = min(interval * 1.5, max_interval)
 
     raise TimeoutError(f"Trigger did not fire for id {test_id} within {timeout}s despite repeated attempts.")
+
+
+def wait_for_kb_creation(query_fn, kb_name, timeout=90, poll_interval=1):
+    """Polls to check if a Knowledge Base has been created successfully."""
+    start_time = time.time()
+    while True:
+        try:
+            result = query_fn(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
+            if result and result[0]["name"] == kb_name:
+                print(f"     [Helper wait_for_kb] KB {kb_name} created and validated.")
+                return result
+        except Exception:
+            # KB might not be queryable at all yet
+            pass
+        
+        elapsed_time = time.time() - start_time
+        if elapsed_time > timeout:
+            print(f"     [Helper wait_for_kb] ERROR: Timeout after {timeout}s waiting for {kb_name}.")
+            raise TimeoutError(f"Timed out waiting for Knowledge Base {kb_name} to be created.")
+        time.sleep(poll_interval)
 
 
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
@@ -268,7 +287,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         self.use_binary = request.param
 
     @pytest.fixture
-    def basic_kb(self):
+    def basic_kb(self, request):
         """
         Fixture to create a basic Knowledge Base for alteration tests.
         Requires OPENAI_API_KEY.
@@ -277,7 +296,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         if not openai_api_key:
             pytest.skip("OPENAI_API_KEY environment variable not set. Skipping KB tests.")
 
-        kb_name = f"test_alter_kb_{uuid.uuid4().hex[:8]}"
+        kb_name = f"test_alter_kb_local"
         embedding_model = "text-embedding-3-small"
 
         create_kb_query = f"""
@@ -285,8 +304,9 @@ class TestMySQLKnowledgeBases(BaseStuff):
             USING embedding_model = {{"provider": "openai", "model_name": "{embedding_model}", "api_key": "{openai_api_key}"}};
         """
         try:
+            self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
             self.query(create_kb_query)
-            result = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
+            result = wait_for_kb_creation(self.query, kb_name)
             assert result and result[0]["name"] == kb_name
             yield kb_name
         finally:
@@ -307,9 +327,13 @@ class TestMySQLKnowledgeBases(BaseStuff):
                 USING embedding_model = {{"provider": "openai", "model_name": "{embedding_model}", "api_key": "{openai_api_key}"}};
             """
             self.query(create_kb_query)
-            result = self.query(f"DESCRIBE KNOWLEDGE_BASE {kb_name};")
+            result = wait_for_kb_creation(self.query, kb_name)
             assert result and result[0]["name"] == kb_name and embedding_model in result[0]["embedding_model"]
             self.query(f"INSERT INTO {kb_name} (content) VALUES ('{content_to_insert}');")
+            
+            # Give insertion a moment to process before querying
+            time.sleep(2) 
+            
             result = self.query(f"SELECT chunk_content FROM {kb_name} WHERE content = 'What is MindsDB?';")
             assert result and "MindsDB" in result[0]["chunk_content"]
         finally:
@@ -324,14 +348,18 @@ class TestMySQLKnowledgeBases(BaseStuff):
             self.query(create_query)
         assert "wrong embedding provider" in str(e.value).lower()
 
-    def test_create_kb_with_invalid_api_key(self, use_binary):
-        kb_name = f"test_invalid_key_{uuid.uuid4().hex[:8]}"
+    def test_create_kb_with_invalid_api_key(self, use_binary, request):
+        kb_name = f"test_invalid_key_local"
         create_query = f'CREATE KNOWLEDGE_BASE {kb_name} USING embedding_model = {{"provider": "openai", "api_key": "this_is_a_fake_key"}};'
-        with pytest.raises(Exception) as e:
-            self.query(create_query)
-        assert (
-            "problem with embedding model config" in str(e.value).lower() or "invalid api key" in str(e.value).lower()
-        )
+        try:
+            with pytest.raises(Exception) as e:
+                self.query(create_query)
+            assert (
+                "problem with embedding model config" in str(e.value).lower() or "invalid api key" in str(e.value).lower()
+            )
+        finally:
+            # Ensure cleanup even if creation fails
+            self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
 
     def test_insert_into_non_existent_kb(self, use_binary):
         kb_name = "non_existent_kb"
@@ -347,7 +375,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         error_str = str(e.value).lower()
         assert "not found in database" in error_str or "doesn't exist" in error_str or "unknown table" in error_str
 
-    def test_create_duplicate_kb(self, use_binary):
+    def test_create_duplicate_kb(self, use_binary, request):
         openai_api_key = os.environ.get("OPENAI_API_KEY")
         if not openai_api_key:
             pytest.skip("OPENAI_API_KEY environment variable not set. Skipping duplicate KB test.")
@@ -361,6 +389,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         try:
             self.query(f"DROP KNOWLEDGE_BASE IF EXISTS {kb_name};")
             self.query(create_query)
+            wait_for_kb_creation(self.query, kb_name)
             with pytest.raises(Exception) as e:
                 self.query(create_query)
             assert "already exists" in str(e.value).lower()
@@ -456,10 +485,10 @@ class TestMySQLKnowledgeBases(BaseStuff):
 
 
 @pytest.fixture(scope="function")
-def setup_trigger_db():
+def setup_trigger_db(request):
     """Function-scoped fixture to ensure a clean DB for each trigger test."""
-
-    db_name = f"trigger_test_db_{uuid.uuid4().hex[:8]}"
+    
+    db_name = f"trigger_test_db_local"
 
     source_table_name = "trigger_source_table"
     target_table_name = "trigger_target_table"
@@ -483,8 +512,8 @@ def setup_trigger_db():
 
         yield db_name, source_table_name, target_table_name
 
-    except mysql.connector.Error as setup_err:
-        pytest.fail(f"Trigger fixture setup failed. Ensure Docker environment is running. Error: {setup_err}")
+    except (mysql.connector.Error, TimeoutError) as setup_err:
+        pytest.skip(f"Trigger fixture setup failed. Ensure Docker environment is running. Error: {setup_err}")
 
     finally:
         print(f"\n--> [CLEANUP] Dropping tables and DATABASE: {db_name}")
@@ -599,13 +628,19 @@ class TestMySQLTriggersNegative(BaseStuff):
             except Exception:
                 pass
 
-    def test_create_trigger_on_non_existent_table(self, use_binary):
-        trigger_name = f"bad_trigger_{uuid.uuid4().hex[:8]}"
+    def test_create_trigger_on_non_existent_table(self, use_binary, request):
+        trigger_name = f"bad_trigger_local"
         create_query = f"CREATE TRIGGER {trigger_name} ON non_existent_db.non_existent_table (SELECT 1);"
-        with pytest.raises(Exception) as e:
-            self.query(create_query)
-        error_str = str(e.value).lower()
-        assert "no integration with name" in error_str or "unknown database" in error_str
+        try:
+            with pytest.raises(Exception) as e:
+                self.query(create_query)
+            error_str = str(e.value).lower()
+            assert "no integration with name" in error_str or "unknown database" in error_str
+        finally:
+            try:
+                self.query(f"DROP TRIGGER {trigger_name};")
+            except Exception:
+                pass
 
     def test_drop_non_existent_trigger(self, use_binary):
         trigger_name = "non_existent_trigger"

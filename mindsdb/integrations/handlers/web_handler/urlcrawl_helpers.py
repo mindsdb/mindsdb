@@ -170,9 +170,9 @@ def get_all_website_links(url, headers: dict = None) -> dict:
                 href = href.rstrip("/")
                 urls.add(href)
 
-    except Exception as e:
+    except Exception:
         error_message = traceback.format_exc().splitlines()[-1]
-        logger.error("An exception occurred: %s", str(e))
+        logger.exception("An exception occurred:")
         return {
             "url": url,
             "urls": urls,
@@ -238,9 +238,9 @@ def get_all_website_links_recursively(
     if url not in reviewed_urls and matches_filter:
         try:
             reviewed_urls[url] = get_all_website_links(url, headers=headers)
-        except Exception as e:
+        except Exception:
             error_message = traceback.format_exc().splitlines()[-1]
-            logger.error("An exception occurred: %s", str(e))
+            logger.exception("An exception occurred:")
             reviewed_urls[url] = {
                 "url": url,
                 "urls": [],

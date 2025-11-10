@@ -32,10 +32,10 @@ class DatabaseController:
         Returns:
             None
         """
-        databases = self.get_dict()
-        if name.lower() not in databases:
+        databases = self.get_dict(lowercase=False)
+        if name not in databases:
             raise EntityNotExistsError("Database does not exists", name)
-        db_type = databases[name.lower()]["type"]
+        db_type = databases[name]["type"]
         if db_type == "project":
             project = self.get_project(name, strict_case)
             project.delete()

@@ -1,0 +1,3 @@
+pymssql >= 2.1.4
+pyodbc >= 5.2.0
+

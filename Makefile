@@ -1,6 +1,9 @@
 PYTEST_ARGS = -v -rs --disable-warnings -n auto --dist loadfile
 PYTEST_ARGS_DEBUG = --runslow -vs -rs
 
+DSI_PYTEST_ARGS = --run-dsi-tests
+DSI_REPORT_ARGS = --json-report --json-report-file=reports/report.json
+
 install_mindsdb:
 	pip install -e .
 	pip install -r requirements/requirements-dev.txt
@@ -11,7 +14,7 @@ install_handler:
 		pip install -e .[$(HANDLER_NAME)];\
 	else\
 		echo 'Please set $$HANDLER_NAME to the handler to install.';\
-	fi	
+	fi
 precommit:
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)
@@ -25,6 +28,8 @@ run_mindsdb:
 check:
 	python tests/scripts/check_requirements.py
 	python tests/scripts/check_print_statements.py
+	pre-commit install
+	pre-commit run --files $$(git diff --cached --name-only)
 
 build_docker:
 	docker buildx build -t mdb --load -f docker/mindsdb.Dockerfile .
@@ -43,9 +48,21 @@ integration_tests_slow:
 integration_tests_debug:
 	pytest $(PYTEST_ARGS_DEBUG) tests/integration/
 
+datasource_integration_tests:
+	@echo "--- Running Datasource Integration (DSI) Tests ---"
+	# Ensure the reports directory exists before running tests
+	mkdir -p reports
+	# Added DSI_REPORT_ARGS to generate JSON report
+	pytest $(PYTEST_ARGS) $(DSI_PYTEST_ARGS) $(DSI_REPORT_ARGS) tests/integration/handlers/
+
+datasource_integration_tests_debug:
+	@echo "--- Running Datasource Integration (DSI) Tests (Debug) ---"
+	mkdir -p reports
+	pytest $(PYTEST_ARGS_DEBUG) $(DSI_PYTEST_ARGS) $(DSI_REPORT_ARGS) tests/integration/handlers/
+
 unit_tests:
 	# We have to run executor tests separately because they do weird things that break everything else
-	env PYTHONPATH=./ pytest $(PYTEST_ARGS) tests/unit/executor/  
+	env PYTHONPATH=./ pytest $(PYTEST_ARGS) tests/unit/executor/
 	pytest $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
 
 unit_tests_slow:
@@ -53,7 +70,7 @@ unit_tests_slow:
 	pytest --runslow $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
 
 unit_tests_debug:
-	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/  
+	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/
 	pytest $(PYTEST_ARGS_DEBUG) --ignore=tests/unit/executor tests/unit/
 
-.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug unit_tests unit_tests_slow unit_tests_debug
+.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug datasource_integration_tests datasource_integration_tests_debug unit_tests unit_tests_slow unit_tests_debug

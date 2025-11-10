@@ -1,6 +1,5 @@
 from alembic import context
 from sqlalchemy import engine_from_config, pool
-import os
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import config as app_config
@@ -15,9 +14,6 @@ config = context.config
 # target_metadata = mymodel.Base.metadata
 
 # initialize
-
-if "MINDSDB_CONFIG_PATH" not in os.environ:
-    os.environ["MINDSDB_CONFIG_PATH"] = "absent"
 
 db.init()
 
@@ -71,9 +67,7 @@ def run_migrations_online():
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata, render_as_batch=True
-        )
+        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
 
         with context.begin_transaction():
             context.run_migrations()

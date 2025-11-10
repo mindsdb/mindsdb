@@ -87,8 +87,7 @@ class FetchDataframeStepCall(BaseStepCall):
         if query is None:
             table_alias = (self.context.get("database"), "result", "result")
 
-            # fetch raw_query
-            response: DataHubResponse = dn.query(native_query=step.raw_query, session=self.session)
+            response: DataHubResponse = dn.query(step.raw_query, session=self.session)
             df = response.data_frame
         else:
             if isinstance(step.query, (Union, Intersect)):

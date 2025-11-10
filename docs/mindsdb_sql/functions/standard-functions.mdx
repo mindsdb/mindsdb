@@ -1,0 +1,75 @@
+---
+title: Standard Functions
+sidebarTitle: Standard Functions
+---
+
+MindsDB supports standard SQL functions via DuckDB and MySQL engines.
+
+## DuckDB Functions
+
+MindsDB executes functions on the underlying DuckDB engine. Therefore, [all DuckDB functions](https://duckdb.org/docs/stable/sql/functions/overview) are supported within MindsDB out of the box.
+
+* [Aggregate Functions](https://duckdb.org/docs/stable/sql/functions/aggregates)
+* [Array Functions](https://duckdb.org/docs/stable/sql/functions/array)
+* [Bitstring Functions](https://duckdb.org/docs/stable/sql/functions/bitstring)
+* [Blob Functions](https://duckdb.org/docs/stable/sql/functions/blob)
+* [Date Format Functions](https://duckdb.org/docs/stable/sql/functions/dateformat)
+* [Date Functions](https://duckdb.org/docs/stable/sql/functions/date)
+* [Date Part Functions](https://duckdb.org/docs/stable/sql/functions/datepart)
+* [Enum Functions](https://duckdb.org/docs/stable/sql/functions/enum)
+* [Interval Functions](https://duckdb.org/docs/stable/sql/functions/interval)
+* [Lambda Functions](https://duckdb.org/docs/stable/sql/functions/lambda)
+* [List Functions](https://duckdb.org/docs/stable/sql/functions/list)
+* [Map Functions](https://duckdb.org/docs/stable/sql/functions/map)
+* [Nested Functions](https://duckdb.org/docs/stable/sql/functions/nested)
+* [Numeric Functions](https://duckdb.org/docs/stable/sql/functions/numeric)
+* [Pattern Matching](https://duckdb.org/docs/stable/sql/functions/pattern_matching)
+* [Regular Expressions](https://duckdb.org/docs/stable/sql/functions/regular_expressions)
+* [Struct Functions](https://duckdb.org/docs/stable/sql/functions/struct)
+* [Text Functions](https://duckdb.org/docs/stable/sql/functions/text)
+* [Time Functions](https://duckdb.org/docs/stable/sql/functions/time)
+* [Timestamp Functions](https://duckdb.org/docs/stable/sql/functions/timestamp)
+* [Timestamp with Time Zone Functions](https://duckdb.org/docs/stable/sql/functions/timestamptz)
+* [Union Functions](https://duckdb.org/docs/stable/sql/functions/union)
+* [Utility Functions](https://duckdb.org/docs/stable/sql/functions/utility)
+* [Window Functions](https://duckdb.org/docs/stable/sql/functions/window_functions)
+
+## MySQL Functions
+
+MindsDB executes MySQL-style functions on the underlying DuckDB engine. The following functions have been adapted to MySQL-style functions.
+
+String functions:
+
+* [`CHAR`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_char)
+* [`FORMAT`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_format)
+* [`INSTR`](https://dev.mysql.com/doc/refman/8.0/en/string-functions.html#function_instr)
+* [`LENGTH`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_length)
+* [`LOCATE`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_locate)
+* [`SUBSTRING_INDEX`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_substring-index)
+* [`UNHEX`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_unhex)
+
+Date and time functions:
+
+* [`ADDDATE`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_adddate)
+* <Tooltip tip="The first argument can be either date or datetime, while the second argument must be a time interval in the MySQL format.">[`ADDTIME`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_addtime)</Tooltip>
+* <Tooltip tip="DuckDB does not recognize time zones provided in digital offset formats like +10:00. Using CONVERT_TZ with these formats may result in errors or unexpected behavior.">[`CONVERT_TZ`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_convert-tz)</Tooltip>
+* [`CURDATE`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_curdate)
+* [`CURTIME`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_curtime)
+* [`DATE_ADD`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_date-add)
+* <Tooltip tip="There may be issues with week numbers at year boundaries when using the %u and %V specifiers. DuckDB does not provide exact alternatives with the same behavior, so results might differ or be inconsistent in those edge cases.">[`DATE_FORMAT`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_date-format)</Tooltip>
+* [`DATE_SUB`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_date-sub)
+* [`DATEDIFF`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_datediff)
+* [`DAYNAME`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayname)
+* [`DAYOFMONTH`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayofmonth)
+* [`DAYOFWEEK`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayofweek)
+* [`DAYOFYEAR`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayofyear)
+* [`EXTRACT`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_extract)
+* [`FROM_DAYS`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_from-days)
+* [`FROM_UNIXTIME`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_from-unixtime)
+* <Tooltip tip="Both argument must be constant values.">[`GET_FORMAT`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_get-format)</Tooltip>
+* [`TIMESTAMPDIFF`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_timestampdiff)
+
+Other functions:
+
+* [`REGEXP_SUBSTR`](https://dev.mysql.com/doc/refman/8.4/en/regexp.html#function_regexp-substr)
+* [`SHA2`](https://dev.mysql.com/doc/refman/8.4/en/encryption-functions.html#function_sha2)

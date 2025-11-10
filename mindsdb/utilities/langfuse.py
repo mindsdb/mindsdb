@@ -44,17 +44,19 @@ class LangfuseClientWrapper:
     Langfuse client wrapper. Defines Langfuse client configuration and initializes Langfuse client.
     """
 
-    def __init__(self,
-                 public_key: str = LANGFUSE_PUBLIC_KEY,
-                 secret_key: str = LANGFUSE_SECRET_KEY,
-                 host: str = LANGFUSE_HOST,
-                 environment: str = LANGFUSE_ENVIRONMENT,
-                 release: str = LANGFUSE_RELEASE,
-                 debug: bool = LANGFUSE_DEBUG,
-                 timeout: int = LANGFUSE_TIMEOUT,
-                 sample_rate: float = LANGFUSE_SAMPLE_RATE,
-                 disable: bool = LANGFUSE_DISABLED,
-                 force_run: bool = LANGFUSE_FORCE_RUN) -> None:
+    def __init__(
+        self,
+        public_key: str = LANGFUSE_PUBLIC_KEY,
+        secret_key: str = LANGFUSE_SECRET_KEY,
+        host: str = LANGFUSE_HOST,
+        environment: str = LANGFUSE_ENVIRONMENT,
+        release: str = LANGFUSE_RELEASE,
+        debug: bool = LANGFUSE_DEBUG,
+        timeout: int = LANGFUSE_TIMEOUT,
+        sample_rate: float = LANGFUSE_SAMPLE_RATE,
+        disable: bool = LANGFUSE_DISABLED,
+        force_run: bool = LANGFUSE_FORCE_RUN,
+    ) -> None:
         """
         Initialize Langfuse client.
 
@@ -112,16 +114,18 @@ class LangfuseClientWrapper:
             release=release,
             debug=debug,
             timeout=timeout,
-            sample_rate=sample_rate
+            sample_rate=sample_rate,
         )
 
-    def setup_trace(self,
-                    name: str,
-                    input: typing.Optional[typing.Any] = None,
-                    tags: typing.Optional[typing.List] = None,
-                    metadata: typing.Optional[typing.Dict] = None,
-                    user_id: str = None,
-                    session_id: str = None) -> None:
+    def setup_trace(
+        self,
+        name: str,
+        input: typing.Optional[typing.Any] = None,
+        tags: typing.Optional[typing.List] = None,
+        metadata: typing.Optional[typing.Dict] = None,
+        user_id: str = None,
+        session_id: str = None,
+    ) -> None:
         """
         Setup trace. If Langfuse is disabled, nothing will be done.
         Args:
@@ -142,15 +146,10 @@ class LangfuseClientWrapper:
 
         try:
             self.trace = self.client.trace(
-                name=name,
-                input=input,
-                metadata=self.metadata,
-                tags=self.tags,
-                user_id=user_id,
-                session_id=session_id
+                name=name, input=input, metadata=self.metadata, tags=self.tags, user_id=user_id, session_id=session_id
             )
-        except Exception as e:
-            logger.error(f'Something went wrong while processing Langfuse trace {self.trace.id}: {str(e)}')
+        except Exception:
+            logger.exception(f"Something went wrong while processing Langfuse trace {self.trace.id}:")
 
         logger.info(f"Langfuse trace configured with ID: {self.trace.id}")
 
@@ -169,9 +168,7 @@ class LangfuseClientWrapper:
 
         return self.trace.id
 
-    def start_span(self,
-                   name: str,
-                   input: typing.Optional[typing.Any] = None) -> typing.Optional['StatefulSpanClient']:
+    def start_span(self, name: str, input: typing.Optional[typing.Any] = None) -> typing.Optional["StatefulSpanClient"]:
         """
         Create span. If Langfuse is disabled, nothing will be done.
 
@@ -186,8 +183,7 @@ class LangfuseClientWrapper:
 
         return self.trace.span(name=name, input=input)
 
-    def end_span_stream(self,
-                        span: typing.Optional['StatefulSpanClient'] = None) -> None:
+    def end_span_stream(self, span: typing.Optional["StatefulSpanClient"] = None) -> None:
         """
         End span. If Langfuse is disabled, nothing will happen.
         Args:
@@ -201,9 +197,9 @@ class LangfuseClientWrapper:
         span.end()
         self.trace.update()
 
-    def end_span(self,
-                 span: typing.Optional['StatefulSpanClient'] = None,
-                 output: typing.Optional[typing.Any] = None) -> None:
+    def end_span(
+        self, span: typing.Optional["StatefulSpanClient"] = None, output: typing.Optional[typing.Any] = None
+    ) -> None:
         """
         End trace. If Langfuse is disabled, nothing will be done.
 
@@ -228,13 +224,12 @@ class LangfuseClientWrapper:
         try:
             # Ensure all batched traces are sent before fetching.
             self.client.flush()
-            metadata['tool_usage'] = self._get_tool_usage()
+            metadata["tool_usage"] = self._get_tool_usage()
             self.trace.update(metadata=metadata)
+        except Exception:
+            logger.exception(f"Something went wrong while processing Langfuse trace {self.trace.id}:")
 
-        except Exception as e:
-            logger.error(f'Something went wrong while processing Langfuse trace {self.trace.id}: {str(e)}')
-
-    def get_langchain_handler(self) -> typing.Optional['CallbackHandler']:
+    def get_langchain_handler(self) -> typing.Optional["CallbackHandler"]:
         """
         Get Langchain handler. If Langfuse is disabled, returns None.
         """
@@ -275,14 +270,14 @@ class LangfuseClientWrapper:
             fetched_trace = self.client.get_trace(self.trace.id)
             steps = [s.name for s in fetched_trace.observations]
             for step in steps:
-                if 'AgentAction' in step:
-                    tool_name = step.split('-')[1]
+                if "AgentAction" in step:
+                    tool_name = step.split("-")[1]
                     if tool_name not in tool_usage:
                         tool_usage[tool_name] = 0
                     tool_usage[tool_name] += 1
         except TraceNotFoundError:
-            logger.warning(f'Langfuse trace {self.trace.id} not found')
-        except Exception as e:
-            logger.error(f'Something went wrong while processing Langfuse trace {self.trace.id}: {str(e)}')
+            logger.warning(f"Langfuse trace {self.trace.id} not found")
+        except Exception:
+            logger.exception(f"Something went wrong while processing Langfuse trace {self.trace.id}:")
 
         return tool_usage

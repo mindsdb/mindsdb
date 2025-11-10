@@ -54,8 +54,8 @@ class MCPQueryTool(BaseTool):
             return f"Query executed successfully: {json.dumps(result.content)}"
 
         except Exception as e:
-            logger.error(f"Error executing MCP query: {str(e)}")
-            return f"Error executing query: {str(e)}"
+            logger.error("Error executing MCP query:")
+            return f"Error executing query: {e}"
 
     def _run(self, query: str) -> str:
         """Synchronous wrapper for async query function"""
@@ -112,8 +112,8 @@ class MCPLangchainAgent(LangchainAgent):
                 )
 
             except Exception as e:
-                logger.error(f"Failed to connect to MCP server: {str(e)}")
-                raise ConnectionError(f"Failed to connect to MCP server: {str(e)}")
+                logger.exception("Failed to connect to MCP server:")
+                raise ConnectionError(f"Failed to connect to MCP server: {e}") from e
 
     def _langchain_tools_from_skills(self, llm):
         """Override to add MCP query tool along with other tools"""
@@ -131,8 +131,8 @@ class MCPLangchainAgent(LangchainAgent):
             if self.session:
                 tools.append(MCPQueryTool(self.session))
                 logger.info("Added MCP query tool to agent tools")
-        except Exception as e:
-            logger.error(f"Failed to add MCP query tool: {str(e)}")
+        except Exception:
+            logger.exception("Failed to add MCP query tool:")
 
         return tools
 
@@ -144,8 +144,8 @@ class MCPLangchainAgent(LangchainAgent):
                 # Using the event loop directly instead of asyncio.run()
                 loop = asyncio.get_event_loop()
                 loop.run_until_complete(self.connect_to_mcp())
-        except Exception as e:
-            logger.error(f"Failed to connect to MCP server: {str(e)}")
+        except Exception:
+            logger.exception("Failed to connect to MCP server:")
 
         # Call parent implementation to get completion
         response = super().get_completion(messages, stream)
@@ -224,8 +224,8 @@ class LiteLLMAgentWrapper:
                     }
                 # Allow async context switch
                 await asyncio.sleep(0)
-        except Exception as e:
-            logger.error(f"Streaming error: {str(e)}")
+        except Exception:
+            logger.exception("Streaming error:")
             raise
 
     async def cleanup(self):

@@ -199,7 +199,6 @@ class QueryStepCall(BaseStepCall):
             #   but can be absent in their output
 
             def remove_not_used_conditions(node, **kwargs):
-                # find last in where
                 if isinstance(node, BinaryOperation):
                     for arg in node.args:
                         if isinstance(arg, Identifier) and len(arg.parts) > 1:

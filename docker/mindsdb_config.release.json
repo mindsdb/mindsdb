@@ -17,22 +17,6 @@
             "user": "mindsdb",
             "database": "mindsdb",
             "ssl": true
-        },
-        "mongodb": {
-            "host": "0.0.0.0",
-            "port": "47336",
-            "database": "mindsdb"
-        },
-        "mcp": {
-            "host": "0.0.0.0",
-            "port": "47337"
-        },
-        "a2a": {
-            "host": "0.0.0.0",
-            "port": "47338",
-            "mindsdb_host": "0.0.0.0",
-            "mindsdb_port": "47334",
-            "project_name": "mindsdb"
         }
     }
 }

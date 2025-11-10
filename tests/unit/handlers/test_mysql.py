@@ -439,7 +439,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.BLOB,
             MYSQL_DATA_TYPE.JSON,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(type(result_value), type(input_value))
@@ -457,7 +457,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         response: Response = self.handler.native_query(query_str)
         excepted_mysql_types = [MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             # without None values in result columns types will be one of pandas types
@@ -505,7 +505,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DECIMAL,
         ]
 
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(result_value, input_value)
@@ -537,7 +537,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DATETIME,
             MYSQL_DATA_TYPE.TIMESTAMP,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(result_value, input_value)
@@ -553,10 +553,10 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         mock_cursor.description = description
         response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.data_frame.dtypes[0], "Int64")
-        self.assertEquals(response.data_frame.dtypes[1], "Int64")
-        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
-        self.assertEquals(response.data_frame.iloc[0, 1], 1)
+        self.assertEqual(response.data_frame.dtypes[0], "Int64")
+        self.assertEqual(response.data_frame.dtypes[1], "Int64")
+        self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEqual(response.data_frame.iloc[0, 1], 1)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion
@@ -574,6 +574,169 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(response.mysql_types, excepted_mysql_types)
         self.assertEqual(input_row["t_vector"], response.data_frame["t_vector"][0])
         # endregion
+
+    def _test_meta_method_with_filter(self, method, sample_data, filter_column, filter_values):
+        """
+        Helper method to test meta catalog methods with and without filtering.
+
+        Args:
+            method: The method to test (e.g., self.handler.meta_get_tables)
+            sample_data: List of dicts containing sample data
+            filter_column: Column name to filter on
+            filter_values: List of values to filter by
+        """
+        # Test without filter
+        df = DataFrame(sample_data)
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = method()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # Test with filter
+        self.handler.native_query.reset_mock()
+        filtered_df = df[df[filter_column].isin(filter_values)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+
+        response = method(table_names=filter_values)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+
+        # Verify filtered data
+        if filter_column in response.data_frame.columns:
+            self.assertTrue(response.data_frame[filter_column].isin(filter_values).all())
+
+        return response
+
+    def test_meta_get_tables_returns_response(self):
+        """Test that meta_get_tables returns correct response with and without filtering"""
+        sample_data = [
+            {
+                "table_name": "customers",
+                "table_schema": "test_db",
+                "table_type": "BASE TABLE",
+                "table_description": "Customer information",
+                "row_count": 100,
+            },
+            {
+                "table_name": "orders",
+                "table_schema": "test_db",
+                "table_type": "BASE TABLE",
+                "table_description": None,
+                "row_count": 500,
+            },
+            {
+                "table_name": "products",
+                "table_schema": "test_db",
+                "table_type": "BASE TABLE",
+                "table_description": None,
+                "row_count": 42,
+            },
+        ]
+        self._test_meta_method_with_filter(
+            self.handler.meta_get_tables, sample_data, "table_name", ["customers", "orders"]
+        )
+
+    def test_meta_get_columns_returns_response(self):
+        """Test that meta_get_columns returns correct response with and without filtering"""
+        sample_data = [
+            {
+                "table_name": "customers",
+                "column_name": "id",
+                "data_type": "int",
+                "column_description": None,
+                "column_default": None,
+                "is_nullable": 0,
+            },
+            {
+                "table_name": "customers",
+                "column_name": "name",
+                "data_type": "varchar",
+                "column_description": None,
+                "column_default": None,
+                "is_nullable": 1,
+            },
+            {
+                "table_name": "products",
+                "column_name": "sku",
+                "data_type": "varchar",
+                "column_description": "Product SKU",
+                "column_default": None,
+                "is_nullable": 0,
+            },
+        ]
+        self._test_meta_method_with_filter(self.handler.meta_get_columns, sample_data, "table_name", ["customers"])
+
+    def test_meta_get_column_statistics_returns_response(self):
+        """Test that meta_get_column_statistics returns correct response with and without filtering"""
+        sample_data = [
+            {
+                "TABLE_NAME": "customers",
+                "COLUMN_NAME": "id",
+                "MOST_COMMON_VALUES": None,
+                "MOST_COMMON_FREQUENCIES": None,
+                "NULL_PERCENTAGE": 0.0,
+                "MINIMUM_VALUE": "1",
+                "MAXIMUM_VALUE": "100",
+                "DISTINCT_VALUES_COUNT": 100,
+            },
+            {
+                "TABLE_NAME": "customers",
+                "COLUMN_NAME": "name",
+                "MOST_COMMON_VALUES": None,
+                "MOST_COMMON_FREQUENCIES": None,
+                "NULL_PERCENTAGE": 5.0,
+                "MINIMUM_VALUE": "Alice",
+                "MAXIMUM_VALUE": "Zoe",
+                "DISTINCT_VALUES_COUNT": 95,
+            },
+            {
+                "TABLE_NAME": "products",
+                "COLUMN_NAME": "sku",
+                "MOST_COMMON_VALUES": None,
+                "MOST_COMMON_FREQUENCIES": None,
+                "NULL_PERCENTAGE": 0.0,
+                "MINIMUM_VALUE": None,
+                "MAXIMUM_VALUE": None,
+                "DISTINCT_VALUES_COUNT": 42,
+            },
+        ]
+        self._test_meta_method_with_filter(
+            self.handler.meta_get_column_statistics, sample_data, "TABLE_NAME", ["customers"]
+        )
+
+    def test_meta_get_primary_keys_returns_response(self):
+        """Test that meta_get_primary_keys returns correct response with and without filtering"""
+        sample_data = [
+            {"table_name": "customers", "column_name": "id", "ordinal_position": 1, "constraint_name": "PRIMARY"},
+            {"table_name": "orders", "column_name": "id", "ordinal_position": 1, "constraint_name": "PRIMARY"},
+            {"table_name": "products", "column_name": "id", "ordinal_position": 1, "constraint_name": "PRIMARY"},
+        ]
+        self._test_meta_method_with_filter(self.handler.meta_get_primary_keys, sample_data, "table_name", ["customers"])
+
+    def test_meta_get_foreign_keys_returns_response(self):
+        """Test that meta_get_foreign_keys returns correct response with and without filtering"""
+        sample_data = [
+            {
+                "parent_table_name": "customers",
+                "parent_column_name": "id",
+                "child_table_name": "orders",
+                "child_column_name": "customer_id",
+                "constraint_name": "orders_ibfk_1",
+            },
+            {
+                "parent_table_name": "products",
+                "parent_column_name": "id",
+                "child_table_name": "orders",
+                "child_column_name": "product_id",
+                "constraint_name": "orders_ibfk_2",
+            },
+        ]
+        self._test_meta_method_with_filter(
+            self.handler.meta_get_foreign_keys, sample_data, "child_table_name", ["orders"]
+        )
 
 
 if __name__ == "__main__":

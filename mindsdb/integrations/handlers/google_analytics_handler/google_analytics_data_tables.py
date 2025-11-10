@@ -79,12 +79,19 @@ class ReportsTable(APITable):
                     dimension_name = arg.replace('dimension_', '')
                     # Convert back to API format (underscore to colon)
                     api_dimension_name = self._unsanitize_column_name(dimension_name)
-                    dimension_filters[api_dimension_name] = val
+                    dimension_filters[api_dimension_name] = (op, val)
                 elif arg.startswith('metric_'):
                     metric_name = arg.replace('metric_', '')
                     # Convert back to API format (underscore to colon)
                     api_metric_name = self._unsanitize_column_name(metric_name)
                     metric_filters[api_metric_name] = (op, val)
+                else:
+                    # Column name without prefix - auto-detect if it's a dimension or metric
+                    api_name = self._unsanitize_column_name(arg)
+                    if self._is_metric(arg):
+                        metric_filters[api_name] = (op, val)
+                    else:
+                        dimension_filters[api_name] = (op, val)
 
             # Extract dimensions and metrics from SELECT columns
             dimensions = []
@@ -237,20 +244,80 @@ class ReportsTable(APITable):
             return column_name
 
     def _build_dimension_filter(self, dimension_filters: dict) -> FilterExpression:
-        """Build dimension filter from dimension filters dictionary"""
+        """Build dimension filter from dimension filters dictionary
+
+        Args:
+            dimension_filters: Dict mapping field names to (operator, value) tuples
+
+        Returns:
+            FilterExpression for GA4 API
+        """
         if not dimension_filters:
             return None
 
         filters = []
-        for field_name, value in dimension_filters.items():
-            filters.append(
-                FilterExpression(
+        for field_name, filter_spec in dimension_filters.items():
+            # Handle both old format (value only) and new format ((op, value))
+            if isinstance(filter_spec, tuple):
+                op, value = filter_spec
+            else:
+                # Backward compatibility: if just a value, assume equals
+                op, value = ('=', filter_spec)
+
+            # Check if this is a NOT operation
+            is_negated = False
+            if op.upper().startswith('NOT '):
+                is_negated = True
+                op = op[4:].strip()  # Remove 'NOT ' prefix
+
+            # Map SQL operators to GA4 StringFilter match types
+            if op.upper() == 'LIKE':
+                # Convert SQL LIKE pattern to GA4 CONTAINS
+                # Remove SQL wildcards (% at start/end)
+                pattern = str(value).strip('%')
+                if value.startswith('%') and value.endswith('%'):
+                    # %pattern% -> CONTAINS
+                    match_type = Filter.StringFilter.MatchType.CONTAINS
+                elif value.startswith('%'):
+                    # %pattern -> ENDS_WITH
+                    match_type = Filter.StringFilter.MatchType.ENDS_WITH
+                elif value.endswith('%'):
+                    # pattern% -> BEGINS_WITH
+                    match_type = Filter.StringFilter.MatchType.BEGINS_WITH
+                else:
+                    # pattern -> EXACT (no wildcards)
+                    match_type = Filter.StringFilter.MatchType.EXACT
+                    pattern = value
+
+                filter_expr = FilterExpression(
                     filter=Filter(
                         field_name=field_name,
-                        string_filter=Filter.StringFilter(value=str(value)),
+                        string_filter=Filter.StringFilter(
+                            value=pattern,
+                            match_type=match_type
+                        ),
                     )
                 )
-            )
+            else:
+                # For =, !=, etc., use EXACT match
+                match_type = Filter.StringFilter.MatchType.EXACT
+                filter_expr = FilterExpression(
+                    filter=Filter(
+                        field_name=field_name,
+                        string_filter=Filter.StringFilter(
+                            value=str(value),
+                            match_type=match_type
+                        ),
+                    )
+                )
+
+            # Wrap in NOT expression if needed
+            if is_negated:
+                filter_expr = FilterExpression(
+                    not_expression=filter_expr
+                )
+
+            filters.append(filter_expr)
 
         if len(filters) == 1:
             return filters[0]
@@ -286,9 +353,7 @@ class ReportsTable(APITable):
                         field_name=field_name,
                         numeric_filter=Filter.NumericFilter(
                             operation=operation,
-                            value=Filter.NumericFilter.NumericValue(
-                                double_value=float(value)
-                            )
+                            value={'double_value': float(value)}
                         ),
                     )
                 )
@@ -415,12 +480,19 @@ class RealtimeReportsTable(APITable):
                     dimension_name = arg.replace('dimension_', '')
                     # Convert back to API format (underscore to colon)
                     api_dimension_name = self._unsanitize_column_name(dimension_name)
-                    dimension_filters[api_dimension_name] = val
+                    dimension_filters[api_dimension_name] = (op, val)
                 elif arg.startswith('metric_'):
                     metric_name = arg.replace('metric_', '')
                     # Convert back to API format (underscore to colon)
                     api_metric_name = self._unsanitize_column_name(metric_name)
                     metric_filters[api_metric_name] = (op, val)
+                else:
+                    # Column name without prefix - auto-detect if it's a dimension or metric
+                    api_name = self._unsanitize_column_name(arg)
+                    if self._is_metric(arg):
+                        metric_filters[api_name] = (op, val)
+                    else:
+                        dimension_filters[api_name] = (op, val)
 
             # Extract dimensions and metrics from SELECT columns
             dimensions = []
@@ -558,20 +630,80 @@ class RealtimeReportsTable(APITable):
             return column_name
 
     def _build_dimension_filter(self, dimension_filters: dict) -> FilterExpression:
-        """Build dimension filter from dimension filters dictionary"""
+        """Build dimension filter from dimension filters dictionary
+
+        Args:
+            dimension_filters: Dict mapping field names to (operator, value) tuples
+
+        Returns:
+            FilterExpression for GA4 API
+        """
         if not dimension_filters:
             return None
 
         filters = []
-        for field_name, value in dimension_filters.items():
-            filters.append(
-                FilterExpression(
+        for field_name, filter_spec in dimension_filters.items():
+            # Handle both old format (value only) and new format ((op, value))
+            if isinstance(filter_spec, tuple):
+                op, value = filter_spec
+            else:
+                # Backward compatibility: if just a value, assume equals
+                op, value = ('=', filter_spec)
+
+            # Check if this is a NOT operation
+            is_negated = False
+            if op.upper().startswith('NOT '):
+                is_negated = True
+                op = op[4:].strip()  # Remove 'NOT ' prefix
+
+            # Map SQL operators to GA4 StringFilter match types
+            if op.upper() == 'LIKE':
+                # Convert SQL LIKE pattern to GA4 CONTAINS
+                # Remove SQL wildcards (% at start/end)
+                pattern = str(value).strip('%')
+                if value.startswith('%') and value.endswith('%'):
+                    # %pattern% -> CONTAINS
+                    match_type = Filter.StringFilter.MatchType.CONTAINS
+                elif value.startswith('%'):
+                    # %pattern -> ENDS_WITH
+                    match_type = Filter.StringFilter.MatchType.ENDS_WITH
+                elif value.endswith('%'):
+                    # pattern% -> BEGINS_WITH
+                    match_type = Filter.StringFilter.MatchType.BEGINS_WITH
+                else:
+                    # pattern -> EXACT (no wildcards)
+                    match_type = Filter.StringFilter.MatchType.EXACT
+                    pattern = value
+
+                filter_expr = FilterExpression(
                     filter=Filter(
                         field_name=field_name,
-                        string_filter=Filter.StringFilter(value=str(value)),
+                        string_filter=Filter.StringFilter(
+                            value=pattern,
+                            match_type=match_type
+                        ),
                     )
                 )
-            )
+            else:
+                # For =, !=, etc., use EXACT match
+                match_type = Filter.StringFilter.MatchType.EXACT
+                filter_expr = FilterExpression(
+                    filter=Filter(
+                        field_name=field_name,
+                        string_filter=Filter.StringFilter(
+                            value=str(value),
+                            match_type=match_type
+                        ),
+                    )
+                )
+
+            # Wrap in NOT expression if needed
+            if is_negated:
+                filter_expr = FilterExpression(
+                    not_expression=filter_expr
+                )
+
+            filters.append(filter_expr)
 
         if len(filters) == 1:
             return filters[0]
@@ -605,9 +737,7 @@ class RealtimeReportsTable(APITable):
                         field_name=field_name,
                         numeric_filter=Filter.NumericFilter(
                             operation=operation,
-                            value=Filter.NumericFilter.NumericValue(
-                                double_value=float(value)
-                            )
+                            value={'double_value': float(value)}
                         ),
                     )
                 )

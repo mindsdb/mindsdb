@@ -463,12 +463,112 @@ class QueryPlanner:
 
         return self.plan_mdb_nested_select(select)
 
+    def _is_disabled_condition(self, node):
+        """
+        Check if a condition has been disabled (set to 0=0) by combine_view_select.
+        These conditions should not be included when merging WHERE clauses.
+        """
+        if isinstance(node, BinaryOperation):
+            if node.op == '=' and len(node.args) == 2:
+                arg1, arg2 = node.args
+                if (isinstance(arg1, Constant) and isinstance(arg2, Constant) and
+                    arg1.value == 0 and arg2.value == 0):
+                    return True
+        return False
+
+    def _clean_where_clause(self, where_clause):
+        """
+        Remove disabled conditions (0=0) from WHERE clause.
+        Returns cleaned clause or None if all conditions are disabled.
+        """
+        if where_clause is None:
+            return None
+
+        if self._is_disabled_condition(where_clause):
+            return None
+
+        if isinstance(where_clause, BinaryOperation) and where_clause.op.upper() == 'AND':
+            # Recursively clean both sides of AND
+            left = self._clean_where_clause(where_clause.args[0])
+            right = self._clean_where_clause(where_clause.args[1])
+
+            if left is None and right is None:
+                return None
+            elif left is None:
+                return right
+            elif right is None:
+                return left
+            else:
+                return BinaryOperation('AND', args=[left, right])
+
+        return where_clause
+
     def plan_mdb_nested_select(self, select):
         # plan nested select
 
         select2 = copy.deepcopy(select.from_table)
         select2.parentheses = False
         select2.alias = None
+
+        # Optimization: Merge outer query clauses into inner query when possible
+        # This allows handlers (like Google Analytics) to receive filters, ordering, and limits
+        # instead of fetching all data and filtering in memory
+
+        # Check if we can safely merge clauses:
+        # - Inner query should be a simple SELECT from a table (not another subquery)
+        # - Outer query should not have complex operations that require post-processing
+        can_merge = (
+            isinstance(select2.from_table, Identifier) and  # Inner query is from a simple table
+            not select2.group_by and  # No GROUP BY in inner query (would change semantics)
+            not select2.having and  # No HAVING in inner query
+            not select.group_by and  # No GROUP BY in outer query
+            not select.having  # No HAVING in outer query
+        )
+
+        if can_merge:
+            # Merge WHERE clauses, filtering out disabled conditions (0=0)
+            outer_where = self._clean_where_clause(select.where)
+            if outer_where is not None:
+                if select2.where is None:
+                    select2.where = copy.deepcopy(outer_where)
+                else:
+                    # Combine with AND
+                    select2.where = BinaryOperation(
+                        'AND',
+                        args=[select2.where, copy.deepcopy(outer_where)]
+                    )
+                # Clear outer WHERE since it's been merged
+                select.where = None
+
+            # Merge ORDER BY (outer takes precedence)
+            if select.order_by:
+                select2.order_by = copy.deepcopy(select.order_by)
+                # Clear outer ORDER BY since it's been merged
+                select.order_by = None
+
+            # Merge LIMIT and OFFSET
+            if select.limit is not None:
+                # If both have limits, use the smaller one
+                if select2.limit is not None:
+                    outer_limit = select.limit.value if hasattr(select.limit, 'value') else select.limit
+                    inner_limit = select2.limit.value if hasattr(select2.limit, 'value') else select2.limit
+                    select2.limit = Constant(min(outer_limit, inner_limit))
+                else:
+                    select2.limit = copy.deepcopy(select.limit)
+                # Clear outer LIMIT since it's been merged
+                select.limit = None
+
+            if select.offset is not None:
+                # Combine offsets: total_offset = outer_offset + inner_offset
+                outer_offset = select.offset.value if hasattr(select.offset, 'value') else select.offset
+                if select2.offset is not None:
+                    inner_offset = select2.offset.value if hasattr(select2.offset, 'value') else select2.offset
+                    select2.offset = Constant(outer_offset + inner_offset)
+                else:
+                    select2.offset = copy.deepcopy(select.offset)
+                # Clear outer OFFSET since it's been merged
+                select.offset = None
+
         self.plan_select(select2)
         last_step = self.plan.steps[-1]
 

@@ -354,7 +354,12 @@ class ReportsTable(APITable):
             for dim_value in row.dimension_values:
                 row_data.append(dim_value.value)
             for metric_value in row.metric_values:
-                row_data.append(metric_value.value)
+                # Convert metric values to float for proper sorting and arithmetic operations
+                try:
+                    row_data.append(float(metric_value.value))
+                except (ValueError, TypeError):
+                    # If conversion fails, keep as string
+                    row_data.append(metric_value.value)
             data.append(row_data)
 
         return pd.DataFrame(data, columns=columns)
@@ -636,7 +641,12 @@ class RealtimeReportsTable(APITable):
             for dim_value in row.dimension_values:
                 row_data.append(dim_value.value)
             for metric_value in row.metric_values:
-                row_data.append(metric_value.value)
+                # Convert metric values to float for proper sorting and arithmetic operations
+                try:
+                    row_data.append(float(metric_value.value))
+                except (ValueError, TypeError):
+                    # If conversion fails, keep as string
+                    row_data.append(metric_value.value)
             data.append(row_data)
 
         return pd.DataFrame(data, columns=columns)

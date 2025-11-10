@@ -217,7 +217,7 @@ class MongodbRender(NonRelationalRender):
 
                 elif isinstance(col, Function):
 
-                    func_name = col.name.lower()
+                    func_name = col.op.lower()
                     alias = col.alias.parts[-1] if col.alias is not None else func_name
                     if len(col.args) > 0 and isinstance(col.args[0], Identifier):
                         field_name = ".".join(col.args[0].parts)
@@ -253,8 +253,34 @@ class MongodbRender(NonRelationalRender):
                     project[alias] = val
 
         if node.group_by is not None:
-            # TODO
-            raise NotImplementedError(f"Group {node.group_by}")
+            if "_id" not in group or not isinstance(group["_id"], dict):
+                group["_id"] = {}
+
+            for group_col in node.group_by:
+                if not isinstance(group_col, Identifier):
+                    raise NotImplementedError(f"Unsupported GROUP BY column {group_col}")
+
+                field_name = ".".join(group_col.parts)
+                alias = (
+                    group_col.alias.parts[-1]
+                    if group_col.alias is not None
+                    else field_name
+                )
+
+                group["_id"][alias] = f"${field_name}"
+
+                if alias in project:
+                    group[alias] = {"$first": f"${field_name}"}
+                    project[alias] = f"${alias}"
+
+            for alias, expression in agg_group.items():
+                group[alias] = expression
+                project[alias] = f"${alias}"
+        elif agg_group:
+            group = {"_id": None}
+            for alias, expression in agg_group.items():
+                group[alias] = expression
+                project[alias] = f"${alias}"
 
         sort = {}
         if node.order_by is not None:

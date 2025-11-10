@@ -47,7 +47,7 @@ class ViewsList(Resource):
         try:
             project = session.database_controller.get_project(project_name)
         except EntityNotExistsError:
-            return http_error(HTTPStatus.NOT_FOUND, "Not found", f"Project name {project_name} does not exist")
+            return http_error(HTTPStatus.NOT_FOUND, "Project not found", f"Project name {project_name} does not exist")
 
         if project.get_view(name) is not None:
             return http_error(HTTPStatus.CONFLICT, "Name conflict", f"View with name {name} already exists.")

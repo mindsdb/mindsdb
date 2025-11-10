@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict, Any
 import pandas as pd
+from pandas.api import types as pd_types
 from hubspot import HubSpot
 
 from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import ContactsTable, CompaniesTable, DealsTable
@@ -323,23 +324,13 @@ class HubspotHandler(MetaAPIHandler):
                         list(self.connection.crm.deals.get_all(limit=1))
 
                     # If successful, get full metadata
-                    try:
-                        table_info = {
-                            "TABLE_SCHEMA": "hubspot",
-                            "TABLE_NAME": table_name,
-                            "TABLE_TYPE": "BASE TABLE",
-                        }
-                        tables_data.append(table_info)
-                        logger.info(f"Table '{table_name}' is accessible")
-                    except Exception as meta_error:
-                        # Can access but can't get metadata
-                        logger.warning(f"Could not get metadata for table {table_name}: {str(meta_error)}")
-                        table_info = {
-                            "TABLE_SCHEMA": "hubspot",
-                            "TABLE_NAME": table_name,
-                            "TABLE_TYPE": "BASE TABLE",
-                        }
-                        tables_data.append(table_info)
+                    table_info = {
+                        "TABLE_SCHEMA": "hubspot",
+                        "TABLE_NAME": table_name,
+                        "TABLE_TYPE": "BASE TABLE",
+                    }
+                    tables_data.append(table_info)
+                    logger.info(f"Table '{table_name}' is accessible")
 
                 except Exception as access_error:
                     # Table is not accessible (likely missing scope)
@@ -400,7 +391,9 @@ class HubspotHandler(MetaAPIHandler):
                         "DATA_TYPE": col["data_type"],
                         "ORDINAL_POSITION": col["ordinal_position"],
                         "COLUMN_DEFAULT": None,
-                        "IS_NULLABLE": "YES" if col["is_nullable"] else "NO",
+                        "IS_NULLABLE": "YES"
+                        if col["is_nullable"] is True
+                        else ("NO" if col["is_nullable"] is False else None),
                         "CHARACTER_MAXIMUM_LENGTH": None,
                         "CHARACTER_OCTET_LENGTH": None,
                         "NUMERIC_PRECISION": None,
@@ -820,17 +813,12 @@ class HubspotHandler(MetaAPIHandler):
         }
 
         if non_null_values:
-            # Try to calculate numeric average for numeric columns
+            # Try to calculate numeric average for numeric columns using pandas
             try:
-                numeric_values = []
-                for v in non_null_values:
-                    if isinstance(v, (int, float)):
-                        numeric_values.append(float(v))
-                    elif isinstance(v, str) and v.replace(".", "").replace("-", "").isdigit():
-                        numeric_values.append(float(v))
-
-                if numeric_values:
-                    stats["average_value"] = round(sum(numeric_values) / len(numeric_values), 2)
+                s = pd.Series(non_null_values)
+                if pd_types.is_numeric_dtype(s):
+                    avg = s.mean()
+                    stats["average_value"] = round(avg, 2)
             except (ValueError, TypeError):
                 # Not numeric data, average stays None
                 pass

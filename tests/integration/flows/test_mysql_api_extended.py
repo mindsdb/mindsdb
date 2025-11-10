@@ -8,7 +8,7 @@ import mysql.connector
 @pytest.fixture(scope="module")
 def setup_local_db():
     """Module-scoped fixture to create a writeable DB for table tests."""
-    db_name = f"test_db_local"
+    db_name = "test_db_local"
     helper = BaseStuff()
     helper.use_binary = False
 
@@ -128,7 +128,7 @@ def wait_for_kb_creation(query_fn, kb_name, timeout=90, poll_interval=1):
         except Exception:
             # KB might not be queryable at all yet
             pass
-        
+
         elapsed_time = time.time() - start_time
         if elapsed_time > timeout:
             print(f"     [Helper wait_for_kb] ERROR: Timeout after {timeout}s waiting for {kb_name}.")
@@ -296,7 +296,7 @@ class TestMySQLKnowledgeBases(BaseStuff):
         if not openai_api_key:
             pytest.skip("OPENAI_API_KEY environment variable not set. Skipping KB tests.")
 
-        kb_name = f"test_alter_kb_local"
+        kb_name = "test_alter_kb_local"
         embedding_model = "text-embedding-3-small"
 
         create_kb_query = f"""
@@ -330,10 +330,10 @@ class TestMySQLKnowledgeBases(BaseStuff):
             result = wait_for_kb_creation(self.query, kb_name)
             assert result and result[0]["name"] == kb_name and embedding_model in result[0]["embedding_model"]
             self.query(f"INSERT INTO {kb_name} (content) VALUES ('{content_to_insert}');")
-            
+
             # Give insertion a moment to process before querying
-            time.sleep(2) 
-            
+            time.sleep(2)
+
             result = self.query(f"SELECT chunk_content FROM {kb_name} WHERE content = 'What is MindsDB?';")
             assert result and "MindsDB" in result[0]["chunk_content"]
         finally:
@@ -349,13 +349,14 @@ class TestMySQLKnowledgeBases(BaseStuff):
         assert "wrong embedding provider" in str(e.value).lower()
 
     def test_create_kb_with_invalid_api_key(self, use_binary, request):
-        kb_name = f"test_invalid_key_local"
+        kb_name = "test_invalid_key_local"
         create_query = f'CREATE KNOWLEDGE_BASE {kb_name} USING embedding_model = {{"provider": "openai", "api_key": "this_is_a_fake_key"}};'
         try:
             with pytest.raises(Exception) as e:
                 self.query(create_query)
             assert (
-                "problem with embedding model config" in str(e.value).lower() or "invalid api key" in str(e.value).lower()
+                "problem with embedding model config" in str(e.value).lower()
+                or "invalid api key" in str(e.value).lower()
             )
         finally:
             # Ensure cleanup even if creation fails
@@ -487,8 +488,8 @@ class TestMySQLKnowledgeBases(BaseStuff):
 @pytest.fixture(scope="function")
 def setup_trigger_db(request):
     """Function-scoped fixture to ensure a clean DB for each trigger test."""
-    
-    db_name = f"trigger_test_db_local"
+
+    db_name = "trigger_test_db_local"
 
     source_table_name = "trigger_source_table"
     target_table_name = "trigger_target_table"
@@ -555,7 +556,6 @@ class TestMySQLTriggers(BaseStuff):
             except Exception:
                 pass
 
-            # Use the original, valid syntax (which implies AFTER INSERT)
             create_trigger_query = f"""
                 CREATE TRIGGER {trigger_name}
                 ON {db_name}.{source_table_name}
@@ -629,7 +629,7 @@ class TestMySQLTriggersNegative(BaseStuff):
                 pass
 
     def test_create_trigger_on_non_existent_table(self, use_binary, request):
-        trigger_name = f"bad_trigger_local"
+        trigger_name = "bad_trigger_local"
         create_query = f"CREATE TRIGGER {trigger_name} ON non_existent_db.non_existent_table (SELECT 1);"
         try:
             with pytest.raises(Exception) as e:

@@ -58,7 +58,7 @@ class BaseHandler:
 
         Args:
             query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+                etc)
 
         Returns:
             HandlerResponse
@@ -202,8 +202,8 @@ class MetaDatabaseHandler(DatabaseHandler):
                         logger.error(
                             f"Error retrieving column statistics for table {table_name}: {result.error_message}"
                         )
-                except Exception as e:
-                    logger.error(f"Exception occurred while retrieving column statistics for table {table_name}: {e}")
+                except Exception:
+                    logger.exception(f"Exception occurred while retrieving column statistics for table {table_name}:")
 
             if not results:
                 logger.warning("No column statistics could be retrieved for the specified tables.")
@@ -355,8 +355,8 @@ class ArgProbeMixin:
         """
         try:
             source_code = self.get_source_code(method_name)
-        except Exception as e:
-            logger.error(f"Failed to get source code of method {method_name} in {self.__class__.__name__}. Reason: {e}")
+        except Exception:
+            logger.exception(f"Failed to get source code of method {method_name} in {self.__class__.__name__}. Reason:")
             return []
 
         # parse the source code

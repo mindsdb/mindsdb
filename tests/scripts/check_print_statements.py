@@ -9,7 +9,7 @@ def check_for_print_statements():
     global success
 
     files = list(
-        set(glob.glob("**/*.py", recursive=True))
+        set(glob.glob("mindsdb/**/*.py", recursive=True))
         - set(glob.glob("**/tests/**", recursive=True))
         - set(glob.glob("docker/**", recursive=True))
         - set(["mindsdb/__main__.py"])

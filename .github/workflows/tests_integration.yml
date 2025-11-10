@@ -65,4 +65,7 @@ jobs:
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         INTERNAL_URL: ${{ vars.MINDSDB_INTERNAL_URL }}
-    
+        MINDSDB_DATA_ENCRYPTION_TYPE: awskms
+        MIND_CASTLE_AWS_USE_ENV_AUTH: "true"
+        MIND_CASTLE_AWS_REGION: "us-east-1"
+        MIND_CASTLE_AWS_KMS_KEY_ARN: ${{ secrets.MIND_CASTLE_AWS_KMS_KEY_ARN }}

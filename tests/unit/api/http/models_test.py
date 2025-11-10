@@ -72,7 +72,7 @@ def test_train_model_no_create_query_aborts(client):
     assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Fixme: Fails on Windoows.")
+@pytest.mark.skipif(sys.platform == "win32", reason="Fixme: Fails on Windows.")
 def test_train_model_already_exists_aborts(client):
     # Learning Hub home rentals model.
     create_query = """

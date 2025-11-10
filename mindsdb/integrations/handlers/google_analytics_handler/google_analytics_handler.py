@@ -69,6 +69,11 @@ class GoogleAnalyticsHandler(APIHandler):
         self.data_service = None  # Data API client
         self.is_connected = False
 
+        # Metadata cache (shared across all tables)
+        self._metadata_cache = None  # Will store: {'metrics': set(), 'dimensions': set()}
+        self._metadata_cache_timestamp = None
+        self._metadata_cache_ttl = 3600  # 1 hour in seconds
+
         # Register Admin API tables
         conversion_events = ConversionEventsTable(self)
         self.conversion_events = conversion_events
@@ -175,6 +180,94 @@ class GoogleAnalyticsHandler(APIHandler):
         self.is_connected = True
 
         return self.service
+
+    def get_metadata_cache(self) -> dict:
+        """
+        Get cached metadata about dimensions and metrics.
+        Caches for 1 hour to avoid repeated API calls.
+
+        Returns:
+            dict: {
+                'metrics': set of metric api_names (API format with colons),
+                'dimensions': set of dimension api_names (API format with colons),
+                'column_to_api': dict mapping sanitized column names to API names,
+                'api_to_column': dict mapping API names to sanitized column names
+            }
+        """
+        import time
+        from google.analytics.data_v1beta.types import GetMetadataRequest
+
+        # Check if cache is valid
+        current_time = time.time()
+        if (self._metadata_cache is not None and
+            self._metadata_cache_timestamp is not None and
+            current_time - self._metadata_cache_timestamp < self._metadata_cache_ttl):
+            return self._metadata_cache
+
+        # Fetch fresh metadata
+        try:
+            self.connect()
+            request = GetMetadataRequest(
+                name=f"properties/{self.property_id}/metadata"
+            )
+            response = self.data_service.get_metadata(request)
+
+            # Build cache with clean API names and bidirectional mappings
+            metrics = set()
+            dimensions = set()
+            column_to_api = {}
+            api_to_column = {}
+
+            # Process metrics
+            for metric in response.metrics:
+                api_name = metric.api_name
+                column_name = api_name.replace(':', '_')  # Sanitize for SQL
+
+                metrics.add(api_name)  # Store API name only (clean set)
+                column_to_api[column_name] = api_name
+                api_to_column[api_name] = column_name
+
+            # Process dimensions
+            for dimension in response.dimensions:
+                api_name = dimension.api_name
+                column_name = api_name.replace(':', '_')  # Sanitize for SQL
+
+                dimensions.add(api_name)  # Store API name only (clean set)
+                column_to_api[column_name] = api_name
+                api_to_column[api_name] = column_name
+
+            self._metadata_cache = {
+                'metrics': metrics,
+                'dimensions': dimensions,
+                'column_to_api': column_to_api,
+                'api_to_column': api_to_column
+            }
+            self._metadata_cache_timestamp = current_time
+
+            logger.info(
+                f"Metadata cache refreshed: {len(metrics)} metrics, "
+                f"{len(dimensions)} dimensions, {len(column_to_api)} mappings"
+            )
+            return self._metadata_cache
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch metadata for cache: {e}")
+            # Return empty cache on error
+            return {
+                'metrics': set(),
+                'dimensions': set(),
+                'column_to_api': {},
+                'api_to_column': {}
+            }
+
+    def invalidate_metadata_cache(self):
+        """
+        Invalidate the metadata cache to force refresh on next access.
+        Useful when property configuration changes (new custom dimensions/metrics added).
+        """
+        self._metadata_cache = None
+        self._metadata_cache_timestamp = None
+        logger.info("Metadata cache invalidated")
 
     def check_connection(self) -> StatusResponse:
         """

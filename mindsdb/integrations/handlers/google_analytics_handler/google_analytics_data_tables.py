@@ -61,20 +61,6 @@ class ReportsTable(APITable):
             pandas DataFrame containing the report data
         """
         try:
-            # DEBUG: Log what we receive
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"DEBUG ReportsTable.select() - query.targets: {query.targets}")
-            logger.error(f"DEBUG ReportsTable.select() - query.targets types: {[type(t).__name__ for t in query.targets]}")
-            if query.targets:
-                for i, target in enumerate(query.targets):
-                    if isinstance(target, ast.Identifier):
-                        logger.error(f"DEBUG Target {i}: Identifier - parts={target.parts}, alias={target.alias}")
-                    elif isinstance(target, ast.Star):
-                        logger.error(f"DEBUG Target {i}: Star")
-                    else:
-                        logger.error(f"DEBUG Target {i}: {type(target).__name__}")
-
             # Extract conditions from WHERE clause
             conditions = extract_comparison_conditions(query.where) if query.where else []
 
@@ -180,13 +166,39 @@ class ReportsTable(APITable):
 
     def _is_metric(self, name: str) -> bool:
         """
-        Determine if a column name is likely a metric (vs dimension).
-        Common metric patterns: contains 'Users', 'Count', 'Rate', 'Revenue', 'Sessions', etc.
+        Determine if a column name is a metric (vs dimension) using metadata lookup.
+        Falls back to heuristic if metadata is unavailable.
+
+        Args:
+            name: Column name (can be sanitized with underscores or API format with colons)
+
+        Returns:
+            bool: True if field is a metric, False if dimension
         """
+        # Get cached metadata from handler
+        metadata_cache = self.handler.get_metadata_cache()
+
+        # Check if we have metadata available
+        if metadata_cache and (metadata_cache['metrics'] or metadata_cache['dimensions']):
+            # Check both original name and API name (with colon restored)
+            api_name = self._unsanitize_column_name(name)
+
+            # Definitive check: if in metrics set, it's a metric
+            if name in metadata_cache['metrics'] or api_name in metadata_cache['metrics']:
+                return True
+
+            # Definitive check: if in dimensions set, it's a dimension
+            if name in metadata_cache['dimensions'] or api_name in metadata_cache['dimensions']:
+                return False
+
+        # Fallback to heuristic if metadata unavailable or field not found
+        logger.debug(f"Falling back to heuristic for field: {name}")
         metric_keywords = [
             'users', 'sessions', 'views', 'count', 'rate', 'revenue', 'value',
             'duration', 'conversions', 'events', 'transactions', 'purchases',
-            'bounces', 'engagement', 'scrolls', 'clicks'
+            'bounces', 'engagement', 'scrolls', 'clicks', 'cost', 'impressions',
+            'advertiser', 'publisher', 'adsense', 'adx', 'cm360', 'dv360', 'sa360',
+            'total', 'average', 'avg', 'sum', 'per', 'quantity', 'amount'
         ]
         name_lower = name.lower()
         return any(keyword in name_lower for keyword in metric_keywords)
@@ -194,18 +206,32 @@ class ReportsTable(APITable):
     def _unsanitize_column_name(self, column_name: str) -> str:
         """
         Convert sanitized column name back to GA4 API format.
-        Converts underscores back to colons for custom dimensions/metrics.
+        Uses metadata cache for accurate mapping, with fallback to heuristic.
 
         Examples:
-            customEvent_job_title -> customEvent:job_title
-            customUser_subscription_tier -> customUser:subscription_tier
+            keyEvents_click_job -> keyEvents:click_job (via cache lookup)
+            customEvent_job_title -> customEvent:job_title (via cache lookup)
+            customUser_subscription_tier -> customUser:subscription_tier (via cache lookup)
             country -> country (no change for standard fields)
+            unknown_field -> unknown_field (fallback for uncached fields)
         """
-        # Only convert if it starts with customEvent_ or customUser_
+        # Try cache lookup first (most accurate)
+        metadata_cache = self.handler.get_metadata_cache()
+        if metadata_cache and 'column_to_api' in metadata_cache:
+            column_to_api = metadata_cache['column_to_api']
+            if column_name in column_to_api:
+                return column_to_api[column_name]
+
+        # Fallback to heuristic for backward compatibility
+        # (handles cases where cache is unavailable or field not in cache)
         if column_name.startswith('customEvent_'):
             return column_name.replace('customEvent_', 'customEvent:', 1)
         elif column_name.startswith('customUser_'):
             return column_name.replace('customUser_', 'customUser:', 1)
+        elif column_name.startswith('keyEvents_'):
+            return column_name.replace('keyEvents_', 'keyEvents:', 1)
+        elif column_name.startswith('sessionKeyEventRate_'):
+            return column_name.replace('sessionKeyEventRate_', 'sessionKeyEventRate:', 1)
         else:
             # Standard dimension/metric, return as-is
             return column_name
@@ -308,8 +334,8 @@ class ReportsTable(APITable):
 
     def _response_to_dataframe(self, response) -> pd.DataFrame:
         """Convert GA4 API response to pandas DataFrame"""
-        if response.row_count == 0:
-            return pd.DataFrame()
+        # if response.row_count == 0:
+        #    return pd.DataFrame()
 
         # Extract column names and sanitize them (replace colons with underscores)
         # This handles custom dimensions like customEvent:job_title -> customEvent_job_title
@@ -456,11 +482,40 @@ class RealtimeReportsTable(APITable):
             raise
 
     def _is_metric(self, name: str) -> bool:
-        """Determine if a column name is likely a metric"""
+        """
+        Determine if a column name is a metric (vs dimension) using metadata lookup.
+        Falls back to heuristic if metadata is unavailable.
+
+        Args:
+            name: Column name (can be sanitized with underscores or API format with colons)
+
+        Returns:
+            bool: True if field is a metric, False if dimension
+        """
+        # Get cached metadata from handler
+        metadata_cache = self.handler.get_metadata_cache()
+
+        # Check if we have metadata available
+        if metadata_cache and (metadata_cache['metrics'] or metadata_cache['dimensions']):
+            # Check both original name and API name (with colon restored)
+            api_name = self._unsanitize_column_name(name)
+
+            # Definitive check: if in metrics set, it's a metric
+            if name in metadata_cache['metrics'] or api_name in metadata_cache['metrics']:
+                return True
+
+            # Definitive check: if in dimensions set, it's a dimension
+            if name in metadata_cache['dimensions'] or api_name in metadata_cache['dimensions']:
+                return False
+
+        # Fallback to heuristic if metadata unavailable or field not found
+        logger.debug(f"Falling back to heuristic for field: {name}")
         metric_keywords = [
             'users', 'sessions', 'views', 'count', 'rate', 'revenue', 'value',
             'duration', 'conversions', 'events', 'transactions', 'purchases',
-            'bounces', 'engagement', 'scrolls', 'clicks'
+            'bounces', 'engagement', 'scrolls', 'clicks', 'cost', 'impressions',
+            'advertiser', 'publisher', 'adsense', 'adx', 'cm360', 'dv360', 'sa360',
+            'total', 'average', 'avg', 'sum', 'per', 'quantity', 'amount'
         ]
         name_lower = name.lower()
         return any(keyword in name_lower for keyword in metric_keywords)
@@ -468,12 +523,32 @@ class RealtimeReportsTable(APITable):
     def _unsanitize_column_name(self, column_name: str) -> str:
         """
         Convert sanitized column name back to GA4 API format.
-        Converts underscores back to colons for custom dimensions/metrics.
+        Uses metadata cache for accurate mapping, with fallback to heuristic.
+
+        Examples:
+            keyEvents_click_job -> keyEvents:click_job (via cache lookup)
+            customEvent_job_title -> customEvent:job_title (via cache lookup)
+            customUser_subscription_tier -> customUser:subscription_tier (via cache lookup)
+            country -> country (no change for standard fields)
+            unknown_field -> unknown_field (fallback for uncached fields)
         """
+        # Try cache lookup first (most accurate)
+        metadata_cache = self.handler.get_metadata_cache()
+        if metadata_cache and 'column_to_api' in metadata_cache:
+            column_to_api = metadata_cache['column_to_api']
+            if column_name in column_to_api:
+                return column_to_api[column_name]
+
+        # Fallback to heuristic for backward compatibility
+        # (handles cases where cache is unavailable or field not in cache)
         if column_name.startswith('customEvent_'):
             return column_name.replace('customEvent_', 'customEvent:', 1)
         elif column_name.startswith('customUser_'):
             return column_name.replace('customUser_', 'customUser:', 1)
+        elif column_name.startswith('keyEvents_'):
+            return column_name.replace('keyEvents_', 'keyEvents:', 1)
+        elif column_name.startswith('sessionKeyEventRate_'):
+            return column_name.replace('sessionKeyEventRate_', 'sessionKeyEventRate:', 1)
         else:
             return column_name
 

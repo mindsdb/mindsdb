@@ -104,7 +104,7 @@ class MongodbRender(NonRelationalRender):
                         saw_star = True
                         break
                     if isinstance(t, Identifier):
-                        name = t.parts[-1]
+                        name = ".".join(t.parts)
                         alias = name if t.alias is None else t.alias.parts[-1]
                         pre_project[alias] = f"${name}"
                     elif isinstance(t, Constant):
@@ -191,7 +191,7 @@ class MongodbRender(NonRelationalRender):
                     project = {}
                     break
                 if isinstance(col, Identifier):
-                    name = col.parts[-1]
+                    name = ".".join(col.parts)
                     if col.alias is None:
                         alias = name
                     else:
@@ -303,7 +303,7 @@ class MongodbRender(NonRelationalRender):
         }
 
         if isinstance(arg1, Identifier):
-            var_name = arg1.parts[-1]
+            var_name = ".".join(arg1.parts)
             # Simple operation.
             if isinstance(arg2, Constant):
                 # Identifier and Constant.

@@ -140,12 +140,21 @@ class StrapiHandler(APIHandler):
 
             if response.status_code == 200 or response.status_code == 201:
                 response_data = response.json()
-                # Create an empty DataFrame
-                df = pd.DataFrame()
-                if isinstance(response_data.get("data", None), list):
-                    df = pd.DataFrame(response_data["data"])
-                elif isinstance(response_data.get("data", None), dict):
-                    df = pd.DataFrame([response_data["data"]])
+                
+                # Check if response has 'data' key
+                if "data" not in response_data:
+                    raise Exception(f"Malformed API response: missing 'data' key in response from {endpoint}")
+                
+                data = response_data["data"]
+                
+                # Check if data is of expected type (list or dict)
+                if isinstance(data, list):
+                    df = pd.DataFrame(data)
+                elif isinstance(data, dict):
+                    df = pd.DataFrame([data])
+                else:
+                    raise Exception(f"Malformed API response: 'data' key contains unexpected type {type(data).__name__}, expected list or dict from {endpoint}")
+                
                 return df
             else:
                 raise Exception(f"Error connecting to Strapi API: {response.status_code} - {response.text}")

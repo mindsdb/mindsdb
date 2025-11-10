@@ -40,6 +40,7 @@ from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
 from .langfuse_callback_handler import LangfuseCallbackHandler, get_skills
 from .safe_output_parser import SafeOutputParser
+from .providers import get_bedrock_chat_model
 
 from mindsdb.interfaces.agents.constants import (
     OPEN_AI_CHAT_MODELS,
@@ -176,6 +177,9 @@ def create_chat_model(args: Dict):
         return ChatGoogleGenerativeAI(**model_kwargs)
     if args["provider"] == "writer":
         return ChatWriter(**model_kwargs)
+    if args["provider"] == "bedrock":
+        ChatBedrock = get_bedrock_chat_model()
+        return ChatBedrock(**model_kwargs)
     if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
     raise ValueError(f"Unknown provider: {args['provider']}")
@@ -716,6 +720,53 @@ AI: {response}"""
                 ctx.load(context)
                 for chunk in stream_iterator:
                     chunk_queue.put(chunk)
+            except TimeoutError as e:
+                error_message = f"Request timed out: The agent took too long to respond. {str(e)}"
+                logger.error(f"Timeout error during streaming: {error_message}", exc_info=True)
+                error_chunk = {
+                    "type": "error",
+                    "content": handle_agent_error(e, error_message),
+                    "error_type": "timeout",
+                }
+                chunk_queue.put(error_chunk)
+            except ConnectionError as e:
+                error_message = f"Connection error: Failed to connect to the service. {str(e)}"
+                logger.error(f"Connection error during streaming: {error_message}", exc_info=True)
+                error_chunk = {
+                    "type": "error",
+                    "content": handle_agent_error(e, error_message),
+                    "error_type": "connection",
+                }
+                chunk_queue.put(error_chunk)
+            except Exception as e:
+                error_message = str(e)
+
+                # Special handling for specific error types
+                # Note: TimeoutError and ConnectionError are already handled by specific exception handlers above
+                if "API key" in error_message and ("not found" in error_message or "missing" in error_message):
+                    logger.error(f"API Key Error: {error_message}")
+                    error_message = f"API Key Error: {error_message}"
+                    error_type = "authentication"
+                elif "404" in error_message or "not found" in error_message.lower():
+                    logger.error(f"Model Error: {error_message}")
+                    error_type = "not_found"
+                elif "rate limit" in error_message.lower() or "429" in error_message:
+                    logger.error(f"Rate Limit Error: {error_message}")
+                    error_message = f"Rate limit exceeded: {error_message}"
+                    error_type = "rate_limit"
+                else:
+                    logger.error(f"LLM chain encountered an error during streaming: {error_message}", exc_info=True)
+                    error_type = "general"
+
+                if not error_message or not error_message.strip():
+                    error_message = f"An unknown error occurred during streaming: {type(e).__name__}"
+
+                error_chunk = {
+                    "type": "error",
+                    "content": handle_agent_error(e, error_message),
+                    "error_type": error_type,
+                }
+                chunk_queue.put(error_chunk)
             finally:
                 # Wrap in try/finally to always set the thread event even if there's an exception.
                 agent_executor_finished_event.set()

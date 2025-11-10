@@ -5,9 +5,7 @@ from setuptools import find_packages, setup
 
 # A special env var that allows us to disable the installation of the default extras for advanced users / containers / etc
 MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = (
-    True
-    if os.getenv("MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS", "true").lower() == "true"
-    else False
+    True if os.getenv("MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS", "true").lower() == "true" else False
 )
 DEFAULT_PIP_EXTRAS = [
     line.split("#")[0].rstrip()
@@ -41,9 +39,7 @@ def expand_requirements_links(requirements: list) -> list:
         if requirement.startswith("-r "):
             if os.path.exists(requirement.split()[1]):
                 with open(requirement.split()[1]) as fh:
-                    to_add += expand_requirements_links(
-                        [req.strip() for req in fh.read().splitlines()]
-                    )
+                    to_add += expand_requirements_links([req.strip() for req in fh.read().splitlines()])
             to_remove.append(requirement)
 
     for req in to_remove:
@@ -74,55 +70,47 @@ def define_deps():
     Returns:
          list of packages, extras and dependency links.
     """
-    with open(os.path.normpath('requirements/requirements.txt')) as req_file:
+    with open(os.path.normpath("requirements/requirements.txt")) as req_file:
         defaults = [req.strip() for req in req_file.read().splitlines()]
 
     links = []
     requirements = []
     for r in defaults:
-        if 'git+https' in r:
-            pkg = r.split('#')[-1]
-            links.append(r + '-9876543210')
-            requirements.append(pkg.replace('egg=', ''))
+        if "git+https" in r:
+            pkg = r.split("#")[-1]
+            links.append(r + "-9876543210")
+            requirements.append(pkg.replace("egg=", ""))
         else:
             requirements.append(r.strip())
 
     extra_requirements = {}
     full_requirements = []
-    for fn in os.listdir(os.path.normpath('./requirements')):
+    for fn in os.listdir(os.path.normpath("./requirements")):
         extra = []
-        if fn.startswith('requirements-') and fn.endswith('.txt'):
-            extra_name = fn.replace('requirements-', '').replace('.txt', '')
+        if fn.startswith("requirements-") and fn.endswith(".txt"):
+            extra_name = fn.replace("requirements-", "").replace(".txt", "")
             with open(os.path.normpath(f"./requirements/{fn}")) as fp:
                 extra = [req.strip() for req in fp.read().splitlines()]
             extra_requirements[extra_name] = extra
             full_requirements += extra
 
-    extra_requirements['all_extras'] = list(set(full_requirements))
+    extra_requirements["all_extras"] = list(set(full_requirements))
 
     full_handlers_requirements = []
-    handlers_dir_path = os.path.normpath('./mindsdb/integrations/handlers')
+    handlers_dir_path = os.path.normpath("./mindsdb/integrations/handlers")
     for fn in os.listdir(handlers_dir_path):
-        if os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith(
-            "_handler"
-        ):
+        if os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith("_handler"):
             extra = []
-            for req_file_path in glob.glob(
-                os.path.join(handlers_dir_path, fn, "requirements*.txt")
-            ):
+            for req_file_path in glob.glob(os.path.join(handlers_dir_path, fn, "requirements*.txt")):
                 extra_name = fn.replace("_handler", "")
                 file_name = os.path.basename(req_file_path)
                 if file_name != "requirements.txt":
-                    extra_name += "-" + file_name.replace("requirements_", "").replace(
-                        ".txt", ""
-                    )
+                    extra_name += "-" + file_name.replace("requirements_", "").replace(".txt", "")
 
                 # If requirements.txt in our handler folder, import them as our extra's requirements
                 if os.path.exists(req_file_path):
                     with open(req_file_path) as fp:
-                        extra = expand_requirements_links(
-                            [req.strip() for req in fp.read().splitlines()]
-                        )
+                        extra = expand_requirements_links([req.strip() for req in fp.read().splitlines()])
 
                     extra_requirements[extra_name] = extra
                     full_handlers_requirements += extra
@@ -133,20 +121,16 @@ def define_deps():
 
                 # If this is a default extra and if we want to install defaults (enabled by default)
                 #   then add it to the default requirements needing to install
-                if (
-                    MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS
-                    and extra_name in DEFAULT_PIP_EXTRAS
-                    and extra
-                ):
+                if MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS and extra_name in DEFAULT_PIP_EXTRAS and extra:
                     requirements += extra
 
-    extra_requirements['all_handlers_extras'] = list(set(full_handlers_requirements))
+    extra_requirements["all_handlers_extras"] = list(set(full_handlers_requirements))
 
-    with open(os.path.normpath('requirements/requirements-opentelemetry.txt')) as req_file:
-        extra_requirements['opentelemetry'] = [req.strip() for req in req_file.read().splitlines()]
+    with open(os.path.normpath("requirements/requirements-opentelemetry.txt")) as req_file:
+        extra_requirements["opentelemetry"] = [req.strip() for req in req_file.read().splitlines()]
 
-    with open(os.path.normpath('requirements/requirements-langfuse.txt')) as req_file:
-        extra_requirements['langfuse'] = [req.strip() for req in req_file.read().splitlines()]
+    with open(os.path.normpath("requirements/requirements-langfuse.txt")) as req_file:
+        extra_requirements["langfuse"] = [req.strip() for req in req_file.read().splitlines()]
 
     Deps.pkgs = requirements
     Deps.extras = extra_requirements
@@ -158,14 +142,14 @@ def define_deps():
 deps = define_deps()
 
 setup(
-    name=about['__title__'],
-    version=about['__version__'],
-    url=about['__github__'],
-    download_url=about['__pypi__'],
-    license=about['__license__'],
-    author=about['__author__'],
-    author_email=about['__email__'],
-    description=about['__description__'],
+    name=about["__title__"],
+    version=about["__version__"],
+    url=about["__github__"],
+    download_url=about["__pypi__"],
+    license=about["__license__"],
+    author=about["__author__"],
+    author_email=about["__email__"],
+    description=about["__description__"],
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=deps.pkgs_exclude),
@@ -177,5 +161,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.10,<3.13",
+    python_requires=">=3.10,<3.14",
 )

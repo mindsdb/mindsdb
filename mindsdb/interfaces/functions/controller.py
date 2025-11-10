@@ -140,7 +140,7 @@ class FunctionController(BYOMFunctionsController):
 
             llm = create_chat_model(chat_model_params)
         except Exception as e:
-            raise RuntimeError(f"Unable to use LLM function, check ENV variables: {e}")
+            raise RuntimeError(f"Unable to use LLM function, check ENV variables: {e}") from e
 
         def callback(question):
             resp = llm([HumanMessage(question)])

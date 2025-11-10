@@ -679,7 +679,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -830,7 +830,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -864,7 +864,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOLEAN]
 
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -1100,7 +1100,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             }
         )
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 
@@ -1163,7 +1163,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             }
         )
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 

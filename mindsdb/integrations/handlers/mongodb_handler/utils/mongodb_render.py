@@ -68,9 +68,7 @@ class MongodbRender(NonRelationalRender):
 
         return inner_query
 
-    def _parse_select(
-        self, from_table: Any
-    ) -> TypingTuple[str, Dict[str, Any], Optional[Dict[str, Any]]]:
+    def _parse_select(self, from_table: Any) -> TypingTuple[str, Dict[str, Any], Optional[Dict[str, Any]]]:
         """
         Parses the from_table to extract the collection name
         If from_table is subquery, transform it for MongoDB
@@ -116,11 +114,7 @@ class MongodbRender(NonRelationalRender):
                         alias = val if t.alias is None else t.alias.parts[-1]
                         pre_project[alias] = val
                     elif isinstance(t, TypeCast):
-                        alias = (
-                            t.alias.parts[-1]
-                            if t.alias is not None
-                            else t.arg.parts[-1]
-                        )
+                        alias = t.alias.parts[-1] if t.alias is not None else t.arg.parts[-1]
                         pre_project[alias] = self._convert_type_cast(t)
                     else:
                         raise NotImplementedError(f"Unsupported inner target: {t}")
@@ -188,9 +182,7 @@ class MongodbRender(NonRelationalRender):
             filters = self.handle_where(node.where)
 
         group: Dict[str, Any] = {}
-        project = {
-            "_id": 0
-        }  # Hide _id field when it has not been explicitly requested.
+        project = {"_id": 0}  # Hide _id field when it has not been explicitly requested.
         if node.distinct:
             # Group by distinct fields.
             group = {"_id": {}}
@@ -216,7 +208,6 @@ class MongodbRender(NonRelationalRender):
                         group[name] = {"$first": f"${name}"}  # Show field.
 
                 elif isinstance(col, Function):
-
                     func_name = col.op.lower()
                     alias = col.alias.parts[-1] if col.alias is not None else func_name
                     if len(col.args) > 0 and isinstance(col.args[0], Identifier):
@@ -231,21 +222,15 @@ class MongodbRender(NonRelationalRender):
                             if isinstance(col.args[0], Star):
                                 agg_group[alias] = {"$sum": 1}
                             else:
-                                agg_group[alias] = {
-                                    "$sum": {"$cond": [f"${field_name}", 1, 0]}
-                                }
+                                agg_group[alias] = {"$sum": {"$cond": [f"${field_name}", 1, 0]}}
                         elif func_name == "min":
                             agg_group[alias] = {"$min": f"${field_name}"}
                         elif func_name == "max":
                             agg_group[alias] = {"$max": f"${field_name}"}
                         else:
-                            raise NotImplementedError(
-                                f"Function {func_name} not supported"
-                            )
+                            raise NotImplementedError(f"Function {func_name} not supported")
                 elif isinstance(col, Constant):
-                    val = str(
-                        col.value
-                    )  # Convert to string becuase it is interpreted as an index.
+                    val = str(col.value)  # Convert to string becuase it is interpreted as an index.
                     if col.alias is None:
                         alias = val
                     else:
@@ -261,11 +246,7 @@ class MongodbRender(NonRelationalRender):
                     raise NotImplementedError(f"Unsupported GROUP BY column {group_col}")
 
                 field_name = ".".join(group_col.parts)
-                alias = (
-                    group_col.alias.parts[-1]
-                    if group_col.alias is not None
-                    else field_name
-                )
+                alias = group_col.alias.parts[-1] if group_col.alias is not None else field_name
 
                 group["_id"][alias] = f"${field_name}"
 
@@ -415,9 +396,7 @@ class MongodbRender(NonRelationalRender):
 
         return {"$expr": {op2: [val1, val2]}}
 
-    def where_element_convert(
-        self, node: Union[Identifier, Latest, Constant, TypeCast]
-    ) -> Any:
+    def where_element_convert(self, node: Union[Identifier, Latest, Constant, TypeCast]) -> Any:
         """
         Converts a WHERE element to the corresponding MongoDB query element.
 

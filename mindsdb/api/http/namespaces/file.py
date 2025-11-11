@@ -228,7 +228,7 @@ class File(Resource):
         if lp.endswith((".zip", ".tar.gz")):
             if lp.endswith(".zip"):
                 with zipfile.ZipFile(file_path) as f:
-                    f.extractall(temp_dir_path)
+                    safe_extract(f, temp_dir_path)
             elif lp.endswith(".tar.gz"):
                 with tarfile.open(file_path) as f:
                     safe_extract(f, temp_dir_path)

@@ -161,7 +161,7 @@ class MongodbRender(NonRelationalRender):
         mquery.add_step({"method": "update_many", "args": [filters, {"$set": row}]})
         return mquery
 
-    def select(self, node: Select):
+    def select(self, node: Select) -> MongoQuery:
         """
         Converts a Select statement to MongoQuery instance.
 
@@ -182,7 +182,7 @@ class MongodbRender(NonRelationalRender):
             filters = self.handle_where(node.where)
 
         group: Dict[str, Any] = {}
-        project = {"_id": 0}  # Hide _id field when it has not been explicitly requested.
+        project = {"_id": 0}
         if node.distinct:
             # Group by distinct fields.
             group = {"_id": {}}
@@ -210,7 +210,10 @@ class MongodbRender(NonRelationalRender):
                 elif isinstance(col, Function):
                     func_name = col.op.lower()
                     alias = col.alias.parts[-1] if col.alias is not None else func_name
-                    if len(col.args) > 0 and isinstance(col.args[0], Identifier):
+
+                    if func_name == "count" and len(col.args) > 0 and isinstance(col.args[0], Star):
+                        agg_group[alias] = {"$sum": 1}
+                    elif len(col.args) > 0 and isinstance(col.args[0], Identifier):
                         field_name = ".".join(col.args[0].parts)
 
                         # Map SQL functions to MongoDB operators
@@ -316,21 +319,20 @@ class MongodbRender(NonRelationalRender):
             dict: The converted MongoDB query filters.
         """
         # TODO: UnaryOperation, function.
-        if type(node) not in [BinaryOperation]:
+        if not isinstance(node, BinaryOperation):
             raise NotImplementedError(f"Not supported type {type(node)}")
 
         op = node.op.lower()
-        arg1, arg2 = node.args
+        a, b = node.args
 
         if op in ("and", "or"):
-            query1 = self.handle_where(arg1)
-            query2 = self.handle_where(arg2)
-
+            left = self.handle_where(a)
+            right = self.handle_where(b)
             ops = {
                 "and": "$and",
                 "or": "$or",
             }
-            query = {ops[op]: [query1, query2]}
+            query = {ops[op]: [left, right]}
             return query
 
         ops_map = {
@@ -346,12 +348,12 @@ class MongodbRender(NonRelationalRender):
             "is not": "$ne",
         }
 
-        if isinstance(arg1, Identifier):
-            var_name = ".".join(arg1.parts)
+        if isinstance(a, Identifier):
+            var_name = ".".join(a.parts)
             # Simple operation.
-            if isinstance(arg2, Constant):
+            if isinstance(b, Constant):
                 # Identifier and Constant.
-                val = ObjectId(arg2.value) if var_name == "_id" else arg2.value
+                val = ObjectId(b.value) if var_name == "_id" else b.value
                 if op in ("=", "=="):
                     pass
                 elif op in ops_map:
@@ -363,12 +365,11 @@ class MongodbRender(NonRelationalRender):
                 return {var_name: val}
 
             # IN condition.
-            elif isinstance(arg2, Tuple):
+            elif isinstance(b, Tuple):
                 # Should be IN, NOT IN.
                 ops = {"in": "$in", "not in": "$nin"}
                 # Must be list of Constants.
-                values = [i.value for i in arg2.items]
-
+                values = [i.value for i in b.items]
                 if op in ops:
                     op2 = ops[op]
                     cond = {op2: values}
@@ -378,8 +379,8 @@ class MongodbRender(NonRelationalRender):
                 return {var_name: cond}
 
         # Create expression.
-        val1 = self.where_element_convert(arg1)
-        val2 = self.where_element_convert(arg2)
+        val1 = self.where_element_convert(a)
+        val2 = self.where_element_convert(b)
 
         if op in ops_map:
             op2 = ops_map[op]

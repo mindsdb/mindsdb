@@ -6,11 +6,12 @@ Supports JSON, XML, and CSV content from web APIs/pages.
 import io
 import json
 import xml.etree.ElementTree as ET
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 import pandas as pd
 import logging
 import re
 from html import unescape
+from dateutil import parser as date_parser
 
 logger = logging.getLogger(__name__)
 
@@ -163,15 +164,39 @@ def parse_xml(content: str) -> pd.DataFrame:
         raise ValueError(f"Invalid XML content: {e}")
 
 
-def _clean_cdata_content(text: str) -> str:
+def _try_parse_date(text: str) -> Union[str, pd.Timestamp]:
     """
-    Clean CDATA content by stripping HTML tags and HTML entities, and trimming whitespace.
+    Attempt to parse text as a date/datetime.
 
     Args:
-        text: Raw text content that may contain HTML tags and entities
+        text: Text that might be a date string
 
     Returns:
-        Cleaned text content
+        pandas Timestamp if parsing succeeds, original text otherwise
+    """
+    if not text or len(text) < 8:  # Minimum reasonable date length
+        return text
+
+    try:
+        # Use dateutil parser which handles many formats
+        # Including: RFC 2822, ISO 8601, and common formats
+        parsed = date_parser.parse(text, fuzzy=False)
+        return pd.Timestamp(parsed)
+    except (ValueError, TypeError, date_parser.ParserError):
+        # Not a date, return as-is
+        return text
+
+
+def _clean_cdata_content(text: str) -> Union[str, pd.Timestamp]:
+    """
+    Clean CDATA content by stripping HTML tags and HTML entities, trimming whitespace,
+    and attempting to parse dates.
+
+    Args:
+        text: Raw text content that may contain HTML tags, entities, or dates
+
+    Returns:
+        Cleaned text content, or pandas Timestamp if a date was detected
     """
     if not text:
         return ''
@@ -188,7 +213,8 @@ def _clean_cdata_content(text: str) -> str:
     # Remove any remaining excessive whitespace
     text = ' '.join(text.split())
 
-    return text
+    # Try to parse as date
+    return _try_parse_date(text)
 
 
 def _xml_element_to_dict(element: ET.Element) -> Dict[str, Any]:

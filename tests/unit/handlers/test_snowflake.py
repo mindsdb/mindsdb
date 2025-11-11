@@ -1609,23 +1609,25 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # Mock failed statistics query
         failed_stats_response = Response(RESPONSE_TYPE.ERROR, error_message="Table not found")
 
-        self.handler.native_query = MagicMock(side_effect=[columns_response, failed_stats_response])
+        with patch.object(
+            self.handler, "native_query", side_effect=[columns_response, failed_stats_response]
+        ) as mock_query:
+            response = self.handler.meta_get_column_statistics()
 
-        response = self.handler.meta_get_column_statistics()
+            # Verify graceful handling - should return placeholder stats
+            self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+            df = response.data_frame
+            self.assertEqual(len(df), 1)
 
-        # Verify graceful handling - should return placeholder stats
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
-        df = response.data_frame
-        self.assertEqual(len(df), 1)
+            # Verify placeholder values
+            row = df.iloc[0]
+            self.assertEqual(row["table_name"], "TEST_TABLE")
+            self.assertEqual(row["column_name"], "TEST_COLUMN")
+            self.assertIsNone(row["null_percentage"])
+            self.assertIsNone(row["distinct_values_count"])
 
-        # Verify placeholder values
-        row = df.iloc[0]
-        self.assertEqual(row["table_name"], "TEST_TABLE")
-        self.assertEqual(row["column_name"], "TEST_COLUMN")
-        self.assertIsNone(row["null_percentage"])
-        self.assertIsNone(row["distinct_values_count"])
-
-        del self.handler.native_query
+            # Verify the mock was called appropriately
+            self.assertEqual(mock_query.call_count, 2)
 
     def test_meta_get_column_statistics_exception_handling(self):
         """Test exception handling during statistics collection"""
@@ -1634,22 +1636,23 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         columns_df = DataFrame(columns_data, columns=["TABLE_NAME", "COLUMN_NAME"])
         columns_response = Response(RESPONSE_TYPE.TABLE, data_frame=columns_df)
 
-        # Mock exception during statistics query
-        self.handler.native_query = MagicMock(side_effect=[columns_response, Exception("Database connection error")])
+        with patch.object(
+            self.handler, "native_query", side_effect=[columns_response, Exception("Database connection error")]
+        ) as mock_query:
+            response = self.handler.meta_get_column_statistics()
 
-        response = self.handler.meta_get_column_statistics()
+            # Verify graceful handling with placeholder stats
+            self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+            df = response.data_frame
+            self.assertEqual(len(df), 1)
 
-        # Verify graceful handling with placeholder stats
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
-        df = response.data_frame
-        self.assertEqual(len(df), 1)
+            # Verify placeholder values for exception case
+            row = df.iloc[0]
+            self.assertIsNone(row["null_percentage"])
+            self.assertIsNone(row["distinct_values_count"])
 
-        # Verify placeholder values for exception case
-        row = df.iloc[0]
-        self.assertIsNone(row["null_percentage"])
-        self.assertIsNone(row["distinct_values_count"])
-
-        del self.handler.native_query
+            # Verify the mock was called appropriately
+            self.assertEqual(mock_query.call_count, 2)
 
     def test_meta_get_primary_keys_success(self):
         """Test successful primary key retrieval"""
@@ -1706,28 +1709,29 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def test_meta_get_primary_keys_error_handling(self):
         """Test SHOW command error handling"""
         error_response = Response(RESPONSE_TYPE.ERROR, error_message="Permission denied")
-        self.handler.native_query = MagicMock(return_value=error_response)
 
-        response = self.handler.meta_get_primary_keys()
+        with patch.object(self.handler, "native_query", return_value=error_response) as mock_query:
+            response = self.handler.meta_get_primary_keys()
 
-        # Should return the error response as-is
-        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
-        self.assertIn("Permission denied", response.error_message)
+            # Should return the error response as-is
+            self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+            self.assertIn("Permission denied", response.error_message)
 
-        del self.handler.native_query
+            # Verify the mock was called
+            mock_query.assert_called_once()
 
     def test_meta_get_primary_keys_exception(self):
         """Test exception handling in primary keys method"""
-        self.handler.native_query = MagicMock(side_effect=Exception("Database error"))
+        with patch.object(self.handler, "native_query", side_effect=Exception("Database error")) as mock_query:
+            response = self.handler.meta_get_primary_keys()
 
-        response = self.handler.meta_get_primary_keys()
+            # Verify exception is caught and returned as error response
+            self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+            self.assertIn("Exception querying primary keys", response.error_message)
+            self.assertIn("Database error", response.error_message)
 
-        # Verify exception is caught and returned as error response
-        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
-        self.assertIn("Exception querying primary keys", response.error_message)
-        self.assertIn("Database error", response.error_message)
-
-        del self.handler.native_query
+            # Verify the mock was called
+            mock_query.assert_called_once()
 
     def test_meta_get_foreign_keys_success(self):
         """Test successful foreign key retrieval"""

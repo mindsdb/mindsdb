@@ -2,3 +2,4 @@ google-api-python-client
 google-analytics-admin
 google-analytics-data
 google-auth
+-r mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt

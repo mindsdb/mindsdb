@@ -6,14 +6,148 @@ and the [Google Analytics Data API](https://developers.google.com/analytics/devg
 - **Admin API**: Manage conversion events (create, read, update, delete)
 - **Data API**: Run analytics reports, access realtime data, and fetch metadata about available dimensions and metrics
 
-## Parameters
+## Authentication Methods
+
+This handler supports two authentication methods: **OAuth2** (recommended for user-level access) and **Service Account** (for server-to-server access).
+
+### Method 1: OAuth2 Authentication (Recommended)
+
+OAuth2 allows users to authenticate with their Google account and grant access to their Google Analytics properties without sharing credentials.
+
+#### OAuth2 Setup Steps
+
+1. **Create OAuth2 Credentials in Google Cloud Console**:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create or select a project
+   - Enable the Google Analytics Admin API and Google Analytics Data API
+   - Go to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "OAuth client ID"
+   - Choose "Desktop app" or "Web application" as application type
+   - Download the client secrets JSON file
+
+2. **Choose Your OAuth2 Method**:
+
+   **Option A: Direct Refresh Token Method** (Simpler for programmatic access)
+
+   If you already have a refresh token, you can use it directly:
+
+   ~~~~sql
+   CREATE DATABASE my_ga
+   WITH ENGINE = 'google_analytics',
+   parameters = {
+       'property_id': '123456789',
+       'client_id': 'your-client-id.apps.googleusercontent.com',
+       'client_secret': 'your-client-secret',
+       'refresh_token': 'your-refresh-token'
+   };
+   ~~~~
+
+   **Option B: Authorization Code Flow** (Interactive user consent)
+
+   First attempt - this will return an authorization URL:
+
+   ~~~~sql
+   CREATE DATABASE my_ga
+   WITH ENGINE = 'google_analytics',
+   parameters = {
+       'property_id': '123456789',
+       'credentials_file': '/path/to/client_secrets.json'
+   };
+   ~~~~
+
+   The error message will contain an authorization URL. Visit this URL in your browser, authorize access, and get the authorization code. Then recreate the database with the code:
+
+   ~~~~sql
+   CREATE DATABASE my_ga
+   WITH ENGINE = 'google_analytics',
+   parameters = {
+       'property_id': '123456789',
+       'credentials_file': '/path/to/client_secrets.json',
+       'code': 'authorization-code-from-oauth-flow'
+   };
+   ~~~~
+
+#### OAuth2 Connection Parameters
+
 * `property_id`: required, the property id of your Google Analytics website
-* `credentials_file`: optional, full path to the credentials file (Service Account Credentials)
-* `credentials_json`: optional, credentials file content as json (Service Account Credentials)
-> ⚠️ One of credentials_file or credentials_json has to be chosen.
+* `credentials_file`: path to OAuth client secrets JSON file (for authorization code flow)
+* `credentials_url`: URL to OAuth client secrets JSON file (alternative to credentials_file)
+* `code`: authorization code obtained after user consent (for authorization code flow)
+* `client_id`: OAuth client ID (for direct refresh token method)
+* `client_secret`: OAuth client secret (for direct refresh token method)
+* `refresh_token`: OAuth refresh token (for direct refresh token method)
+* `token_uri`: OAuth token URI (optional, defaults to https://oauth2.googleapis.com/token)
+* `scopes`: comma-separated OAuth scopes (optional, uses default GA scopes if not provided)
+
+### Method 2: Service Account Authentication
+
+Service accounts are useful for server-to-server communication and automated processes.
+
+#### Service Account Setup Steps
+
+1. **Create Service Account in Google Cloud Console**:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create or select a project
+   - Enable the Google Analytics Admin API and Google Analytics Data API
+   - Go to "IAM & Admin" > "Service Accounts"
+   - Create a service account and download the JSON key file
+
+2. **Grant Service Account Access to GA4 Property**:
+   - Go to your Google Analytics property
+   - Navigate to Admin > Property Access Management
+   - Add the service account email (found in the JSON file)
+   - Grant appropriate permissions (Viewer, Analyst, or Editor)
+
+3. **Create Connection**:
+
+   ~~~~sql
+   CREATE DATABASE my_ga
+   WITH ENGINE = 'google_analytics',
+   parameters = {
+       'property_id': '123456789',
+       'credentials_file': '/path/to/service_account.json'
+   };
+   ~~~~
+
+   Or using JSON directly:
+
+   ~~~~sql
+   CREATE DATABASE my_ga
+   WITH ENGINE = 'google_analytics',
+   parameters = {
+       'property_id': '123456789',
+       'credentials_json': {
+           "type": "service_account",
+           "project_id": "your-project",
+           "private_key_id": "key-id",
+           "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+           "client_email": "service-account@project.iam.gserviceaccount.com",
+           "client_id": "1234567890",
+           "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+           "token_uri": "https://oauth2.googleapis.com/token"
+       }
+   };
+   ~~~~
+
+#### Service Account Connection Parameters
+
+* `property_id`: required, the property id of your Google Analytics website
+* `credentials_file`: path to service account JSON file
+* `credentials_json`: service account credentials as JSON object
+
+### OAuth2 vs Service Account Comparison
+
+| Feature | OAuth2 | Service Account |
+|---------|--------|-----------------|
+| **Use Case** | User-level access, interactive applications | Server-to-server, automated processes |
+| **Setup Complexity** | Requires user authorization flow | Requires granting access in GA4 admin |
+| **Access Level** | User's own GA properties | Specific properties granted access |
+| **Token Refresh** | Automatic with refresh token | No refresh needed |
+| **Best For** | Personal analytics, user dashboards | Scheduled reports, automated analysis |
 
 ## Security
-Service account credentials are stored securely using MindsDB's encrypted storage system. Once you provide credentials (either via file or JSON), they are automatically encrypted and stored in the handler's secure storage. Subsequent connections will use the stored encrypted credentials, so you don't need to provide them again.
+
+All credentials (OAuth tokens and service account keys) are stored securely using MindsDB's encrypted storage system. Once you provide credentials, they are automatically encrypted and stored in the handler's secure storage. Subsequent connections will use the stored encrypted credentials, so you don't need to provide them again.
 
 ## Example: Automate your GA4 Property
 
@@ -24,19 +158,31 @@ conversion events and counting method.
 
 We start by creating a database to connect to the Google Analytics API.
 
-Before creating a database, you will need to have a Google account and have enabled the Google Analytics Admin API.
-Also, you will need to have a Google Analytics account created in your Google account and the credentials for that GA property
-in a json file. You can find more information on how to do
-this [here](https://developers.google.com/analytics/devguides/config/admin/v1/quickstart-client-libraries).
+Before creating a database, you will need to have a Google account and have enabled the Google Analytics Admin API and Data API.
+You can choose between OAuth2 (recommended for user access) or Service Account authentication (see Authentication Methods section above).
+
+**Example with Service Account:**
 
 ~~~~sql
-CREATE
-DATABASE my_ga
-WITH  ENGINE = 'google_analytics',
+CREATE DATABASE my_ga
+WITH ENGINE = 'google_analytics',
 parameters = {
-    'credentials_file': '/home/talaat/Downloads/credentials.json',
+    'credentials_file': '/home/talaat/Downloads/service_account.json',
     'property_id': '<YOUR_PROPERTY_ID>'
-};    
+};
+~~~~
+
+**Example with OAuth2 (refresh token):**
+
+~~~~sql
+CREATE DATABASE my_ga
+WITH ENGINE = 'google_analytics',
+parameters = {
+    'property_id': '<YOUR_PROPERTY_ID>',
+    'client_id': 'your-client-id.apps.googleusercontent.com',
+    'client_secret': 'your-client-secret',
+    'refresh_token': 'your-refresh-token'
+};
 ~~~~
 
 This creates a database called my_ga. This database provides access to the following tables:

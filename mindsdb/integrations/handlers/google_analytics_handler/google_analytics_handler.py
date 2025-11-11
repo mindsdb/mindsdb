@@ -18,8 +18,11 @@ import os
 from google.analytics.admin_v1beta import AnalyticsAdminServiceClient
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials as OAuthCredentials
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleUserOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 DEFAULT_SCOPES = ['https://www.googleapis.com/auth/analytics.readonly',
                   'https://www.googleapis.com/auth/analytics.edit',
@@ -35,11 +38,24 @@ class GoogleAnalyticsHandler(APIHandler):
     This handler supports both the Admin API (for managing conversion events) and the Data API (for
     running reports and accessing analytics data).
 
+    Authentication Methods:
+        1. Service Account (JSON credentials):
+            - credentials_file: Path to service account JSON file
+            - credentials_json: Service account credentials as dictionary
+
+        2. OAuth2 User Authentication:
+            - Option A: Direct refresh token method
+                - client_id: OAuth client ID
+                - client_secret: OAuth client secret
+                - refresh_token: User refresh token
+                - token_uri: Token URI (optional, defaults to Google's token URI)
+
+            - Option B: Authorization code flow
+                - credentials_file or credentials_url: Path/URL to OAuth client secrets
+                - code: Authorization code (obtained after user consent)
+
     Attributes:
         property_id (str): The Google Analytics 4 property ID.
-        credentials_file (str): The path to the Google Auth Credentials file for authentication
-            and interacting with the Google Analytics API on behalf of the user.
-        credentials_json (dict): Alternative to credentials_file, provide credentials as a dictionary.
         scopes (List[str], Optional): The scopes to use when authenticating with the Google Analytics API.
 
     Tables:
@@ -63,7 +79,22 @@ class GoogleAnalyticsHandler(APIHandler):
         if self.connection_args.get('credentials'):
             self.credentials_file = self.connection_args.pop('credentials')
 
-        self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
+        # Handle scopes - can be string or list
+        scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
+        if isinstance(scopes, str):
+            # Convert comma-separated string to list
+            self.scopes = [s.strip() for s in scopes.split(',')]
+        else:
+            self.scopes = scopes
+
+        # OAuth parameters
+        self.credentials_url = self.connection_args.get('credentials_url')
+        self.code = self.connection_args.get('code')
+        self.client_id = self.connection_args.get('client_id')
+        self.client_secret = self.connection_args.get('client_secret')
+        self.refresh_token = self.connection_args.get('refresh_token')
+        self.token_uri = self.connection_args.get('token_uri', 'https://oauth2.googleapis.com/token')
+
         self.service = None  # Admin API client (for backward compatibility)
         self.admin_service = None  # Admin API client
         self.data_service = None  # Data API client
@@ -150,18 +181,105 @@ class GoogleAnalyticsHandler(APIHandler):
             raise Exception('Connection args have to content ether credentials_file or credentials_json')
 
     def create_connection(self):
-        info = self._get_creds_json()
-        creds = service_account.Credentials.from_service_account_info(info=info, scopes=self.scopes)
+        """
+        Create connection to Google Analytics using either OAuth2 or Service Account authentication.
 
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
+        OAuth2 is attempted first if refresh_token is provided, then authorization code flow,
+        and finally falls back to service account credentials.
+
+        Returns:
+            tuple: (admin_client, data_client) - Admin API and Data API clients
+
+        Raises:
+            AuthException: When OAuth authorization is required (user needs to authorize)
+            Exception: For other authentication errors
+        """
+        creds = None
+
+        # Try OAuth2 with refresh token (direct method)
+        if self.refresh_token:
+            logger.info("Authenticating with OAuth2 using refresh token")
+            try:
+                creds = OAuthCredentials(
+                    token=None,
+                    refresh_token=self.refresh_token,
+                    token_uri=self.token_uri,
+                    client_id=self.client_id,
+                    client_secret=self.client_secret,
+                    scopes=self.scopes
+                )
+                # Refresh to get access token
                 creds.refresh(Request())
+                logger.info("OAuth2 authentication successful with refresh token")
+            except Exception as e:
+                logger.error(f"OAuth2 authentication with refresh token failed: {e}")
+                raise Exception(f"OAuth2 authentication failed: {e}")
+
+        # Try OAuth2 with authorization code flow
+        elif self.credentials_url or (hasattr(self, 'credentials_file') and self.credentials_file and not self._is_service_account_file()):
+            logger.info("Authenticating with OAuth2 using authorization code flow")
+            try:
+                google_oauth2_manager = GoogleUserOAuth2Manager(
+                    self.handler_storage,
+                    self.scopes,
+                    getattr(self, 'credentials_file', None),
+                    self.credentials_url,
+                    self.code
+                )
+                creds = google_oauth2_manager.get_oauth2_credentials()
+                logger.info("OAuth2 authentication successful with authorization code flow")
+            except AuthException:
+                # Re-raise AuthException so it can be caught in check_connection
+                raise
+            except Exception as e:
+                logger.error(f"OAuth2 authentication with code flow failed: {e}")
+                raise Exception(f"OAuth2 authentication failed: {e}")
+
+        # Fall back to service account authentication
+        else:
+            logger.info("Authenticating with Service Account")
+            try:
+                info = self._get_creds_json()
+                creds = service_account.Credentials.from_service_account_info(info=info, scopes=self.scopes)
+
+                if not creds or not creds.valid:
+                    if creds and creds.expired and creds.refresh_token:
+                        creds.refresh(Request())
+
+                logger.info("Service Account authentication successful")
+            except Exception as e:
+                logger.error(f"Service Account authentication failed: {e}")
+                raise Exception(f"Service Account authentication failed: {e}")
+
+        # Ensure we have valid credentials
+        if not creds:
+            raise Exception("Failed to create credentials: no authentication method succeeded")
 
         # Create both Admin API and Data API clients with same credentials
         admin_client = AnalyticsAdminServiceClient(credentials=creds)
         data_client = BetaAnalyticsDataClient(credentials=creds)
 
         return admin_client, data_client
+
+    def _is_service_account_file(self):
+        """
+        Check if the credentials_file contains service account credentials.
+
+        Returns:
+            bool: True if service account, False if OAuth client secrets
+        """
+        if not hasattr(self, 'credentials_file') or not self.credentials_file:
+            return False
+
+        try:
+            with open(self.credentials_file, 'r') as f:
+                data = json.load(f)
+                # Service account files have 'type': 'service_account'
+                # OAuth client secrets have 'installed' or 'web' keys
+                return data.get('type') == 'service_account'
+        except Exception as e:
+            logger.warning(f"Could not determine credentials file type: {e}")
+            return True  # Assume service account if can't determine
 
     def connect(self):
         """
@@ -276,7 +394,7 @@ class GoogleAnalyticsHandler(APIHandler):
         Returns
         -------
         response
-            Status confirmation
+            Status confirmation with optional auth_url for OAuth flow
         """
         response = StatusResponse(False)
 
@@ -287,9 +405,16 @@ class GoogleAnalyticsHandler(APIHandler):
 
             if result is not None:
                 response.success = True
+        except AuthException as e:
+            # OAuth authorization required - return auth URL to user
+            response.error_message = str(e)
+            logger.info(f"OAuth authorization required: {e}")
         except HttpError as error:
             response.error_message = f'Error connecting to Google Analytics api: {error}.'
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
+        except Exception as error:
+            response.error_message = f'Error connecting to Google Analytics: {error}.'
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

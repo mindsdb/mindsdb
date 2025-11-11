@@ -27,7 +27,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         return MongoDBHandler("mongodb", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch("mindsdb.integrations.handlers.mongodb_handler.mongodb_handler.MongoClient")
+        return patch(
+            "mindsdb.integrations.handlers.mongodb_handler.mongodb_handler.MongoClient"
+        )
 
     def test_connect_success(self):
         """
@@ -78,7 +80,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Test if the `check_connection` method returns a StatusResponse object and accurately reflects the connection status on a successful connection.
         """
-        self.mock_connect.return_value.list_database_names.return_value = ["sample_mflix"]
+        self.mock_connect.return_value.list_database_names.return_value = [
+            "sample_mflix"
+        ]
 
         response = self.handler.check_connection()
 
@@ -90,9 +94,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Test if the `query` method returns a response object with an error message on failed query due to non-existent collection.
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
-            "movies"
-        ]
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
 
         query = ast.Select(
             targets=[
@@ -131,7 +135,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
                 Star(),
             ],
             from_table=ast.Identifier("movies"),
-            where=ast.BinaryOperation(args=[ast.Identifier("name"), ast.Constant("The Dark Knight")], op="in"),
+            where=ast.BinaryOperation(
+                args=[ast.Identifier("name"), ast.Constant("The Dark Knight")], op="in"
+            ),
         )
 
         with self.assertRaises(NotImplementedError):
@@ -142,11 +148,13 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         Test if the `query` method returns a response object with a data frame containing the query result.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
-            "movies"
-        ]
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
 
-        self.mock_connect.return_value[self.dummy_connection_data["database"]]["movies"].aggregate.return_value = [
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].aggregate.return_value = [
             {
                 "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
                 "name": "The Dark Knight",
@@ -177,9 +185,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         Test if the `query` method returns a response object with a 'OK' status.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
-            "movies"
-        ]
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
 
         self.mock_connect.return_value[self.dummy_connection_data["database"]][
             "movies"
@@ -196,7 +204,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
                 ),
                 "runtime": ast.Constant(152),
             },
-            where=ast.BinaryOperation(args=[ast.Identifier("name"), ast.Constant("The Dark Knight")], op="="),
+            where=ast.BinaryOperation(
+                args=[ast.Identifier("name"), ast.Constant("The Dark Knight")], op="="
+            ),
         )
 
         response = self.handler.query(query)
@@ -208,7 +218,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Tests the `get_tables` method returns a response object with a list of tables (collections) in the database.
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = [
             "theaters",
             "movies",
             "comments",
@@ -234,7 +246,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Tests the `get_columns` method returns a response object with a list of columns (fields) for a given table (collection).
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]]["movies"].find_one.return_value = {
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].find_one.return_value = {
             "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
             "name": "The Dark Knight",
             "plot": "The Dark Knight is a 2008 superhero film directed, produced, and co-written by Christopher Nolan.",
@@ -258,12 +272,16 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         Test if the `query` method returns a response object with a data frame containing the query result for a select with subquery.
         e.g., SELECT * FROM (SELECT * FROM theaters);
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = [
             "movies",
             "theaters",
         ]
 
-        self.mock_connect.return_value[self.dummy_connection_data["database"]]["theaters"].aggregate.return_value = [
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "theaters"
+        ].aggregate.return_value = [
             {
                 "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
                 "name": "Cinema City",
@@ -300,12 +318,12 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         Test if the `query` method returns a response object with a data frame containing the query result for a select with complex subquery.
         e.g. SELECT * FROM (SELECT CAST(customer_id AS VARCHAR) AS cust_id, CAST(first_name AS VARCHAR) AS fname FROM mongo_db.customers)
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["customers"]
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
             "customers"
-        ]
-        self.mock_connect.return_value[self.dummy_connection_data["database"]]["customers"].aggregate.return_value = [
-            {"cust_id": "C001", "fname": "John"}
-        ]
+        ].aggregate.return_value = [{"cust_id": "C001", "fname": "John"}]
 
         cust_cast = ast.TypeCast(
             arg=ast.Identifier(parts=["customer_id"]),
@@ -366,11 +384,13 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Test SELECT with various WHERE operators (>, <, >=, <=, !=)
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
-            "movies"
-        ]
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
 
-        self.mock_connect.return_value[self.dummy_connection_data["database"]]["movies"].aggregate.return_value = [
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].aggregate.return_value = [
             {
                 "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
                 "name": "Inception",
@@ -383,7 +403,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
                 Star(),
             ],
             from_table=ast.Identifier("movies"),
-            where=ast.BinaryOperation(args=[ast.Identifier("runtime"), ast.Constant(150)], op="<"),
+            where=ast.BinaryOperation(
+                args=[ast.Identifier("runtime"), ast.Constant(150)], op="<"
+            ),
         )
 
         response = self.handler.query(query)
@@ -400,11 +422,13 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Test SELECT with AND/OR conditions in WHERE clause
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
-            "movies"
-        ]
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
 
-        self.mock_connect.return_value[self.dummy_connection_data["database"]]["movies"].aggregate.return_value = [
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].aggregate.return_value = [
             {
                 "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
                 "name": "The Matrix",
@@ -419,7 +443,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
             from_table=ast.Identifier("movies"),
             where=ast.BinaryOperation(
                 args=[
-                    ast.BinaryOperation(args=[ast.Identifier("runtime"), ast.Constant(140)], op="<"),
+                    ast.BinaryOperation(
+                        args=[ast.Identifier("runtime"), ast.Constant(140)], op="<"
+                    ),
                     ast.BinaryOperation(
                         args=[ast.Identifier("name"), ast.Constant("The Matrix")],
                         op="=",
@@ -444,13 +470,15 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         NotImplementedError for unsupported inner subselect:
         SELECT * FROM (SELECT COUNT(*) FROM movies);
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
-            "movies"
-        ]
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
 
         inner = ast.Select(
             targets=[
-                ast.Function(op="COUNT", args=[ast.Star()], distinct=False, from_arg=None),
+                ast.Function(
+                    op="COUNT", args=[ast.Star()], distinct=False, from_arg=None
+                ),
             ],
             from_table=ast.Identifier(parts=["movies"]),
         )
@@ -473,11 +501,13 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         if match is not None and proj != {}:
             arg.append({"$project": proj})
         """
-        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
-            "movies"
-        ]
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
 
-        self.mock_connect.return_value[self.dummy_connection_data["database"]]["movies"].aggregate.return_value = [
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].aggregate.return_value = [
             {
                 "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
                 "name": "Interstellar",
@@ -489,7 +519,9 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
                 ast.Identifier("name"),
             ],
             from_table=ast.Identifier("movies"),
-            where=ast.BinaryOperation(args=[ast.Identifier("runtime"), ast.Constant(170)], op=">"),
+            where=ast.BinaryOperation(
+                args=[ast.Identifier("runtime"), ast.Constant(170)], op=">"
+            ),
         )
 
         response = self.handler.query(query)
@@ -501,6 +533,70 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(len(df), 1)
         self.assertEqual(df.columns.tolist(), ["_id", "name"])
         self.assertEqual(df["name"].tolist(), ["Interstellar"])
+
+    def test_select_constant_with_alias(self):
+        """
+        Test SELECT with constant value and alias
+        e.g., SELECT 1 AS one, 'test' AS text FROM movies;
+        """
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].aggregate.return_value = [{"one": 1, "text": "test"}]
+
+        query = ast.Select(
+            targets=[
+                ast.Constant(1, alias=ast.Identifier("one")),
+                ast.Constant("test", alias=ast.Identifier("text")),
+            ],
+            from_table=ast.Identifier("movies"),
+        )
+
+        response = self.handler.query(query)
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.columns.tolist(), ["one", "text"])
+        self.assertEqual(df["one"].tolist(), [1])
+        self.assertEqual(df["text"].tolist(), ["test"])
+
+    def test_select_with_constant_no_alias(self):
+        """
+        Test SELECT with constant value without alias
+        e.g., SELECT 42, 'hello' FROM movies;
+        """
+        self.mock_connect.return_value[
+            self.dummy_connection_data["database"]
+        ].list_collection_names.return_value = ["movies"]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]][
+            "movies"
+        ].aggregate.return_value = [{"42": 42, "hello": "hello"}]
+
+        query = ast.Select(
+            targets=[
+                ast.Constant(42),
+                ast.Constant("hello"),
+            ],
+            from_table=ast.Identifier("movies"),
+        )
+
+        response = self.handler.query(query)
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.columns.tolist(), ["42", "hello"])
+        self.assertEqual(df["42"].tolist(), [42])
+        self.assertEqual(df["hello"].tolist(), ["hello"])
 
 
 if __name__ == "__main__":

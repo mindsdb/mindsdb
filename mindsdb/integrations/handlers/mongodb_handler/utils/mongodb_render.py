@@ -229,12 +229,8 @@ class MongodbRender(NonRelationalRender):
                         else:
                             raise NotImplementedError(f"Function {func_name} not supported")
                 elif isinstance(col, Constant):
-                    val = str(col.value)  # Convert to string becuase it is interpreted as an index.
-                    if col.alias is None:
-                        alias = val
-                    else:
-                        alias = col.alias.parts[-1]
-                    project[alias] = val
+                    alias = (str(col.value) if col.alias is None else col.alias.parts[-1])
+                    project[alias] = col.value
 
         if node.group_by is not None:
             if "_id" not in group or not isinstance(group["_id"], dict):

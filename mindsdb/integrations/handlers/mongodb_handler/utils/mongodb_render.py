@@ -53,17 +53,20 @@ class MongodbRender(NonRelationalRender):
         inner_query = self._parse_inner_query(node.arg)
         type_name = node.type_name.upper()
 
+        def convert(value: Any, to_type: str) -> Dict[str, Any]:
+            return {"$convert": {"input": value, "to": to_type, "onError": None}}
+
         if type_name in ("VARCHAR", "TEXT", "STRING"):
-            return {"$convert": {"input": inner_query, "to": "string", "onError": None}}
+            return convert(inner_query, "string")
 
         if type_name in ("INT", "INTEGER", "BIGINT", "LONG"):
-            return {"$convert": {"input": inner_query, "to": "long", "onError": None}}
+            return convert(inner_query, "long")
 
         if type_name in ("DOUBLE", "FLOAT", "DECIMAL", "NUMERIC"):
-            return {"$convert": {"input": inner_query, "to": "double", "onError": None}}
+            return convert(inner_query, "double")
 
         if type_name in ("DATE", "DATETIME", "TIMESTAMP"):
-            return {"$convert": {"input": inner_query, "to": "date", "onError": None}}
+            return convert(inner_query, "date")
 
         return inner_query
 

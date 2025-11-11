@@ -88,6 +88,7 @@ class MongodbRender(NonRelationalRender):
         # Trivial subselect
         if isinstance(from_table, Select):
             # reject complex forms early
+            # how deep we want to go with subqueries?
             if from_table.group_by is not None or from_table.having is not None:
                 raise NotImplementedError(f"Not supported FROM as {from_table}")
 
@@ -100,30 +101,27 @@ class MongodbRender(NonRelationalRender):
             if from_table.where is not None:
                 pre_match = self.handle_where(from_table.where)
 
-            pre_project: Optional[Dict[str, Any]] = {"_id": 0}
-            if from_table.targets is not None:
-                saw_star = False
-                for t in from_table.targets:
-                    if isinstance(t, Star):
-                        saw_star = True
-                        break
-                    if isinstance(t, Identifier):
-                        name = ".".join(t.parts)
-                        alias = name if t.alias is None else t.alias.parts[-1]
-                        pre_project[alias] = f"${name}"
-                    elif isinstance(t, Constant):
-                        val = str(t.value)
-                        alias = val if t.alias is None else t.alias.parts[-1]
-                        pre_project[alias] = val
-                    elif isinstance(t, TypeCast):
-                        alias = t.alias.parts[-1] if t.alias is not None else t.arg.parts[-1]
-                        pre_project[alias] = self._convert_type_cast(t)
-                    else:
-                        raise NotImplementedError(f"Unsupported inner target: {t}")
-                if saw_star:
-                    pre_project = {}
+            if from_table.targets is None:
+                pre_project: Optional[Dict[str, Any]] = {"_id": 0}
             else:
-                pre_project = {"_id": 0}
+                saw_star = any(isinstance(t, Star) for t in from_table.targets)
+                if saw_star:
+                    pre_project = None
+                else:
+                    pre_project = {"_id": 0}
+                    for t in from_table.targets:
+                        if isinstance(t, Identifier):
+                            name = ".".join(t.parts)
+                            alias = name if t.alias is None else t.alias.parts[-1]
+                            pre_project[alias] = f"${name}"
+                        elif isinstance(t, Constant):
+                            alias = (str(t.value) if t.alias is None else t.alias.parts[-1])
+                            pre_project[alias] = t.value
+                        elif isinstance(t, TypeCast):
+                            alias = t.alias.parts[-1] if t.alias is not None else t.arg.parts[-1]
+                            pre_project[alias] = self._convert_type_cast(t)
+                        else:
+                            raise NotImplementedError(f"Unsupported inner target: {t}")
 
             return collection, pre_match, pre_project
 

@@ -9,6 +9,8 @@ import xml.etree.ElementTree as ET
 from typing import Optional, Dict, Any
 import pandas as pd
 import logging
+import re
+from html import unescape
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +163,34 @@ def parse_xml(content: str) -> pd.DataFrame:
         raise ValueError(f"Invalid XML content: {e}")
 
 
+def _clean_cdata_content(text: str) -> str:
+    """
+    Clean CDATA content by stripping HTML tags and HTML entities, and trimming whitespace.
+
+    Args:
+        text: Raw text content that may contain HTML tags and entities
+
+    Returns:
+        Cleaned text content
+    """
+    if not text:
+        return ''
+
+    # Strip leading/trailing whitespace (common in CDATA sections)
+    text = text.strip()
+
+    # Remove HTML tags (e.g., <a href="...">URL</a> -> URL)
+    text = re.sub(r'<[^>]+>', '', text)
+
+    # Decode HTML entities (e.g., &amp; -> &, &lt; -> <)
+    text = unescape(text)
+
+    # Remove any remaining excessive whitespace
+    text = ' '.join(text.split())
+
+    return text
+
+
 def _xml_element_to_dict(element: ET.Element) -> Dict[str, Any]:
     """
     Convert XML element to dictionary.
@@ -180,7 +210,7 @@ def _xml_element_to_dict(element: ET.Element) -> Dict[str, Any]:
 
     # Add text content
     if element.text and element.text.strip():
-        result['text'] = element.text.strip()
+        result['text'] = _clean_cdata_content(element.text)
 
     # Add child elements
     for child in element:
@@ -188,8 +218,8 @@ def _xml_element_to_dict(element: ET.Element) -> Dict[str, Any]:
         tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
 
         if len(list(child)) == 0:
-            # Leaf node - just get text
-            result[tag] = child.text or ''
+            # Leaf node - just get text and clean it
+            result[tag] = _clean_cdata_content(child.text or '')
         else:
             # Has children - recursively convert
             child_dict = _xml_element_to_dict(child)

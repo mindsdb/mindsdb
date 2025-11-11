@@ -64,10 +64,7 @@ def test_delete_nonexistent_file(client):
     assert response.status_code == HTTPStatus.BAD_REQUEST
     data = response.get_json()
     assert "Error deleting file" in data["title"]
-    assert (
-        "There was an error while trying to delete file with name 'nonexistent.txt'"
-        in data["detail"]
-    )
+    assert "There was an error while trying to delete file with name 'nonexistent.txt'" in data["detail"]
 
 
 def test_put_file_invalid_url(client):
@@ -153,9 +150,8 @@ def test_zipfile_traversal(client):
 
     # Create a zip file in memory with a symlink
     zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED
-                        ) as zf:
-            zf.writestr("../../../../etc/passwd", "malicious content")
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("../../../../etc/passwd", "malicious content")
     zip_buffer.seek(0)
     data = {"file": (zip_buffer, "archive.zip")}
     response = client.put(

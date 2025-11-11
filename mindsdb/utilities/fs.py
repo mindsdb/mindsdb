@@ -115,9 +115,7 @@ def clean_unlinked_process_marks() -> List[int]:
             try:
                 next(t for t in threads if t.id == thread_id)
             except StopIteration:
-                logger.warning(
-                    f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
-                )
+                logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
                 deleted_pids.append(process_id)
                 file.unlink()
 
@@ -126,9 +124,7 @@ def clean_unlinked_process_marks() -> List[int]:
             continue
 
         except psutil.NoSuchProcess:
-            logger.warning(
-                f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
-            )
+            logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
             deleted_pids.append(process_id)
             file.unlink()
     return deleted_pids
@@ -189,7 +185,6 @@ def __is_within_directory(directory, target):
 
 
 def safe_extract(archivefile, path=".", members=None, *, numeric_owner=False):
-
     if isinstance(archivefile, zipfile.ZipFile):
         for member in archivefile.namelist():
             member_path = os.path.join(path, member)
@@ -201,9 +196,7 @@ def safe_extract(archivefile, path=".", members=None, *, numeric_owner=False):
     if isinstance(archivefile, tarfile.TarFile):
         # for py >= 3.12
         if hasattr(archivefile, "data_filter"):
-            archivefile.extractall(
-                path, members=members, numeric_owner=numeric_owner, filter="data"
-            )
+            archivefile.extractall(path, members=members, numeric_owner=numeric_owner, filter="data")
             return
 
         # for py < 3.12

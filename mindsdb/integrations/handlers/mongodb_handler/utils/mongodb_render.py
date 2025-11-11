@@ -15,7 +15,6 @@ from mindsdb_sql_parser.ast import (
     Function,
 )
 from mindsdb_sql_parser.ast.base import ASTNode
-from sympy import arg
 
 from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_query import MongoQuery
 

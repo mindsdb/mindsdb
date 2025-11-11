@@ -78,13 +78,7 @@ def _make_table_response(
     if not result:
         data_frame = pd.DataFrame(columns=columns)
     elif use_odbc:
-        # For pyodbc with large datasets, convert Row objects efficiently
-        # Using iterator with pd.DataFrame avoids intermediate list creation
-        try:
-            data_frame = pd.DataFrame(result, columns=columns)
-        except (ValueError, TypeError):
-            # Fallback: convert Row objects to tuples
-            data_frame = pd.DataFrame.from_records((tuple(row) for row in result), columns=columns)
+        data_frame = pd.DataFrame.from_records((tuple(row) for row in result), columns=columns)
     else:
         data_frame = pd.DataFrame(result, columns=columns)
 

@@ -26,6 +26,21 @@ logger = log.getLogger(__name__)
 MAX_FILE_SIZE = 1024 * 1024 * 100  # 100Mb
 
 
+# helpers
+def _validate_file_size(file_size) -> bool:
+    if file_size is None:
+        return False
+    try:
+        return int(file_size) > MAX_FILE_SIZE
+    except ValueError:
+        return False
+
+
+def _is_multipart_request() -> bool:
+    content_type = request.headers.get("Content-Type", "")
+    return content_type.startswith("multipart/form-data")
+
+
 @ns_conf.route("/")
 class FilesList(Resource):
     @ns_conf.doc("get_files_list")
@@ -78,7 +93,7 @@ class File(Resource):
 
         temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
 
-        if request.headers["Content-Type"].startswith("multipart/form-data"):
+        if _is_multipart_request():
             parser = multipart.create_form_parser(
                 headers=request.headers,
                 on_field=on_field,
@@ -115,18 +130,12 @@ class File(Resource):
                 file_object = None
         else:
             data = request.json
-
-        breakpoint()
-        if "file" in data:
-            # check for traversal attack
-
-            if Path(data["file"]).name != data["file"]:
+            if "file" in data:
                 return http_error(
                     400,
-                    "Wrong file name",
-                    f"File name contains path symbols: {data['file']}",
+                    "Fields conflict",
+                    'JSON source type can not be used together with "file" field.',
                 )
-
         existing_file_names = ca.file_controller.get_files_names(lower=True)
         if mindsdb_file_name.lower() in existing_file_names:
             return http_error(
@@ -194,23 +203,7 @@ class File(Resource):
                 if ctx.user_class != 1:
                     info = requests.head(url, timeout=30)
                     file_size = info.headers.get("Content-Length")
-                    try:
-                        file_size = int(file_size)
-                    except Exception:
-                        pass
-
-                    if file_size is None:
-                        return http_error(
-                            400,
-                            "Error getting file info",
-                            "Can't determine remote file size",
-                        )
-                    if file_size > MAX_FILE_SIZE:
-                        return http_error(
-                            400,
-                            "File is too big",
-                            f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB",
-                        )
+                    _validate_file_size(file_size)
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:
                     return http_error(

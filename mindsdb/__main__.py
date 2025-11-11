@@ -27,7 +27,6 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.starters import (
     start_http,
     start_mysql,
-    start_postgres,
     start_ml_task_queue,
     start_scheduler,
     start_tasks,
@@ -58,7 +57,6 @@ _stop_event = threading.Event()
 class TrunkProcessEnum(Enum):
     HTTP = "http"
     MYSQL = "mysql"
-    POSTGRES = "postgres"
     JOBS = "jobs"
     TASKS = "tasks"
     ML_TASK_QUEUE = "ml_task_queue"
@@ -252,7 +250,7 @@ def validate_default_project() -> None:
     """
     new_default_project_name = config.get("default_project")
     logger.debug(f"Checking if default project {new_default_project_name} exists")
-    filter_company_id = ctx.company_id if ctx.company_id is not None else 0
+    filter_company_id = ctx.company_id if ctx.company_id is not None else "0"
 
     current_default_project: db.Project | None = db.Project.query.filter(
         db.Project.company_id == filter_company_id,
@@ -343,11 +341,22 @@ if __name__ == "__main__":
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)
 
-    if config.cmd_args.update_gui:
-        from mindsdb.api.http.initialize import initialize_static
+    if config.cmd_args.update_gui or config.cmd_args.load_tokenizer:
+        if config.cmd_args.update_gui:
+            from mindsdb.api.http.initialize import initialize_static
 
-        logger.info("Updating the GUI version")
-        initialize_static()
+            logger.info("Updating the GUI version")
+            initialize_static()
+
+        if config.cmd_args.load_tokenizer:
+            try:
+                from langchain_core.language_models import get_tokenizer
+
+                get_tokenizer()
+                logger.info("Tokenizer successfully loaded")
+            except Exception:
+                logger.info("Failed to load tokenizer: ", exc_info=True)
+
         sys.exit(0)
 
     config.raise_warnings(logger=logger)
@@ -446,12 +455,6 @@ if __name__ == "__main__":
             max_restart_interval_seconds=mysql_api_config.get(
                 "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
             ),
-        ),
-        TrunkProcessEnum.POSTGRES: TrunkProcessData(
-            name=TrunkProcessEnum.POSTGRES.value,
-            entrypoint=start_postgres,
-            port=config["api"]["postgres"]["port"],
-            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.JOBS: TrunkProcessData(
             name=TrunkProcessEnum.JOBS.value, entrypoint=start_scheduler, args=(config.cmd_args.verbose,)
@@ -585,6 +588,12 @@ if __name__ == "__main__":
     ioloop.run_until_complete(wait_apis_start())
 
     threading.Thread(target=do_clean_process_marks, name="clean_process_marks").start()
+    if config["logging"]["resources_log"]["enabled"] is True:
+        threading.Thread(
+            target=log.resources_log_thread,
+            args=(_stop_event, config["logging"]["resources_log"]["interval"]),
+            name="resources_log",
+        ).start()
 
     ioloop.run_until_complete(gather_apis())
     ioloop.close()

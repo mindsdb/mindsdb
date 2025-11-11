@@ -5,10 +5,6 @@ from hubspot.crm.objects import (
     SimplePublicObjectId as HubSpotObjectId,
     SimplePublicObjectBatchInput as HubSpotObjectBatchInput,
     SimplePublicObjectInputForCreate as HubSpotObjectInputCreate,
-    BatchInputSimplePublicObjectId as HubSpotBatchObjectIdInput,
-    BatchInputSimplePublicObjectBatchInput as HubSpotBatchObjectBatchInput,
-    BatchInputSimplePublicObjectInputForCreate as HubSpotBatchObjectInputCreate,
-
 )
 from mindsdb_sql_parser import ast
 
@@ -52,19 +48,12 @@ class CompaniesTable(APITable):
 
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            "companies",
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "companies", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         companies_df = pd.json_normalize(self.get_companies(limit=result_limit))
         select_statement_executor = SELECTQueryExecutor(
-            companies_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
+            companies_df, selected_columns, where_conditions, order_by_conditions
         )
         companies_df = select_statement_executor.execute_query()
 
@@ -90,8 +79,8 @@ class CompaniesTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['name', 'city', 'phone', 'state', 'domain', 'industry'],
-            mandatory_columns=['name'],
+            supported_columns=["name", "city", "phone", "state", "domain", "industry"],
+            mandatory_columns=["name"],
             all_mandatory=False,
         )
         company_data = insert_statement_parser.parse_query()
@@ -119,13 +108,10 @@ class CompaniesTable(APITable):
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
         companies_df = pd.json_normalize(self.get_companies())
-        update_query_executor = UPDATEQueryExecutor(
-            companies_df,
-            where_conditions
-        )
+        update_query_executor = UPDATEQueryExecutor(companies_df, where_conditions)
 
         companies_df = update_query_executor.execute_query()
-        company_ids = companies_df['id'].tolist()
+        company_ids = companies_df["id"].tolist()
         self.update_companies(company_ids, values_to_update)
 
     def delete(self, query: ast.Delete) -> None:
@@ -150,13 +136,10 @@ class CompaniesTable(APITable):
         where_conditions = delete_statement_parser.parse_query()
 
         companies_df = pd.json_normalize(self.get_companies())
-        delete_query_executor = DELETEQueryExecutor(
-            companies_df,
-            where_conditions
-        )
+        delete_query_executor = DELETEQueryExecutor(companies_df, where_conditions)
 
         companies_df = delete_query_executor.execute_query()
-        company_ids = companies_df['id'].tolist()
+        company_ids = companies_df["id"].tolist()
         self.delete_companies(company_ids)
 
     def get_columns(self) -> List[Text]:
@@ -186,20 +169,26 @@ class CompaniesTable(APITable):
         companies_to_create = [HubSpotObjectInputCreate(properties=company) for company in companies_data]
         try:
             created_companies = hubspot.crm.companies.batch_api.create(
-                HubSpotBatchObjectInputCreate(inputs=companies_to_create),
+                inputs=companies_to_create,
             )
-            logger.info(f"Companies created with ID's {[created_company.id for created_company in created_companies.results]}")
+            logger.info(
+                f"Companies created with ID's {[created_company.id for created_company in created_companies.results]}"
+            )
         except Exception as e:
             raise Exception(f"Companies creation failed {e}")
 
     def update_companies(self, company_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
         hubspot = self.handler.connect()
-        companies_to_update = [HubSpotObjectBatchInput(id=company_id, properties=values_to_update) for company_id in company_ids]
+        companies_to_update = [
+            HubSpotObjectBatchInput(id=company_id, properties=values_to_update) for company_id in company_ids
+        ]
         try:
             updated_companies = hubspot.crm.companies.batch_api.update(
-                HubSpotBatchObjectBatchInput(inputs=companies_to_update),
+                inputs=companies_to_update,
             )
-            logger.info(f"Companies with ID {[updated_company.id for updated_company in updated_companies.results]} updated")
+            logger.info(
+                f"Companies with ID {[updated_company.id for updated_company in updated_companies.results]} updated"
+            )
         except Exception as e:
             raise Exception(f"Companies update failed {e}")
 
@@ -208,7 +197,7 @@ class CompaniesTable(APITable):
         companies_to_delete = [HubSpotObjectId(id=company_id) for company_id in company_ids]
         try:
             hubspot.crm.companies.batch_api.archive(
-                HubSpotBatchObjectIdInput(inputs=companies_to_delete),
+                inputs=companies_to_delete,
             )
             logger.info("Companies deleted")
         except Exception as e:
@@ -239,19 +228,12 @@ class ContactsTable(APITable):
 
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            "contacts",
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "contacts", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         contacts_df = pd.json_normalize(self.get_contacts(limit=result_limit))
         select_statement_executor = SELECTQueryExecutor(
-            contacts_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
+            contacts_df, selected_columns, where_conditions, order_by_conditions
         )
         contacts_df = select_statement_executor.execute_query()
 
@@ -277,8 +259,8 @@ class ContactsTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['email', 'firstname', 'firstname', 'phone', 'company', 'website'],
-            mandatory_columns=['email'],
+            supported_columns=["email", "firstname", "firstname", "phone", "company", "website"],
+            mandatory_columns=["email"],
             all_mandatory=False,
         )
         contact_data = insert_statement_parser.parse_query()
@@ -306,13 +288,10 @@ class ContactsTable(APITable):
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
         contacts_df = pd.json_normalize(self.get_contacts())
-        update_query_executor = UPDATEQueryExecutor(
-            contacts_df,
-            where_conditions
-        )
+        update_query_executor = UPDATEQueryExecutor(contacts_df, where_conditions)
 
         contacts_df = update_query_executor.execute_query()
-        contact_ids = contacts_df['id'].tolist()
+        contact_ids = contacts_df["id"].tolist()
         self.update_contacts(contact_ids, values_to_update)
 
     def delete(self, query: ast.Delete) -> None:
@@ -337,13 +316,10 @@ class ContactsTable(APITable):
         where_conditions = delete_statement_parser.parse_query()
 
         contacts_df = pd.json_normalize(self.get_contacts())
-        delete_query_executor = DELETEQueryExecutor(
-            contacts_df,
-            where_conditions
-        )
+        delete_query_executor = DELETEQueryExecutor(contacts_df, where_conditions)
 
         contacts_df = delete_query_executor.execute_query()
-        contact_ids = contacts_df['id'].tolist()
+        contact_ids = contacts_df["id"].tolist()
         self.delete_contacts(contact_ids)
 
     def get_columns(self) -> List[Text]:
@@ -372,21 +348,25 @@ class ContactsTable(APITable):
         hubspot = self.handler.connect()
         contacts_to_create = [HubSpotObjectInputCreate(properties=contact) for contact in contacts_data]
         try:
-            created_contacts = hubspot.crm.contacts.batch_api.create(
-                HubSpotBatchObjectInputCreate(inputs=contacts_to_create)
+            created_contacts = hubspot.crm.contacts.batch_api.create(inputs=contacts_to_create)
+            logger.info(
+                f"Contacts created with ID {[created_contact.id for created_contact in created_contacts.results]}"
             )
-            logger.info(f"Contacts created with ID {[created_contact.id for created_contact in created_contacts.results]}")
         except Exception as e:
             raise Exception(f"Contacts creation failed {e}")
 
     def update_contacts(self, contact_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
         hubspot = self.handler.connect()
-        contacts_to_update = [HubSpotObjectBatchInput(id=contact_id, properties=values_to_update) for contact_id in contact_ids]
+        contacts_to_update = [
+            HubSpotObjectBatchInput(id=contact_id, properties=values_to_update) for contact_id in contact_ids
+        ]
         try:
             updated_contacts = hubspot.crm.contacts.batch_api.update(
-                HubSpotBatchObjectBatchInput(inputs=contacts_to_update),
+                inputs=contacts_to_update,
             )
-            logger.info(f"Contacts with ID {[updated_contact.id for updated_contact in updated_contacts.results]} updated")
+            logger.info(
+                f"Contacts with ID {[updated_contact.id for updated_contact in updated_contacts.results]} updated"
+            )
         except Exception as e:
             raise Exception(f"Contacts update failed {e}")
 
@@ -395,7 +375,7 @@ class ContactsTable(APITable):
         contacts_to_delete = [HubSpotObjectId(id=contact_id) for contact_id in contact_ids]
         try:
             hubspot.crm.contacts.batch_api.archive(
-                HubSpotBatchObjectIdInput(inputs=contacts_to_delete),
+                inputs=contacts_to_delete,
             )
             logger.info("Contacts deleted")
         except Exception as e:
@@ -426,19 +406,12 @@ class DealsTable(APITable):
 
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            "deals",
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "deals", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         deals_df = pd.json_normalize(self.get_deals(limit=result_limit))
         select_statement_executor = SELECTQueryExecutor(
-            deals_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
+            deals_df, selected_columns, where_conditions, order_by_conditions
         )
         deals_df = select_statement_executor.execute_query()
 
@@ -464,8 +437,8 @@ class DealsTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['amount', 'dealname', 'pipeline', 'closedate', 'dealstage', 'hubspot_owner_id'],
-            mandatory_columns=['dealname'],
+            supported_columns=["amount", "dealname", "pipeline", "closedate", "dealstage", "hubspot_owner_id"],
+            mandatory_columns=["dealname"],
             all_mandatory=False,
         )
         deals_data = insert_statement_parser.parse_query()
@@ -493,13 +466,10 @@ class DealsTable(APITable):
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
         deals_df = pd.json_normalize(self.get_deals())
-        update_query_executor = UPDATEQueryExecutor(
-            deals_df,
-            where_conditions
-        )
+        update_query_executor = UPDATEQueryExecutor(deals_df, where_conditions)
 
         deals_df = update_query_executor.execute_query()
-        deal_ids = deals_df['id'].tolist()
+        deal_ids = deals_df["id"].tolist()
         self.update_deals(deal_ids, values_to_update)
 
     def delete(self, query: ast.Delete) -> None:
@@ -524,13 +494,10 @@ class DealsTable(APITable):
         where_conditions = delete_statement_parser.parse_query()
 
         deals_df = pd.json_normalize(self.get_deals())
-        delete_query_executor = DELETEQueryExecutor(
-            deals_df,
-            where_conditions
-        )
+        delete_query_executor = DELETEQueryExecutor(deals_df, where_conditions)
 
         deals_df = delete_query_executor.execute_query()
-        deal_ids = deals_df['id'].tolist()
+        deal_ids = deals_df["id"].tolist()
         self.delete_deals(deal_ids)
 
     def get_columns(self) -> List[Text]:
@@ -560,7 +527,7 @@ class DealsTable(APITable):
         deals_to_create = [HubSpotObjectInputCreate(properties=deal) for deal in deals_data]
         try:
             created_deals = hubspot.crm.deals.batch_api.create(
-                HubSpotBatchObjectBatchInput(inputs=deals_to_create),
+                inputs=deals_to_create,
             )
             logger.info(f"Deals created with ID's {[created_deal.id for created_deal in created_deals.results]}")
         except Exception as e:
@@ -571,7 +538,7 @@ class DealsTable(APITable):
         deals_to_update = [HubSpotObjectBatchInput(id=deal_id, properties=values_to_update) for deal_id in deal_ids]
         try:
             updated_deals = hubspot.crm.deals.batch_api.update(
-                HubSpotBatchObjectBatchInput(inputs=deals_to_update),
+                inputs=deals_to_update,
             )
             logger.info(f"Deals with ID {[updated_deal.id for updated_deal in updated_deals.results]} updated")
         except Exception as e:
@@ -582,7 +549,7 @@ class DealsTable(APITable):
         deals_to_delete = [HubSpotObjectId(id=deal_id) for deal_id in deal_ids]
         try:
             hubspot.crm.deals.batch_api.archive(
-                HubSpotBatchObjectIdInput(inputs=deals_to_delete),
+                inputs=deals_to_delete,
             )
             logger.info("Deals deleted")
         except Exception as e:

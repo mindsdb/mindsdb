@@ -23,10 +23,14 @@ WITH
   PARAMETERS = {
       "host": "localhost",
       "service_name": "FREEPDB1",
-      "user": "SYSTEM",
+      "user": "custom_user",
       "password": "password"
   };
 ```
+
+**Recommendation**: Use a dedicated user for MindsDB with the least privileges necessary for the tasks it needs to perform. SYSDBA privileges are not required.
+If you are connecting to an Oracle database using SYS or SYSTEM user, tables will be not be visible in the MindsDB Studio UI.
+
 
 Required connection parameters include the following:
 
@@ -46,7 +50,8 @@ Optional connection parameters include the following:
 * `port`: The port number for connecting to the Oracle database. Default is 1521.
 * `disable_oob`: The boolean parameter to disable out-of-band breaks. Default is `false`.
 * `auth_mode`: The authorization mode to use.
-* `thick_mode`: Set to `true` to use thick mode for the connection. Thin mode is used by default. Oracle Client libraries required for thick mode.
+* `thick_mode`: Set to `true` to use thick mode for the connection. Thin mode is used by default.
+* `oracle_client_lib_dir`: The directory path where Oracle Client libraries are located. Required if `thick_mode` is set to `true`.
 
 ## Usage
 
@@ -86,6 +91,15 @@ The above examples utilize `oracle_datasource` as the datasource name, which is 
     1. Make sure the Oracle database is active.
     2. Confirm that the connection parameters provided (DSN, host, SID, service_name) and the credentials (user, password) are correct.
     3. Ensure a stable network between MindsDB and Oracle.
+* **Symptoms**: Connection timeout errors.
+* **Checklist**:
+    1. Verify that the Oracle database is reachable from the MindsDB server.
+    2. Check for any firewall or network restrictions that might be causing delays.
+* **Symptoms**: Can't connect to db: Failed to initialize Oracle client: DPI-1047: Cannot locate a 64-bit Oracle Client library:
+* **Checklist**:
+    1. Ensure that the Oracle Client libraries are installed on the MindsDB server.
+    2. Verify that the `oracle_client_lib_dir` parameter is set correctly in the connection configuration.
+    3. Check that the installed Oracle Client libraries match the architecture (64-bit) of the MindsDB server.
 </Warning>
 
 This [troubleshooting guide](https://docs.oracle.com/en/database/oracle/oracle-database/19/ntqrf/database-connection-issues.html) provided by Oracle might also be helpful.

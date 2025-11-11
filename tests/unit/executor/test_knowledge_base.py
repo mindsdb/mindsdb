@@ -10,6 +10,7 @@ import pytest
 import sys
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
+from mindsdb.integrations.utilities.rag.rerankers.base_reranker import ListwiseLLMReranker
 
 
 @contextmanager
@@ -176,6 +177,15 @@ class TestKB(BaseExecutorDummyML):
         assert ret["product"][0] == record["product"]
         assert ret["url"][0] == record["url"]
 
+        # using json operator in filter
+        ret = self.run_sql(
+            "select metadata->>'product' as product, metadata->>'url' as url "
+            "from kb_review where metadata->>'product' = 'probook'"
+        )
+        assert len(ret) == 1
+        assert ret["product"][0] == record["product"]
+        assert ret["url"][0] == record["url"]
+
         # ---  case 2: kb with defined columns ---
         self._create_kb(
             "kb_review", content_columns=["review", "product"], id_column="url", metadata_columns=["specs", "id"]
@@ -211,9 +221,9 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
+        # metadata as columns
         ret = self.run_sql("""
-                select chunk_content,
-                 metadata->>'specs' as specs, metadata->>'product' as product, metadata->>'url' as url
+                select chunk_content, specs, product, url
                 from kb_review 
                 where _original_doc_id = 123 -- id is id
         """)
@@ -225,6 +235,100 @@ class TestKB(BaseExecutorDummyML):
         assert ret["specs"][0] == record["specs"]
         assert ret["url"][0] == record["url"]
         assert ret["product"][0] == record["product"]
+
+    def test_listwise_reranker_parses_valid_json(self):
+        reranker = ListwiseLLMReranker(api_key="-", model="gpt-4o")
+
+        # Fake async LLM response
+        class _Msg:
+            def __init__(self, content):
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content):
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content):
+                self.choices = [_Choice(content)]
+
+        async def _fake_call_llm(messages):
+            content = '{"ranking": [{"doc_index": 2, "score": 0.9}, {"doc_index": 1, "score": 0.6}, {"doc_index": 3, "score": 0.1}]}'
+            return _Resp(content)
+
+        # Bind the async method to this reranker instance
+        reranker._call_llm = _fake_call_llm  # type: ignore
+
+        docs = ["A", "B", "C"]
+        scores = reranker.get_scores("q", docs)
+
+        assert len(scores) == 3
+        # doc_index 2 (B) highest, then A, then C
+        assert scores[1] > scores[0] > scores[2]
+        # scores are clamped to [0,1]
+        assert all(0.0 <= s <= 1.0 for s in scores)
+
+    def test_listwise_reranker_handles_code_fence_and_missing_docs(self):
+        reranker = ListwiseLLMReranker(api_key="-", model="gpt-4o")
+
+        class _Msg:
+            def __init__(self, content):
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content):
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content):
+                self.choices = [_Choice(content)]
+
+        async def _fake_call_llm(messages):
+            # Returns code-fenced JSON, includes only two entries, one without score
+            content = """```json
+            {"ranking": [1, {"doc_index": 3, "score": 0.8}]}
+            ```"""
+            return _Resp(content)
+
+        reranker._call_llm = _fake_call_llm  # type: ignore
+
+        docs = ["D0", "D1", "D2", "D3"]
+        scores = reranker.get_scores("q", docs)
+
+        assert len(scores) == 4
+        # All scores within [0,1]
+        assert all(0.0 <= s <= 1.0 for s in scores)
+        # At least doc_index 3 (zero-based 2) should have a relatively high score
+        assert scores[2] >= 0.5
+
+    def test_listwise_reranker_json_error_fallback(self):
+        reranker = ListwiseLLMReranker(api_key="-", model="gpt-4o")
+
+        class _Msg:
+            def __init__(self, content):
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content):
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content):
+                self.choices = [_Choice(content)]
+
+        async def _fake_call_llm(messages):
+            # Invalid JSON forces fallback
+            content = "not-json"
+            return _Resp(content)
+
+        reranker._call_llm = _fake_call_llm  # type: ignore
+
+        docs = ["X", "Y", "Z"]
+        scores = reranker.get_scores("q", docs)
+
+        assert len(scores) == 3
+        # Fallback pattern should be descending
+        assert scores[0] > scores[1] > scores[2]
 
     def _get_ral_table(self):
         data = [
@@ -497,6 +601,20 @@ class TestKB(BaseExecutorDummyML):
             assert "white" in item["chunk_content"]
             assert item["metadata"]["num"] in (3, 4)
 
+        # -- chunk_content and '%'
+        ret = self.run_sql("""
+           select * from kb_alg where
+               (chunk_content like '%green%' and size='big') 
+            or (chunk_content like '%white%' and size='small') 
+            or (chunk_content is null)
+           limit 3
+        """)
+        for content in ret["chunk_content"]:
+            if "green" in content:
+                assert "big" in content
+            else:
+                assert "small" in content
+
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_select_allowed_columns(self, mock_litellm_embedding):
         set_litellm_embedding(mock_litellm_embedding)
@@ -696,3 +814,54 @@ class TestKB(BaseExecutorDummyML):
             and relevance > 0.5
         """)
         assert isinstance(ret, pd.DataFrame)
+
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_alter_kb(self, mock_litellm_embedding, mock_get_scores):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb(
+            "kb1",
+            embedding_model={
+                "provider": "bedrock",
+                "model_name": "dummy_model",
+                "api_key": "embed-key-1",
+            },
+            reranking_model={"provider": "openai", "model_name": "gpt-3", "api_key": "rerank-key-1"},
+        )
+
+        # update KB
+        self.run_sql("""
+            ALTER KNOWLEDGE BASE kb1
+            USING 
+                reranking_model={'api_key': 'rerank-key-2'},
+                embedding_model={'api_key': 'embed-key-2'},
+                id_column='my_id',
+                content_columns=['my_content'],                
+                metadata_columns=['my_meta']
+        """)
+
+        # check updated values in database
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+        assert kb.params["id_column"] == "my_id"
+        assert kb.params["content_columns"] == ["my_content"]
+        assert kb.params["metadata_columns"] == ["my_meta"]
+
+        assert kb.params["reranking_model"]["model_name"] == "gpt-3"
+        assert kb.params["reranking_model"]["api_key"] == "rerank-key-2"
+
+        assert kb.params["embedding_model"]["api_key"] == "embed-key-2"
+
+        # update embedding fails
+        with pytest.raises(ValueError):
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'model_name': 'my_model'}")
+
+        with pytest.raises(ValueError):
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'provider': 'ollama'}")
+
+        # different provider: params are replaced
+        self.run_sql("ALTER KNOWLEDGE BASE kb1 USING reranking_model={'provider': 'ollama', 'model_name': 'mistral'}")
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+
+        assert kb.params["reranking_model"]["provider"] == "ollama"
+        assert "api_key" not in kb.params["reranking_model"]

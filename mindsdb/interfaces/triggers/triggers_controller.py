@@ -14,8 +14,6 @@ class TriggersController:
     OBJECT_TYPE = "trigger"
 
     def add(self, name, project_name, table, query_str, columns=None):
-        name = name.lower()
-
         if project_name is None:
             project_name = config.get("default_project")
         project_controller = ProjectController()
@@ -155,7 +153,7 @@ class TriggersController:
                 {
                     "id": record.object_id,
                     "project": project_names[record.project_id],
-                    "name": record.name.lower(),
+                    "name": record.name,
                     "database": database_names.get(record.database_id, "?"),
                     "table": record.table_name,
                     "query": record.query_str,

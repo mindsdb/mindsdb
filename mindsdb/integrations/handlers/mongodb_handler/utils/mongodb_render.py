@@ -272,43 +272,39 @@ class MongodbRender(NonRelationalRender):
         # Compose the MongoDB query.
         mquery = MongoQuery(collection)
 
-        method = "aggregate"
-        arg = []
+        method: str = "aggregate"
+        margs: list = []
 
         # MongoDB related pipeline steps for the aggregate method.
         if node.modifiers is not None:
             for modifier in node.modifiers:
-                arg.append(modifier)
+                margs.append(modifier)
 
         if pre_match:
-            arg.append({"$match": pre_match})
+            margs.append({"$match": pre_match})
         if pre_project is not None and pre_project != {}:
-            arg.append({"$project": pre_project})
+            margs.append({"$project": pre_project})
 
         if filters:
-            arg.append({"$match": filters})
+            margs.append({"$match": filters})
 
         if group:
-            arg.append({"$group": group})
+            margs.append({"$group": group})
 
         if project:
-            arg.append({"$project": project})
+            margs.append({"$project": project})
 
         if sort:
-            arg.append({"$sort": sort})
+            margs.append({"$sort": sort})
 
         if node.offset is not None:
-            arg.append({"$skip": int(node.offset.value)})
+            margs.append({"$skip": int(node.offset.value)})
 
         if node.limit is not None:
-            arg.append({"$limit": int(node.limit.value)})
+            margs.append({"$limit": int(node.limit.value)})
 
-        mquery.add_step({"method": method, "args": [arg]})
+        mquery.add_step({"method": method, "args": [margs]})
 
-        print("&***********************************************************")
-        print(f"DEBUG: MongoDB query pipeline: {arg}")
-        print(method)
-        print("***********************************************************&")
 
         return mquery
 

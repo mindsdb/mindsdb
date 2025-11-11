@@ -115,7 +115,7 @@ class MongodbRender(NonRelationalRender):
                             alias = name if t.alias is None else t.alias.parts[-1]
                             pre_project[alias] = f"${name}"
                         elif isinstance(t, Constant):
-                            alias = (str(t.value) if t.alias is None else t.alias.parts[-1])
+                            alias = str(t.value) if t.alias is None else t.alias.parts[-1]
                             pre_project[alias] = t.value
                         elif isinstance(t, TypeCast):
                             alias = t.alias.parts[-1] if t.alias is not None else t.arg.parts[-1]
@@ -233,7 +233,7 @@ class MongodbRender(NonRelationalRender):
                         else:
                             raise NotImplementedError(f"Function {func_name} not supported")
                 elif isinstance(col, Constant):
-                    alias = (str(col.value) if col.alias is None else col.alias.parts[-1])
+                    alias = str(col.value) if col.alias is None else col.alias.parts[-1]
                     project[alias] = col.value
 
         if node.group_by is not None:
@@ -304,7 +304,6 @@ class MongodbRender(NonRelationalRender):
             margs.append({"$limit": int(node.limit.value)})
 
         mquery.add_step({"method": method, "args": [margs]})
-
 
         return mquery
 

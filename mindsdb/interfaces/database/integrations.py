@@ -31,7 +31,6 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
-from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
 from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
 
 logger = log.getLogger(__name__)
@@ -66,9 +65,6 @@ class IntegrationController:
         )
         handler_meta = self.get_handler_meta(engine)
 
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
-
         accept_connection_args = handler_meta.get("connection_args")
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 
@@ -94,7 +90,7 @@ class IntegrationController:
 
         return integration_id
 
-    def modify(self, name, data):
+    def modify(self, name, data, check_connection=False):
         self.handlers_cache.delete(name)
         integration_record = self._get_integration_record(name)
         if isinstance(integration_record.data, dict) and integration_record.data.get("is_demo") is True:
@@ -103,6 +99,18 @@ class IntegrationController:
         for k in old_data:
             if k not in data:
                 data[k] = old_data[k]
+
+        # Test the new connection data before applying
+        if check_connection:
+            try:
+                temp_name = f"{integration_record.name}_update_{time.time()}".replace(".", "")
+                handler = self.create_tmp_handler(temp_name, integration_record.engine, data)
+                status = handler.check_connection()
+            except ImportError:
+                raise
+
+            if status.success is not True:
+                raise Exception(f"Connection test failed: {status.error_message}")
 
         integration_record.data = data
         db.session.commit()
@@ -162,14 +170,6 @@ class IntegrationController:
         for model in engine_models:
             if model.deleted_at is not None:
                 model.integration_id = None
-
-        # Remove the integration metadata from the data catalog (if enabled).
-        # TODO: Can this be handled via cascading delete in the database?
-        if self.get_handler_meta(integration_record.engine).get("type") == HANDLER_TYPE.DATA and Config().get(
-            "data_catalog", {}
-        ).get("enabled", False):
-            data_catalog_reader = DataCatalogLoader(database_name=name)
-            data_catalog_reader.unload_metadata()
 
         db.session.delete(integration_record)
         db.session.commit()
@@ -424,6 +424,7 @@ class IntegrationController:
         """
         handler = self.handlers_cache.get(name)
         if handler is not None:
+            ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
             return handler
 
         integration_record = self._get_integration_record(name, case_sensitive)
@@ -497,6 +498,7 @@ class IntegrationController:
         if connect:
             self.handlers_cache.set(handler)
 
+        ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
         return handler
 
     def reload_handler_module(self, handler_name):

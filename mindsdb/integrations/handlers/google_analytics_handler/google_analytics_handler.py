@@ -200,13 +200,13 @@ class GoogleAnalyticsHandler(APIHandler):
         if self.refresh_token:
             logger.info("Authenticating with OAuth2 using refresh token")
             try:
+                # Note: scopes are not passed here as they are already embedded in the refresh token
                 creds = OAuthCredentials(
                     token=None,
                     refresh_token=self.refresh_token,
                     token_uri=self.token_uri,
                     client_id=self.client_id,
-                    client_secret=self.client_secret,
-                    scopes=self.scopes
+                    client_secret=self.client_secret
                 )
                 # Refresh to get access token
                 creds.refresh(Request())

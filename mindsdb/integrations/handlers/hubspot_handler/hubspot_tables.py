@@ -5,6 +5,9 @@ from hubspot.crm.objects import (
     SimplePublicObjectId as HubSpotObjectId,
     SimplePublicObjectBatchInput as HubSpotObjectBatchInput,
     SimplePublicObjectInputForCreate as HubSpotObjectInputCreate,
+    BatchInputSimplePublicObjectBatchInputForCreate,
+    BatchInputSimplePublicObjectBatchInput,
+    BatchInputSimplePublicObjectId,
 )
 from mindsdb_sql_parser import ast
 
@@ -107,11 +110,23 @@ class CompaniesTable(APITable):
         update_statement_parser = UPDATEQueryParser(query)
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
-        companies_df = pd.json_normalize(self.get_companies())
-        update_query_executor = UPDATEQueryExecutor(companies_df, where_conditions)
+        companies_df = pd.json_normalize(self.get_companies(limit=1000))
 
-        companies_df = update_query_executor.execute_query()
-        company_ids = companies_df["id"].tolist()
+        if companies_df.empty:
+            raise ValueError(
+                "No companies retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
+            )
+
+        update_query_executor = UPDATEQueryExecutor(companies_df, where_conditions)
+        filtered_df = update_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No companies found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+            )
+
+        company_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Updating {len(company_ids)} compan(ies) matching WHERE conditions")
         self.update_companies(company_ids, values_to_update)
 
     def delete(self, query: ast.Delete) -> None:
@@ -135,46 +150,96 @@ class CompaniesTable(APITable):
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
-        companies_df = pd.json_normalize(self.get_companies())
-        delete_query_executor = DELETEQueryExecutor(companies_df, where_conditions)
+        companies_df = pd.json_normalize(self.get_companies(limit=1000))
 
-        companies_df = delete_query_executor.execute_query()
-        company_ids = companies_df["id"].tolist()
+        if companies_df.empty:
+            raise ValueError(
+                "No companies retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
+            )
+
+        delete_query_executor = DELETEQueryExecutor(companies_df, where_conditions)
+        filtered_df = delete_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No companies found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+            )
+
+        company_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Deleting {len(company_ids)} compan(ies) matching WHERE conditions")
         self.delete_companies(company_ids)
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_companies(limit=1)).columns.tolist()
 
-    def get_companies(self, **kwargs) -> List[Dict]:
+    def get_companies(self, limit: int | None = None, **kwargs) -> List[Dict]:
         hubspot = self.handler.connect()
-        companies = hubspot.crm.companies.get_all(**kwargs)
-        companies_dict = [
-            {
-                "id": company.id,
-                "name": company.properties.get("name", None),
-                "city": company.properties.get("city", None),
-                "phone": company.properties.get("phone", None),
-                "state": company.properties.get("state", None),
-                "domain": company.properties.get("company", None),
-                "industry": company.properties.get("industry", None),
-                "createdate": company.properties["createdate"],
-                "lastmodifieddate": company.properties["hs_lastmodifieddate"],
-            }
-            for company in companies
+
+        requested_properties = kwargs.get("properties", [])
+        default_properties = [
+            "name",
+            "domain",
+            "industry",
+            "city",
+            "state",
+            "phone",
+            "createdate",
+            "hs_lastmodifieddate",
         ]
+
+        properties = list({*default_properties, *requested_properties})
+
+        api_kwargs = {**kwargs, "properties": properties}
+        if limit is not None:
+            api_kwargs["limit"] = limit
+
+        companies = hubspot.crm.companies.get_all(**api_kwargs)
+        companies_dict = []
+
+        for company in companies:
+            try:
+                company_dict = {
+                    "id": company.id,
+                    "name": company.properties.get("name"),
+                    "city": company.properties.get("city"),
+                    "phone": company.properties.get("phone"),
+                    "state": company.properties.get("state"),
+                    "domain": company.properties.get("domain"),
+                    "industry": company.properties.get("industry"),
+                    "createdate": company.properties.get("createdate"),
+                    "lastmodifieddate": company.properties.get("hs_lastmodifieddate"),
+                }
+                companies_dict.append(company_dict)
+            except Exception as e:
+                logger.warning(f"Error processing company {getattr(company, 'id', 'unknown')}: {str(e)}")
+                continue
+
+        logger.info(f"Retrieved {len(companies_dict)} companies from HubSpot")
         return companies_dict
 
     def create_companies(self, companies_data: List[Dict[Text, Any]]) -> None:
+        if not companies_data:
+            raise ValueError("No company data provided for creation")
+
+        logger.info(f"Attempting to create {len(companies_data)} compan(ies): {companies_data}")
+
         hubspot = self.handler.connect()
         companies_to_create = [HubSpotObjectInputCreate(properties=company) for company in companies_data]
+        batch_input = BatchInputSimplePublicObjectBatchInputForCreate(inputs=companies_to_create)
+
         try:
             created_companies = hubspot.crm.companies.batch_api.create(
-                inputs=companies_to_create,
+                batch_input_simple_public_object_batch_input_for_create=batch_input
             )
-            logger.info(
-                f"Companies created with ID's {[created_company.id for created_company in created_companies.results]}"
-            )
+
+            if not created_companies or not hasattr(created_companies, "results") or not created_companies.results:
+                raise Exception("Company creation returned no results")
+
+            created_ids = [created_company.id for created_company in created_companies.results]
+            logger.info(f"Successfully created {len(created_ids)} compan(ies) with IDs: {created_ids}")
+
         except Exception as e:
+            logger.error(f"Companies creation failed: {str(e)}")
             raise Exception(f"Companies creation failed {e}")
 
     def update_companies(self, company_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
@@ -182,9 +247,10 @@ class CompaniesTable(APITable):
         companies_to_update = [
             HubSpotObjectBatchInput(id=company_id, properties=values_to_update) for company_id in company_ids
         ]
+        batch_input = BatchInputSimplePublicObjectBatchInput(inputs=companies_to_update)
         try:
             updated_companies = hubspot.crm.companies.batch_api.update(
-                inputs=companies_to_update,
+                batch_input_simple_public_object_batch_input=batch_input
             )
             logger.info(
                 f"Companies with ID {[updated_company.id for updated_company in updated_companies.results]} updated"
@@ -195,10 +261,9 @@ class CompaniesTable(APITable):
     def delete_companies(self, company_ids: List[Text]) -> None:
         hubspot = self.handler.connect()
         companies_to_delete = [HubSpotObjectId(id=company_id) for company_id in company_ids]
+        batch_input = BatchInputSimplePublicObjectId(inputs=companies_to_delete)
         try:
-            hubspot.crm.companies.batch_api.archive(
-                inputs=companies_to_delete,
-            )
+            hubspot.crm.companies.batch_api.archive(batch_input_simple_public_object_id=batch_input)
             logger.info("Companies deleted")
         except Exception as e:
             raise Exception(f"Companies deletion failed {e}")
@@ -259,7 +324,7 @@ class ContactsTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=["email", "firstname", "firstname", "phone", "company", "website"],
+            supported_columns=["email", "firstname", "lastname", "phone", "company", "website"],
             mandatory_columns=["email"],
             all_mandatory=False,
         )
@@ -287,11 +352,23 @@ class ContactsTable(APITable):
         update_statement_parser = UPDATEQueryParser(query)
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
-        contacts_df = pd.json_normalize(self.get_contacts())
-        update_query_executor = UPDATEQueryExecutor(contacts_df, where_conditions)
+        contacts_df = pd.json_normalize(self.get_contacts(limit=1000))
 
-        contacts_df = update_query_executor.execute_query()
-        contact_ids = contacts_df["id"].tolist()
+        if contacts_df.empty:
+            raise ValueError(
+                "No contacts retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
+            )
+
+        update_query_executor = UPDATEQueryExecutor(contacts_df, where_conditions)
+        filtered_df = update_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No contacts found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+            )
+
+        contact_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Updating {len(contact_ids)} contact(s) matching WHERE conditions")
         self.update_contacts(contact_ids, values_to_update)
 
     def delete(self, query: ast.Delete) -> None:
@@ -315,44 +392,97 @@ class ContactsTable(APITable):
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
-        contacts_df = pd.json_normalize(self.get_contacts())
-        delete_query_executor = DELETEQueryExecutor(contacts_df, where_conditions)
+        contacts_df = pd.json_normalize(self.get_contacts(limit=1000))
 
-        contacts_df = delete_query_executor.execute_query()
-        contact_ids = contacts_df["id"].tolist()
+        if contacts_df.empty:
+            raise ValueError(
+                "No contacts retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
+            )
+
+        delete_query_executor = DELETEQueryExecutor(contacts_df, where_conditions)
+        filtered_df = delete_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No contacts found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+            )
+
+        contact_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Deleting {len(contact_ids)} contact(s) matching WHERE conditions")
         self.delete_contacts(contact_ids)
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_contacts(limit=1)).columns.tolist()
 
-    def get_contacts(self, **kwargs) -> List[Dict]:
+    def get_contacts(self, limit: int | None = None, **kwargs) -> List[Dict]:
         hubspot = self.handler.connect()
-        contacts = hubspot.crm.contacts.get_all(**kwargs)
-        contacts_dict = [
-            {
-                "id": contact.id,
-                "email": contact.properties["email"],
-                "firstname": contact.properties.get("firstname", None),
-                "lastname": contact.properties.get("lastname", None),
-                "phone": contact.properties.get("phone", None),
-                "company": contact.properties.get("company", None),
-                "website": contact.properties.get("website", None),
-                "createdate": contact.properties["createdate"],
-                "lastmodifieddate": contact.properties["lastmodifieddate"],
-            }
-            for contact in contacts
+        requested_properties = kwargs.get("properties", [])
+        default_properties = [
+            "email",
+            "firstname",
+            "lastname",
+            "phone",
+            "company",
+            "website",
+            "createdate",
+            "lastmodifieddate",
         ]
+
+        properties = list({*default_properties, *requested_properties})
+
+        api_kwargs = {**kwargs, "properties": properties}
+        if limit is not None:
+            api_kwargs["limit"] = limit
+        else:
+            api_kwargs.pop("limit", None)
+
+        contacts = hubspot.crm.contacts.get_all(**api_kwargs)
+        contacts_dict = []
+
+        for contact in contacts:
+            try:
+                contact_dict = {
+                    "id": contact.id,
+                    "email": contact.properties.get("email", None),
+                    "firstname": contact.properties.get("firstname", None),
+                    "lastname": contact.properties.get("lastname", None),
+                    "phone": contact.properties.get("phone", None),
+                    "company": contact.properties.get("company", None),
+                    "website": contact.properties.get("website", None),
+                    "createdate": contact.properties.get("createdate", None),
+                    "lastmodifieddate": contact.properties.get("lastmodifieddate", None),
+                }
+                contacts_dict.append(contact_dict)
+            except Exception as e:
+                logger.warning(f"Error processing contact {contact.id}: {str(e)}")
+                continue
+
+        logger.info(f"Retrieved {len(contacts_dict)} contacts from HubSpot")
         return contacts_dict
 
     def create_contacts(self, contacts_data: List[Dict[Text, Any]]) -> None:
+        if not contacts_data:
+            raise ValueError("No contact data provided for creation")
+
+        logger.info(f"Attempting to create {len(contacts_data)} contact(s): {contacts_data}")
+
         hubspot = self.handler.connect()
         contacts_to_create = [HubSpotObjectInputCreate(properties=contact) for contact in contacts_data]
+        batch_input = BatchInputSimplePublicObjectBatchInputForCreate(inputs=contacts_to_create)
+
         try:
-            created_contacts = hubspot.crm.contacts.batch_api.create(inputs=contacts_to_create)
-            logger.info(
-                f"Contacts created with ID {[created_contact.id for created_contact in created_contacts.results]}"
+            created_contacts = hubspot.crm.contacts.batch_api.create(
+                batch_input_simple_public_object_batch_input_for_create=batch_input
             )
+
+            if not created_contacts or not hasattr(created_contacts, "results") or not created_contacts.results:
+                raise Exception("Contact creation returned no results")
+
+            created_ids = [created_contact.id for created_contact in created_contacts.results]
+            logger.info(f"Successfully created {len(created_ids)} contact(s) with IDs: {created_ids}")
+
         except Exception as e:
+            logger.error(f"Contacts creation failed: {str(e)}")
             raise Exception(f"Contacts creation failed {e}")
 
     def update_contacts(self, contact_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
@@ -360,9 +490,10 @@ class ContactsTable(APITable):
         contacts_to_update = [
             HubSpotObjectBatchInput(id=contact_id, properties=values_to_update) for contact_id in contact_ids
         ]
+        batch_input = BatchInputSimplePublicObjectBatchInput(inputs=contacts_to_update)
         try:
             updated_contacts = hubspot.crm.contacts.batch_api.update(
-                inputs=contacts_to_update,
+                batch_input_simple_public_object_batch_input=batch_input
             )
             logger.info(
                 f"Contacts with ID {[updated_contact.id for updated_contact in updated_contacts.results]} updated"
@@ -373,10 +504,9 @@ class ContactsTable(APITable):
     def delete_contacts(self, contact_ids: List[Text]) -> None:
         hubspot = self.handler.connect()
         contacts_to_delete = [HubSpotObjectId(id=contact_id) for contact_id in contact_ids]
+        batch_input = BatchInputSimplePublicObjectId(inputs=contacts_to_delete)
         try:
-            hubspot.crm.contacts.batch_api.archive(
-                inputs=contacts_to_delete,
-            )
+            hubspot.crm.contacts.batch_api.archive(batch_input_simple_public_object_id=batch_input)
             logger.info("Contacts deleted")
         except Exception as e:
             raise Exception(f"Contacts deletion failed {e}")
@@ -465,11 +595,23 @@ class DealsTable(APITable):
         update_statement_parser = UPDATEQueryParser(query)
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
-        deals_df = pd.json_normalize(self.get_deals())
-        update_query_executor = UPDATEQueryExecutor(deals_df, where_conditions)
+        deals_df = pd.json_normalize(self.get_deals(limit=1000))
 
-        deals_df = update_query_executor.execute_query()
-        deal_ids = deals_df["id"].tolist()
+        if deals_df.empty:
+            raise ValueError(
+                "No deals retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
+            )
+
+        update_query_executor = UPDATEQueryExecutor(deals_df, where_conditions)
+        filtered_df = update_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No deals found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+            )
+
+        deal_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Updating {len(deal_ids)} deal(s) matching WHERE conditions")
         self.update_deals(deal_ids, values_to_update)
 
     def delete(self, query: ast.Delete) -> None:
@@ -493,11 +635,23 @@ class DealsTable(APITable):
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
-        deals_df = pd.json_normalize(self.get_deals())
-        delete_query_executor = DELETEQueryExecutor(deals_df, where_conditions)
+        deals_df = pd.json_normalize(self.get_deals(limit=1000))
 
-        deals_df = delete_query_executor.execute_query()
-        deal_ids = deals_df["id"].tolist()
+        if deals_df.empty:
+            raise ValueError(
+                "No deals retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
+            )
+
+        delete_query_executor = DELETEQueryExecutor(deals_df, where_conditions)
+        filtered_df = delete_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No deals found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+            )
+
+        deal_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Deleting {len(deal_ids)} deal(s) matching WHERE conditions")
         self.delete_deals(deal_ids)
 
     def get_columns(self) -> List[Text]:
@@ -506,40 +660,60 @@ class DealsTable(APITable):
     def get_deals(self, **kwargs) -> List[Dict]:
         hubspot = self.handler.connect()
         deals = hubspot.crm.deals.get_all(**kwargs)
-        deals_dict = [
-            {
-                "id": deal.id,
-                "dealname": deal.properties["dealname"],
-                "amount": deal.properties.get("amount", None),
-                "pipeline": deal.properties.get("pipeline", None),
-                "closedate": deal.properties.get("closedate", None),
-                "dealstage": deal.properties.get("dealstage", None),
-                "hubspot_owner_id": deal.properties.get("hubspot_owner_id", None),
-                "createdate": deal.properties["createdate"],
-                "hs_lastmodifieddate": deal.properties["hs_lastmodifieddate"],
-            }
-            for deal in deals
-        ]
+        deals_dict = []
+
+        for deal in deals:
+            try:
+                deal_dict = {
+                    "id": deal.id,
+                    "dealname": deal.properties.get("dealname", None),
+                    "amount": deal.properties.get("amount", None),
+                    "pipeline": deal.properties.get("pipeline", None),
+                    "closedate": deal.properties.get("closedate", None),
+                    "dealstage": deal.properties.get("dealstage", None),
+                    "hubspot_owner_id": deal.properties.get("hubspot_owner_id", None),
+                    "createdate": deal.properties.get("createdate", None),
+                    "hs_lastmodifieddate": deal.properties.get("hs_lastmodifieddate", None),
+                }
+                deals_dict.append(deal_dict)
+            except Exception as e:
+                logger.warning(f"Error processing deal {deal.id}: {str(e)}")
+                continue
+
+        logger.info(f"Retrieved {len(deals_dict)} deals from HubSpot")
         return deals_dict
 
     def create_deals(self, deals_data: List[Dict[Text, Any]]) -> None:
+        if not deals_data:
+            raise ValueError("No deal data provided for creation")
+
+        logger.info(f"Attempting to create {len(deals_data)} deal(s): {deals_data}")
+
         hubspot = self.handler.connect()
         deals_to_create = [HubSpotObjectInputCreate(properties=deal) for deal in deals_data]
+        batch_input = BatchInputSimplePublicObjectBatchInputForCreate(inputs=deals_to_create)
+
         try:
             created_deals = hubspot.crm.deals.batch_api.create(
-                inputs=deals_to_create,
+                batch_input_simple_public_object_batch_input_for_create=batch_input
             )
-            logger.info(f"Deals created with ID's {[created_deal.id for created_deal in created_deals.results]}")
+
+            if not created_deals or not hasattr(created_deals, "results") or not created_deals.results:
+                raise Exception("Deal creation returned no results")
+
+            created_ids = [created_deal.id for created_deal in created_deals.results]
+            logger.info(f"Successfully created {len(created_ids)} deal(s) with IDs: {created_ids}")
+
         except Exception as e:
+            logger.error(f"Deals creation failed: {str(e)}")
             raise Exception(f"Deals creation failed {e}")
 
     def update_deals(self, deal_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
         hubspot = self.handler.connect()
         deals_to_update = [HubSpotObjectBatchInput(id=deal_id, properties=values_to_update) for deal_id in deal_ids]
+        batch_input = BatchInputSimplePublicObjectBatchInput(inputs=deals_to_update)
         try:
-            updated_deals = hubspot.crm.deals.batch_api.update(
-                inputs=deals_to_update,
-            )
+            updated_deals = hubspot.crm.deals.batch_api.update(batch_input_simple_public_object_batch_input=batch_input)
             logger.info(f"Deals with ID {[updated_deal.id for updated_deal in updated_deals.results]} updated")
         except Exception as e:
             raise Exception(f"Deals update failed {e}")
@@ -547,10 +721,9 @@ class DealsTable(APITable):
     def delete_deals(self, deal_ids: List[Text]) -> None:
         hubspot = self.handler.connect()
         deals_to_delete = [HubSpotObjectId(id=deal_id) for deal_id in deal_ids]
+        batch_input = BatchInputSimplePublicObjectId(inputs=deals_to_delete)
         try:
-            hubspot.crm.deals.batch_api.archive(
-                inputs=deals_to_delete,
-            )
+            hubspot.crm.deals.batch_api.archive(batch_input_simple_public_object_id=batch_input)
             logger.info("Deals deleted")
         except Exception as e:
             raise Exception(f"Deals deletion failed {e}")

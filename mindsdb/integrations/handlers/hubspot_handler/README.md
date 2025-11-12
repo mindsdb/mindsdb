@@ -7,6 +7,7 @@ HubSpot handler for MindsDB provides interfaces to connect to HubSpot via APIs a
 ## Table of Contents
 
 - [HubSpot Handler](#hubspot-handler)
+  - [Table of Contents](#table-of-contents)
   - [About HubSpot](#about-hubspot)
   - [Installation](#installation)
   - [Authentication](#authentication)
@@ -96,6 +97,11 @@ The handler provides comprehensive data catalog capabilities:
 | `contacts` | Individual contact records | id, email, firstname, lastname | SELECT, INSERT, UPDATE, DELETE |
 | `deals` | Sales opportunity records | id, dealname, amount, stage | SELECT, INSERT, UPDATE, DELETE |
 
+**Important Notes on Field Values:**
+- **Industry codes**: HubSpot uses predefined industry values (e.g., `COMPUTER_SOFTWARE`, `BIOTECHNOLOGY`, `FINANCIAL_SERVICES`). See [HubSpot's industry list](https://knowledge.hubspot.com/properties/hubspots-default-company-properties#industry) for all valid options.
+- **Deal stages**: Each HubSpot account has custom pipeline stages. Use the stage IDs from your account (e.g., `presentationscheduled`, `closedwon`, `closedlost`, or numeric IDs like `110382973`).
+- **Email validation**: Contact email addresses must be valid email formats (e.g., `user@example.com`).
+
 ## Example Usage
 
 ### Basic Connection
@@ -126,13 +132,6 @@ PARAMETERS = {
 SHOW TABLES FROM hubspot_datasource;
 ```
 
-**Get Table Schema:**
-```sql
-DESCRIBE hubspot_datasource.companies;
-DESCRIBE hubspot_datasource.contacts;  
-DESCRIBE hubspot_datasource.deals;
-```
-
 **Get Detailed Column Information:**
 ```sql
 SELECT * FROM information_schema.columns 
@@ -159,7 +158,7 @@ SELECT * FROM hubspot_datasource.deals LIMIT 10;
 -- Companies by industry and location
 SELECT name, industry, city, state
 FROM hubspot_datasource.companies
-WHERE industry IN ('Technology', 'Healthcare')
+WHERE industry IN ('COMPUTER_SOFTWARE', 'BIOTECHNOLOGY')
   AND city = 'San Francisco'
 ORDER BY name;
 
@@ -191,22 +190,22 @@ ORDER BY total_value DESC;
 ```sql
 -- Create new company
 INSERT INTO hubspot_datasource.companies (name, domain, industry, city, state)
-VALUES ('Acme Corp', 'acme.com', 'Technology', 'New York', 'NY');
+VALUES ('Acme Corp', 'acme.com', 'COMPUTER_SOFTWARE', 'New York', 'NY');
 
 -- Create new contact  
-INSERT INTO hubspot_datasource.contacts (email, firstname, lastname, company, phone)
-VALUES ('john.doe@acme.com', 'John', 'Doe', 'Acme Corp', '+1-555-0123');
+INSERT INTO hubspot_datasource.contacts (email, firstname, phone)
+VALUES ('john.doe@example.com', 'John', '+1234567890');
 
 -- Create new deal
-INSERT INTO hubspot_datasource.deals (dealname, amount, pipeline, dealstage)
-VALUES ('Acme Software License', '50000', 'sales', 'qualified-to-buy');
+INSERT INTO hubspot_datasource.deals (dealname, amount, dealstage, pipeline)
+VALUES ('New Deal', 5000, 'presentationscheduled', 'default');
 ```
 
 **Updating Records:**
 ```sql
 -- Update company information
 UPDATE hubspot_datasource.companies 
-SET industry = 'SaaS', city = 'Austin'
+SET industry = 'COMPUTER_SOFTWARE', city = 'Austin'
 WHERE name = 'Acme Corp';
 
 -- Update contact details
@@ -216,15 +215,15 @@ WHERE email = 'john.doe@acme.com';
 
 -- Move deal through pipeline
 UPDATE hubspot_datasource.deals
-SET dealstage = 'proposal-made', amount = '75000'
-WHERE dealname = 'Acme Software License';
+SET dealstage = '110382973', amount = '75000'
+WHERE dealname = 'New Deal';
 ```
 
 **Deleting Records:**
 ```sql  
 -- Archive old deals
 DELETE FROM hubspot_datasource.deals  
-WHERE dealstage = 'closed-lost' 
+WHERE dealstage = 'closedlost' 
   AND createdate < '2023-01-01';
 
 -- Remove test contacts

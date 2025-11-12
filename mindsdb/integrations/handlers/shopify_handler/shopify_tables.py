@@ -9,6 +9,7 @@ from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOper
 
 from .utils import query_graphql_nodes, get_graphql_columns, query_graphql
 from .models.products import Products, columns as products_columns
+from .models.product_variants import ProductVariants
 from .models.customers import Customers, columns as customers_columns
 from .models.orders import Orders, columns as orders_columns
 
@@ -181,6 +182,96 @@ class ProductsTable(ShopifyMetaAPIResource):
         return []
 
     # meta_get_column_statistics
+
+
+class ProductVariantsTable(ShopifyMetaAPIResource):
+    """The Shopify Products Table implementation"""
+    # https://shopify.dev/docs/api/admin-graphql/latest/queries/productvariants
+
+    def __init__(self, *args, **kwargs):
+        self.model = ProductVariants
+        self.model_name = 'productVariants'
+
+        sort_map = {
+            ProductVariants.id: "ID",
+            ProductVariants.inventoryQuantity: "INVENTORY_QUANTITY",
+            ProductVariants.displayName: "NAME",
+            ProductVariants.position: "POSITION",
+            ProductVariants.sku: "SKU",
+            ProductVariants.title: "TITLE",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("barcode", FilterOperator.EQUAL): "barcode:",
+
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("id", FilterOperator.EQUAL): "id:",
+
+            ("inventoryquantity", FilterOperator.GREATER_THAN): "inventoryquantity:>",
+            ("inventoryquantity", FilterOperator.GREATER_THAN_OR_EQUAL): "inventoryquantity:>=",
+            ("inventoryquantity", FilterOperator.LESS_THAN): "inventoryquantity:<",
+            ("inventoryquantity", FilterOperator.LESS_THAN_OR_EQUAL): "inventoryquantity:<=",
+            ("inventoryquantity", FilterOperator.EQUAL): "inventoryquantity:",
+
+            ("productid", FilterOperator.GREATER_THAN): "product_id:>",
+            ("productid", FilterOperator.GREATER_THAN_OR_EQUAL): "product_id:>=",
+            ("productid", FilterOperator.LESS_THAN): "product_id:<",
+            ("productid", FilterOperator.LESS_THAN_OR_EQUAL): "product_id:<=",
+            ("productid", FilterOperator.EQUAL): "product_id:",
+
+            ("productid", FilterOperator.IN): "toproduct_ids:",
+
+            ("sku", FilterOperator.EQUAL): "sku:",
+
+            ("title", FilterOperator.EQUAL): "title:",
+
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def get_columns(self) -> list[str]:
+        return [column["COLUMN_NAME"] for column in products_columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        response = query_graphql("""{
+            productVariantsCount(limit:null) {
+                count
+        }""")
+        row_count = response["productVariantsCount"]["count"]
+
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of product variants. A product variant is a specific version of a product that comes in more than one option, such as size or color.",
+            "row_count": row_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs):
+        return products_columns
+
+    def meta_get_primary_keys(self, table_name: str) -> list[Dict]:
+        return [
+            {
+                "table_name": table_name,
+                "column_name": "id",
+            }
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: list[str]) -> list[Dict]:
+        return [{
+            "PARENT_TABLE_NAME": table_name,
+            "PARENT_COLUMN_NAME": "productId",
+            "CHILD_TABLE_NAME": "products",
+            "CHILD_COLUMN_NAME": "id"
+        }]
 
 
 class CustomersTable(ShopifyMetaAPIResource):

@@ -5,6 +5,7 @@ import shopify
 
 from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     ProductsTable,
+    ProductVariantsTable,
     CustomersTable,
     OrdersTable,
 )
@@ -66,6 +67,9 @@ class ShopifyHandler(APIHandler):
 
         orders_data = OrdersTable(self)
         self._register_table("orders", orders_data)
+
+        product_variants_table = ProductVariantsTable(self)
+        self._register_table("product_variants", product_variants_table)
 
     def connect(self):
         """

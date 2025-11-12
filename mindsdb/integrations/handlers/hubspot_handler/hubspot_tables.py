@@ -1,4 +1,4 @@
-from typing import List, Dict, Text, Any, Optional, Tuple
+from typing import List, Dict, Text, Any, Optional
 
 import pandas as pd
 from hubspot import HubSpot
@@ -86,9 +86,35 @@ class CompaniesTable(APIResource):
             "ROW_COUNT": row_count,
         }
 
+<<<<<<< HEAD
     def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
         """Return default column metadata for companies."""
         return self.handler._get_default_meta_columns("companies")
+=======
+        Returns
+        -------
+        pd.DataFrame
+            Hubspot Companies matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+
+        """
+
+        select_statement_parser = SELECTQueryParser(query, "companies", self.get_columns())
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        companies_df = pd.json_normalize(self.get_companies(limit=result_limit))
+        if companies_df.empty:
+            companies_df = pd.DataFrame(columns=self._get_default_company_columns())
+
+        select_statement_executor = SELECTQueryExecutor(
+            companies_df, selected_columns, where_conditions, order_by_conditions
+        )
+        companies_df = select_statement_executor.execute_query()
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
 
     def list(
         self,
@@ -122,12 +148,33 @@ class CompaniesTable(APIResource):
                 f"No companies found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
             )
 
+<<<<<<< HEAD
         company_ids = filtered_df["id"].astype(str).tolist()
         logger.info(f"Updating {len(company_ids)} compan(ies) matching WHERE conditions")
         self.update_companies(company_ids, values)
 
     def remove(self, conditions: List[FilterCondition]) -> None:
         companies_df = pd.json_normalize(self.get_companies(limit=1000))
+=======
+        companies_df = pd.json_normalize(self.get_companies(limit=1000))
+
+        if companies_df.empty:
+            raise ValueError(
+                "No companies retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
+            )
+
+        update_query_executor = UPDATEQueryExecutor(companies_df, where_conditions)
+        filtered_df = update_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No companies found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+            )
+
+        company_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Updating {len(company_ids)} compan(ies) matching WHERE conditions")
+        self.update_companies(company_ids, values_to_update)
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
 
         if companies_df.empty:
             raise ValueError(
@@ -143,6 +190,32 @@ class CompaniesTable(APIResource):
                 f"No companies found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
             )
 
+<<<<<<< HEAD
+=======
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        companies_df = pd.json_normalize(self.get_companies(limit=1000))
+
+        if companies_df.empty:
+            raise ValueError(
+                "No companies retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
+            )
+
+        delete_query_executor = DELETEQueryExecutor(companies_df, where_conditions)
+        filtered_df = delete_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No companies found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+            )
+
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
         company_ids = filtered_df["id"].astype(str).tolist()
         logger.info(f"Deleting {len(company_ids)} compan(ies) matching WHERE conditions")
         self.delete_companies(company_ids)
@@ -282,6 +355,7 @@ class ContactsTable(APIResource):
     def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
         return self.handler._get_default_meta_columns("contacts")
 
+<<<<<<< HEAD
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -292,6 +366,24 @@ class ContactsTable(APIResource):
         requested_properties = targets or []
         contacts_df = pd.json_normalize(
             self.get_contacts(limit=limit, where_conditions=conditions, properties=requested_properties)
+=======
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+
+        """
+
+        select_statement_parser = SELECTQueryParser(query, "contacts", self.get_columns())
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        contacts_df = pd.json_normalize(self.get_contacts(limit=result_limit, where_conditions=where_conditions))
+        if contacts_df.empty:
+            contacts_df = pd.DataFrame(columns=self._get_default_contact_columns())
+
+        select_statement_executor = SELECTQueryExecutor(
+            contacts_df, selected_columns, where_conditions, order_by_conditions
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
         )
         if contacts_df.empty:
             contacts_df = pd.DataFrame(columns=self._get_default_contact_columns())
@@ -299,11 +391,67 @@ class ContactsTable(APIResource):
             contacts_df["id"] = pd.to_numeric(contacts_df["id"], errors="coerce")
         return contacts_df
 
+<<<<<<< HEAD
     def add(self, contact_data: List[dict]):
+=======
+    def insert(self, query: ast.Insert) -> None:
+        """
+        Inserts data into HubSpot "POST /crm/v3/objects/contacts/batch/create" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=["email", "firstname", "lastname", "phone", "company", "website"],
+            mandatory_columns=["email"],
+            all_mandatory=False,
+        )
+        contact_data = insert_statement_parser.parse_query()
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
         self.create_contacts(contact_data)
 
     def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
         where_conditions = _normalize_filter_conditions(conditions)
+        contacts_df = pd.json_normalize(self.get_contacts(limit=1000, where_conditions=where_conditions))
+
+        if contacts_df.empty:
+            raise ValueError(
+                "No contacts retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
+            )
+
+<<<<<<< HEAD
+        update_query_executor = UPDATEQueryExecutor(contacts_df, where_conditions)
+        filtered_df = update_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No contacts found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
+            )
+=======
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
         contacts_df = pd.json_normalize(self.get_contacts(limit=1000, where_conditions=where_conditions))
 
         if contacts_df.empty:
@@ -316,8 +464,13 @@ class ContactsTable(APIResource):
 
         if filtered_df.empty:
             raise ValueError(
-                f"No contacts found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
+                f"No contacts found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
             )
+
+        contact_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Updating {len(contact_ids)} contact(s) matching WHERE conditions")
+        self.update_contacts(contact_ids, values_to_update)
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
 
         contact_ids = filtered_df["id"].astype(str).tolist()
         logger.info(f"Updating {len(contact_ids)} contact(s) matching WHERE conditions")
@@ -332,12 +485,36 @@ class ContactsTable(APIResource):
                 "No contacts retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
             )
 
+<<<<<<< HEAD
         delete_query_executor = DELETEQueryExecutor(contacts_df, where_conditions)
         filtered_df = delete_query_executor.execute_query()
 
         if filtered_df.empty:
             raise ValueError(
                 f"No contacts found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
+=======
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        contacts_df = pd.json_normalize(self.get_contacts(limit=1000, where_conditions=where_conditions))
+
+        if contacts_df.empty:
+            raise ValueError(
+                "No contacts retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
+            )
+
+        delete_query_executor = DELETEQueryExecutor(contacts_df, where_conditions)
+        filtered_df = delete_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No contacts found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
             )
 
         contact_ids = filtered_df["id"].astype(str).tolist()
@@ -367,7 +544,10 @@ class ContactsTable(APIResource):
         where_conditions: Optional[List] = None,
         **kwargs,
     ) -> List[Dict]:
+<<<<<<< HEAD
         normalized_conditions = _normalize_filter_conditions(where_conditions)
+=======
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
         hubspot = self.handler.connect()
         requested_properties = kwargs.get("properties", [])
         default_properties = [
@@ -390,8 +570,13 @@ class ContactsTable(APIResource):
             api_kwargs.pop("limit", None)
 
         # Try using HubSpot search API if we have simple equality filters
+<<<<<<< HEAD
         if normalized_conditions:
             search_results = self._search_contacts_by_conditions(hubspot, normalized_conditions, properties, limit)
+=======
+        if where_conditions:
+            search_results = self._search_contacts_by_conditions(hubspot, where_conditions, properties, limit)
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
             if search_results is not None:
                 logger.info(f"Retrieved {len(search_results)} contacts from HubSpot via search API")
                 return search_results
@@ -573,8 +758,34 @@ class DealsTable(APIResource):
             "ROW_COUNT": row_count,
         }
 
+<<<<<<< HEAD
     def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
         return self.handler._get_default_meta_columns("deals")
+=======
+        Returns
+        -------
+        pd.DataFrame
+            Hubspot Deals matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+
+        """
+
+        select_statement_parser = SELECTQueryParser(query, "deals", self.get_columns())
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        deals_df = pd.json_normalize(self.get_deals(limit=result_limit))
+        if deals_df.empty:
+            deals_df = pd.DataFrame(columns=self._get_default_deal_columns())
+
+        select_statement_executor = SELECTQueryExecutor(
+            deals_df, selected_columns, where_conditions, order_by_conditions
+        )
+        deals_df = select_statement_executor.execute_query()
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
 
     def list(
         self,
@@ -602,6 +813,7 @@ class DealsTable(APIResource):
                 "No deals retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
             )
 
+<<<<<<< HEAD
         update_query_executor = UPDATEQueryExecutor(deals_df, where_conditions)
         filtered_df = update_query_executor.execute_query()
 
@@ -609,6 +821,61 @@ class DealsTable(APIResource):
             raise ValueError(
                 f"No deals found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
             )
+=======
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=["amount", "dealname", "pipeline", "closedate", "dealstage", "hubspot_owner_id"],
+            mandatory_columns=["dealname"],
+            all_mandatory=False,
+        )
+        deals_data = insert_statement_parser.parse_query()
+        self.create_deals(deals_data)
+
+    def update(self, query: ast.Update) -> None:
+        """
+        Updates data from HubSpot "PATCH /crm/v3/objects/deals/batch/update" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        deals_df = pd.json_normalize(self.get_deals(limit=1000))
+
+        if deals_df.empty:
+            raise ValueError(
+                "No deals retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
+            )
+
+        update_query_executor = UPDATEQueryExecutor(deals_df, where_conditions)
+        filtered_df = update_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No deals found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+            )
+
+        deal_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Updating {len(deal_ids)} deal(s) matching WHERE conditions")
+        self.update_deals(deal_ids, values_to_update)
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
 
         deal_ids = filtered_df["id"].astype(str).tolist()
         logger.info(f"Updating {len(deal_ids)} deal(s) matching WHERE conditions")
@@ -623,12 +890,36 @@ class DealsTable(APIResource):
                 "No deals retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
             )
 
+<<<<<<< HEAD
         delete_query_executor = DELETEQueryExecutor(deals_df, where_conditions)
         filtered_df = delete_query_executor.execute_query()
 
         if filtered_df.empty:
             raise ValueError(
                 f"No deals found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
+=======
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        deals_df = pd.json_normalize(self.get_deals(limit=1000))
+
+        if deals_df.empty:
+            raise ValueError(
+                "No deals retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
+            )
+
+        delete_query_executor = DELETEQueryExecutor(deals_df, where_conditions)
+        filtered_df = delete_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No deals found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
             )
 
         deal_ids = filtered_df["id"].astype(str).tolist()
@@ -651,6 +942,7 @@ class DealsTable(APIResource):
             "createdate",
             "hs_lastmodifieddate",
         ]
+<<<<<<< HEAD
 
     @staticmethod
     def _cast_deal_columns(deals_df: pd.DataFrame) -> pd.DataFrame:
@@ -666,6 +958,8 @@ class DealsTable(APIResource):
                 deals_df[column] = pd.to_datetime(deals_df[column], errors="coerce")
 
         return deals_df
+=======
+>>>>>>> a4bc712aa ([BUG] - Hubspot Handler - CRUD operations  (#11874))
 
     def get_deals(self, **kwargs) -> List[Dict]:
         hubspot = self.handler.connect()

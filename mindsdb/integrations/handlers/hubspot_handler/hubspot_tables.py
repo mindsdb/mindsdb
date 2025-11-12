@@ -174,7 +174,7 @@ class CompaniesTable(APITable):
         self.delete_companies(company_ids)
 
     def get_columns(self) -> List[Text]:
-        return pd.json_normalize(self.get_companies(limit=1)).columns.tolist()
+        return self._get_default_company_columns()
 
     @staticmethod
     def _get_default_company_columns() -> List[str]:
@@ -433,7 +433,7 @@ class ContactsTable(APITable):
         self.delete_contacts(contact_ids)
 
     def get_columns(self) -> List[Text]:
-        return pd.json_normalize(self.get_contacts(limit=1)).columns.tolist()
+        return self._get_default_contact_columns()
 
     @staticmethod
     def _get_default_contact_columns() -> List[str]:
@@ -788,7 +788,7 @@ class DealsTable(APITable):
         self.delete_deals(deal_ids)
 
     def get_columns(self) -> List[Text]:
-        return pd.json_normalize(self.get_deals(limit=1)).columns.tolist()
+        return self._get_default_deal_columns()
 
     @staticmethod
     def _get_default_deal_columns() -> List[str]:

@@ -32,7 +32,7 @@ class ClickHouseHandler(MetaDatabaseHandler):
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
-        self.protocol = connection_data.get('protocol', 'native')
+        self.protocol = connection_data.get("protocol", "native")
         self._has_is_nullable_column = None  # Cache for version check
 
     def __del__(self):
@@ -172,13 +172,13 @@ class ClickHouseHandler(MetaDatabaseHandler):
         """
         Checks if the is_nullable column exists in system.columns table.
         This column was added in ClickHouse 23.x.
-        
+
         Returns:
             bool: True if is_nullable column exists, False otherwise.
         """
         if self._has_is_nullable_column is not None:
             return self._has_is_nullable_column
-        
+
         try:
             check_query = """
                 SELECT name 
@@ -188,14 +188,11 @@ class ClickHouseHandler(MetaDatabaseHandler):
                     AND name = 'is_nullable'
             """
             result = self.native_query(check_query)
-            self._has_is_nullable_column = (
-                result.resp_type == RESPONSE_TYPE.TABLE 
-                and not result.data_frame.empty
-            )
+            self._has_is_nullable_column = result.resp_type == RESPONSE_TYPE.TABLE and not result.data_frame.empty
         except Exception as e:
             logger.warning(f"Could not check for is_nullable column: {e}")
             self._has_is_nullable_column = False
-        
+
         return self._has_is_nullable_column
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
@@ -209,8 +206,8 @@ class ClickHouseHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the metadata information.
         """
-        database = self.connection_data['database']
-        
+        database = self.connection_data["database"]
+
         query = f"""
             SELECT 
                 name as table_name,
@@ -243,11 +240,11 @@ class ClickHouseHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the column metadata.
         """
-        database = self.connection_data['database']
-        
+        database = self.connection_data["database"]
+
         # Check if is_nullable column is available (ClickHouse 23.x+)
         has_is_nullable = self._check_has_is_nullable_column()
-        
+
         # Build the SELECT clause based on available columns
         select_clause = """
                 table as table_name,
@@ -255,11 +252,11 @@ class ClickHouseHandler(MetaDatabaseHandler):
                 type as data_type,
                 comment as column_description,
                 default_expression as column_default"""
-        
+
         if has_is_nullable:
             select_clause += """,
                 is_nullable as is_nullable"""
-        
+
         query = f"""
             SELECT {select_clause}
             FROM system.columns
@@ -294,15 +291,15 @@ class ClickHouseHandler(MetaDatabaseHandler):
     ) -> Response:
         """
         Retrieves column statistics for a specific table.
-        
+
         Args:
             table_name (str): The name of the table.
-            column_names (Optional[List[str]]): List of column names to retrieve statistics for. 
+            column_names (Optional[List[str]]): List of column names to retrieve statistics for.
                                                   If None, statistics for all columns will be returned.
         Returns:
             Response: A response object containing the column statistics for the table.
         """
-        database = self.connection_data['database']
+        database = self.connection_data["database"]
 
         # Get the list of columns for this table
         columns_query = f"""
@@ -325,14 +322,16 @@ class ClickHouseHandler(MetaDatabaseHandler):
             # Build statistics query - collect all stats in one query
             select_parts = []
             for _, row in columns_result.data_frame.iterrows():
-                col = row['name']
+                col = row["name"]
                 # Use backticks to handle special characters in column names
-                select_parts.extend([
-                    f"countIf(`{col}` IS NULL) AS nulls_{col}",
-                    f"uniq(`{col}`) AS distincts_{col}",
-                    f"toString(min(`{col}`)) AS min_{col}",
-                    f"toString(max(`{col}`)) AS max_{col}",
-                ])
+                select_parts.extend(
+                    [
+                        f"countIf(`{col}` IS NULL) AS nulls_{col}",
+                        f"uniq(`{col}`) AS distincts_{col}",
+                        f"toString(min(`{col}`)) AS min_{col}",
+                        f"toString(max(`{col}`)) AS max_{col}",
+                    ]
+                )
 
             if not select_parts:
                 return Response(RESPONSE_TYPE.TABLE, pd.DataFrame())
@@ -341,7 +340,7 @@ class ClickHouseHandler(MetaDatabaseHandler):
             stats_query = f"""
                 SELECT 
                     count(*) AS total_rows,
-                    {', '.join(select_parts)}
+                    {", ".join(select_parts)}
                 FROM `{database}`.`{table_name}`
             """
 
@@ -352,46 +351,50 @@ class ClickHouseHandler(MetaDatabaseHandler):
                 # Return placeholder stats
                 placeholder_data = []
                 for _, row in columns_result.data_frame.iterrows():
-                    placeholder_data.append({
-                        'table_name': table_name,
-                        'column_name': row['name'],
-                        'null_percentage': None,
-                        'distinct_values_count': None,
-                        'most_common_values': None,
-                        'most_common_frequencies': None,
-                        'minimum_value': None,
-                        'maximum_value': None,
-                    })
+                    placeholder_data.append(
+                        {
+                            "table_name": table_name,
+                            "column_name": row["name"],
+                            "null_percentage": None,
+                            "distinct_values_count": None,
+                            "most_common_values": None,
+                            "most_common_frequencies": None,
+                            "minimum_value": None,
+                            "maximum_value": None,
+                        }
+                    )
                 return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(placeholder_data))
 
             # Parse the stats result
             stats_data = stats_result.data_frame.iloc[0]
-            total_rows = stats_data.get('total_rows', 0)
+            total_rows = stats_data.get("total_rows", 0)
 
             # Build the final statistics DataFrame
             all_stats = []
             for _, row in columns_result.data_frame.iterrows():
-                col = row['name']
-                nulls = stats_data.get(f'nulls_{col}', 0)
-                distincts = stats_data.get(f'distincts_{col}', None)
-                min_val = stats_data.get(f'min_{col}', None)
-                max_val = stats_data.get(f'max_{col}', None)
+                col = row["name"]
+                nulls = stats_data.get(f"nulls_{col}", 0)
+                distincts = stats_data.get(f"distincts_{col}", None)
+                min_val = stats_data.get(f"min_{col}", None)
+                max_val = stats_data.get(f"max_{col}", None)
 
                 # Calculate null percentage
                 null_pct = None
                 if total_rows is not None and total_rows > 0:
                     null_pct = round((nulls / total_rows) * 100, 2)
 
-                all_stats.append({
-                    'table_name': table_name,
-                    'column_name': col,
-                    'null_percentage': null_pct,
-                    'distinct_values_count': distincts,
-                    'most_common_values': None,
-                    'most_common_frequencies': None,
-                    'minimum_value': min_val,
-                    'maximum_value': max_val,
-                })
+                all_stats.append(
+                    {
+                        "table_name": table_name,
+                        "column_name": col,
+                        "null_percentage": null_pct,
+                        "distinct_values_count": distincts,
+                        "most_common_values": None,
+                        "most_common_frequencies": None,
+                        "minimum_value": min_val,
+                        "maximum_value": max_val,
+                    }
+                )
 
             return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(all_stats))
 
@@ -399,8 +402,7 @@ class ClickHouseHandler(MetaDatabaseHandler):
             logger.error(f"Exception while fetching statistics for table {table_name}: {e}")
             # Return empty stats on error
             return Response(
-                RESPONSE_TYPE.ERROR, 
-                error_message=f"Could not retrieve statistics for table {table_name}: {str(e)}"
+                RESPONSE_TYPE.ERROR, error_message=f"Could not retrieve statistics for table {table_name}: {str(e)}"
             )
 
     def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
@@ -413,8 +415,8 @@ class ClickHouseHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the primary key information.
         """
-        database = self.connection_data['database']
-        
+        database = self.connection_data["database"]
+
         query = f"""
             SELECT 
                 table as table_name,
@@ -448,13 +450,15 @@ class ClickHouseHandler(MetaDatabaseHandler):
         """
         # ClickHouse does not support foreign key constraints
         # Return an empty DataFrame with the expected columns
-        df = pd.DataFrame(columns=[
-            'parent_table_name',
-            'parent_column_name', 
-            'child_table_name',
-            'child_column_name',
-            'constraint_name'
-        ])
+        df = pd.DataFrame(
+            columns=[
+                "parent_table_name",
+                "parent_column_name",
+                "child_table_name",
+                "child_column_name",
+                "constraint_name",
+            ]
+        )
         return Response(RESPONSE_TYPE.TABLE, df)
 
     def meta_get_handler_info(self, **kwargs) -> str:

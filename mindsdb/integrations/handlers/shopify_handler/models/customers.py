@@ -16,6 +16,7 @@ class Customers(Enum):
     createdAt = "createdAt"
     dataSaleOptOut = "dataSaleOptOut"
     defaultAddress = MailingAddress
+    country = Extract("defaultAddress", "country")  # Custom
     # defaultEmailAddress = defaultEmailAddress
     emailAddress = Extract("defaultEmailAddress", "emailAddress")  # Custom
     # defaultPhoneNumber = "defaultPhoneNumber"
@@ -105,6 +106,14 @@ columns = [
         "COLUMN_NAME": "defaultAddress",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The default address associated with the customer.",
+        "IS_NULLABLE": None
+    },
+    {
+        # Custom field, extracted from defaultAddress
+        "TABLE_NAME": "customers",
+        "COLUMN_NAME": "country",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The coutry associated with the customer.",
         "IS_NULLABLE": None
     },
     # {

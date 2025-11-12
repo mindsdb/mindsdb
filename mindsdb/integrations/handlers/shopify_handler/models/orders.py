@@ -133,41 +133,41 @@ class Orders(Enum):
 
 
 columns = [
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "additionalFees",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of additional fees applied to an order, such as duties, import fees, or tax lines.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "agreements",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of sales agreements associated with the order, such as contracts defining payment terms, or delivery schedules between merchants and customers.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "alerts",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of messages that appear on the Orders page in the Shopify admin. These alerts provide merchants with important information about an order's status or required actions.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "app",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The application that created the order. For example, Online Store, Point of Sale, or a custom app name. Use this to identify the order source for attribution and fulfillment workflows.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "billingAddress",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The billing address associated with the payment method selected by the customer for an order. Returns null if no billing address was provided during checkout.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "additionalFees",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of additional fees applied to an order, such as duties, import fees, or tax lines.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "agreements",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of sales agreements associated with the order, such as contracts defining payment terms, or delivery schedules between merchants and customers.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "alerts",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of messages that appear on the Orders page in the Shopify admin. These alerts provide merchants with important information about an order's status or required actions.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "app",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The application that created the order. For example, Online Store, Point of Sale, or a custom app name. Use this to identify the order source for attribution and fulfillment workflows.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "billingAddress",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The billing address associated with the payment method selected by the customer for an order. Returns null if no billing address was provided during checkout.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "billingAddressMatchesShippingAddress",
@@ -175,13 +175,13 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether the billing address matches the shipping address. Returns true if both addresses are the same, and false if they're different or if an address is missing.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "cancellation",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "Details of an order's cancellation, if it has been canceled. This includes the reason, date, and any staff notes.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "cancellation",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "Details of an order's cancellation, if it has been canceled. This includes the reason, date, and any staff notes.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "cancelledAt",
@@ -189,13 +189,13 @@ columns = [
         "COLUMN_DESCRIPTION": "The date and time in ISO 8601 format when an order was canceled. Returns null if the order hasn't been canceled.",
         "IS_NULLABLE": None
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "cancelReason",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The reason provided for an order cancellation. For example, a merchant might cancel an order if there's insufficient inventory. Returns null if the order hasn't been canceled.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "cancelReason",
+    #     "DATA_TYPE": "TEXT",
+    #     "COLUMN_DESCRIPTION": "The reason provided for an order cancellation. For example, a merchant might cancel an order if there's insufficient inventory. Returns null if the order hasn't been canceled.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "canMarkAsPaid",
@@ -217,20 +217,20 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether an authorized payment for an order can be captured. Returns true if an authorized payment exists that hasn't been fully captured yet.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "cartDiscountAmountSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total discount amount applied at the time the order was created, displayed in both shop and presentment currencies, before returns, refunds, order edits, and cancellations. This field only includes discounts applied to the entire order.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "channelInformation",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "Details about the sales channel that created the order, such as the channel app type and channel name, which helps to track order sources.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "cartDiscountAmountSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total discount amount applied at the time the order was created, displayed in both shop and presentment currencies, before returns, refunds, order edits, and cancellations. This field only includes discounts applied to the entire order.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "channelInformation",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "Details about the sales channel that created the order, such as the channel app type and channel name, which helps to track order sources.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "clientIp",
@@ -280,20 +280,20 @@ columns = [
         "COLUMN_DESCRIPTION": "The shop currency when the order was placed. For example, USD or CAD.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "currentCartDiscountAmountSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The current total of all discounts applied to the entire order, after returns, refunds, order edits, and cancellations. This includes discount codes, automatic discounts, and other promotions that affect the whole order rather than individual line items.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "currentShippingPriceSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The current shipping price after applying refunds and discounts. If the parent order.taxesIncluded field is true, then this price includes taxes. Otherwise, this field is the pre-tax price.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "currentCartDiscountAmountSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The current total of all discounts applied to the entire order, after returns, refunds, order edits, and cancellations. This includes discount codes, automatic discounts, and other promotions that affect the whole order rather than individual line items.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "currentShippingPriceSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The current shipping price after applying refunds and discounts. If the parent order.taxesIncluded field is true, then this price includes taxes. Otherwise, this field is the pre-tax price.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "currentSubtotalLineItemsQuantity",
@@ -301,55 +301,55 @@ columns = [
         "COLUMN_DESCRIPTION": "The current sum of the quantities for all line items that contribute to the order's subtotal price, after returns, refunds, order edits, and cancellations.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "currentSubtotalPriceSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total price of the order, after returns and refunds, in shop and presentment currencies. This includes taxes and discounts.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "currentTaxLines",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of all tax lines applied to line items on the order, after returns. Tax line prices represent the total price for all tax lines with the same rate and title.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "currentTotalAdditionalFeesSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The current total of all additional fees for an order, after any returns or modifications. Modifications include returns, refunds, order edits, and cancellations. Additional fees can include charges such as duties, import fees, and special handling.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "currentTotalDiscountsSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total amount discounted on the order after returns and refunds, in shop and presentment currencies. This includes both order and line level discounts.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "currentTotalDutiesSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The current total duties amount for an order, after any returns or modifications. Modifications include returns, refunds, order edits, and cancellations.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "currentTotalPriceSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total price of the order, after returns, in shop and presentment currencies. This includes taxes and discounts.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "currentTotalTaxSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The sum of the prices of all tax lines applied to line items on the order, after returns and refunds, in shop and presentment currencies.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "currentSubtotalPriceSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total price of the order, after returns and refunds, in shop and presentment currencies. This includes taxes and discounts.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "currentTaxLines",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of all tax lines applied to line items on the order, after returns. Tax line prices represent the total price for all tax lines with the same rate and title.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "currentTotalAdditionalFeesSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The current total of all additional fees for an order, after any returns or modifications. Modifications include returns, refunds, order edits, and cancellations. Additional fees can include charges such as duties, import fees, and special handling.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "currentTotalDiscountsSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total amount discounted on the order after returns and refunds, in shop and presentment currencies. This includes both order and line level discounts.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "currentTotalDutiesSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The current total duties amount for an order, after any returns or modifications. Modifications include returns, refunds, order edits, and cancellations.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "currentTotalPriceSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total price of the order, after returns, in shop and presentment currencies. This includes taxes and discounts.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "currentTotalTaxSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The sum of the prices of all tax lines applied to line items on the order, after returns and refunds, in shop and presentment currencies.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "currentTotalWeight",
@@ -357,20 +357,20 @@ columns = [
         "COLUMN_DESCRIPTION": "The total weight of the order after returns and refunds, in grams.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "customAttributes",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of additional information that has been attached to the order. For example, gift message, delivery instructions, or internal notes.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "customer",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The customer who placed an order. Returns null if an order was created through a checkout without customer authentication, such as a guest checkout.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "customAttributes",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of additional information that has been attached to the order. For example, gift message, delivery instructions, or internal notes.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "customer",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The customer who placed an order. Returns null if an order was created through a checkout without customer authentication, such as a guest checkout.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "customerAcceptsMarketing",
@@ -378,13 +378,13 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether the customer agreed to receive marketing emails at the time of purchase. Use this to ensure compliance with marketing consent laws and to segment customers for email campaigns.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "customerJourneySummary",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The customer's visits and interactions with the online store before placing the order. Use this to understand customer behavior, attribution sources, and marketing effectiveness to optimize your sales funnel.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "customerJourneySummary",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The customer's visits and interactions with the online store before placing the order. Use this to understand customer behavior, attribution sources, and marketing effectiveness to optimize your sales funnel.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "customerLocale",
@@ -392,13 +392,13 @@ columns = [
         "COLUMN_DESCRIPTION": "The customer's language and region preference at the time of purchase. For example, en for English, fr-CA for French (Canada), or es-MX for Spanish (Mexico). Use this to provide localized customer service and targeted marketing in the customer's preferred language.",
         "IS_NULLABLE": None
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "discountApplications",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of discounts that are applied to the order, excluding order edits and refunds. Includes discount codes, automatic discounts, and other promotions that reduce the order total.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "discountApplications",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of discounts that are applied to the order, excluding order edits and refunds. Includes discount codes, automatic discounts, and other promotions that reduce the order total.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "discountCode",
@@ -413,34 +413,34 @@ columns = [
         "COLUMN_DESCRIPTION": "The discount codes used for the order. Multiple codes can be applied to a single order.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "displayAddress",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The primary address of the customer, prioritizing shipping address over billing address when both are available. Returns null if neither shipping address nor billing address was provided.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "displayFinancialStatus",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "An order's financial status for display in the Shopify admin.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "displayFulfillmentStatus",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The order's fulfillment status that displays in the Shopify admin to merchants. For example, an order might be unfulfilled or scheduled.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "disputes",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of payment disputes associated with the order, such as chargebacks or payment inquiries. Disputes occur when customers challenge transactions with their bank or payment provider.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "displayAddress",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The primary address of the customer, prioritizing shipping address over billing address when both are available. Returns null if neither shipping address nor billing address was provided.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "displayFinancialStatus",
+    #     "DATA_TYPE": "TEXT",
+    #     "COLUMN_DESCRIPTION": "An order's financial status for display in the Shopify admin.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "displayFulfillmentStatus",
+    #     "DATA_TYPE": "TEXT",
+    #     "COLUMN_DESCRIPTION": "The order's fulfillment status that displays in the Shopify admin to merchants. For example, an order might be unfulfilled or scheduled.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "disputes",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of payment disputes associated with the order, such as chargebacks or payment inquiries. Disputes occur when customers challenge transactions with their bank or payment provider.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "dutiesIncluded",
@@ -469,13 +469,13 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether taxes on the order are estimated. This field returns false when taxes on the order are finalized and aren't subject to any changes.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "events",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of events associated with the order. Events track significant changes and activities related to the order, such as creation, payment, fulfillment, and cancellation.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "events",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of events associated with the order. Events track significant changes and activities related to the order, such as creation, payment, fulfillment, and cancellation.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "fulfillable",
@@ -483,20 +483,20 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether there are line items that can be fulfilled. This field returns false when the order has no fulfillable line items.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "fulfillmentOrders",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of fulfillment orders for an order. Each fulfillment order groups line items that are fulfilled together, allowing an order to be processed in parts if needed.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "fulfillments",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of shipments for the order. Fulfillments represent the physical shipment of products to customers.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "fulfillmentOrders",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of fulfillment orders for an order. Each fulfillment order groups line items that are fulfilled together, allowing an order to be processed in parts if needed.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "fulfillments",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of shipments for the order. Fulfillments represent the physical shipment of products to customers.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "fulfillmentsCount",
@@ -525,34 +525,34 @@ columns = [
         "COLUMN_DESCRIPTION": "A globally-unique ID.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "legacyResourceId",
-        "DATA_TYPE": "INT",
-        "COLUMN_DESCRIPTION": "The ID of the corresponding resource in the REST Admin API.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "lineItems",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of the order's line items. Line items represent the individual products and quantities that make up the order.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "localizedFields",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "List of localized fields for the resource.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "merchantBusinessEntity",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The legal business structure that the merchant operates under for this order, such as an LLC, corporation, or partnership. Used for tax reporting, legal compliance, and determining which business entity is responsible for the order.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "legacyResourceId",
+    #     "DATA_TYPE": "INT",
+    #     "COLUMN_DESCRIPTION": "The ID of the corresponding resource in the REST Admin API.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "lineItems",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of the order's line items. Line items represent the individual products and quantities that make up the order.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "localizedFields",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "List of localized fields for the resource.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "merchantBusinessEntity",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The legal business structure that the merchant operates under for this order, such as an LLC, corporation, or partnership. Used for tax reporting, legal compliance, and determining which business entity is responsible for the order.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "merchantEditable",
@@ -567,27 +567,27 @@ columns = [
         "COLUMN_DESCRIPTION": "A list of reasons why the order can't be edited. For example, canceled orders can't be edited.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "merchantOfRecordApp",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The application acting as the Merchant of Record for the order. The Merchant of Record is responsible for tax collection and remittance.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "metafield",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A custom field, including its namespace and key, that's associated with a Shopify resource for the purposes of adding and storing additional information.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "metafields",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of custom fields that a merchant associates with a Shopify resource.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "merchantOfRecordApp",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The application acting as the Merchant of Record for the order. The Merchant of Record is responsible for tax collection and remittance.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "metafield",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A custom field, including its namespace and key, that's associated with a Shopify resource for the purposes of adding and storing additional information.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "metafields",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of custom fields that a merchant associates with a Shopify resource.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "name",
@@ -595,20 +595,20 @@ columns = [
         "COLUMN_DESCRIPTION": "The unique identifier for the order that appears on the order page in the Shopify admin and the Order status page. For example, #1001, EN1001, or 1001-A. This value isn't unique across multiple stores.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "netPaymentSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The net payment for the order, based on the total amount received minus the total amount refunded, in shop and presentment currencies.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "nonFulfillableLineItems",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of line items that can't be fulfilled. For example, tips and fully refunded line items can't be fulfilled.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "netPaymentSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The net payment for the order, based on the total amount received minus the total amount refunded, in shop and presentment currencies.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "nonFulfillableLineItems",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of line items that can't be fulfilled. For example, tips and fully refunded line items can't be fulfilled.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "note",
@@ -623,34 +623,34 @@ columns = [
         "COLUMN_DESCRIPTION": "The order number used to generate the name using the store's configured order number prefix/suffix. This number isn't guaranteed to follow a consecutive integer sequence, nor is it guaranteed to be unique across multiple stores, or even for a single store.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "originalTotalAdditionalFeesSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total amount of all additional fees, such as import fees or taxes, that were applied when an order was created. Returns null if additional fees aren't applicable.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "originalTotalDutiesSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total amount of duties calculated when an order was created, before any modifications. Modifications include returns, refunds, order edits, and cancellations.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "originalTotalPriceSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total price of the order at the time of order creation, in shop and presentment currencies. Use this to compare the original order value against the current total after edits, returns, or refunds.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "paymentCollectionDetails",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The payment collection details for the order, including payment status, outstanding amounts, and collection information. Use this to understand when and how payments should be collected, especially for orders with deferred or installment payment terms.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "originalTotalAdditionalFeesSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total amount of all additional fees, such as import fees or taxes, that were applied when an order was created. Returns null if additional fees aren't applicable.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "originalTotalDutiesSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total amount of duties calculated when an order was created, before any modifications. Modifications include returns, refunds, order edits, and cancellations.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "originalTotalPriceSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total price of the order at the time of order creation, in shop and presentment currencies. Use this to compare the original order value against the current total after edits, returns, or refunds.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "paymentCollectionDetails",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The payment collection details for the order, including payment status, outstanding amounts, and collection information. Use this to understand when and how payments should be collected, especially for orders with deferred or installment payment terms.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "paymentGatewayNames",
@@ -658,13 +658,13 @@ columns = [
         "COLUMN_DESCRIPTION": "A list of the names of all payment gateways used for the order. For example, Shopify Payments and Cash on Delivery (COD).",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "paymentTerms",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The payment terms associated with the order, such as net payment due dates or early payment discounts. Payment terms define when and how an order should be paid. Returns null if no specific payment terms were set for the order.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "paymentTerms",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The payment terms associated with the order, such as net payment due dates or early payment discounts. Payment terms define when and how an order should be paid. Returns null if no specific payment terms were set for the order.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "phone",
@@ -700,20 +700,20 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether the customer also purchased items from other stores in the network.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "publication",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The sales channel that the order was created from, such as the Online Store or Shopify POS.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "purchasingEntity",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The business entity that placed the order, including company details and purchasing relationships. Used for B2B transactions to track which company or organization is responsible for the purchase and payment terms.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "publication",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The sales channel that the order was created from, such as the Online Store or Shopify POS.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "purchasingEntity",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The business entity that placed the order, including company details and purchasing relationships. Used for B2B transactions to track which company or organization is responsible for the purchase and payment terms.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "refundable",
@@ -721,20 +721,20 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether the order can be refunded based on its payment transactions. Returns false for orders with no eligible payment transactions, such as fully refunded orders or orders with non-refundable payment methods.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "refundDiscrepancySet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The difference between the suggested and actual refund amount of all refunds that have been applied to the order. A positive value indicates a difference in the merchant's favor, and a negative value indicates a difference in the customer's favor.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "refunds",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of refunds that have been applied to the order. Refunds represent money returned to customers for returned items, cancellations, or adjustments.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "refundDiscrepancySet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The difference between the suggested and actual refund amount of all refunds that have been applied to the order. A positive value indicates a difference in the merchant's favor, and a negative value indicates a difference in the customer's favor.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "refunds",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of refunds that have been applied to the order. Refunds represent money returned to customers for returned items, cancellations, or adjustments.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "registeredSourceUrl",
@@ -756,20 +756,20 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether any line items on the order can be restocked into inventory. Returns false for digital products, custom items, or items that can't be resold.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "retailLocation",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The physical location where a retail order is created or completed, except for draft POS orders completed using the mark as paid flow in the Shopify admin, which return null. Transactions associated with the order might have been processed at a different location.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "returns",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The returns associated with the order. Contains information about items that customers have requested to return, including return reasons, status, and refund details.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "retailLocation",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The physical location where a retail order is created or completed, except for draft POS orders completed using the mark as paid flow in the Shopify admin, which return null. Transactions associated with the order might have been processed at a different location.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "returns",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The returns associated with the order. Contains information about items that customers have requested to return, including return reasons, status, and refund details.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "returnStatus",
@@ -777,41 +777,41 @@ columns = [
         "COLUMN_DESCRIPTION": "The order's aggregated return status for display purposes. Indicates the overall state of returns for the order, helping merchants track and manage the return process.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "risk",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The risk assessment summary for the order. Provides fraud analysis and risk scoring to help you identify potentially fraudulent orders.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "shippingAddress",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The shipping address where the order will be delivered. Contains the customer's delivery location for fulfillment and shipping label generation. Returns null for digital orders or orders that don't require shipping.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "shippingLine",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A summary of all shipping costs on the order. Aggregates shipping charges, discounts, and taxes to provide a single view of delivery costs.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "shippingLines",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The shipping methods applied to the order. Each shipping line represents a shipping option chosen during checkout, including the carrier, service level, and cost.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "shopifyProtect",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The Shopify Protect details for the order, including fraud protection status and coverage information. Shopify Protect helps protect eligible orders against fraudulent chargebacks. Returns null if Shopify Protect is disabled for the shop or the order isn't eligible for protection.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "risk",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The risk assessment summary for the order. Provides fraud analysis and risk scoring to help you identify potentially fraudulent orders.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "shippingAddress",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The shipping address where the order will be delivered. Contains the customer's delivery location for fulfillment and shipping label generation. Returns null for digital orders or orders that don't require shipping.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "shippingLine",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A summary of all shipping costs on the order. Aggregates shipping charges, discounts, and taxes to provide a single view of delivery costs.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "shippingLines",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The shipping methods applied to the order. Each shipping line represents a shipping option chosen during checkout, including the carrier, service level, and cost.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "shopifyProtect",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The Shopify Protect details for the order, including fraud protection status and coverage information. Shopify Protect helps protect eligible orders against fraudulent chargebacks. Returns null if Shopify Protect is disabled for the shop or the order isn't eligible for protection.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "sourceIdentifier",
@@ -826,13 +826,13 @@ columns = [
         "COLUMN_DESCRIPTION": "The name of the source associated with the order, such as web, mobile_app, or pos. Use this field to identify the platform where the order was placed.",
         "IS_NULLABLE": None
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "staffMember",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The staff member who created or is responsible for the order. Useful for tracking which team member handled phone orders, manual orders, or order modifications. Returns null for orders created directly by customers through the online store.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "staffMember",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The staff member who created or is responsible for the order. Useful for tracking which team member handled phone orders, manual orders, or order modifications. Returns null for orders created directly by customers through the online store.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "statusPageUrl",
@@ -847,20 +847,20 @@ columns = [
         "COLUMN_DESCRIPTION": "The sum of quantities for all line items that contribute to the order's subtotal price. This excludes quantities for items like tips, shipping costs, or gift cards that don't affect the subtotal.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "subtotalPriceSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The sum of the prices for all line items after discounts and before returns, in shop and presentment currencies. If taxesIncluded is true, then the subtotal also includes tax.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "suggestedRefund",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A calculated refund suggestion for the order based on specified line items, shipping, and duties. Use this to preview refund amounts, taxes, and processing fees before creating an actual refund.",
-        "IS_NULLABLE": None
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "subtotalPriceSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The sum of the prices for all line items after discounts and before returns, in shop and presentment currencies. If taxesIncluded is true, then the subtotal also includes tax.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "suggestedRefund",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A calculated refund suggestion for the order based on specified line items, shipping, and duties. Use this to preview refund amounts, taxes, and processing fees before creating an actual refund.",
+    #     "IS_NULLABLE": None
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "tags",
@@ -882,13 +882,13 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether taxes are exempt on the order. Returns true for orders where the customer or business has a valid tax exemption, such as non-profit organizations or tax-free purchases.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "taxLines",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of all tax lines applied to line items on the order, before returns. Tax line prices represent the total price for all tax lines with the same rate and title.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "taxLines",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of all tax lines applied to line items on the order, before returns. Tax line prices represent the total price for all tax lines with the same rate and title.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "test",
@@ -896,83 +896,83 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether the order is a test. Test orders are made using the Shopify Bogus Gateway or a payment provider with test mode enabled. A test order can't be converted into a real order and vice versa.",
         "IS_NULLABLE": False
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalCapturableSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The authorized amount that's uncaptured or undercaptured, in shop and presentment currencies. This amount isn't adjusted for returns.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalCashRoundingAdjustment",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total rounding adjustment applied to payments or refunds for an order involving cash payments. Applies to some countries where cash transactions are rounded to the nearest currency denomination.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalDiscountsSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total amount discounted on the order before returns, in shop and presentment currencies. This includes both order and line level discounts.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalOutstandingSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total amount not yet transacted for the order, in shop and presentment currencies. A positive value indicates a difference in the merchant's favor (payment from customer to merchant) and a negative value indicates a difference in the customer's favor (refund from merchant to customer).",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalPriceSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total price of the order, before returns, in shop and presentment currencies. This includes taxes and discounts.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalReceivedSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total amount received from the customer before returns, in shop and presentment currencies.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalRefundedSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total amount that was refunded, in shop and presentment currencies.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalRefundedShippingSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total amount of shipping that was refunded, in shop and presentment currencies.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalShippingPriceSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total shipping costs returned to the customer, in shop and presentment currencies. This includes fees and any related discounts that were refunded.",
-        "IS_NULLABLE": False
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalTaxSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total tax amount before returns, in shop and presentment currencies.",
-        "IS_NULLABLE": None
-    },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "totalTipReceivedSet",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The sum of all tip amounts for the order, in shop and presentment currencies.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalCapturableSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The authorized amount that's uncaptured or undercaptured, in shop and presentment currencies. This amount isn't adjusted for returns.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalCashRoundingAdjustment",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total rounding adjustment applied to payments or refunds for an order involving cash payments. Applies to some countries where cash transactions are rounded to the nearest currency denomination.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalDiscountsSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total amount discounted on the order before returns, in shop and presentment currencies. This includes both order and line level discounts.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalOutstandingSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total amount not yet transacted for the order, in shop and presentment currencies. A positive value indicates a difference in the merchant's favor (payment from customer to merchant) and a negative value indicates a difference in the customer's favor (refund from merchant to customer).",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalPriceSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total price of the order, before returns, in shop and presentment currencies. This includes taxes and discounts.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalReceivedSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total amount received from the customer before returns, in shop and presentment currencies.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalRefundedSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total amount that was refunded, in shop and presentment currencies.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalRefundedShippingSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total amount of shipping that was refunded, in shop and presentment currencies.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalShippingPriceSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total shipping costs returned to the customer, in shop and presentment currencies. This includes fees and any related discounts that were refunded.",
+    #     "IS_NULLABLE": False
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalTaxSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The total tax amount before returns, in shop and presentment currencies.",
+    #     "IS_NULLABLE": None
+    # },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "totalTipReceivedSet",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "The sum of all tip amounts for the order, in shop and presentment currencies.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "totalWeight",
@@ -980,13 +980,13 @@ columns = [
         "COLUMN_DESCRIPTION": "The total weight of the order before returns, in grams.",
         "IS_NULLABLE": None
     },
-    {
-        "TABLE_NAME": "orders",
-        "COLUMN_NAME": "transactions",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "A list of transactions associated with the order.",
-        "IS_NULLABLE": False
-    },
+    # {
+    #     "TABLE_NAME": "orders",
+    #     "COLUMN_NAME": "transactions",
+    #     "DATA_TYPE": "JSON",
+    #     "COLUMN_DESCRIPTION": "A list of transactions associated with the order.",
+    #     "IS_NULLABLE": False
+    # },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "transactionsCount",

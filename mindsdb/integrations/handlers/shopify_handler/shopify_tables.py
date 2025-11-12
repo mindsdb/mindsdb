@@ -1,16 +1,9 @@
-import json
 import shopify
-import requests
 import pandas as pd
-from typing import Text, List, Dict, Any, Set
+from typing import List, Dict
 
-from mindsdb_sql_parser import ast
-from mindsdb.integrations.libs.api_handler import APITable, APIResource, MetaAPIResource
+from mindsdb.integrations.libs.api_handler import MetaAPIResource
 
-from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
-from mindsdb.integrations.utilities.handlers.query_utilities import INSERTQueryParser
-from mindsdb.integrations.utilities.handlers.query_utilities import DELETEQueryParser, DELETEQueryExecutor
-from mindsdb.integrations.utilities.handlers.query_utilities import UPDATEQueryParser, UPDATEQueryExecutor
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 
@@ -23,43 +16,100 @@ logger = log.getLogger(__name__)
 
 
 class ShopifyMetaAPIResource(MetaAPIResource):
-    def list(self, *args, **kwargs):
-        return self.query(*args, **kwargs)
+    def list(
+        self,
+        conditions: list[FilterCondition] | None = None,
+        limit: int | None = None,
+        sort: list[SortColumn] | None = None,
+        targets: list[str] | None = None,
+        **kwargs,
+    ):
+        sort_key, sort_reverse = self._get_sort(sort)
+        query_conditions = self._get_query_conditions(conditions)
+
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        columns = get_graphql_columns(self.model, targets)
+        data = query_graphql_nodes(
+            self.model_name,
+            self.model,
+            columns,
+            sort_key=sort_key,
+            sort_reverse=sort_reverse,
+            query=query_conditions,
+            limit=limit,
+        )
+
+        if len(data) == 0:
+            df_columns = targets
+            if targets is None or len(targets) == 0:
+                df_columns = list(self.model)
+            products_df = pd.DataFrame(data, columns=df_columns)
+        else:
+            products_df = pd.DataFrame(data)
+
+        return products_df
+
+    def _get_sort(self, sort: List[SortColumn] | None) -> tuple[str, bool]:
+        sort_key = None
+        sort_reverse = None
+        sort_map = self.sort_map or {}
+        if sort:
+            order_by = sort[0].column.lower()
+            asc = sort[0].ascending
+            if order_by not in sort_map:
+                raise KeyError(f"Unsopported column for order by: {order_by}, available columns are: {list(self.sort_map.keys())}")
+
+            sort_key = sort_map[order_by]
+            sort_reverse = not asc
+        return sort_key, sort_reverse
+
+    def _get_query_conditions(self, conditions: List[FilterCondition] | None) -> str:
+        query_conditions = []
+        conditions_op_map = self.conditions_op_map or {}
+        for condition in (conditions or []):
+            op = condition.op
+            column = condition.column.lower()
+            mapped_op = conditions_op_map.get((column, op))
+            if mapped_op:
+                value = condition.value
+                if isinstance(value, list):
+                    value = ','.join(value)
+                elif isinstance(value, bool):
+                    value = f'{value}'.lower()
+                query_conditions.append(f"{mapped_op}{value}")
+                condition.applied = True
+        query_conditions = ' AND '.join(query_conditions)
+        return query_conditions
 
 
 class ProductsTable(ShopifyMetaAPIResource):
     """The Shopify Products Table implementation"""
+    # https://shopify.dev/docs/api/admin-graphql/latest/queries/products
 
-    def query(self, conditions, limit, sort, targets, **kwargs):
-        sorter = {}
-        if sort:
-            order_by = sort[0].column.lower()
-            asc = sort[0].ascending
-            sort_map = {
-                Products.createdAt: "CREATED_AT",
-                Products.id: "ID",
-                Products.totalInventory: "INVENTORY_TOTAL",
-                Products.productType: "PRODUCT_TYPE",
-                Products.publishedAt: "PUBLISHED_AT",
-                Products.title: "TITLE",
-                Products.updatedAt: "UPDATED_AT",
-                Products.vendor: "VENDOR",
-            }
-            sort_map = {key.name.lower(): value for key, value in sort_map.items()}
-            if order_by not in sort_map:
-                raise KeyError(f"Unsopported column for order by: {order_by}, available columns are: {list(sort_map.keys())}")
+    def __init__(self, *args, **kwargs):
+        self.model = Products
+        self.model_name = 'products'
 
-            sorter = {
-                "field": sort_map[order_by],
-                "reverse": not asc
-            }
+        sort_map = {
+            Products.createdAt: "CREATED_AT",
+            Products.id: "ID",
+            Products.totalInventory: "INVENTORY_TOTAL",
+            Products.productType: "PRODUCT_TYPE",
+            Products.publishedAt: "PUBLISHED_AT",
+            Products.title: "TITLE",
+            Products.updatedAt: "UPDATED_AT",
+            Products.vendor: "VENDOR",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
 
-        op_map = {
-            ("createdat", FilterOperator.GREATER_THAN): "createdAt:>",
-            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "createdAt:>=",
-            ("createdat", FilterOperator.LESS_THAN): "createdAt:<",
-            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "createdAt:<=",
-            ("createdat", FilterOperator.EQUAL): "createdAt:",
+        self.conditions_op_map = {
+            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
+            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
+            ("createdat", FilterOperator.EQUAL): "created_at:",
 
             ("id", FilterOperator.GREATER_THAN): "id:>",
             ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
@@ -67,42 +117,36 @@ class ProductsTable(ShopifyMetaAPIResource):
             ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
             ("id", FilterOperator.EQUAL): "id:",
 
+            ("isgiftcard", FilterOperator.EQUAL): "gift_card:",
+
             ("handle", FilterOperator.EQUAL): "handle:",
             ("handle", FilterOperator.IN): "handle:",
+
+            ("totalinventory", FilterOperator.EQUAL): "inventory_total:",
+
+            ("producttype", FilterOperator.EQUAL): "product_type:",
+            ("producttype", FilterOperator.IN): "product_type:",
+
+            ("publishedat", FilterOperator.GREATER_THAN): "published_at:>",
+            ("publishedat", FilterOperator.GREATER_THAN_OR_EQUAL): "published_at:>=",
+            ("publishedat", FilterOperator.LESS_THAN): "published_at:<",
+            ("publishedat", FilterOperator.LESS_THAN_OR_EQUAL): "published_at:<=",
+            ("publishedat", FilterOperator.EQUAL): "published_at:",
 
             ("status", FilterOperator.EQUAL): "status:",
             ("status", FilterOperator.IN): "status:",
 
-            ("totalinventory", FilterOperator.EQUAL): "inventory_total:",
+            ("title", FilterOperator.EQUAL): "title:",
+
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+
+            ("vendor", FilterOperator.EQUAL): "vendor:",
         }
-        query_conditions = []
-        for condition in conditions:
-            op = condition.op
-            column = condition.column.lower()
-            mapped_op = op_map.get((column, op))
-            if mapped_op:
-                value = condition.value
-                if isinstance(value, list):
-                    value = ','.join(value)
-                query_conditions.append(f"{mapped_op}{value}")
-                condition.applied = True
-        query_conditions = ' AND '.join(query_conditions)
-
-        products_df = pd.DataFrame(
-            self.get_products(limit=limit, sort=sorter, query=query_conditions)
-        )
-        return products_df
-
-    def get_products(self, limit: int = None, sort: dict | None = None, query: str | None = None, **kwargs) -> List[Dict]:
-        # https://shopify.dev/docs/api/admin-graphql/latest/queries/products
-
-        api_session = self.handler.connect()
-        shopify.ShopifyResource.activate_session(api_session)
-
-        columns = get_graphql_columns(Products)
-        data = query_graphql_nodes('products', Products, columns, sort=sort, query=query)
-
-        return data
+        super().__init__(*args, **kwargs)
 
     def get_columns(self) -> list[str]:
         return [column["COLUMN_NAME"] for column in products_columns]
@@ -125,7 +169,7 @@ class ProductsTable(ShopifyMetaAPIResource):
         # parsed from https://shopify.dev/docs/api/admin-graphql/latest/objects/Product.md
         return products_columns
 
-    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+    def meta_get_primary_keys(self, table_name: str) -> list[Dict]:
         return [
             {
                 "table_name": table_name,
@@ -133,7 +177,7 @@ class ProductsTable(ShopifyMetaAPIResource):
             }
         ]
 
-    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+    def meta_get_foreign_keys(self, table_name: str, all_tables: list[str]) -> list[Dict]:
         return []
 
     # meta_get_column_statistics
@@ -142,25 +186,47 @@ class ProductsTable(ShopifyMetaAPIResource):
 class CustomersTable(ShopifyMetaAPIResource):
     """The Shopify Customers Table implementation"""
 
-    def query(self, conditions, limit, sort, targets, **kwargs):
-        products_df = pd.DataFrame(
-            self.get_customers(limit=limit)
-        )
-        return products_df
+    def __init__(self, *args, **kwargs):
+        self.model = Customers
+        self.model_name = 'customers'
 
-    def get_customers(self, limit: int | None = None):
-        # https://shopify.dev/docs/api/admin-graphql/latest/queries/customers
+        sort_map = {
+            Customers.createdAt: "CREATED_AT",
+            Customers.id: "ID",
+            Customers.updatedAt: "UPDATED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
 
-        api_session = self.handler.connect()
-        shopify.ShopifyResource.activate_session(api_session)
+        self.conditions_op_map = {
+            ("country", FilterOperator.EQUAL): "country:",
 
-        columns = get_graphql_columns(Customers)
-        data = query_graphql_nodes('customers', Customers, columns)
+            ("createdat", FilterOperator.GREATER_THAN): "customer_date:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "customer_date:>=",
+            ("createdat", FilterOperator.LESS_THAN): "customer_date:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "customer_date:<=",
+            ("createdat", FilterOperator.EQUAL): "customer_date:",
 
-        return data
+            ("email", FilterOperator.EQUAL): "email:",
 
-    # def get_columns(self) -> List[Text]:
-    #     return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
+            ("firstname", FilterOperator.EQUAL): "first_name:",
+
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("id", FilterOperator.EQUAL): "id:",
+
+            ("lastname", FilterOperator.EQUAL): "last_name:",
+
+            ("phonenumber", FilterOperator.EQUAL): "phone:",
+
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
 
     def get_columns(self) -> list[str]:
         return [column["COLUMN_NAME"] for column in customers_columns]
@@ -196,25 +262,75 @@ class CustomersTable(ShopifyMetaAPIResource):
 
 class OrdersTable(ShopifyMetaAPIResource):
     """The Shopify Orders Table implementation"""
+    # https://shopify.dev/docs/api/admin-graphql/latest/queries/orders
 
-    def query(self, conditions, limit, sort, targets, **kwargs):
-        result = self.get_orders(limit=limit)
-        if len(result) == 0:
-            products_df = pd.DataFrame([], columns=[column.name for column in Orders])
-        else:
-            products_df = pd.DataFrame(result)
-        return products_df
 
-    def get_orders(self, limit: int | None = None):
-        # https://shopify.dev/docs/api/admin-graphql/latest/queries/orders
+    def __init__(self, *args, **kwargs):
+        self.model = Orders
+        self.model_name = 'orders'
 
-        api_session = self.handler.connect()
-        shopify.ShopifyResource.activate_session(api_session)
+        sort_map = {
+            Orders.createdAt: "CREATED_AT",
+            Orders.id: "ID",
+            Orders.number: "ORDER_NUMBER",
+            Orders.poNumber: "PO_NUMBER",
+            Orders.processedAt: "PROCESSED_AT",
+            Orders.updatedAt: "UPDATED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
 
-        columns = get_graphql_columns(Orders)
-        data = query_graphql_nodes('orders', Orders, columns)
+        self.conditions_op_map = {
+            ("confirmationnumber", FilterOperator.EQUAL): "confirmation_number:",
 
-        return data
+            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
+            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
+            ("createdat", FilterOperator.EQUAL): "created_at:",
+
+            ("customerid", FilterOperator.EQUAL): "customer_id:",
+
+            ("discountcode", FilterOperator.EQUAL): "discount_code:",
+
+            ("email", FilterOperator.EQUAL): "email:",
+
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("id", FilterOperator.EQUAL): "id:",
+
+            ("name", FilterOperator.EQUAL): "name:",
+
+            ("ponumber", FilterOperator.EQUAL): "po_number:",
+
+            ("processedat", FilterOperator.GREATER_THAN): "processed_at:>",
+            ("processedat", FilterOperator.GREATER_THAN_OR_EQUAL): "processed_at:>=",
+            ("processedat", FilterOperator.LESS_THAN): "processed_at:<",
+            ("processedat", FilterOperator.LESS_THAN_OR_EQUAL): "processed_at:<=",
+            ("processedat", FilterOperator.EQUAL): "processed_at:",
+
+            ("returnstatus", FilterOperator.EQUAL): "return_status:",
+
+            ("sourceidentifier", FilterOperator.EQUAL): "source_identifier:",
+
+            ("sourcename", FilterOperator.EQUAL): "source_name:",
+
+            ("test", FilterOperator.EQUAL): "test:",
+
+            ("totalweight", FilterOperator.GREATER_THAN): "total_weight:>",
+            ("totalweight", FilterOperator.GREATER_THAN_OR_EQUAL): "total_weight:>=",
+            ("totalweight", FilterOperator.LESS_THAN): "total_weight:<",
+            ("totalweight", FilterOperator.LESS_THAN_OR_EQUAL): "total_weight:<=",
+            ("totalweight", FilterOperator.EQUAL): "total_weight:",
+
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
 
     def get_columns(self) -> list[str]:
         return [column["COLUMN_NAME"] for column in orders_columns]

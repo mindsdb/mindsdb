@@ -56,6 +56,9 @@ class CompaniesTable(APITable):
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         companies_df = pd.json_normalize(self.get_companies(limit=result_limit))
+        if companies_df.empty:
+            companies_df = pd.DataFrame(columns=self._get_default_company_columns())
+
         select_statement_executor = SELECTQueryExecutor(
             companies_df, selected_columns, where_conditions, order_by_conditions
         )
@@ -172,6 +175,20 @@ class CompaniesTable(APITable):
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_companies(limit=1)).columns.tolist()
+
+    @staticmethod
+    def _get_default_company_columns() -> List[str]:
+        return [
+            "id",
+            "name",
+            "city",
+            "phone",
+            "state",
+            "domain",
+            "industry",
+            "createdate",
+            "lastmodifieddate",
+        ]
 
     def get_companies(self, limit: int | None = None, **kwargs) -> List[Dict]:
         hubspot = self.handler.connect()
@@ -298,6 +315,9 @@ class ContactsTable(APITable):
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         contacts_df = pd.json_normalize(self.get_contacts(limit=result_limit, where_conditions=where_conditions))
+        if contacts_df.empty:
+            contacts_df = pd.DataFrame(columns=self._get_default_contact_columns())
+
         select_statement_executor = SELECTQueryExecutor(
             contacts_df, selected_columns, where_conditions, order_by_conditions
         )
@@ -414,6 +434,20 @@ class ContactsTable(APITable):
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_contacts(limit=1)).columns.tolist()
+
+    @staticmethod
+    def _get_default_contact_columns() -> List[str]:
+        return [
+            "id",
+            "email",
+            "firstname",
+            "lastname",
+            "phone",
+            "company",
+            "website",
+            "createdate",
+            "lastmodifieddate",
+        ]
 
     def get_contacts(
         self,
@@ -636,6 +670,9 @@ class DealsTable(APITable):
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         deals_df = pd.json_normalize(self.get_deals(limit=result_limit))
+        if deals_df.empty:
+            deals_df = pd.DataFrame(columns=self._get_default_deal_columns())
+
         select_statement_executor = SELECTQueryExecutor(
             deals_df, selected_columns, where_conditions, order_by_conditions
         )
@@ -752,6 +789,20 @@ class DealsTable(APITable):
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_deals(limit=1)).columns.tolist()
+
+    @staticmethod
+    def _get_default_deal_columns() -> List[str]:
+        return [
+            "id",
+            "dealname",
+            "amount",
+            "pipeline",
+            "closedate",
+            "dealstage",
+            "hubspot_owner_id",
+            "createdate",
+            "hs_lastmodifieddate",
+        ]
 
     def get_deals(self, **kwargs) -> List[Dict]:
         hubspot = self.handler.connect()

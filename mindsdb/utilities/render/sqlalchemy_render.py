@@ -213,7 +213,12 @@ class SqlalchemyRender:
             if col is None:
                 col = self.to_column(t)
             if t.alias:
-                col = col.label(self.get_alias(t.alias))
+                alias_name = self.get_alias(t.alias)
+                # Skip self-referencing aliases (e.g., "column AS column")
+                if len(t.parts) == 1 and t.parts[0] == alias_name:
+                    pass  # Don't add alias if it matches the column name
+                else:
+                    col = col.label(alias_name)
         elif isinstance(t, ast.Select):
             sub_stmt = self.prepare_select(t)
             col = sub_stmt.scalar_subquery()

@@ -20,6 +20,30 @@ except ImportError:
         return wrapper
 
 
+def run_in_batches(batch_size):
+    """
+    decorator to run function into batches if input is greater than batch_size
+    """
+
+    def decorator(func):
+        def wrapper(self, messages, *args, **kwargs):
+            if len(messages) <= batch_size:
+                return func(self, messages, *args, **kwargs)
+
+            chunk_num = 0
+            results = []
+            while chunk_num * batch_size < len(messages):
+                chunk = messages[chunk_num * batch_size : (chunk_num + 1) * batch_size]
+                results.extend(func(self, chunk, *args, **kwargs))
+                chunk_num += 1
+
+            return results
+
+        return wrapper
+
+    return decorator
+
+
 class LLMClient:
     """
     Class for accession to LLM.
@@ -72,6 +96,7 @@ class LLMClient:
             self.client = module.Handler
             self.engine = "litellm"
 
+    @run_in_batches(1000)
     @retry_with_exponential_backoff()
     def embeddings(self, messages: List[str]):
         params = self.params
@@ -88,6 +113,7 @@ class LLMClient:
 
             return self.client.embeddings(self.provider, model=model, messages=messages, args=kwargs)
 
+    @run_in_batches(100)
     def completion(self, messages: List[dict], json_output: bool = False) -> List[str]:
         """
         Call LLM completion and get response

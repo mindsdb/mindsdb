@@ -1,6 +1,7 @@
 import json
 import orjson
 import datetime
+import os
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -29,6 +30,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 from sqlalchemy.sql.schema import ForeignKey
+from mind_castle.sqlalchemy_type import SecretData
 
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.config import config
@@ -137,6 +139,11 @@ class Json(types.TypeDecorator):
         return json.loads(value) if value is not None else None
 
 
+# Use MindsDB's "Json" column type as a backend for mind-castle
+class SecretDataJson(SecretData):
+    impl = Json
+
+
 class PREDICTOR_STATUS:
     __slots__ = ()
     COMPLETE = "complete"
@@ -228,7 +235,7 @@ class Integration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
-    data = Column(Json)
+    data = Column(SecretDataJson(os.environ.get("MINDSDB_DATA_ENCRYPTION_TYPE", "none")))
     company_id = Column(String)
 
     __table_args__ = (UniqueConstraint("name", "company_id", name="unique_integration_name_company_id"),)

@@ -10,6 +10,7 @@ import pytest
 import sys
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
+from mindsdb.integrations.utilities.rag.rerankers.base_reranker import ListwiseLLMReranker
 
 
 @contextmanager
@@ -176,6 +177,15 @@ class TestKB(BaseExecutorDummyML):
         assert ret["product"][0] == record["product"]
         assert ret["url"][0] == record["url"]
 
+        # using json operator in filter
+        ret = self.run_sql(
+            "select metadata->>'product' as product, metadata->>'url' as url "
+            "from kb_review where metadata->>'product' = 'probook'"
+        )
+        assert len(ret) == 1
+        assert ret["product"][0] == record["product"]
+        assert ret["url"][0] == record["url"]
+
         # ---  case 2: kb with defined columns ---
         self._create_kb(
             "kb_review", content_columns=["review", "product"], id_column="url", metadata_columns=["specs", "id"]
@@ -225,6 +235,100 @@ class TestKB(BaseExecutorDummyML):
         assert ret["specs"][0] == record["specs"]
         assert ret["url"][0] == record["url"]
         assert ret["product"][0] == record["product"]
+
+    def test_listwise_reranker_parses_valid_json(self):
+        reranker = ListwiseLLMReranker(api_key="-", model="gpt-4o")
+
+        # Fake async LLM response
+        class _Msg:
+            def __init__(self, content):
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content):
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content):
+                self.choices = [_Choice(content)]
+
+        async def _fake_call_llm(messages):
+            content = '{"ranking": [{"doc_index": 2, "score": 0.9}, {"doc_index": 1, "score": 0.6}, {"doc_index": 3, "score": 0.1}]}'
+            return _Resp(content)
+
+        # Bind the async method to this reranker instance
+        reranker._call_llm = _fake_call_llm  # type: ignore
+
+        docs = ["A", "B", "C"]
+        scores = reranker.get_scores("q", docs)
+
+        assert len(scores) == 3
+        # doc_index 2 (B) highest, then A, then C
+        assert scores[1] > scores[0] > scores[2]
+        # scores are clamped to [0,1]
+        assert all(0.0 <= s <= 1.0 for s in scores)
+
+    def test_listwise_reranker_handles_code_fence_and_missing_docs(self):
+        reranker = ListwiseLLMReranker(api_key="-", model="gpt-4o")
+
+        class _Msg:
+            def __init__(self, content):
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content):
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content):
+                self.choices = [_Choice(content)]
+
+        async def _fake_call_llm(messages):
+            # Returns code-fenced JSON, includes only two entries, one without score
+            content = """```json
+            {"ranking": [1, {"doc_index": 3, "score": 0.8}]}
+            ```"""
+            return _Resp(content)
+
+        reranker._call_llm = _fake_call_llm  # type: ignore
+
+        docs = ["D0", "D1", "D2", "D3"]
+        scores = reranker.get_scores("q", docs)
+
+        assert len(scores) == 4
+        # All scores within [0,1]
+        assert all(0.0 <= s <= 1.0 for s in scores)
+        # At least doc_index 3 (zero-based 2) should have a relatively high score
+        assert scores[2] >= 0.5
+
+    def test_listwise_reranker_json_error_fallback(self):
+        reranker = ListwiseLLMReranker(api_key="-", model="gpt-4o")
+
+        class _Msg:
+            def __init__(self, content):
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content):
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content):
+                self.choices = [_Choice(content)]
+
+        async def _fake_call_llm(messages):
+            # Invalid JSON forces fallback
+            content = "not-json"
+            return _Resp(content)
+
+        reranker._call_llm = _fake_call_llm  # type: ignore
+
+        docs = ["X", "Y", "Z"]
+        scores = reranker.get_scores("q", docs)
+
+        assert len(scores) == 3
+        # Fallback pattern should be descending
+        assert scores[0] > scores[1] > scores[2]
 
     def _get_ral_table(self):
         data = [

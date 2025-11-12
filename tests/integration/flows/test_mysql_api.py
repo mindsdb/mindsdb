@@ -18,7 +18,8 @@ from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT
 
 
 class Dlist(list):
-    """Service class for convenient work with list of dicts(db response)"""
+    """Service class for convenient work with list of dicts(db response).
+    Assumes keys are already normalized to lowercase."""
 
     def __contains__(self, item):
         if len(self) == 0:
@@ -59,7 +60,7 @@ class BaseStuff:
 
                 if cursor.description:
                     description = cursor.description
-                    columns = [i[0] for i in cursor.description]
+                    columns = [i[0].lower() for i in cursor.description]
                     data = cursor.fetchall()
 
                     res = Dlist()
@@ -83,7 +84,7 @@ class BaseStuff:
 
     def upload_ds(self, df, name):
         """Upload pandas df as csv file."""
-        self.query(f"DROP TABLE files.{name};")
+        self.query(f"DROP TABLE IF EXISTS files.{name};")
         with tempfile.NamedTemporaryFile(mode="w+", newline="", delete=False) as f:
             df.to_csv(f, index=False)
             filename = f.name
@@ -91,20 +92,20 @@ class BaseStuff:
 
         with open(filename, "r") as f:
             url = f"{HTTP_API_ROOT}/files/{name}"
-            data = {"name": (name, f, "text/csv")}
-            res = requests.put(url, files=data)
+            files = {"file": (f"{name}.csv", f, "text/csv")}
+            res = requests.put(url, files=files)
             res.raise_for_status()
 
     def verify_file_ds(self, ds_name):
-        timeout = 5
+        timeout = 10
         threshold = time.time() + timeout
         res = ""
         while time.time() < threshold:
             res = self.query("SHOW tables from files;")
-            if "Tables_in_files" in res and res.get_record("Tables_in_files", ds_name):
-                break
-            time.sleep(0.5)
-        assert "Tables_in_files" in res and res.get_record("Tables_in_files", ds_name), (
+            if "tables_in_files" in res and res.get_record("tables_in_files", ds_name):
+                return
+            time.sleep(0.3)
+        assert "tables_in_files" in res and res.get_record("tables_in_files", ds_name), (
             f"file datasource {ds_name} is not ready to use after {timeout} seconds"
         )
 
@@ -112,6 +113,8 @@ class BaseStuff:
         timeout = 600
         threshold = time.time() + timeout
         res = ""
+        model_not_found_threshold = time.time() + 30
+        check_interval = 1
         while time.time() < threshold:
             _query = "SELECT status, error FROM mindsdb.models WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
@@ -120,9 +123,11 @@ class BaseStuff:
                     break
                 elif res.get_record("status", "error"):
                     raise Exception(res[0]["error"])
-            time.sleep(2)
+            elif len(res) == 0 and time.time() > model_not_found_threshold:
+                raise Exception(f"Model {predictor_name} not found in models table after 30 seconds")
+            time.sleep(check_interval)
         assert "status" in res and res.get_record("status", "complete"), (
-            f"predictor {predictor_name} is not complete after {timeout} seconds"
+            f"predictor {predictor_name} is not complete after {timeout} seconds. Last result: {res}"
         )
 
     def validate_database_creation(self, name):
@@ -458,21 +463,21 @@ class TestMySqlApi(BaseStuff):
         """)
         assert len(ret) == 8
         # TODO FIX STR->INT casting
-        # assert sorted([x['ORDINAL_POSITION'] for x in ret]) == list(range(1, 9))
+        # assert sorted([x['ordinal_position'] for x in ret]) == list(range(1, 9))
 
-        rental_price_column = next(x for x in ret if x["COLUMN_NAME"].lower() == "rental_price")
-        assert rental_price_column["DATA_TYPE"] == "int"
-        assert rental_price_column["COLUMN_TYPE"] == "int"
-        assert rental_price_column["ORIGINAL_TYPE"] == "integer"
-        assert rental_price_column["NUMERIC_PRECISION"] is not None
+        rental_price_column = next(x for x in ret if x["column_name"] == "rental_price")
+        assert rental_price_column["data_type"] == "int"
+        assert rental_price_column["column_type"] == "int"
+        assert rental_price_column["original_type"] == "integer"
+        assert rental_price_column["numeric_precision"] is not None
 
-        location_column = next(x for x in ret if x["COLUMN_NAME"].lower() == "location")
-        assert location_column["DATA_TYPE"] == "varchar"
-        assert location_column["COLUMN_TYPE"].startswith("varchar(")  # varchar(###)
-        assert location_column["ORIGINAL_TYPE"] == "character varying"
-        assert location_column["NUMERIC_PRECISION"] is None
-        assert location_column["CHARACTER_MAXIMUM_LENGTH"] is not None
-        assert location_column["CHARACTER_OCTET_LENGTH"] is not None
+        location_column = next(x for x in ret if x["column_name"] == "location")
+        assert location_column["data_type"] == "varchar"
+        assert location_column["column_type"].startswith("varchar(")  # varchar(###)
+        assert location_column["original_type"] == "character varying"
+        assert location_column["numeric_precision"] is None
+        assert location_column["character_maximum_length"] is not None
+        assert location_column["character_octet_length"] is not None
 
     def test_train_model_from_files(self, use_binary):
         df = pd.DataFrame(
@@ -579,8 +584,8 @@ class TestMySqlApi(BaseStuff):
             f"""
                SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),
                TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES
-               WHERE TABLE_SCHEMA LIKE '{integration}'
-                AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' ) ORDER BY TABLE_SCHEMA, TABLE_NAME
+               WHERE TABLE_SCHEMA = '{integration}'
+                AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_SCHEMA, TABLE_NAME
             """,
             f"""
                 SELECT SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,

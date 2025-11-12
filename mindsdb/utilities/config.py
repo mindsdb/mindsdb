@@ -157,7 +157,8 @@ class Config:
                         "maxBytes": 1 << 19,  # 0.5 Mb
                         "backupCount": 3,
                     },
-                }
+                },
+                "resources_log": {"enabled": False, "level": "INFO", "interval": 60},
             },
             "gui": {"open_on_start": True, "autoupdate": True},
             "debug": False,
@@ -558,6 +559,7 @@ class Config:
 
         parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
         parser.add_argument("--update-gui", action="store_true", default=False, help="Update GUI and exit")
+        parser.add_argument("--load-tokenizer", action="store_true", default=False, help="Preload tokenizer and exit")
 
         self._cmd_args = parser.parse_args()
 

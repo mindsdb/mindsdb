@@ -1,4 +1,3 @@
-import time
 import shutil
 import tempfile
 from http import HTTPStatus
@@ -212,23 +211,12 @@ class DatabaseResource(Resource):
             new_integration = session.database_controller.get_integration(new_integration_id)
             return new_integration, HTTPStatus.CREATED
 
-        if check_connection:
-            existing_integration = session.integration_controller.get(database_name)
-            temp_name = f"{database_name}_{time.time()}".replace(".", "")
-            try:
-                handler = session.integration_controller.create_tmp_handler(
-                    temp_name, existing_integration["engine"], parameters
-                )
-                status = handler.check_connection()
-            except ImportError as import_error:
-                status = HandlerStatusResponse(success=False, error_message=str(import_error))
+        try:
+            session.integration_controller.modify(database_name, parameters, check_connection=check_connection)
+        except Exception as e:
+            status = HandlerStatusResponse(success=False, error_message=str(e))
+            return http_error(HTTPStatus.BAD_REQUEST, "Connection error", status.error_message or "Connection error")
 
-            if status.success is not True:
-                return http_error(
-                    HTTPStatus.BAD_REQUEST, "Connection error", status.error_message or "Connection error"
-                )
-
-        session.integration_controller.modify(database_name, parameters)
         return session.integration_controller.get(database_name)
 
     @ns_conf.doc("delete_database")

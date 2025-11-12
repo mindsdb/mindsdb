@@ -1,5 +1,7 @@
+import os
 import json
 import logging
+import threading
 from logging.config import dictConfig
 
 from mindsdb.utilities.config import config as app_config
@@ -416,3 +418,92 @@ def log_system_info(logger: logging.Logger) -> None:
 
     except Exception as e:
         logger.debug(f"Failed to get system information: {e}")
+
+
+def resources_log_thread(stop_event: threading.Event, interval: int = 60):
+    """Log resources information to the logger
+
+    Args:
+        stop_event (Event): Event to stop the thread
+        interval (int): Interval in seconds to log resources information
+
+    Returns:
+        None
+
+    Note:
+        Output shows:
+            - RAM: total, available, used memory in GB and memory usage percentage
+            - Consumed RAM: sum of rss, and percentage of total memory used
+            - CPU usage: average CPU usage for last period
+            - Active queries: number of active SQL queries
+    """
+    from mindsdb.utilities.fs import get_tmp_dir
+
+    logger = getLogger(__name__)
+    while stop_event.wait(timeout=interval) is False:
+        try:
+            import psutil
+
+            main_process = psutil.Process(os.getpid())
+            children = main_process.children(recursive=True)
+
+            total_memory_info = {
+                "main_process": {
+                    "pid": main_process.pid,
+                    "name": main_process.name(),
+                    "memory_info": main_process.memory_info(),
+                    "memory_percent": main_process.memory_percent(),
+                },
+                "children": [],
+                "total_memory": {"rss": 0, "vms": 0, "percent": 0},
+            }
+
+            for child in children:
+                try:
+                    child_info = {
+                        "pid": child.pid,
+                        "name": child.name(),
+                        "memory_info": child.memory_info(),
+                        "memory_percent": child.memory_percent(),
+                    }
+                    total_memory_info["children"].append(child_info)
+
+                    total_memory_info["total_memory"]["rss"] += child.memory_info().rss
+                    total_memory_info["total_memory"]["vms"] += child.memory_info().vms
+                    total_memory_info["total_memory"]["percent"] += child.memory_percent()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            total_memory_info["total_memory"]["rss"] += main_process.memory_info().rss
+            total_memory_info["total_memory"]["vms"] += main_process.memory_info().vms
+            total_memory_info["total_memory"]["percent"] += main_process.memory_percent()
+
+            memory = psutil.virtual_memory()
+            total_memory_gb = memory.total / (1024**3)
+            available_memory_gb = memory.available / (1024**3)
+            used_memory_gb = memory.used / (1024**3)
+            memory_percent = memory.percent
+            cpu_usage = psutil.cpu_percent()
+
+            active_http_queries = 0
+            p = get_tmp_dir().joinpath("processes/http_query/")
+            if p.exists() and p.is_dir():
+                for _ in p.iterdir():
+                    active_http_queries += 1
+
+            active_mysql_queries = 0
+            p = get_tmp_dir().joinpath("processes/mysql_query/")
+            if p.exists() and p.is_dir():
+                for _ in p.iterdir():
+                    active_mysql_queries += 1
+
+            level = app_config["logging"]["resources_log"]["level"]
+            logger.log(
+                logging.getLevelName(level),
+                f"RAM: {total_memory_gb:.1f}GB total, {available_memory_gb:.1f}GB available, {used_memory_gb:.1f}GB used ({memory_percent:.1f}%)\n"
+                f"Consumed RAM: {total_memory_info['total_memory']['rss'] / (1024**2):.1f}Mb, {total_memory_info['total_memory']['percent']:.2f}%\n"
+                f"CPU usage: {cpu_usage}% {interval}s\n"
+                f"Active queries: {active_http_queries}/HTTP {active_mysql_queries}/MySQL",
+            )
+        except Exception as e:
+            logger.debug(f"Failed to get memory information: {e}")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import json
 import asyncio
 import logging
 import math
@@ -20,6 +21,7 @@ from mindsdb.integrations.utilities.rag.settings import (
     DEFAULT_RERANKER_TOP_LOGPROBS,
     DEFAULT_RERANKER_MAX_TOKENS,
     DEFAULT_VALID_CLASS_TOKENS,
+    RerankerMode,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -46,6 +48,7 @@ class BaseLLMReranker(BaseModel, ABC):
     api_version: Optional[str] = None
     num_docs_to_keep: Optional[int] = None  # How many of the top documents to keep after reranking & compressing.
     method: str = "multi-class"  # Scoring method: 'multi-class' or 'binary'
+    mode: RerankerMode = RerankerMode.POINTWISE
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[AsyncOpenAI | BaseMLEngine] = None
     _semaphore: Optional[asyncio.Semaphore] = None
@@ -408,3 +411,225 @@ class BaseLLMReranker(BaseModel, ABC):
 
         scores = [score for _, score in documents_and_scores]
         return scores
+
+
+def _strip_code_fences(text: str) -> str:
+    """Strip code fences from text, handling cases where first line has content after fence."""
+    stripped = text.strip()
+    if stripped.startswith("```") and stripped.endswith("```"):
+        lines = stripped.splitlines()
+        # Check if first line has content after the fence (e.g., ```json)
+        first_line = lines[0] if lines else ""
+        if first_line.strip() == "```" or (first_line.startswith("```") and len(first_line.strip()) > 3):
+            # Drop first fence line (with or without language specifier)
+            lines = lines[1:]
+        # Drop trailing fence lines
+        while lines and lines[-1].strip().startswith("```"):
+            lines.pop()
+        stripped = "\n".join(lines).strip()
+    return stripped
+
+
+class ListwiseLLMReranker(BaseLLMReranker):
+    mode: RerankerMode = RerankerMode.LISTWISE
+    max_document_characters: int = 3000
+    max_documents_per_batch: int = 50  # Maximum documents to rank in a single LLM call
+    document_separator: str = "\n---DOCUMENT_SEPARATOR---\n"  # Unique separator to avoid conflicts
+
+    async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:
+        if not query_document_pairs:
+            return []
+
+        query = query_document_pairs[0][0]
+        documents = [document for _, document in query_document_pairs]
+
+        # Handle large document sets by batching
+        if len(documents) > self.max_documents_per_batch:
+            log.info(f"Batching {len(documents)} documents into groups of {self.max_documents_per_batch}")
+            return await self._rank_with_batching(query, documents, rerank_callback)
+
+        # Use _rank_single_batch for consistency
+        return await self._rank_single_batch(query_document_pairs, rerank_callback)
+
+    async def _rank_with_batching(
+        self, query: str, documents: List[str], rerank_callback=None
+    ) -> List[Tuple[str, float]]:
+        """Rank documents in batches to avoid overwhelming the LLM with too many documents."""
+        batch_size = self.max_documents_per_batch
+        num_batches = (len(documents) + batch_size - 1) // batch_size
+
+        all_results: List[Tuple[str, float]] = []
+
+        for batch_idx in range(num_batches):
+            start_idx = batch_idx * batch_size
+            end_idx = min(start_idx + batch_size, len(documents))
+            batch_docs = documents[start_idx:end_idx]
+
+            # Create query-document pairs for this batch
+            batch_pairs = [(query, doc) for doc in batch_docs]
+
+            # Rank this batch
+            batch_results = await self._rank_single_batch(batch_pairs, rerank_callback)
+            all_results.extend(batch_results)
+
+        # Sort all results by score to get final ranking
+        all_results.sort(key=lambda item: item[1], reverse=True)
+        return all_results
+
+    async def _rank_single_batch(
+        self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None
+    ) -> List[Tuple[str, float]]:
+        """Rank a single batch of documents."""
+        query = query_document_pairs[0][0]
+        documents = [document for _, document in query_document_pairs]
+
+        messages = self._build_messages(query, documents)
+
+        for attempt in range(self.max_retries):
+            try:
+                response = await self._call_llm(messages)
+                content = response.choices[0].message.content
+                scores = self._extract_scores(content, len(documents))
+                return list(zip(documents, scores))
+            except Exception as exc:
+                if attempt == self.max_retries - 1:
+                    log.error(f"Failed listwise reranking batch after {self.max_retries} attempts: {exc}")
+                    raise
+                retry_delay = self.retry_delay * (2**attempt) + random.uniform(0, 0.1)
+                await asyncio.sleep(retry_delay)
+
+        return []
+
+    def _build_messages(self, query: str, documents: List[str]) -> List[dict]:
+        document_blocks = []
+        for idx, document in enumerate(documents, start=1):
+            # Remove any existing 'Document [N]:' prefix from content
+            cleaned_doc = self._clean_document_prefix(document)
+            truncated = self._truncate_document(cleaned_doc)
+            document_blocks.append(f"Document {idx}:\n{truncated}")
+
+        docs_text = self.document_separator.join(document_blocks)
+        system_prompt = (
+            "You are an expert reranker. Given a user query and a list of candidate "
+            "documents, you must rank the documents from most to least relevant. "
+            'Only respond with JSON following the schema: {"ranking": ['
+            '{"doc_index": <1-based document index>, "score": <float between 0 and 1>}]}.'
+        )
+
+        user_prompt = (
+            f"""
+            Query:
+            {query}
+
+            Documents:
+            {docs_text}
+
+            Return the ranking as JSON. Make sure every document appears once. Scores must be between 0 and 1.
+            """
+        ).strip()
+
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+    def _clean_document_prefix(self, document: str) -> str:
+        """Remove 'Document [N]:' prefix if present in the document content."""
+        pattern = r"^Document\s+\d+:\s*"
+        return re.sub(pattern, "", document, count=1)
+
+    def _truncate_document(self, document: str) -> str:
+        if len(document) <= self.max_document_characters:
+            return document
+        return document[: self.max_document_characters] + "..."
+
+    def _extract_scores(self, content: str, num_documents: int) -> List[float]:
+        sanitized = _strip_code_fences(content)
+        fallback_scores = self._fallback_scores(num_documents)
+        parsed_scores = fallback_scores.copy()
+
+        try:
+            parsed = json.loads(sanitized)
+        except json.JSONDecodeError as exc:
+            log.warning(f"Failed to parse listwise reranker response as JSON: {exc}. Using fallback scores.")
+            return parsed_scores
+
+        ranking = parsed.get("ranking", []) if isinstance(parsed, dict) else parsed
+        if not isinstance(ranking, list):
+            log.warning("Listwise reranker response missing 'ranking' list. Using fallback scores.")
+            return parsed_scores
+
+        assignment_order = 0
+        assigned: dict[int, float] = {}
+
+        for rank_position, entry in enumerate(ranking):
+            doc_index: Optional[int] = None
+            score: Optional[float] = None
+
+            if isinstance(entry, dict):
+                doc_index = entry.get("doc_index")
+                score = entry.get("score")
+            elif isinstance(entry, (list, tuple)) and entry:
+                doc_index = entry[0]
+                if len(entry) > 1:
+                    score = entry[1]
+            elif isinstance(entry, int):
+                doc_index = entry
+
+            if doc_index is None:
+                continue
+
+            if isinstance(doc_index, str) and doc_index.isdigit():
+                doc_index = int(doc_index)
+
+            if not isinstance(doc_index, int):
+                continue
+
+            # Accept either 0-based or 1-based indices
+            if doc_index <= 0:
+                adjusted_index = doc_index
+            else:
+                adjusted_index = doc_index - 1
+
+            if adjusted_index < 0 or adjusted_index >= num_documents:
+                continue
+
+            normalized_score = self._normalize_score(score)
+            if normalized_score is None:
+                normalized_score = fallback_scores[min(rank_position, num_documents - 1)]
+
+            assigned[adjusted_index] = normalized_score
+            assignment_order = max(assignment_order, rank_position + 1)
+
+        next_rank = assignment_order
+        for doc_idx in range(num_documents):
+            if doc_idx in assigned:
+                parsed_scores[doc_idx] = assigned[doc_idx]
+            else:
+                parsed_scores[doc_idx] = fallback_scores[min(next_rank, num_documents - 1)]
+                next_rank += 1
+
+        return parsed_scores
+
+    def _normalize_score(self, score: Any) -> Optional[float]:
+        if score is None:
+            return None
+        try:
+            value = float(score)
+        except (TypeError, ValueError):
+            return None
+
+        if math.isnan(value) or math.isinf(value):
+            return None
+
+        if value > 1:
+            value = 1.0
+        elif value < 0:
+            value = 0.0
+
+        return value
+
+    def _fallback_scores(self, length: int) -> List[float]:
+        if length <= 0:
+            return []
+        return [max(0.0, (length - idx) / length) for idx in range(length)]

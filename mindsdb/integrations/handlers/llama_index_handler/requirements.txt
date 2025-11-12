@@ -1,4 +1,4 @@
-llama-index==0.12.41
+llama-index==0.13.0
 pydantic-settings >= 2.1.0
 llama-index-readers-web
 llama-index-embeddings-openai

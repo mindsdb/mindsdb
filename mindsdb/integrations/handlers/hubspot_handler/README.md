@@ -153,36 +153,6 @@ SELECT * FROM hubspot_datasource.contacts LIMIT 10;
 SELECT * FROM hubspot_datasource.deals LIMIT 10;
 ```
 
-**Advanced Filtering and Analytics:**
-```sql
--- Companies by industry and location
-SELECT name, industry, city, state
-FROM hubspot_datasource.companies
-WHERE industry IN ('COMPUTER_SOFTWARE', 'BIOTECHNOLOGY')
-  AND city = 'San Francisco'
-ORDER BY name;
-
--- Contact engagement analysis
-SELECT 
-    company,
-    COUNT(*) as contact_count,
-    STRING_AGG(email, ', ') as emails
-FROM hubspot_datasource.contacts
-WHERE company IS NOT NULL
-GROUP BY company
-ORDER BY contact_count DESC;
-
--- Sales pipeline analysis
-SELECT 
-    dealstage,
-    COUNT(*) as deal_count,
-    SUM(CAST(amount AS DECIMAL)) as total_value,
-    AVG(CAST(amount AS DECIMAL)) as avg_deal_size
-FROM hubspot_datasource.deals  
-WHERE amount IS NOT NULL
-GROUP BY dealstage
-ORDER BY total_value DESC;
-```
 
 ### Data Manipulation
 
@@ -228,5 +198,5 @@ WHERE dealstage = 'closedlost'
 
 -- Remove test contacts
 DELETE FROM hubspot_datasource.contacts
-WHERE email LIKE '%test%' OR email LIKE '%example%';
+WHERE email = 'email';
 ```

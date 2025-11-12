@@ -1,6 +1,7 @@
-from typing import List, Dict, Text, Any
+from typing import List, Dict, Text, Any, Optional
 
 import pandas as pd
+from hubspot import HubSpot
 from hubspot.crm.objects import (
     SimplePublicObjectId as HubSpotObjectId,
     SimplePublicObjectBatchInput as HubSpotObjectBatchInput,
@@ -296,7 +297,7 @@ class ContactsTable(APITable):
         select_statement_parser = SELECTQueryParser(query, "contacts", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        contacts_df = pd.json_normalize(self.get_contacts(limit=result_limit))
+        contacts_df = pd.json_normalize(self.get_contacts(limit=result_limit, where_conditions=where_conditions))
         select_statement_executor = SELECTQueryExecutor(
             contacts_df, selected_columns, where_conditions, order_by_conditions
         )
@@ -352,7 +353,7 @@ class ContactsTable(APITable):
         update_statement_parser = UPDATEQueryParser(query)
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
-        contacts_df = pd.json_normalize(self.get_contacts(limit=1000))
+        contacts_df = pd.json_normalize(self.get_contacts(limit=1000, where_conditions=where_conditions))
 
         if contacts_df.empty:
             raise ValueError(
@@ -392,7 +393,7 @@ class ContactsTable(APITable):
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
-        contacts_df = pd.json_normalize(self.get_contacts(limit=1000))
+        contacts_df = pd.json_normalize(self.get_contacts(limit=1000, where_conditions=where_conditions))
 
         if contacts_df.empty:
             raise ValueError(
@@ -414,7 +415,12 @@ class ContactsTable(APITable):
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_contacts(limit=1)).columns.tolist()
 
-    def get_contacts(self, limit: int | None = None, **kwargs) -> List[Dict]:
+    def get_contacts(
+        self,
+        limit: Optional[int] = None,
+        where_conditions: Optional[List] = None,
+        **kwargs,
+    ) -> List[Dict]:
         hubspot = self.handler.connect()
         requested_properties = kwargs.get("properties", [])
         default_properties = [
@@ -436,29 +442,119 @@ class ContactsTable(APITable):
         else:
             api_kwargs.pop("limit", None)
 
+        # Try using HubSpot search API if we have simple equality filters
+        if where_conditions:
+            search_results = self._search_contacts_by_conditions(hubspot, where_conditions, properties, limit)
+            if search_results is not None:
+                logger.info(f"Retrieved {len(search_results)} contacts from HubSpot via search API")
+                return search_results
+
         contacts = hubspot.crm.contacts.get_all(**api_kwargs)
         contacts_dict = []
 
-        for contact in contacts:
-            try:
-                contact_dict = {
-                    "id": contact.id,
-                    "email": contact.properties.get("email", None),
-                    "firstname": contact.properties.get("firstname", None),
-                    "lastname": contact.properties.get("lastname", None),
-                    "phone": contact.properties.get("phone", None),
-                    "company": contact.properties.get("company", None),
-                    "website": contact.properties.get("website", None),
-                    "createdate": contact.properties.get("createdate", None),
-                    "lastmodifieddate": contact.properties.get("lastmodifieddate", None),
-                }
-                contacts_dict.append(contact_dict)
-            except Exception as e:
-                logger.warning(f"Error processing contact {contact.id}: {str(e)}")
-                continue
+        try:
+            for contact in contacts:
+                contacts_dict.append(self._contact_to_dict(contact))
+                if limit is not None and len(contacts_dict) >= limit:
+                    break
+        except Exception as e:
+            logger.error(f"Failed to iterate HubSpot contacts: {str(e)}")
+            raise
 
         logger.info(f"Retrieved {len(contacts_dict)} contacts from HubSpot")
         return contacts_dict
+
+    def _search_contacts_by_conditions(
+        self,
+        hubspot: HubSpot,
+        where_conditions: List,
+        properties: List[str],
+        limit: Optional[int],
+    ) -> Optional[List[Dict[str, Any]]]:
+        filters = []
+
+        for condition in where_conditions:
+            if not isinstance(condition, (list, tuple)) or len(condition) < 3:
+                continue
+
+            operator, column, value = condition[0], condition[1], condition[2]
+            if operator != "=" or column not in {"email", "id"}:
+                continue
+
+            property_name = "hs_object_id" if column == "id" else column
+            filters.append(
+                {
+                    "propertyName": property_name,
+                    "operator": "EQ",
+                    "value": str(value),
+                }
+            )
+
+        if not filters:
+            return None
+
+        collected: List[Dict[str, Any]] = []
+        remaining = limit if limit is not None else float("inf")
+        after = None
+
+        while remaining > 0:
+            page_limit = min(int(remaining) if remaining != float("inf") else 100, 100)
+            search_request = {
+                "properties": properties,
+                "limit": page_limit,
+                "filterGroups": [{"filters": filters}],
+            }
+
+            if after is not None:
+                search_request["after"] = after
+
+            response = hubspot.crm.contacts.search_api.do_search(public_object_search_request=search_request)
+
+            results = getattr(response, "results", [])
+            for contact in results:
+                collected.append(self._contact_to_dict(contact))
+                if limit is not None and len(collected) >= limit:
+                    return collected
+
+            paging = getattr(response, "paging", None)
+            next_page = getattr(paging, "next", None) if paging else None
+            after = getattr(next_page, "after", None) if next_page else None
+
+            if after is None or (limit is not None and len(collected) >= limit):
+                break
+
+            if remaining != float("inf"):
+                remaining = limit - len(collected)
+
+        return collected
+
+    def _contact_to_dict(self, contact: Any) -> Dict[str, Any]:
+        try:
+            properties = getattr(contact, "properties", {}) or {}
+            return {
+                "id": contact.id,
+                "email": properties.get("email"),
+                "firstname": properties.get("firstname"),
+                "lastname": properties.get("lastname"),
+                "phone": properties.get("phone"),
+                "company": properties.get("company"),
+                "website": properties.get("website"),
+                "createdate": properties.get("createdate"),
+                "lastmodifieddate": properties.get("lastmodifieddate"),
+            }
+        except Exception as e:
+            logger.warning(f"Error processing contact {getattr(contact, 'id', 'unknown')}: {str(e)}")
+            return {
+                "id": getattr(contact, "id", None),
+                "email": None,
+                "firstname": None,
+                "lastname": None,
+                "phone": None,
+                "company": None,
+                "website": None,
+                "createdate": None,
+                "lastmodifieddate": None,
+            }
 
     def create_contacts(self, contacts_data: List[Dict[Text, Any]]) -> None:
         if not contacts_data:

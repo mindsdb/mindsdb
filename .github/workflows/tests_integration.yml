@@ -43,7 +43,7 @@ jobs:
       name: ${{ inputs.deploy-env }}
       url: ${{ vars.MDB_ENV_URL }}
     name: Run integration tests on deploy
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:

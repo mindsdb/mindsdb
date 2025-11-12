@@ -29,7 +29,7 @@ jobs:
   build:
     if: github.event.pull_request.merged == true
     name: Build Docker Images
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     steps:
       # Check out the merge commit on the base branch
       - uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
   # This is separate to the build step so we can do other stuff in parallel
   build-cache:
     name: Push Docker Cache
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     needs: [build]
     steps:
       # Check out the merge commit on the base branch
@@ -85,7 +85,7 @@ jobs:
     if: always() && github.event.pull_request.merged == true
     name: All Tests Succeeded
     needs: [run_unit_tests, run_integration_tests]
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     steps:
       - name: fail if tests failed or didnt run
         if: ${{ needs.run_unit_tests.result != 'success' || needs.run_integration_tests.result != 'success'}}
@@ -97,7 +97,7 @@ jobs:
     name: Notify Slack
     # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
     needs: [run_unit_tests, build, build-cache, deploy, run_integration_tests, tests_completed]
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     steps:
       - name: Notify of failing tests
         if: ${{ needs.tests_completed.result != 'success' && needs.tests_completed.result != 'cancelled' }}

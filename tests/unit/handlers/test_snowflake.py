@@ -1167,6 +1167,643 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 
+    # =====================================
+    # METADATA CATALOG TESTS
+    # =====================================
+
+    def create_mock_metadata_response(self, data, columns):
+        """Helper method to create consistent metadata response DataFrames"""
+        df = DataFrame(data, columns=columns)
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+    def test_meta_get_tables_all_tables(self):
+        """Test retrieving all tables metadata"""
+        mock_data = [
+            [
+                "ANALYTICS_DB",
+                "PUBLIC",
+                "CUSTOMERS",
+                "BASE TABLE",
+                "Customer master data",
+                150000,
+                "2023-01-15 10:30:00",
+                "2024-11-01 14:20:00",
+            ],
+            [
+                "ANALYTICS_DB",
+                "PUBLIC",
+                "ORDERS",
+                "BASE TABLE",
+                "Order transactions",
+                450000,
+                "2023-01-15 10:30:00",
+                "2024-11-11 09:15:00",
+            ],
+            [
+                "ANALYTICS_DB",
+                "PUBLIC",
+                "CUSTOMER_VIEW",
+                "VIEW",
+                "Customer summary view",
+                None,
+                "2023-06-01 16:45:00",
+                "2024-10-15 11:30:00",
+            ],
+        ]
+        columns = [
+            "TABLE_CATALOG",
+            "TABLE_SCHEMA",
+            "TABLE_NAME",
+            "TABLE_TYPE",
+            "TABLE_DESCRIPTION",
+            "ROW_COUNT",
+            "CREATED",
+            "LAST_ALTERED",
+        ]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = self.handler.meta_get_tables()
+
+        # Verify the query was called correctly
+        self.handler.native_query.assert_called_once()
+        call_args = self.handler.native_query.call_args[0][0]
+        self.assertIn("FROM INFORMATION_SCHEMA.TABLES", call_args)
+        self.assertIn("TABLE_CATALOG", call_args)
+        self.assertIn("TABLE_SCHEMA", call_args)
+        self.assertIn("TABLE_NAME", call_args)
+        self.assertIn("current_schema()", call_args)
+        self.assertNotIn("TABLE_NAME IN", call_args)  # No filtering
+
+        # Verify response structure
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertIsInstance(response.data_frame, DataFrame)
+        self.assertEqual(len(response.data_frame), 3)
+
+        # Verify ROW_COUNT conversion to int
+        self.assertEqual(response.data_frame.iloc[0]["ROW_COUNT"], 150000)
+        self.assertEqual(response.data_frame.iloc[1]["ROW_COUNT"], 450000)
+
+        del self.handler.native_query
+
+    def test_meta_get_tables_specific_tables(self):
+        """Test retrieving metadata for specific table list"""
+        mock_data = [
+            [
+                "ANALYTICS_DB",
+                "PUBLIC",
+                "CUSTOMERS",
+                "BASE TABLE",
+                "Customer master data",
+                150000,
+                "2023-01-15 10:30:00",
+                "2024-11-01 14:20:00",
+            ]
+        ]
+        columns = [
+            "TABLE_CATALOG",
+            "TABLE_SCHEMA",
+            "TABLE_NAME",
+            "TABLE_TYPE",
+            "TABLE_DESCRIPTION",
+            "ROW_COUNT",
+            "CREATED",
+            "LAST_ALTERED",
+        ]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        table_names = ["CUSTOMERS", "orders"]  # Test case sensitivity
+        response = self.handler.meta_get_tables(table_names)
+
+        # Verify the query includes filtering
+        call_args = self.handler.native_query.call_args[0][0]
+        self.assertIn("TABLE_NAME IN", call_args)
+        self.assertIn("'CUSTOMERS'", call_args)
+        self.assertIn("'ORDERS'", call_args)  # Should be uppercased
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(len(response.data_frame), 1)
+
+        del self.handler.native_query
+
+    def test_meta_get_tables_row_count_conversion(self):
+        """Test ROW_COUNT column is converted to int"""
+        mock_data = [
+            [
+                "ANALYTICS_DB",
+                "PUBLIC",
+                "TEST_TABLE",
+                "BASE TABLE",
+                "Test table",
+                "42",
+                "2023-01-15 10:30:00",
+                "2024-11-01 14:20:00",
+            ]  # String ROW_COUNT
+        ]
+        columns = [
+            "TABLE_CATALOG",
+            "TABLE_SCHEMA",
+            "TABLE_NAME",
+            "TABLE_TYPE",
+            "TABLE_DESCRIPTION",
+            "ROW_COUNT",
+            "CREATED",
+            "LAST_ALTERED",
+        ]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = self.handler.meta_get_tables()
+
+        # Verify ROW_COUNT is converted to int
+        self.assertEqual(response.data_frame.iloc[0]["ROW_COUNT"], 42)
+        self.assertEqual(response.data_frame["ROW_COUNT"].dtype, "int64")
+
+        del self.handler.native_query
+
+    def test_meta_get_columns_all_tables(self):
+        """Test retrieving column metadata for all tables"""
+        mock_data = [
+            [
+                "CUSTOMERS",
+                "CUSTOMER_ID",
+                "NUMBER(38,0)",
+                "Unique customer identifier",
+                None,
+                False,
+                None,
+                None,
+                38,
+                0,
+                None,
+                None,
+                None,
+            ],
+            [
+                "CUSTOMERS",
+                "FIRST_NAME",
+                "VARCHAR(100)",
+                "Customer first name",
+                None,
+                True,
+                100,
+                100,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ],
+            [
+                "ORDERS",
+                "ORDER_ID",
+                "NUMBER(38,0)",
+                "Unique order identifier",
+                None,
+                False,
+                None,
+                None,
+                38,
+                0,
+                None,
+                None,
+                None,
+            ],
+        ]
+        columns = [
+            "TABLE_NAME",
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "COLUMN_DESCRIPTION",
+            "COLUMN_DEFAULT",
+            "IS_NULLABLE",
+            "CHARACTER_MAXIMUM_LENGTH",
+            "CHARACTER_OCTET_LENGTH",
+            "NUMERIC_PRECISION",
+            "NUMERIC_SCALE",
+            "DATETIME_PRECISION",
+            "CHARACTER_SET_NAME",
+            "COLLATION_NAME",
+        ]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = self.handler.meta_get_columns()
+
+        # Verify the query was called correctly
+        call_args = self.handler.native_query.call_args[0][0]
+        self.assertIn("FROM INFORMATION_SCHEMA.COLUMNS", call_args)
+        self.assertIn("TABLE_NAME", call_args)
+        self.assertIn("COLUMN_NAME", call_args)
+        self.assertIn("DATA_TYPE", call_args)
+        self.assertIn("current_schema()", call_args)
+        self.assertNotIn("TABLE_NAME IN", call_args)  # No filtering
+
+        # Verify response structure
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertIsInstance(response.data_frame, DataFrame)
+        self.assertEqual(len(response.data_frame), 3)
+
+        # Verify specific data
+        self.assertEqual(response.data_frame.iloc[0]["TABLE_NAME"], "CUSTOMERS")
+        self.assertEqual(response.data_frame.iloc[0]["COLUMN_NAME"], "CUSTOMER_ID")
+        self.assertEqual(response.data_frame.iloc[0]["DATA_TYPE"], "NUMBER(38,0)")
+
+        del self.handler.native_query
+
+    def test_meta_get_columns_specific_tables(self):
+        """Test retrieving column metadata for specific tables"""
+        mock_data = [
+            [
+                "CUSTOMERS",
+                "CUSTOMER_ID",
+                "NUMBER(38,0)",
+                "Unique customer identifier",
+                None,
+                False,
+                None,
+                None,
+                38,
+                0,
+                None,
+                None,
+                None,
+            ]
+        ]
+        columns = [
+            "TABLE_NAME",
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "COLUMN_DESCRIPTION",
+            "COLUMN_DEFAULT",
+            "IS_NULLABLE",
+            "CHARACTER_MAXIMUM_LENGTH",
+            "CHARACTER_OCTET_LENGTH",
+            "NUMERIC_PRECISION",
+            "NUMERIC_SCALE",
+            "DATETIME_PRECISION",
+            "CHARACTER_SET_NAME",
+            "COLLATION_NAME",
+        ]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        table_names = ["customers"]  # Test case sensitivity
+        response = self.handler.meta_get_columns(table_names)
+
+        # Verify the query includes filtering
+        call_args = self.handler.native_query.call_args[0][0]
+        self.assertIn("TABLE_NAME IN", call_args)
+        self.assertIn("'CUSTOMERS'", call_args)  # Should be uppercased
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(len(response.data_frame), 1)
+
+        del self.handler.native_query
+
+    def test_meta_get_columns_data_types(self):
+        """Test various data type representations"""
+        mock_data = [
+            ["TEST_TABLE", "ID", "NUMBER(38,0)", "ID column", None, False, None, None, 38, 0, None, None, None],
+            ["TEST_TABLE", "NAME", "VARCHAR(255)", "Name column", None, True, 255, 255, None, None, None, None, None],
+            [
+                "TEST_TABLE",
+                "CREATED_AT",
+                "TIMESTAMP_NTZ(9)",
+                "Creation timestamp",
+                None,
+                True,
+                None,
+                None,
+                None,
+                None,
+                9,
+                None,
+                None,
+            ],
+        ]
+        columns = [
+            "TABLE_NAME",
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "COLUMN_DESCRIPTION",
+            "COLUMN_DEFAULT",
+            "IS_NULLABLE",
+            "CHARACTER_MAXIMUM_LENGTH",
+            "CHARACTER_OCTET_LENGTH",
+            "NUMERIC_PRECISION",
+            "NUMERIC_SCALE",
+            "DATETIME_PRECISION",
+            "CHARACTER_SET_NAME",
+            "COLLATION_NAME",
+        ]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = self.handler.meta_get_columns()
+
+        # Verify various data types are handled correctly
+        df = response.data_frame
+        self.assertEqual(df.iloc[0]["DATA_TYPE"], "NUMBER(38,0)")
+        self.assertEqual(df.iloc[1]["DATA_TYPE"], "VARCHAR(255)")
+        self.assertEqual(df.iloc[2]["DATA_TYPE"], "TIMESTAMP_NTZ(9)")
+
+        del self.handler.native_query
+
+    def test_meta_get_column_statistics_success(self):
+        """Test successful statistics retrieval"""
+        # Mock the initial columns query response
+        columns_data = [["CUSTOMERS", "CUSTOMER_ID"], ["CUSTOMERS", "FIRST_NAME"], ["ORDERS", "ORDER_ID"]]
+        columns_df = DataFrame(columns_data, columns=["TABLE_NAME", "COLUMN_NAME"])
+        columns_response = Response(RESPONSE_TYPE.TABLE, data_frame=columns_df)
+
+        # Mock statistics query responses for each table
+        customers_stats_data = [
+            [2, 0, 150000, 1, 150000, "Alice", "Zoe"]
+        ]  # total_rows, nulls_CUSTOMER_ID, distincts_CUSTOMER_ID, min_CUSTOMER_ID, max_CUSTOMER_ID, min_FIRST_NAME, max_FIRST_NAME
+        customers_stats_columns = [
+            "total_rows",
+            "nulls_CUSTOMER_ID",
+            "distincts_CUSTOMER_ID",
+            "min_CUSTOMER_ID",
+            "max_CUSTOMER_ID",
+            "nulls_FIRST_NAME",
+            "distincts_FIRST_NAME",
+            "min_FIRST_NAME",
+            "max_FIRST_NAME",
+        ]
+        customers_stats_df = DataFrame([customers_stats_data[0] + [500, 12000]], columns=customers_stats_columns)
+        customers_stats_response = Response(RESPONSE_TYPE.TABLE, data_frame=customers_stats_df)
+
+        orders_stats_data = [
+            [1, 0, 450000, 1, 450000]
+        ]  # total_rows, nulls_ORDER_ID, distincts_ORDER_ID, min_ORDER_ID, max_ORDER_ID
+        orders_stats_columns = ["total_rows", "nulls_ORDER_ID", "distincts_ORDER_ID", "min_ORDER_ID", "max_ORDER_ID"]
+        orders_stats_df = DataFrame([orders_stats_data[0]], columns=orders_stats_columns)
+        orders_stats_response = Response(RESPONSE_TYPE.TABLE, data_frame=orders_stats_df)
+
+        # Set up side_effect for multiple calls
+        self.handler.native_query = MagicMock(
+            side_effect=[
+                columns_response,  # First call: get columns
+                customers_stats_response,  # Second call: get stats for CUSTOMERS table
+                orders_stats_response,  # Third call: get stats for ORDERS table
+            ]
+        )
+
+        response = self.handler.meta_get_column_statistics()
+
+        # Verify multiple queries were called
+        self.assertEqual(self.handler.native_query.call_count, 3)
+
+        # Verify the first call was for columns
+        first_call = self.handler.native_query.call_args_list[0][0][0]
+        self.assertIn("FROM INFORMATION_SCHEMA.COLUMNS", first_call)
+
+        # Verify response structure
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertIsInstance(response.data_frame, DataFrame)
+        self.assertEqual(len(response.data_frame), 3)  # 2 columns for CUSTOMERS + 1 for ORDERS
+
+        # Verify statistics data
+        df = response.data_frame
+        customer_id_row = df[df["column_name"] == "CUSTOMER_ID"].iloc[0]
+        self.assertEqual(customer_id_row["table_name"], "CUSTOMERS")
+        self.assertEqual(customer_id_row["null_percentage"], 0.0)
+        self.assertEqual(customer_id_row["distinct_values_count"], 150000)
+        self.assertEqual(customer_id_row["minimum_value"], 1)
+        self.assertEqual(customer_id_row["maximum_value"], 150000)
+
+        del self.handler.native_query
+
+    def test_meta_get_column_statistics_no_columns_error(self):
+        """Test error handling when no columns found"""
+        # Mock empty columns response
+        empty_df = DataFrame([], columns=["TABLE_NAME", "COLUMN_NAME"])
+        empty_response = Response(RESPONSE_TYPE.TABLE, data_frame=empty_df)
+
+        self.handler.native_query = MagicMock(return_value=empty_response)
+
+        response = self.handler.meta_get_column_statistics()
+
+        # Verify error response
+        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+        self.assertIn("No columns found", response.error_message)
+
+        del self.handler.native_query
+
+    def test_meta_get_column_statistics_query_failure(self):
+        """Test handling of failed statistics queries per table"""
+        # Mock the initial columns query response
+        columns_data = [["TEST_TABLE", "TEST_COLUMN"]]
+        columns_df = DataFrame(columns_data, columns=["TABLE_NAME", "COLUMN_NAME"])
+        columns_response = Response(RESPONSE_TYPE.TABLE, data_frame=columns_df)
+
+        # Mock failed statistics query
+        failed_stats_response = Response(RESPONSE_TYPE.ERROR, error_message="Table not found")
+
+        with patch.object(
+            self.handler, "native_query", side_effect=[columns_response, failed_stats_response]
+        ) as mock_query:
+            response = self.handler.meta_get_column_statistics()
+
+            # Verify graceful handling - should return placeholder stats
+            self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+            df = response.data_frame
+            self.assertEqual(len(df), 1)
+
+            # Verify placeholder values
+            row = df.iloc[0]
+            self.assertEqual(row["table_name"], "TEST_TABLE")
+            self.assertEqual(row["column_name"], "TEST_COLUMN")
+            self.assertIsNone(row["null_percentage"])
+            self.assertIsNone(row["distinct_values_count"])
+
+            # Verify the mock was called appropriately
+            self.assertEqual(mock_query.call_count, 2)
+
+    def test_meta_get_column_statistics_exception_handling(self):
+        """Test exception handling during statistics collection"""
+        # Mock the initial columns query response
+        columns_data = [["TEST_TABLE", "TEST_COLUMN"]]
+        columns_df = DataFrame(columns_data, columns=["TABLE_NAME", "COLUMN_NAME"])
+        columns_response = Response(RESPONSE_TYPE.TABLE, data_frame=columns_df)
+
+        with patch.object(
+            self.handler, "native_query", side_effect=[columns_response, Exception("Database connection error")]
+        ) as mock_query:
+            response = self.handler.meta_get_column_statistics()
+
+            # Verify graceful handling with placeholder stats
+            self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+            df = response.data_frame
+            self.assertEqual(len(df), 1)
+
+            # Verify placeholder values for exception case
+            row = df.iloc[0]
+            self.assertIsNone(row["null_percentage"])
+            self.assertIsNone(row["distinct_values_count"])
+
+            # Verify the mock was called appropriately
+            self.assertEqual(mock_query.call_count, 2)
+
+    def test_meta_get_primary_keys_success(self):
+        """Test successful primary key retrieval"""
+        mock_data = [
+            ["CUSTOMERS", "CUSTOMER_ID", 1, "PK_CUSTOMERS"],
+            ["ORDERS", "ORDER_ID", 1, "PK_ORDERS"],
+            ["ORDERS", "ORDER_DATE", 2, "PK_ORDERS"],  # Composite key
+        ]
+        columns = ["table_name", "column_name", "key_sequence", "constraint_name"]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = self.handler.meta_get_primary_keys()
+
+        # Verify the SHOW query was called
+        call_args = self.handler.native_query.call_args[0][0]
+        self.assertIn("SHOW PRIMARY KEYS", call_args)
+
+        # Verify response structure
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        df = response.data_frame
+        self.assertEqual(len(df), 3)
+
+        # Verify column renaming (key_sequence -> ordinal_position)
+        self.assertIn("ordinal_position", df.columns)
+        self.assertNotIn("key_sequence", df.columns)
+
+        # Verify data
+        self.assertEqual(df.iloc[0]["table_name"], "CUSTOMERS")
+        self.assertEqual(df.iloc[0]["column_name"], "CUSTOMER_ID")
+        self.assertEqual(df.iloc[0]["ordinal_position"], 1)
+
+        del self.handler.native_query
+
+    def test_meta_get_primary_keys_filtered(self):
+        """Test filtering by table names"""
+        mock_data = [["CUSTOMERS", "CUSTOMER_ID", 1, "PK_CUSTOMERS"]]
+        columns = ["table_name", "column_name", "key_sequence", "constraint_name"]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        table_names = ["CUSTOMERS"]
+        response = self.handler.meta_get_primary_keys(table_names)
+
+        # Verify filtering was applied
+        df = response.data_frame
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.iloc[0]["table_name"], "CUSTOMERS")
+
+        del self.handler.native_query
+
+    def test_meta_get_primary_keys_error_handling(self):
+        """Test SHOW command error handling"""
+        error_response = Response(RESPONSE_TYPE.ERROR, error_message="Permission denied")
+
+        with patch.object(self.handler, "native_query", return_value=error_response) as mock_query:
+            response = self.handler.meta_get_primary_keys()
+
+            # Should return the error response as-is
+            self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+            self.assertIn("Permission denied", response.error_message)
+
+            # Verify the mock was called
+            mock_query.assert_called_once()
+
+    def test_meta_get_primary_keys_exception(self):
+        """Test exception handling in primary keys method"""
+        with patch.object(self.handler, "native_query", side_effect=Exception("Database error")) as mock_query:
+            response = self.handler.meta_get_primary_keys()
+
+            # Verify exception is caught and returned as error response
+            self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+            self.assertIn("Exception querying primary keys", response.error_message)
+            self.assertIn("Database error", response.error_message)
+
+            # Verify the mock was called
+            mock_query.assert_called_once()
+
+    def test_meta_get_foreign_keys_success(self):
+        """Test successful foreign key retrieval"""
+        mock_data = [
+            ["CUSTOMERS", "CUSTOMER_ID", "ORDERS", "CUSTOMER_ID"],
+            ["CATEGORIES", "CATEGORY_ID", "PRODUCTS", "CATEGORY_ID"],
+        ]
+        columns = ["pk_table_name", "pk_column_name", "fk_table_name", "fk_column_name"]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = self.handler.meta_get_foreign_keys()
+
+        # Verify the SHOW query was called
+        call_args = self.handler.native_query.call_args[0][0]
+        self.assertIn("SHOW IMPORTED KEYS", call_args)
+
+        # Verify response structure and column mapping
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        df = response.data_frame
+        self.assertEqual(len(df), 2)
+
+        # Verify column renaming
+        expected_columns = ["child_table_name", "child_column_name", "parent_table_name", "parent_column_name"]
+        for col in expected_columns:
+            self.assertIn(col, df.columns)
+
+        # Verify data mapping (pk becomes child, fk becomes parent)
+        self.assertEqual(df.iloc[0]["child_table_name"], "CUSTOMERS")
+        self.assertEqual(df.iloc[0]["child_column_name"], "CUSTOMER_ID")
+        self.assertEqual(df.iloc[0]["parent_table_name"], "ORDERS")
+        self.assertEqual(df.iloc[0]["parent_column_name"], "CUSTOMER_ID")
+
+        del self.handler.native_query
+
+    def test_meta_get_foreign_keys_filtered(self):
+        """Test filtering foreign keys by table names"""
+        mock_data = [
+            ["CUSTOMERS", "CUSTOMER_ID", "ORDERS", "CUSTOMER_ID"],
+            ["CATEGORIES", "CATEGORY_ID", "PRODUCTS", "CATEGORY_ID"],
+        ]
+        columns = ["pk_table_name", "pk_column_name", "fk_table_name", "fk_column_name"]
+
+        expected_response = self.create_mock_metadata_response(mock_data, columns)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        table_names = ["CUSTOMERS", "ORDERS"]
+        response = self.handler.meta_get_foreign_keys(table_names)
+
+        # Verify filtering was applied (only relationships involving CUSTOMERS or ORDERS)
+        df = response.data_frame
+        self.assertEqual(len(df), 1)  # Only the CUSTOMERS-ORDERS relationship should remain
+        self.assertEqual(df.iloc[0]["child_table_name"], "CUSTOMERS")
+
+        del self.handler.native_query
+
+    def test_meta_get_foreign_keys_exception(self):
+        """Test exception handling in foreign keys method"""
+        self.handler.native_query = MagicMock(side_effect=Exception("Database error"))
+
+        response = self.handler.meta_get_foreign_keys()
+
+        # Verify exception is caught and returned as error response
+        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+        self.assertIn(
+            "Exception querying primary keys", response.error_message
+        )  # Note: uses same error message as primary keys
+        self.assertIn("Database error", response.error_message)
+
+        del self.handler.native_query
+
 
 if __name__ == "__main__":
     unittest.main()

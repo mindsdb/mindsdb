@@ -824,8 +824,11 @@ class DealsTable(APITable):
                 }
                 deals_dict.append(deal_dict)
             except Exception as e:
-                logger.warning(f"Error processing deal {deal.id}: {str(e)}")
-                continue
+                logger.error(f"Error processing deal {getattr(deal, 'id', 'unknown')}: {str(e)}")
+                raise ValueError(
+                    f"Failed to process deal {getattr(deal, 'id', 'unknown')}. "
+                    f"Please verify the HubSpot record and try again."
+                ) from e
 
         logger.info(f"Retrieved {len(deals_dict)} deals from HubSpot")
         return deals_dict

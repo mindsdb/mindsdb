@@ -15,6 +15,7 @@ from .models.orders import Orders, columns as orders_columns
 from .models.marketing_events import MarketingEvents, columns as marketing_events_columns
 from .models.inventory_items import InventoryItems, columns as inventory_items_columns
 from .models.staff_members import StaffMembers, columns as staff_members_columns
+from .models.gift_cards import GiftCards, columns as gift_cards_columns
 
 logger = log.getLogger(__name__)
 
@@ -662,3 +663,64 @@ class StaffMembersTable(ShopifyMetaAPIResource):
 
     def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
         return []
+
+
+class GiftCardsTable(ShopifyMetaAPIResource):
+    """The Shopify GiftCards table implementation"""
+    # https://shopify.dev/docs/api/admin-graphql/latest/queries/giftcards
+
+    def __init__(self, *args, **kwargs):
+        self.model = GiftCards
+        self.model_name = 'giftCards'
+
+        sort_map = {
+            # TODO
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            # TODO
+        }
+        super().__init__(*args, **kwargs)
+
+    def get_columns(self) -> list[str]:
+        return [column["COLUMN_NAME"] for column in gift_cards_columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        data = query_graphql_nodes(
+            self.model_name,
+            self.model,
+            ["id"],
+        )
+        row_count = len(data)
+
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "The shop staff members.",
+            "row_count": row_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs):
+        return gift_cards_columns
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [
+            {
+                "table_name": table_name,
+                "column_name": "id",
+            }
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [{
+            "PARENT_TABLE_NAME": table_name,
+            "PARENT_COLUMN_NAME": "customerId",
+            "CHILD_TABLE_NAME": "customers",
+            "CHILD_COLUMN_NAME": "id"
+        }, {
+            "PARENT_TABLE_NAME": table_name,
+            "PARENT_COLUMN_NAME": "orderId",
+            "CHILD_TABLE_NAME": "orders",
+            "CHILD_COLUMN_NAME": "id"
+        }]

@@ -13,6 +13,8 @@ from .models.product_variants import ProductVariants, columns as product_variant
 from .models.customers import Customers, columns as customers_columns
 from .models.orders import Orders, columns as orders_columns
 from .models.marketing_events import MarketingEvents, columns as marketing_events_columns
+from .models.inventory_items import InventoryItems, columns as inventory_items_columns
+from .models.staff_members import StaffMembers, columns as staff_members_columns
 
 logger = log.getLogger(__name__)
 
@@ -497,7 +499,7 @@ class MarketingEventsTable(ShopifyMetaAPIResource):
         super().__init__(*args, **kwargs)
 
     def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in orders_columns]
+        return [column["COLUMN_NAME"] for column in marketing_events_columns]
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
         data = query_graphql_nodes(
@@ -515,7 +517,140 @@ class MarketingEventsTable(ShopifyMetaAPIResource):
         }
 
     def meta_get_columns(self, *args, **kwargs):
-        return orders_columns
+        return marketing_events_columns
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [
+            {
+                "table_name": table_name,
+                "column_name": "id",
+            }
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class InventoryItemsTable(ShopifyMetaAPIResource):
+    """The Shopify InventoryItems table implementation"""
+    # https://shopify.dev/docs/api/admin-graphql/latest/queries/inventoryitems
+
+    def __init__(self, *args, **kwargs):
+        self.model = InventoryItems
+        self.model_name = 'inventoryItems'
+
+        self.sort_map = {}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("id", FilterOperator.EQUAL): "id:",
+
+            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
+            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
+            ("createdat", FilterOperator.EQUAL): "created_at:",
+
+            ("sku", FilterOperator.EQUAL): "sku:",
+
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def get_columns(self) -> list[str]:
+        return [column["COLUMN_NAME"] for column in inventory_items_columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        data = query_graphql_nodes(
+            self.model_name,
+            self.model,
+            ["id"],
+        )
+        row_count = len(data)
+
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "A list of inventory items.",
+            "row_count": row_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs):
+        return inventory_items_columns
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [
+            {
+                "table_name": table_name,
+                "column_name": "id",
+            }
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class StaffMembersTable(ShopifyMetaAPIResource):
+    """The Shopify StaffMembers table implementation"""
+    # https://shopify.dev/docs/api/admin-graphql/latest/queries/staffmembers
+
+    def __init__(self, *args, **kwargs):
+        self.model = StaffMembers
+        self.model_name = 'staffMembers'
+
+        sort_map = {
+            StaffMembers.id: "ID",
+            StaffMembers.email: "EMAIL",
+            StaffMembers.firstName: "FIRST_NAME",
+            StaffMembers.lastName: "LAST_NAME",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("accounttype", FilterOperator.EQUAL): "account_type:",
+            ("email", FilterOperator.EQUAL): "email:",
+
+            ("firstname", FilterOperator.EQUAL): "first_name:",
+            ("firstname", FilterOperator.LIKE): "first_name:",
+
+            ("lastname", FilterOperator.EQUAL): "last_name:",
+            ("lastname", FilterOperator.LIKE): "last_name:",
+
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("id", FilterOperator.EQUAL): "id:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def get_columns(self) -> list[str]:
+        return [column["COLUMN_NAME"] for column in staff_members_columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        data = query_graphql_nodes(
+            self.model_name,
+            self.model,
+            ["id"],
+        )
+        row_count = len(data)
+
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "The shop staff members.",
+            "row_count": row_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs):
+        return staff_members_columns
 
     def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
         return [

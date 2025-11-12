@@ -9,6 +9,8 @@ from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     CustomersTable,
     OrdersTable,
     MarketingEventsTable,
+    InventoryItemsTable,
+    StaffMembersTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -74,6 +76,12 @@ class ShopifyHandler(APIHandler):
 
         marketing_events_table = MarketingEventsTable(self)
         self._register_table("marketing_events", marketing_events_table)
+
+        inventory_items_table = InventoryItemsTable(self)
+        self._register_table("inventory_items", inventory_items_table)
+
+        staff_members_table = StaffMembersTable(self)
+        self._register_table("staff_members", staff_members_table)
 
     def connect(self):
         """

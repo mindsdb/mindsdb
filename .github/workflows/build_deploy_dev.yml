@@ -20,7 +20,7 @@ jobs:
 
   changes:
     name: Filter changed files
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     outputs:
       not-docs: ${{ steps.filter.outputs.not-docs }}
     steps:
@@ -49,7 +49,7 @@ jobs:
   get-deploy-labels:
     if: ${{ !github.event.pull_request.head.repo.fork }}
     name: Get Deploy Envs
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     needs: [changes]
     outputs:
       deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
@@ -61,7 +61,7 @@ jobs:
   build:
     if: ${{ !github.event.pull_request.head.repo.fork && needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
     name: Build Docker Images
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     needs: [get-deploy-labels]
     steps:
       - uses: actions/checkout@v4
@@ -78,7 +78,7 @@ jobs:
   build-cache:
     if: ${{ !github.event.pull_request.head.repo.fork }}
     name: Push Docker Cache
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     needs: [build]
     steps:
       - uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
   tests_completed:
     name: All Tests Succeeded
     needs: [run_unit_tests, run_integration_tests, changes]
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     if: always()
     steps:
       - name: fail if tests failed or didnt run

@@ -8,6 +8,7 @@ from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     ProductVariantsTable,
     CustomersTable,
     OrdersTable,
+    MarketingEventsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -70,6 +71,9 @@ class ShopifyHandler(APIHandler):
 
         product_variants_table = ProductVariantsTable(self)
         self._register_table("product_variants", product_variants_table)
+
+        marketing_events_table = MarketingEventsTable(self)
+        self._register_table("marketing_events", marketing_events_table)
 
     def connect(self):
         """

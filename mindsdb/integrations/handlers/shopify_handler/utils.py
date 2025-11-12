@@ -77,7 +77,6 @@ class ShopifyQuery:
         return json.loads(result)
 
 
-
 def query_graphql_nodes(
         root_name: str, root_class: type, columns: str, cursor: str | None = None,
         limit: int | None = None, sort_key: str | None = None, sort_reverse: bool = False, query: str | None = None,

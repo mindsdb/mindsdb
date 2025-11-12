@@ -9,9 +9,10 @@ from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOper
 
 from .utils import query_graphql_nodes, get_graphql_columns, query_graphql
 from .models.products import Products, columns as products_columns
-from .models.product_variants import ProductVariants
+from .models.product_variants import ProductVariants, columns as product_variants_columns
 from .models.customers import Customers, columns as customers_columns
 from .models.orders import Orders, columns as orders_columns
+from .models.marketing_events import MarketingEvents, columns as marketing_events_columns
 
 logger = log.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class ShopifyMetaAPIResource(MetaAPIResource):
         if len(data) == 0:
             df_columns = targets
             if targets is None or len(targets) == 0:
-                df_columns = list(self.model)
+                df_columns = [column.name for column in self.model]
             products_df = pd.DataFrame(data, columns=df_columns)
         else:
             products_df = pd.DataFrame(data)
@@ -238,7 +239,7 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
         super().__init__(*args, **kwargs)
 
     def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in products_columns]
+        return [column["COLUMN_NAME"] for column in product_variants_columns]
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
         response = query_graphql("""{
@@ -255,7 +256,7 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
         }
 
     def meta_get_columns(self, *args, **kwargs):
-        return products_columns
+        return product_variants_columns
 
     def meta_get_primary_keys(self, table_name: str) -> list[Dict]:
         return [
@@ -458,3 +459,71 @@ class OrdersTable(ShopifyMetaAPIResource):
             "CHILD_TABLE_NAME": "customers",
             "CHILD_COLUMN_NAME": "id"
         }]
+
+
+class MarketingEventsTable(ShopifyMetaAPIResource):
+    """The Shopify MarketingEvents table implementation"""
+    # https://shopify.dev/docs/api/admin-graphql/latest/queries/marketingevents
+
+    def __init__(self, *args, **kwargs):
+        self.model = MarketingEvents
+        self.model_name = 'marketingEvents'
+
+        sort_map = {
+            MarketingEvents.id: "ID",
+            MarketingEvents.startedAt: "STARTED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("id", FilterOperator.EQUAL): "id:",
+
+            ("startedat", FilterOperator.GREATER_THAN): "started_at:>",
+            ("startedat", FilterOperator.GREATER_THAN_OR_EQUAL): "started_at:>=",
+            ("startedat", FilterOperator.LESS_THAN): "started_at:<",
+            ("startedat", FilterOperator.LESS_THAN_OR_EQUAL): "started_at:<=",
+            ("startedat", FilterOperator.EQUAL): "started_at:",
+
+            ("description", FilterOperator.EQUAL): "description:",
+            ("description", FilterOperator.LIKE): "description:",
+
+            ("type", FilterOperator.EQUAL): "type:",
+            ("type", FilterOperator.LIKE): "type:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def get_columns(self) -> list[str]:
+        return [column["COLUMN_NAME"] for column in orders_columns]
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        data = query_graphql_nodes(
+            self.model_name,
+            self.model,
+            ["id"],
+        )
+        row_count = len(data)
+
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "A list of marketing events.",
+            "row_count": row_count,
+        }
+
+    def meta_get_columns(self, *args, **kwargs):
+        return orders_columns
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [
+            {
+                "table_name": table_name,
+                "column_name": "id",
+            }
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []

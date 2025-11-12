@@ -21,7 +21,7 @@ jobs:
   # Check that the version defined in the github release is valid
   check-version:
     name: Check Code Version
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     if: github.actor != 'mindsdbadmin'
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
   # Push a new release to PyPI
   deploy_to_pypi:
     name: Publish to PyPI
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     needs: check-version
     if: github.actor != 'mindsdbadmin'
     steps:
@@ -65,7 +65,7 @@ jobs:
   # This will tag with the release version tag and push to both dockerhub and ECR
   build:
     name: Build Docker Images
-    runs-on: mdb-dev
+    runs-on: ubuntu-latest
     needs: [check-version]
     if: github.actor != 'mindsdbadmin'
     steps:

@@ -24,8 +24,102 @@ from mindsdb.integrations.utilities.handlers.query_utilities import (
 
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.utilities import log
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 logger = log.getLogger(__name__)
+
+
+def _cast_series_to_type(series: pd.Series, type_name: str) -> pd.Series:
+    if type_name is None:
+        return series
+
+    type_name = type_name.lower()
+    if type_name in {"int", "integer", "bigint", "smallint", "decimal", "numeric", "float", "double", "real"}:
+        return pd.to_numeric(series, errors="coerce")
+    if type_name in {"date", "datetime", "timestamp"}:
+        return pd.to_datetime(series, errors="coerce")
+    if type_name in {"text", "string", "varchar", "char"}:
+        return series.astype(str)
+    return series
+
+
+def _extract_where_casts(query: ast.Select) -> Dict[Text, Text]:
+    casts: Dict[Text, Text] = {}
+
+    if query.where is None:
+        return casts
+
+    def _capture_casts(node, **kwargs):
+        if isinstance(node, ast.BinaryOperation):
+            candidate = node.args[0]
+        elif isinstance(node, ast.BetweenOperation):
+            candidate = node.args[0]
+        else:
+            return
+
+        cast_type = None
+        while isinstance(candidate, ast.TypeCast):
+            cast_type = candidate.type_name
+            candidate = candidate.arg
+
+        if cast_type and isinstance(candidate, ast.Identifier):
+            casts[candidate.parts[-1]] = cast_type
+
+    query_traversal(query.where, _capture_casts)
+    return casts
+
+
+def _apply_casts(df: pd.DataFrame, casts: Dict[Text, Text]) -> pd.DataFrame:
+    if not casts or df.empty:
+        return df
+
+    for column, cast_type in casts.items():
+        if column in df.columns:
+            df[column] = _cast_series_to_type(df[column], cast_type)
+    return df
+
+
+def _strip_typecasts_from_where(query: ast.Select) -> None:
+    if query.where is None:
+        return
+
+    def _strip_casts(node, **kwargs):
+        if isinstance(node, ast.TypeCast):
+            return node.arg
+
+    query_traversal(query.where, _strip_casts)
+
+
+def _extract_order_casts(query: ast.Select) -> Dict[Text, Text]:
+    casts: Dict[Text, Text] = {}
+    if not query.order_by:
+        return casts
+
+    for order in query.order_by:
+        field = order.field
+        cast_type = None
+        while isinstance(field, ast.TypeCast):
+            cast_type = field.type_name
+            field = field.arg
+
+        if cast_type and isinstance(field, ast.Identifier):
+            casts[field.parts[-1]] = cast_type
+
+    return casts
+
+
+def _strip_typecasts_from_order_by(query: ast.Select) -> None:
+    if not query.order_by:
+        return
+
+    def _strip_casts(node, **kwargs):
+        if isinstance(node, ast.TypeCast):
+            return node.arg
+
+    for order in query.order_by:
+        node_out = query_traversal(order.field, _strip_casts)
+        if node_out is not None:
+            order.field = node_out
 
 
 class CompaniesTable(APITable):
@@ -52,12 +146,25 @@ class CompaniesTable(APITable):
 
         """
 
+        where_casts = _extract_where_casts(query)
+        order_casts = _extract_order_casts(query)
+        _strip_typecasts_from_where(query)
+        _strip_typecasts_from_order_by(query)
+
         select_statement_parser = SELECTQueryParser(query, "companies", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         companies_df = pd.json_normalize(self.get_companies(limit=result_limit))
         if companies_df.empty:
             companies_df = pd.DataFrame(columns=self._get_default_company_columns())
+
+        combined_casts = {**order_casts}
+        for column, cast_type in where_casts.items():
+            if column in combined_casts and combined_casts[column] != cast_type:
+                raise ValueError(f"Conflicting CAST types for column '{column}'")
+            combined_casts[column] = cast_type
+
+        companies_df = _apply_casts(companies_df, combined_casts)
 
         select_statement_executor = SELECTQueryExecutor(
             companies_df, selected_columns, where_conditions, order_by_conditions
@@ -311,12 +418,25 @@ class ContactsTable(APITable):
 
         """
 
+        where_casts = _extract_where_casts(query)
+        order_casts = _extract_order_casts(query)
+        _strip_typecasts_from_where(query)
+        _strip_typecasts_from_order_by(query)
+
         select_statement_parser = SELECTQueryParser(query, "contacts", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         contacts_df = pd.json_normalize(self.get_contacts(limit=result_limit, where_conditions=where_conditions))
         if contacts_df.empty:
             contacts_df = pd.DataFrame(columns=self._get_default_contact_columns())
+
+        combined_casts = {**order_casts}
+        for column, cast_type in where_casts.items():
+            if column in combined_casts and combined_casts[column] != cast_type:
+                raise ValueError(f"Conflicting CAST types for column '{column}'")
+            combined_casts[column] = cast_type
+
+        contacts_df = _apply_casts(contacts_df, combined_casts)
 
         select_statement_executor = SELECTQueryExecutor(
             contacts_df, selected_columns, where_conditions, order_by_conditions
@@ -666,12 +786,25 @@ class DealsTable(APITable):
 
         """
 
+        where_casts = _extract_where_casts(query)
+        order_casts = _extract_order_casts(query)
+        _strip_typecasts_from_where(query)
+        _strip_typecasts_from_order_by(query)
+
         select_statement_parser = SELECTQueryParser(query, "deals", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         deals_df = pd.json_normalize(self.get_deals(limit=result_limit))
         if deals_df.empty:
             deals_df = pd.DataFrame(columns=self._get_default_deal_columns())
+
+        combined_casts = {**order_casts}
+        for column, cast_type in where_casts.items():
+            if column in combined_casts and combined_casts[column] != cast_type:
+                raise ValueError(f"Conflicting CAST types for column '{column}'")
+            combined_casts[column] = cast_type
+
+        deals_df = _apply_casts(deals_df, combined_casts)
 
         select_statement_executor = SELECTQueryExecutor(
             deals_df, selected_columns, where_conditions, order_by_conditions

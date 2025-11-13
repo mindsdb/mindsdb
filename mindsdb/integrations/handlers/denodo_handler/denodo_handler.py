@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -23,14 +23,14 @@ class DenodoHandler(DatabaseHandler):
     This handler handles connection and execution of the Denodo statements.
     """
 
-    name = 'denodo'
+    name = "denodo"
 
     def __init__(self, name: str, **kwargs) -> None:
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'mysql'
-        self.connection_data = kwargs.get('connection_data', {})
-        self.database = self.connection_data.get('database')
+        self.dialect = "mysql"
+        self.connection_data = kwargs.get("connection_data", {})
+        self.database = self.connection_data.get("database")
 
         self.connection = None
 
@@ -46,16 +46,16 @@ class DenodoHandler(DatabaseHandler):
 
         try:
             self.connection = dbdriver.connect(
-                host=self.connection_data.get('host'),
-                port=self.connection_data.get('port'),
-                user=self.connection_data.get('user'),
-                password=self.connection_data.get('password'),
-                database=self.connection_data.get('database')
+                host=self.connection_data.get("host"),
+                port=self.connection_data.get("port"),
+                user=self.connection_data.get("user"),
+                password=self.connection_data.get("password"),
+                database=self.connection_data.get("database"),
             )
             return self.connection
         except (OperationalError, InterfaceError) as e:
-            logger.error(f'Error connecting to Denodo: {str(e)}')
-            raise ConnectionError(f'Failed to connect to Denodo: {str(e)}')
+            logger.error(f"Error connecting to Denodo: {str(e)}")
+            raise ConnectionError(f"Failed to connect to Denodo: {str(e)}")
 
     def disconnect(self) -> None:
         """
@@ -73,7 +73,7 @@ class DenodoHandler(DatabaseHandler):
             self.connect()
         try:
             with self.connection.cursor() as cursor:
-                cursor.execute('SELECT 1')
+                cursor.execute("SELECT 1")
         except (OperationalError, InterfaceError):
             self.connect()
 
@@ -88,7 +88,7 @@ class DenodoHandler(DatabaseHandler):
             self._validate_connection()
             return StatusResponse(True)
         except Exception as e:
-            logger.error(f'Connection check failed: {str(e)}')
+            logger.error(f"Connection check failed: {str(e)}")
             return StatusResponse(False, str(e))
 
     def native_query(self, query: str) -> Response:
@@ -113,17 +113,14 @@ class DenodoHandler(DatabaseHandler):
                     response = Response(
                         resp_type=RESPONSE_TYPE.TABLE,
                         query=query,
-                        data_frame=pd.DataFrame(result, columns=columns)
+                        data_frame=pd.DataFrame(result, columns=columns),
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
 
         except (OperationalError, InterfaceError, ProgrammingError) as e:
-            logger.error(f'Error running query: {query} on {self.database}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.database}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         return response
 
@@ -139,9 +136,9 @@ class DenodoHandler(DatabaseHandler):
         """
         Get all tables in current schema.
         """
-        query = 'SELECT name FROM GET_VIEWS();'
+        query = "SELECT name FROM GET_VIEWS();"
         result = self.native_query(query)
-        df = result.data_frame.rename(columns={'name': 'TABLE_NAME'})
+        df = result.data_frame.rename(columns={"name": "TABLE_NAME"})
         result.data_frame = df
         return result
 
@@ -151,6 +148,8 @@ class DenodoHandler(DatabaseHandler):
         """
         query = f"CALL GET_VIEW_COLUMNS('{self.database}', '{table_name}');"
         result = self.native_query(query)
-        df = result.data_frame.rename(columns={'column_name': 'COLUMN_NAME', 'data_type': 'DATA_TYPE'})
+        df = result.data_frame.rename(
+            columns={"column_name": "COLUMN_NAME", "data_type": "DATA_TYPE"}
+        )
         result.data_frame = df
         return result

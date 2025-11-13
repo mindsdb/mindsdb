@@ -5,7 +5,7 @@ from .common import (
     CollectionConnection,
     ProductCompareAtPriceRange,
     ProductPriceRangeV2,
-    SEO
+    SEO,
 )
 from .utils import Nodes
 
@@ -15,6 +15,7 @@ class Products(AliasesEnum):
     Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/Product
     Require `read_products` permission.
     """
+
     availablePublicationsCount = Count
     # bundleComponents
     category = TaxonomyCategory
@@ -77,13 +78,14 @@ class Products(AliasesEnum):
     variantsCount = Count
     vendor = "vendor"
 
+
 columns = [
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "availablePublicationsCount",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The number of publications that a resource is published to, without feedback errors.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -97,14 +99,14 @@ columns = [
         "COLUMN_NAME": "category",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The category of a product from Shopify's Standard Product Taxonomy.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "collections",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "A list of collections that include the product.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -118,14 +120,14 @@ columns = [
         "COLUMN_NAME": "combinedListingRole",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The role of the product in a combined listing. If null, then the product isn't part of any combined listing.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "compareAtPriceRange",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The compare-at price range of the product in the shop's default currency.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -139,7 +141,7 @@ columns = [
         "COLUMN_NAME": "createdAt",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The date and time when the product was created.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -153,14 +155,14 @@ columns = [
         "COLUMN_NAME": "description",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "A single-line description of the product, with HTML tags removed.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "descriptionHtml",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The description of the product, with HTML tags. For example, the description might include bold and italic text.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -188,42 +190,42 @@ columns = [
         "COLUMN_NAME": "giftCardTemplateSuffix",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The theme template that's used when customers view the gift card in a store.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "handle",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "A unique, human-readable string of the product's title. A handle can contain letters, hyphens, and numbers, but no spaces. The handle is used in the online store URL for the product.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "hasOnlyDefaultVariant",
         "DATA_TYPE": "BOOLEAN",
         "COLUMN_DESCRIPTION": "Whether the product has only a single variant with the default option and value.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "hasOutOfStockVariants",
         "DATA_TYPE": "BOOLEAN",
         "COLUMN_DESCRIPTION": "Whether the product has variants that are out of stock.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "hasVariantsThatRequiresComponents",
         "DATA_TYPE": "BOOLEAN",
         "COLUMN_DESCRIPTION": "Whether at least one of the product variants requires bundle components. Learn more about store eligibility for bundles.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "id",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "A globally-unique ID.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -237,14 +239,14 @@ columns = [
         "COLUMN_NAME": "isGiftCard",
         "DATA_TYPE": "BOOLEAN",
         "COLUMN_DESCRIPTION": "Whether the product is a gift card.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "legacyResourceId",
         "DATA_TYPE": "INT",
         "COLUMN_DESCRIPTION": "The ID of the corresponding resource in the REST Admin API.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -258,7 +260,7 @@ columns = [
         "COLUMN_NAME": "mediaCount",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The total count of media that's associated with a product.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -279,14 +281,14 @@ columns = [
         "COLUMN_NAME": "onlineStorePreviewUrl",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The preview URL for the online store.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "onlineStoreUrl",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The product's URL on the online store. If null, then the product isn't published to the online store sales channel.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -300,7 +302,7 @@ columns = [
         "COLUMN_NAME": "priceRangeV2",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The minimum and maximum prices of a product, expressed in decimal numbers. For example, if the product is priced between $10.00 and $50.00, then the price range is $10.00 - $50.00.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -314,7 +316,7 @@ columns = [
         "COLUMN_NAME": "productComponentsCount",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "A count of unique products that contain at least one variant associated with at least one of the current products' variants via group relationship.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -328,14 +330,14 @@ columns = [
         "COLUMN_NAME": "productType",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The product type that merchants define.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "publishedAt",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The date and time when the product was published to the online store.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -363,7 +365,7 @@ columns = [
         "COLUMN_NAME": "requiresSellingPlan",
         "DATA_TYPE": "BOOLEAN",
         "COLUMN_DESCRIPTION": "Whether the product can only be purchased with a selling plan. Products that are sold on subscription can be updated only for online stores. If you update a product to be subscription-only, then the product is unpublished from all channels, except the online store.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -384,7 +386,7 @@ columns = [
         "COLUMN_NAME": "resourcePublicationsCount",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The number of publications that a resource is published to, without feedback errors.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -412,56 +414,56 @@ columns = [
         "COLUMN_NAME": "sellingPlanGroupsCount",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "A count of selling plan groups that are associated with the product.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "seo",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The SEO title and description that are associated with a product.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "status",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The product status, which controls visibility across all sales channels.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "tags",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "A comma-separated list of searchable keywords that are associated with the product. For example, a merchant might apply the sports and summer tags to products that are associated with sportwear for summer. Updating tags overwrites any existing tags that were previously added to the product. To add new tags without overwriting existing tags, use the tagsAdd mutation.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "templateSuffix",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The theme template that's used when customers view the product in a store.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "title",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The name for the product that displays to customers. The title is used to construct the product's handle. For example, if a product is titled Black Sunglasses, then the handle is black-sunglasses.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "totalInventory",
         "DATA_TYPE": "INT",
         "COLUMN_DESCRIPTION": "The quantity of inventory that's in stock.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "tracksInventory",
         "DATA_TYPE": "BOOLEAN",
         "COLUMN_DESCRIPTION": "Whether inventory tracking has been enabled for the product.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -482,7 +484,7 @@ columns = [
         "COLUMN_NAME": "updatedAt",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The date and time when the product was last modified. A product's updatedAt value can change for different reasons. For example, if an order is placed for a product that has inventory tracking set up, then the inventory adjustment is counted as an update.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "products",
@@ -496,13 +498,13 @@ columns = [
         "COLUMN_NAME": "variantsCount",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The number of variants that are associated with the product.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "products",
         "COLUMN_NAME": "vendor",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The name of the product's vendor.",
-        "IS_NULLABLE": False
-    }
+        "IS_NULLABLE": False,
+    },
 ]

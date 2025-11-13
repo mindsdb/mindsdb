@@ -11,6 +11,7 @@ class ProductVariants(AliasesEnum):
     Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/ProductVariant
     Require `read_products` permission.
     """
+
     availableForSale = "availableForSale"
     barcode = "barcode"
     compareAtPrice = "compareAtPrice"
@@ -48,27 +49,28 @@ class ProductVariants(AliasesEnum):
     # unitPriceMeasurement = "unitPriceMeasurement"
     updatedAt = "updatedAt"
 
+
 columns = [
     {
         "TABLE_NAME": "product_variants",
         "COLUMN_NAME": "availableForSale",
         "DATA_TYPE": "BOOL",
         "COLUMN_DESCRIPTION": "Whether the product variant is available for sale.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "product_variants",
         "COLUMN_NAME": "barcode",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The value of the barcode associated with the product.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "product_variants",
         "COLUMN_NAME": "compareAtPrice",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The compare-at price of the variant in the default shop currency.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -82,7 +84,7 @@ columns = [
         "COLUMN_NAME": "createdAt",
         "DATA_TYPE": "TIMESTAMP",
         "COLUMN_DESCRIPTION": "The date and time when the variant was created.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -103,7 +105,7 @@ columns = [
         "COLUMN_NAME": "displayName",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "Display name of the variant, based on product's title + variant's title.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -117,7 +119,7 @@ columns = [
         "COLUMN_NAME": "id",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "A globally-unique ID.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -138,7 +140,7 @@ columns = [
         "COLUMN_NAME": "inventoryQuantity",
         "DATA_TYPE": "INT",
         "COLUMN_DESCRIPTION": "The total sellable quantity of the variant.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -173,14 +175,14 @@ columns = [
         "COLUMN_NAME": "position",
         "DATA_TYPE": "INT",
         "COLUMN_DESCRIPTION": "The order of the product variant in the list of product variants. The first position in the list is 1.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "product_variants",
         "COLUMN_NAME": "price",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The price of the product variant in the default shop currency.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -195,7 +197,7 @@ columns = [
         "COLUMN_NAME": "productId",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "ID of the product that this variant belongs to.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -216,7 +218,7 @@ columns = [
         "COLUMN_NAME": "requiresComponents",
         "DATA_TYPE": "BOOL",
         "COLUMN_DESCRIPTION": "Whether a product variant requires components. The default value is false. If true, then the product variant can only be purchased as a parent bundle with components and it will be omitted from channels that don't support bundles.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -230,7 +232,7 @@ columns = [
         "COLUMN_NAME": "sellableOnlineQuantity",
         "DATA_TYPE": "INT",
         "COLUMN_DESCRIPTION": "The total sellable quantity of the variant for online channels. This doesn't represent the total available inventory or capture limitations based on customer location.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -244,35 +246,35 @@ columns = [
         "COLUMN_NAME": "sellingPlanGroupsCount",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "Count of selling plan groups associated with the product variant.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "product_variants",
         "COLUMN_NAME": "showUnitPrice",
         "DATA_TYPE": "BOOL",
         "COLUMN_DESCRIPTION": "Whether to show the unit price for this product variant.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "product_variants",
         "COLUMN_NAME": "sku",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "A case-sensitive identifier for the product variant in the shop. Required in order to connect to a fulfillment service.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "product_variants",
         "COLUMN_NAME": "taxable",
         "DATA_TYPE": "BOOL",
         "COLUMN_DESCRIPTION": "Whether a tax is charged when the product variant is sold.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "product_variants",
         "COLUMN_NAME": "title",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The title of the product variant.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -286,7 +288,7 @@ columns = [
         "COLUMN_NAME": "unitPrice",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The unit price value for the variant based on the variant measurement.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "product_variants",
@@ -300,6 +302,6 @@ columns = [
         "COLUMN_NAME": "updatedAt",
         "DATA_TYPE": "TIMESTAMP",
         "COLUMN_DESCRIPTION": "The date and time (ISO 8601 format) when the product variant was last modified.",
-        "IS_NULLABLE": False
-    }
+        "IS_NULLABLE": False,
+    },
 ]

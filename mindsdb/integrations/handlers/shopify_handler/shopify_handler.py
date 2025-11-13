@@ -52,10 +52,12 @@ class ShopifyHandler(APIHandler):
 
         connection_data = kwargs.get("connection_data", {})
 
-        required_args = [arg_name for arg_name, arg_meta in connection_args.items() if arg_meta.get('required') is True]
+        required_args = [arg_name for arg_name, arg_meta in connection_args.items() if arg_meta.get("required") is True]
         missed_args = set(required_args) - set(connection_data)
         if missed_args:
-            raise MissingConnectionParams(f"Required parameters are not found in the connection data: {', '.join(list(missed_args))}")
+            raise MissingConnectionParams(
+                f"Required parameters are not found in the connection data: {', '.join(list(missed_args))}"
+            )
 
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -89,19 +91,13 @@ class ShopifyHandler(APIHandler):
 
         response = requests.post(
             f"https://{shop_url}/admin/oauth/access_token",
-            data={
-                "grant_type": "client_credentials",
-                "client_id": client_id,
-                "client_secret": client_secret
-            },
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
+            data={"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=10,
         )
         response.raise_for_status()
         result = response.json()
-        access_token = result.get('access_token')
+        access_token = result.get("access_token")
 
         api_session = shopify.Session(shop_url, "2025-10", access_token)
 

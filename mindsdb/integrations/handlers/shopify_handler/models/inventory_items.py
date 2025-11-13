@@ -6,6 +6,7 @@ class InventoryItems(AliasesEnum):
     Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/InventoryItem
     Require `read_inventory` or `read_products` permission.
     """
+
     countryCodeOfOrigin = "countryCodeOfOrigin"
     # countryHarmonizedSystemCodes = "countryHarmonizedSystemCodes"
     createdAt = "createdAt"
@@ -28,14 +29,13 @@ class InventoryItems(AliasesEnum):
     # variant = "variant"
 
 
-
 columns = [
     {
         "TABLE_NAME": "inventory_items",
         "COLUMN_NAME": "countryCodeOfOrigin",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The ISO 3166-1 alpha-2 country code of where the item originated from.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "inventory_items",
@@ -49,35 +49,35 @@ columns = [
         "COLUMN_NAME": "createdAt",
         "DATA_TYPE": "TIMESTAMP",
         "COLUMN_DESCRIPTION": "The date and time when the inventory item was created.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "inventory_items",
         "COLUMN_NAME": "duplicateSkuCount",
         "DATA_TYPE": "INT",
         "COLUMN_DESCRIPTION": "The number of inventory items that share the same SKU with this item.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "inventory_items",
         "COLUMN_NAME": "harmonizedSystemCode",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The harmonized system code of the item. This must be a number between 6 and 13 digits.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "inventory_items",
         "COLUMN_NAME": "id",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "A globally-unique ID.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "inventory_items",
         "COLUMN_NAME": "inventoryHistoryUrl",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The URL that points to the inventory history for the item.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     # {
     #     "TABLE_NAME": "inventory_items",
@@ -98,7 +98,7 @@ columns = [
         "COLUMN_NAME": "legacyResourceId",
         "DATA_TYPE": "INT",
         "COLUMN_DESCRIPTION": "The ID of the corresponding resource in the REST Admin API.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "inventory_items",
@@ -119,28 +119,28 @@ columns = [
         "COLUMN_NAME": "provinceCodeOfOrigin",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The ISO 3166-2 alpha-2 province code of where the item originated from.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "inventory_items",
         "COLUMN_NAME": "requiresShipping",
         "DATA_TYPE": "BOOL",
         "COLUMN_DESCRIPTION": "Whether the inventory item requires shipping.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "inventory_items",
         "COLUMN_NAME": "sku",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "Inventory item SKU. Case-sensitive string.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "inventory_items",
         "COLUMN_NAME": "tracked",
         "DATA_TYPE": "BOOL",
         "COLUMN_DESCRIPTION": "Whether inventory levels are tracked for the item.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "inventory_items",
@@ -154,14 +154,14 @@ columns = [
         "COLUMN_NAME": "unitCost",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "Unit cost associated with the inventory item. Note: the user must have View product costs permission granted in order to access this field once product granular permissions are enabled.",
-        "IS_NULLABLE": None
+        "IS_NULLABLE": None,
     },
     {
         "TABLE_NAME": "inventory_items",
         "COLUMN_NAME": "updatedAt",
         "DATA_TYPE": "TIMESTAMP",
         "COLUMN_DESCRIPTION": "The date and time when the inventory item was updated.",
-        "IS_NULLABLE": False
+        "IS_NULLABLE": False,
     },
     # {
     #     "TABLE_NAME": "inventory_items",

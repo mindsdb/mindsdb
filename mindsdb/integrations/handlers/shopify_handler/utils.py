@@ -25,11 +25,11 @@ def _format_error(errors_list: list[dict]) -> str:
     Returns:
         str: The formatted error string.
     """
-    errors_text = [record.get('message', 'undescribed') for record in errors_list]
+    errors_text = [record.get("message", "undescribed") for record in errors_list]
     if len(errors_list) == 0:
         errors_text = errors_text[0]
         return f"An error occurred when executing the query: {errors_text}"
-    errors_text = '\n'.join(errors_text)
+    errors_text = "\n".join(errors_text)
     return f"Error occurred when executing the query:\n{errors_text}"
 
 
@@ -51,15 +51,15 @@ def get_graphql_columns(root: AliasesEnum, targets: list[str] | None = None) -> 
             continue
         if isinstance(value, Nodes):
             sub_fields = get_graphql_columns(value.enum)
-            acc.append(f'{name}(first: {MAX_PAGE_LIMIT}) {{ nodes {{{sub_fields}}} {PAGE_INFO} }}')
+            acc.append(f"{name}(first: {MAX_PAGE_LIMIT}) {{ nodes {{{sub_fields}}} {PAGE_INFO} }}")
         elif isinstance(value, Extract):
-            acc.append(f'{name}:{value.obj} {{ {value.key} }}')
+            acc.append(f"{name}:{value.obj} {{ {value.key} }}")
         elif inspect.isclass(value) and issubclass(value, Enum):
             sub_fields = get_graphql_columns(value)
-            acc.append(f'{name} {{{sub_fields}}}')
+            acc.append(f"{name} {{{sub_fields}}}")
         else:
             acc.append(value)
-    return ' '.join(acc)
+    return " ".join(acc)
 
 
 def query_graphql(query: str) -> dict:
@@ -73,8 +73,8 @@ def query_graphql(query: str) -> dict:
     """
     result = shopify.GraphQL().execute(query)
     result = json.loads(result)
-    if 'errors' in result:
-        raise Exception(_format_error(result['errors']))
+    if "errors" in result:
+        raise Exception(_format_error(result["errors"]))
     return result
 
 
@@ -91,6 +91,7 @@ class ShopifyQuery:
         reverse: Whether to reverse the sort.
         query: The query to execute.
     """
+
     operation_name: str
     columns: str
     limit: int | None = None
@@ -109,7 +110,7 @@ class ShopifyQuery:
         if self.cursor:
             items.append(f'after: "{self.cursor}"')
         if self.sort_key:
-            items.append(f'sortKey: {self.sort_key}, reverse: {"true" if self.reverse else "false"}')
+            items.append(f"sortKey: {self.sort_key}, reverse: {'true' if self.reverse else 'false'}")
         if self.query:
             items.append(f'query: "{self.query}"')
         return f"{{ {self.operation_name} ({', '.join(items)}) {{ nodes {{ {self.columns} }} {PAGE_INFO} }} }}"
@@ -125,16 +126,16 @@ class ShopifyQuery:
 
 
 def query_graphql_nodes(
-        root_name: str,
-        root_class: type,
-        columns: str,
-        cursor: str | None = None,
-        limit: int | None = None,
-        sort_key: str | None = None,
-        sort_reverse: bool = False,
-        query: str | None = None,
-        depth: int = 1
-    ):
+    root_name: str,
+    root_class: type,
+    columns: str,
+    cursor: str | None = None,
+    limit: int | None = None,
+    sort_key: str | None = None,
+    sort_reverse: bool = False,
+    query: str | None = None,
+    depth: int = 1,
+):
     """Query the GraphQL API for nodes.
 
     Args:
@@ -163,27 +164,37 @@ def query_graphql_nodes(
             reverse=sort_reverse,
             query=query,
         ).execute()
-        if 'errors' in result:
-            raise Exception(_format_error(result['errors']))
-        hasNextPage = result['data'][root_name]['pageInfo']['hasNextPage']
-        cursor = result['data'][root_name]['pageInfo']['endCursor']
-        result_data += result['data'][root_name]['nodes']
+        if "errors" in result:
+            raise Exception(_format_error(result["errors"]))
+        hasNextPage = result["data"][root_name]["pageInfo"]["hasNextPage"]
+        cursor = result["data"][root_name]["pageInfo"]["endCursor"]
+        result_data += result["data"][root_name]["nodes"]
 
     fetched_fields = []
     if len(result_data) > 0:
         fetched_fields = [name.lower() for name in result_data[0].keys()]
 
-    nodes_name = [name for name, value in root_class.aliases() if isinstance(value, Nodes) if name.lower() in fetched_fields]
-    extracts_names = [name for name, value in root_class.aliases() if isinstance(value, Extract) if name.lower() in fetched_fields]
+    nodes_name = [
+        name for name, value in root_class.aliases() if isinstance(value, Nodes) if name.lower() in fetched_fields
+    ]
+    extracts_names = [
+        name for name, value in root_class.aliases() if isinstance(value, Extract) if name.lower() in fetched_fields
+    ]
 
     for row in result_data:
         for name in nodes_name:
             value = root_class[name].value
-            node_data = row[name]['nodes']
-            hasNextPage = row[name]['pageInfo']['hasNextPage']
+            node_data = row[name]["nodes"]
+            hasNextPage = row[name]["pageInfo"]["hasNextPage"]
             if depth > 0 and hasNextPage:
-                cursor = row[name]['pageInfo']['endCursor']
-                result = query_graphql_nodes(root_name=name, cursor=cursor, root_class=value.enum, columns=get_graphql_columns(value.enum), depth=depth - 1)
+                cursor = row[name]["pageInfo"]["endCursor"]
+                result = query_graphql_nodes(
+                    root_name=name,
+                    cursor=cursor,
+                    root_class=value.enum,
+                    columns=get_graphql_columns(value.enum),
+                    depth=depth - 1,
+                )
                 node_data += result
             row[name] = node_data
         for name in extracts_names:

@@ -20,8 +20,7 @@ logger = log.getLogger(__name__)
 
 
 class ShopifyMetaAPIResource(MetaAPIResource):
-    """A class to represent a Shopify Meta API resource.
-    """
+    """A class to represent a Shopify Meta API resource."""
 
     def list(
         self,
@@ -85,7 +84,9 @@ class ShopifyMetaAPIResource(MetaAPIResource):
             order_by = sort[0].column.lower()
             asc = sort[0].ascending
             if order_by not in sort_map:
-                raise KeyError(f"Unsopported column for order by: {order_by}, available columns are: {list(self.sort_map.keys())}")
+                raise KeyError(
+                    f"Unsopported column for order by: {order_by}, available columns are: {list(self.sort_map.keys())}"
+                )
 
             sort_key = sort_map[order_by]
             sort_reverse = not asc
@@ -102,19 +103,19 @@ class ShopifyMetaAPIResource(MetaAPIResource):
         """
         query_conditions = []
         conditions_op_map = self.conditions_op_map or {}
-        for condition in (conditions or []):
+        for condition in conditions or []:
             op = condition.op
             column = condition.column.lower()
             mapped_op = conditions_op_map.get((column, op))
             if mapped_op:
                 value = condition.value
                 if isinstance(value, list):
-                    value = ','.join(value)
+                    value = ",".join(value)
                 elif isinstance(value, bool):
-                    value = f'{value}'.lower()
+                    value = f"{value}".lower()
                 query_conditions.append(f"{mapped_op}{value}")
                 condition.applied = True
-        query_conditions = ' AND '.join(query_conditions)
+        query_conditions = " AND ".join(query_conditions)
         return query_conditions
 
     def get_columns(self) -> List[str]:
@@ -141,7 +142,7 @@ class ProductsTable(ShopifyMetaAPIResource):
 
     def __init__(self, *args, **kwargs):
         self.model = Products
-        self.model_name = 'products'
+        self.model_name = "products"
         self.columns = products_columns
 
         sort_map = {
@@ -162,40 +163,30 @@ class ProductsTable(ShopifyMetaAPIResource):
             ("createdat", FilterOperator.LESS_THAN): "created_at:<",
             ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
             ("createdat", FilterOperator.EQUAL): "created_at:",
-
             ("id", FilterOperator.GREATER_THAN): "id:>",
             ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
             ("id", FilterOperator.LESS_THAN): "id:<",
             ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
             ("id", FilterOperator.EQUAL): "id:",
-
             ("isgiftcard", FilterOperator.EQUAL): "gift_card:",
-
             ("handle", FilterOperator.EQUAL): "handle:",
             ("handle", FilterOperator.IN): "handle:",
-
             ("totalinventory", FilterOperator.EQUAL): "inventory_total:",
-
             ("producttype", FilterOperator.EQUAL): "product_type:",
             ("producttype", FilterOperator.IN): "product_type:",
-
             ("publishedat", FilterOperator.GREATER_THAN): "published_at:>",
             ("publishedat", FilterOperator.GREATER_THAN_OR_EQUAL): "published_at:>=",
             ("publishedat", FilterOperator.LESS_THAN): "published_at:<",
             ("publishedat", FilterOperator.LESS_THAN_OR_EQUAL): "published_at:<=",
             ("publishedat", FilterOperator.EQUAL): "published_at:",
-
             ("status", FilterOperator.EQUAL): "status:",
             ("status", FilterOperator.IN): "status:",
-
             ("title", FilterOperator.EQUAL): "title:",
-
             ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
             ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
             ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
             ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
             ("updatedat", FilterOperator.EQUAL): "updated_at:",
-
             ("vendor", FilterOperator.EQUAL): "vendor:",
         }
         super().__init__(*args, **kwargs)
@@ -233,7 +224,7 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
 
     def __init__(self, *args, **kwargs):
         self.model = ProductVariants
-        self.model_name = 'productVariants'
+        self.model_name = "productVariants"
         self.columns = product_variants_columns
 
         sort_map = {
@@ -248,31 +239,24 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
 
         self.conditions_op_map = {
             ("barcode", FilterOperator.EQUAL): "barcode:",
-
             ("id", FilterOperator.GREATER_THAN): "id:>",
             ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
             ("id", FilterOperator.LESS_THAN): "id:<",
             ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
             ("id", FilterOperator.EQUAL): "id:",
-
             ("inventoryquantity", FilterOperator.GREATER_THAN): "inventoryquantity:>",
             ("inventoryquantity", FilterOperator.GREATER_THAN_OR_EQUAL): "inventoryquantity:>=",
             ("inventoryquantity", FilterOperator.LESS_THAN): "inventoryquantity:<",
             ("inventoryquantity", FilterOperator.LESS_THAN_OR_EQUAL): "inventoryquantity:<=",
             ("inventoryquantity", FilterOperator.EQUAL): "inventoryquantity:",
-
             ("productid", FilterOperator.GREATER_THAN): "product_id:>",
             ("productid", FilterOperator.GREATER_THAN_OR_EQUAL): "product_id:>=",
             ("productid", FilterOperator.LESS_THAN): "product_id:<",
             ("productid", FilterOperator.LESS_THAN_OR_EQUAL): "product_id:<=",
             ("productid", FilterOperator.EQUAL): "product_id:",
-
             ("productid", FilterOperator.IN): "toproduct_ids:",
-
             ("sku", FilterOperator.EQUAL): "sku:",
-
             ("title", FilterOperator.EQUAL): "title:",
-
             ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
             ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
             ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
@@ -304,12 +288,14 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
         ]
 
     def meta_get_foreign_keys(self, table_name: str, all_tables: list[str]) -> list[Dict]:
-        return [{
-            "PARENT_TABLE_NAME": table_name,
-            "PARENT_COLUMN_NAME": "productId",
-            "CHILD_TABLE_NAME": "products",
-            "CHILD_COLUMN_NAME": "id"
-        }]
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "productId",
+                "CHILD_TABLE_NAME": "products",
+                "CHILD_COLUMN_NAME": "id",
+            }
+        ]
 
 
 class CustomersTable(ShopifyMetaAPIResource):
@@ -319,7 +305,7 @@ class CustomersTable(ShopifyMetaAPIResource):
 
     def __init__(self, *args, **kwargs):
         self.model = Customers
-        self.model_name = 'customers'
+        self.model_name = "customers"
         self.columns = customers_columns
 
         sort_map = {
@@ -331,27 +317,20 @@ class CustomersTable(ShopifyMetaAPIResource):
 
         self.conditions_op_map = {
             ("country", FilterOperator.EQUAL): "country:",
-
             ("createdat", FilterOperator.GREATER_THAN): "customer_date:>",
             ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "customer_date:>=",
             ("createdat", FilterOperator.LESS_THAN): "customer_date:<",
             ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "customer_date:<=",
             ("createdat", FilterOperator.EQUAL): "customer_date:",
-
             ("email", FilterOperator.EQUAL): "email:",
-
             ("firstname", FilterOperator.EQUAL): "first_name:",
-
             ("id", FilterOperator.GREATER_THAN): "id:>",
             ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
             ("id", FilterOperator.LESS_THAN): "id:<",
             ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
             ("id", FilterOperator.EQUAL): "id:",
-
             ("lastname", FilterOperator.EQUAL): "last_name:",
-
             ("phonenumber", FilterOperator.EQUAL): "phone:",
-
             ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
             ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
             ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
@@ -393,7 +372,7 @@ class OrdersTable(ShopifyMetaAPIResource):
 
     def __init__(self, *args, **kwargs):
         self.model = Orders
-        self.model_name = 'orders'
+        self.model_name = "orders"
         self.columns = orders_columns
 
         sort_map = {
@@ -408,49 +387,35 @@ class OrdersTable(ShopifyMetaAPIResource):
 
         self.conditions_op_map = {
             ("confirmationnumber", FilterOperator.EQUAL): "confirmation_number:",
-
             ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
             ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
             ("createdat", FilterOperator.LESS_THAN): "created_at:<",
             ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
             ("createdat", FilterOperator.EQUAL): "created_at:",
-
             ("customerid", FilterOperator.EQUAL): "customer_id:",
-
             ("discountcode", FilterOperator.EQUAL): "discount_code:",
-
             ("email", FilterOperator.EQUAL): "email:",
-
             ("id", FilterOperator.GREATER_THAN): "id:>",
             ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
             ("id", FilterOperator.LESS_THAN): "id:<",
             ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
             ("id", FilterOperator.EQUAL): "id:",
-
             ("name", FilterOperator.EQUAL): "name:",
-
             ("ponumber", FilterOperator.EQUAL): "po_number:",
-
             ("processedat", FilterOperator.GREATER_THAN): "processed_at:>",
             ("processedat", FilterOperator.GREATER_THAN_OR_EQUAL): "processed_at:>=",
             ("processedat", FilterOperator.LESS_THAN): "processed_at:<",
             ("processedat", FilterOperator.LESS_THAN_OR_EQUAL): "processed_at:<=",
             ("processedat", FilterOperator.EQUAL): "processed_at:",
-
             ("returnstatus", FilterOperator.EQUAL): "return_status:",
-
             ("sourceidentifier", FilterOperator.EQUAL): "source_identifier:",
-
             ("sourcename", FilterOperator.EQUAL): "source_name:",
-
             ("test", FilterOperator.EQUAL): "test:",
-
             ("totalweight", FilterOperator.GREATER_THAN): "total_weight:>",
             ("totalweight", FilterOperator.GREATER_THAN_OR_EQUAL): "total_weight:>=",
             ("totalweight", FilterOperator.LESS_THAN): "total_weight:<",
             ("totalweight", FilterOperator.LESS_THAN_OR_EQUAL): "total_weight:<=",
             ("totalweight", FilterOperator.EQUAL): "total_weight:",
-
             ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
             ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
             ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
@@ -482,12 +447,14 @@ class OrdersTable(ShopifyMetaAPIResource):
         ]
 
     def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
-        return [{
-            "PARENT_TABLE_NAME": table_name,
-            "PARENT_COLUMN_NAME": "customerId",
-            "CHILD_TABLE_NAME": "customers",
-            "CHILD_COLUMN_NAME": "id"
-        }]
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "customerId",
+                "CHILD_TABLE_NAME": "customers",
+                "CHILD_COLUMN_NAME": "id",
+            }
+        ]
 
 
 class MarketingEventsTable(ShopifyMetaAPIResource):
@@ -497,7 +464,7 @@ class MarketingEventsTable(ShopifyMetaAPIResource):
 
     def __init__(self, *args, **kwargs):
         self.model = MarketingEvents
-        self.model_name = 'marketingEvents'
+        self.model_name = "marketingEvents"
         self.columns = marketing_events_columns
 
         sort_map = {
@@ -512,16 +479,13 @@ class MarketingEventsTable(ShopifyMetaAPIResource):
             ("id", FilterOperator.LESS_THAN): "id:<",
             ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
             ("id", FilterOperator.EQUAL): "id:",
-
             ("startedat", FilterOperator.GREATER_THAN): "started_at:>",
             ("startedat", FilterOperator.GREATER_THAN_OR_EQUAL): "started_at:>=",
             ("startedat", FilterOperator.LESS_THAN): "started_at:<",
             ("startedat", FilterOperator.LESS_THAN_OR_EQUAL): "started_at:<=",
             ("startedat", FilterOperator.EQUAL): "started_at:",
-
             ("description", FilterOperator.EQUAL): "description:",
             ("description", FilterOperator.LIKE): "description:",
-
             ("type", FilterOperator.EQUAL): "type:",
             ("type", FilterOperator.LIKE): "type:",
         }
@@ -561,7 +525,7 @@ class InventoryItemsTable(ShopifyMetaAPIResource):
 
     def __init__(self, *args, **kwargs):
         self.model = InventoryItems
-        self.model_name = 'inventoryItems'
+        self.model_name = "inventoryItems"
         self.columns = inventory_items_columns
 
         self.sort_map = {}
@@ -572,15 +536,12 @@ class InventoryItemsTable(ShopifyMetaAPIResource):
             ("id", FilterOperator.LESS_THAN): "id:<",
             ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
             ("id", FilterOperator.EQUAL): "id:",
-
             ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
             ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
             ("createdat", FilterOperator.LESS_THAN): "created_at:<",
             ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
             ("createdat", FilterOperator.EQUAL): "created_at:",
-
             ("sku", FilterOperator.EQUAL): "sku:",
-
             ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
             ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
             ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
@@ -623,7 +584,7 @@ class StaffMembersTable(ShopifyMetaAPIResource):
 
     def __init__(self, *args, **kwargs):
         self.model = StaffMembers
-        self.model_name = 'staffMembers'
+        self.model_name = "staffMembers"
         self.columns = staff_members_columns
 
         sort_map = {
@@ -637,13 +598,10 @@ class StaffMembersTable(ShopifyMetaAPIResource):
         self.conditions_op_map = {
             ("accounttype", FilterOperator.EQUAL): "account_type:",
             ("email", FilterOperator.EQUAL): "email:",
-
             ("firstname", FilterOperator.EQUAL): "first_name:",
             ("firstname", FilterOperator.LIKE): "first_name:",
-
             ("lastname", FilterOperator.EQUAL): "last_name:",
             ("lastname", FilterOperator.LIKE): "last_name:",
-
             ("id", FilterOperator.GREATER_THAN): "id:>",
             ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
             ("id", FilterOperator.LESS_THAN): "id:<",
@@ -686,7 +644,7 @@ class GiftCardsTable(ShopifyMetaAPIResource):
 
     def __init__(self, *args, **kwargs):
         self.model = GiftCards
-        self.model_name = 'giftCards'
+        self.model_name = "giftCards"
         self.columns = gift_cards_columns
 
         sort_map = {
@@ -706,13 +664,11 @@ class GiftCardsTable(ShopifyMetaAPIResource):
             ("createdat", FilterOperator.LESS_THAN): "created_at:<",
             ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
             ("createdat", FilterOperator.EQUAL): "created_at:",
-
             ("expireson", FilterOperator.GREATER_THAN): "expires_on:>",
             ("expireson", FilterOperator.GREATER_THAN_OR_EQUAL): "expires_on:>=",
             ("expireson", FilterOperator.LESS_THAN): "expires_on:<",
             ("expireson", FilterOperator.LESS_THAN_OR_EQUAL): "expires_on:<=",
             ("expireson", FilterOperator.EQUAL): "expires_on:",
-
             ("id", FilterOperator.GREATER_THAN): "id:>",
             ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
             ("id", FilterOperator.LESS_THAN): "id:<",
@@ -720,7 +676,6 @@ class GiftCardsTable(ShopifyMetaAPIResource):
             ("id", FilterOperator.EQUAL): "id:",
         }
         super().__init__(*args, **kwargs)
-
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
         response = query_graphql("""{
@@ -745,14 +700,17 @@ class GiftCardsTable(ShopifyMetaAPIResource):
         ]
 
     def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
-        return [{
-            "PARENT_TABLE_NAME": table_name,
-            "PARENT_COLUMN_NAME": "customerId",
-            "CHILD_TABLE_NAME": "customers",
-            "CHILD_COLUMN_NAME": "id"
-        }, {
-            "PARENT_TABLE_NAME": table_name,
-            "PARENT_COLUMN_NAME": "orderId",
-            "CHILD_TABLE_NAME": "orders",
-            "CHILD_COLUMN_NAME": "id"
-        }]
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "customerId",
+                "CHILD_TABLE_NAME": "customers",
+                "CHILD_COLUMN_NAME": "id",
+            },
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "orderId",
+                "CHILD_TABLE_NAME": "orders",
+                "CHILD_COLUMN_NAME": "id",
+            },
+        ]

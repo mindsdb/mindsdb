@@ -42,6 +42,9 @@ class SQLiteHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
 
+        # SQLite objects created in a thread can only be used in that same thread.
+        self.thread_safe = False
+
         self.connection = None
         self.is_connected = False
 

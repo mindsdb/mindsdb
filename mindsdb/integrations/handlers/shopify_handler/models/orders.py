@@ -377,6 +377,13 @@ columns = [
     # },
     {
         "TABLE_NAME": "orders",
+        "COLUMN_NAME": "customerId",
+        "DATA_TYPE": "TEXT",
+        "COLUMN_DESCRIPTION": "ID of the customer.",
+        "IS_NULLABLE": False,
+    },
+    {
+        "TABLE_NAME": "orders",
         "COLUMN_NAME": "customerAcceptsMarketing",
         "DATA_TYPE": "BOOLEAN",
         "COLUMN_DESCRIPTION": "Whether the customer agreed to receive marketing emails at the time of purchase. Use this to ensure compliance with marketing consent laws and to segment customers for email campaigns.",

@@ -84,9 +84,8 @@ class ShopifyMetaAPIResource(MetaAPIResource):
             order_by = sort[0].column.lower()
             asc = sort[0].ascending
             if order_by not in sort_map:
-                raise KeyError(
-                    f"Unsopported column for order by: {order_by}, available columns are: {list(self.sort_map.keys())}"
-                )
+                logger.info(f"Used unsopported column for order by: {order_by}, available columns are: {list(self.sort_map.keys())}.")
+                return None, None
 
             sort_key = sort_map[order_by]
             sort_reverse = not asc
@@ -141,6 +140,7 @@ class ProductsTable(ShopifyMetaAPIResource):
     """
 
     def __init__(self, *args, **kwargs):
+        self.name = "products"
         self.model = Products
         self.model_name = "products"
         self.columns = products_columns
@@ -223,6 +223,7 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
     """
 
     def __init__(self, *args, **kwargs):
+        self.name = "product_variants"
         self.model = ProductVariants
         self.model_name = "productVariants"
         self.columns = product_variants_columns
@@ -304,6 +305,7 @@ class CustomersTable(ShopifyMetaAPIResource):
     """
 
     def __init__(self, *args, **kwargs):
+        self.name = "customers"
         self.model = Customers
         self.model_name = "customers"
         self.columns = customers_columns
@@ -371,6 +373,7 @@ class OrdersTable(ShopifyMetaAPIResource):
     """
 
     def __init__(self, *args, **kwargs):
+        self.name = "orders"
         self.model = Orders
         self.model_name = "orders"
         self.columns = orders_columns
@@ -463,6 +466,7 @@ class MarketingEventsTable(ShopifyMetaAPIResource):
     """
 
     def __init__(self, *args, **kwargs):
+        self.name = "marketing_events"
         self.model = MarketingEvents
         self.model_name = "marketingEvents"
         self.columns = marketing_events_columns
@@ -524,6 +528,7 @@ class InventoryItemsTable(ShopifyMetaAPIResource):
     """
 
     def __init__(self, *args, **kwargs):
+        self.name = "inventory_items"
         self.model = InventoryItems
         self.model_name = "inventoryItems"
         self.columns = inventory_items_columns
@@ -583,6 +588,7 @@ class StaffMembersTable(ShopifyMetaAPIResource):
     """
 
     def __init__(self, *args, **kwargs):
+        self.name = "staff_members"
         self.model = StaffMembers
         self.model_name = "staffMembers"
         self.columns = staff_members_columns
@@ -643,6 +649,7 @@ class GiftCardsTable(ShopifyMetaAPIResource):
     """
 
     def __init__(self, *args, **kwargs):
+        self.name = "gift_cards"
         self.model = GiftCards
         self.model_name = "giftCards"
         self.columns = gift_cards_columns

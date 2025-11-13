@@ -96,6 +96,8 @@ class ShopifyHandler(APIHandler):
         response.raise_for_status()
         result = response.json()
         access_token = result.get("access_token")
+        if not access_token:
+            raise ConnectionFailed("Unable to get an access token")
 
         api_session = shopify.Session(shop_url, "2025-10", access_token)
 

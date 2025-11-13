@@ -84,7 +84,9 @@ class ShopifyMetaAPIResource(MetaAPIResource):
             order_by = sort[0].column.lower()
             asc = sort[0].ascending
             if order_by not in sort_map:
-                logger.info(f"Used unsopported column for order by: {order_by}, available columns are: {list(self.sort_map.keys())}.")
+                logger.info(
+                    f"Used unsopported column for order by: {order_by}, available columns are: {list(self.sort_map.keys())}."
+                )
                 return None, None
 
             sort_key = sort_map[order_by]

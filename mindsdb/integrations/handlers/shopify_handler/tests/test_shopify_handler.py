@@ -145,9 +145,7 @@ class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
         self.assertEqual(call_args[1]["data"]["client_secret"], self.TEST_CLIENT_SECRET)
 
         # Verify session was created
-        mock_shopify.Session.assert_called_once_with(
-            self.TEST_SHOP_URL, "2025-10", "test_access_token"
-        )
+        mock_shopify.Session.assert_called_once_with(self.TEST_SHOP_URL, "2025-10", "test_access_token")
 
         self.assertTrue(handler.is_connected)
         self.assertEqual(result, mock_session)
@@ -763,4 +761,3 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
 
 if __name__ == "__main__":
     unittest.main()
-

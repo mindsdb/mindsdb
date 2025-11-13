@@ -1,18 +1,16 @@
-from enum import Enum
-
 from .common import (
+    AliasesEnum,
     Count,
-    TaxonomyCategory,
-    CollectionConnectionShort,
-    ProductCompareAtPriceRange,
-    ProductPriceRangeV2,
-    SEO,
     MoneyV2,
 )
-from .utils import Nodes, Extract
+from .utils import Extract
 
 
-class ProductVariants(Enum):
+class ProductVariants(AliasesEnum):
+    """A class to represent a Shopify GraphQL product variant.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/ProductVariant
+    Require `read_products` permission.
+    """
     availableForSale = "availableForSale"
     barcode = "barcode"
     compareAtPrice = "compareAtPrice"
@@ -32,7 +30,7 @@ class ProductVariants(Enum):
     # metafields = "metafields"
     position = "position"
     price = "price"
-    # product = "product"  add id
+    # product = "product"
     productId = Extract("product", "id")  # Custom
     # productParents = "productParents"
     # productVariantComponents = "productVariantComponents"

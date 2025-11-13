@@ -1,9 +1,8 @@
-from enum import Enum
-
 from .common import (
+    AliasesEnum,
     Count,
     TaxonomyCategory,
-    CollectionConnectionShort,
+    CollectionConnection,
     ProductCompareAtPriceRange,
     ProductPriceRangeV2,
     SEO
@@ -11,11 +10,15 @@ from .common import (
 from .utils import Nodes
 
 
-class Products(Enum):
+class Products(AliasesEnum):
+    """A class to represent a Shopify GraphQL product.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/Product
+    Require `read_products` permission.
+    """
     availablePublicationsCount = Count
     # bundleComponents
     category = TaxonomyCategory
-    collections = Nodes(CollectionConnectionShort)
+    collections = Nodes(CollectionConnection)
     # combinedListing = CombinedListing
     combinedListingRole = "combinedListingRole"
     compareAtPriceRange = ProductCompareAtPriceRange

@@ -1,13 +1,16 @@
-from enum import Enum
-
 from .common import (
+    AliasesEnum,
     MailingAddress,
     MoneyV2
 )
 from .utils import Nodes, Extract
 
 
-class Customers(Enum):
+class Customers(AliasesEnum):
+    """A class to represent a Shopify GraphQL customer.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/Customer
+    Require `read_customers` permission.
+    """
     addresses = MailingAddress
     addressesV2 = Nodes(MailingAddress)
     amountSpent = MoneyV2

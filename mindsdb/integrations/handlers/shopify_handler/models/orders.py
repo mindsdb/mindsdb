@@ -1,18 +1,20 @@
-from enum import Enum
-
-from .common import Count
+from .common import AliasesEnum, Count, MailingAddress, OrderCancellation, MoneyBag
 from .utils import Extract
 
-class Orders(Enum):
+class Orders(AliasesEnum):
+    """A class to represent a Shopify GraphQL order.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/Order
+    Require `read_orders`, `read_marketplace_orders` or `read_quick_sale` permission.
+    """
     # additionalFees = "additionalFees"
     # agreements = "agreements"
     # alerts = "alerts"
     # app = "app"
     # billingAddress = "billingAddress"
     billingAddressMatchesShippingAddress = "billingAddressMatchesShippingAddress"
-    # cancellation = "cancellation"
+    cancellation = OrderCancellation
     cancelledAt = "cancelledAt"
-    # cancelReason = "cancelReason"
+    cancelReason = "cancelReason"
     canMarkAsPaid = "canMarkAsPaid"
     canNotifyCustomer = "canNotifyCustomer"
     capturable = "capturable"
@@ -26,15 +28,15 @@ class Orders(Enum):
     createdAt = "createdAt"
     currencyCode = "currencyCode"
     # currentCartDiscountAmountSet = "currentCartDiscountAmountSet"
-    # currentShippingPriceSet = "currentShippingPriceSet"
+    currentShippingPriceSet = MoneyBag
     currentSubtotalLineItemsQuantity = "currentSubtotalLineItemsQuantity"
-    # currentSubtotalPriceSet = "currentSubtotalPriceSet"
+    currentSubtotalPriceSet = MoneyBag
     # currentTaxLines = "currentTaxLines"
-    # currentTotalAdditionalFeesSet = "currentTotalAdditionalFeesSet"
-    # currentTotalDiscountsSet = "currentTotalDiscountsSet"
-    # currentTotalDutiesSet = "currentTotalDutiesSet"
-    # currentTotalPriceSet = "currentTotalPriceSet"
-    # currentTotalTaxSet = "currentTotalTaxSet"
+    currentTotalAdditionalFeesSet = MoneyBag
+    currentTotalDiscountsSet = MoneyBag
+    currentTotalDutiesSet = MoneyBag
+    currentTotalPriceSet = MoneyBag
+    currentTotalTaxSet = MoneyBag
     currentTotalWeight = "currentTotalWeight"
     # customAttributes = "customAttributes"
     # customer = "customer"
@@ -71,13 +73,13 @@ class Orders(Enum):
     # metafield = "metafield"
     # metafields = "metafields"
     name = "name"
-    # netPaymentSet = "netPaymentSet"
+    netPaymentSet = MoneyBag
     # nonFulfillableLineItems = "nonFulfillableLineItems"
     note = "note"
     number = "number"
-    # originalTotalAdditionalFeesSet = "originalTotalAdditionalFeesSet"
-    # originalTotalDutiesSet = "originalTotalDutiesSet"
-    # originalTotalPriceSet = "originalTotalPriceSet"
+    originalTotalAdditionalFeesSet = MoneyBag
+    originalTotalDutiesSet = MoneyBag
+    originalTotalPriceSet = MoneyBag
     # paymentCollectionDetails = "paymentCollectionDetails"
     paymentGatewayNames = "paymentGatewayNames"
     # paymentTerms = "paymentTerms"
@@ -89,7 +91,7 @@ class Orders(Enum):
     # publication = "publication"
     # purchasingEntity = "purchasingEntity"
     refundable = "refundable"
-    # refundDiscrepancySet = "refundDiscrepancySet"
+    refundDiscrepancySet = MoneyBag
     # refunds = "refunds"
     registeredSourceUrl = "registeredSourceUrl"
     requiresShipping = "requiresShipping"
@@ -98,7 +100,7 @@ class Orders(Enum):
     # returns = "returns"
     returnStatus = "returnStatus"
     # risk = "risk"
-    # shippingAddress = "shippingAddress"
+    shippingAddress = MailingAddress
     # shippingLine = "shippingLine"
     # shippingLines = "shippingLines"
     # shopifyProtect = "shopifyProtect"
@@ -107,24 +109,24 @@ class Orders(Enum):
     # staffMember = "staffMember"
     statusPageUrl = "statusPageUrl"
     subtotalLineItemsQuantity = "subtotalLineItemsQuantity"
-    # subtotalPriceSet = "subtotalPriceSet"
+    subtotalPriceSet = MoneyBag
     # suggestedRefund = "suggestedRefund"
     tags = "tags"
     taxesIncluded = "taxesIncluded"
     taxExempt = "taxExempt"
     # taxLines = "taxLines"
     test = "test"
-    # totalCapturableSet = "totalCapturableSet"
+    totalCapturableSet = MoneyBag
     # totalCashRoundingAdjustment = "totalCashRoundingAdjustment"
-    # totalDiscountsSet = "totalDiscountsSet"
-    # totalOutstandingSet = "totalOutstandingSet"
-    # totalPriceSet = "totalPriceSet"
-    # totalReceivedSet = "totalReceivedSet"
-    # totalRefundedSet = "totalRefundedSet"
-    # totalRefundedShippingSet = "totalRefundedShippingSet"
-    # totalShippingPriceSet = "totalShippingPriceSet"
-    # totalTaxSet = "totalTaxSet"
-    # totalTipReceivedSet = "totalTipReceivedSet"
+    totalDiscountsSet = MoneyBag
+    totalOutstandingSet = MoneyBag
+    totalPriceSet = MoneyBag
+    totalReceivedSet = MoneyBag
+    totalRefundedSet = MoneyBag
+    totalRefundedShippingSet = MoneyBag
+    totalShippingPriceSet = MoneyBag
+    totalTaxSet = MoneyBag
+    totalTipReceivedSet = MoneyBag
     totalWeight = "totalWeight"
     # transactions = "transactions"
     transactionsCount = Count
@@ -175,13 +177,13 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether the billing address matches the shipping address. Returns true if both addresses are the same, and false if they're different or if an address is missing.",
         "IS_NULLABLE": False
     },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "cancellation",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "Details of an order's cancellation, if it has been canceled. This includes the reason, date, and any staff notes.",
-    #     "IS_NULLABLE": None
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "cancellation",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "Details of an order's cancellation, if it has been canceled. This includes the reason, date, and any staff notes.",
+        "IS_NULLABLE": None
+    },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "cancelledAt",
@@ -189,13 +191,13 @@ columns = [
         "COLUMN_DESCRIPTION": "The date and time in ISO 8601 format when an order was canceled. Returns null if the order hasn't been canceled.",
         "IS_NULLABLE": None
     },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "cancelReason",
-    #     "DATA_TYPE": "TEXT",
-    #     "COLUMN_DESCRIPTION": "The reason provided for an order cancellation. For example, a merchant might cancel an order if there's insufficient inventory. Returns null if the order hasn't been canceled.",
-    #     "IS_NULLABLE": None
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "cancelReason",
+        "DATA_TYPE": "TEXT",
+        "COLUMN_DESCRIPTION": "The reason provided for an order cancellation. For example, a merchant might cancel an order if there's insufficient inventory. Returns null if the order hasn't been canceled.",
+        "IS_NULLABLE": None
+    },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "canMarkAsPaid",
@@ -287,13 +289,13 @@ columns = [
     #     "COLUMN_DESCRIPTION": "The current total of all discounts applied to the entire order, after returns, refunds, order edits, and cancellations. This includes discount codes, automatic discounts, and other promotions that affect the whole order rather than individual line items.",
     #     "IS_NULLABLE": False
     # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "currentShippingPriceSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The current shipping price after applying refunds and discounts. If the parent order.taxesIncluded field is true, then this price includes taxes. Otherwise, this field is the pre-tax price.",
-    #     "IS_NULLABLE": False
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "currentShippingPriceSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The current shipping price after applying refunds and discounts. If the parent order.taxesIncluded field is true, then this price includes taxes. Otherwise, this field is the pre-tax price.",
+        "IS_NULLABLE": False
+    },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "currentSubtotalLineItemsQuantity",
@@ -301,13 +303,13 @@ columns = [
         "COLUMN_DESCRIPTION": "The current sum of the quantities for all line items that contribute to the order's subtotal price, after returns, refunds, order edits, and cancellations.",
         "IS_NULLABLE": False
     },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "currentSubtotalPriceSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total price of the order, after returns and refunds, in shop and presentment currencies. This includes taxes and discounts.",
-    #     "IS_NULLABLE": False
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "currentSubtotalPriceSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total price of the order, after returns and refunds, in shop and presentment currencies. This includes taxes and discounts.",
+        "IS_NULLABLE": False
+    },
     # {
     #     "TABLE_NAME": "orders",
     #     "COLUMN_NAME": "currentTaxLines",
@@ -315,41 +317,41 @@ columns = [
     #     "COLUMN_DESCRIPTION": "A list of all tax lines applied to line items on the order, after returns. Tax line prices represent the total price for all tax lines with the same rate and title.",
     #     "IS_NULLABLE": False
     # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "currentTotalAdditionalFeesSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The current total of all additional fees for an order, after any returns or modifications. Modifications include returns, refunds, order edits, and cancellations. Additional fees can include charges such as duties, import fees, and special handling.",
-    #     "IS_NULLABLE": None
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "currentTotalDiscountsSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total amount discounted on the order after returns and refunds, in shop and presentment currencies. This includes both order and line level discounts.",
-    #     "IS_NULLABLE": False
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "currentTotalDutiesSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The current total duties amount for an order, after any returns or modifications. Modifications include returns, refunds, order edits, and cancellations.",
-    #     "IS_NULLABLE": None
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "currentTotalPriceSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total price of the order, after returns, in shop and presentment currencies. This includes taxes and discounts.",
-    #     "IS_NULLABLE": False
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "currentTotalTaxSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The sum of the prices of all tax lines applied to line items on the order, after returns and refunds, in shop and presentment currencies.",
-    #     "IS_NULLABLE": False
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "currentTotalAdditionalFeesSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The current total of all additional fees for an order, after any returns or modifications. Modifications include returns, refunds, order edits, and cancellations. Additional fees can include charges such as duties, import fees, and special handling.",
+        "IS_NULLABLE": None
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "currentTotalDiscountsSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total amount discounted on the order after returns and refunds, in shop and presentment currencies. This includes both order and line level discounts.",
+        "IS_NULLABLE": False
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "currentTotalDutiesSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The current total duties amount for an order, after any returns or modifications. Modifications include returns, refunds, order edits, and cancellations.",
+        "IS_NULLABLE": None
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "currentTotalPriceSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total price of the order, after returns, in shop and presentment currencies. This includes taxes and discounts.",
+        "IS_NULLABLE": False
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "currentTotalTaxSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The sum of the prices of all tax lines applied to line items on the order, after returns and refunds, in shop and presentment currencies.",
+        "IS_NULLABLE": False
+    },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "currentTotalWeight",
@@ -595,13 +597,13 @@ columns = [
         "COLUMN_DESCRIPTION": "The unique identifier for the order that appears on the order page in the Shopify admin and the Order status page. For example, #1001, EN1001, or 1001-A. This value isn't unique across multiple stores.",
         "IS_NULLABLE": False
     },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "netPaymentSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The net payment for the order, based on the total amount received minus the total amount refunded, in shop and presentment currencies.",
-    #     "IS_NULLABLE": False
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "netPaymentSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The net payment for the order, based on the total amount received minus the total amount refunded, in shop and presentment currencies.",
+        "IS_NULLABLE": False
+    },
     # {
     #     "TABLE_NAME": "orders",
     #     "COLUMN_NAME": "nonFulfillableLineItems",
@@ -623,27 +625,27 @@ columns = [
         "COLUMN_DESCRIPTION": "The order number used to generate the name using the store's configured order number prefix/suffix. This number isn't guaranteed to follow a consecutive integer sequence, nor is it guaranteed to be unique across multiple stores, or even for a single store.",
         "IS_NULLABLE": False
     },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "originalTotalAdditionalFeesSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total amount of all additional fees, such as import fees or taxes, that were applied when an order was created. Returns null if additional fees aren't applicable.",
-    #     "IS_NULLABLE": None
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "originalTotalDutiesSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total amount of duties calculated when an order was created, before any modifications. Modifications include returns, refunds, order edits, and cancellations.",
-    #     "IS_NULLABLE": None
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "originalTotalPriceSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total price of the order at the time of order creation, in shop and presentment currencies. Use this to compare the original order value against the current total after edits, returns, or refunds.",
-    #     "IS_NULLABLE": False
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "originalTotalAdditionalFeesSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total amount of all additional fees, such as import fees or taxes, that were applied when an order was created. Returns null if additional fees aren't applicable.",
+        "IS_NULLABLE": None
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "originalTotalDutiesSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total amount of duties calculated when an order was created, before any modifications. Modifications include returns, refunds, order edits, and cancellations.",
+        "IS_NULLABLE": None
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "originalTotalPriceSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total price of the order at the time of order creation, in shop and presentment currencies. Use this to compare the original order value against the current total after edits, returns, or refunds.",
+        "IS_NULLABLE": False
+    },
     # {
     #     "TABLE_NAME": "orders",
     #     "COLUMN_NAME": "paymentCollectionDetails",
@@ -721,13 +723,13 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether the order can be refunded based on its payment transactions. Returns false for orders with no eligible payment transactions, such as fully refunded orders or orders with non-refundable payment methods.",
         "IS_NULLABLE": False
     },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "refundDiscrepancySet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The difference between the suggested and actual refund amount of all refunds that have been applied to the order. A positive value indicates a difference in the merchant's favor, and a negative value indicates a difference in the customer's favor.",
-    #     "IS_NULLABLE": False
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "refundDiscrepancySet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The difference between the suggested and actual refund amount of all refunds that have been applied to the order. A positive value indicates a difference in the merchant's favor, and a negative value indicates a difference in the customer's favor.",
+        "IS_NULLABLE": False
+    },
     # {
     #     "TABLE_NAME": "orders",
     #     "COLUMN_NAME": "refunds",
@@ -784,13 +786,13 @@ columns = [
     #     "COLUMN_DESCRIPTION": "The risk assessment summary for the order. Provides fraud analysis and risk scoring to help you identify potentially fraudulent orders.",
     #     "IS_NULLABLE": False
     # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "shippingAddress",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The shipping address where the order will be delivered. Contains the customer's delivery location for fulfillment and shipping label generation. Returns null for digital orders or orders that don't require shipping.",
-    #     "IS_NULLABLE": None
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "shippingAddress",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The shipping address where the order will be delivered. Contains the customer's delivery location for fulfillment and shipping label generation. Returns null for digital orders or orders that don't require shipping.",
+        "IS_NULLABLE": None
+    },
     # {
     #     "TABLE_NAME": "orders",
     #     "COLUMN_NAME": "shippingLine",
@@ -847,13 +849,13 @@ columns = [
         "COLUMN_DESCRIPTION": "The sum of quantities for all line items that contribute to the order's subtotal price. This excludes quantities for items like tips, shipping costs, or gift cards that don't affect the subtotal.",
         "IS_NULLABLE": False
     },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "subtotalPriceSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The sum of the prices for all line items after discounts and before returns, in shop and presentment currencies. If taxesIncluded is true, then the subtotal also includes tax.",
-    #     "IS_NULLABLE": None
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "subtotalPriceSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The sum of the prices for all line items after discounts and before returns, in shop and presentment currencies. If taxesIncluded is true, then the subtotal also includes tax.",
+        "IS_NULLABLE": None
+    },
     # {
     #     "TABLE_NAME": "orders",
     #     "COLUMN_NAME": "suggestedRefund",
@@ -896,13 +898,13 @@ columns = [
         "COLUMN_DESCRIPTION": "Whether the order is a test. Test orders are made using the Shopify Bogus Gateway or a payment provider with test mode enabled. A test order can't be converted into a real order and vice versa.",
         "IS_NULLABLE": False
     },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalCapturableSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The authorized amount that's uncaptured or undercaptured, in shop and presentment currencies. This amount isn't adjusted for returns.",
-    #     "IS_NULLABLE": False
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalCapturableSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The authorized amount that's uncaptured or undercaptured, in shop and presentment currencies. This amount isn't adjusted for returns.",
+        "IS_NULLABLE": False
+    },
     # {
     #     "TABLE_NAME": "orders",
     #     "COLUMN_NAME": "totalCashRoundingAdjustment",
@@ -910,69 +912,69 @@ columns = [
     #     "COLUMN_DESCRIPTION": "The total rounding adjustment applied to payments or refunds for an order involving cash payments. Applies to some countries where cash transactions are rounded to the nearest currency denomination.",
     #     "IS_NULLABLE": False
     # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalDiscountsSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total amount discounted on the order before returns, in shop and presentment currencies. This includes both order and line level discounts.",
-    #     "IS_NULLABLE": None
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalOutstandingSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total amount not yet transacted for the order, in shop and presentment currencies. A positive value indicates a difference in the merchant's favor (payment from customer to merchant) and a negative value indicates a difference in the customer's favor (refund from merchant to customer).",
-    #     "IS_NULLABLE": False
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalPriceSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total price of the order, before returns, in shop and presentment currencies. This includes taxes and discounts.",
-    #     "IS_NULLABLE": False
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalReceivedSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total amount received from the customer before returns, in shop and presentment currencies.",
-    #     "IS_NULLABLE": False
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalRefundedSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total amount that was refunded, in shop and presentment currencies.",
-    #     "IS_NULLABLE": False
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalRefundedShippingSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total amount of shipping that was refunded, in shop and presentment currencies.",
-    #     "IS_NULLABLE": False
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalShippingPriceSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total shipping costs returned to the customer, in shop and presentment currencies. This includes fees and any related discounts that were refunded.",
-    #     "IS_NULLABLE": False
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalTaxSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The total tax amount before returns, in shop and presentment currencies.",
-    #     "IS_NULLABLE": None
-    # },
-    # {
-    #     "TABLE_NAME": "orders",
-    #     "COLUMN_NAME": "totalTipReceivedSet",
-    #     "DATA_TYPE": "JSON",
-    #     "COLUMN_DESCRIPTION": "The sum of all tip amounts for the order, in shop and presentment currencies.",
-    #     "IS_NULLABLE": False
-    # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalDiscountsSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total amount discounted on the order before returns, in shop and presentment currencies. This includes both order and line level discounts.",
+        "IS_NULLABLE": None
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalOutstandingSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total amount not yet transacted for the order, in shop and presentment currencies. A positive value indicates a difference in the merchant's favor (payment from customer to merchant) and a negative value indicates a difference in the customer's favor (refund from merchant to customer).",
+        "IS_NULLABLE": False
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalPriceSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total price of the order, before returns, in shop and presentment currencies. This includes taxes and discounts.",
+        "IS_NULLABLE": False
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalReceivedSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total amount received from the customer before returns, in shop and presentment currencies.",
+        "IS_NULLABLE": False
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalRefundedSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total amount that was refunded, in shop and presentment currencies.",
+        "IS_NULLABLE": False
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalRefundedShippingSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total amount of shipping that was refunded, in shop and presentment currencies.",
+        "IS_NULLABLE": False
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalShippingPriceSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total shipping costs returned to the customer, in shop and presentment currencies. This includes fees and any related discounts that were refunded.",
+        "IS_NULLABLE": False
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalTaxSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The total tax amount before returns, in shop and presentment currencies.",
+        "IS_NULLABLE": None
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "totalTipReceivedSet",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The sum of all tip amounts for the order, in shop and presentment currencies.",
+        "IS_NULLABLE": False
+    },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "totalWeight",

@@ -63,29 +63,14 @@ class ShopifyHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        products_data = ProductsTable(self)
-        self._register_table("products", products_data)
-
-        customers_data = CustomersTable(self)
-        self._register_table("customers", customers_data)
-
-        orders_data = OrdersTable(self)
-        self._register_table("orders", orders_data)
-
-        product_variants_table = ProductVariantsTable(self)
-        self._register_table("product_variants", product_variants_table)
-
-        marketing_events_table = MarketingEventsTable(self)
-        self._register_table("marketing_events", marketing_events_table)
-
-        inventory_items_table = InventoryItemsTable(self)
-        self._register_table("inventory_items", inventory_items_table)
-
-        staff_members_table = StaffMembersTable(self)
-        self._register_table("staff_members", staff_members_table)
-
-        gift_cards_table = GiftCardsTable(self)
-        self._register_table("gift_cards", gift_cards_table)
+        self._register_table("products", ProductsTable(self))
+        self._register_table("customers", CustomersTable(self))
+        self._register_table("orders", OrdersTable(self))
+        self._register_table("product_variants", ProductVariantsTable(self))
+        self._register_table("marketing_events", MarketingEventsTable(self))
+        self._register_table("inventory_items", InventoryItemsTable(self))
+        self._register_table("staff_members", StaffMembersTable(self))
+        self._register_table("gift_cards", GiftCardsTable(self))
 
     def connect(self):
         """
@@ -119,13 +104,7 @@ class ShopifyHandler(APIHandler):
 
         api_session = shopify.Session(shop_url, "2025-10", access_token)
 
-        # self.yotpo_app_key = self.connection_data["yotpo_app_key"] if "yotpo_app_key" in self.connection_data else None
-        # self.yotpo_access_token = (
-        #     self.connection_data["yotpo_access_token"] if "yotpo_access_token" in self.connection_data else None
-        # )
-
         self.connection = api_session
-
         self.is_connected = True
 
         return self.connection
@@ -148,14 +127,6 @@ class ShopifyHandler(APIHandler):
             logger.error("Error connecting to Shopify!")
             response.error_message = str(e)
             raise ConnectionFailed("Conenction to Shopify failed.")
-
-        # if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
-        #     url = f"https://api.yotpo.com/v1/apps/{self.yotpo_app_key}/reviews?count=1&utoken={self.yotpo_access_token}"
-        #     headers = {"accept": "application/json", "Content-Type": "application/json"}
-        #     if requests.get(url, headers=headers).status_code == 200:
-        #         response.success = True
-        #     else:
-        #         response.success = False
 
         self.is_connected = response.success
 

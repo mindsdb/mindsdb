@@ -1,7 +1,11 @@
-from enum import Enum
+from .common import AliasesEnum
 
 
-class StaffMembers(Enum):
+class StaffMembers(AliasesEnum):
+    """A class to represent a Shopify GraphQL staff member.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/StaffMember
+    Require `read_users` permission. Also the app must be a finance embedded app or installed on a Shopify Plus or Advanced store.
+    """
     accountType = "accountType"
     active = "active"
     # avatar = "avatar"

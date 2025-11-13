@@ -1,51 +1,98 @@
 from enum import Enum
 
-class Count(Enum):
+
+class AliasesEnum(Enum):
+    """A class to represent a Shopify GraphQL resource.
+    It adds easy method to get the aliases of the Enum class.
+    """
+    @classmethod
+    def aliases(cls):
+        return ((name, field.value) for name, field in cls.__members__.items())
+
+
+class Count(AliasesEnum):
+    """A class to represent a Shopify GraphQL count.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/Count
+    """
     count = "count"
     precision = "precision"
 
-class TaxonomyAttribute(Enum):
+class TaxonomyAttribute(AliasesEnum):
+    """A class to represent a Shopify GraphQL taxonomy attribute.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/TaxonomyAttribute
+    """
     id = "id"
 
-class TaxonomyChoiceListAttribute(Enum):
+class TaxonomyChoiceListAttribute(AliasesEnum):
+    """A class to represent a Shopify GraphQL taxonomy choice list attribute.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/TaxonomyChoiceListAttribute
+    """
     id = "id"
     name = "name"
     # values = Nodes()
 
-class TaxonomyMeasurementAttribute(Enum):
+class TaxonomyMeasurementAttribute(AliasesEnum):
+    """A class to represent a Shopify GraphQL taxonomy measurement attribute.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/TaxonomyMeasurementAttribute
+    """
     id = "id"
     name = "name"
     # options = Attribute
 
-class SEO(Enum):
+class SEO(AliasesEnum):
+    """A class to represent a Shopify GraphQL SEO.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/SEO
+    """
     description = "description"
     title = "title"
 
-class TaxonomyCategory(Enum):
+class TaxonomyCategory(AliasesEnum):
+    """A class to represent a Shopify GraphQL taxonomy category.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/TaxonomyCategory
+    """
     ancestorIds = "ancestorIds"
     # attributes = Nodes(TaxonomyCategoryAttributeConnection)
     childrenIds = "childrenIds"
     fullName = "fullName"
+    id = "id"
+    name = "name"
 
-class MoneyV2(Enum):
+class MoneyV2(AliasesEnum):
+    """A class to represent a Shopify GraphQL money v2.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/MoneyV2
+    """
     amount = "amount"
     currencyCode = "currencyCode"
 
 
-class ProductPriceRangeV2(Enum):
+class ProductPriceRangeV2(AliasesEnum):
+    """A class to represent a Shopify GraphQL product price range v2.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/ProductPriceRangeV2
+    Require `read_products` permission.
+    """
     maxVariantPrice = MoneyV2
     minVariantPrice = MoneyV2
 
-class ProductCompareAtPriceRange(Enum):
+class ProductCompareAtPriceRange(AliasesEnum):
+    """A class to represent a Shopify GraphQL product compare at price range.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/ProductCompareAtPriceRange
+    Require `read_products` permission.
+    """
     maxVariantCompareAtPrice = MoneyV2
     minVariantCompareAtPrice = MoneyV2
 
-class CollectionConnectionShort(Enum):
-    # just subset of fields
+class CollectionConnection(AliasesEnum):
+    """A class to represent a Shopify GraphQL collection connection short.
+    Reference: https://shopify.dev/docs/api/storefront/latest/connections/collectionconnection
+    Just a subset of fields.
+    """
     id = "id"
     title = "title"
 
-class MailingAddress(Enum):
+class MailingAddress(AliasesEnum):
+    """A class to represent a Shopify GraphQL mailing address.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/MailingAddress
+    """
     address1 = "address1"
     address2 = "address2"
     city = "city"
@@ -68,6 +115,16 @@ class MailingAddress(Enum):
     validationResultSummary = "validationResultSummary"
     zip = "zip"
 
-class MoneyV2(Enum):
-    amount = "amount"
-    currencyCode = "currencyCode"
+class OrderCancellation(AliasesEnum):
+    """A class to represent a Shopify GraphQL order cancellation.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/OrderCancellation
+    Require `read_orders` permission.
+    """
+    staffNote = "staffNote"
+
+class MoneyBag(AliasesEnum):
+    """A class to represent a Shopify GraphQL money bag.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/MoneyBag
+    """
+    presentmentMoney = MoneyV2
+    shopMoney = MoneyV2

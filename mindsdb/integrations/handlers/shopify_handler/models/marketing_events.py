@@ -1,7 +1,11 @@
-from enum import Enum
+from .common import AliasesEnum
 
 
-class MarketingEvents(Enum):
+class MarketingEvents(AliasesEnum):
+    """A class to represent a Shopify GraphQL marketing event.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/MarketingEvent
+    Require `read_marketing_events` permission.
+    """
     # app = "app"
     channelHandle = "channelHandle"
     description = "description"

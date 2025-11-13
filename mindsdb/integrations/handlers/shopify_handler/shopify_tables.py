@@ -3,9 +3,8 @@ import pandas as pd
 from typing import List, Dict
 
 from mindsdb.integrations.libs.api_handler import MetaAPIResource
-
-from mindsdb.utilities import log
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
+from mindsdb.utilities import log
 
 from .utils import query_graphql_nodes, get_graphql_columns, query_graphql
 from .models.products import Products, columns as products_columns
@@ -21,6 +20,9 @@ logger = log.getLogger(__name__)
 
 
 class ShopifyMetaAPIResource(MetaAPIResource):
+    """A class to represent a Shopify Meta API resource.
+    """
+
     def list(
         self,
         conditions: list[FilterCondition] | None = None,
@@ -29,6 +31,17 @@ class ShopifyMetaAPIResource(MetaAPIResource):
         targets: list[str] | None = None,
         **kwargs,
     ):
+        """Query the Shopify API to get the resources data.
+
+        Args:
+            conditions: The conditions to apply to the query.
+            limit: The limit of the resources to return.
+            sort: The sort to apply to the query.
+            targets: The columns to include in the query.
+
+        Returns:
+            pd.DataFrame: The data of the resources.
+        """
         sort_key, sort_reverse = self._get_sort(sort)
         query_conditions = self._get_query_conditions(conditions)
 
@@ -57,6 +70,14 @@ class ShopifyMetaAPIResource(MetaAPIResource):
         return products_df
 
     def _get_sort(self, sort: List[SortColumn] | None) -> tuple[str, bool]:
+        """Get the sort key and reverse from the sort list.
+
+        Args:
+            sort: The sort list.
+
+        Returns:
+            tuple[str, bool]: The sort key and reverse flag.
+        """
         sort_key = None
         sort_reverse = None
         sort_map = self.sort_map or {}
@@ -71,6 +92,14 @@ class ShopifyMetaAPIResource(MetaAPIResource):
         return sort_key, sort_reverse
 
     def _get_query_conditions(self, conditions: List[FilterCondition] | None) -> str:
+        """Get the GraphQL query conditions from the conditions list.
+
+        Args:
+            conditions: The conditions list.
+
+        Returns:
+            str: The query conditions.
+        """
         query_conditions = []
         conditions_op_map = self.conditions_op_map or {}
         for condition in (conditions or []):
@@ -88,14 +117,32 @@ class ShopifyMetaAPIResource(MetaAPIResource):
         query_conditions = ' AND '.join(query_conditions)
         return query_conditions
 
+    def get_columns(self) -> List[str]:
+        """Get the table columns names.
+
+        Returns:
+            List[str]: The columns names.
+        """
+        return [column["COLUMN_NAME"] for column in self.columns]
+
+    def meta_get_columns(self, *args, **kwargs) -> List[dict]:
+        """Get the table columns metadata.
+
+        Returns:
+            List[dict]: The columns metadata.
+        """
+        return self.columns
+
 
 class ProductsTable(ShopifyMetaAPIResource):
-    """The Shopify Products Table implementation"""
-    # https://shopify.dev/docs/api/admin-graphql/latest/queries/products
+    """The Shopify Products Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/products
+    """
 
     def __init__(self, *args, **kwargs):
         self.model = Products
         self.model_name = 'products'
+        self.columns = products_columns
 
         sort_map = {
             Products.createdAt: "CREATED_AT",
@@ -153,9 +200,6 @@ class ProductsTable(ShopifyMetaAPIResource):
         }
         super().__init__(*args, **kwargs)
 
-    def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in products_columns]
-
     def meta_get_tables(self, *args, **kwargs) -> dict:
         response = query_graphql("""{
             productsCount(limit:null) {
@@ -170,10 +214,6 @@ class ProductsTable(ShopifyMetaAPIResource):
             "row_count": row_count,
         }
 
-    def meta_get_columns(self, *args, **kwargs):
-        # parsed from https://shopify.dev/docs/api/admin-graphql/latest/objects/Product.md
-        return products_columns
-
     def meta_get_primary_keys(self, table_name: str) -> list[Dict]:
         return [
             {
@@ -185,16 +225,16 @@ class ProductsTable(ShopifyMetaAPIResource):
     def meta_get_foreign_keys(self, table_name: str, all_tables: list[str]) -> list[Dict]:
         return []
 
-    # meta_get_column_statistics
-
 
 class ProductVariantsTable(ShopifyMetaAPIResource):
-    """The Shopify Products Table implementation"""
-    # https://shopify.dev/docs/api/admin-graphql/latest/queries/productvariants
+    """The Shopify Product Variants Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/productvariants
+    """
 
     def __init__(self, *args, **kwargs):
         self.model = ProductVariants
         self.model_name = 'productVariants'
+        self.columns = product_variants_columns
 
         sort_map = {
             ProductVariants.id: "ID",
@@ -241,9 +281,6 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
         }
         super().__init__(*args, **kwargs)
 
-    def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in product_variants_columns]
-
     def meta_get_tables(self, *args, **kwargs) -> dict:
         response = query_graphql("""{
             productVariantsCount(limit:null) {
@@ -257,9 +294,6 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
             "table_description": "List of product variants. A product variant is a specific version of a product that comes in more than one option, such as size or color.",
             "row_count": row_count,
         }
-
-    def meta_get_columns(self, *args, **kwargs):
-        return product_variants_columns
 
     def meta_get_primary_keys(self, table_name: str) -> list[Dict]:
         return [
@@ -279,11 +313,14 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
 
 
 class CustomersTable(ShopifyMetaAPIResource):
-    """The Shopify Customers Table implementation"""
+    """The Shopify Customers Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/customers
+    """
 
     def __init__(self, *args, **kwargs):
         self.model = Customers
         self.model_name = 'customers'
+        self.columns = customers_columns
 
         sort_map = {
             Customers.createdAt: "CREATED_AT",
@@ -323,9 +360,6 @@ class CustomersTable(ShopifyMetaAPIResource):
         }
         super().__init__(*args, **kwargs)
 
-    def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in customers_columns]
-
     def meta_get_tables(self, *args, **kwargs) -> dict:
         response = query_graphql("""{
             customersCount(limit:null) {
@@ -340,9 +374,6 @@ class CustomersTable(ShopifyMetaAPIResource):
             "row_count": row_count,
         }
 
-    def meta_get_columns(self, *args, **kwargs):
-        return customers_columns
-
     def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
         return [
             {
@@ -356,13 +387,14 @@ class CustomersTable(ShopifyMetaAPIResource):
 
 
 class OrdersTable(ShopifyMetaAPIResource):
-    """The Shopify Orders Table implementation"""
-    # https://shopify.dev/docs/api/admin-graphql/latest/queries/orders
-
+    """The Shopify Orders Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/orders
+    """
 
     def __init__(self, *args, **kwargs):
         self.model = Orders
         self.model_name = 'orders'
+        self.columns = orders_columns
 
         sort_map = {
             Orders.createdAt: "CREATED_AT",
@@ -427,9 +459,6 @@ class OrdersTable(ShopifyMetaAPIResource):
         }
         super().__init__(*args, **kwargs)
 
-    def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in orders_columns]
-
     def meta_get_tables(self, *args, **kwargs) -> dict:
         response = query_graphql("""{
             ordersCount(limit:null) {
@@ -443,9 +472,6 @@ class OrdersTable(ShopifyMetaAPIResource):
             "table_description": "List of orders placed in the store, including data such as order status, customer, and line item details.",
             "row_count": row_count,
         }
-
-    def meta_get_columns(self, *args, **kwargs):
-        return orders_columns
 
     def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
         return [
@@ -465,12 +491,14 @@ class OrdersTable(ShopifyMetaAPIResource):
 
 
 class MarketingEventsTable(ShopifyMetaAPIResource):
-    """The Shopify MarketingEvents table implementation"""
-    # https://shopify.dev/docs/api/admin-graphql/latest/queries/marketingevents
+    """The Shopify MarketingEvents table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/marketingevents
+    """
 
     def __init__(self, *args, **kwargs):
         self.model = MarketingEvents
         self.model_name = 'marketingEvents'
+        self.columns = marketing_events_columns
 
         sort_map = {
             MarketingEvents.id: "ID",
@@ -499,9 +527,6 @@ class MarketingEventsTable(ShopifyMetaAPIResource):
         }
         super().__init__(*args, **kwargs)
 
-    def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in marketing_events_columns]
-
     def meta_get_tables(self, *args, **kwargs) -> dict:
         data = query_graphql_nodes(
             self.model_name,
@@ -517,9 +542,6 @@ class MarketingEventsTable(ShopifyMetaAPIResource):
             "row_count": row_count,
         }
 
-    def meta_get_columns(self, *args, **kwargs):
-        return marketing_events_columns
-
     def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
         return [
             {
@@ -533,12 +555,14 @@ class MarketingEventsTable(ShopifyMetaAPIResource):
 
 
 class InventoryItemsTable(ShopifyMetaAPIResource):
-    """The Shopify InventoryItems table implementation"""
-    # https://shopify.dev/docs/api/admin-graphql/latest/queries/inventoryitems
+    """The Shopify InventoryItems table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/inventoryitems
+    """
 
     def __init__(self, *args, **kwargs):
         self.model = InventoryItems
         self.model_name = 'inventoryItems'
+        self.columns = inventory_items_columns
 
         self.sort_map = {}
 
@@ -565,9 +589,6 @@ class InventoryItemsTable(ShopifyMetaAPIResource):
         }
         super().__init__(*args, **kwargs)
 
-    def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in inventory_items_columns]
-
     def meta_get_tables(self, *args, **kwargs) -> dict:
         data = query_graphql_nodes(
             self.model_name,
@@ -583,9 +604,6 @@ class InventoryItemsTable(ShopifyMetaAPIResource):
             "row_count": row_count,
         }
 
-    def meta_get_columns(self, *args, **kwargs):
-        return inventory_items_columns
-
     def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
         return [
             {
@@ -599,12 +617,14 @@ class InventoryItemsTable(ShopifyMetaAPIResource):
 
 
 class StaffMembersTable(ShopifyMetaAPIResource):
-    """The Shopify StaffMembers table implementation"""
-    # https://shopify.dev/docs/api/admin-graphql/latest/queries/staffmembers
+    """The Shopify StaffMembers table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/staffmembers
+    """
 
     def __init__(self, *args, **kwargs):
         self.model = StaffMembers
         self.model_name = 'staffMembers'
+        self.columns = staff_members_columns
 
         sort_map = {
             StaffMembers.id: "ID",
@@ -632,9 +652,6 @@ class StaffMembersTable(ShopifyMetaAPIResource):
         }
         super().__init__(*args, **kwargs)
 
-    def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in staff_members_columns]
-
     def meta_get_tables(self, *args, **kwargs) -> dict:
         data = query_graphql_nodes(
             self.model_name,
@@ -649,9 +666,6 @@ class StaffMembersTable(ShopifyMetaAPIResource):
             "table_description": "The shop staff members.",
             "row_count": row_count,
         }
-
-    def meta_get_columns(self, *args, **kwargs):
-        return staff_members_columns
 
     def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
         return [
@@ -666,43 +680,61 @@ class StaffMembersTable(ShopifyMetaAPIResource):
 
 
 class GiftCardsTable(ShopifyMetaAPIResource):
-    """The Shopify GiftCards table implementation"""
-    # https://shopify.dev/docs/api/admin-graphql/latest/queries/giftcards
+    """The Shopify GiftCards table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/giftcards
+    """
 
     def __init__(self, *args, **kwargs):
         self.model = GiftCards
         self.model_name = 'giftCards'
+        self.columns = gift_cards_columns
 
         sort_map = {
-            # TODO
+            GiftCards.balance: "BALANCE",
+            GiftCards.createdAt: "CREATED_AT",
+            GiftCards.deactivatedAt: "DISABLED_AT",
+            GiftCards.expiresOn: "EXPIRES_ON",
+            GiftCards.id: "ID",
+            GiftCards.initialValue: "INITIAL_VALUE",
+            GiftCards.updatedAt: "UPDATED_AT",
         }
         self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
 
         self.conditions_op_map = {
-            # TODO
+            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
+            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
+            ("createdat", FilterOperator.EQUAL): "created_at:",
+
+            ("expireson", FilterOperator.GREATER_THAN): "expires_on:>",
+            ("expireson", FilterOperator.GREATER_THAN_OR_EQUAL): "expires_on:>=",
+            ("expireson", FilterOperator.LESS_THAN): "expires_on:<",
+            ("expireson", FilterOperator.LESS_THAN_OR_EQUAL): "expires_on:<=",
+            ("expireson", FilterOperator.EQUAL): "expires_on:",
+
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("id", FilterOperator.EQUAL): "id:",
         }
         super().__init__(*args, **kwargs)
 
-    def get_columns(self) -> list[str]:
-        return [column["COLUMN_NAME"] for column in gift_cards_columns]
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
-        data = query_graphql_nodes(
-            self.model_name,
-            self.model,
-            ["id"],
-        )
-        row_count = len(data)
+        response = query_graphql("""{
+            giftCardsCount(limit:null) {
+                count
+        }""")
+        row_count = response["giftCardsCount"]["count"]
 
         return {
             "table_name": self.name,
             "table_type": "BASE TABLE",
-            "table_description": "The shop staff members.",
+            "table_description": "List of gift cards.",
             "row_count": row_count,
         }
-
-    def meta_get_columns(self, *args, **kwargs):
-        return gift_cards_columns
 
     def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
         return [

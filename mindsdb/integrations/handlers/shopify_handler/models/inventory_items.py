@@ -1,9 +1,11 @@
-from enum import Enum
-
-from .common import MoneyV2
+from .common import AliasesEnum, MoneyV2
 
 
-class InventoryItems(Enum):
+class InventoryItems(AliasesEnum):
+    """A class to represent a Shopify GraphQL inventory item.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/InventoryItem
+    Require `read_inventory` or `read_products` permission.
+    """
     countryCodeOfOrigin = "countryCodeOfOrigin"
     # countryHarmonizedSystemCodes = "countryHarmonizedSystemCodes"
     createdAt = "createdAt"

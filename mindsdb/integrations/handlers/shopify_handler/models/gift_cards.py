@@ -1,10 +1,12 @@
-from enum import Enum
-
-from .common import MoneyV2
+from .common import AliasesEnum, MoneyV2
 from .utils import Extract
 
 
-class GiftCards(Enum):
+class GiftCards(AliasesEnum):
+    """A class to represent a Shopify GraphQL gift card.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/GiftCard
+    Require `read_gift_cards` permission.
+    """
     balance = MoneyV2
     createdAt = "createdAt"
     customerId = Extract("customer", "id")  # Custom

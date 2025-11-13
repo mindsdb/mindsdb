@@ -254,7 +254,6 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertFalse(response.success)
             self.assertIsNotNone(response.error_message)
 
-    # Override base tests that don't apply to Cassandra handler
     def test_native_query(self):
         """Cassandra handler doesn't implement native_query yet"""
         self.skipTest("native_query not implemented in CassandraHandler")

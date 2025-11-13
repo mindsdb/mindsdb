@@ -3,11 +3,10 @@
 from collections import OrderedDict
 import pytest
 import unittest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 import pandas as pd
 
 try:
-    from atlassian import Jira
     from mindsdb.integrations.handlers.jira_handler.jira_handler import JiraHandler
     from mindsdb.integrations.handlers.jira_handler.jira_tables import (
         JiraIssuesTable,
@@ -19,12 +18,6 @@ except ImportError:
     pytestmark = pytest.mark.skip("Jira handler not installed")
 
 from base_handler_test import BaseAPIHandlerTest
-
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE,
-)
 
 
 class TestJiraHandler(BaseAPIHandlerTest, unittest.TestCase):

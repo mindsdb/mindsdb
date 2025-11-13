@@ -13,14 +13,14 @@ logger = log.getLogger(__name__)
 
 class JiraTableBase(APIResource):
     """Base class for Jira tables"""
-    
+
     def to_dataframe(self, records: Optional[List[dict]]) -> pd.DataFrame:
         """
         Convert records to DataFrame with fixed columns, handling missing optional fields.
-        
+
         Args:
             records: List of record dictionaries from Jira API, or None/empty list
-            
+
         Returns:
             DataFrame with all expected columns, missing fields filled with None
         """
@@ -153,7 +153,7 @@ class JiraIssuesTable(JiraTableBase):
                 "fields.status.name": "status",
             },
             inplace=True,
-            errors='ignore',
+            errors="ignore",
         )
         issues_df = issues_df.reindex(columns=self.get_columns(), fill_value=None)
 

@@ -1,0 +1,62 @@
+---
+title: Delete Mind
+sidebarTitle: Delete Mind
+---
+
+This API endpoint deletes a specific Mind using the `DELETE` method.
+
+### Body
+
+None.
+
+### Response
+
+<ResponseField name="status" type="string" required>  
+
+HTTP status code indicating success. `200 OK` confirms the Mind was deleted.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='mind_name' type='string' required>
+
+The name of the Mind you want to delete.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl --request DELETE \
+     --url 'https://mdb.ai/api/projects/mindsdb/minds/mind_name' \
+     --header 'Authorization: Bearer MINDS_API_KEY'
+```
+
+```python Python
+from minds.client import Client
+
+client = Client("MINDS_API_KEY", "https://mdb.ai/")
+
+client.minds.drop('mind_name')
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+200 OK
+```
+
+</ResponseExample>

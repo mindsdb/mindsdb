@@ -32,7 +32,7 @@ class SQLAnyHandlerTest(unittest.TestCase):
             "host": os.environ.get('SQLANY_HOST', 'localhost'),
             "port": os.environ.get('SQLANY_PORT', 55505),
             "user": "DBA",
-            "password": os.environ.get('SQLANY_PASSWORD','password'),
+            "password": os.environ.get('SQLANY_PASSWORD', 'password'),
             "server": "TestMe",
             "database": "MINDSDB"
         }

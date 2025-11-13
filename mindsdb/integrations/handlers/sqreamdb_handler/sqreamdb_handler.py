@@ -14,15 +14,14 @@ from mindsdb.integrations.libs.response import (
 import pandas as pd
 import pysqream as db
 
-from pysqream_sqlalchemy.dialect import SqreamDialect 
+from pysqream_sqlalchemy.dialect import SqreamDialect
 
 logger = log.getLogger(__name__)
 
 
 class SQreamDBHandler(DatabaseHandler):
 
-
-    name= 'sqreamdb'
+    name = 'sqreamdb'
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """ Initialize the handler
@@ -32,33 +31,29 @@ class SQreamDBHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        
-        
+
         self.connection_data = connection_data
 
         self.connection = None
         self.is_connected = False
-          
- 
+
     def connect(self):
         """
         Handles the connection to a YugabyteSQL database insance.
         """
         if self.is_connected is True:
             return self.connection
-        
-        args={
+
+        args = {
             "database": self.connection_data.get('database'),
             "host": self.connection_data.get('host'),
             "port": self.connection_data.get('port'),
             "username": self.connection_data.get('user'),
             "password": self.connection_data.get('password'),
-            "clustered":self.connection_data.get('clustered',False),
-            "use_ssl":self.connection_data.get('use_ssl',False), 
-            "service":self.connection_data.get('service','sqream')
+            "clustered": self.connection_data.get('clustered', False),
+            "use_ssl": self.connection_data.get('use_ssl', False),
+            "service": self.connection_data.get('service', 'sqream')
         }
-
-
 
         connection = db.connect(**args)
 
@@ -103,9 +98,9 @@ class SQreamDBHandler(DatabaseHandler):
         with conn.cursor() as cur:
             try:
                 cur.execute(query)
-                   
-                if cur.rowcount >0 and query.upper().startswith('SELECT') :
-                    result = cur.fetchall() 
+
+                if cur.rowcount > 0 and query.upper().startswith('SELECT'):
+                    result = cur.fetchall()
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(
@@ -139,7 +134,7 @@ class SQreamDBHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        List all tables in SQreamDB stored in 'sqream_catalog' 
+        List all tables in SQreamDB stored in 'sqream_catalog'
         """
 
         query = "SELECT table_name FROM sqream_catalog.tables"
@@ -147,8 +142,8 @@ class SQreamDBHandler(DatabaseHandler):
         return self.query(query)
 
     def get_columns(self, table_name):
-        query = f"""SELECT column_name, type_name 
-        FROM sqream_catalog.columns 
+        query = f"""SELECT column_name, type_name
+        FROM sqream_catalog.columns
         WHERE table_name = '{table_name}';
         """
         return self.query(query)

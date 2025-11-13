@@ -59,6 +59,18 @@ connection_args = OrderedDict(
         "required": False,
         "label": "Auth Mode",
     },
+    thick_mode={
+        "type": ARG_TYPE.BOOL,
+        "description": "Set to `true` to use thick mode for the connection. Thin mode is used by default.",
+        "required": False,
+        "label": "Connection mode",
+    },
+    oracle_client_lib_dir={
+        "type": ARG_TYPE.STR,
+        "description": "The directory path where Oracle client libraries are located. Required if using thick mode.",
+        "required": False,
+        "label": "Oracle Client Library Directory",
+    },
 )
 
 connection_args_example = OrderedDict(

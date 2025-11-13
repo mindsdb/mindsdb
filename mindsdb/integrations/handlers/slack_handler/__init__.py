@@ -9,7 +9,7 @@ try:
     import_error = None
 except Exception as e:
     Handler = None
-    import_error = e 
+    import_error = e
 
 title = 'Slack'
 name = 'slack'
@@ -21,7 +21,7 @@ __all__ = [
     'version',
     'name',
     'type',
-    'title', 
+    'title',
     'description',
     'import_error',
     'icon_path'

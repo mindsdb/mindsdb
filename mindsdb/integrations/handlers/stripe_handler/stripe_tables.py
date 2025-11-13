@@ -1,17 +1,11 @@
 import pandas as pd
-
 import stripe
 from typing import Text, List, Dict, Any
+
 from mindsdb_sql_parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.handlers.query_utilities import INSERTQueryParser, DELETEQueryParser, UPDATEQueryParser, DELETEQueryExecutor, UPDATEQueryExecutor
-
-from mindsdb_sql_parser import ast
-from mindsdb.integrations.libs.api_handler import APITable
-
 from mindsdb.integrations.utilities.handlers.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
-
-
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -235,7 +229,7 @@ class ProductsTable(APITable):
 
 class PaymentIntentsTable(APITable):
     """The Stripe Payment Intents Table implementation"""
-    
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
         Pulls Stripe Payment Intents data.
@@ -273,6 +267,7 @@ class PaymentIntentsTable(APITable):
         payment_intents_df = select_statement_executor.execute_query()
 
         return payment_intents_df
+
     def delete(self, query: ast.Delete) -> None:
         """
         Cancels Stripe Payment Intents and updates the local data.
@@ -307,22 +302,21 @@ class PaymentIntentsTable(APITable):
         payment_intent_ids = canceled_payment_intents_df['id'].tolist()
         self.cancel_payment_intents(payment_intent_ids)
 
-        
         self.payment_intents_df = self.payment_intents_df[~self.payment_intents_df['id'].isin(payment_intent_ids)]
 
     def cancel_payment_intents(self, payment_intent_ids: List[str]) -> None:
         stripe = self.handler.connect()
         for payment_intent_id in payment_intent_ids:
             try:
-              
+
                 payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
                 if payment_intent.status in ['requires_payment_method', 'requires_capture', 'requires_confirmation', 'requires_action', 'processing']:
                     stripe.PaymentIntent.cancel(payment_intent_id)
                 else:
-                     logger.warning(f"Payment intent {payment_intent_id} is in status {payment_intent.status} and cannot be canceled.")
+                    logger.warning(f"Payment intent {payment_intent_id} is in status {payment_intent.status} and cannot be canceled.")
             except stripe.error.StripeError as e:
                 logger.error(f"Error cancelling payment intent {payment_intent_id}: {str(e)}")
-                
+
     def update(self, query: 'ast.Update') -> None:
         """
         Updates data in Stripe "POST /v1/payment_intents/:id" API endpoint.
@@ -358,16 +352,6 @@ class PaymentIntentsTable(APITable):
         for payment_intent_id in payment_intent_ids:
             stripe.PaymentIntent.modify(payment_intent_id, **values_to_update)
 
-
-    def get_columns(self) -> List[Text]:
-        return pd.json_normalize(self.get_payment_intents(limit=1)).columns.tolist()
-
-    def get_payment_intents(self, **kwargs) -> List[Dict]:
-        payment_intents = stripe.PaymentIntent.list(**kwargs)
-        return [payment_intent for payment_intent in payment_intents.data]
-
-    
-    
     def insert(self, query: 'ast.Insert') -> None:
         """
         Inserts data into Stripe "POST /v1/payment_intents" API endpoint.
@@ -398,7 +382,7 @@ class PaymentIntentsTable(APITable):
     def create_payment_intent(self, payment_intent_data: list) -> None:
         for data in payment_intent_data:
             stripe.PaymentIntent.create(**data)
-        
+
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_payment_intents(limit=1)).columns.tolist()
 
@@ -407,7 +391,7 @@ class PaymentIntentsTable(APITable):
         payment_intents = stripe.PaymentIntent.list(**kwargs)
         return [payment_intent.to_dict() for payment_intent in payment_intents]
 
-      
+
 class RefundsTable(APITable):
     """The Stripe Refund Table implementation"""
 
@@ -455,9 +439,9 @@ class RefundsTable(APITable):
     def get_refunds(self, **kwargs) -> List[Dict]:
         stripe = self.handler.connect()
         refunds = stripe.Refund.list(**kwargs)
-        return [refund.to_dict() for refund in refunds ]
-     
-    
+        return [refund.to_dict() for refund in refunds]
+
+
 class PayoutsTable(APITable):
     """The Stripe Payouts Table implementation"""
 

@@ -24,19 +24,22 @@ class FileController:
         self.fs_store = FsStore()
         self.dir = os.path.join(self.config.paths["content"], "file")
 
-    def get_files_names(self):
-        """return list of files names"""
-        return [
-            x[0]
-            for x in db.session.query(db.File.name).filter_by(company_id=ctx.company_id)
-        ]
+    def get_files_names(self, lower: bool = False):
+        """return list of files names
+
+        Args:
+            lower (bool): return names in lowercase if True
+
+        Returns:
+            list[str]: list of files names
+        """
+        names = [record[0] for record in db.session.query(db.File.name).filter_by(company_id=ctx.company_id)]
+        if lower:
+            names = [name.lower() for name in names]
+        return names
 
     def get_file_meta(self, name):
-        file_record = (
-            db.session.query(db.File)
-            .filter_by(company_id=ctx.company_id, name=name)
-            .first()
-        )
+        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
             return None
         columns = file_record.columns
@@ -54,9 +57,7 @@ class FileController:
         Returns:
             list[dict]: files metadata
         """
-        file_records = (
-            db.session.query(db.File).filter_by(company_id=ctx.company_id).all()
-        )
+        file_records = db.session.query(db.File).filter_by(company_id=ctx.company_id).all()
         files_metadata = [
             {
                 "name": record.name,
@@ -89,10 +90,7 @@ class FileController:
         try:
             pages_files, pages_index = self.get_file_pages(file_path)
 
-            metadata = {
-                'is_feather': True,
-                'pages': pages_index
-            }
+            metadata = {"is_feather": True, "pages": pages_index}
             df = pages_files[0]
             file_record = db.File(
                 name=name,
@@ -101,7 +99,7 @@ class FileController:
                 file_path="",
                 row_count=len(df),
                 columns=list(df.columns),
-                metadata_=metadata
+                metadata_=metadata,
             )
             db.session.add(file_record)
             db.session.flush()
@@ -119,8 +117,8 @@ class FileController:
             self.fs_store.put(store_file_path, base_dir=self.dir)
             db.session.commit()
 
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception("An error occurred while saving the file:")
             if file_dir is not None:
                 shutil.rmtree(file_dir)
             raise
@@ -157,17 +155,13 @@ class FileController:
         """
 
         for num, df in pages_files.items():
-            dest = dest_dir.joinpath(f'{num}.feather')
+            dest = dest_dir.joinpath(f"{num}.feather")
             df.to_feather(str(dest))
 
     def delete_file(self, name):
-        file_record = (
-            db.session.query(db.File)
-            .filter_by(company_id=ctx.company_id, name=name)
-            .first()
-        )
+        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
-            return None
+            raise FileNotFoundError(f"File '{name}' does not exists")
         file_id = file_record.id
         db.session.delete(file_record)
         db.session.commit()
@@ -175,20 +169,12 @@ class FileController:
         return True
 
     def get_file_path(self, name):
-        file_record = (
-            db.session.query(db.File)
-            .filter_by(company_id=ctx.company_id, name=name)
-            .first()
-        )
+        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
-            raise Exception(f"File '{name}' does not exists")
+            raise FileNotFoundError(f"File '{name}' does not exists")
         file_dir = f"file_{ctx.company_id}_{file_record.id}"
         self.fs_store.get(file_dir, base_dir=self.dir)
-        return str(
-            Path(self.dir)
-            .joinpath(file_dir)
-            .joinpath(Path(file_record.source_file_path).name)
-        )
+        return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))
 
     def get_file_data(self, name: str, page_name: str = None) -> pd.DataFrame:
         """
@@ -198,49 +184,37 @@ class FileController:
         :param page_name: page name, optional
         :return: Page or file content
         """
-        file_record = (
-            db.session.query(db.File)
-            .filter_by(company_id=ctx.company_id, name=name)
-            .first()
-        )
+        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
-            raise Exception(f"File '{name}' does not exists")
+            raise FileNotFoundError(f"File '{name}' does not exists")
 
         file_dir = f"file_{ctx.company_id}_{file_record.id}"
         self.fs_store.get(file_dir, base_dir=self.dir)
 
         metadata = file_record.metadata_ or {}
-        if metadata.get('is_feather') is not True:
+        if metadata.get("is_feather") is not True:
             # migrate file
 
-            file_path = (
-                Path(self.dir)
-                .joinpath(file_dir)
-                .joinpath(Path(file_record.source_file_path).name)
-            )
+            file_path = Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name)
 
             pages_files, pages_index = self.get_file_pages(str(file_path))
 
             self.store_pages_as_feather(file_path.parent, pages_files)
-            metadata['is_feather'] = True
-            metadata['pages'] = pages_index
+            metadata["is_feather"] = True
+            metadata["pages"] = pages_index
 
             file_record.metadata_ = metadata
-            flag_modified(file_record, 'metadata_')
+            flag_modified(file_record, "metadata_")
             db.session.commit()
 
         if page_name is None:
             num = 0
         else:
-            num = metadata.get('pages', {}).get(page_name)
+            num = metadata.get("pages", {}).get(page_name)
             if num is None:
-                raise KeyError(f'Page not found: {page_name}')
+                raise KeyError(f"Page not found: {page_name}")
 
-        path = (
-            Path(self.dir)
-            .joinpath(file_dir)
-            .joinpath(f'{num}.feather')
-        )
+        path = Path(self.dir).joinpath(file_dir).joinpath(f"{num}.feather")
         return pd.read_feather(path)
 
     def set_file_data(self, name: str, df: pd.DataFrame, page_name: str = None):
@@ -251,25 +225,17 @@ class FileController:
         :param page_name: name of page, optional
         """
 
-        file_record = (
-            db.session.query(db.File)
-            .filter_by(company_id=ctx.company_id, name=name)
-            .first()
-        )
+        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
-            raise Exception(f"File '{name}' does not exists")
+            raise FileNotFoundError(f"File '{name}' does not exists")
 
         file_dir = f"file_{ctx.company_id}_{file_record.id}"
         self.fs_store.get(file_dir, base_dir=self.dir)
 
         num = 0
         if page_name is not None and file_record.metadata_ is not None:
-            num = file_record.metadata_.get('pages', {}).get(page_name, 0)
+            num = file_record.metadata_.get("pages", {}).get(page_name, 0)
 
-        path = (
-            Path(self.dir)
-            .joinpath(file_dir)
-            .joinpath(f'{num}.feather')
-        )
+        path = Path(self.dir).joinpath(file_dir).joinpath(f"{num}.feather")
         df.to_feather(path)
         self.fs_store.put(file_dir, base_dir=self.dir)

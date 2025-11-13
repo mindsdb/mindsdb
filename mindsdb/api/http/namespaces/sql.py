@@ -1,5 +1,5 @@
+import time
 from http import HTTPStatus
-import traceback
 
 from flask import request
 from flask_restx import Resource
@@ -8,6 +8,7 @@ import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
@@ -17,6 +18,8 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import QueryError
+from mindsdb.utilities.functions import mark_process
 
 logger = log.getLogger(__name__)
 
@@ -28,18 +31,16 @@ class Query(Resource):
         super().__init__(*args, **kwargs)
 
     @ns_conf.doc("query")
-    @api_endpoint_metrics('POST', '/sql/query')
+    @api_endpoint_metrics("POST", "/sql/query")
+    @mark_process(name="http_query")
     def post(self):
+        start_time = time.time()
         query = request.json["query"]
         context = request.json.get("context", {})
 
         if isinstance(query, str) is False or isinstance(context, dict) is False:
-            return http_error(
-                HTTPStatus.BAD_REQUEST,
-                'Wrong arguments',
-                'Please provide "query" with the request.'
-            )
-        logger.debug(f'Incoming query: {query}')
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" with the request.')
+        logger.debug(f"Incoming query: {query}")
 
         if context.get("profiling") is True:
             profiler.enable()
@@ -49,30 +50,13 @@ class Query(Resource):
         error_text = None
         error_traceback = None
 
-        profiler.set_meta(
-            query=query, api="http", environment=Config().get("environment")
-        )
+        profiler.set_meta(query=query, api="http", environment=Config().get("environment"))
         with profiler.Context("http_query_processing"):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
             try:
-                result = mysql_proxy.process_query(query)
-
-                if result.type == SQL_RESPONSE_TYPE.OK:
-                    query_response = {
-                        "type": SQL_RESPONSE_TYPE.OK,
-                        "affected_rows": result.affected_rows
-                    }
-                elif result.type == SQL_RESPONSE_TYPE.TABLE:
-                    data = result.data.to_lists(json_types=True)
-                    query_response = {
-                        "type": SQL_RESPONSE_TYPE.TABLE,
-                        "data": data,
-                        "column_names": [
-                            x["alias"] or x["name"] if "alias" in x else x["name"]
-                            for x in result.columns
-                        ],
-                    }
+                result: SQLAnswer = mysql_proxy.process_query(query)
+                query_response: dict = result.dump_http_response()
             except ExecutorException as e:
                 # classified error
                 error_type = "expected"
@@ -81,8 +65,18 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error query processing: \n{traceback.format_exc()}")
-
+                logger.warning(f"Error query processing: {e}")
+            except QueryError as e:
+                error_type = "expected" if e.is_expected else "unexpected"
+                query_response = {
+                    "type": SQL_RESPONSE_TYPE.ERROR,
+                    "error_code": 0,
+                    "error_message": str(e),
+                }
+                if e.is_expected:
+                    logger.warning(f"Query failed due to expected reason: {e}")
+                else:
+                    logger.exception("Error query processing:")
             except UnknownError as e:
                 # unclassified
                 error_type = "unexpected"
@@ -91,7 +85,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error query processing: \n{traceback.format_exc()}")
+                logger.exception("Error query processing:")
 
             except Exception as e:
                 error_type = "unexpected"
@@ -100,7 +94,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error query processing: \n{traceback.format_exc()}")
+                logger.exception("Error query processing:")
 
             if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
                 error_type = "expected"
@@ -122,6 +116,15 @@ class Query(Resource):
             traceback=error_traceback,
         )
 
+        end_time = time.time()
+        log_msg = f"SQL processed in {(end_time - start_time):.2f}s ({end_time:.2f}-{start_time:.2f}), result is {query_response['type']}"
+        if query_response["type"] is SQL_RESPONSE_TYPE.TABLE:
+            log_msg += f" ({len(query_response['data'])} rows), "
+        elif query_response["type"] is SQL_RESPONSE_TYPE.ERROR:
+            log_msg += f" ({query_response['error_message']}), "
+        log_msg += f"used handlers {ctx.used_handlers}"
+        logger.debug(log_msg)
+
         return query_response, 200
 
 
@@ -129,12 +132,12 @@ class Query(Resource):
 @ns_conf.param("list_databases", "lists databases of mindsdb")
 class ListDatabases(Resource):
     @ns_conf.doc("list_databases")
-    @api_endpoint_metrics('GET', '/sql/list_databases')
+    @api_endpoint_metrics("GET", "/sql/list_databases")
     def get(self):
         listing_query = "SHOW DATABASES"
         mysql_proxy = FakeMysqlProxy()
         try:
-            result = mysql_proxy.process_query(listing_query)
+            result: SQLAnswer = mysql_proxy.process_query(listing_query)
 
             # iterate over result.data and perform a query on each item to get the name of the tables
             if result.type == SQL_RESPONSE_TYPE.ERROR:
@@ -149,15 +152,19 @@ class ListDatabases(Resource):
                 listing_query_response = {
                     "data": [
                         {
-                            "name": x[0],
-                            "tables": mysql_proxy.process_query(
-                                "SHOW TABLES FROM `{}`".format(x[0])
-                            ).data,
+                            "name": db_row[0],
+                            "tables": [
+                                table_row[0]
+                                for table_row in mysql_proxy.process_query(
+                                    "SHOW TABLES FROM `{}`".format(db_row[0])
+                                ).result_set.to_lists()
+                            ],
                         }
-                        for x in result.data
+                        for db_row in result.result_set.to_lists()
                     ]
                 }
         except Exception as e:
+            logger.exception("Error while retrieving list of databases")
             listing_query_response = {
                 "type": "error",
                 "error_code": 0,

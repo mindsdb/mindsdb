@@ -5,12 +5,12 @@
 <div align="center">
 	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release"></a>
 	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
-	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
-	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">
 	<a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
 
   <br />
   <br />
+
+  <a href="https://trendshift.io/repositories/3068" target="_blank"><img src="https://trendshift.io/api/badge/repositories/3068" alt="mindsdb%2Fmindsdb | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
   <a href="https://github.com/mindsdb/mindsdb">
     <img src="/docs/assets/mindsdb_logo.png" alt="MindsDB" width="300">
@@ -22,7 +22,7 @@
     ·
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     ·
-    <a href="https://mdb.ai/register">Demo</a>
+    <a href="https://mindsdb.com/contact">Contact us for a Demo</a>
     ·
     <a href="https://mindsdb.com/joincommunity?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Community Slack</a>
   </p>
@@ -31,110 +31,55 @@
 ----------------------------------------
 
 
-MindsDB is an AI data solution that enables humans, AI, agents, and applications to query data in natural language and SQL, and get highly accurate answers across disparate data sources and types.
+MindsDB enables humans, AI, agents, and applications to get highly accurate answers across large scale data sources.
 
-![image](https://github.com/user-attachments/assets/03b779e8-7008-485e-989a-e8733cb94e4c)
+<a href="https://www.youtube.com/watch?v=MX3OKpnsoLM" target="_blank">
+  <img src="https://github.com/user-attachments/assets/119e7b82-f901-4214-a26f-ff7c5ad86064" alt="MindsDB Demo">
+	
+</a>
 
-A federated query engine that tidies up your data-sprawl chaos while meticulously answering every single question you throw at it. 
 
-[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
-
-## Minds [Demo](https://mdb.ai/register)
-Play with [Minds demo](https://mdb.ai/register), and see the power of MindsDB at answering questions from structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.
- 
 ## Install MindsDB Server 
 
 MindsDB is an open-source server that can be deployed anywhere - from your laptop to the cloud, and everywhere in between. And yes, you can customize it to your heart's content.
 
   * [Using Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop). This is the fastest and recommended way to get started and have it all running.
   * [Using Docker](https://docs.mindsdb.com/setup/self-hosted/docker). This is also simple, but gives you more flexibility on how to further customize your server.
-  * [Using PyPI](https://docs.mindsdb.com/contribute/install). This option enables you to contribute to MindsDB.
 
-## Connect Your Data
+[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
+ 
+----------------------------------------
 
-You can connect to hundreds of [data sources (learn more)](https://docs.mindsdb.com/integrations/data-overview). This is just an example of a Postgres database.
+# Core Philosophy: Connect, Unify, Respond
 
-```sql
--- Connect to demo postgres DB
-CREATE DATABASE demo_postgres_db
-WITH ENGINE = "postgres",
-PARAMETERS = {
-  "user": "demo_user",
-  "password": "demo_password",
-  "host": "samples.mindsdb.com",
-  "port": "5432",
-  "database": "demo",
-  "schema": "demo_data"
-};
-```
+MindsDB's architecture is built around three fundamental capabilities:
 
-Once you've connected your data sources, you can [combine](https://docs.mindsdb.com/mindsdb_sql/sql/api/join-on), [slice it, dice it](https://docs.mindsdb.com/mindsdb_sql/sql/api/select), and [transform](https://docs.mindsdb.com/use-cases/data_enrichment/overview) it however your heart desires using good ol' standard SQL [(learn more)](https://docs.mindsdb.com/mindsdb_sql/overview). 
+## [Connect](https://docs.mindsdb.com/integrations/data-overview) Your Data
 
-After you've whipped your data into shape, it's time to build AI that actually learns!
+You can connect to hundreds of enterprise [data sources (learn more)](https://docs.mindsdb.com/integrations/data-overview). These integrations allow MindsDB to access data wherever it resides, forming the foundation for all other capabilities.
 
-## Build AI Knowledge
-
-Our Knowledge Bases are state-of-the-art autonomous RAG systems that can digest data from any source MindsDB supports. Whether your data is structured and neater than a Swiss watch factory or unstructured and messy as a teenager's bedroom, our Knowledge Base engine will figure out how to find the relevant information. 
-
-**In this example** we will create a knowledge base that knows everything about amazon reviews. 
-
-```sql
--- first create a knowledge base
-CREATE KNOWLEDGE_BASE mindsdb.reviews_kb;
-
--- now insert everything from the amazon reviews table into it, so it can learn it
-INSERT INTO mindsdb.reviews_kb (
-  SELECT review as content FROM demo_pg_db.amazon_reviews
-);
-
--- check the status of your loads here
-SELECT * FROM information_schema.knowledge_bases;
-
--- query the content of the knowledge base
-SELECT * FROM mindsdb.reviews_kb;
-```
-
-For the tinkerers and optimization enthusiasts out there, you can dive as deep as you want. [(Learn more about knowledge Bases)](https://docs.mindsdb.com/mindsdb_sql/agents/knowledge-bases)
-
-+ Want to [hand-pick your embedding model? Go for it](https://docs.mindsdb.com/mindsdb_sql/agents/knowledge-bases#knowledge-base-with-openai-embedding-model)! 
-+ Have strong [opinions about vector databases? We're here for it!](https://docs.mindsdb.com/mindsdb_sql/agents/knowledge-bases#knowledge-base-with-custom-vector-store). 
-
-But if you'd rather spend your time on other things (like finally building that billion-dollar AI App), that's perfectly fine too. By default, it's all handled automatically - you don't need to worry about the nitty-gritty details like data embedding, chunking, vector optimization, etc.
-
-## Search 
-
-Now that your knowledge base is loaded and ready. Let's hunt for some juicy info!
-
-#### Via SQL
-
-```sql
--- Find the reviews that about Iphone in beast of lights
-SELECT *  FROM mindsdb.reviews_kb
-WHERE content LIKE 'what are the best kindle reviews'
-LIMIT 10;
-```
-
-#### Via Python SDK
-
-Install MindsDB SDK
-
-```shell
-pip install mindsdb_sdk
-```
-
-You can call this AI knowledge base from your app with the following code:
-
-```python
-import mindsdb_sdk
+## [Unify](https://docs.mindsdb.com/mindsdb_sql/overview) Your Data
 
 
-# connects to the specified host and port
-server = mindsdb_sdk.connect('http://127.0.0.1:47334')
+In many situations, it’s important to be able to prepare and unify data before generating responses from it. MindsDB SQL offers knowledge bases and views that allow indexing and organizing structured and unstructured data as if it were unified in a single system.
 
-my_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
-df = my_kb.find('what are the best kindle reviews').fetch()
+* [**KNOWLEDGE BASES**](https://docs.mindsdb.com/mindsdb_sql/knowledge-bases) – Index and organize unstructured data for efficient Q&A.
+* [**VIEWS**](https://docs.mindsdb.com/mindsdb_sql/sql/create/view) – Simplify data access by creating unified views across different sources (no-ETL).
 
-```
+
+Unification of data can be automated using JOBs
+
+* [**JOBS**](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) – Schedule synchronization and transformation tasks for real-time processing.
+
+
+## [Respond](https://docs.mindsdb.com/mindsdb_sql/agents/agent) From Your Data
+
+Chat with Your Data
+
+* [**AGENTS**](https://docs.mindsdb.com/mindsdb_sql/agents/agent) – Configure built-in agents specialized in answering questions over your connected and unified data.
+* [**MCP**](https://docs.mindsdb.com/mcp/overview) – Connect to MindsDB through the MCP (Model Context Protocol) for seamless interaction.
+
+----------------------------------------
 
 ## 🤝 Contribute
 

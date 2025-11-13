@@ -1,0 +1,138 @@
+---
+title: List Messages
+sidebarTitle: List Messages
+---
+
+This API endpoint retrieves all Messages from a Thread using the `GET` method.
+
+### Body
+
+None.
+
+### Response
+
+<ResponseField name="data" type="array" required>  
+
+An array of message objects stored in the thread.
+
+</ResponseField>
+
+<ResponseField name="object" type="string" required>  
+
+Type of the returned object, usually `"list"`.
+
+</ResponseField>
+
+<ResponseField name="first_id" type="string">  
+
+ID of the first message in the returned list.
+
+</ResponseField>
+
+<ResponseField name="last_id" type="string">  
+
+ID of the last message in the returned list.
+
+</ResponseField>
+
+<ResponseField name="has_more" type="boolean">  
+
+Indicates whether more messages are available beyond the current list.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='thread_id' type='string' required>
+
+Id of the Thread that stores messages.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl -X GET "https://mdb.ai/threads/mdb_thread_cfa0fac64cd94faab3ae269d768c0cb0/messages" \
+  -H "Authorization: Bearer MINDS_API_KEY"
+```
+
+```python Python
+from openai import OpenAI
+client = OpenAI(
+    api_key='MINDS_API_KEY',
+    base_url='https://mdb.ai/'
+)
+
+thread_messages = client.beta.threads.messages.list("thread_abc123")
+print(thread_messages.data)
+```
+
+```js Node
+import OpenAI from "openai";
+
+const openai = new OpenAI(
+    api_key='MINDS_API_KEY',
+    baseURL='https://mdb.ai/'
+);
+
+async function main() {
+  const threadMessages = await openai.beta.threads.messages.list(
+    "thread_abc123"
+  );
+
+  console.log(threadMessages.data);
+}
+
+main();
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+    "data": [
+        {
+            "id": "mdb_msg_7a74bc341b194af1ab8228e57a85d462",
+            "assistant_id": null,
+            "attachments": null,
+            "completed_at": null,
+            "content": [
+                {
+                    "text": {
+                        "annotations": [],
+                        "value": "What data do you have access to?"
+                    },
+                    "type": "text"
+                }
+            ],
+            "created_at": 1718885284.349052,
+            "incomplete_at": null,
+            "incomplete_details": null,
+            "metadata": null,
+            "object": "thread.message",
+            "role": "user",
+            "run_id": null,
+            "status": "completed",
+            "thread_id": "mdb_thread_cfa0fac64cd94faab3ae269d768c0cb0"
+        }
+    ],
+    "object": "list",
+    "first_id": "mdb_msg_7a74bc341b194af1ab8228e57a85d462",
+    "last_id": "mdb_msg_7a74bc341b194af1ab8228e57a85d462",
+    "has_more": false
+}
+```
+
+</ResponseExample>

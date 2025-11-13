@@ -18,6 +18,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class MatrixOneHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the MatrixOne statements.
@@ -25,7 +26,7 @@ class MatrixOneHandler(DatabaseHandler):
 
     name = 'matrixone'
 
-    def __init__(self, name,connection_data: Optional[dict], **kwargs):
+    def __init__(self, name, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
         self.mysql_url = None
         self.parser = parse_sql
@@ -158,11 +159,10 @@ class MatrixOneHandler(DatabaseHandler):
         """
         q = f"SHOW COLUMNS FROM {table_name};"
         result = self.native_query(q)
-        df=result.data_frame
-        result.data_frame=df.rename(columns={
+        df = result.data_frame
+        result.data_frame = df.rename(columns={
             df.columns[0]: 'COLUMN_NAME',
             df.columns[1]: 'DATA TYPE'
         })
-
 
         return result

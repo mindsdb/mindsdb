@@ -28,12 +28,12 @@ class NewsApiHandlerTest(unittest.TestCase):
     def test_3_select(self):
         # table = self.handler.get_table("article")
         with self.assertRaises(NewsAPIException):
-            res = self.handler.native_query("SELECT * FROM article")
+            self.handler.native_query("SELECT * FROM article")
 
     def test_4_select(self):
         # table = self.handler.get_table("article")
         with self.assertRaises(NewsAPIException):
-            res = self.handler.native_query(
+            self.handler.native_query(
                 'SELECT * FROM article WHERE query="google" AND sources="google.com"'
             )
 
@@ -46,7 +46,7 @@ class NewsApiHandlerTest(unittest.TestCase):
 
     def test_6_select(self):
         # table = self.handler.get_table("article")
-        res = self.handler.native_query(
+        self.handler.native_query(
             'SELECT * FROM article WHERE query="google" AND publishedAt >= "2023-03-23" AND  publishedAt <= "2023-04-23"'
         )
 
@@ -74,7 +74,7 @@ class NewsApiHandlerTest(unittest.TestCase):
     def test_10_select(self):
         # table = self.handler.get_table("article")
         with self.assertRaises(NotImplementedError):
-            res = self.handler.native_query(
+            self.handler.native_query(
                 'SELECT * FROM article WHERE query="google" ORDER BY query'
             )
 

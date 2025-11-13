@@ -1,0 +1,65 @@
+---
+title: Build your Mind
+sidebarTitle: Custom Mind Setup
+icon: "gear"
+---
+
+This guide walks you through connecting your data and creating a Mind that can answer questions using your data.
+
+## Step 1. Connect your data
+
+Navigate to the **Datasources** tab and click the **New datasource** button.
+
+<p align="center">
+  <img src="/assets/minds/DatasourcesTab_Minds.png"/>
+</p>
+
+Select one of the [supported data sources](/minds/data_sources).
+
+<p align="center">
+  <img src="/assets/minds/DatasourcesType_Minds.png"/>
+</p>
+
+Enter the connection parameters for your selected data source and click the `Connect` button.
+
+<p align="center">
+  <img src="/assets/minds/DatasourcesConn_Minds.png"/>
+</p>
+
+The `Name your datasource` and `Description` fields are required for all data source types. The `Name your datasource` field stores the name of your data connection, while the `Description` field stores the description of your data. Note that the `Description` field can contain verbose instructions on what data is stored and how to use it. [Learn more about best practices for data descriptions](/minds/quickstart_best_practices).
+
+## Step 2. Create a Mind
+
+Navigate to the **Minds** tab and click the **New Mind** button.
+
+<p align="center">
+  <img src="/assets/minds/MindsTab_Minds.png"/>
+</p>
+
+Enter a name for your Mind in the `Mind name` field and select one of the connected data sources. Note that upon checking the data source, you can limit the connected tables by clicking the `Select tables` button.
+
+<p align="center">
+  <img src="/assets/minds/NewMind_Minds.png"/>
+</p>
+
+Now click the `Create` button to complete the creation of the Mind.
+
+Note that in the *Settings* tab, you can add a system prompt to provide further instructions or specific personality to a Mind. [Learn more about best practices for system prompts]_practices).
+
+## Step 3. Chat with the Mind
+
+When you enter a Mind, you'll see the chat interface where you can interact with the Mind and observe its thought process as it works through your queries.
+
+<p align="center">
+  <img src="/assets/minds/MindChat_Minds.png"/>
+</p>
+
+The chat interface is divided into three sections:
+
+1. The left pane displays conversation threads that you can revisit anytime.
+2. The center pane iprovides the main chat window for interacting with the Mind.
+3. The right pane contains four tabs:
+    - The Thoughts tab displays thoughts of the Mind, including its reasoning and decision-making steps, as it works through your requests.
+    - The Code tab provides a quickstart Python code for integrating the Mind into your applications.
+    - The Data tab lists connected data sources. Note that you can connect multiple data sources to a Mind.
+    - The Settings tab displays key configurations, including name and prompt instructions.

@@ -8,7 +8,7 @@ WORKDIR /mindsdb
 # This will almost always invalidate the cache for this stage
 COPY . .
 # Find every FILE that is not a requirements file and delete it
-RUN find ./ -type f -not -name "requirements*.txt" -print | xargs rm -f \
+RUN find ./ -type f -not -name "requirements*.txt" -print0 | xargs -0 rm -f \
 # Find every empty directory and delete it
     && find ./ -type d -empty -delete
 # Copy setup.py and everything else used by setup.py
@@ -34,20 +34,25 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -qy \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
-    freetds-dev freetds-bin libpq5 curl # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
+    freetds-dev freetds-bin libpq5 curl unixodbc unixodbc-dev gnupg # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
+
+# Install Microsoft ODBC Driver 18 for SQL Server
+# Use Debian 12 (bookworm) repo as it's the latest stable version supported by Microsoft
+RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql18
 
 # Use a specific tag so the file doesn't change
-COPY --from=ghcr.io/astral-sh/uv:0.4.23 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.8.11 /uv /usr/local/bin/uv
 # Copy requirements files from the first stage
 COPY --from=deps /mindsdb .
 
 # - Silence uv complaining about not being able to use hard links,
-# - tell uv to byte-compile packages for faster application startups,
 # - prevent uv from accidentally downloading isolated Python builds,
 # - pick a Python,
 # - and finally declare `/mindsdb` as the target dir.
 ENV UV_LINK_MODE=copy \
-    UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
     UV_PYTHON=python3.10 \
     UV_PROJECT_ENVIRONMENT=/mindsdb \
@@ -85,12 +90,10 @@ ENV PATH=/venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
-EXPOSE 47336/tcp
-# Expose MCP port
-EXPOSE 47337/tcp  
 
-
-
+# Pre-load tokenizer from Huggingface, and UI
+# This causing issues during docker build in CI/CD, need to fix it
+# RUN python -m mindsdb --config=/root/mindsdb_config.json --load-tokenizer --update-gui
 
 # Same as extras image, but with dev dependencies installed.
 # This image is used in our docker-compose
@@ -115,7 +118,7 @@ RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requir
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
-ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http' mindsdb" ]
+ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql' mindsdb" ]
 
 
 
@@ -123,4 +126,4 @@ ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --con
 # Make sure the regular image is the default
 FROM extras
 
-ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http" ]
+ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql" ]

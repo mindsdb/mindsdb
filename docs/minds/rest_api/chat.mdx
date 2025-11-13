@@ -1,0 +1,195 @@
+---
+title: Chat Completions
+sidebarTitle: Chat Completions
+---
+
+This API endpoint creates a model response for the given chat conversation using the `POST` method.
+
+### Body
+
+<ParamField body='messages' type='array' required>
+
+A list of messages comprising the conversation so far.
+
+</ParamField>
+
+<ParamField body='model' type='string' required>
+
+Name of the Mind that you created.
+
+</ParamField>
+
+<ParamField body='stream' type='boolean'>
+
+If set, Minds' thoughts will be streamed before the final response.
+
+</ParamField>
+
+<ParamField body='frequency_penalty' type='number'>
+
+This setting ranges from -2.0 to 2.0. Positive values make the model less likely to repeat phrases it has already used.
+
+</ParamField>
+
+<ParamField body='max_tokens' type='integer'>
+
+This parameter sets the maximum number of tokens that can be generated in the chat completion.
+
+</ParamField>
+
+<ParamField body='temperature' type='number'>
+
+This parameter controls the randomness of the output with values ranging from 0 to 2. A higher value increases randomness in the output, while a lower value, like 0.1, results in more focused and deterministic output.
+
+</ParamField>
+
+<ParamField body='tools' type='array'>
+
+This setting allows you to specify a list of tools that the model can call, currently limited to functions.
+
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string" required>  
+Unique identifier for the completion.
+</ResponseField>
+
+<ResponseField name="object" type="string" required>  
+Type of the returned object (e.g., "chat.completion").
+</ResponseField>
+
+<ResponseField name="created" type="integer" required>  
+Timestamp for when the completion was created.
+</ResponseField>
+
+<ResponseField name="model" type="string" required>  
+Name of the model that generated the response.
+</ResponseField>
+
+<ResponseField name="choices" type="array" required>  
+An array of response choices. Each choice includes an index and the assistant's message.
+</ResponseField>
+
+<ResponseField name="usage" type="object">  
+Token usage statistics for the prompt and response.
+</ResponseField>
+
+<ResponseField name="system_fingerprint" type="string">  
+Optional fingerprint of the backend system.
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+None.
+
+<RequestExample>
+
+```shell Shell
+curl https://mdb.ai/chat/completions \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer $MINDS_API_KEY" \
+-d '{
+  "model": "<name of the mind that you created>",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant."
+    },
+    {
+      "role": "user",
+      "content": "Can you summarize the data you have access to?"
+    }
+  ],
+  "stream": false
+}'
+```
+
+```python Python
+from openai import OpenAI
+client = OpenAI(
+    api_key="MINDS_API_KEY",
+    base_url="https://mdb.ai"
+)
+
+completion = client.chat.completions.create(
+  model="<name of the mind that you created>",
+  messages=[
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Can you summarize the data you have access to?"}
+  ],
+  stream=False
+)
+
+print(completion.choices[0].message)
+
+# if stream=True, then print chunks, as below
+# for chunk in completion:
+#   print(chunk.choices[0].delta)
+```
+
+```js Node
+import OpenAI from "openai";
+
+const openai = new OpenAI(
+  apiKey="MINDS_API_KEY",
+  baseURL="https://mdb.ai"
+);
+
+async function main() {
+  const completion = await openai.chat.completions.create({
+    messages: [{ role: "system", content: "You are a helpful assistant." }],
+    model: "<name of the mind that you created>",
+    stream: false,
+  });
+
+  console.log(completion.choices[0]);
+
+  // if stream: true, then print chunks, as below
+  // for await (const chunk of completion) {
+  //   console.log(chunk.choices[0].delta.content);
+  }
+}
+
+main();
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+  "id": "chatcmpl-123",
+  "object": "chat.completion",
+  "created": 1702685778,
+  "model": "<name of the mind that you created>",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "I have access to sales data, customer info, and website analytics. Let me know if you need details!"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 9,
+    "completion_tokens": 9,
+    "total_tokens": 18
+  },
+  "system_fingerprint": null
+}
+```
+
+</ResponseExample>

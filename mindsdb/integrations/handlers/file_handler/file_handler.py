@@ -7,7 +7,7 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import CreateTable, DropTables, Insert, Select, Identifier
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import query_dfs
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
@@ -50,6 +50,7 @@ class FileHandler(DatabaseHandler):
         self.chunk_size = connection_data.get("chunk_size", DEFAULT_CHUNK_SIZE)
         self.chunk_overlap = connection_data.get("chunk_overlap", DEFAULT_CHUNK_OVERLAP)
         self.file_controller = file_controller
+        self.thread_safe = True
 
     def connect(self, **kwargs):
         return
@@ -75,10 +76,7 @@ class FileHandler(DatabaseHandler):
     def query(self, query: ASTNode) -> Response:
         if type(query) is DropTables:
             for table_identifier in query.tables:
-                if (
-                    len(table_identifier.parts) == 2
-                    and table_identifier.parts[0] != self.name
-                ):
+                if len(table_identifier.parts) == 2 and table_identifier.parts[0] != self.name:
                     return Response(
                         RESPONSE_TYPE.ERROR,
                         error_message=f"Can't delete table from database '{table_identifier.parts[0]}'",
@@ -86,6 +84,12 @@ class FileHandler(DatabaseHandler):
                 table_name = table_identifier.parts[-1]
                 try:
                     self.file_controller.delete_file(table_name)
+                except FileNotFoundError as e:
+                    if not query.if_exists:
+                        return Response(
+                            RESPONSE_TYPE.ERROR,
+                            error_message=f"Can't delete table '{table_name}': {e}",
+                        )
                 except Exception as e:
                     return Response(
                         RESPONSE_TYPE.ERROR,
@@ -136,12 +140,30 @@ class FileHandler(DatabaseHandler):
             return Response(RESPONSE_TYPE.OK)
 
         elif isinstance(query, Select):
-            table_name, page_name = self._get_table_page_names(query.from_table)
+            from mindsdb.integrations.utilities.query_traversal import query_traversal
 
-            df = self.file_controller.get_file_data(table_name, page_name)
+            tables = {}
+
+            def find_tables(node, is_table, **args):
+                if is_table and isinstance(node, Identifier):
+                    table_name, page_name = self._get_table_page_names(node)
+                    try:
+                        df = self.file_controller.get_file_data(table_name, page_name)
+                    except FileNotFoundError:
+                        return
+
+                    if page_name is not None:
+                        table_name = f"{page_name}_{table_name}"
+                        node.parts = [table_name]
+                    tables[table_name] = df
+
+            query_traversal(query, find_tables)
+
+            if len(tables) == 0:
+                raise RuntimeError(f"No tables in query: {query}")
 
             # Process the SELECT query
-            result_df = query_df(df, query)
+            result_df = query_dfs(tables, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
 
         elif isinstance(query, Insert):
@@ -191,9 +213,7 @@ class FileHandler(DatabaseHandler):
             data_frame=pd.DataFrame(
                 [
                     {
-                        "Field": x["name"].strip()
-                        if isinstance(x, dict)
-                        else x.strip(),
+                        "Field": x["name"].strip() if isinstance(x, dict) else x.strip(),
                         "Type": "str",
                     }
                     for x in file_meta["columns"]

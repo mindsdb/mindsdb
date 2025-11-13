@@ -1,0 +1,26 @@
+---
+title: Authentication
+sidebarTitle: Authentication
+icon: "lock"
+---
+
+Authenticate your requests to access the endpoints in the Minds Cloud. You can view and manage your API keys in the [Minds Dashboard](https://mdb.ai/apiKeys).
+
+Here's how to add the Minds API key to the request header using cURL or Minds SDK, which you can install by running `pip install minds_sdk`.
+
+<CodeGroup>
+    ```bash cURL
+    curl --request X \
+    --url 'https://mdb.ai/...' \
+    --header 'Authorization: Bearer MINDS_API_KEY'
+    ...
+    ```
+
+    ```python Python
+    from minds.client import Client
+
+    client = Client("MINDS_API_KEY")
+    ```
+</CodeGroup>
+
+Always keep your API keys safe and revoke it if you suspect it has been compromised.

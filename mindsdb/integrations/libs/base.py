@@ -1,4 +1,5 @@
 import ast
+import concurrent.futures
 import inspect
 import textwrap
 from _ast import AnnAssign, AugAssign
@@ -8,20 +9,20 @@ import pandas as pd
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities import log
 
-from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
+from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse, RESPONSE_TYPE
 
 logger = log.getLogger(__name__)
 
 
 class BaseHandler:
-    """ Base class for database handlers
+    """Base class for database handlers
 
     Base class for handlers that associate a source of information with the
     broader MindsDB ecosystem via SQL commands.
     """
 
     def __init__(self, name: str):
-        """ constructor
+        """constructor
         Args:
             name (str): the handler name
         """
@@ -29,7 +30,7 @@ class BaseHandler:
         self.name = name
 
     def connect(self):
-        """ Set up any connections required by the handler
+        """Set up any connections required by the handler
 
         Should return connection
 
@@ -37,7 +38,7 @@ class BaseHandler:
         raise NotImplementedError()
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
 
         Should switch self.is_connected.
         """
@@ -45,7 +46,7 @@ class BaseHandler:
         return
 
     def check_connection(self) -> HandlerStatusResponse:
-        """ Check connection to the handler
+        """Check connection to the handler
 
         Returns:
             HandlerStatusResponse
@@ -57,7 +58,7 @@ class BaseHandler:
 
         Args:
             query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+                etc)
 
         Returns:
             HandlerResponse
@@ -77,7 +78,7 @@ class BaseHandler:
         raise NotImplementedError()
 
     def get_tables(self) -> HandlerResponse:
-        """ Return list of entities
+        """Return list of entities
 
         Return list of entities that will be accesible as tables.
 
@@ -89,7 +90,7 @@ class BaseHandler:
         raise NotImplementedError()
 
     def get_columns(self, table_name: str) -> HandlerResponse:
-        """ Returns a list of entity columns
+        """Returns a list of entity columns
 
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
@@ -111,6 +112,174 @@ class DatabaseHandler(BaseHandler):
 
     def __init__(self, name: str):
         super().__init__(name)
+
+
+class MetaDatabaseHandler(DatabaseHandler):
+    """
+    Base class for handlers associated to data storage systems (e.g. databases, data warehouses, streaming services, etc.)
+
+    This class is used when the handler is also needed to store information in the data catalog.
+    This information is typically avaiable in the information schema or system tables of the database.
+    """
+
+    def __init__(self, name: str):
+        super().__init__(name)
+
+    def meta_get_tables(self, table_names: Optional[List[str]]) -> HandlerResponse:
+        """
+        Returns metadata information about the tables to be stored in the data catalog.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - TABLE_TYPE (str): Type of the table, e.g. 'BASE TABLE', 'VIEW', etc. (optional).
+            - TABLE_SCHEMA (str): Schema of the table (optional).
+            - TABLE_DESCRIPTION (str): Description of the table (optional).
+            - ROW_COUNT (int): Estimated number of rows in the table (optional).
+        """
+        raise NotImplementedError()
+
+    def meta_get_columns(self, table_names: Optional[List[str]]) -> HandlerResponse:
+        """
+        Returns metadata information about the columns in the tables to be stored in the data catalog.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column.
+            - DATA_TYPE (str): Data type of the column, e.g. 'VARCHAR', 'INT', etc.
+            - COLUMN_DESCRIPTION (str): Description of the column (optional).
+            - IS_NULLABLE (bool): Whether the column can contain NULL values (optional).
+            - COLUMN_DEFAULT (str): Default value of the column (optional).
+        """
+        raise NotImplementedError()
+
+    def meta_get_column_statistics(self, table_names: Optional[List[str]]) -> HandlerResponse:
+        """
+        Returns metadata statisical information about the columns in the tables to be stored in the data catalog.
+        Either this method should be overridden in the handler or `meta_get_column_statistics_for_table` should be implemented.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column.
+            - MOST_COMMON_VALUES (List[str]): Most common values in the column (optional).
+            - MOST_COMMON_FREQUENCIES (List[str]): Frequencies of the most common values in the column (optional).
+            - NULL_PERCENTAGE: Percentage of NULL values in the column (optional).
+            - MINIMUM_VALUE (str): Minimum value in the column (optional).
+            - MAXIMUM_VALUE (str): Maximum value in the column (optional).
+            - DISTINCT_VALUES_COUNT (int): Count of distinct values in the column (optional).
+        """
+        method = getattr(self, "meta_get_column_statistics_for_table")
+        if method.__func__ is not MetaDatabaseHandler.meta_get_column_statistics_for_table:
+            meta_columns = self.meta_get_columns(table_names)
+            grouped_columns = (
+                meta_columns.data_frame.groupby("table_name")
+                .agg(
+                    {
+                        "column_name": list,
+                    }
+                )
+                .reset_index()
+            )
+
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+            futures = []
+
+            results = []
+            with executor:
+                for _, row in grouped_columns.iterrows():
+                    table_name = row["table_name"]
+                    columns = row["column_name"]
+                    futures.append(executor.submit(self.meta_get_column_statistics_for_table, table_name, columns))
+
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    result = future.result(timeout=120)
+                    if result.resp_type == RESPONSE_TYPE.TABLE:
+                        results.append(result.data_frame)
+                    else:
+                        logger.error(
+                            f"Error retrieving column statistics for table {table_name}: {result.error_message}"
+                        )
+                except Exception:
+                    logger.exception(f"Exception occurred while retrieving column statistics for table {table_name}:")
+
+            if not results:
+                logger.warning("No column statistics could be retrieved for the specified tables.")
+                return HandlerResponse(RESPONSE_TYPE.ERROR, error_message="No column statistics could be retrieved.")
+            return HandlerResponse(
+                RESPONSE_TYPE.TABLE, pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+            )
+
+        else:
+            raise NotImplementedError()
+
+    def meta_get_column_statistics_for_table(
+        self, table_name: str, column_names: Optional[List[str]] = None
+    ) -> HandlerResponse:
+        """
+        Returns metadata statistical information about the columns in a specific table to be stored in the data catalog.
+        Either this method should be implemented in the handler or `meta_get_column_statistics` should be overridden.
+
+        Args:
+            table_name (str): Name of the table.
+            column_names (Optional[List[str]]): List of column names to retrieve statistics for. If None, statistics for all columns will be returned.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column.
+            - MOST_COMMON_VALUES (List[str]): Most common values in the column (optional).
+            - MOST_COMMON_FREQUENCIES (List[str]): Frequencies of the most common values in the column (optional).
+            - NULL_PERCENTAGE: Percentage of NULL values in the column (optional).
+            - MINIMUM_VALUE (str): Minimum value in the column (optional).
+            - MAXIMUM_VALUE (str): Maximum value in the column (optional).
+            - DISTINCT_VALUES_COUNT (int): Count of distinct values in the column (optional).
+        """
+        pass
+
+    def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
+        """
+        Returns metadata information about the primary keys in the tables to be stored in the data catalog.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column that is part of the primary key.
+            - ORDINAL_POSITION (int): Position of the column in the primary key (optional).
+            - CONSTRAINT_NAME (str): Name of the primary key constraint (optional).
+        """
+        raise NotImplementedError()
+
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
+        """
+        Returns metadata information about the foreign keys in the tables to be stored in the data catalog.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - PARENT_TABLE_NAME (str): Name of the parent table.
+            - PARENT_COLUMN_NAME (str): Name of the parent column that is part of the foreign key.
+            - CHILD_TABLE_NAME (str): Name of the child table.
+            - CHILD_COLUMN_NAME (str): Name of the child column that is part of the foreign key.
+            - CONSTRAINT_NAME (str): Name of the foreign key constraint (optional).
+        """
+        raise NotImplementedError()
+
+    def meta_get_handler_info(self, **kwargs) -> str:
+        """
+        Retrieves information about the design and implementation of the database handler.
+        This should include, but not be limited to, the following:
+        - The type of SQL queries and operations that the handler supports.
+        - etc.
+
+        Args:
+            kwargs: Additional keyword arguments that may be used in generating the handler information.
+
+        Returns:
+            str: A string containing information about the database handler's design and implementation.
+        """
+        pass
 
 
 class ArgProbeMixin:
@@ -154,26 +323,16 @@ class ArgProbeMixin:
             self.visit(node.value)
 
         def visit_Subscript(self, node):
-            if (
-                isinstance(node.value, ast.Name)
-                and node.value.id in self.var_names_to_track
-            ):
-                if isinstance(node.slice, ast.Index) and isinstance(
-                    node.slice.value, ast.Str
-                ):
+            if isinstance(node.value, ast.Name) and node.value.id in self.var_names_to_track:
+                if isinstance(node.slice, ast.Index) and isinstance(node.slice.value, ast.Str):
                     self.arg_keys.append({"name": node.slice.value.s, "required": True})
             self.generic_visit(node)
 
         def visit_Call(self, node):
             if isinstance(node.func, ast.Attribute) and node.func.attr == "get":
-                if (
-                    isinstance(node.func.value, ast.Name)
-                    and node.func.value.id in self.var_names_to_track
-                ):
+                if isinstance(node.func.value, ast.Name) and node.func.value.id in self.var_names_to_track:
                     if isinstance(node.args[0], ast.Str):
-                        self.arg_keys.append(
-                            {"name": node.args[0].s, "required": False}
-                        )
+                        self.arg_keys.append({"name": node.args[0].s, "required": False})
             self.generic_visit(node)
 
     @classmethod
@@ -196,10 +355,8 @@ class ArgProbeMixin:
         """
         try:
             source_code = self.get_source_code(method_name)
-        except Exception as e:
-            logger.error(
-                f"Failed to get source code of method {method_name} in {self.__class__.__name__}. Reason: {e}"
-            )
+        except Exception:
+            logger.exception(f"Failed to get source code of method {method_name} in {self.__class__.__name__}. Reason:")
             return []
 
         # parse the source code
@@ -238,9 +395,7 @@ class ArgProbeMixin:
         """
         method = getattr(self, method_name)
         if method is None:
-            raise Exception(
-                f"Method {method_name} does not exist in {self.__class__.__name__}"
-            )
+            raise Exception(f"Method {method_name} does not exist in {self.__class__.__name__}")
         source_code = inspect.getsource(method)
         return source_code
 
@@ -288,8 +443,8 @@ class BaseMLEngine(ArgProbeMixin):
         self.engine_storage = engine_storage
         self.generative = False  # if True, the target column name does not have to be specified at creation time
 
-        if kwargs.get('base_model_storage'):
-            self.base_model_storage = kwargs['base_model_storage']  # available when updating a model
+        if kwargs.get("base_model_storage"):
+            self.base_model_storage = kwargs["base_model_storage"]  # available when updating a model
         else:
             self.base_model_storage = None
 

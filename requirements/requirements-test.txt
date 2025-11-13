@@ -1,10 +1,14 @@
+scipy==1.15.3   # MacOS has issue with higher versions
 docker >= 5.0.3
 openai<2.0.0,>=1.54.0
 pytest >= 8.3.5, < 9.0.0
 pytest-subtests
 pytest-xdist
 pytest-cov 
-lightwood==25.5.2.1  # This is required for tests/unit/test_executor.py. These tests need to be refactored.
+pytest-json-report==1.5.0
+pytest-metadata==3.1.1
+python-dotenv==1.1.1
+lightwood>=25.9.1.0  # This is required for tests/unit/test_executor.py. These tests need to be refactored.
 responses
 coveralls
 locust
@@ -15,3 +19,6 @@ mindsdb-sdk
 filelock==3.18.0
 mysql-connector-python==9.1.0
 walrus==0.9.3
+pymongo == 4.8.0
+pytest-json-report==1.5.0
+appdirs >= 1.0.0

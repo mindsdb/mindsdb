@@ -18,13 +18,13 @@ class JiraProjectsTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
         client: Jira = self.handler.connect()
 
         projects = []
         for condition in conditions:
-            if condition.column in ('id', 'key'): 
+            if condition.column in ("id", "key"):
                 if condition.op == FilterOperator.EQUAL:
                     projects = [client.get_project(condition.value)]
                 elif condition.op == FilterOperator.IN:
@@ -43,7 +43,7 @@ class JiraProjectsTable(APIResource):
             projects_df = pd.DataFrame([], columns=self.get_columns())
 
         return projects_df
-    
+
     def get_columns(self) -> List[str]:
         return [
             "id",
@@ -56,7 +56,7 @@ class JiraProjectsTable(APIResource):
             "entityId",
             "uuid",
         ]
-    
+
 
 class JiraIssuesTable(APIResource):
     def list(
@@ -65,13 +65,13 @@ class JiraIssuesTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
         client: Jira = self.handler.connect()
 
         issues = []
         for condition in conditions:
-            if condition.column in ('id', 'key'): 
+            if condition.column in ("id", "key"):
                 if condition.op == FilterOperator.EQUAL:
                     issues = [client.get_issue(condition.value)]
                 elif condition.op == FilterOperator.IN:
@@ -80,7 +80,7 @@ class JiraIssuesTable(APIResource):
                     raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
                 condition.applied = True
 
-            elif condition.column in ('project_id', 'project_key', 'project_name'):
+            elif condition.column in ("project_id", "project_key", "project_name"):
                 if condition.op == FilterOperator.EQUAL:
                     issues = client.get_all_project_issues(condition.value, limit=limit)
                 elif condition.op == FilterOperator.IN:
@@ -88,11 +88,13 @@ class JiraIssuesTable(APIResource):
                         issues.extend(client.get_all_project_issues(project_id, limit=limit))
 
                 condition.applied = True
-                
+
         if not issues:
-            project_ids = [project['id'] for project in client.get_all_projects()]
+            project_ids = [project["id"] for project in client.get_all_projects()]
             for project_id in project_ids:
-                issues.extend(self._get_project_issues_with_limit(client, project_id, limit=limit, current_issues=issues))
+                issues.extend(
+                    self._get_project_issues_with_limit(client, project_id, limit=limit, current_issues=issues)
+                )
 
         if issues:
             issues_df = self.normalize(issues)
@@ -100,7 +102,7 @@ class JiraIssuesTable(APIResource):
             issues_df = pd.DataFrame([], columns=self.get_columns())
 
         return issues_df
-    
+
     def _get_project_issues_with_limit(self, client: Jira, project_id, limit=None, current_issues=None):
         """
         Helper to get issues from a project, respecting the limit.
@@ -128,9 +130,9 @@ class JiraIssuesTable(APIResource):
                 "fields.assignee.displayName": "assignee",
                 "fields.status.name": "status",
             },
-            inplace=True
+            inplace=True,
         )
-        issues_df = issues_df[self.get_columns()]
+        issues_df = issues_df.reindex(columns=self.get_columns(), fill_value=None)
 
         return issues_df
 
@@ -147,8 +149,8 @@ class JiraIssuesTable(APIResource):
             "assignee",
             "status",
         ]
-        
-        
+
+
 class JiraGroupsTable(APIResource):
     def list(
         self,
@@ -156,14 +158,14 @@ class JiraGroupsTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
         client: Jira = self.handler.connect()
 
         if limit:
-            groups = client.get_groups(limit=limit)['groups']
+            groups = client.get_groups(limit=limit)["groups"]
         else:
-            groups = client.get_groups()['groups']
+            groups = client.get_groups()["groups"]
 
         if groups:
             groups_df = pd.DataFrame(groups)
@@ -188,13 +190,13 @@ class JiraUsersTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
         client: Jira = self.handler.connect()
 
         users = []
         for condition in conditions:
-            if condition.column == 'accountId': 
+            if condition.column == "accountId":
                 if condition.op == FilterOperator.EQUAL:
                     users = [client.user(account_id=condition.value)]
                 elif condition.op == FilterOperator.IN:

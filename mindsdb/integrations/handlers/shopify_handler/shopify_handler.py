@@ -1,5 +1,3 @@
-from http import HTTPStatus
-
 import requests
 import shopify
 

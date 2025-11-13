@@ -1,4 +1,5 @@
 """Unit tests for Jira handler."""
+
 from collections import OrderedDict
 import pytest
 import unittest
@@ -55,7 +56,7 @@ class TestJiraHandler(BaseAPIHandlerTest, unittest.TestCase):
         """Test that issues without assignee are handled correctly."""
         mock_client = MagicMock()
         self.mock_connect.return_value = mock_client
-        
+
         mock_issues = [
             {
                 "id": "1",
@@ -100,7 +101,7 @@ class TestJiraHandler(BaseAPIHandlerTest, unittest.TestCase):
 
         self.assertEqual(len(result_df), 3)
         self.assertIsNotNone(result_df)
-        
+
         expected_columns = issues_table.get_columns()
         for col in expected_columns:
             self.assertIn(col, result_df.columns)
@@ -240,4 +241,3 @@ class TestJiraHandler(BaseAPIHandlerTest, unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

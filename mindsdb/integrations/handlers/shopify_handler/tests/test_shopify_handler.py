@@ -1,6 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch, Mock
-import pandas as pd
+from unittest.mock import MagicMock, patch
 import sys
 
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
@@ -458,8 +457,6 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
     @patch("mindsdb.integrations.handlers.shopify_handler.shopify_tables.query_graphql")
     def test_products_table_meta_get_tables(self, mock_query_graphql):
         """Test meta_get_tables method for products table."""
-        from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable
-
         mock_query_graphql.return_value = {"productsCount": {"count": 100}}
 
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)

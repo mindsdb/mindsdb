@@ -96,7 +96,8 @@ class ShopifyHandler(APIHandler):
             },
             headers={
                 "Content-Type": "application/x-www-form-urlencoded"
-            }
+            },
+            timeout=10,
         )
         response.raise_for_status()
         result = response.json()

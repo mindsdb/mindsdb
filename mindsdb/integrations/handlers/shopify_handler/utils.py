@@ -112,7 +112,7 @@ class ShopifyQuery:
             items.append(f'sortKey: {self.sort_key}, reverse: {"true" if self.reverse else "false"}')
         if self.query:
             items.append(f'query: "{self.query}"')
-        return f"{{ {self.operation_name} ({','.join(items)}) {{ nodes {{ {self.columns} }} {PAGE_INFO} }} }}"
+        return f"{{ {self.operation_name} ({', '.join(items)}) {{ nodes {{ {self.columns} }} {PAGE_INFO} }} }}"
 
     def execute(self) -> list[dict]:
         """Execute the query.
@@ -167,7 +167,6 @@ def query_graphql_nodes(
             raise Exception(_format_error(result['errors']))
         hasNextPage = result['data'][root_name]['pageInfo']['hasNextPage']
         cursor = result['data'][root_name]['pageInfo']['endCursor']
-        cursor = f', after: "{cursor}"'
         result_data += result['data'][root_name]['nodes']
 
     fetched_fields = []

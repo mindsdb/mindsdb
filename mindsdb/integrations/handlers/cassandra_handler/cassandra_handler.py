@@ -37,6 +37,7 @@ class CassandraHandler(MetaDatabaseHandler):
         self.session = None
         self.is_connected = False
         self.connection_args = connection_data
+        self.keyspace = connection_data.get("keyspace")
 
     def download_secure_bundle(self, url, max_size=10 * 1024 * 1024):
         """
@@ -61,7 +62,9 @@ class CassandraHandler(MetaDatabaseHandler):
                     temp_file.write(chunk)
                     size_downloaded += len(chunk)
                     if size_downloaded > max_size:
-                        raise ValueError("Secure bundle is larger than the allowed size!")
+                        raise ValueError(
+                            "Secure bundle is larger than the allowed size!"
+                        )
             return temp_file.name
 
     def connect(self):
@@ -78,15 +81,21 @@ class CassandraHandler(MetaDatabaseHandler):
                     password=self.connection_args["password"],
                 )
             else:
-                raise ValueError("If authentication is required, both 'user' and 'password' must be provided!")
+                raise ValueError(
+                    "If authentication is required, both 'user' and 'password' must be provided!"
+                )
 
         connection_props = {"auth_provider": auth_provider}
-        connection_props["protocol_version"] = self.connection_args.get("protocol_version", 4)
+        connection_props["protocol_version"] = self.connection_args.get(
+            "protocol_version", 4
+        )
         secure_connect_bundle = self.connection_args.get("secure_connect_bundle")
 
         if secure_connect_bundle:
             if secure_connect_bundle.startswith(("http://", "https://")):
-                secure_connect_bundle = self.download_secure_bundle(secure_connect_bundle)
+                secure_connect_bundle = self.download_secure_bundle(
+                    secure_connect_bundle
+                )
             connection_props["cloud"] = {"secure_connect_bundle": secure_connect_bundle}
         else:
             connection_props["contact_points"] = [self.connection_args["host"]]
@@ -138,7 +147,7 @@ class CassandraHandler(MetaDatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f"Error running query: {query} on {self.connection_args['keyspace']}!")
+            logger.error(f"Error running query: {query} on {self.keyspace}!")
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
         return response
 
@@ -148,7 +157,10 @@ class CassandraHandler(MetaDatabaseHandler):
         """
 
         if isinstance(query, ast.Select):
-            if isinstance(query.from_table, ast.Identifier) and query.from_table.alias is not None:
+            if (
+                isinstance(query.from_table, ast.Identifier)
+                and query.from_table.alias is not None
+            ):
                 query.from_table.alias = None
 
             # remove table name from fields
@@ -174,6 +186,8 @@ class CassandraHandler(MetaDatabaseHandler):
                 table_name
             FROM system_schema.tables
         """
+        if self.keyspace:
+            query += " WHERE keyspace_name = '{}';".format(self.keyspace)
 
         result = self.native_query(query)
         # Filter out system keyspaces in Python
@@ -190,13 +204,20 @@ class CassandraHandler(MetaDatabaseHandler):
                 table_name
             FROM system_schema.views
         """
+        if self.keyspace:
+            views_query += " WHERE keyspace_name = '{}';".format(self.keyspace)
+
         views_result = self.native_query(views_query)
         if views_result.type == RESPONSE_TYPE.TABLE:
             views_df = views_result.data_frame
-            views_df = views_df[~views_df["table_schema"].str.contains("system", case=False, na=False)]
+            views_df = views_df[
+                ~views_df["table_schema"].str.contains("system", case=False, na=False)
+            ]
             views_df["table_type"] = "VIEW"
             # concatenate tables and views
-            result.data_frame = pd.concat([result.data_frame, views_df], ignore_index=True)
+            result.data_frame = pd.concat(
+                [result.data_frame, views_df], ignore_index=True
+            )
 
         return result
 

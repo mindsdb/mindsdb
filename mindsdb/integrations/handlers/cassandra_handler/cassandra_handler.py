@@ -134,9 +134,10 @@ class CassandraHandler(MetaDatabaseHandler):
     def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
-        :param query: The SQL query to run in MySQL
+        :param query: The SQL query to run in Cassandra
         :return: returns the records from the current recordset
         """
+        # TODO: adapt reponse to match Response class. Cassandra does not return affected rows in the same way as SQL DBs.
         session = self.connect()
         try:
             resp = session.execute(query).all()
@@ -157,7 +158,6 @@ class CassandraHandler(MetaDatabaseHandler):
         Retrieve the data from the SQL statement.
         """
 
-        # remove table alias because Cassandra Query Language doesn't support it
         if isinstance(query, ast.Select):
             if (
                 isinstance(query.from_table, ast.Identifier)
@@ -179,18 +179,65 @@ class CassandraHandler(MetaDatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Get a list with all of the tabels in MySQL
+        Get a list of all tables in the current keyspace.
         """
+
         q = "DESCRIBE TABLES;"
         result = self.native_query(q)
-        df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
+        print("**************************************************************")
+        print(result)
         return result
 
-    def get_columns(self, table_name) -> Response:
+    def get_columns(self, table_name: str) -> Response:
+        """
+        Return columns for a single table, minimal shape:
+        - column_name
+        - type
+        """
+        q = f"DESCRIBE {table_name};"
+        return self.native_query(q)
+
+    # Metadata
+    
+    def meta_get_tables(self) -> Response:
+        """
+        Get a list with all of the tables in Cassandra
+        """
+        q = "SELECT table_name FROM system_schema.tables WHERE keyspace_name = '{}';".format(
+            self.connection_args["keyspace"]
+        )
+        return self.native_query(q)
+
+    def meta_get_columns(self, table_name) -> Response:
         """
         Show details about the table
         """
-        q = f"DESCRIBE {table_name};"
-        result = self.native_query(q)
-        return result
+        q = "SELECT column_name, kind, position, type FROM system_schema.columns WHERE keyspace_name = '{}' AND table_name = '{}';".format(
+            self.connection_args["keyspace"], table_name
+        )
+        return self.native_query(q)
+
+    def meta_get_column_statistics(self, table_name, column_name) -> Response:
+        """
+        Show basic statistics about a column in a table
+        """
+        # Cassandra does not maintain column statistics like some other databases.
+        # Therefore, we will return an empty response or a message indicating that
+        # TODO: Implement column statistics 
+        return Response(RESPONSE_TYPE.OK, pd.DataFrame())
+
+    def meta_get_primary_keys(self, table_name) -> Response:
+        """
+        Get the primary keys of a table
+        """
+        q = "SELECT column_name FROM system_schema.columns WHERE keyspace_name = '{}' AND table_name = '{}' AND kind = 'partition_key';".format(
+            self.connection_args["keyspace"], table_name
+        )
+        return self.native_query(q)
+
+    def meta_get_foreign_keys(self, table_name) -> Response:
+        """
+        Get the foreign keys of a table
+        """
+        # Cassandra does not support foreign keys.
+        return Response(RESPONSE_TYPE.OK, pd.DataFrame())

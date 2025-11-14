@@ -2,6 +2,8 @@ import pytest
 import unittest
 from unittest.mock import patch, MagicMock
 from datetime import date
+import pandas as pd
+
 
 try:
     from cassandra.cluster import NoHostAvailable
@@ -13,6 +15,11 @@ except ImportError:
     pytestmark = pytest.mark.skip("Cassandra handler not installed")
 
 from base_handler_test import BaseDatabaseHandlerTest
+from mindsdb.integrations.libs.response import (
+    HandlerResponse as Response,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
+    RESPONSE_TYPE,
+)
 
 
 class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
@@ -41,23 +48,11 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     @property
     def get_tables_query(self):
-        """Query to get tables"""
-        keyspace = self.mock_keyspace
-        return (
-            f"SELECT table_name FROM system_schema.tables "
-            f"WHERE keyspace_name = '{keyspace}'"
-        )
+        pass
 
     @property
     def get_columns_query(self):
-        """Query to get columns"""
-        keyspace = self.mock_keyspace
-        table = self.mock_table
-        return (
-            f"SELECT column_name, type FROM system_schema.columns "
-            f"WHERE keyspace_name = '{keyspace}' "
-            f"AND table_name = '{table}'"
-        )
+        pass
 
     def create_handler(self):
         """Create a Cassandra handler instance"""
@@ -262,17 +257,42 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertEqual(response.data_frame.iloc[0]["name"], "test")
             self.assertIsInstance(response.data_frame.iloc[0]["created_at"], date)
 
-    def test_get_columns(self):
-        """Cassandra handler doesn't implement get_columns yet"""
-        self.skipTest("get_columns not implemented in CassandraHandler")
-
     def test_get_tables(self):
-        """Test get_tables uses DESCRIBE TABLES command"""
-        self.handler.native_query = MagicMock()
-        self.handler.get_tables()
+        """
+        Tests that get_tables calls native_query with the correct SQL for Oracle
+        and returns the expected DataFrame structure.
+        """
+        expected_df = pd.DataFrame({"table_name": ["table1", "table2", "table3"]})
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
 
-        # Cassandra handler uses DESCRIBE TABLES instead of system schema
-        self.handler.native_query.assert_called_once_with("DESCRIBE TABLES;")
+        self.handler.native_query = MagicMock(return_value=expected_response)
+        response = self.handler.get_tables()
+
+        self.handler.native_query.assert_called_once()
+        expected_query = "DESCRIBE TABLES;"
+        self.handler.native_query.assert_called_with(expected_query)
+        self.assertEqual(response.data_frame.equals(expected_df), True)
+
+    def test_get_columns(self):
+        """
+        Tests that get_columns calls native_query with the correct SQL for Oracle
+        and returns the expected DataFrame structure.
+        """
+        expected_df = pd.DataFrame(
+            {
+                "column_name": ["col1", "col2", "col3"],
+                "type": ["int", "text", "date"],
+            }
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+
+        self.handler.native_query = MagicMock(return_value=expected_response)
+        response = self.handler.get_columns(self.mock_table)
+
+        self.handler.native_query.assert_called_once()
+        expected_query = "DESCRIBE {};".format(self.mock_table)
+        self.handler.native_query.assert_called_with(expected_query)
+        self.assertEqual(response.data_frame.equals(expected_df), True)
 
 
 if __name__ == "__main__":

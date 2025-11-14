@@ -137,15 +137,20 @@ class CassandraHandler(MetaDatabaseHandler):
         :param query: The SQL query to run in Cassandra
         :return: returns the records from the current recordset
         """
-        # TODO: adapt reponse to match Response class. Cassandra does not return affected rows in the same way as SQL DBs.
         session = self.connect()
         try:
-            resp = session.execute(query).all()
-            resp = self.prepare_response(resp)
-            if resp:
-                response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(resp))
+            cass_response = session.execute(query)
+            rows = cass_response.all()
+            rows = self.prepare_response(rows)
+            if rows:
+                df = pd.DataFrame(rows)
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=df,
+                    affected_rows=len(df),
+                )
             else:
-                response = Response(RESPONSE_TYPE.OK)
+                response = Response(RESPONSE_TYPE.OK, affected_rows=0)
         except Exception as e:
             logger.error(
                 f'Error running query: {query} on {self.connection_args["keyspace"]}!'

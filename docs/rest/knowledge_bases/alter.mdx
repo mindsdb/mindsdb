@@ -1,11 +1,11 @@
 ---
-title: Create Knowledge Base
-sidebarTitle: Create Knowledge Base
+title: Alter Knowledge Base
+sidebarTitle: Alter Knowledge Base
 ---
 
-**POST `/api/projects/{project_name}/knowledge_bases`**
+**PUT `/api/projects/{project_name}/knowledge_bases/{kb_name}`**
 
-This API endpoint creates a knowledge base using the `POST` method.
+This API endpoint alters an existing knowledge base using the `PUT` method.
 
 <Tip>
 Learn more about knowledge bases following [this doc page](/mindsdb_sql/knowledge_bases/overview).
@@ -17,15 +17,11 @@ Learn more about knowledge bases following [this doc page](/mindsdb_sql/knowledg
 Defines the project where the knowledge bases are located. Note that the default project name is `mindsdb`.
 </ParamField>
 
+<ParamField body='kb_name' type='string' required>
+Defines the knowledge base to be altered.
+</ParamField>
+
 ### Body
-
-<ParamField body='name' type='string' required>
-Name of the knowledge base.
-</ParamField>
-
-<ParamField body='storage' type='string'>
-Underlying vector database that stores the embeddings.
-</ParamField>
 
 <ParamField body='embedding_model' type='string'>
 Defines the embedding model used to embed data in vector representation.
@@ -116,18 +112,11 @@ The name of the embedding model associated with this knowledge base at creation 
 <RequestExample>
 
 ```shell Shell
-curl -X POST http://127.0.0.1:47334/api/projects/mindsdb/knowledge_bases \
+curl -X PUT http://127.0.0.1:47334/api/projects/mindsdb/knowledge_bases/my_kb \
   -H "Content-Type: application/json" \
   -d '{
     "knowledge_base": {
-      "name": "my_kb",
-      "storage": {
-        "database": "my_kb_chromadb",
-        "table": "default_collection"
-      },
       "embedding_model": {
-        "provider": "openai",
-        "model_name": "text-embedding-3-small",
         "api_key": "sk-xxx"
       },
       "reranking_model": {

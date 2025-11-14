@@ -1,11 +1,14 @@
 import pytest
 import unittest
 from unittest.mock import patch, MagicMock
+from datetime import date
 
 try:
     from cassandra.cluster import NoHostAvailable
-    from mindsdb.integrations.handlers.cassandra_handler.\
-        cassandra_handler import CassandraHandler
+    from mindsdb.integrations.handlers.cassandra_handler.cassandra_handler import (
+        CassandraHandler,
+    )
+    from cassandra.util import Date
 except ImportError:
     pytestmark = pytest.mark.skip("Cassandra handler not installed")
 
@@ -58,10 +61,7 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_handler(self):
         """Create a Cassandra handler instance"""
-        return CassandraHandler(
-            "cassandra",
-            connection_data=self.dummy_connection_data
-        )
+        return CassandraHandler("cassandra", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
         """Create patcher for Cassandra connection"""
@@ -85,9 +85,7 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.handler.connect()
 
             mock_cluster.assert_called_once()
-            mock_cluster_instance.connect.assert_called_once_with(
-                self.mock_keyspace
-            )
+            mock_cluster_instance.connect.assert_called_once_with(self.mock_keyspace)
             self.assertTrue(self.handler.is_connected)
             self.assertEqual(self.handler.session, mock_session)
 
@@ -116,14 +114,8 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             )
             mock_cluster.assert_called_once()
             call_kwargs = mock_cluster.call_args[1]
-            self.assertEqual(
-                call_kwargs["auth_provider"],
-                mock_auth_instance
-            )
-            self.assertEqual(
-                call_kwargs["contact_points"],
-                ["localhost"]
-            )
+            self.assertEqual(call_kwargs["auth_provider"], mock_auth_instance)
+            self.assertEqual(call_kwargs["contact_points"], ["localhost"])
             self.assertEqual(call_kwargs["port"], 9042)
             self.assertEqual(call_kwargs["protocol_version"], 4)
 
@@ -131,10 +123,7 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """Test connection without specifying a keyspace"""
         connection_data = self.dummy_connection_data.copy()
         del connection_data["keyspace"]
-        handler = CassandraHandler(
-            "cassandra",
-            connection_data=connection_data
-        )
+        handler = CassandraHandler("cassandra", connection_data=connection_data)
 
         with patch(
             "mindsdb.integrations.handlers.cassandra_handler."
@@ -154,10 +143,7 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # Missing password
         connection_data = self.dummy_connection_data.copy()
         del connection_data["password"]
-        handler = CassandraHandler(
-            "cassandra",
-            connection_data=connection_data
-        )
+        handler = CassandraHandler("cassandra", connection_data=connection_data)
 
         with self.assertRaises(ValueError):
             handler.connect()
@@ -165,10 +151,7 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # Missing user
         connection_data = self.dummy_connection_data.copy()
         del connection_data["user"]
-        handler = CassandraHandler(
-            "cassandra",
-            connection_data=connection_data
-        )
+        handler = CassandraHandler("cassandra", connection_data=connection_data)
 
         with self.assertRaises(ValueError):
             handler.connect()
@@ -177,10 +160,7 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """Test connection using secure connect bundle (Astra DB)"""
         connection_data = self.dummy_connection_data.copy()
         connection_data["secure_connect_bundle"] = "/path/to/bundle.zip"
-        handler = CassandraHandler(
-            "cassandra",
-            connection_data=connection_data
-        )
+        handler = CassandraHandler("cassandra", connection_data=connection_data)
 
         with patch(
             "mindsdb.integrations.handlers.cassandra_handler."
@@ -196,13 +176,11 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             call_kwargs = mock_cluster.call_args[1]
             self.assertIn("cloud", call_kwargs)
             self.assertEqual(
-                call_kwargs["cloud"]["secure_connect_bundle"],
-                "/path/to/bundle.zip"
+                call_kwargs["cloud"]["secure_connect_bundle"], "/path/to/bundle.zip"
             )
 
     def test_connect_reuses_existing_connection(self):
-        """Test that connect reuses existing connection if already connected
-        """
+        """Test that connect reuses existing connection if already connected"""
         mock_session = MagicMock()
         self.handler.session = mock_session
         self.handler.is_connected = True
@@ -255,8 +233,34 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertIsNotNone(response.error_message)
 
     def test_native_query(self):
-        """Cassandra handler doesn't implement native_query yet"""
-        self.skipTest("native_query not implemented in CassandraHandler")
+        """Test cassandra native query"""
+        with patch(
+            "mindsdb.integrations.handlers.cassandra_handler."
+            "cassandra_handler.Cluster"
+        ) as mock_cluster:
+            mock_session = MagicMock()
+            mock_row = MagicMock()
+            mock_cassandra_date = MagicMock(spec=Date)
+            mock_cassandra_date.date.return_value = date(2023, 1, 1)
+
+            mock_row._asdict.return_value = {
+                "id": 1,
+                "name": "test",
+                "created_at": mock_cassandra_date,
+            }
+            mock_response = [mock_row]
+            mock_session.execute.return_value.all.return_value = mock_response
+            mock_cluster_instance = MagicMock()
+            mock_cluster_instance.connect.return_value = mock_session
+            mock_cluster.return_value = mock_cluster_instance
+
+            response = self.handler.native_query("SELECT * FROM test_table")
+
+            self.assertEqual(response.error_code, 0)
+            self.assertEqual(len(response.data_frame), 1)
+            self.assertEqual(response.data_frame.iloc[0]["id"], 1)
+            self.assertEqual(response.data_frame.iloc[0]["name"], "test")
+            self.assertIsInstance(response.data_frame.iloc[0]["created_at"], date)
 
     def test_get_columns(self):
         """Cassandra handler doesn't implement get_columns yet"""
@@ -268,7 +272,7 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.get_tables()
 
         # Cassandra handler uses DESCRIBE TABLES instead of system schema
-        self.handler.native_query.assert_called_once_with("DESCRIBE TABLES")
+        self.handler.native_query.assert_called_once_with("DESCRIBE TABLES;")
 
 
 if __name__ == "__main__":

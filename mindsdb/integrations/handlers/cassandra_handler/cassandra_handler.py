@@ -7,13 +7,20 @@ from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.util import Date
 
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser import ast
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE,
 )
-from mindsdb_sql_parser import parse_sql
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class CassandraHandler(MetaDatabaseHandler):
@@ -30,19 +37,6 @@ class CassandraHandler(MetaDatabaseHandler):
         self.session = None
         self.is_connected = False
         self.connection_args = connection_data
-
-    def get_tables(self) -> Response:
-        """
-        Get the list of tables in the connected Cassandra database.
-
-        :return: List of table names.
-        """
-        sql = "DESCRIBE TABLES"
-        result = self.native_query(sql)
-        df = result.data_frame
-        df = df.rename(columns={"name": "table_name"})
-        result.data_frame = df
-        return result
 
     def download_secure_bundle(self, url, max_size=10 * 1024 * 1024):
         """
@@ -123,7 +117,80 @@ class CassandraHandler(MetaDatabaseHandler):
             session.execute("SELECT release_version FROM system.local")
             return StatusResponse(success=True)
         except Exception as e:
-            return StatusResponse(
-                success=False,
-                error_message=str(e)
+            return StatusResponse(success=False, error_message=str(e))
+
+    def prepare_response(self, resp):
+        # replace cassandra types
+        data = []
+        for row in resp:
+            row2 = {}
+            for k, v in row._asdict().items():
+                if isinstance(v, Date):
+                    v = v.date()
+                row2[k] = v
+            data.append(row2)
+        return data
+
+    def native_query(self, query: str) -> Response:
+        """
+        Receive SQL query and runs it
+        :param query: The SQL query to run in MySQL
+        :return: returns the records from the current recordset
+        """
+        session = self.connect()
+        try:
+            resp = session.execute(query).all()
+            resp = self.prepare_response(resp)
+            if resp:
+                response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(resp))
+            else:
+                response = Response(RESPONSE_TYPE.OK)
+        except Exception as e:
+            logger.error(
+                f'Error running query: {query} on {self.connection_args["keyspace"]}!'
             )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+        return response
+
+    def query(self, query: ASTNode) -> Response:
+        """
+        Retrieve the data from the SQL statement.
+        """
+
+        # remove table alias because Cassandra Query Language doesn't support it
+        if isinstance(query, ast.Select):
+            if (
+                isinstance(query.from_table, ast.Identifier)
+                and query.from_table.alias is not None
+            ):
+                query.from_table.alias = None
+
+            # remove table name from fields
+            table_name = query.from_table.parts[-1]
+
+            for target in query.targets:
+                if isinstance(target, ast.Identifier):
+                    if target.parts[0] == table_name:
+                        target.parts.pop(0)
+
+        renderer = SqlalchemyRender("mysql")
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
+
+    def get_tables(self) -> Response:
+        """
+        Get a list with all of the tabels in MySQL
+        """
+        q = "DESCRIBE TABLES;"
+        result = self.native_query(q)
+        df = result.data_frame
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
+        return result
+
+    def get_columns(self, table_name) -> Response:
+        """
+        Show details about the table
+        """
+        q = f"DESCRIBE {table_name};"
+        result = self.native_query(q)
+        return result

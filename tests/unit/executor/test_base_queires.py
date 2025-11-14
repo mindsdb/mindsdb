@@ -239,6 +239,75 @@ class TestSelect(BaseExecutorDummyML):
         assert ret["col1"][0] == 7
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_db_mixed_case(self, data_handler):
+        df = pd.DataFrame(
+            [
+                {"a": 6, "c": 1},
+                {"a": 4, "c": 2},
+                {"a": 2, "c": 3},
+            ]
+        )
+        # mixed case
+        self.set_handler(data_handler, name="mixDb", tables={"tbl": df, "mixTbl": df})
+        self.set_handler(data_handler, name="mixDb2", tables={"tbl": df, "mixTbl": df})
+
+        # --- works with right case (with quotes and without)
+        self.run_sql("""
+          SELECT * FROM `mixDb`.tbl as t1
+          JOIN `mixDb2`.tbl as t2 on t1.c=t2.c
+        """)
+
+        self.run_sql("""
+          SELECT * FROM mixDb.tbl as t1
+          JOIN mixDb2.tbl as t2 on t1.c=t2.c
+        """)
+
+        self.run_sql("SELECT * FROM mixDb.tbl")
+
+        self.run_sql("SELECT * FROM `mixDb`.tbl")
+
+        # --- doesn't work with wrong case
+        with pytest.raises(Exception):
+            self.run_sql("""
+              SELECT * FROM mixdb.tbl as t1
+              JOIN mixDb2.tbl as t2 on t1.c=t2.c
+            """)
+
+        with pytest.raises(Exception):
+            self.run_sql("""
+              SELECT * FROM `mixdb`.tbl as t1
+              JOIN `mixDb2`.tbl as t2 on t1.c=t2.c
+            """)
+
+        with pytest.raises(Exception):
+            self.run_sql("SELECT * FROM mixdb.tbl")
+
+        with pytest.raises(Exception):
+            self.run_sql("SELECT * FROM `mixdb`.tbl")
+
+        # lower case
+        self.set_handler(data_handler, name="low_db", tables={"tbl": df, "mixTbl": df})
+        self.set_handler(data_handler, name="low_db2", tables={"tbl": df, "mixTbl": df})
+
+        # --- works with any case if not quoted
+        self.run_sql("""
+          SELECT * FROM low_DB.tbl as t1
+          JOIN low_DB2.tbl as t2 on t1.c=t2.c
+        """)
+
+        self.run_sql("SELECT * FROM low_DB.tbl")
+
+        # -- doesn't work quoted
+        with pytest.raises(Exception):
+            self.run_sql("""
+             SELECT * FROM `low_DB`.tbl as t1
+             JOIN `low_DB2`.tbl as t2 on t1.c=t2.c
+           """)
+
+        with pytest.raises(Exception):
+            self.run_sql("SELECT * FROM `low_DB`.tbl")
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_implicit_join(self, data_handler):
         df1 = pd.DataFrame(
             [

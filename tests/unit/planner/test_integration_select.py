@@ -71,7 +71,7 @@ class TestPlanIntegrationSelect:
     def test_integration_name_is_case_insensitive(self):
         query = Select(
             targets=[Identifier('tab.column1')],
-            from_table=Identifier('int.tab'),
+            from_table=Identifier('INT.tab'),
             where=BinaryOperation(
                 'and', args=[
                     BinaryOperation('=', args=[Identifier('column1'), Identifier('column2')]),
@@ -83,7 +83,7 @@ class TestPlanIntegrationSelect:
             integrations=['int'],
             steps=[
                 FetchDataframeStep(
-                    integration='int',
+                    integration='INT',
                     query=Select(
                         targets=[Identifier('tab.column1', alias=Identifier('column1'))],
                         from_table=Identifier('tab'),

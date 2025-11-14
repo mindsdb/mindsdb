@@ -154,8 +154,14 @@ class PlanJoinTablesQuery:
         # try to use default namespace
         integration = self.planner.default_namespace
         if len(table.parts) > 0:
-            if table.parts[0] in self.planner.databases:
-                integration = table.parts.pop(0)
+            # if not quoted  check in lower case
+            part = table.parts[0]
+            if part not in self.planner.databases and not table.is_quoted[0]:
+                part = part.lower()
+
+            if part in self.planner.databases:
+                integration = part
+                table.parts.pop(0)
                 table.is_quoted.pop(0)
             else:
                 integration = self.planner.default_namespace

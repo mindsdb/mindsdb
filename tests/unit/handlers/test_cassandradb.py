@@ -258,20 +258,32 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertIsInstance(response.data_frame.iloc[0]["created_at"], date)
 
     def test_get_tables(self):
-        """
-        Tests that get_tables calls native_query with the correct SQL for Oracle
-        and returns the expected DataFrame structure.
-        """
-        expected_df = pd.DataFrame({"table_name": ["table1", "table2", "table3"]})
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        """Test that get_tables returns proper table_schema, table_name, and table_type"""
+        tables_df = pd.DataFrame(
+            {
+                "table_schema": ["test_keyspace", "test_keyspace"],
+                "table_name": ["table1", "table2"],
+                "table_type": ["BASE TABLE", "BASE TABLE"],
+            }
+        )
+        tables_response = Response(RESPONSE_TYPE.TABLE, data_frame=tables_df)
+
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=tables_df)
 
         self.handler.native_query = MagicMock(return_value=expected_response)
         response = self.handler.get_tables()
+        # Verify the response has correct structure
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertIn("table_schema", response.data_frame.columns)
+        self.assertIn("table_name", response.data_frame.columns)
+        self.assertIn("table_type", response.data_frame.columns)
 
-        self.handler.native_query.assert_called_once()
-        expected_query = "DESCRIBE TABLES;"
-        self.handler.native_query.assert_called_with(expected_query)
-        self.assertEqual(response.data_frame.equals(expected_df), True)
+        # Verify correct values
+        self.assertEqual(len(response.data_frame), 2)
+        self.assertEqual(list(response.data_frame["table_name"]), ["table1", "table2"])
+        self.assertEqual(
+            list(response.data_frame["table_type"]), ["BASE TABLE", "BASE TABLE"]
+        )
 
     def test_get_columns(self):
         """

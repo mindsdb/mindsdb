@@ -134,23 +134,17 @@ class CassandraHandler(MetaDatabaseHandler):
     def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
-        :param query: The SQL query to run in Cassandra
+        :param query: The SQL query to run in MySQL
         :return: returns the records from the current recordset
         """
         session = self.connect()
         try:
-            cass_response = session.execute(query)
-            rows = cass_response.all()
-            rows = self.prepare_response(rows)
-            if rows:
-                df = pd.DataFrame(rows)
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=df,
-                    affected_rows=len(df),
-                )
+            resp = session.execute(query).all()
+            resp = self.prepare_response(resp)
+            if resp:
+                response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(resp))
             else:
-                response = Response(RESPONSE_TYPE.OK, affected_rows=0)
+                response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
             logger.error(
                 f'Error running query: {query} on {self.connection_args["keyspace"]}!'
@@ -187,10 +181,22 @@ class CassandraHandler(MetaDatabaseHandler):
         Get a list of all tables in the current keyspace.
         """
 
-        q = "DESCRIBE TABLES;"
-        result = self.native_query(q)
-        print("**************************************************************")
-        print(result)
+        query = """
+            SELECT
+                keyspace_name AS table_schema,
+                table_name
+            FROM system_schema.tables
+        """
+
+        result = self.native_query(query)
+
+        # Filter out system keyspaces in Python
+        if result.type == RESPONSE_TYPE.TABLE:
+            df = result.data_frame
+            df = df[~df["table_schema"].str.contains("system", case=False, na=False)]
+            # add table_type column
+            df["table_type"] = "BASE TABLE"
+            result.data_frame = df
         return result
 
     def get_columns(self, table_name: str) -> Response:
@@ -203,7 +209,7 @@ class CassandraHandler(MetaDatabaseHandler):
         return self.native_query(q)
 
     # Metadata
-    
+
     def meta_get_tables(self) -> Response:
         """
         Get a list with all of the tables in Cassandra
@@ -228,7 +234,7 @@ class CassandraHandler(MetaDatabaseHandler):
         """
         # Cassandra does not maintain column statistics like some other databases.
         # Therefore, we will return an empty response or a message indicating that
-        # TODO: Implement column statistics 
+        # TODO: Implement column statistics
         return Response(RESPONSE_TYPE.OK, pd.DataFrame())
 
     def meta_get_primary_keys(self, table_name) -> Response:

@@ -23,6 +23,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
 2. To connect Elasticsearch to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
+3. **If installing from source**: Python 3.11 or 3.12 is recommended. Install with: `pip install -e '.[elasticsearch]'`
 
 ## Connection
 

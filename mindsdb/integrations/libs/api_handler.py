@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 import ast as py_ast
 
 import pandas as pd
-from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star
+from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.utilities.sql_utils import (
@@ -168,7 +168,7 @@ class APIResource(APITable):
             pd.DataFrame
         """
 
-        conditions = self._extract_conditions(query.where)
+        api_conditions, raw_conditions = self._extract_conditions(query.where, strict=False)
 
         limit = None
         if query.limit:
@@ -185,18 +185,18 @@ class APIResource(APITable):
             if isinstance(col, Identifier):
                 targets.append(col.parts[-1])
 
-        kwargs = {"conditions": conditions, "limit": limit, "sort": sort, "targets": targets}
+        kwargs = {"conditions": api_conditions, "limit": limit, "sort": sort, "targets": targets}
         if self.table_name is not None:
             kwargs["table_name"] = self.table_name
 
         result = self.list(**kwargs)
 
         filters = []
-        for cond in conditions:
+        for cond in api_conditions:
             if not cond.applied:
                 filters.append([cond.op.value, cond.column, cond.value])
 
-        result = filter_dataframe(result, filters)
+        result = filter_dataframe(result, filters, raw_conditions=raw_conditions)
 
         if sort:
             sort_columns = []
@@ -274,7 +274,7 @@ class APIResource(APITable):
         Returns:
             None
         """
-        conditions = self._extract_conditions(query.where)
+        conditions, _ = self._extract_conditions(query.where)
 
         values = {key: val.value for key, val in query.update_columns.items()}
 
@@ -303,7 +303,7 @@ class APIResource(APITable):
         Returns:
             None
         """
-        conditions = self._extract_conditions(query.where)
+        conditions, _ = self._extract_conditions(query.where)
 
         self.remove(conditions)
 
@@ -320,8 +320,16 @@ class APIResource(APITable):
         """
         raise NotImplementedError()
 
-    def _extract_conditions(self, where: ASTNode) -> List[FilterCondition]:
-        return [FilterCondition(i[1], FilterOperator(i[0].upper()), i[2]) for i in extract_comparison_conditions(where)]
+    def _extract_conditions(self, where: ASTNode, strict=True):
+        api_conditions, raw_conditions = [], []
+        for item in extract_comparison_conditions(where, strict=strict):
+            if isinstance(item, BinaryOperation):
+                # is it a raw condition
+                raw_conditions.append(item)
+            else:
+                api_conditions.append(FilterCondition(item[1], FilterOperator(item[0].upper()), item[2]))
+
+        return api_conditions, raw_conditions
 
 
 class MetaAPIResource(APIResource):

@@ -41,7 +41,7 @@ class EmailHandler(APIHandler):
         self.is_connected = False
 
         emails = EmailsTable(self)
-        self._register_table('emails', emails)
+        self._register_table("emails", emails)
 
     def connect(self):
         """Authenticate with the email servers using credentials."""
@@ -52,14 +52,14 @@ class EmailHandler(APIHandler):
         try:
             self.connection = EmailClient(self.connection_data)
         except Exception as e:
-            logger.error(f'Error connecting to email api: {e}!')
+            logger.error(f"Error connecting to email api: {e}!")
             raise e
 
         self.is_connected = True
         return self.connection
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
 
         Should switch self.is_connected.
         """
@@ -76,7 +76,7 @@ class EmailHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            response.error_message = f'Error connecting to Email: {e}. '
+            response.error_message = f"Error connecting to Email: {e}. "
             logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:

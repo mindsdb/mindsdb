@@ -104,10 +104,25 @@ class HandlerReadme(Resource):
                 f"Handler '{handler_name}' does not define a folder",
             )
 
+        # Ensure the folder does not contain traversal sequences
+        handler_folder_name = Path(handler_folder).name
+        if handler_folder_name != handler_folder or ".." in handler_folder:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                "Invalid handler folder",
+                f"Handler folder '{handler_folder}' is invalid.",
+            )
+
         mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent
-        readme_path = mindsdb_path.joinpath("integrations/handlers").joinpath(handler_folder).joinpath("README.md")
-        if readme_path.is_absolute() is False:
-            readme_path = Path(os.getcwd()).joinpath(readme_path)
+        base_handlers_path = mindsdb_path.joinpath("integrations/handlers").resolve()
+        readme_path = base_handlers_path.joinpath(handler_folder_name).joinpath("README.md").resolve()
+
+        if base_handlers_path not in readme_path.parents:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                "Invalid handler folder",
+                f"Handler folder '{handler_folder}' is invalid.",
+            )
 
         try:
             with open(readme_path, "r", encoding="utf-8") as readme_file:

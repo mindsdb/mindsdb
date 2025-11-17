@@ -251,7 +251,9 @@ class TestEmailHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Test that parse_date correctly handles timezone-aware datetimes.
         """
-        aware_dt = dt.datetime(2022, 2, 2, 15, 30, 0, tzinfo=pytz.timezone("US/Eastern"))
+        aware_dt = dt.datetime(
+            2022, 2, 2, 15, 30, 0, tzinfo=pytz.timezone("US/Eastern")
+        )
         result = EmailsTable.parse_date(aware_dt)
 
         # Should return the same datetime

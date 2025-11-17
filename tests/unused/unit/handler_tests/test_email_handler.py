@@ -14,7 +14,9 @@ class TestEmailHandler:
         # Check if env variables exist, if not fail the test
         email = os.getenv("EMAIL_USERNAME")
         password = os.getenv("EMAIL_PASSWORD")
-        assert email is not None, "EMAIL_USERNAME environment variable not found e.g. example@gmail.com"
+        assert (
+            email is not None
+        ), "EMAIL_USERNAME environment variable not found e.g. example@gmail.com"
         assert password is not None, "EMAIL_PASSWORD environment variable not found"
 
         self.connection_data = {"email": email, "password": password}
@@ -25,7 +27,9 @@ class TestEmailHandler:
     def test_connect_already_connected(self):
         self.email_handler.is_connected = True
         connection = self.email_handler.connect()
-        assert connection is self.email_handler.connection, "The connection must be the same as the one in the handler."
+        assert (
+            connection is self.email_handler.connection
+        ), "The connection must be the same as the one in the handler."
 
     def test_check_connection(self):
         response = self.email_handler.check_connection()
@@ -56,14 +60,20 @@ class TestEmailHandler:
             }
         )
 
-        self.emails_table_instance.handler.connection.search_email = MagicMock(return_value=mock_df)
+        self.emails_table_instance.handler.connection.search_email = MagicMock(
+            return_value=mock_df
+        )
 
         query = parse_sql("SELECT * FROM emails limit 1")
 
         self.emails_table_instance.select(query)
 
         assert self.emails_table_instance.handler.connection.search_email.called, (
+<<<<<<< HEAD
             "The search_email method must be called."
+=======
+            "The search_email " "method must be called."
+>>>>>>> 8d5b6e6f6 (Ruff format)
         )
 
         # select using invalid column should raise Exception
@@ -85,7 +95,9 @@ class TestEmailHandler:
         )
 
         self.emails_table_instance.insert(query)
-        assert self.emails_table_instance.handler.connection.send_email.called, "The send_email method must be called."
+        assert (
+            self.emails_table_instance.handler.connection.send_email.called
+        ), "The send_email method must be called."
 
         # insert using invalid column should raise Exception
         query = parse_sql(
@@ -136,3 +148,5 @@ class TestEmailHandler:
         assert result is not None, "The result must not be None."
         assert "body" in result.columns, "The body should be in the result columns."
         assert len(result) > 0, "The result should not be empty."
+        assert "from_field" in result.columns, "Column 'from_field' must be in the columns list."
+        assert "datetime" in result.columns, "Column 'datetime' must be in the columns list."

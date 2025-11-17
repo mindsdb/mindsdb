@@ -82,6 +82,54 @@ class HandlerInfo(Resource):
         return row
 
 
+@ns_conf.route("/<handler_name>/readme")
+class HandlerReadme(Resource):
+    @ns_conf.param("handler_name", "Handler name")
+    @api_endpoint_metrics("GET", "/handlers/handler/readme")
+    def get(self, handler_name):
+        try:
+            handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+        except Exception:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                "Readme not found",
+                f"Handler '{handler_name}' not found",
+            )
+
+        handler_folder = handler_meta.get("import", {}).get("folder")
+        if handler_folder is None:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                "Readme not found",
+                f"Handler '{handler_name}' does not define a folder",
+            )
+
+        mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent
+        readme_path = mindsdb_path.joinpath("integrations/handlers").joinpath(handler_folder).joinpath("README.md")
+        if readme_path.is_absolute() is False:
+            readme_path = Path(os.getcwd()).joinpath(readme_path)
+
+        try:
+            with open(readme_path, "r", encoding="utf-8") as readme_file:
+                readme_content = readme_file.read()
+        except FileNotFoundError:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                "Readme not found",
+                f"README.md for handler '{handler_name}' not found",
+            )
+        except Exception as exc:
+            error_message = f"Failed to read README for '{handler_name}': {exc}"
+            logger.warning(error_message)
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                "Readme error",
+                error_message,
+            )
+
+        return {"name": handler_name, "readme": readme_content}
+
+
 @ns_conf.route("/<handler_name>/install")
 class InstallDependencies(Resource):
     @ns_conf.param("handler_name", "Handler name")

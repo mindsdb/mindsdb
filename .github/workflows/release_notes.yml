@@ -1,15 +1,16 @@
 # Uses OpenAI to summarise github's auto-generated release notes,
 # Then update the release notes to contain the new summary
 
+
 name: Update Release Notes
+
+permissions:
+    contents: write
 
 on:
   release:
     types:
       - published
-
-permissions:
-    contents: write
 
 jobs:
   get-release-notes:

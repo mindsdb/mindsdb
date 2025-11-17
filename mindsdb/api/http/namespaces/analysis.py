@@ -36,6 +36,7 @@ def analyze_df(df: DataFrame) -> dict:
     df.columns = cols
 
     from dataprep_ml.insights import analyze_dataset
+
     analysis = analyze_dataset(df)
     return analysis.to_dict()
 
@@ -43,7 +44,7 @@ def analyze_df(df: DataFrame) -> dict:
 @ns_conf.route("/query")
 class QueryAnalysis(Resource):
     @ns_conf.doc("post_query_to_analyze")
-    @api_endpoint_metrics('POST', '/analysis/query')
+    @api_endpoint_metrics("POST", "/analysis/query")
     def post(self):
         data = request.json
         query = data.get("query")
@@ -67,35 +68,31 @@ class QueryAnalysis(Resource):
         try:
             result = mysql_proxy.process_query(query)
         except Exception as e:
-            import traceback
-
-            logger.error(traceback.format_exc())
-            return http_error(500, "Error", str(e))
+            logger.exception("Error during query analysis:")
+            return http_error(500, "Error", f"Unexpected error duting query analysis: {e}")
 
         if result.type == SQL_RESPONSE_TYPE.ERROR:
             return http_error(500, f"Error {result.error_code}", result.error_message)
         if result.type != SQL_RESPONSE_TYPE.TABLE:
             return http_error(500, "Error", "Query does not return data")
 
-        column_names = [x["name"] for x in result.columns]
-        df = DataFrame(result.data, columns=column_names)
+        column_names = [column.name for column in result.result_set.columns]
+        df = result.result_set.to_df()
         try:
             analysis = analyze_df(df)
         except ImportError:
             return {
-                'analysis': {},
-                'timestamp': time.time(),
-                'error': 'To use this feature, please install the "dataprep_ml" package.'
+                "analysis": {},
+                "timestamp": time.time(),
+                "error": 'To use this feature, please install the "dataprep_ml" package.',
             }
 
-        query_tables = [
-            table.to_string() for table in get_query_tables(ast)
-        ]
+        query_tables = [table.to_string() for table in get_query_tables(ast)]
 
         return {
             "analysis": analysis,
             "column_names": column_names,
-            "row_count": len(result.data),
+            "row_count": len(result.result_set),
             "timestamp": time.time(),
             "tables": query_tables,
         }
@@ -104,7 +101,7 @@ class QueryAnalysis(Resource):
 @ns_conf.route("/data")
 class DataAnalysis(Resource):
     @ns_conf.doc("post_data_to_analyze")
-    @api_endpoint_metrics('POST', '/analysis/data')
+    @api_endpoint_metrics("POST", "/analysis/data")
     def post(self):
         payload = request.json
         column_names = payload.get("column_names")
@@ -116,15 +113,11 @@ class DataAnalysis(Resource):
             return {"analysis": analysis, "timestamp": time.time()}
         except ImportError:
             return {
-                'analysis': {},
-                'timestamp': timestamp,
-                'error': 'To use this feature, please install the "dataprep_ml" package.'
+                "analysis": {},
+                "timestamp": timestamp,
+                "error": 'To use this feature, please install the "dataprep_ml" package.',
             }
         except Exception as e:
             # Don't want analysis exceptions to show up on UI.
             # TODO: Fix analysis so it doesn't throw exceptions at all.
-            return {
-                'analysis': {},
-                'timestamp': timestamp,
-                'error': str(e)
-            }
+            return {"analysis": {}, "timestamp": timestamp, "error": str(e)}

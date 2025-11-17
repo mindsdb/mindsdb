@@ -33,7 +33,7 @@ class TimeGPTHandler(BaseMLEngine):
         if mode == 'forecasting':
             assert time_settings["is_timeseries"], "Specify time series settings in your query"
 
-        timegpt_token =  get_api_key('timegpt', using_args, self.engine_storage, strict=True)
+        timegpt_token = get_api_key('timegpt', using_args, self.engine_storage, strict=True)
         timegpt = NixtlaClient(api_key=timegpt_token)
         assert timegpt.validate_api_key(), "Invalid TimeGPT token provided."
 
@@ -64,7 +64,7 @@ class TimeGPTHandler(BaseMLEngine):
             model_args['add_history'] = True
 
         assert isinstance(model_args["level"], list), "`level` must be a list of integers"
-        assert all([isinstance(l, int) for l in model_args["level"]]), "`level` must be a list of integers"
+        assert all([isinstance(level, int) for level in model_args["level"]]), "`level` must be a list of integers"
 
         self.model_storage.json_set("model_args", model_args)  # persist changes to handler folder
 
@@ -73,7 +73,7 @@ class TimeGPTHandler(BaseMLEngine):
         model_args = self.model_storage.json_get("model_args")
         args = args['predict_params']
         prediction_df = self._transform_to_nixtla_df(df, model_args)
-        
+
         timegpt = NixtlaClient(api_key=model_args['token'])
         assert timegpt.validate_api_key(), "Invalid TimeGPT token provided."
 
@@ -122,7 +122,7 @@ class TimeGPTHandler(BaseMLEngine):
         for i, level in enumerate(levels):
             if i == 0:
                 # NOTE: this should be simplified once we refactor the expected time series output within MindsDB
-                results_df['confidence'] = level/100  # we report the highest level as the overall confidence
+                results_df['confidence'] = level / 100  # we report the highest level as the overall confidence
                 results_df['lower'] = forecast_df[f'TimeGPT-lo-{level}']
                 results_df['upper'] = forecast_df[f'TimeGPT-hi-{level}']
             else:
@@ -171,7 +171,7 @@ class TimeGPTHandler(BaseMLEngine):
                 if mindate > pd.to_datetime('1970-01-01T00:00:00') and maxdate < pd.to_datetime('2050-12-31T23:59:59'):
                     unit = u
             df[date_column] = pd.to_datetime(df[date_column], unit=unit, origin='unix')
-        else: 
+        else:
             df[date_column] = pd.to_datetime(df[date_column])
         df[date_column] = df[date_column].dt.strftime('%Y-%m-%dT%H:%M:%S')  # convert to ISO 8601 format
         df[date_column] = pd.to_datetime(df[date_column])

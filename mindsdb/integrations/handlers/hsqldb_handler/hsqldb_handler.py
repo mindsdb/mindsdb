@@ -14,6 +14,7 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 logger = log.getLogger(__name__)
 
+
 class HSQLDBHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the HyperSQL statements.
@@ -21,7 +22,7 @@ class HSQLDBHandler(DatabaseHandler):
 
     name = 'hsqldb'
 
-    def __init__(self, name: str,  **kwargs):
+    def __init__(self, name: str, **kwargs):
         """
         Initialize the handler.
         Args:
@@ -162,7 +163,7 @@ class HSQLDBHandler(DatabaseHandler):
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog') AND table_type='BASE TABLE'")
         results = cursor.fetchall()
-        df = pd.DataFrame([x[2] for x in results], columns=['table_name']) # Workaround since cursor.tables() wont work with postgres driver
+        df = pd.DataFrame([x[2] for x in results], columns=['table_name'])  # Workaround since cursor.tables() wont work with postgres driver
         response = Response(
             RESPONSE_TYPE.TABLE,
             df
@@ -181,7 +182,7 @@ class HSQLDBHandler(DatabaseHandler):
 
         connection = self.connect()
         cursor = connection.cursor()
-        query = f'SELECT * FROM information_schema.columns WHERE table_name ={table_name}' # Workaround since cursor.columns() wont work with postgres driver
+        query = f'SELECT * FROM information_schema.columns WHERE table_name ={table_name}'  # Workaround since cursor.columns() wont work with postgres driver
         cursor.execute(query)
         results = cursor.fetchall()
         df = pd.DataFrame(

@@ -1,0 +1,72 @@
+---
+title: Data Catalog for Integrations
+sidebarTitle: Overview
+---
+
+As of now, the Data Catalog is available for the following integrations:
+
+- [Snowflake](/integrations/data-integrations/snowflake)
+- [Salesforce](/integrations/app-integrations/salesforce)
+- [BigQuery](/integrations/data-integrations/google-bigquery)
+- [MS SQL Server](/integrations/data-integrations/microsoft-sql-server)
+- [MySQL](/integrations/app-integrations/mysql)
+- [Oracle](/integrations/data-integrations/oracle)
+- [PostgreSQL](/integrations/data-integrations/postgresql)
+
+### Enabling the Data Catalog
+
+To enable the Data Catalog feature in MindsDB, update your `config.json` file by setting the `data_catalog` flag to `true`:
+
+```json
+{
+    "data_catalog": {
+        "enabled": true
+    }
+}
+```
+
+Follow this doc page to learn how to [start MindsDB with custom configuration](/setup/custom-config).
+
+<Note>
+Note that the data catalog is generated for a data source only after this data source is connected to an agent.
+
+Here is an example:
+
+```sql
+CREATE DATABASE snowflake_data
+WITH
+    ENGINE = 'snowflake',
+    PARAMETERS = {
+        "account": "abc123-xyz987",
+        "user": "username",
+        "password": "password",
+        "database": "database_name",
+        "schema": "schema_name",
+        "warehouse": "warehouse_name"
+    };
+
+CREATE AGENT my_agent
+USING
+    include_tables= ['snowflake_data.table_name', ...];
+```
+
+Now you can [query the data catalog](/data_catalog/integrations/query) generated for the `snowflake_data` integration.
+</Note>
+
+### How It Works
+
+When you create an [agent](/mindsdb_sql/agents/agent) in MindsDB that connects to one of the supported integrations, the Data Catalog automatically:
+
+1. Inspects the data source.
+2. Extracts metadata for all accessible tables and columns.
+3. Stores this information in a dedicated catalog schema (`DATA_CATALOG`).
+4. Makes this metadata available to agents and users via both SQL queries and internal reasoning.
+
+<Warning>
+**Current Limitations**
+
+This feature is still evolving and has some known limitations:
+
+- **One-Time Snapshot**: Metadata is generated only once—at the time the agent is created. If the data schema changes (e.g., new columns, renamed tables), the Data Catalog will not automatically update. A refresh mechanism is planned in a future release.
+- **No Manual Feedback**: If any metadata appears to be incorrect (e.g., wrong row counts or data types), there is currently no way for users to flag or correct it. A feedback system will be introduced soon.
+</Warning>

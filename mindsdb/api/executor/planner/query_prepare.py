@@ -8,7 +8,7 @@ from mindsdb.api.executor.planner import utils
 
 def to_string(identifier):
     # alternative to AST.to_string() but without quoting
-    return '.'.join(identifier.parts)
+    return ".".join(identifier.parts)
 
 
 class Table:
@@ -32,7 +32,6 @@ class Column:
     def __init__(self, node=None, table=None, name=None, type=None):
         alias = None
         if node is not None:
-
             if isinstance(node, ast.Identifier):
                 # set name
                 name = node.parts[-1]  # ???
@@ -67,26 +66,25 @@ class Statement:
         self.offset = 0
 
 
-class PreparedStatementPlanner():
-
+class PreparedStatementPlanner:
     def __init__(self, planner):
         self.planner = planner
 
     def get_type_of_var(self, v):
         if isinstance(v, str):
-            return 'str'
+            return "str"
         elif isinstance(v, float):
-            return 'float'
+            return "float"
         elif isinstance(v, int):
-            return 'integer'
+            return "integer"
 
-        return 'str'
+        return "str"
 
     def get_statement_info(self):
         stmt = self.planner.statement
 
         if stmt is None:
-            raise PlanningException('Statement is not prepared')
+            raise PlanningException("Statement is not prepared")
 
         columns_result = []
 
@@ -95,45 +93,45 @@ class PreparedStatementPlanner():
             if column.table is not None:
                 table = column.table.name
                 ds = column.table.ds
-            columns_result.append(dict(
-                alias=column.alias,
-                type=column.type,
-                name=column.name,
-                table_name=table,
-                table_alias=table,
-                ds=ds,
-            ))
+            columns_result.append(
+                dict(
+                    alias=column.alias,
+                    type=column.type,
+                    name=column.name,
+                    table_name=table,
+                    table_alias=table,
+                    ds=ds,
+                )
+            )
 
         parameters = []
         for param in stmt.params:
-            name = '?'
-            parameters.append(dict(
-                alias=name,
-                type='str',
-                name=name,
-            ))
+            name = "?"
+            parameters.append(
+                dict(
+                    alias=name,
+                    type="str",
+                    name=name,
+                )
+            )
 
-        return {
-            'parameters': parameters,
-            'columns': columns_result
-        }
+        return {"parameters": parameters, "columns": columns_result}
 
     def get_table_of_column(self, t):
-
         tables_map = self.planner.statement.tables_map
 
         # get tables to check
         if len(t.parts) > 1:
             # try to find table
             table_parts = t.parts[:-1]
-            table_name = '.'.join(table_parts)
+            table_name = ".".join(table_parts)
             if table_name in tables_map:
                 return tables_map[table_name]
 
             elif len(table_parts) > 1:
                 # maybe datasource is 1st part
                 table_parts = table_parts[1:]
-                table_name = '.'.join(table_parts)
+                table_name = ".".join(table_parts)
                 if table_name in tables_map:
                     return tables_map[table_name]
 
@@ -158,14 +156,10 @@ class PreparedStatementPlanner():
             # in reverse order
             for p in table.parts[::-1]:
                 parts.insert(0, p)
-                keys.append('.'.join(parts))
+                keys.append(".".join(parts))
 
         # remember table
-        tbl = Table(
-            ds=ds,
-            node=table,
-            is_predictor=is_predictor
-        )
+        tbl = Table(ds=ds, node=table, is_predictor=is_predictor)
         tbl.keys = keys
 
         return tbl
@@ -189,7 +183,6 @@ class PreparedStatementPlanner():
         stmt.tables_map = {}
         stmt.tables_lvl1 = []
         if query.from_table is not None:
-
             if isinstance(query.from_table, ast.Join):
                 # get all tables
                 join_tables = utils.convert_join_to_list(query.from_table)
@@ -198,21 +191,17 @@ class PreparedStatementPlanner():
 
             if isinstance(query.from_table, ast.Select):
                 # nested select, get only last select
-                join_tables = [
-                    dict(
-                        table=utils.get_deepest_select(query.from_table).from_table
-                    )
-                ]
+                join_tables = [dict(table=utils.get_deepest_select(query.from_table).from_table)]
 
             for i, join_table in enumerate(join_tables):
-                table = join_table['table']
+                table = join_table["table"]
                 if isinstance(table, ast.Identifier):
                     tbl = self.table_from_identifier(table)
 
                     if tbl.is_predictor:
                         # Is the last table?
                         if i + 1 < len(join_tables):
-                            raise PlanningException('Predictor must be last table in query')
+                            raise PlanningException("Predictor must be last table in query")
 
                     stmt.tables_lvl1.append(tbl)
                     for key in tbl.keys:
@@ -225,13 +214,12 @@ class PreparedStatementPlanner():
         # is there any predictors at other levels?
         lvl1_predictors = [i for i in stmt.tables_lvl1 if i.is_predictor]
         if len(query_predictors) != len(lvl1_predictors):
-            raise PlanningException('Predictor is not at first level')
+            raise PlanningException("Predictor is not at first level")
 
         # === get targets ===
         columns = []
         get_all_tables = False
         for t in query.targets:
-
             column = Column(t)
 
             # column alias
@@ -264,10 +252,10 @@ class PreparedStatementPlanner():
                 column.type = self.get_type_of_var(t.value)
             elif isinstance(t, ast.Function):
                 # mysql function
-                if t.op == 'connection_id':
-                    column.type = 'integer'
+                if t.op == "connection_id":
+                    column.type = "integer"
                 else:
-                    column.type = 'str'
+                    column.type = "str"
             else:
                 # TODO go down into lower level.
                 #  It can be function, operation, select.
@@ -276,7 +264,7 @@ class PreparedStatementPlanner():
                 # TODO add several known types for function, i.e ABS-int
 
                 # TODO TypeCast - as casted type
-                column.type = 'str'
+                column.type = "str"
 
             if alias is not None:
                 column.alias = alias
@@ -298,29 +286,8 @@ class PreparedStatementPlanner():
 
                 if step.result_data is not None:
                     # save results
-
-                    if len(step.result_data['tables']) > 0:
-                        table_info = step.result_data['tables'][0]
-                        columns_info = step.result_data['columns'][table_info]
-
-                        table.columns = []
-                        table.ds = table_info[0]
-                        for col in columns_info:
-                            if isinstance(col, tuple):
-                                # is predictor
-                                col = dict(name=col[0], type='str')
-                            table.columns.append(
-                                Column(
-                                    name=col['name'],
-                                    type=col['type'],
-                                )
-                            )
-
-                    # map by names
-                    table.columns_map = {
-                        i.name.upper(): i
-                        for i in table.columns
-                    }
+                    table.columns = step.result_data.columns
+                    table.columns_map = {column.name.upper(): column for column in step.result_data.columns}
 
         # === create columns list ===
         columns_result = []
@@ -329,7 +296,7 @@ class PreparedStatementPlanner():
                 # add data from all tables
                 for table in stmt.tables_lvl1:
                     if table.columns is None:
-                        raise PlanningException(f'Table is not found {table.name}')
+                        raise PlanningException(f"Table is not found {table.name}")
 
                     for col in table.columns:
                         # col = {name: 'col', type: 'str'}
@@ -354,7 +321,7 @@ class PreparedStatementPlanner():
                             column.type = table.columns_map[col_name].type
                         else:
                             # continue
-                            raise PlanningException(f'Column not found {col_name}')
+                            raise PlanningException(f"Column not found {col_name}")
 
                 else:
                     # table is not found, looking for in all tables
@@ -368,11 +335,11 @@ class PreparedStatementPlanner():
 
             # forcing alias
             if column.alias is None:
-                column.alias = f'column_{i}'
+                column.alias = f"column_{i}"
 
             # forcing type
             if column.type is None:
-                column.type = 'str'
+                column.type = "str"
 
             columns_result.append(column)
 
@@ -393,28 +360,25 @@ class PreparedStatementPlanner():
         if step.result_data is not None:
             # save results
 
-            if len(step.result_data['tables']) > 0:
-                table_info = step.result_data['tables'][0]
-                columns_info = step.result_data['columns'][table_info]
+            if len(step.result_data["tables"]) > 0:
+                table_info = step.result_data["tables"][0]
+                columns_info = step.result_data["columns"][table_info]
 
                 table.columns = []
                 table.ds = table_info[0]
                 for col in columns_info:
                     if isinstance(col, tuple):
                         # is predictor
-                        col = dict(name=col[0], type='str')
+                        col = dict(name=col[0], type="str")
                     table.columns.append(
                         Column(
-                            name=col['name'],
-                            type=col['type'],
+                            name=col["name"],
+                            type=col["type"],
                         )
                     )
 
                 # map by names
-                table.columns_map = {
-                    i.name.upper(): i
-                    for i in table.columns
-                }
+                table.columns_map = {i.name.upper(): i for i in table.columns}
 
         # save results
         columns_result = []
@@ -430,7 +394,7 @@ class PreparedStatementPlanner():
 
             if column.type is None:
                 # forcing type
-                column.type = 'str'
+                column.type = "str"
 
             columns_result.append(column)
 
@@ -440,13 +404,12 @@ class PreparedStatementPlanner():
         stmt = self.planner.statement
 
         stmt.columns = [
-            Column(name='Variable_name', type='str'),
-            Column(name='Value', type='str'),
+            Column(name="Variable_name", type="str"),
+            Column(name="Value", type="str"),
         ]
         return []
 
     def prepare_steps(self, query):
-
         stmt = Statement()
         self.planner.statement = stmt
 
@@ -476,7 +439,6 @@ class PreparedStatementPlanner():
         if isinstance(query, ast.Show):
             return self.prepare_show(query)
         else:
-
             # do nothing
             return []
             # raise NotImplementedError(query.__name__)
@@ -496,7 +458,6 @@ class PreparedStatementPlanner():
         query = self.planner.query
 
         if params is not None:
-
             if len(params) != len(stmt.params):
                 raise PlanningException("Count of execution parameters don't match prepared statement")
 
@@ -508,12 +469,14 @@ class PreparedStatementPlanner():
         stmt.params = None
 
         if (
-                isinstance(query, ast.Select)
-                or isinstance(query, ast.Union)
-                or isinstance(query, ast.CreateTable)
-                or isinstance(query, ast.Insert)
-                or isinstance(query, ast.Update)
-                or isinstance(query, ast.Delete)
+            isinstance(query, ast.Select)
+            or isinstance(query, ast.Union)
+            or isinstance(query, ast.CreateTable)
+            or isinstance(query, ast.Insert)
+            or isinstance(query, ast.Update)
+            or isinstance(query, ast.Delete)
+            or isinstance(query, ast.Intersect)
+            or isinstance(query, ast.Except)
         ):
             return self.plan_query(query)
         else:

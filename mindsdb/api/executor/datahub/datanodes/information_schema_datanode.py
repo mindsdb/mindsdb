@@ -15,12 +15,38 @@ from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.utilities import log
 
 from .system_tables import (
-    SchemataTable, TablesTable, ColumnsTable, EventsTable, RoutinesTable,
-    PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
-    CharacterSetsTable, CollationsTable)
+    SchemataTable,
+    TablesTable,
+    MetaTablesTable,
+    ColumnsTable,
+    MetaColumnsTable,
+    EventsTable,
+    RoutinesTable,
+    PluginsTable,
+    EnginesTable,
+    MetaTableConstraintsTable,
+    KeyColumnUsageTable,
+    MetaColumnUsageTable,
+    StatisticsTable,
+    MetaColumnStatisticsTable,
+    CharacterSetsTable,
+    CollationsTable,
+    MetaHandlerInfoTable,
+)
 from .mindsdb_tables import (
-    ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable, QueriesTable,
-    ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable)
+    ModelsTable,
+    DatabasesTable,
+    MLEnginesTable,
+    HandlersTable,
+    JobsTable,
+    QueriesTable,
+    ChatbotsTable,
+    KBTable,
+    SkillsTable,
+    AgentsTable,
+    ViewsTable,
+    TriggersTable,
+)
 
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 
@@ -32,12 +58,35 @@ class InformationSchemaDataNode(DataNode):
     type = "INFORMATION_SCHEMA"
 
     tables_list = [
-        SchemataTable, TablesTable, ColumnsTable, EventsTable, RoutinesTable,
-        PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
-        CharacterSetsTable, CollationsTable,
-        ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable,
-        ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable,
-        QueriesTable
+        SchemataTable,
+        TablesTable,
+        MetaTablesTable,
+        ColumnsTable,
+        MetaColumnsTable,
+        EventsTable,
+        RoutinesTable,
+        PluginsTable,
+        EnginesTable,
+        MetaTableConstraintsTable,
+        KeyColumnUsageTable,
+        MetaColumnUsageTable,
+        StatisticsTable,
+        MetaColumnStatisticsTable,
+        CharacterSetsTable,
+        CollationsTable,
+        ModelsTable,
+        DatabasesTable,
+        MLEnginesTable,
+        HandlersTable,
+        JobsTable,
+        ChatbotsTable,
+        KBTable,
+        SkillsTable,
+        AgentsTable,
+        ViewsTable,
+        TriggersTable,
+        QueriesTable,
+        MetaHandlerInfoTable,
     ]
 
     def __init__(self, session):
@@ -45,19 +94,7 @@ class InformationSchemaDataNode(DataNode):
         self.integration_controller = session.integration_controller
         self.project_controller = ProjectController()
         self.database_controller = session.database_controller
-
-        self.persis_datanodes = {
-            'log': self.database_controller.logs_db_controller
-        }
-
-        databases = self.database_controller.get_dict()
-        if "files" in databases:
-            self.persis_datanodes["files"] = IntegrationDataNode(
-                "files",
-                ds_type="file",
-                integration_controller=self.session.integration_controller,
-            )
-
+        self.persist_datanodes_names = ("log", "files")
         self.tables = {t.name: t for t in self.tables_list}
 
     def __getitem__(self, key):
@@ -69,15 +106,17 @@ class InformationSchemaDataNode(DataNode):
         if name_lower == "information_schema":
             return self
 
-        if name_lower == 'log':
-            return self.database_controller.get_system_db('log')
+        if name_lower == "log":
+            return self.database_controller.get_system_db("log")
 
-        if name_lower in self.persis_datanodes:
-            return self.persis_datanodes[name_lower]
+        if name_lower == "files":
+            return IntegrationDataNode(
+                "files",
+                ds_type="file",
+                integration_controller=self.session.integration_controller,
+            )
 
-        existing_databases_meta = (
-            self.database_controller.get_dict()
-        )  # filter_type='project'
+        existing_databases_meta = self.database_controller.get_dict()  # filter_type='project'
         database_name = None
         for key in existing_databases_meta:
             if key.lower() == name_lower:
@@ -130,11 +169,9 @@ class InformationSchemaDataNode(DataNode):
         """
         table_name = table_name.upper()
         if table_name not in self.tables:
-            raise exc.TableNotExistError(
-                f"Table information_schema.{table_name} does not exists"
-            )
+            raise exc.TableNotExistError(f"Table information_schema.{table_name} does not exists")
         table_columns_names = self.tables[table_name].columns
-        df = pd.DataFrame([[table_columns_names]], columns=[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME])
+        df = pd.DataFrame(pd.Series(table_columns_names, name=INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME))
         for column_name in astuple(INF_SCHEMA_COLUMNS_NAMES):
             if column_name == INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME:
                 continue
@@ -153,9 +190,7 @@ class InformationSchemaDataNode(DataNode):
         """
         table_name = table_name.upper()
         if table_name not in self.tables:
-            raise exc.TableNotExistError(
-                f"Table information_schema.{table_name} does not exists"
-            )
+            raise exc.TableNotExistError(f"Table information_schema.{table_name} does not exists")
         return self.tables[table_name].columns
 
     def get_integrations_names(self):
@@ -168,25 +203,16 @@ class InformationSchemaDataNode(DataNode):
         return [x.lower() for x in projects]
 
     def get_tables(self):
-        return [
-            TablesRow(TABLE_NAME=name)
-            for name in self.tables.keys()
-        ]
+        return [TablesRow(TABLE_NAME=name) for name in self.tables.keys()]
 
     def get_tree_tables(self):
-        return {
-            name: table
-            for name, table in self.tables.items()
-            if table.visible
-        }
+        return {name: table for name, table in self.tables.items() if table.visible}
 
     def query(self, query: ASTNode, session=None) -> DataHubResponse:
         query_tables = [x[1] for x in get_query_tables(query)]
 
         if len(query_tables) != 1:
-            raise exc.BadTableError(
-                f"Only one table can be used in query to information_schema: {query}"
-            )
+            raise exc.BadTableError(f"Only one table can be used in query to information_schema: {query}")
 
         table_name = query_tables[0].upper()
 
@@ -195,7 +221,7 @@ class InformationSchemaDataNode(DataNode):
 
         tbl = self.tables[table_name]
 
-        if hasattr(tbl, 'get_data'):
+        if hasattr(tbl, "get_data"):
             dataframe = tbl.get_data(query=query, inf_schema=self, session=self.session)
         else:
             dataframe = self._get_empty_table(tbl)
@@ -203,11 +229,7 @@ class InformationSchemaDataNode(DataNode):
 
         columns_info = [{"name": k, "type": v} for k, v in data.dtypes.items()]
 
-        return DataHubResponse(
-            data_frame=data,
-            columns=columns_info,
-            affected_rows=0
-        )
+        return DataHubResponse(data_frame=data, columns=columns_info, affected_rows=0)
 
     def _get_empty_table(self, table):
         columns = table.columns

@@ -50,6 +50,7 @@ class FileHandler(DatabaseHandler):
         self.chunk_size = connection_data.get("chunk_size", DEFAULT_CHUNK_SIZE)
         self.chunk_overlap = connection_data.get("chunk_overlap", DEFAULT_CHUNK_OVERLAP)
         self.file_controller = file_controller
+        self.thread_safe = True
 
     def connect(self, **kwargs):
         return
@@ -75,10 +76,7 @@ class FileHandler(DatabaseHandler):
     def query(self, query: ASTNode) -> Response:
         if type(query) is DropTables:
             for table_identifier in query.tables:
-                if (
-                    len(table_identifier.parts) == 2
-                    and table_identifier.parts[0] != self.name
-                ):
+                if len(table_identifier.parts) == 2 and table_identifier.parts[0] != self.name:
                     return Response(
                         RESPONSE_TYPE.ERROR,
                         error_message=f"Can't delete table from database '{table_identifier.parts[0]}'",
@@ -86,6 +84,12 @@ class FileHandler(DatabaseHandler):
                 table_name = table_identifier.parts[-1]
                 try:
                     self.file_controller.delete_file(table_name)
+                except FileNotFoundError as e:
+                    if not query.if_exists:
+                        return Response(
+                            RESPONSE_TYPE.ERROR,
+                            error_message=f"Can't delete table '{table_name}': {e}",
+                        )
                 except Exception as e:
                     return Response(
                         RESPONSE_TYPE.ERROR,
@@ -136,9 +140,20 @@ class FileHandler(DatabaseHandler):
             return Response(RESPONSE_TYPE.OK)
 
         elif isinstance(query, Select):
-            table_name, page_name = self._get_table_page_names(query.from_table)
+            if isinstance(query.from_table, Select):
+                # partitioning mode
+                sub_result = self.query(query.from_table)
+                if sub_result.error_message is not None:
+                    raise RuntimeError(sub_result.error_message)
 
-            df = self.file_controller.get_file_data(table_name, page_name)
+                df = sub_result.data_frame
+                query.from_table = Identifier("t")
+            elif isinstance(query.from_table, Identifier):
+                table_name, page_name = self._get_table_page_names(query.from_table)
+
+                df = self.file_controller.get_file_data(table_name, page_name)
+            else:
+                raise RuntimeError(f"Not supported query target: {query}")
 
             # Process the SELECT query
             result_df = query_df(df, query)
@@ -191,9 +206,7 @@ class FileHandler(DatabaseHandler):
             data_frame=pd.DataFrame(
                 [
                     {
-                        "Field": x["name"].strip()
-                        if isinstance(x, dict)
-                        else x.strip(),
+                        "Field": x["name"].strip() if isinstance(x, dict) else x.strip(),
                         "Type": "str",
                     }
                     for x in file_meta["columns"]

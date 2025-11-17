@@ -1,6 +1,7 @@
 import json
+import orjson
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 from sqlalchemy import (
@@ -16,7 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     text,
-    types
+    types,
 )
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import (
@@ -45,11 +46,21 @@ session, engine = None, None
 def init(connection_str: str = None):
     global Base, session, engine
     if connection_str is None:
-        connection_str = config['storage_db']
+        connection_str = config["storage_db"]
+    # Use orjson with our CustomJSONEncoder.default for JSON serialization
+    _default_json = CustomJSONEncoder().default
+
+    def _json_serializer(value):
+        return orjson.dumps(
+            value,
+            default=_default_json,
+            option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
+        ).decode("utf-8")
+
     base_args = {
         "pool_size": 30,
         "max_overflow": 200,
-        "json_serializer": CustomJSONEncoder().encode,
+        "json_serializer": _json_serializer,
     }
     engine = create_engine(connection_str, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
@@ -144,17 +155,13 @@ class Predictor(Base):
     __tablename__ = "predictor"
 
     id = Column(Integer, primary_key=True)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     deleted_at = Column(DateTime)
     name = Column(String)
-    data = Column(
-        Json
-    )  # A JSON -- should be everything returned by `get_model_data`, I think
+    data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
-    company_id = Column(Integer)
+    company_id = Column(String)
     mindsdb_version = Column(String)
     native_version = Column(String)
     integration_id = Column(ForeignKey("integration.id", name="fk_integration_id"))
@@ -173,9 +180,7 @@ class Predictor(Base):
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
-    project_id = Column(
-        Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False
-    )
+    project_id = Column(Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False)
     training_phase_current = Column(Integer)
     training_phase_total = Column(Integer)
     training_phase_name = Column(String)
@@ -199,7 +204,7 @@ Index(
     Predictor.version,
     Predictor.active,
     Predictor.deleted_at,  # would be good to have here nullsfirst(Predictor.deleted_at)
-    unique=True
+    unique=True,
 )
 
 
@@ -208,67 +213,50 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     deleted_at = Column(DateTime)
     name = Column(String, nullable=False)
-    company_id = Column(Integer, default=0)
+    company_id = Column(String, default="0")
     metadata_: dict = Column("metadata", JSON, nullable=True)
-    __table_args__ = (
-        UniqueConstraint("name", "company_id", name="unique_project_name_company_id"),
-    )
+    __table_args__ = (UniqueConstraint("name", "company_id", name="unique_project_name_company_id"),)
 
 
 class Integration(Base):
     __tablename__ = "integration"
     id = Column(Integer, primary_key=True)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
     data = Column(Json)
-    company_id = Column(Integer)
-    __table_args__ = (
-        UniqueConstraint(
-            "name", "company_id", name="unique_integration_name_company_id"
-        ),
-    )
+    company_id = Column(String)
+
+    __table_args__ = (UniqueConstraint("name", "company_id", name="unique_integration_name_company_id"),)
 
 
 class File(Base):
     __tablename__ = "file"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    company_id = Column(Integer)
+    company_id = Column(String)
     source_file_path = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
     row_count = Column(Integer, nullable=False)
     columns = Column(Json, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
     metadata_: dict = Column("metadata", JSON, nullable=True)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
-    __table_args__ = (
-        UniqueConstraint("name", "company_id", name="unique_file_name_company_id"),
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    __table_args__ = (UniqueConstraint("name", "company_id", name="unique_file_name_company_id"),)
 
 
 class View(Base):
     __tablename__ = "view"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    company_id = Column(Integer)
+    company_id = Column(String)
     query = Column(String, nullable=False)
-    project_id = Column(
-        Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False
-    )
-    __table_args__ = (
-        UniqueConstraint("name", "company_id", name="unique_view_name_company_id"),
-    )
+    project_id = Column(Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False)
+    __table_args__ = (UniqueConstraint("name", "company_id", name="unique_view_name_company_id"),)
 
 
 class JsonStorage(Base):
@@ -279,7 +267,7 @@ class JsonStorage(Base):
     name = Column(String)
     content = Column(JSON)
     encrypted_content = Column(LargeBinary, nullable=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
 
     def to_dict(self) -> Dict:
         return {
@@ -296,7 +284,7 @@ class JsonStorage(Base):
 class Jobs(Base):
     __tablename__ = "jobs"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
     user_class = Column(Integer, nullable=True)
     active = Column(Boolean, default=True)
 
@@ -310,16 +298,14 @@ class Jobs(Base):
     schedule_str = Column(String)
 
     deleted_at = Column(DateTime)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
 class JobsHistory(Base):
     __tablename__ = "jobs_history"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
 
     job_id = Column(Integer)
 
@@ -331,9 +317,7 @@ class JobsHistory(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, default=datetime.datetime.now)
 
-    __table_args__ = (
-        UniqueConstraint("job_id", "start_at", name="uniq_job_history_job_id_start"),
-    )
+    __table_args__ = (UniqueConstraint("job_id", "start_at", name="uniq_job_history_job_id_start"),)
 
 
 class ChatBots(Base):
@@ -349,9 +333,7 @@ class ChatBots(Base):
     database_id = Column(Integer)
     params = Column(JSON)
 
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     webhook_token = Column(String)
 
@@ -393,16 +375,14 @@ class Triggers(Base):
     query_str = Column(String, nullable=False)
     columns = Column(String)  # list of columns separated by delimiter
 
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
 class Tasks(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
     user_class = Column(Integer, nullable=True)
 
     # trigger, chatbot
@@ -417,9 +397,7 @@ class Tasks(Base):
     run_by = Column(String)
     alive_time = Column(DateTime(timezone=True))
 
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
@@ -444,9 +422,7 @@ class Skills(Base):
     params = Column(JSON)
 
     created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     deleted_at = Column(DateTime)
 
     def as_dict(self) -> Dict:
@@ -465,7 +441,7 @@ class Agents(Base):
     __tablename__ = "agents"
     id = Column(Integer, primary_key=True)
     skills_relationships: Mapped[List["Skills"]] = relationship(AgentSkillsAssociation, back_populates="agent")
-    company_id = Column(Integer, nullable=True)
+    company_id = Column(String, nullable=True)
     user_class = Column(Integer, nullable=True)
 
     name = Column(String, nullable=False)
@@ -475,25 +451,57 @@ class Agents(Base):
     provider = Column(String, nullable=True)
     params = Column(JSON)
 
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     deleted_at = Column(DateTime)
 
     def as_dict(self) -> Dict:
-        return {
+        skills = []
+        skills_extra_parameters = {}
+        for rel in self.skills_relationships:
+            skill = rel.skill
+            # Skip auto-generated SQL skills
+            if skill.params.get("description", "").startswith("Auto-generated SQL skill for agent"):
+                continue
+            skills.append(skill.as_dict())
+            skills_extra_parameters[skill.name] = rel.parameters or {}
+
+        params = self.params.copy()
+
+        agent_dict = {
             "id": self.id,
             "name": self.name,
             "project_id": self.project_id,
-            "model_name": self.model_name,
-            "skills": [rel.skill.as_dict() for rel in self.skills_relationships],
-            "skills_extra_parameters": {rel.skill.name: (rel.parameters or {}) for rel in self.skills_relationships},
-            "provider": self.provider,
-            "params": self.params,
             "updated_at": self.updated_at,
             "created_at": self.created_at,
         }
+
+        if self.model_name:
+            agent_dict["model_name"] = self.model_name
+
+        if self.provider:
+            agent_dict["provider"] = self.provider
+
+        # Since skills were depreciated, they are only used with Minds
+        # Minds expects the parameters to be provided as is without breaking them down
+        if skills:
+            agent_dict["skills"] = skills
+            agent_dict["skills_extra_parameters"] = skills_extra_parameters
+            agent_dict["params"] = params
+        else:
+            data = params.pop("data", {})
+            model = params.pop("model", {})
+            prompt_template = params.pop("prompt_template", None)
+            if data:
+                agent_dict["data"] = data
+            if model:
+                agent_dict["model"] = model
+            if prompt_template:
+                agent_dict["prompt_template"] = prompt_template
+            if params:
+                agent_dict["params"] = params
+
+        return agent_dict
 
 
 class KnowledgeBase(Base):
@@ -520,55 +528,60 @@ class KnowledgeBase(Base):
         doc="fk to the embedding model",
     )
 
-    embedding_model = relationship(
-        "Predictor", foreign_keys=[embedding_model_id], doc="embedding model"
-    )
+    embedding_model = relationship("Predictor", foreign_keys=[embedding_model_id], doc="embedding model")
     query_id = Column(Integer, nullable=True)
 
     created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
 
-    __table_args__ = (
-        UniqueConstraint(
-            "name", "project_id", name="unique_knowledge_base_name_project_id"
-        ),
-    )
+    __table_args__ = (UniqueConstraint("name", "project_id", name="unique_knowledge_base_name_project_id"),)
 
-    def as_dict(self) -> Dict:
+    def as_dict(self, with_secrets: Optional[bool] = True) -> Dict:
+        params = self.params.copy()
+        embedding_model = params.pop("embedding_model", None)
+        reranking_model = params.pop("reranking_model", None)
+
+        if not with_secrets:
+            for key in ("api_key", "private_key"):
+                for el in (embedding_model, reranking_model):
+                    if el and key in el:
+                        el[key] = "******"
+
         return {
             "id": self.id,
             "name": self.name,
             "project_id": self.project_id,
-            "embedding_model": None if self.embedding_model is None else self.embedding_model.name,
             "vector_database": None if self.vector_database is None else self.vector_database.name,
             "vector_database_table": self.vector_database_table,
             "updated_at": self.updated_at,
             "created_at": self.created_at,
-            "params": self.params
+            "query_id": self.query_id,
+            "embedding_model": embedding_model,
+            "reranking_model": reranking_model,
+            "metadata_columns": params.pop("metadata_columns", None),
+            "content_columns": params.pop("content_columns", None),
+            "id_column": params.pop("id_column", None),
+            "params": params,
         }
 
 
 class QueryContext(Base):
     __tablename__ = "query_context"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=True)
+    company_id: int = Column(String, nullable=True)
 
     query: str = Column(String, nullable=False)
     context_name: str = Column(String, nullable=False)
     values: dict = Column(JSON)
 
-    updated_at: datetime.datetime = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
 
 
 class Queries(Base):
     __tablename__ = "queries"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=True)
+    company_id: int = Column(String, nullable=True)
 
     sql: str = Column(String, nullable=False)
     database: str = Column(String, nullable=True)
@@ -581,16 +594,14 @@ class Queries(Base):
     processed_rows = Column(Integer, default=0)
     error: str = Column(String, nullable=True)
 
-    updated_at: datetime.datetime = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
 
 
 class LLMLog(Base):
     __tablename__ = "llm_log"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=False)
+    company_id: int = Column(String, nullable=False)
     api_key: str = Column(String, nullable=True)
     model_id: int = Column(Integer, nullable=True)
     model_group: str = Column(String, nullable=True)
@@ -610,10 +621,11 @@ class LLMLog(Base):
 
 
 class LLMData(Base):
-    '''
+    """
     Stores the question/answer pairs of an LLM call so examples can be used
     for self improvement with DSPy
-    '''
+    """
+
     __tablename__ = "llm_data"
     id: int = Column(Integer, primary_key=True)
     input: str = Column(String, nullable=False)

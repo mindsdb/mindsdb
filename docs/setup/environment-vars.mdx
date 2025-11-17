@@ -10,16 +10,32 @@ can be added as environment variables on the server where MindsDB is deployed.
 
 MindsDB does not require authentication by default. If you want to enable authentication, you can set the `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` environment variables.
 
-#### Example
+### Example
 
 <CodeGroup>
     ```bash Docker
-    docker run --name mindsdb_container -e MINDSDB_USERNAME='mindsdb_user' -e MINDSDB_PASSWORD='mindsdb_password' -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    docker run --name mindsdb_container -e MINDSDB_USERNAME='mindsdb_user' -e MINDSDB_PASSWORD='mindsdb_password' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
     ```
 
     ```bash Shell
     export MINDSDB_USERNAME='mindsdb_user'
     export MINDSDB_PASSWORD='mindsdb_password'
+    ```
+</CodeGroup>
+
+## MindsDB Configuration File
+
+In order to start MindsDB with a [custom configuration file](/setup/custom-config), the `MINDSDB_CONFIG_PATH` environment variable should store the file path.
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_CONFIG_PATH=/Users/username/path/config.json -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_CONFIG_PATH=/Users/username/path/config.json
     ```
 </CodeGroup>
 
@@ -35,11 +51,11 @@ In the `MINDSDB_STORAGE_DIR` location, MindsDB stores users' data, models and up
 `sqlite.db` file. 
 You can change the default storage location using `MINDSDB_STORAGE_DIR` variable.
 
-#### Example
+### Example
 
 <CodeGroup>
     ```bash Docker
-    docker run --name mindsdb_container -e MINDSDB_STORAGE_DIR='~/home/mindsdb/var' -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    docker run --name mindsdb_container -e MINDSDB_STORAGE_DIR='~/home/mindsdb/var' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
     ```
 
     ```bash Shell
@@ -53,11 +69,11 @@ MindsDB uses `sqlite` database by default to store the required configuration as
 The full list of the above schemas can be found [here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/interfaces/storage/db.py#L69). You can change the 
 default storage option and use different database by adding the new connection string using `MINDSDB_DB_CON` variable.
 
-#### Example
+### Example
 
 <CodeGroup>
     ```bash Docker
-    docker run --name mindsdb_container -e MINDSDB_DB_CON='postgresql://user:secret@localhost' -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    docker run --name mindsdb_container -e MINDSDB_DB_CON='postgresql://user:secret@localhost' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
     ```
     
     ```bash Shell
@@ -67,50 +83,19 @@ default storage option and use different database by adding the new connection s
 
 ## MindsDB APIs
 
-By default, MindsDB starts the http and mysql APIs. To define which APIs you want to start, you can use the `MINDSDB_APIS` environment variable. The available APIs are:
+The `MINDSDB_APIS` environment variable lets users define which APIs to start. Learn more about the [available APIs here](/setup/mindsdb-apis).
 
-- `http` (port 47334) - HTTP/REST API
-- `mysql` (port 47335) - MySQL API
-- `mongodb` (port 47336) - MongoDB API  
-- `postgres` (port 55432) - PostgreSQL API
-- `mcp` (port 47337) - Model Context Protocol API
-
-To expose the ports for the APIs, you need to add the respective ports to the command with the `-p` flag.
-
-#### Example
+### Example
 
 <CodeGroup>
     ```bash Docker
-    docker run --name mindsdb_container -e MINDSDB_APIS='http,mysql,mongodb,postgres,mcp' -p 47334:47334 -p 47335:47335 -p 47336:47336 -p 55432:55432 -p 47337:47337 mindsdb/mindsdb
+    docker run --name mindsdb_container -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
     ```
 
     ```bash Shell
-    export MINDSDB_APIS='http,mysql,mongodb,postgres,mcp'
+    export MINDSDB_APIS='http,mysql'
     ```
 </CodeGroup>
-
-## MindsDB Server
-
-By default for the HTTP API, MindsDB uses [Waitress](https://pypi.org/project/waitress/) which is a pure-Python WSGI server. There is an option to change that 
-and use [Flask](https://flask.palletsprojects.com/en/stable/) or [Gunicorn](https://gunicorn.org/)
-
-#### Example
-
-<CodeGroup>
-    ```bash Docker
-    # To use Gunicorn as a default server, it should be installed by logging into the container
-    docker exec -it mindsdb_container sh  # assuming the container name is mindsdb_container  # assuming the container name is mindsdb_container
-    pip install gunicorn
-
-    docker run --name mindsdb_container -e MINDSDB_DEFAULT_SERVER='gunicorn' -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
-    ```
-
-    ```bash Shell
-    export MINDSDB_DEFAULT_SERVER='gunicorn'
-    ```
-</CodeGroup>
-
-You can also use `waitress`, which is the default server or `flask`.
 
 ## MindsDB Logs
 
@@ -120,7 +105,7 @@ This environment variable defines the level of logging generated by MindsDB. You
 
 <CodeGroup>
     ```bash Docker
-    docker run --name mindsdb_container -e MINDSDB_LOG_LEVEL='DEBUG' -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    docker run --name mindsdb_container -e MINDSDB_LOG_LEVEL='DEBUG' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
     ```
 
     ```bash Shell
@@ -138,10 +123,66 @@ If this environment variable is set or modified after MindsDB has started, the d
 
 <CodeGroup>
     ```bash Docker
-    docker run --name mindsdb_container -e MINDSDB_DEFAULT_PROJECT='my_project' -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    docker run --name mindsdb_container -e MINDSDB_DEFAULT_PROJECT='my_project' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
     ```
 
     ```bash Shell
     export MINDSDB_DEFAULT_PROJECT='my_project'
+    ```
+</CodeGroup>
+
+## MindsDB's PID File
+
+When running MindsDB via [Docker](/setup/self-hosted/docker) or [Docker Extension](/setup/self-hosted/docker-desktop), the PID file is not used by default. Users can opt for enabling the PID file by defining the `USE_PIDFILE` environment variable.
+
+If used, the PID file is stored in the temp directory (`$TMPDIR` on MacOS and Linux, `%TEMP%` on Windows) under the `mindsdb` folder.
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e USE_PIDFILE=1 -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export USE_PIDFILE=1
+    ```
+</CodeGroup>
+
+## MindsDB GUI Updates
+
+In order to disable automatic GUI updates, the `MINDSDB_GUI_AUTOUPDATE` environment variable should be set to `false` (or `0`).
+
+By default, the automatic GUI updates are enabled and the `MINDSDB_GUI_AUTOUPDATE` environment variable is set to `true` (or `1`).
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_GUI_AUTOUPDATE=false -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_GUI_AUTOUPDATE=false
+    ```
+</CodeGroup>
+
+## MindsDB GUI Startup and Updates
+
+In order to not open the MindsDB GUI automatically when starting the instance (and to disable automatic GUI updates), the `MINDSDB_NO_STUDIO` environment variable should be set to `true` (or `1`).
+
+By default, the MindsDB GUI starts automatically when starting the instance (and the automatic GUI updates are enabled), that is, the `MINDSDB_NO_STUDIO` environment variable is set to `false` (or `0`).
+
+Note that the `MINDSDB_NO_STUDIO` is not recommended for the MindsDB instance running in Docker. Instead, use the `MINDSDB_GUI_AUTOUPDATE` environment variable to disable automatic GUI updates.
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_NO_STUDIO=true -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_NO_STUDIO=true
     ```
 </CodeGroup>

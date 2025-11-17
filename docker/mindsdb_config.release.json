@@ -1,5 +1,5 @@
 {
-    "config_version":"1.4",
+    "config_version": "1.4",
     "paths": {
         "root": "/root/mdb_storage"
     },
@@ -17,15 +17,6 @@
             "user": "mindsdb",
             "database": "mindsdb",
             "ssl": true
-        },
-         "mongodb": {
-            "host": "0.0.0.0",
-            "port": "47336",
-            "database": "mindsdb"
-        },
-        "mcp": {
-            "host": "0.0.0.0",
-            "port": "47337"
         }
     }
 }

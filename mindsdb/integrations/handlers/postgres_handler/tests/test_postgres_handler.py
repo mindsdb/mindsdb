@@ -1,7 +1,6 @@
 import pytest
 import psycopg2
 import os
-import time
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
     PostgresHandler,
@@ -14,7 +13,9 @@ HANDLER_KWARGS = {
         "port": os.environ.get("MDB_TEST_POSTGRES_PORT", "5432"),
         "user": os.environ.get("MDB_TEST_POSTGRES_USER", "postgres"),
         "password": os.environ.get("MDB_TEST_POSTGRES_PASSWORD", "supersecret"),
-        "database": os.environ.get("MDB_TEST_POSTGRES_DATABASE", "postgres_db_handler_test"),
+        "database": os.environ.get(
+            "MDB_TEST_POSTGRES_DATABASE", "postgres_db_handler_test"
+        ),
     }
 }
 
@@ -23,6 +24,7 @@ expected_columns = ["col_one", "col_two", "col_three", "col_four"]
 
 
 curr_dir = os.path.dirname(os.path.realpath(__file__))
+
 
 def seed_db():
     """Seed the test DB with some data"""
@@ -36,7 +38,7 @@ def seed_db():
     try:
         cursor.execute("DROP DATABASE IF EXISTS postgres_db_handler_test;")
         db.commit()
-        
+
         # Create the test database
         cursor.execute("CREATE DATABASE postgres_db_handler_test;")
 
@@ -56,11 +58,13 @@ def seed_db():
         cursor.close()
         db.close()
 
+
 @pytest.fixture(scope="module")
 def handler(request):
     seed_db()
     handler = PostgresHandler(**HANDLER_KWARGS)
     yield handler
+
 
 def check_valid_response(res):
     if res.resp_type == RESPONSE_TYPE.TABLE:
@@ -71,6 +75,7 @@ def check_valid_response(res):
     assert (
         res.error_message is None
     ), f"expected to have None in error message, but got {res.error_message}"
+
 
 def get_table_names(handler):
     res = handler.get_tables()
@@ -157,15 +162,15 @@ class TestPostgresColumns:
         describe_data = described.data_frame
         check_valid_response(described)
         got_columns = list(describe_data.iloc[:, 0])
-        assert (
-            set(got_columns) == set(expected_columns)
+        assert set(got_columns) == set(
+            expected_columns
         ), f"expected to have next columns in test table:\n{expected_columns}\nbut got:\n{got_columns}"
 
 
 class TestPostgresDisconnect:
     def test_disconnect(self, handler):
         handler.disconnect()
-        assert handler.is_connected == False, "failed to disconnect"
+        assert handler.is_connected is False, "failed to disconnect"
 
     def test_check_connection(self, handler):
         res = handler.check_connection()

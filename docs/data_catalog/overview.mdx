@@ -1,0 +1,16 @@
+---
+title: Data Catalog
+sidebarTitle: Overview
+---
+
+The **Data Catalog** in MindsDB plays a key role in enhancing the context available to [agents](/mindsdb_sql/agents/agent) when querying data sources. By automatically indexing and storing metadata, such as table names, column types, constraints, and statistics, the catalog empowers agents to understand the structure and semantics of the data, leading to more accurate and efficient query generation.
+
+### Why It Matters
+
+When agents interpret natural language questions or generate SQL queries, access to metadata improves their ability to:
+
+- Understand relationships between tables and fields.
+- Infer joins, filters, and aggregations more intelligently.
+- Avoid syntax errors due to missing or unknown schema information.
+
+This metadata layer provides agents with the necessary context to avoid making uninformed queries.

@@ -37,11 +37,6 @@
             "restart_on_failure": true,
             "max_restart_count": 1,
             "max_restart_interval_seconds": 60
-        },
-        "mongodb": {
-            "host": "127.0.0.1",
-            "port": "47336",
-            "database": "mindsdb"
         }
     },
     "cache": {
@@ -71,6 +66,10 @@
         "username": "username",
         "password": "password"
     },
-    "file_upload_domains": [],
+    "url_file_upload": {
+           "enabled": false,
+           "allowed_origins": [],
+           "disallowed_origins": []
+    },
     "web_crawling_allowed_sites": []
 }

@@ -29,19 +29,20 @@ Note that the trailing whitespaces on column names are erased upon uploading a f
    SELECT * FROM files.file_name;
    ```
 
+Here is how to list all files:
+
+```sql
+SHOW TABLES FROM files;
+```
+
+This command is the same as the command for listing tables because files uploaded to MindsDB become tables within the MindsDB ecosystem and are stored in the `files` database.
+
 ### Configuring URL File Upload for Specific Domains
 
-The File Uploader can be configured to interact only with specific domains by using the `file_upload_domains` setting in the `config.json` file. 
+The File Uploader can be configured to interact only with specific domains by using the [`url_file_upload` key in `config.json` file](/setup/custom-config#url-file-upload). 
 This feature allows you to restrict the handler to upoad and process files only from the domains you specify, enhancing security and control over web interactions.
 
-To configure this, simply list the allowed domains under the `file_upload_domains` key in `config.json`. For example:
-
-```json
-"file_upload_domains": [
-   "s3.amazonaws.com",
-    "drive.google.com"
-]
-```
+To configure this, simply list the allowed domains under the [`url_file_upload` key in `config.json` file](/setup/custom-config#url-file-upload).
 
 ## What's Next?
 

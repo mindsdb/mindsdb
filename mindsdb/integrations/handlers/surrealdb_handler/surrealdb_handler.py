@@ -1,4 +1,7 @@
 from typing import Optional
+import pysurrealdb as surreal
+import pandas as pd
+
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log
@@ -8,10 +11,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from .utils.surreal_get_info import *
-
-import pysurrealdb as surreal
-import pandas as pd
+from .utils.surreal_get_info import table_names, column_info
 
 
 logger = log.getLogger(__name__)

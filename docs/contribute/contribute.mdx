@@ -1,40 +1,109 @@
 ---
-title: Contribute to MindsDB 🐻
-sidebarTitle: How to Contribute
+title: How to Contribute to MindsDB
+sidebarTitle: Contribute to MindsDB
 icon: "handshake"
 ---
 
 Thank you for your interest in contributing to MindsDB. MindsDB is free, open-source software and all types of contributions are welcome, whether they’re documentation changes, bug reports, bug fixes, or new source code changes.
 
-## Contribution issues 🔧
+<Tip>
+In order to contribute to MindsDB:
 
-All the issues open for contributions are tagged with [`good-first-issue`](https://github.com/mindsdb/mindsdb/labels/good%20first%20issue) or [`help-wanted`](https://github.com/mindsdb/mindsdb/labels/help%20wanted). A great place to start looking is our GitHub project for community contributors [dashboard](https://github.com/mindsdb/mindsdb/projects/8).
+- fork the MindsDB GitHub repository,
+- [install MindsDB locally](/contribute/install),
+- implement and test your changes,
+- **push your changes to the `develop` branch**.
 
-Also, we are always open to suggestions so feel free to [open new issues](https://github.com/mindsdb/mindsdb/issues/new/choose) with your ideas and we can give you guidance!
+<Accordion title="Step-by-Step Guide">
 
-After you find the issue that you want to contribute to, follow the `fork-and-pull` workflow:
+1. Fork the MindsDB repository from [MindsDB GitHub](https://github.com/mindsdb/mindsdb).
 
-1. Comment on the issue, so we can assign it to you
-2. Fork the MindsDB repository
-3. Clone the repository locally
-4. Make changes and commit them
-5. Push your local branch to your fork
-6. Submit a Pull Request so that we can review your changes
-7. Follow the PR template and provide all of the required informations
-8. Make sure that the CI tests are GREEN
+2. Clone the MindsDB repository locally from your fork and go inside the repository folder.
 
-<Note>
-  Be sure to merge the latest MindsDB repository from "upstream" before making a Pull Request!
-</Note>
+    ```bash
+    cd /path/mindsdb-repo-folder-name
+    ```
 
-Pull Request reviews are done on a regular basis. Please make sure you respond to our feedback/questions and sign our CLA.
+3. Fetch all other branches from the MindsDB repository with these commands:
 
-## Documentation 📖
+    ```bash
+    git remote add upstream https://github.com/mindsdb/mindsdb
 
-We are always trying to improve our documentation. All Pull Requests that improve our grammar or docs structure or fix typos are welcomed.
+    git fetch upstream
+    ```
 
-Check the issues labeled as [`good-first-issue`](https://github.com/mindsdb/mindsdb/labels/good%20first%20issue) or [`help-wanted`](https://github.com/mindsdb/mindsdb/labels/help%20wanted) with a `documentation` tag.
+4. Switch to the `develop` branch.
 
-## Write for us 📝
+    ```bash
+    git checkout develop
+    ```
 
-Do you find MindsDB useful and want to share your story? Make a PR to this repo with your writing in a markdown file, or just post it on Medium, Dev, or your own blog post. We would love to hear from you 💚
+5. Create a new branch for your changes from the `develop` branch.
+
+    ```bash
+    git checkout -b new-branch-name
+    ```
+
+6. Make your changes on this branch.
+
+7. Commit and push your changes to GitHub.
+
+    ```bash
+    git add *
+
+    git commit -m "commit message"
+
+    git push --set-upstream origin new-branch-name
+    ```
+
+8. Go to GitHub and create a PR to the `develop` branch of the MindsDB repository.
+
+    <p align="center">
+      <img src="/assets/contribute.png"/>
+    </p>
+
+</Accordion>
+</Tip>
+
+## MindsDB Release Process
+
+The `main` branch of the [MindsDB repository](https://github.com/mindsdb/mindsdb) contains the latest stable version of MindsDB and represents the GA (General Availability) release. Learn more about [MindsDB release types here](/releases).
+
+MindsDB follows the [Gitflow branching model](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow) to manage development and releases as follows.
+
+<Steps>
+  <Step title="Development Phase">
+    All code changes are first committed to the `develop` branch.
+  </Step>
+  <Step title="Release Preparation">
+    When a release is approaching, a short-lived `release` branch is created from the `develop` branch.
+      * This branch is used for final testing and validation.
+      * Pre-GA artifacts are built at this stage, including both the Python package and the Docker image, and shared for broader testing and feedback.
+  </Step>
+  <Step title="Release Finalization">
+    After successful testing and validation:
+      * The `release` branch is merged into the `main` branch, making it an official GA release.
+      * The final GA versions of the Python package and Docker image are released, while the pre-GA version are removed.
+  </Step>
+</Steps>
+
+## Contributor Testing Requirements
+
+As a contributor, you are responsible for writing the code according to the [Python Coding Standards](/contribute/python-coding-standards) and thoroughly testing all features or fixes that you implement before they are merged into the `develop` branch.
+
+### Feature Branch Testing
+
+Before merging your changes, the following types of testing must be completed to validate your work in isolation:
+
+* Unit Tests
+Verify that individual components or functions behave as expected during development.
+
+* Integration Tests
+Ensure that your new code works correctly with existing functionality and doesn't introduce regressions.
+
+### Post-Release Testing
+
+After a release that includes your features or fixes is published, contributors are encouraged to:
+
+* Test their changes in the released environment, and
+* Report any issues or unexpected behavior that may arise.

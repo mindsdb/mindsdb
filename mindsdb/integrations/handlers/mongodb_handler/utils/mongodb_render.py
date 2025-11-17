@@ -90,10 +90,10 @@ class MongodbRender(NonRelationalRender):
             # reject complex forms early
             # how deep we want to go with subqueries?
             if from_table.group_by is not None or from_table.having is not None:
-                raise NotImplementedError(f"Not supported FROM as {from_table}")
+                raise NotImplementedError(f"Not supported, subquery has `having` or `group by`: {from_table}")
 
             if not isinstance(from_table.from_table, Identifier):
-                raise NotImplementedError(f"Not supported FROM as {from_table}")
+                raise NotImplementedError(f"Only simple subqueries are allowed in {from_table}")
 
             collection = from_table.from_table.parts[-1]
 
@@ -211,27 +211,28 @@ class MongodbRender(NonRelationalRender):
                     func_name = col.op.lower()
                     alias = col.alias.parts[-1] if col.alias is not None else func_name
 
-                    if func_name == "count" and len(col.args) > 0 and isinstance(col.args[0], Star):
-                        agg_group[alias] = {"$sum": 1}
-                    elif len(col.args) > 0 and isinstance(col.args[0], Identifier):
-                        field_name = ".".join(col.args[0].parts)
+                    if len(col.args) == 0:
+                        raise NotImplementedError(f"Function {func_name.upper()} requires arguments")
 
-                        # Map SQL functions to MongoDB operators
+                    arg0 = col.args[0]
+
+                    if func_name == "count" and isinstance(arg0, Star):
+                        agg_group[alias] = {"$sum": 1}
+                    elif isinstance(arg0, Identifier):
+                        field_name = ".".join(arg0.parts)
+
                         if func_name == "avg":
                             agg_group[alias] = {"$avg": f"${field_name}"}
                         elif func_name == "sum":
                             agg_group[alias] = {"$sum": f"${field_name}"}
                         elif func_name == "count":
-                            if isinstance(col.args[0], Star):
-                                agg_group[alias] = {"$sum": 1}
-                            else:
-                                agg_group[alias] = {"$sum": {"$cond": [f"${field_name}", 1, 0]}}
+                            agg_group[alias] = {"$sum": {"$cond": [{"$ne": [f"${field_name}", None]}, 1, 0]}}
                         elif func_name == "min":
                             agg_group[alias] = {"$min": f"${field_name}"}
                         elif func_name == "max":
                             agg_group[alias] = {"$max": f"${field_name}"}
                         else:
-                            raise NotImplementedError(f"Function {func_name} not supported")
+                            raise NotImplementedError(f"Aggregation function '{func_name.upper()}' is not supported")
                 elif isinstance(col, Constant):
                     alias = str(col.value) if col.alias is None else col.alias.parts[-1]
                     project[alias] = col.value

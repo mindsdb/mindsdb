@@ -566,6 +566,221 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(df["42"].tolist(), [42])
         self.assertEqual(df["hello"].tolist(), ["hello"])
 
+    def test_query_select_with_subquery_and_where(self):
+        """
+        Test if the `query` method returns a response object with a data frame
+        containing the query result for a select with subquery that has WHERE clause.
+        """
+        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
+            "movies"
+        ]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]]["movies"].aggregate.return_value = [
+            {
+                "name": "The Dark Knight",
+                "runtime": 152,
+            },
+            {
+                "name": "Inception",
+                "runtime": 148,
+            },
+        ]
+
+        subquery = ast.Select(
+            targets=[
+                ast.Identifier(parts=["name"]),
+                ast.Identifier(parts=["runtime"]),
+            ],
+            from_table=ast.Identifier("movies"),
+            where=ast.BinaryOperation(op=">", args=[ast.Identifier(parts=["runtime"]), ast.Constant(120)]),
+        )
+
+        main_query = ast.Select(
+            targets=[
+                Star(),
+            ],
+            from_table=subquery,
+        )
+
+        response = self.handler.query(main_query)
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 2)
+        self.assertEqual(df.columns.tolist(), ["name", "runtime"])
+        self.assertEqual(df["name"].tolist(), ["The Dark Knight", "Inception"])
+        self.assertEqual(df["runtime"].tolist(), [152, 148])
+
+    def test_query_select_nested_field_projection(self):
+        """
+        Test if the `query` method correctly handles nested field projection using dot notation.
+        MongoDB stores nested documents (JSON data) that can be accessed with dot notation.
+        """
+        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
+            "clients"
+        ]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]]["clients"].aggregate.return_value = [
+            {
+                "financials.profit_margin": 0.18,
+                "financials.account_balance": 150000,
+            },
+            {
+                "financials.profit_margin": 0.22,
+                "financials.account_balance": 85000,
+            },
+        ]
+
+        query = ast.Select(
+            targets=[
+                ast.Identifier(parts=["financials", "profit_margin"]),
+                ast.Identifier(parts=["financials", "account_balance"]),
+            ],
+            from_table=ast.Identifier("clients"),
+        )
+
+        response = self.handler.query(query)
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 2)
+        self.assertEqual(
+            df.columns.tolist(),
+            ["financials.profit_margin", "financials.account_balance"],
+        )
+        self.assertEqual(df["financials.profit_margin"].tolist(), [0.18, 0.22])
+        self.assertEqual(df["financials.account_balance"].tolist(), [150000, 85000])
+
+    def test_query_select_nested_field_with_where(self):
+        """
+        Test nested field projection with WHERE clause on nested field.
+        Tests that nested fields work correctly in both SELECT and WHERE clauses.
+        """
+        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
+            "clients"
+        ]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]]["clients"].aggregate.return_value = [
+            {
+                "financials.profit_margin": 0.18,
+            },
+            {
+                "financials.profit_margin": 0.22,
+            },
+        ]
+
+        query = ast.Select(
+            targets=[
+                ast.Identifier(parts=["financials", "profit_margin"]),
+            ],
+            from_table=ast.Identifier("clients"),
+            where=ast.BinaryOperation(
+                op=">",
+                args=[
+                    ast.Identifier(parts=["financials", "profit_margin"]),
+                    ast.Constant(0.15),
+                ],
+            ),
+        )
+
+        response = self.handler.query(query)
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 2)
+        self.assertEqual(df.columns.tolist(), ["financials.profit_margin"])
+        self.assertEqual(df["financials.profit_margin"].tolist(), [0.18, 0.22])
+
+    def test_query_aggregation_on_nested_field(self):
+        """
+        Test aggregation function (AVG) on nested field.
+        Tests that nested fields work correctly with aggregation functions.
+        """
+        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
+            "clients"
+        ]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]]["clients"].aggregate.return_value = [
+            {
+                "avg_margin": 0.191,
+            }
+        ]
+
+        query = ast.Select(
+            targets=[
+                ast.Function(
+                    op="AVG",
+                    args=[ast.Identifier(parts=["financials", "profit_margin"])],
+                    alias=ast.Identifier(parts=["avg_margin"]),
+                )
+            ],
+            from_table=ast.Identifier("clients"),
+        )
+
+        response = self.handler.query(query)
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.columns.tolist(), ["avg_margin"])
+        self.assertAlmostEqual(df["avg_margin"].tolist()[0], 0.191, places=3)
+
+    def test_query_group_by_with_nested_aggregation(self):
+        """
+        Test GROUP BY with aggregation on nested field.
+        Tests that nested fields work correctly with GROUP BY and aggregation.
+        """
+        self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
+            "clients"
+        ]
+
+        self.mock_connect.return_value[self.dummy_connection_data["database"]]["clients"].aggregate.return_value = [
+            {
+                "industry": "technology",
+                "avg_margin": 0.18,
+            },
+            {
+                "industry": "finance",
+                "avg_margin": 0.22,
+            },
+            {
+                "industry": "healthcare",
+                "avg_margin": 0.15,
+            },
+        ]
+
+        query = ast.Select(
+            targets=[
+                ast.Identifier(parts=["industry"]),
+                ast.Function(
+                    op="AVG",
+                    args=[ast.Identifier(parts=["financials", "profit_margin"])],
+                    alias=ast.Identifier(parts=["avg_margin"]),
+                ),
+            ],
+            from_table=ast.Identifier("clients"),
+            group_by=[ast.Identifier(parts=["industry"])],
+        )
+
+        response = self.handler.query(query)
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), 3)
+        self.assertEqual(df.columns.tolist(), ["industry", "avg_margin"])
+        self.assertEqual(df["industry"].tolist(), ["technology", "finance", "healthcare"])
+        self.assertEqual(df["avg_margin"].tolist(), [0.18, 0.22, 0.15])
+
 
 if __name__ == "__main__":
     unittest.main()

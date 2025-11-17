@@ -223,6 +223,8 @@ class ContactsTable(APIResource):
         )
         if contacts_df.empty:
             contacts_df = pd.DataFrame(columns=self._get_default_contact_columns())
+        else:
+            contacts_df["id"] = pd.to_numeric(contacts_df["id"], errors="coerce")
         return contacts_df
 
     def add(self, contact_data: List[dict]):

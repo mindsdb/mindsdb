@@ -74,7 +74,6 @@ class EmailHandler(APIHandler):
             raise
 
     def check_connection(self) -> StatusResponse:
-
         response = StatusResponse(False)
 
         try:

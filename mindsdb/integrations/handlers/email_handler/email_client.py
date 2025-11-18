@@ -25,9 +25,7 @@ class EmailClient:
         self.email = connection_data.email
         self.password = connection_data.password
         self.imap_server = imaplib.IMAP4_SSL(connection_data.imap_server)
-        self.smtp_server = smtplib.SMTP(
-            connection_data.smtp_server, connection_data.smtp_port
-        )
+        self.smtp_server = smtplib.SMTP(connection_data.smtp_server, connection_data.smtp_port)
 
     def select_mailbox(self, mailbox: str = "INBOX"):
         """Logs in & selects a mailbox from IMAP server. Defaults to INBOX, which is the default inbox.
@@ -37,17 +35,13 @@ class EmailClient:
         """
         ok, resp = self.imap_server.login(self.email, self.password)
         if ok != "OK":
-            raise ValueError(
-                f"Unable to login to mailbox {mailbox}. Please check your credentials: {str(resp)}"
-            )
+            raise ValueError(f"Unable to login to mailbox {mailbox}. Please check your credentials: {str(resp)}")
 
         logger.info(f"Logged in to mailbox {mailbox}")
 
         ok, resp = self.imap_server.select(mailbox)
         if ok != "OK":
-            raise ValueError(
-                f"Unable to select mailbox {mailbox}. Please check the mailbox name: {str(resp)}"
-            )
+            raise ValueError(f"Unable to select mailbox {mailbox}. Please check the mailbox name: {str(resp)}")
 
         logger.info(f"Selected mailbox {mailbox}")
 
@@ -60,17 +54,13 @@ class EmailClient:
                 logger.error(f"Unable to logout of IMAP client: {str(resp)}")
             logger.info("Logged out of IMAP server")
         except Exception as e:
-            logger.error(
-                f"Exception occurred while logging out from IMAP server: {str(e)}"
-            )
+            logger.error(f"Exception occurred while logging out from IMAP server: {str(e)}")
 
         try:
             self.smtp_server.quit()
             logger.info("Logged out of SMTP server")
         except Exception as e:
-            logger.error(
-                f"Exception occurred while logging out from SMTP server: {str(e)}"
-            )
+            logger.error(f"Exception occurred while logging out from SMTP server: {str(e)}")
 
     def send_email(self, to_addr: str, subject: str, body: str):
         """
@@ -98,16 +88,10 @@ class EmailClient:
             raise ValueError(f"Failed to send email to {to_addr}: {str(e)}") from e
         except smtplib.SMTPAuthenticationError as e:
             logger.error(f"SMTP authentication failed: {str(e)}")
-            raise ValueError(
-                "SMTP authentication failed. Please check your credentials"
-            )
+            raise ValueError("SMTP authentication failed. Please check your credentials")
         except Exception as e:
-            logger.error(
-                f"An unexpected error occurred while sending email to {to_addr}: {str(e)}"
-            )
-            raise ValueError(
-                f"An unexpected error occurred while sending email to {to_addr}: {str(e)}"
-            ) from e
+            logger.error(f"An unexpected error occurred while sending email to {to_addr}: {str(e)}")
+            raise ValueError(f"An unexpected error occurred while sending email to {to_addr}: {str(e)}") from e
 
     def search_email(self, options: EmailSearchOptions) -> pd.DataFrame:
         """Searches emails based on the given options and returns a DataFrame.
@@ -134,9 +118,7 @@ class EmailClient:
             if options.since_date is not None:
                 since_date_str = options.since_date.strftime("%d-%b-%Y")
             else:
-                since_date = datetime.today() - timedelta(
-                    days=EmailClient._DEFAULT_SINCE_DAYS
-                )
+                since_date = datetime.today() - timedelta(days=EmailClient._DEFAULT_SINCE_DAYS)
                 since_date_str = since_date.strftime("%d-%b-%Y")
             query_parts.append(f'(SINCE "{since_date_str}")')
 

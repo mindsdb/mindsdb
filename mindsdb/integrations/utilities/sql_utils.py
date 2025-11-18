@@ -10,12 +10,6 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.config import config
 
 
-def _unwrap_identifier(node):
-    while isinstance(node, ast.TypeCast):
-        node = node.arg
-    return node if isinstance(node, ast.Identifier) else None
-
-
 class FilterOperator(Enum):
     """
     Enum for filter operators.
@@ -117,9 +111,6 @@ def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False, st
                 return
 
             arg1, arg2 = node.args
-            while isinstance(arg1, ast.TypeCast):
-                arg1 = arg1.arg
-
             if ignore_functions and isinstance(arg1, ast.Function):
                 # handle lower/upper
                 if arg1.op.lower() in ("lower", "upper"):
@@ -144,8 +135,6 @@ def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False, st
             conditions.append([op, arg1.parts[-1], value])
         if isinstance(node, ast.BetweenOperation):
             var, up, down = node.args
-            while isinstance(var, ast.TypeCast):
-                var = var.arg
             if not (
                 isinstance(var, ast.Identifier) and isinstance(up, ast.Constant) and isinstance(down, ast.Constant)
             ):
@@ -177,11 +166,8 @@ def project_dataframe(df, targets, table_columns):
                 columns.append(col)
 
             break
-        else:
-            identifier = _unwrap_identifier(target)
-            if identifier is None:
-                raise NotImplementedError
-            col = identifier.parts[-1]
+        elif isinstance(target, ast.Identifier):
+            col = target.parts[-1]
             col_df = df_cols_idx.get(col.lower())
             if col_df is not None:
                 if hasattr(target, "alias") and isinstance(target.alias, ast.Identifier):
@@ -189,6 +175,8 @@ def project_dataframe(df, targets, table_columns):
                 else:
                     df_col_rename[col_df] = col
             columns.append(col)
+        else:
+            raise NotImplementedError
 
     if len(df) == 0:
         df = pd.DataFrame([], columns=columns)
@@ -206,7 +194,7 @@ def project_dataframe(df, targets, table_columns):
     return df
 
 
-def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None):
+def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, order_by=None):
     # convert list of conditions to ast.
     # assumes that list was got from extract_comparison_conditions
     where_query = None
@@ -234,6 +222,9 @@ def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None):
 
     query = ast.Select(targets=[ast.Star()], from_table=ast.Identifier("df"), where=where_query)
 
+    if order_by:
+        query.order_by = order_by
+
     return query_df(df, query)
 
 
@@ -244,10 +235,7 @@ def sort_dataframe(df, order_by: list):
         if not isinstance(order, ast.OrderBy):
             continue
 
-        identifier = _unwrap_identifier(order.field)
-        if identifier is None:
-            continue
-        col = identifier.parts[-1]
+        col = order.field.parts[-1]
         if col not in df.columns:
             continue
 

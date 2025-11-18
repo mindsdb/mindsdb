@@ -2,13 +2,12 @@ from typing import Any, List, Optional
 import ast as py_ast
 
 import pandas as pd
-from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation, TypeCast
+from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation, OrderBy
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.utilities.sql_utils import (
     extract_comparison_conditions,
     filter_dataframe,
-    sort_dataframe,
     FilterCondition,
     FilterOperator,
     SortColumn,
@@ -153,13 +152,6 @@ class APITable:
         raise NotImplementedError()
 
 
-def _resolve_identifier_from_expression(node):
-    """Return Identifier from node, ignoring wrapping type casts."""
-    while isinstance(node, TypeCast):
-        node = node.arg
-    return node if isinstance(node, Identifier) else None
-
-
 class APIResource(APITable):
     def __init__(self, *args, table_name=None, **kwargs):
         self.table_name = table_name
@@ -185,16 +177,13 @@ class APIResource(APITable):
         if query.order_by and len(query.order_by) > 0:
             sort = []
             for an_order in query.order_by:
-                identifier = _resolve_identifier_from_expression(an_order.field)
-                if identifier is None:
-                    continue
-                sort.append(SortColumn(identifier.parts[-1], an_order.direction.upper() != "DESC"))
+                if isinstance(an_order.field, Identifier):
+                    sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
 
         targets = []
         for col in query.targets:
-            identifier = _resolve_identifier_from_expression(col)
-            if identifier is not None:
-                targets.append(identifier.parts[-1])
+            if isinstance(col, Identifier):
+                targets.append(col.parts[-1])
 
         kwargs = {"conditions": api_conditions, "limit": limit, "sort": sort, "targets": targets}
         if self.table_name is not None:
@@ -208,14 +197,6 @@ class APIResource(APITable):
                 filters.append([cond.op.value, cond.column, cond.value])
 
         result = filter_dataframe(result, filters, raw_conditions=raw_conditions)
-
-        if sort:
-            sort_columns = []
-            for idx, a_sort in enumerate(sort):
-                if not a_sort.applied:
-                    sort_columns.append(query.order_by[idx])
-
-            result = sort_dataframe(result, sort_columns)
 
         if limit is not None and len(result) > limit:
             result = result[: int(limit)]

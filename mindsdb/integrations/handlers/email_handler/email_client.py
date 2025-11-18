@@ -97,12 +97,10 @@ class EmailClient:
             logger.error(f"Failed to send email to {to_addr}: {str(e)}")
             raise ValueError(f"Failed to send email to {to_addr}: {str(e)}") from e
         except smtplib.SMTPAuthenticationError as e:
-            logger.error(
-                f"Authentication error while sending email to {to_addr}: {str(e)}"
-            )
+            logger.error(f"SMTP authentication failed: {str(e)}")
             raise ValueError(
-                f"Authentication error while sending email to {to_addr}: {str(e)}"
-            ) from e
+                "SMTP authentication failed. Please check your credentials"
+            )
         except Exception as e:
             logger.error(
                 f"An unexpected error occurred while sending email to {to_addr}: {str(e)}"

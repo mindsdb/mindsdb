@@ -63,9 +63,15 @@ class EmailHandler(APIHandler):
 
         Should switch self.is_connected.
         """
-        self.is_connected = False
-
-        return self.connection.logout()
+        if not self.is_connected or self.connection is None:
+            return
+        try:
+            self.connection.logout()
+            self.is_connected = False
+        except Exception as e:
+            logger.error(f"Error disconnecting from email api: {e}!")
+            self.is_connected = False
+            raise
 
     def check_connection(self) -> StatusResponse:
 

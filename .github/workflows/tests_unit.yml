@@ -131,7 +131,8 @@ jobs:
             .[statsforecast] \
             .[mysql] \
             .[chromadb] \
-            .[mssql]
+            .[mssql] \
+            .[elasticsearch]
           uv pip freeze
           git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
           

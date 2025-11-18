@@ -194,7 +194,7 @@ def project_dataframe(df, targets, table_columns):
     return df
 
 
-def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None):
+def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, order_by=None):
     # convert list of conditions to ast.
     # assumes that list was got from extract_comparison_conditions
     where_query = None
@@ -221,6 +221,9 @@ def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None):
                 where_query = ast.BinaryOperation(op="and", args=[where_query, condition])
 
     query = ast.Select(targets=[ast.Star()], from_table=ast.Identifier("df"), where=where_query)
+
+    if order_by:
+        query.order_by = order_by
 
     return query_df(df, query)
 

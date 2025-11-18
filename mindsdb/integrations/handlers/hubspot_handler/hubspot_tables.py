@@ -60,7 +60,8 @@ class CompaniesTable(APIResource):
                 "No companies retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
             )
 
-        update_query_executor = UPDATEQueryExecutor(companies_df, conditions)
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        update_query_executor = UPDATEQueryExecutor(companies_df, normalized_conditions)
         filtered_df = update_query_executor.execute_query()
 
         if filtered_df.empty:
@@ -80,7 +81,8 @@ class CompaniesTable(APIResource):
                 "No companies retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
             )
 
-        delete_query_executor = DELETEQueryExecutor(companies_df, conditions)
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        delete_query_executor = DELETEQueryExecutor(companies_df, normalized_conditions)
         filtered_df = delete_query_executor.execute_query()
 
         if filtered_df.empty:
@@ -216,10 +218,9 @@ class ContactsTable(APIResource):
         sort: List[SortColumn] = None,
         targets: List[str] = None,
     ) -> pd.DataFrame:
-        normalized_conditions = _normalize_filter_conditions(conditions)
         requested_properties = targets or []
         contacts_df = pd.json_normalize(
-            self.get_contacts(limit=limit, where_conditions=normalized_conditions, properties=requested_properties)
+            self.get_contacts(limit=limit, where_conditions=conditions, properties=requested_properties)
         )
         if contacts_df.empty:
             contacts_df = pd.DataFrame(columns=self._get_default_contact_columns())
@@ -485,10 +486,6 @@ class ContactsTable(APIResource):
 
 class DealsTable(APIResource):
     """Hubspot Deals table."""
-
-    def select(self, query):
-        deals_df = super().select(query)
-        return deals_df.where(pd.notna(deals_df), None)
 
     def list(
         self,

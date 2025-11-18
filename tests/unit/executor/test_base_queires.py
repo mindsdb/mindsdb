@@ -4,7 +4,7 @@ import pytest
 
 import pandas as pd
 
-from tests.unit.executor_test_base import BaseExecutorDummyML
+from tests.unit.executor_test_base import BaseExecutorDummyML, BaseExecutorTest
 
 
 class TestSelect(BaseExecutorDummyML):
@@ -710,6 +710,29 @@ class TestSelect(BaseExecutorDummyML):
         assert res["NAME"][0] == "test_db"
         assert res["CONNECTION_DATA"][0] == '{"key": 2}'
 
+
+class TestSet(BaseExecutorTest):
+    @pytest.mark.parametrize('var', [
+        'var',
+        '@@var',
+        '@@session.var',
+        'session var'
+    ])
+    @pytest.mark.parametrize('value', [
+        '1',
+        '0',
+        'true',
+        'false',
+        'on',
+        'off'
+    ])
+    def test_set(self, var, value):
+        query = f"set {var} = {value}"
+        self.run_sql(query)
+
+    def test_multy_set(self):
+        query = "set @@var = ON, session var = 0"
+        self.run_sql(query)
 
 class TestDML(BaseExecutorDummyML):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")

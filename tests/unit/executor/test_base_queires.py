@@ -712,20 +712,8 @@ class TestSelect(BaseExecutorDummyML):
 
 
 class TestSet(BaseExecutorTest):
-    @pytest.mark.parametrize('var', [
-        'var',
-        '@@var',
-        '@@session.var',
-        'session var'
-    ])
-    @pytest.mark.parametrize('value', [
-        '1',
-        '0',
-        'true',
-        'false',
-        'on',
-        'off'
-    ])
+    @pytest.mark.parametrize("var", ["var", "@@var", "@@session.var", "session var"])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "on", "off"])
     def test_set(self, var, value):
         query = f"set {var} = {value}"
         self.run_sql(query)
@@ -733,6 +721,7 @@ class TestSet(BaseExecutorTest):
     def test_multy_set(self):
         query = "set @@var = ON, session var = 0"
         self.run_sql(query)
+
 
 class TestDML(BaseExecutorDummyML):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")

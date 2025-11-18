@@ -4,6 +4,7 @@ class RESPONSE_TYPE:
     TABLE = 'table'
     ERROR = 'error'
     COLUMNS_TABLE = 'columns_table'  # for queries to information_schema.columns
+    EOF = 'eof'
 
 
 RESPONSE_TYPE = RESPONSE_TYPE()

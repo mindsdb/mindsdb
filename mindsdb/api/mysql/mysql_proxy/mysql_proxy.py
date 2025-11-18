@@ -344,6 +344,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket, state_track=answer.state_track, affected_rows=answer.affected_rows).send()
         elif answer.type == RESPONSE_TYPE.ERROR:
             self.packet(ErrPacket, err_code=answer.error_code, msg=answer.error_message).send()
+        elif answer.type == RESPONSE_TYPE.EOF:
+            self.packet(EofPacket).send()
 
     def _get_column_defenition_packets(self, columns: dict, data=None):
         if data is None:
@@ -664,18 +666,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             logger.debug("Command TYPE: {type}".format(type=getConstName(COMMANDS, p.type.value)))
 
-            command_names = {
-                COMMANDS.COM_QUERY: "COM_QUERY",
-                COMMANDS.COM_STMT_PREPARE: "COM_STMT_PREPARE",
-                COMMANDS.COM_STMT_EXECUTE: "COM_STMT_EXECUTE",
-                COMMANDS.COM_STMT_FETCH: "COM_STMT_FETCH",
-                COMMANDS.COM_STMT_CLOSE: "COM_STMT_CLOSE",
-                COMMANDS.COM_QUIT: "COM_QUIT",
-                COMMANDS.COM_INIT_DB: "COM_INIT_DB",
-                COMMANDS.COM_FIELD_LIST: "COM_FIELD_LIST",
-            }
-
-            command_name = command_names.get(p.type.value, f"UNKNOWN {p.type.value}")
             sql = None
             response = None
             error_type = None
@@ -716,6 +706,50 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_STMT_RESET:
                     response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_PING:
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_CHANGE_USER:
+                    # This package should trigger re-authentication. For now it is forbidden.
+                    logger.warning("Got COM_CHANGE_USER packet that could not be processed, return error.")
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="Packet COM_CHANGE_USER could not be processed",
+                    )
+                elif p.type.value == COMMANDS.COM_DEBUG:
+                    response = SQLAnswer(resp_type=RESPONSE_TYPE.EOF)
+                elif p.type.value == COMMANDS.COM_SET_OPTION:
+                    # While regular MySQL options have no effect on mindsdb, we can safely return Ok.
+                    logger.warning("Unexpected packet COM_SET_OPTION recieved, return ok.")
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_SLEEP:
+                    # error - is the only valid answer for the packet
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="",
+                    )
+                elif p.type.value == COMMANDS.COM_PROCESS_KILL:
+                    logger.warning("Unexpected packet COM_PROCESS_KILL recieved, return error.")
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="Packet COM_PROCESS_KILL could not be processed",
+                    )
+                elif p.type.value == COMMANDS.COM_RESET_CONNECTION:
+                    logger.warning("Unexpected packet COM_RESET_CONNECTION recieved, return error.")
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="Packet COM_RESET_CONNECTION could not be processed",
+                    )
+                elif p.type.value == COMMANDS.COM_SHUTDOWN:
+                    logger.warning("Unexpected packet COM_SHUTDOWN recieved, return error.")
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="Packet COM_SHUTDOWN could not be processed",
+                    )
                 else:
                     logger.warning("Command has no specific handler, return OK msg")
                     logger.debug(str(p))
@@ -758,7 +792,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             hooks.after_api_query(
                 company_id=ctx.company_id,
                 api="mysql",
-                command=command_name,
+                command=getConstName(COMMANDS, p.type.value),
                 payload=sql,
                 error_type=error_type,
                 error_code=error_code,

@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 import ast as py_ast
 
 import pandas as pd
-from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation, TypeCast
+from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.utilities.sql_utils import (
@@ -153,13 +153,6 @@ class APITable:
         raise NotImplementedError()
 
 
-def _resolve_identifier_from_expression(node):
-    """Return Identifier from node, ignoring wrapping type casts."""
-    while isinstance(node, TypeCast):
-        node = node.arg
-    return node if isinstance(node, Identifier) else None
-
-
 class APIResource(APITable):
     def __init__(self, *args, table_name=None, **kwargs):
         self.table_name = table_name
@@ -185,16 +178,12 @@ class APIResource(APITable):
         if query.order_by and len(query.order_by) > 0:
             sort = []
             for an_order in query.order_by:
-                identifier = _resolve_identifier_from_expression(an_order.field)
-                if identifier is None:
-                    continue
-                sort.append(SortColumn(identifier.parts[-1], an_order.direction.upper() != "DESC"))
+                sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
 
         targets = []
         for col in query.targets:
-            identifier = _resolve_identifier_from_expression(col)
-            if identifier is not None:
-                targets.append(identifier.parts[-1])
+            if isinstance(col, Identifier):
+                targets.append(col.parts[-1])
 
         kwargs = {"conditions": api_conditions, "limit": limit, "sort": sort, "targets": targets}
         if self.table_name is not None:

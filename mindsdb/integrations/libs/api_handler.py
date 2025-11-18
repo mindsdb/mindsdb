@@ -173,14 +173,12 @@ class APIResource(APITable):
         if query.limit:
             limit = query.limit.value
 
-        sort, raw_sort = None, {}
+        sort = None
         if query.order_by and len(query.order_by) > 0:
             sort = []
-            for i, an_order in enumerate(query.order_by):
+            for an_order in query.order_by:
                 if isinstance(an_order.field, Identifier):
                     sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
-                else:
-                    raw_sort[i] = an_order
 
         targets = []
         for col in query.targets:
@@ -198,21 +196,7 @@ class APIResource(APITable):
             if not cond.applied:
                 filters.append([cond.op.value, cond.column, cond.value])
 
-        if sort is None:
-            sort = []
-
-        order_by = []
-        for i in range(len(sort) + len(raw_sort)):
-            if i in raw_sort:
-                item = raw_sort[i]
-            else:
-                el = sort.pop(0)
-                if el.applied:
-                    continue
-                item = OrderBy(Identifier(el.column, direction="ASC" if el.ascending else "DESC"))
-            order_by.append(item)
-
-        result = filter_dataframe(result, filters, raw_conditions=raw_conditions, order_by=order_by)
+        result = filter_dataframe(result, filters, raw_conditions=raw_conditions)
 
         if limit is not None and len(result) > limit:
             result = result[: int(limit)]

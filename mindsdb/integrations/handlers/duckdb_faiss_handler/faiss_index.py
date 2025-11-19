@@ -53,7 +53,7 @@ class FaissIndex:
         self.index_fd = open(self.path, "rb")
         try:
             portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
-        except ValueError:
+        except portalocker.exceptions.AlreadyLocked:
             raise ValueError(f'Index is already used: {self.path}')
 
         self.index = faiss.read_index(self.path)

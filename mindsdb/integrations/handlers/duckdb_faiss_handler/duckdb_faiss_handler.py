@@ -86,6 +86,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         """Close DuckDB connection."""
         if self.is_connected and self.connection:
             self.connection.close()
+            self.faiss_index.close()
             self.is_connected = False
 
     def create_table(self, table_name: str, if_not_exists=True):

@@ -1,6 +1,9 @@
 import os
 from typing import Iterable, List
 import numpy as np
+
+import portalocker
+
 import faiss  # faiss or faiss-gpu
 from pydantic import BaseModel
 
@@ -41,13 +44,25 @@ class FaissIndex:
         self.path = path
 
         self.index = None
+        self.index_fd = None
         if os.path.exists(self.path):
             self.load_index()
 
     def load_index(self):
         # TODO check RAM
+        self.index_fd = open(self.path, "rb")
+        try:
+            portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
+        except ValueError:
+            raise ValueError(f'Index is already used: {self.path}')
+
         self.index = faiss.read_index(self.path)
         self.dim = self.index.d
+
+    def close(self):
+        if self.index_fd is not None:
+            self.index_fd.close()
+        self.index = None
 
     def _build_index(self):
         # TODO option to create hnsw

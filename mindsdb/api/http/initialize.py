@@ -330,8 +330,10 @@ def initialize_app(is_restart: bool = False):
             config["auth"]["http_auth_enabled"] is True
             and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
             and (
-                http_auth_type == HTTP_AUTH_TYPE.SESSION and check_session_auth() is False
-                or http_auth_type == HTTP_AUTH_TYPE.TOKEN and verify_pat(bearer) is False
+                http_auth_type == HTTP_AUTH_TYPE.SESSION
+                and check_session_auth() is False
+                or http_auth_type == HTTP_AUTH_TYPE.TOKEN
+                and verify_pat(bearer) is False
             )
         ):
             logger.debug(f"Auth failed for path {request.path}")

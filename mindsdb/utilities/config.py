@@ -63,6 +63,7 @@ class HTTP_AUTH_TYPE:
     SESSION: str = "session"
     TOKEN: str = "token"
 
+
 HTTP_AUTH_TYPE = HTTP_AUTH_TYPE()
 
 

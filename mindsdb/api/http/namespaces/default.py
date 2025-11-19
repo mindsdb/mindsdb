@@ -15,14 +15,14 @@ logger = log.getLogger(__name__)
 
 
 def check_session_auth() -> bool:
-    ''' checking whether current user is authenticated
+    """checking whether current user is authenticated
 
-        Returns:
-            bool: True if user authentication is approved
-    '''
-    if config['auth']['http_auth_enabled'] is False:
+    Returns:
+        bool: True if user authentication is approved
+    """
+    if config["auth"]["http_auth_enabled"] is False:
         return True
-    return session.get('username') == config['auth']['username']
+    return session.get("username") == config["auth"]["username"]
 
 
 @ns_conf.route("/login", methods=["POST"])
@@ -57,7 +57,7 @@ class LoginRoute(Resource):
 
         if config["auth"]["http_auth_type"] == HTTP_AUTH_TYPE.SESSION:
             session.clear()
-            session['username'] = username
+            session["username"] = username
             session.permanent = True
             response = {}
         elif config["auth"]["http_auth_type"] == HTTP_AUTH_TYPE.TOKEN:

@@ -1,4 +1,4 @@
-from typing import List, Dict, Text, Any, Optional
+from typing import List, Dict, Text, Any, Optional, Tuple
 
 import pandas as pd
 from hubspot import HubSpot
@@ -16,6 +16,39 @@ from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
+    "companies": [
+        ("name", "VARCHAR", "Company name"),
+        ("domain", "VARCHAR", "Company domain"),
+        ("industry", "VARCHAR", "Industry"),
+        ("city", "VARCHAR", "City"),
+        ("state", "VARCHAR", "State"),
+        ("phone", "VARCHAR", "Phone number"),
+        ("createdate", "TIMESTAMP", "Creation date"),
+        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+    ],
+    "contacts": [
+        ("email", "VARCHAR", "Email address"),
+        ("firstname", "VARCHAR", "First name"),
+        ("lastname", "VARCHAR", "Last name"),
+        ("phone", "VARCHAR", "Phone number"),
+        ("company", "VARCHAR", "Associated company"),
+        ("website", "VARCHAR", "Website URL"),
+        ("createdate", "TIMESTAMP", "Creation date"),
+        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+    ],
+    "deals": [
+        ("dealname", "VARCHAR", "Deal name"),
+        ("amount", "DECIMAL", "Deal amount"),
+        ("dealstage", "VARCHAR", "Deal stage"),
+        ("pipeline", "VARCHAR", "Sales pipeline"),
+        ("closedate", "DATE", "Expected close date"),
+        ("hubspot_owner_id", "VARCHAR", "Owner ID"),
+        ("createdate", "TIMESTAMP", "Creation date"),
+        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+    ],
+}
 
 
 def _normalize_filter_conditions(conditions: Optional[List[FilterCondition]]) -> List[List[Any]]:
@@ -36,6 +69,26 @@ def _normalize_filter_conditions(conditions: Optional[List[FilterCondition]]) ->
 
 class CompaniesTable(APIResource):
     """Hubspot Companies table."""
+
+    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+        """Return static metadata for the companies table."""
+        row_count = None
+        try:
+            self.handler.connect()
+            row_count = self.handler._estimate_table_rows("companies")
+        except Exception as e:
+            logger.warning(f"Could not estimate HubSpot companies row count: {e}")
+
+        return {
+            "TABLE_NAME": "companies",
+            "TABLE_TYPE": "BASE TABLE",
+            "TABLE_DESCRIPTION": self.handler._get_table_description("companies"),
+            "ROW_COUNT": row_count,
+        }
+
+    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        """Return default column metadata for companies."""
+        return self.handler._get_default_meta_columns("companies")
 
     def list(
         self,
@@ -210,6 +263,24 @@ class CompaniesTable(APIResource):
 
 class ContactsTable(APIResource):
     """Hubspot Contacts table."""
+
+    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+        row_count = None
+        try:
+            self.handler.connect()
+            row_count = self.handler._estimate_table_rows("contacts")
+        except Exception as e:
+            logger.warning(f"Could not estimate HubSpot contacts row count: {e}")
+
+        return {
+            "TABLE_NAME": "contacts",
+            "TABLE_TYPE": "BASE TABLE",
+            "TABLE_DESCRIPTION": self.handler._get_table_description("contacts"),
+            "ROW_COUNT": row_count,
+        }
+
+    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        return self.handler._get_default_meta_columns("contacts")
 
     def list(
         self,
@@ -486,6 +557,24 @@ class ContactsTable(APIResource):
 
 class DealsTable(APIResource):
     """Hubspot Deals table."""
+
+    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+        row_count = None
+        try:
+            self.handler.connect()
+            row_count = self.handler._estimate_table_rows("deals")
+        except Exception as e:
+            logger.warning(f"Could not estimate HubSpot deals row count: {e}")
+
+        return {
+            "TABLE_NAME": "deals",
+            "TABLE_TYPE": "BASE TABLE",
+            "TABLE_DESCRIPTION": self.handler._get_table_description("deals"),
+            "ROW_COUNT": row_count,
+        }
+
+    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        return self.handler._get_default_meta_columns("deals")
 
     def list(
         self,

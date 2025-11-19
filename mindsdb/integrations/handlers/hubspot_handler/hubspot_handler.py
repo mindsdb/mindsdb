@@ -419,6 +419,65 @@ class HubspotHandler(MetaAPIHandler):
                 RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve columns for table '{table_name}': {error_msg}"
             )
 
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+        """Return table metadata for the data catalog.
+
+        Args:
+            table_names (Optional[List[str]]): Specific tables to include or None for all.
+
+        Returns:
+            Response: Metadata describing tables exposed by the handler.
+        """
+        columns = [
+            "TABLE_CATALOG",
+            "TABLE_SCHEMA",
+            "TABLE_NAME",
+            "TABLE_TYPE",
+            "TABLE_DESCRIPTION",
+            "ROW_COUNT",
+        ]
+
+        try:
+            self.connect()
+
+            all_tables = ["companies", "contacts", "deals"]
+            tables_to_process = [t for t in all_tables if table_names is None or t in table_names]
+
+            metadata_rows: List[Dict[str, Any]] = []
+            for table_name in tables_to_process:
+                accessible = False
+                try:
+                    if table_name == "companies":
+                        list(self.connection.crm.companies.get_all(limit=1))
+                    elif table_name == "contacts":
+                        list(self.connection.crm.contacts.get_all(limit=1))
+                    elif table_name == "deals":
+                        list(self.connection.crm.deals.get_all(limit=1))
+                    accessible = True
+                except Exception as access_error:
+                    error_msg = _extract_hubspot_error_message(access_error)
+                    logger.warning(f"Could not access HubSpot table '{table_name}' for metadata: {error_msg}")
+
+                row_count = self._estimate_table_rows(table_name) if accessible else None
+                metadata_rows.append(
+                    {
+                        "TABLE_CATALOG": "def",
+                        "TABLE_SCHEMA": self.name,
+                        "TABLE_NAME": table_name,
+                        "TABLE_TYPE": "BASE TABLE",
+                        "TABLE_DESCRIPTION": self._get_table_description(table_name),
+                        "ROW_COUNT": row_count,
+                    }
+                )
+
+            df = pd.DataFrame(metadata_rows, columns=columns)
+            logger.info(f"Prepared metadata for {len(df)} HubSpot table(s)")
+            return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+        except Exception as e:
+            logger.error(f"Failed to get HubSpot table metadata: {str(e)}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve table metadata: {str(e)}")
+
     def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
         """Return column metadata for data catalog.
 

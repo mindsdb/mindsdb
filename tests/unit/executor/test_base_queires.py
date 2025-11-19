@@ -266,6 +266,41 @@ class TestSelect(BaseExecutorDummyML):
         # must be 2 rows
         assert len(ret) == 2
 
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_federated_query(self, data_handler):
+        statuses = pd.DataFrame(
+            [
+                [1, 'new'],
+                [2, 'progress'],
+                [3, 'done'],
+                [4, 'cancel'],
+                [5, 'backlog'],
+            ], columns=["id", "name"])
+
+        tasks = pd.DataFrame(
+            [
+                [1, 1, 'new1'],
+                [2, 5, 'backlog2'],
+                [3, 5, 'backlog3'],
+                [4, 5, 'backlog4'],
+                [5, 5, 'backlog5'],
+                [6, 5, 'backlog6'],
+            ], columns=["id", "status", "name"]
+        )
+
+        # mixed case
+        self.set_handler(data_handler, name="db1", tables={"statuses": statuses})
+        self.set_handler(data_handler, name="db2", tables={"tasks": tasks})
+
+        ret = self.run_sql("""
+          SELECT * FROM db1.statuses as t1
+          JOIN db2.tasks as t2 on t1.id=t2.status
+          limit 3
+        """)
+
+        assert len(ret) == 3
+
+
     def test_complex_queries(self):
         # -- set up data --
 

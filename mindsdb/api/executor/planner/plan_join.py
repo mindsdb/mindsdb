@@ -298,8 +298,6 @@ class PlanJoinTablesQuery:
                     if join_type not in ("LEFT JOIN", "LEFT OUTER JOIN"):
                         optimize_inner_join = True
                     continue
-                else:
-                    use_limit = False
 
         self.query_context["use_limit"] = use_limit
         self.query_context["optimize_inner_join"] = optimize_inner_join

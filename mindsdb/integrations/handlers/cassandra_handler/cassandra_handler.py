@@ -1,7 +1,6 @@
 import tempfile
 
 import pandas as pd
-import requests
 
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
@@ -39,38 +38,20 @@ class CassandraHandler(MetaDatabaseHandler):
         self.connection_args = connection_data
         self.keyspace = connection_data.get("keyspace")
 
-    def download_secure_bundle(self, url, max_size=10 * 1024 * 1024):
-        """
-        Downloads the secure bundle from a given URL and stores it in a temporary file.
-
-        :param url: URL of the secure bundle to be downloaded.
-        :param max_size: Maximum allowable size of the bundle in bytes. Defaults to 10MB.
-        :return: Path to the downloaded secure bundle saved as a temporary file.
-        :raises ValueError: If the secure bundle size exceeds the allowed `max_size`.
-        """
-        response = requests.get(url, stream=True, timeout=10)
-        response.raise_for_status()
-
-        content_length = int(response.headers.get("content-length", 0))
-        if content_length > max_size:
-            raise ValueError("Secure bundle is larger than the allowed size!")
-
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            size_downloaded = 0
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:
-                    temp_file.write(chunk)
-                    size_downloaded += len(chunk)
-                    if size_downloaded > max_size:
-                        raise ValueError("Secure bundle is larger than the allowed size!")
-            return temp_file.name
-
     def connect(self):
         """
-        Handles the connection to a Cassandra keystore.
+        Establishes connection to Cassandra.
         """
-        if self.is_connected is True:
+
+        if self.is_connected and self.session:
             return self.session
+
+        if "host" not in self.connection_args:
+            raise ValueError("'host' is required for Cassandra connection")
+        if "port" not in self.connection_args:
+            raise ValueError("'port' is required for Cassandra connection")
+
+        # Setup authentication
         auth_provider = None
         if any(key in self.connection_args for key in ("user", "password")):
             if all(key in self.connection_args for key in ("user", "password")):
@@ -79,26 +60,27 @@ class CassandraHandler(MetaDatabaseHandler):
                     password=self.connection_args["password"],
                 )
             else:
-                raise ValueError("If authentication is required, both 'user' and 'password' must be provided!")
+                raise ValueError(
+                    "Both 'user' and 'password' must be provided for authentication"
+                )
 
-        connection_props = {"auth_provider": auth_provider}
-        connection_props["protocol_version"] = self.connection_args.get("protocol_version", 4)
-        secure_connect_bundle = self.connection_args.get("secure_connect_bundle")
+        # Setup connection
+        connection_props = {
+            "auth_provider": auth_provider,
+            "contact_points": [self.connection_args["host"]],
+            "port": int(self.connection_args["port"]),
+            "protocol_version": self.connection_args.get("protocol_version", 4),
+        }
 
-        if secure_connect_bundle:
-            if secure_connect_bundle.startswith(("http://", "https://")):
-                secure_connect_bundle = self.download_secure_bundle(secure_connect_bundle)
-            connection_props["cloud"] = {"secure_connect_bundle": secure_connect_bundle}
-        else:
-            connection_props["contact_points"] = [self.connection_args["host"]]
-            connection_props["port"] = int(self.connection_args["port"])
-
-        cluster = Cluster(**connection_props)
-        session = cluster.connect(self.connection_args.get("keyspace"))
-
-        self.is_connected = True
-        self.session = session
-        return self.session
+        try:
+            self.cluster = Cluster(**connection_props)
+            self.session = self.cluster.connect(self.keyspace)
+            self.is_connected = True
+            return self.session
+        except Exception as e:
+            self.is_connected = False
+            logger.error(f"Failed to connect to Cassandra: {e}")
+            raise
 
     def check_connection(self) -> StatusResponse:
         """
@@ -149,7 +131,10 @@ class CassandraHandler(MetaDatabaseHandler):
         """
 
         if isinstance(query, ast.Select):
-            if isinstance(query.from_table, ast.Identifier) and query.from_table.alias is not None:
+            if (
+                isinstance(query.from_table, ast.Identifier)
+                and query.from_table.alias is not None
+            ):
                 query.from_table.alias = None
 
             # remove table name from fields
@@ -168,43 +153,47 @@ class CassandraHandler(MetaDatabaseHandler):
         """
         Get a list of all tables in the current keyspace.
         """
+        try:
+            self.connect()
 
-        query = """
-            SELECT
-                keyspace_name AS table_schema,
-                table_name
-            FROM system_schema.tables
-        """
-        if self.keyspace:
-            query += " WHERE keyspace_name = '{}';".format(self.keyspace)
+            keyspace_metadata = self.cluster.metadata.keyspaces.get(self.keyspace)
 
-        result = self.native_query(query)
-        # Filter out system keyspaces in Python
-        if result.type == RESPONSE_TYPE.TABLE:
-            df = result.data_frame
-            df = df[~df["table_schema"].str.contains("system", case=False, na=False)]
-            # add table_type column
-            df["table_type"] = "BASE TABLE"
-            result.data_frame = df
+            if not keyspace_metadata:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Keyspace {self.keyspace} not found",
+                )
 
-        views_query = """
-            SELECT
-                keyspace_name AS table_schema,
-                table_name
-            FROM system_schema.views
-        """
-        if self.keyspace:
-            views_query += " WHERE keyspace_name = '{}';".format(self.keyspace)
+            data = []
 
-        views_result = self.native_query(views_query)
-        if views_result.type == RESPONSE_TYPE.TABLE:
-            views_df = views_result.data_frame
-            views_df = views_df[~views_df["table_schema"].str.contains("system", case=False, na=False)]
-            views_df["table_type"] = "VIEW"
-            # concatenate tables and views
-            result.data_frame = pd.concat([result.data_frame, views_df], ignore_index=True)
+            for table_name, table_meta in keyspace_metadata.tables.items():
+                data.append(
+                    {
+                        "table_schema": self.keyspace,
+                        "table_name": table_name,
+                        "table_type": "BASE TABLE",
+                    }
+                )
+            for view_name, view_meta in keyspace_metadata.views.items():
+                data.append(
+                    {
+                        "table_schema": self.keyspace,
+                        "table_name": view_name,
+                        "table_type": "VIEW",
+                    }
+                )
+            df = pd.DataFrame(data)
+            if not df.empty:
+                df = df[
+                    ~df["table_schema"].str.contains("system", case=False, na=False)
+                ]
+                df = df.sort_values("table_name").reset_index(drop=True)
 
-        return result
+            return Response(RESPONSE_TYPE.TABLE, df)
+
+        except Exception as e:
+            logger.error(f"Error getting tables: {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
     def get_columns(self, table_name: str) -> Response:
         """
@@ -212,8 +201,40 @@ class CassandraHandler(MetaDatabaseHandler):
         - column_name
         - type
         """
-        q = f"DESCRIBE {table_name};"
-        return self.native_query(q)
+        try:
+            self.connect()
+
+            keyspace_metadata = self.cluster.metadata.keyspaces.get(self.keyspace)
+
+            if not keyspace_metadata:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Keyspace {self.keyspace} not found",
+                )
+
+            table_metadata = keyspace_metadata.tables.get(table_name)
+
+            if not table_metadata:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Table {table_name} not found in keyspace {self.keyspace}",
+                )
+
+            data = []
+            for col_name, col_meta in table_metadata.columns.items():
+                data.append(
+                    {
+                        "column_name": col_name,
+                        "type": str(col_meta.cql_type),
+                    }
+                )
+
+            df = pd.DataFrame(data)
+            return Response(RESPONSE_TYPE.TABLE, df)
+
+        except Exception as e:
+            logger.error(f"Error getting columns for table {table_name}: {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
     # Metadata
 

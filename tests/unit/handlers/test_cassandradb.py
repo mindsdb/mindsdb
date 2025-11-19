@@ -60,12 +60,16 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_patcher(self):
         """Create patcher for Cassandra connection"""
-        return patch("mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster")
+        return patch(
+            "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster"
+        )
 
     # Connection Tests
     def test_connect_success(self):
         """Test successful connection to Cassandra"""
-        with patch("mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster") as mock_cluster:
+        with patch(
+            "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster"
+        ) as mock_cluster:
             mock_session = MagicMock()
             mock_cluster_instance = MagicMock()
             mock_cluster_instance.connect.return_value = mock_session
@@ -81,7 +85,9 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def test_connect_with_auth(self):
         """Test connection with authentication"""
         with (
-            patch("mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster") as mock_cluster,
+            patch(
+                "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster"
+            ) as mock_cluster,
             patch(
                 "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.PlainTextAuthProvider"
             ) as mock_auth,
@@ -112,7 +118,9 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         del connection_data["keyspace"]
         handler = CassandraHandler("cassandra", connection_data=connection_data)
 
-        with patch("mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster") as mock_cluster:
+        with patch(
+            "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster"
+        ) as mock_cluster:
             mock_session = MagicMock()
             mock_cluster_instance = MagicMock()
             mock_cluster_instance.connect.return_value = mock_session
@@ -140,31 +148,15 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         with self.assertRaises(ValueError):
             handler.connect()
 
-    def test_connect_with_secure_bundle(self):
-        """Test connection using secure connect bundle (Astra DB)"""
-        connection_data = self.dummy_connection_data.copy()
-        connection_data["secure_connect_bundle"] = "/path/to/bundle.zip"
-        handler = CassandraHandler("cassandra", connection_data=connection_data)
-
-        with patch("mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster") as mock_cluster:
-            mock_session = MagicMock()
-            mock_cluster_instance = MagicMock()
-            mock_cluster_instance.connect.return_value = mock_session
-            mock_cluster.return_value = mock_cluster_instance
-
-            handler.connect()
-
-            call_kwargs = mock_cluster.call_args[1]
-            self.assertIn("cloud", call_kwargs)
-            self.assertEqual(call_kwargs["cloud"]["secure_connect_bundle"], "/path/to/bundle.zip")
-
     def test_connect_reuses_existing_connection(self):
         """Test that connect reuses existing connection if already connected"""
         mock_session = MagicMock()
         self.handler.session = mock_session
         self.handler.is_connected = True
 
-        with patch("mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster") as mock_cluster:
+        with patch(
+            "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster"
+        ) as mock_cluster:
             session = self.handler.connect()
 
             mock_cluster.assert_not_called()
@@ -172,7 +164,9 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def test_check_connection_success(self):
         """Test check_connection returns success when connection is valid"""
-        with patch("mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster") as mock_cluster:
+        with patch(
+            "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster"
+        ) as mock_cluster:
             mock_session = MagicMock()
             mock_result = MagicMock()
             mock_result.one.return_value = ("4.1.0",)
@@ -185,14 +179,18 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
             self.assertTrue(response.success)
             self.assertIsNone(response.error_message)
-            mock_session.execute.assert_called_once_with("SELECT release_version FROM system.local")
+            mock_session.execute.assert_called_once_with(
+                "SELECT release_version FROM system.local"
+            )
 
     def test_check_connection_failure(self):
         """Test check_connection returns failure when connection fails"""
         error_msg = "No host available"
         error = NoHostAvailable(error_msg, {})
 
-        with patch("mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster") as mock_cluster:
+        with patch(
+            "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster"
+        ) as mock_cluster:
             mock_cluster.side_effect = error
 
             response = self.handler.check_connection()
@@ -202,7 +200,9 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def test_native_query(self):
         """Test cassandra native query"""
-        with patch("mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster") as mock_cluster:
+        with patch(
+            "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster"
+        ) as mock_cluster:
             mock_session = MagicMock()
             mock_row = MagicMock()
             mock_cassandra_date = MagicMock(spec=Date)
@@ -228,68 +228,180 @@ class TestCassandraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertIsInstance(response.data_frame.iloc[0]["created_at"], date)
 
     def test_get_tables(self):
-        """Test that get_tables returns proper table_schema, table_name, and table_type"""
-        tables_df = pd.DataFrame(
-            {
-                "table_schema": ["test_keyspace", "test_keyspace"],
-                "table_name": ["table1", "table2"],
-                "table_type": ["BASE TABLE", "BASE TABLE"],
-            }
-        )
-        tables_response = Response(RESPONSE_TYPE.TABLE, data_frame=tables_df)
+        """Test that get_tables returns proper table_schema, table_name, and table_type using metadata"""
 
-        views_df = pd.DataFrame(
-            {
-                "table_schema": ["test_keyspace"],
-                "table_name": ["view1"],
-                "table_type": ["VIEW"],
-            }
-        )
-        views_response = Response(RESPONSE_TYPE.TABLE, data_frame=views_df)
+        mock_table1 = MagicMock()
+        mock_table1.name = "table1"
 
-        def mock_native_query(query):
-            if "system_schema.tables" in query and "system_schema.views" not in query:
-                return tables_response
-            elif "system_schema.views" in query:
-                return views_response
-            return Response(RESPONSE_TYPE.ERROR)
+        mock_table2 = MagicMock()
+        mock_table2.name = "table2"
 
-        self.handler.native_query = MagicMock(side_effect=mock_native_query)
+        mock_view1 = MagicMock()
+        mock_view1.name = "view1"
+
+        mock_keyspace_metadata = MagicMock()
+        mock_keyspace_metadata.tables = {"table1": mock_table1, "table2": mock_table2}
+        mock_keyspace_metadata.views = {"view1": mock_view1}
+
+        mock_cluster = MagicMock()
+        mock_cluster.metadata.keyspaces = {"test_keyspace": mock_keyspace_metadata}
+
+        self.handler.cluster = mock_cluster
+        self.handler.is_connected = True
+        self.handler.session = MagicMock()
+
         response = self.handler.get_tables()
-        # Verify the response has correct structure
+
         self.assertEqual(response.resp_type, RESPONSE_TYPE.TABLE)
         self.assertIn("table_schema", response.data_frame.columns)
         self.assertIn("table_name", response.data_frame.columns)
         self.assertIn("table_type", response.data_frame.columns)
 
-        # Verify correct values
-        self.assertEqual(len(response.data_frame), 3)
-        self.assertEqual(list(response.data_frame["table_name"]), ["table1", "table2", "view1"])
-        self.assertEqual(
-            list(response.data_frame["table_type"]),
-            ["BASE TABLE", "BASE TABLE", "VIEW"],
-        )
+        df = response.data_frame
+        self.assertEqual(len(df), 3)  # 2 tables + 1 view
+
+        tables = df[df["table_type"] == "BASE TABLE"]
+        self.assertEqual(len(tables), 2)
+        self.assertIn("table1", tables["table_name"].values)
+        self.assertIn("table2", tables["table_name"].values)
+
+        views = df[df["table_type"] == "VIEW"]
+        self.assertEqual(len(views), 1)
+        self.assertIn("view1", views["table_name"].values)
+
+        self.assertTrue(all(df["table_schema"] == "test_keyspace"))
+
+    def test_get_tables_no_keyspace(self):
+        """Test get_tables when keyspace doesn't exist"""
+
+        mock_cluster = MagicMock()
+        mock_cluster.metadata.keyspaces = {}
+
+        self.handler.cluster = mock_cluster
+        self.handler.is_connected = True
+        self.handler.session = MagicMock()
+
+        response = self.handler.get_tables()
+
+        # Should return error
+        self.assertEqual(response.resp_type, RESPONSE_TYPE.ERROR)
+        self.assertIn("not found", response.error_message.lower())
 
     def test_get_columns(self):
-        """
-        Tests that get_columns calls native_query with the correct SQL for Oracle
-        and returns the expected DataFrame structure.
-        """
-        expected_df = pd.DataFrame(
-            {
-                "column_name": ["col1", "col2", "col3"],
-                "type": ["int", "text", "date"],
-            }
-        )
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        """Test that get_columns returns proper column information using metadata"""
 
-        self.handler.native_query = MagicMock(return_value=expected_response)
-        response = self.handler.get_columns(self.mock_table)
+        mock_partition_col = MagicMock()
+        mock_partition_col.name = "id"
+        mock_partition_col.cql_type = "uuid"
 
-        self.handler.native_query.assert_called_once()
-        expected_query = "DESCRIBE {};".format(self.mock_table)
-        self.handler.native_query.assert_called_with(expected_query)
-        self.assertEqual(response.data_frame.equals(expected_df), True)
+        mock_clustering_col = MagicMock()
+        mock_clustering_col.name = "created_at"
+        mock_clustering_col.cql_type = "timestamp"
+
+        mock_regular_col = MagicMock()
+        mock_regular_col.name = "name"
+        mock_regular_col.cql_type = "text"
+
+        mock_table = MagicMock()
+        mock_table.partition_key = [mock_partition_col]
+        mock_table.clustering_key = [mock_clustering_col]
+        mock_table.columns = {
+            "id": mock_partition_col,
+            "created_at": mock_clustering_col,
+            "name": mock_regular_col,
+        }
+
+        mock_keyspace_metadata = MagicMock()
+        mock_keyspace_metadata.tables = {"test_table": mock_table}
+        mock_keyspace_metadata.views = {}
+
+        mock_cluster = MagicMock()
+        mock_cluster.metadata.keyspaces = {"test_keyspace": mock_keyspace_metadata}
+
+        self.handler.cluster = mock_cluster
+        self.handler.is_connected = True
+        self.handler.session = MagicMock()
+
+        response = self.handler.get_columns("test_table")
+
+        self.assertEqual(response.resp_type, RESPONSE_TYPE.TABLE)
+        df = response.data_frame
+
+        self.assertEqual(len(df), 3)
+
+    def test_get_columns_table_not_found(self):
+        """Test get_columns when table doesn't exist"""
+
+        mock_keyspace_metadata = MagicMock()
+        mock_keyspace_metadata.tables = {}
+        mock_keyspace_metadata.views = {}
+
+        mock_cluster = MagicMock()
+        mock_cluster.metadata.keyspaces = {"test_keyspace": mock_keyspace_metadata}
+
+        self.handler.cluster = mock_cluster
+        self.handler.is_connected = True
+        self.handler.session = MagicMock()
+
+        response = self.handler.get_columns("nonexistent_table")
+
+        # Should return error
+        self.assertEqual(response.resp_type, RESPONSE_TYPE.ERROR)
+        self.assertIn("not found", response.error_message.lower())
+
+
+class TestDatasaxAstraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
+
+    @property
+    def dummy_connection_data(self):
+        """Dummy connection data for testing"""
+        return {
+            "host": "localhost",
+            "port": 9042,
+            "user": "test_user",
+            "password": "test_password",
+            "keyspace": "test_keyspace",
+        }
+
+    @property
+    def mock_keyspace(self):
+        """Mock keyspace for testing"""
+        return self.dummy_connection_data["keyspace"]
+
+    @property
+    def err_to_raise_on_connect_failure(self):
+        """Exception to raise on connection failure"""
+        return NoHostAvailable("Connection failed", {})
+
+    @property
+    def get_tables_query(self):
+        pass
+
+    @property
+    def get_columns_query(self):
+        pass
+
+    def test_connect_with_secure_bundle(self):
+        """Test connection using secure connect bundle (Astra DB)"""
+        connection_data = self.dummy_connection_data.copy()
+        connection_data["secure_connect_bundle"] = "/path/to/bundle.zip"
+        handler = CassandraHandler("cassandra", connection_data=connection_data)
+
+        with patch(
+            "mindsdb.integrations.handlers.cassandra_handler.cassandra_handler.Cluster"
+        ) as mock_cluster:
+            mock_session = MagicMock()
+            mock_cluster_instance = MagicMock()
+            mock_cluster_instance.connect.return_value = mock_session
+            mock_cluster.return_value = mock_cluster_instance
+
+            handler.connect()
+
+            call_kwargs = mock_cluster.call_args[1]
+            self.assertIn("cloud", call_kwargs)
+            self.assertEqual(
+                call_kwargs["cloud"]["secure_connect_bundle"], "/path/to/bundle.zip"
+            )
 
 
 if __name__ == "__main__":

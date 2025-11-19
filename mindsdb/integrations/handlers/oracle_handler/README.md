@@ -23,10 +23,14 @@ WITH
   PARAMETERS = {
       "host": "localhost",
       "service_name": "FREEPDB1",
-      "user": "SYSTEM",
+      "user": "custom_user",
       "password": "password"
   };
 ```
+
+**Recommendation**: Use a dedicated user for MindsDB with the least privileges necessary for the tasks it needs to perform. SYSDBA privileges are not required.
+If you are connecting to an Oracle database using SYS or SYSTEM user, tables will be not be visible in the MindsDB Studio UI.
+
 
 Required connection parameters include the following:
 

@@ -3,7 +3,12 @@ import pandas as pd
 from pandas.api import types as pd_types
 from hubspot import HubSpot
 
-from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import ContactsTable, CompaniesTable, DealsTable
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
+    ContactsTable,
+    CompaniesTable,
+    DealsTable,
+    HUBSPOT_TABLE_COLUMN_DEFINITIONS,
+)
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 
 from mindsdb.integrations.libs.response import (
@@ -16,39 +21,6 @@ from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
-
-table_columns_def = {
-    "companies": [
-        ("name", "VARCHAR", "Company name"),
-        ("domain", "VARCHAR", "Company domain"),
-        ("industry", "VARCHAR", "Industry"),
-        ("city", "VARCHAR", "City"),
-        ("state", "VARCHAR", "State"),
-        ("phone", "VARCHAR", "Phone number"),
-        ("createdate", "TIMESTAMP", "Creation date"),
-        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
-    ],
-    "contacts": [
-        ("email", "VARCHAR", "Email address"),
-        ("firstname", "VARCHAR", "First name"),
-        ("lastname", "VARCHAR", "Last name"),
-        ("phone", "VARCHAR", "Phone number"),
-        ("company", "VARCHAR", "Associated company"),
-        ("website", "VARCHAR", "Website URL"),
-        ("createdate", "TIMESTAMP", "Creation date"),
-        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
-    ],
-    "deals": [
-        ("dealname", "VARCHAR", "Deal name"),
-        ("amount", "DECIMAL", "Deal amount"),
-        ("dealstage", "VARCHAR", "Deal stage"),
-        ("pipeline", "VARCHAR", "Sales pipeline"),
-        ("closedate", "DATE", "Expected close date"),
-        ("hubspot_owner_id", "VARCHAR", "Owner ID"),
-        ("createdate", "TIMESTAMP", "Creation date"),
-        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
-    ],
-}
 
 
 def _extract_hubspot_error_message(error: Exception) -> str:
@@ -419,120 +391,6 @@ class HubspotHandler(MetaAPIHandler):
                 RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve columns for table '{table_name}': {error_msg}"
             )
 
-    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
-        """Return table metadata for the data catalog.
-
-        Args:
-            table_names (Optional[List[str]]): Specific tables to include or None for all.
-
-        Returns:
-            Response: Metadata describing tables exposed by the handler.
-        """
-        columns = [
-            "TABLE_CATALOG",
-            "TABLE_SCHEMA",
-            "TABLE_NAME",
-            "TABLE_TYPE",
-            "TABLE_DESCRIPTION",
-            "ROW_COUNT",
-        ]
-
-        try:
-            self.connect()
-
-            all_tables = ["companies", "contacts", "deals"]
-            tables_to_process = [t for t in all_tables if table_names is None or t in table_names]
-
-            metadata_rows: List[Dict[str, Any]] = []
-            for table_name in tables_to_process:
-                accessible = False
-                try:
-                    if table_name == "companies":
-                        list(self.connection.crm.companies.get_all(limit=1))
-                    elif table_name == "contacts":
-                        list(self.connection.crm.contacts.get_all(limit=1))
-                    elif table_name == "deals":
-                        list(self.connection.crm.deals.get_all(limit=1))
-                    accessible = True
-                except Exception as access_error:
-                    error_msg = _extract_hubspot_error_message(access_error)
-                    logger.warning(f"Could not access HubSpot table '{table_name}' for metadata: {error_msg}")
-
-                row_count = self._estimate_table_rows(table_name) if accessible else None
-                metadata_rows.append(
-                    {
-                        "TABLE_CATALOG": "def",
-                        "TABLE_SCHEMA": self.name,
-                        "TABLE_NAME": table_name,
-                        "TABLE_TYPE": "BASE TABLE",
-                        "TABLE_DESCRIPTION": self._get_table_description(table_name),
-                        "ROW_COUNT": row_count,
-                    }
-                )
-
-            df = pd.DataFrame(metadata_rows, columns=columns)
-            logger.info(f"Prepared metadata for {len(df)} HubSpot table(s)")
-            return Response(RESPONSE_TYPE.TABLE, data_frame=df)
-
-        except Exception as e:
-            logger.error(f"Failed to get HubSpot table metadata: {str(e)}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve table metadata: {str(e)}")
-
-    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
-        """Return column metadata for data catalog.
-
-        Args:
-            table_names (Optional[List[str]]): List of table names to get columns for,
-            or None for all tables
-
-        Returns:
-            Response: A response containing column metadata with fields:
-                     TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_DESCRIPTION,
-                     IS_NULLABLE, COLUMN_DEFAULT
-        """
-        try:
-            self.connect()
-
-            all_tables = ["companies", "contacts", "deals"]
-            if table_names:
-                tables_to_process = [t for t in table_names if t in all_tables]
-            else:
-                tables_to_process = all_tables
-
-            all_columns = []
-
-            for table_name in tables_to_process:
-                try:
-                    # Discover columns from HubSpot API
-                    discovered_columns = self._discover_columns(table_name, sample_size=100)
-
-                    # Transform to data catalog format (6 fields)
-                    for col in discovered_columns:
-                        all_columns.append(
-                            {
-                                "TABLE_NAME": table_name,
-                                "COLUMN_NAME": col["column_name"],
-                                "DATA_TYPE": col["data_type"],
-                                "COLUMN_DESCRIPTION": col["description"],
-                                "IS_NULLABLE": col["is_nullable"],
-                                "COLUMN_DEFAULT": None,
-                            }
-                        )
-
-                except Exception as e:
-                    logger.warning(f"Could not get columns for table {table_name}: {str(e)}")
-                    # Use default columns on error
-                    default_cols = self._get_default_meta_columns(table_name)
-                    all_columns.extend(default_cols)
-
-            df = pd.DataFrame(all_columns)
-            logger.info(f"Retrieved metadata for {len(all_columns)} columns across {len(tables_to_process)} tables")
-            return Response(RESPONSE_TYPE.TABLE, data_frame=df)
-
-        except Exception as e:
-            logger.error(f"Failed to get column metadata: {str(e)}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve column metadata: {str(e)}")
-
     def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
         """Return column statistics for data catalog
 
@@ -774,8 +632,8 @@ class HubspotHandler(MetaAPIHandler):
         ]
         ordinal_position += 1
 
-        if table_name in table_columns_def:
-            for col_name, data_type, description in table_columns_def[table_name]:
+        if table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
+            for col_name, data_type, description in HUBSPOT_TABLE_COLUMN_DEFINITIONS[table_name]:
                 base_columns.append(
                     {
                         "column_name": col_name,
@@ -810,8 +668,8 @@ class HubspotHandler(MetaAPIHandler):
             }
         ]
 
-        if table_name in table_columns_def:
-            for col_name, data_type, description in table_columns_def[table_name]:
+        if table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
+            for col_name, data_type, description in HUBSPOT_TABLE_COLUMN_DEFINITIONS[table_name]:
                 base_columns.append(
                     {
                         "TABLE_NAME": table_name,

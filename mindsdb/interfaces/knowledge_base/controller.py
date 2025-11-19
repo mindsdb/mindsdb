@@ -586,8 +586,6 @@ class KnowledgeBaseTable:
         """Process and insert raw data rows"""
         if not rows:
             return
-        if len(rows) > MAX_INSERT_BATCH_SIZE:
-            raise ValueError("Input data is too large, please load data in batches")
 
         df = pd.DataFrame(rows)
 
@@ -699,6 +697,9 @@ class KnowledgeBaseTable:
         """
         if df.empty:
             return
+
+        if len(df) > MAX_INSERT_BATCH_SIZE:
+            raise ValueError("Input data is too large, please load data in batches")
 
         try:
             run_query_id = ctx.run_query_id

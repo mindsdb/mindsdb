@@ -57,6 +57,20 @@ def create_data_dir(path: Path) -> None:
         raise PermissionError(f"The directory is not allowed for writing: {path}")
 
 
+def get_bool_env_var(env_name: str) -> bool:
+    value = os.environ.get(env_name)
+    if value is None or value == "":
+        return None
+    match value.lower():
+        case "1" | "true" | "on" | "yes" | "y":
+            value = True
+        case "0" | "false" | "off" | "no" | "n":
+            value = False
+        case _:
+            raise ValueError(f"Expected a boolean value for the environment variable '{env_name}', but got '{value}'")
+    return value
+
+
 class Config:
     """Application config. Singletone, initialized just once. Re-initialyze if `config.auto.json` is changed.
     The class loads multiple configs and merge then in one. If a config option defined in multiple places (config file,
@@ -94,7 +108,7 @@ class Config:
     auto_config_path: Path = None
     auto_config_mtime: float = 0
     _cmd_args: argparse.Namespace = None
-    use_docker_env: bool = os.environ.get("MINDSDB_DOCKER_ENV", False) is not False
+    use_docker_env: bool = get_bool_env_var("MINDSDB_DOCKER_ENV") or False
 
     def __new__(cls, *args, **kwargs) -> "Config":
         """Make class singletone and initialize config."""
@@ -201,6 +215,11 @@ class Config:
             "data_catalog": {
                 "enabled": False,
             },
+            "telemetry": {
+                "enabled": False,
+                "endpoint": None,
+                "records_limit": 10
+            },
         }
         # endregion
 
@@ -253,6 +272,10 @@ class Config:
         ):
             self._env_config["permanent_storage"] = {"location": "absent"}
         # endregion
+
+        telemetry_enabled = get_bool_env_var("MINDSDB_TELEMETRY")
+        if telemetry_enabled is not None:
+            self._env_config["telemetry"]["enabled"] = telemetry_enabled
 
         # region vars: ml queue
         if os.environ.get("MINDSDB_ML_QUEUE_TYPE", "").lower() == "redis":
@@ -319,16 +342,9 @@ class Config:
             except ValueError:
                 raise ValueError(f"MINDSDB_RERANKER_N must be an integer, got: {os.environ['MINDSDB_RERANKER_N']}")
 
-        if os.environ.get("MINDSDB_RERANKER_LOGPROBS", "") != "":
-            logprobs_value = os.environ["MINDSDB_RERANKER_LOGPROBS"].lower()
-            if logprobs_value in ("true", "1", "yes", "y"):
-                reranker_config["logprobs"] = True
-            elif logprobs_value in ("false", "0", "no", "n"):
-                reranker_config["logprobs"] = False
-            else:
-                raise ValueError(
-                    f"MINDSDB_RERANKER_LOGPROBS must be a boolean value, got: {os.environ['MINDSDB_RERANKER_LOGPROBS']}"
-                )
+        reranker_logprobs = get_bool_env_var("MINDSDB_RERANKER_LOGPROBS")
+        if reranker_logprobs is not None:
+            reranker_config["logprobs"] = reranker_logprobs
 
         if os.environ.get("MINDSDB_RERANKER_TOP_LOGPROBS", "") != "":
             try:
@@ -358,20 +374,16 @@ class Config:
             if "default_reranking_model" not in self._env_config:
                 self._env_config["default_reranking_model"] = {}
             self._env_config["default_reranking_model"].update(reranker_config)
-        if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
+        if get_bool_env_var("MINDSDB_DATA_CATALOG_ENABLED") is True:
             self._env_config["data_catalog"] = {"enabled": True}
 
-        if os.environ.get("MINDSDB_NO_STUDIO", "").lower() in ("1", "true"):
+        if get_bool_env_var("MINDSDB_NO_STUDIO") is True:
             self._env_config["gui"]["open_on_start"] = False
             self._env_config["gui"]["autoupdate"] = False
 
-        mindsdb_gui_autoupdate = os.environ.get("MINDSDB_GUI_AUTOUPDATE", "").lower()
-        if mindsdb_gui_autoupdate in ("0", "false"):
-            self._env_config["gui"]["autoupdate"] = False
-        elif mindsdb_gui_autoupdate in ("1", "true"):
-            self._env_config["gui"]["autoupdate"] = True
-        elif mindsdb_gui_autoupdate != "":
-            raise ValueError(f"Wrong value of env var MINDSDB_GUI_AUTOUPDATE={mindsdb_gui_autoupdate}")
+        mindsdb_gui_autoupdate = get_bool_env_var("MINDSDB_GUI_AUTOUPDATE")
+        if mindsdb_gui_autoupdate is not None:
+            self._env_config["gui"]["autoupdate"] = mindsdb_gui_autoupdate
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.

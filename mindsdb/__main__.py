@@ -23,6 +23,7 @@ logger = log.getLogger("mindsdb")
 logger.debug("Starting MindsDB...")
 
 from mindsdb.__about__ import __version__ as mindsdb_version
+from mindsdb.utilities.telemetry import send_telemetry, create_telemetry_start_record
 from mindsdb.utilities.config import config
 from mindsdb.utilities.starters import (
     start_http,
@@ -211,12 +212,21 @@ def set_error_model_status_for_unfinished():
         db.session.commit()
 
 
-def do_clean_process_marks():
+def service_thread():
     """delete unexisting 'process marks'"""
-    while _stop_event.wait(timeout=5) is False:
+    timeout = 5
+    telemetry_timeout = 0
+    create_telemetry_start_record()
+
+    while _stop_event.wait(timeout=timeout) is False:
         unexisting_pids = clean_unlinked_process_marks()
         if not config.is_cloud and len(unexisting_pids) > 0:
             set_error_model_status_by_pids(unexisting_pids)
+
+        telemetry_timeout += timeout
+        if telemetry_timeout > 60:
+            telemetry_timeout = 0
+            send_telemetry()
 
 
 def create_permanent_integrations():
@@ -576,7 +586,7 @@ if __name__ == "__main__":
     ioloop = asyncio.new_event_loop()
     ioloop.run_until_complete(wait_apis_start())
 
-    threading.Thread(target=do_clean_process_marks, name="clean_process_marks").start()
+    threading.Thread(target=service_thread, name="service_thread").start()
 
     ioloop.run_until_complete(gather_apis())
     ioloop.close()

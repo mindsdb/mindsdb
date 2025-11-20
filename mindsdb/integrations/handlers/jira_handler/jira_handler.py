@@ -75,14 +75,17 @@ class JiraHandler(APIHandler):
                 "cloud": is_cloud,
             }
         else:
-            # Jira Server supports personal access token authentication or open access.
+            # Jira Server
             if "url" not in self.connection_data:
                 raise ValueError("Required parameter 'url' must be provided.")
 
             config = {"url": self.connection_data["url"], "cloud": False}
 
             if "personal_access_token" in self.connection_data:
-                config["session"] = {"Authorization": f"Bearer {self.connection_data['personal_access_token']}"}
+                config["token"] = self.connection_data["personal_access_token"]
+            elif "username" in self.connection_data and "password" in self.connection_data:
+                config["username"] = self.connection_data["username"]
+                config["password"] = self.connection_data["password"]
 
         try:
             self.connection = Jira(**config)

@@ -276,13 +276,6 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
                 where_clause = BinaryOperation(op="AND", args=[where_clause, condition])
         return where_clause
 
-    # def update(self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None) -> Response:
-    #     """Update data in both DuckDB and Faiss."""
-    #     # TODO implement
-
-    # def upsert():
-    #     # TODO implement
-
     def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> Response:
         """Delete data from both DuckDB and Faiss."""
 
@@ -311,11 +304,6 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         """Get list of tables."""
         data = [{"table_name": "meta_data"}]
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
-
-    def get_columns(self, table_name: str) -> Response:
-        """Get table columns."""
-        # TODO
-        ...
 
     def check_connection(self) -> Response:
         """Check the connection to the database."""

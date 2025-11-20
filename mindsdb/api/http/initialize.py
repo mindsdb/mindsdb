@@ -330,10 +330,9 @@ def initialize_app(is_restart: bool = False):
             config["auth"]["http_auth_enabled"] is True
             and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
             and (
-                http_auth_type == HTTP_AUTH_TYPE.SESSION
-                and check_session_auth() is False
-                or http_auth_type == HTTP_AUTH_TYPE.TOKEN
-                and verify_pat(bearer) is False
+                (http_auth_type == HTTP_AUTH_TYPE.SESSION and check_session_auth() is False)
+                or (http_auth_type == HTTP_AUTH_TYPE.TOKEN and verify_pat(bearer) is False)
+                or (http_auth_type == HTTP_AUTH_TYPE.SESSION_OR_TOKEN and check_session_auth() is False and verify_pat(bearer) is False)
             )
         ):
             logger.debug(f"Auth failed for path {request.path}")
@@ -400,21 +399,25 @@ def initialize_flask():
     app.json = ORJSONProvider(app)
 
     http_auth_type = config["auth"]["http_auth_type"]
-    if http_auth_type == HTTP_AUTH_TYPE.SESSION:
+    authorizations = {}
+    security = []
+
+    if http_auth_type in (HTTP_AUTH_TYPE.SESSION, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
         app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
         app.config["SESSION_COOKIE_NAME"] = "session"
         app.config["PERMANENT_SESSION_LIFETIME"] = config["auth"]["http_permanent_session_lifetime"]
-        authorizations = {"apikey": {"type": "session", "in": "query", "name": "session"}}
-    elif http_auth_type == HTTP_AUTH_TYPE.TOKEN:
-        authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}}
-    else:
-        raise ValueError(f"Unknown type of HTTP auth: {http_auth_type}")
+        authorizations["session"] = {"type": "apiKey", "in": "cookie", "name": "session"}
+        security.appen(["session"])
+
+    if http_auth_type in (HTTP_AUTH_TYPE.TOKEN, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
+        authorizations["bearer"] = {"type": "apiKey", "in": "header", "name": "Authorization"}
+        security.appen(["bearer"])
 
     logger.debug("Creating swagger API..")
     api = Swagger_Api(
         app,
         authorizations=authorizations,
-        security=["apikey"],
+        security=security,
         url_prefix=":8000",
         prefix="/api",
         doc="/doc/",

@@ -62,6 +62,7 @@ def create_data_dir(path: Path) -> None:
 class HTTP_AUTH_TYPE:
     SESSION: str = "session"
     TOKEN: str = "token"
+    SESSION_OR_TOKEN: str = "session_or_token"
 
 
 HTTP_AUTH_TYPE = HTTP_AUTH_TYPE()
@@ -148,7 +149,7 @@ class Config:
                 "locks": self.storage_root_path / "locks",
             },
             "auth": {
-                "http_auth_type": HTTP_AUTH_TYPE.SESSION,  # token | session
+                "http_auth_type": HTTP_AUTH_TYPE.SESSION_OR_TOKEN,  # token | session | session_or_token
                 "http_auth_enabled": False,
                 "http_permanent_session_lifetime": datetime.timedelta(days=31),
                 "username": "mindsdb",

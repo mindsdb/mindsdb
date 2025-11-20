@@ -20,9 +20,12 @@ def check_session_auth() -> bool:
     Returns:
         bool: True if user authentication is approved
     """
-    if config["auth"]["http_auth_enabled"] is False:
-        return True
-    return session.get("username") == config["auth"]["username"]
+    try:
+        if config["auth"]["http_auth_enabled"] is False:
+            return True
+        return session.get("username") == config["auth"]["username"]
+    except Exception:
+        return False
 
 
 @ns_conf.route("/login", methods=["POST"])
@@ -55,13 +58,14 @@ class LoginRoute(Resource):
 
         logger.info(f"User '{username}' logged in successfully")
 
-        if config["auth"]["http_auth_type"] == HTTP_AUTH_TYPE.SESSION:
+        response = {}
+        if config["auth"]["http_auth_type"] in (HTTP_AUTH_TYPE.SESSION, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
             session.clear()
             session["username"] = username
             session.permanent = True
-            response = {}
-        elif config["auth"]["http_auth_type"] == HTTP_AUTH_TYPE.TOKEN:
-            response = {"token": generate_pat()}
+
+        elif config["auth"]["http_auth_type"] in (HTTP_AUTH_TYPE.TOKEN, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
+            response["token"] = generate_pat()
 
         return response, 200
 
@@ -127,10 +131,10 @@ class StatusRoute(Resource):
 
         auth_confirmed = False
         auth_type = config["auth"]["http_auth_type"]
-        if auth_type == "session":
-            auth_confirmed = check_session_auth()
-        elif auth_type == "token":
-            auth_confirmed = verify_pat(request.headers.get("Authorization", "").replace("Bearer ", ""))
+        if auth_type in (HTTP_AUTH_TYPE.SESSION, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
+            auth_confirmed = auth_confirmed or check_session_auth()
+        if auth_type in (HTTP_AUTH_TYPE.TOKEN, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
+            auth_confirmed = auth_confirmed or verify_pat(request.headers.get("Authorization", "").replace("Bearer ", ""))
 
         resp = {
             "mindsdb_version": mindsdb_version,

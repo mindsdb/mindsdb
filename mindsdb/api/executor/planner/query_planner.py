@@ -269,7 +269,6 @@ class QueryPlanner:
             if part in self.databases:
                 database = part
                 parts.pop(0)
-                node.is_quoted.pop(0)
             else:
                 err_msg_suffix = f"'{parts[0].lower()}' is not valid database name."
 

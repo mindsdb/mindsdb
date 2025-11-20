@@ -40,6 +40,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name=name)
+        self.thread_safe = True
 
         # Extract configuration
         self.connection_data = kwargs.get("connection_data", {})

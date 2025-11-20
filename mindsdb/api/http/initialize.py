@@ -407,11 +407,11 @@ def initialize_flask():
         app.config["SESSION_COOKIE_NAME"] = "session"
         app.config["PERMANENT_SESSION_LIFETIME"] = config["auth"]["http_permanent_session_lifetime"]
         authorizations["session"] = {"type": "apiKey", "in": "cookie", "name": "session"}
-        security.appen(["session"])
+        security.append(["session"])
 
     if http_auth_type in (HTTP_AUTH_TYPE.TOKEN, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
         authorizations["bearer"] = {"type": "apiKey", "in": "header", "name": "Authorization"}
-        security.appen(["bearer"])
+        security.append(["bearer"])
 
     logger.debug("Creating swagger API..")
     api = Swagger_Api(

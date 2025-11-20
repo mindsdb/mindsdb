@@ -134,7 +134,9 @@ class StatusRoute(Resource):
         if auth_type in (HTTP_AUTH_TYPE.SESSION, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
             auth_confirmed = auth_confirmed or check_session_auth()
         if auth_type in (HTTP_AUTH_TYPE.TOKEN, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
-            auth_confirmed = auth_confirmed or verify_pat(request.headers.get("Authorization", "").replace("Bearer ", ""))
+            auth_confirmed = auth_confirmed or verify_pat(
+                request.headers.get("Authorization", "").replace("Bearer ", "")
+            )
 
         resp = {
             "mindsdb_version": mindsdb_version,

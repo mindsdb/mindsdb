@@ -332,7 +332,11 @@ def initialize_app(is_restart: bool = False):
             and (
                 (http_auth_type == HTTP_AUTH_TYPE.SESSION and check_session_auth() is False)
                 or (http_auth_type == HTTP_AUTH_TYPE.TOKEN and verify_pat(bearer) is False)
-                or (http_auth_type == HTTP_AUTH_TYPE.SESSION_OR_TOKEN and check_session_auth() is False and verify_pat(bearer) is False)
+                or (
+                    http_auth_type == HTTP_AUTH_TYPE.SESSION_OR_TOKEN
+                    and check_session_auth() is False
+                    and verify_pat(bearer) is False
+                )
             )
         ):
             logger.debug(f"Auth failed for path {request.path}")

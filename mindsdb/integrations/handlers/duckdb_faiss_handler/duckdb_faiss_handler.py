@@ -226,6 +226,27 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             in_filter = BinaryOperation(
                 op="IN", args=[Identifier("faiss_id"), AstTuple([Constant(i) for i in faiss_ids])]
             )
+            # split into chunks
+            chunk_size = 10000
+            if len(faiss_ids) > chunk_size:
+                dfs = []
+                chunk = 0
+                total = 0
+                while chunk * chunk_size < len(faiss_ids):
+                    # create results with partition
+                    ids = faiss_ids[chunk * chunk_size: (chunk + 1) * chunk_size]
+                    chunk += 1
+                    df = self._select_from_metadata(faiss_ids=ids, meta_filters=meta_filters, limit=limit)
+                    total += len(df)
+                    if limit is not None and limit <= total:
+                        # cut the extra from the end
+                        df = df[: -(total-limit)]
+                        dfs.append(df)
+                        break
+                    if len(df) > 0:
+                        dfs.append(df)
+
+                return pd.concat(dfs)
 
             if where_clause is None:
                 where_clause = in_filter

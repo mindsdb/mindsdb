@@ -130,6 +130,12 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         self.faiss_index.insert(list(vectors), list(ids))
         self._sync()
 
+    def upsert(self, table_name: str, data: pd.DataFrame):
+        # delete by ids and insert
+        ids = list(data['id'])
+        self.delete(table_name, [FilterCondition(column='id', op=FilterOperator.IN, value=ids)])
+        self.insert(table_name, data)
+
     def select(
         self,
         table_name: str,

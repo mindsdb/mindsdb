@@ -113,6 +113,7 @@ from mindsdb.interfaces.variables.variables_controller import variables_controll
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier, get_handler_install_message
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.utilities.telemetry import add_telemetry_record
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -1260,6 +1261,13 @@ class ExecuteCommands:
             if statement.if_not_exists is False:
                 raise
 
+        add_telemetry_record(
+            event="create_database",
+            record={
+                "engine": engine
+            }
+        )
+
         return ExecuteAnswer()
 
     def answer_drop_database(self, statement: DropDatabase | DropDatasource) -> ExecuteAnswer:
@@ -1430,6 +1438,19 @@ class ExecuteCommands:
             if_not_exists=statement.if_not_exists,
         )
 
+        params = statement.params or {}
+        add_telemetry_record(
+            event="create_knowledge_base",
+            record={
+                "embedding_model": {
+                    k: v for k, v in params.get("embedding_model", {}).items() if k in ("provider", "model_name")
+                },
+                "reranking_model": {
+                    k: v for k, v in params.get("reranking_model", {}).items() if k in ("provider", "model_name")
+                }
+            }
+        )
+
         return ExecuteAnswer()
 
     def answer_alter_kb(self, statement: AlterKnowledgeBase, database_name: str):
@@ -1514,6 +1535,14 @@ class ExecuteCommands:
         except ValueError as e:
             # Project does not exist or agent already exists.
             raise ExecutorException(str(e))
+
+        params = statement.params or {}
+        add_telemetry_record(
+            event="create_agent",
+            record={
+                k: v for k, v in params.items() if k in ("provider", "model_name")
+            }
+        )
 
         return ExecuteAnswer()
 

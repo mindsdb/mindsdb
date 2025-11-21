@@ -633,3 +633,14 @@ class LLMData(Base):
     model_id: int = Column(Integer, nullable=False)
     created_at: datetime = Column(DateTime, default=datetime.datetime.now)
     updated_at: datetime = Column(DateTime, onupdate=datetime.datetime.now)
+
+
+class Telemetry(Base):
+    """Table to store telemetry data, while it is not sent to the telemetry service.
+    """
+    __tablename__ = "telemetry"
+    id: int = Column(Integer, primary_key=True)
+    company_id: int = Column(String, nullable=False)
+    event: str = Column(String, nullable=False)
+    record: str = Column(JSON, nullable=True)
+    created_at: datetime = Column(DateTime, default=datetime.datetime.now)

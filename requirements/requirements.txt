@@ -51,6 +51,7 @@ starlette>=0.27     # Required for A2A, MCP servers
 a2wsgi ~= 1.10.10  # WSGI wrapper for flask+starlette
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
 uvicorn>=0.30.0, <1.0.0   # For all HTTP-based APIs
+py-machineid==0.8.1
 
 # files reading
 pymupdf==1.25.2

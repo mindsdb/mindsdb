@@ -1,3 +1,7 @@
+"""Utilities for telemetry data collection and sending
+
+Note: some libraries are imported in the functions, so they will not be imported if telemetry is disabled.
+"""
 import sys
 from functools import wraps
 

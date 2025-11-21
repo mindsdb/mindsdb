@@ -54,7 +54,8 @@ def add_telemetry_record(event: str, record: dict) -> None:
     telemetry_records = _get_all_telemetry_db_records()
     try:
         if len(telemetry_records) + 1 > records_limit:
-            db.session.delete(telemetry_records[: len(telemetry_records) + 1 - records_limit])
+            for r in telemetry_records[: len(telemetry_records) + 1 - records_limit]:
+                db.session.delete(r)
         record = db.Telemetry(
             company_id=None,
             event=event,
@@ -167,10 +168,11 @@ def send_telemetry() -> None:
     for record in telemetry_records:
         data["records"].append({"event": record.event, **record.record})
     try:
-        result = requests.post(config["telemetry"]["endpoint"], data=data, timeout=5)
+        result = requests.post(config["telemetry"]["endpoint"], json=data, timeout=5)
         result.raise_for_status()
     except Exception:
         logger.warning("Telemetry data was not sent to the telemetry service")
     else:
-        db.session.delete(telemetry_records)
+        for record in telemetry_records:
+            db.session.delete(record)
         db.session.commit()

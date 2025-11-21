@@ -1,6 +1,7 @@
 import os
 from typing import Iterable, List
 import numpy as np
+import psutil
 
 import portalocker
 
@@ -43,13 +44,24 @@ class FaissIndex:
 
         self.path = path
 
+        self._since_ram_checked = 0
+
         self.index = None
         self.index_fd = None
         if os.path.exists(self.path):
             self.load_index()
 
     def load_index(self):
-        # TODO check RAM
+        # check RAM
+        index_size = os.path.getsize(self.path)
+        # according to tests faiss index occupies ~ the same amount of RAM as file size
+        # add 10% and 2GB to it
+        required_ram = index_size * 1.1 + 2 * 1024**3
+        available_ram = psutil.virtual_memory().available
+        if available_ram < required_ram:
+            to_free_gb = round ((required_ram-available_ram) / 1024**3, 2)
+            raise ValueError(f'Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb')
+
         self.index_fd = open(self.path, "rb")
         try:
             portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
@@ -78,6 +90,32 @@ class FaissIndex:
 
         self.index = index
 
+    def check_ram_usage(self, count_vectors, index_type: str = 'flat', m=32, nlist=4096):
+        self._since_ram_checked += count_vectors
+
+        # check after every 10k vectors
+        if self._since_ram_checked < 10000:
+            return
+
+        match index_type:
+            case 'flat':
+                required = self.dim * 4 * count_vectors
+            case 'hnsw':
+                required =  (self.dim * 4 + m * 2 * 4) * count_vectors
+            case 'ivf':
+                required =  (self.dim * 4 + 8) * count_vectors + self.dim * 4 * nlist
+            case _:
+                raise ValueError(f'Unknown index type: {index_type}')
+
+        # check RAM usage
+        # keep extra 2Gb
+        available = psutil.virtual_memory().available - 2 * 1024 ** 3
+
+        if available < required:
+            raise ValueError(f'Unable insert records, not enough RAM')
+
+        self._since_ram_checked = 0
+
     def insert(
         self,
         vectors: Iterable[Iterable[float]],
@@ -86,7 +124,7 @@ class FaissIndex:
         if len(vectors) == 0:
             return
 
-        # TODO check RAM usage
+        self.check_ram_usage(len(vectors), 'flat')
 
         vectors = np.array(vectors)
         ids = np.array(ids)

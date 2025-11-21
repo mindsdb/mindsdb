@@ -1,0 +1,128 @@
+---
+title: MindsDB System Defaults
+sidebarTitle: System Defaults
+---
+
+System defaults in MindsDB provide a convenient way to set application-wide configurations for commonly used AI models. By defining these defaults once, users can streamline workflows and avoid repeatedly specifying model parameters when creating or using various MindsDB objects and functions.
+
+## Usage of System Defaults
+
+When system defaults are set, MindsDB can automatically use the configured models across the platform for various components such as:
+
+* [Agents](/mindsdb_sql/agents/agent) that can answer questions over the connected data and are powered by a default large language model (LLM).
+
+* [Knowledge Bases](/mindsdb_sql/knowledge_bases/overview) that can store and search both structured and unstructured data, and use a default embedding model for embedding the content and a default reranking model for reranking the search results. Additionally, knowledge bases use a default model for evaluating performance with the [EVALUATE KNOWLEDGE_BASE command](/mindsdb_sql/knowledge_bases/evaluate).
+
+* Custom functions such as [LLM()](/mindsdb_sql/functions/llm_function) and [TO_MARKDOWN()](/mindsdb_sql/functions/to_markdown_function) that rely on the default LLM for text generation and formatting.
+
+Once configured, users can create and use agents, knowledge bases, and custom functions without having to specify model parameters each time. This ensures consistent behavior across the system and simplifies deployment.
+
+## Available System Defaults
+
+MindsDB supports the following system defaults:
+
+| System Default           | Used By                                                      | Description                                                                                       |
+|--------------------------|--------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| Default LLM              | Agents, EVALUATE, KNOWLEDGE_BASE, LLM(), TO_MARKDOWN()       | Used as an underlying LLM for reasoning, conversation, and text generation and formatting.        |
+| Default Embedding Model  | Knowledge Bases                                              | Converts inserted content and user questions into embeddings for semantic search.                 |
+| Default Reranking Model  | Knowledge Bases                                              | Reranks search results to improve retrieval accuracy.                                             |
+
+## Supported Model Providers
+
+Different components in MindsDB support different sets of model providers.
+
+**Knowledge Bases**
+
+Supported providers for **embedding models**:
+
+* Azure OpenAI
+* Bedrock
+* Google
+* OpenAI (and OpenAI-compatible model providers)
+* Snowflake Cortex AI
+
+Supported providers for **reranking models**:
+
+* Azure OpenAI
+* Bedrock
+* Google
+* OpenAI (and OpenAI-compatible model providers)
+* Snowflake Cortex AI
+
+Supported providers for **models used to evaluate knowledge bases**:
+
+* Azure OpenAI
+* Bedrock
+* Google
+* OpenAI (and OpenAI-compatible model providers)
+* Snowflake Cortex AI
+
+**Agents**
+
+Supported providers for **default models**:
+
+* Bedrock
+* Google
+* Ollama
+* OpenAI (and OpenAI-compatible model providers)
+
+**LLM()**
+
+Supported providers for **default models**:
+
+* Ollama
+* OpenAI (and OpenAI-compatible model providers)
+
+**TO_MARKDOWN()**
+
+Supported providers for **default models**:
+
+* Azure OpenAI
+* Google
+* OpenAI (and OpenAI-compatible model providers)
+
+## How to Configure System Defaults
+
+You can configure system defaults using either the MindsDB UI or the configuration file, depending on your setup preferences.
+
+The configuration variables include a provider name, a model name, and – if available – base URL, API key, and API version.
+
+**Option 1: Configure via MindsDB UI**
+
+1. Open the MindsDB UI.
+2. Navigate to Settings → Models.
+3. Define the models for each of the system defaults as follows:
+a. Under Provider, select the model provider from the dropdown.
+b. Under Model, define the model name that is available with the selected model provider.
+c. Under Base URL, define the base URL of the model provider, if available.
+d. Under API key, provide the API key, if available.
+e. Under API version, define the API version, if available.
+4.Click the Test & Save button to validate and save the configuration.
+
+After saving, the defaults take immediate effect across your MindsDB instance.
+
+**Option 2: Configure via MindsDB Configuration File**
+
+You can also define system defaults in the [MindsDB configuration file](/setup/custom-config). This method is recommended for advanced or automated deployments.
+
+When MindsDB is started with the custom configuration file, it will automatically load and apply these default models.
+
+**Option 3: Environment Variables**
+
+For functions like [LLM()](/mindsdb_sql/functions/llm_function) and [TO_MARKDOWN()](/mindsdb_sql/functions/to_markdown_function), system defaults can also be defined using environment variables. This allows for easy configuration in containerized or cloud deployments.
+
+Refer to the individual function documentation for details on environment variables.
+
+**Option 4: Define Defaults at Object Creation**
+
+You can specify default models when creating [agents](/mindsdb_sql/agents/agent_syntax) and [knowledge bases](/mindsdb_sql/knowledge_bases/create). These local defaults override the global system defaults for that specific object.
+
+This allows you to tailor model behavior per agent or per knowledge base while keeping system-wide defaults in place.
+
+<Note>
+Note that after changing the default model, the existing objects are not updated with the new default model. All objects going forward will use the updated default models.
+</Note>
+
+## Summary
+
+System defaults in MindsDB simplify the AI development by standardizing the models used across various components. Whether configured through the UI, YAML configuration file, or environment variables, defaults help maintain consistency and reduce setup time.

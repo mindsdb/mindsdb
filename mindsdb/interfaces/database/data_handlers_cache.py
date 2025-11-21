@@ -15,6 +15,7 @@ logger = log.getLogger(__name__)
 class HandlersCacheRecord:
     """Record for a handler in the cache
 
+
     Args:
         handler (DatabaseHandler): handler instance
         expired_at (float): time when the handler will be expired

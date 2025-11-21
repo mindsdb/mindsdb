@@ -1,7 +1,8 @@
 import os
 import ast
-from typing import Dict, List, Optional, Union
+import shutil
 import hashlib
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
 import chromadb
@@ -471,6 +472,8 @@ class ChromaDBHandler(VectorStoreHandler):
         self.connect()
         try:
             self._client.delete_collection(table_name)
+            if "persist_directory" in self._client_config:
+                shutil.rmtree(self._client_config["persist_directory"], ignore_errors=True)
             self._sync()
         except ValueError:
             if if_exists:

@@ -85,12 +85,13 @@ class ShopifyMetaAPIResource(MetaAPIResource):
             asc = sort[0].ascending
             if order_by not in sort_map:
                 logger.info(
-                    f"Used unsopported column for order by: {order_by}, available columns are: {list(self.sort_map.keys())}."
+                    f"Used unsupported column for order by: {order_by}, available columns are: {list(self.sort_map.keys())}."
                 )
                 return None, None
 
             sort_key = sort_map[order_by]
             sort_reverse = not asc
+            sort[0].applied = True
         return sort_key, sort_reverse
 
     def _get_query_conditions(self, conditions: List[FilterCondition] | None) -> str:
@@ -501,7 +502,7 @@ class MarketingEventsTable(ShopifyMetaAPIResource):
         data = query_graphql_nodes(
             self.model_name,
             self.model,
-            ["id"],
+            "id",
         )
         row_count = len(data)
 
@@ -561,7 +562,7 @@ class InventoryItemsTable(ShopifyMetaAPIResource):
         data = query_graphql_nodes(
             self.model_name,
             self.model,
-            ["id"],
+            "id",
         )
         row_count = len(data)
 
@@ -622,7 +623,7 @@ class StaffMembersTable(ShopifyMetaAPIResource):
         data = query_graphql_nodes(
             self.model_name,
             self.model,
-            ["id"],
+            "id",
         )
         row_count = len(data)
 

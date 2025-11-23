@@ -9,7 +9,7 @@ from mindsdb.integrations.handlers.jira_handler.jira_tables import (
     JiraUsersTable,
     JiraGroupsTable,
 )
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -21,7 +21,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class JiraHandler(APIHandler):
+class JiraHandler(MetaAPIHandler):
     """
     This handler handles the connection and execution of SQL statements on Jira.
     """

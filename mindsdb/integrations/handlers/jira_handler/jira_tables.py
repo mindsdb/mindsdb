@@ -4,7 +4,11 @@ from atlassian import Jira
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import (
+    FilterCondition,
+    SortColumn,
+    FilterOperator,
+)
 from mindsdb.utilities import log
 
 
@@ -28,9 +32,13 @@ class JiraProjectsTable(APIResource):
                 if condition.op == FilterOperator.EQUAL:
                     projects = [client.get_project(condition.value)]
                 elif condition.op == FilterOperator.IN:
-                    projects = [client.get_project(project_id) for project_id in condition.value]
+                    projects = [
+                        client.get_project(project_id) for project_id in condition.value
+                    ]
                 else:
-                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
+                    raise ValueError(
+                        f"Unsupported operator {condition.op} for column {condition.column}."
+                    )
                 condition.applied = True
 
         if not projects:
@@ -58,6 +66,14 @@ class JiraProjectsTable(APIResource):
         ]
 
 
+class JiraAttachmentsTable(APIResource):
+    pass
+
+
+class JiraCommentsTable(APIResource):
+    pass
+
+
 class JiraIssuesTable(APIResource):
     def list(
         self,
@@ -75,9 +91,13 @@ class JiraIssuesTable(APIResource):
                 if condition.op == FilterOperator.EQUAL:
                     issues = [client.get_issue(condition.value)]
                 elif condition.op == FilterOperator.IN:
-                    issues = [client.get_issue(issue_id) for issue_id in condition.value]
+                    issues = [
+                        client.get_issue(issue_id) for issue_id in condition.value
+                    ]
                 else:
-                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
+                    raise ValueError(
+                        f"Unsupported operator {condition.op} for column {condition.column}."
+                    )
                 condition.applied = True
 
             elif condition.column in ("project_id", "project_key", "project_name"):
@@ -85,7 +105,9 @@ class JiraIssuesTable(APIResource):
                     issues = client.get_all_project_issues(condition.value, limit=limit)
                 elif condition.op == FilterOperator.IN:
                     for project_id in condition.value:
-                        issues.extend(client.get_all_project_issues(project_id, limit=limit))
+                        issues.extend(
+                            client.get_all_project_issues(project_id, limit=limit)
+                        )
 
                 condition.applied = True
 
@@ -93,7 +115,9 @@ class JiraIssuesTable(APIResource):
             project_ids = [project["id"] for project in client.get_all_projects()]
             for project_id in project_ids:
                 issues.extend(
-                    self._get_project_issues_with_limit(client, project_id, limit=limit, current_issues=issues)
+                    self._get_project_issues_with_limit(
+                        client, project_id, limit=limit, current_issues=issues
+                    )
                 )
 
         if issues:
@@ -103,7 +127,9 @@ class JiraIssuesTable(APIResource):
 
         return issues_df
 
-    def _get_project_issues_with_limit(self, client: Jira, project_id, limit=None, current_issues=None):
+    def _get_project_issues_with_limit(
+        self, client: Jira, project_id, limit=None, current_issues=None
+    ):
         """
         Helper to get issues from a project, respecting the limit.
         """
@@ -200,9 +226,14 @@ class JiraUsersTable(APIResource):
                 if condition.op == FilterOperator.EQUAL:
                     users = [client.user(account_id=condition.value)]
                 elif condition.op == FilterOperator.IN:
-                    users = [client.user(account_id=accountId) for accountId in condition.value]
+                    users = [
+                        client.user(account_id=accountId)
+                        for accountId in condition.value
+                    ]
                 else:
-                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
+                    raise ValueError(
+                        f"Unsupported operator {condition.op} for column {condition.column}."
+                    )
                 condition.applied = True
 
         if not users:

@@ -16,6 +16,7 @@ class HANDLER_CONNECTION_ARG_TYPE:
     PATH = 'path'
     DICT = 'dict'
     PWD = 'pwd'
+    LIST = 'list'
 
 
 HANDLER_CONNECTION_ARG_TYPE = HANDLER_CONNECTION_ARG_TYPE()

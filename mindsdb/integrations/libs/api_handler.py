@@ -553,6 +553,17 @@ class MetaAPIHandler(APIHandler):
                 except Exception:
                     logger.exception(f"Error retrieving metadata for table {table_name}:")
 
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "TABLE_TYPE",
+                    "TABLE_SCHEMA",
+                    "TABLE_DESCRIPTION",
+                    "ROW_COUNT",
+                ]
+            )
+
         return Response(RESPONSE_TYPE.TABLE, df)
 
     def meta_get_columns(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
@@ -574,6 +585,18 @@ class MetaAPIHandler(APIHandler):
                         df = pd.concat([df, pd.DataFrame(column_metadata)], ignore_index=True)
                 except Exception:
                     logger.exception(f"Error retrieving column metadata for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "COLUMN_NAME",
+                    "DATA_TYPE",
+                    "COLUMN_DESCRIPTION",
+                    "IS_NULLABLE",
+                    "COLUMN_DEFAULT",
+                ]
+            )
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -597,6 +620,20 @@ class MetaAPIHandler(APIHandler):
                 except Exception:
                     logger.exception(f"Error retrieving column statistics for table {table_name}:")
 
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "COLUMN_NAME",
+                    "MOST_COMMON_VALUES",
+                    "MOST_COMMON_FREQUENCIES",
+                    "NULL_PERCENTAGE",
+                    "MINIMUM_VALUE",
+                    "MAXIMUM_VALUE",
+                    "DISTINCT_VALUES_COUNT",
+                ]
+            )
+
         return Response(RESPONSE_TYPE.TABLE, df)
 
     def meta_get_primary_keys(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
@@ -618,6 +655,16 @@ class MetaAPIHandler(APIHandler):
                         df = pd.concat([df, pd.DataFrame(primary_key_metadata)], ignore_index=True)
                 except Exception:
                     logger.exception(f"Error retrieving primary keys for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "COLUMN_NAME",
+                    "ORDINAL_POSITION",
+                    "CONSTRAINT_NAME",
+                ]
+            )
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -643,6 +690,17 @@ class MetaAPIHandler(APIHandler):
                         df = pd.concat([df, pd.DataFrame(foreign_key_metadata)], ignore_index=True)
                 except Exception:
                     logger.exception(f"Error retrieving foreign keys for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "PARENT_TABLE_NAME",
+                    "PARENT_COLUMN_NAME",
+                    "CHILD_TABLE_NAME",
+                    "CHILD_COLUMN_NAME",
+                    "CONSTRAINT_NAME",
+                ]
+            )
 
         return Response(RESPONSE_TYPE.TABLE, df)
 

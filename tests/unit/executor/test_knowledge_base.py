@@ -865,3 +865,38 @@ class TestKB(BaseExecutorDummyML):
 
         assert kb.params["reranking_model"]["provider"] == "ollama"
         assert "api_key" not in kb.params["reranking_model"]
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_kb_uppercase_source_columns(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        df = pd.DataFrame(
+            [
+                {
+                    "PRODUCT_ID": 1,
+                    "PRODUCT_NAME": 'Laptop Pro 15"',
+                    "DESCRIPTION": "High-performance laptop with 16GB RAM and 512GB SSD",
+                    "CATEGORY": "Electronics",
+                    "PRICE": 1299.99,
+                }
+            ],
+            columns=["PRODUCT_ID", "PRODUCT_NAME", "DESCRIPTION", "CATEGORY", "PRICE"],
+        )
+
+        self.save_file("oracle_products", df)
+
+        self._create_kb(
+            "kb_oracle_dbg",
+            content_columns=["product_name", "description"],
+            id_column="product_id",
+            metadata_columns=["category", "price"],
+        )
+        self.run_sql(
+            """
+            insert into kb_oracle_dbg
+            select * from files.oracle_products
+        """
+        )
+
+        ret = self.run_sql("select * from kb_oracle_dbg")
+        assert len(ret) == 2

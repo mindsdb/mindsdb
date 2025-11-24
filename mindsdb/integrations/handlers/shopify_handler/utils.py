@@ -62,22 +62,6 @@ def get_graphql_columns(root: AliasesEnum, targets: list[str] | None = None) -> 
     return " ".join(acc)
 
 
-def query_graphql(query: str) -> dict:
-    """Query the GraphQL API.
-
-    Args:
-        query: The GraphQL query to execute.
-
-    Returns:
-        dict: The result of the GraphQL query.
-    """
-    result = shopify.GraphQL().execute(query)
-    result = json.loads(result)
-    if "errors" in result:
-        raise Exception(_format_error(result["errors"]))
-    return result
-
-
 @dataclass(slots=True, kw_only=True)
 class ShopifyQuery:
     """A class to represent a Shopify GraphQL query.

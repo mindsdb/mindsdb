@@ -1,12 +1,14 @@
+import json
+from typing import List, Dict
+
 import shopify
 import pandas as pd
-from typing import List, Dict
 
 from mindsdb.integrations.libs.api_handler import MetaAPIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 from mindsdb.utilities import log
 
-from .utils import query_graphql_nodes, get_graphql_columns, query_graphql
+from .utils import query_graphql_nodes, get_graphql_columns, _format_error # query_graphql
 from .models.products import Products, columns as products_columns
 from .models.product_variants import ProductVariants, columns as product_variants_columns
 from .models.customers import Customers, columns as customers_columns
@@ -135,6 +137,23 @@ class ShopifyMetaAPIResource(MetaAPIResource):
             List[dict]: The columns metadata.
         """
         return self.columns
+    
+    def query_graphql(self, query: str) -> dict:
+        """Query the GraphQL API.
+
+        Args:
+            query: The GraphQL query to execute.
+
+        Returns:
+            dict: The result of the GraphQL query.
+        """
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        result = shopify.GraphQL().execute(query)
+        result = json.loads(result)
+        if "errors" in result:
+            raise Exception(_format_error(result["errors"]))
+        return result
 
 
 class ProductsTable(ShopifyMetaAPIResource):
@@ -195,11 +214,11 @@ class ProductsTable(ShopifyMetaAPIResource):
         super().__init__(*args, **kwargs)
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
-        response = query_graphql("""{
+        response = self.query_graphql("""{
             productsCount(limit:null) {
                 count
-        }""")
-        row_count = response["productsCount"]["count"]
+        } }""")
+        row_count = response["data"]["productsCount"]["count"]
 
         return {
             "table_name": self.name,
@@ -270,11 +289,11 @@ class ProductVariantsTable(ShopifyMetaAPIResource):
         super().__init__(*args, **kwargs)
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
-        response = query_graphql("""{
+        response = self.query_graphql("""{
             productVariantsCount(limit:null) {
                 count
-        }""")
-        row_count = response["productVariantsCount"]["count"]
+        } }""")
+        row_count = response["data"]["productVariantsCount"]["count"]
 
         return {
             "table_name": self.name,
@@ -345,11 +364,11 @@ class CustomersTable(ShopifyMetaAPIResource):
         super().__init__(*args, **kwargs)
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
-        response = query_graphql("""{
+        response = self.query_graphql("""{
             customersCount(limit:null) {
                 count
-        }""")
-        row_count = response["customersCount"]["count"]
+        } }""")
+        row_count = response["data"]["customersCount"]["count"]
 
         return {
             "table_name": self.name,
@@ -431,11 +450,11 @@ class OrdersTable(ShopifyMetaAPIResource):
         super().__init__(*args, **kwargs)
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
-        response = query_graphql("""{
+        response = self.query_graphql("""{
             ordersCount(limit:null) {
                 count
-        }""")
-        row_count = response["ordersCount"]["count"]
+        } }""")
+        row_count = response["data"]["ordersCount"]["count"]
 
         return {
             "table_name": self.name,
@@ -688,11 +707,11 @@ class GiftCardsTable(ShopifyMetaAPIResource):
         super().__init__(*args, **kwargs)
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
-        response = query_graphql("""{
+        response = self.query_graphql("""{
             giftCardsCount(limit:null) {
                 count
-        }""")
-        row_count = response["giftCardsCount"]["count"]
+        } }""")
+        row_count = response["data"]["giftCardsCount"]["count"]
 
         return {
             "table_name": self.name,

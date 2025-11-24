@@ -11,7 +11,7 @@ from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     StaffMembersTable,
     GiftCardsTable,
 )
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
@@ -29,7 +29,7 @@ from .connection_args import connection_args
 logger = log.getLogger(__name__)
 
 
-class ShopifyHandler(APIHandler):
+class ShopifyHandler(MetaAPIHandler):
     """
     The Shopify handler implementation.
     """

@@ -173,10 +173,14 @@ class DataCatalogRetriever:
         """
         Construct a formatted string representation of the columns for a single table.
         """
-        columns_str = "\n\nColumns:"
+        columns_str = "\n\nColumns:\n"
         for _, column_row in columns_df.iterrows():
             # Ideally, there should be only one stats row per column.
-            stats_row = column_stats_df[column_stats_df["COLUMN_NAME"] == column_row["COLUMN_NAME"]].iloc[0]
+            stats_row = column_stats_df[column_stats_df["COLUMN_NAME"] == column_row["COLUMN_NAME"]]
+            if len(stats_row) == 0:
+                stats_row = pd.Series()
+            else:
+                stats_row = stats_row.iloc[0]
             columns_str += self._construct_metadata_string_for_column(
                 column_row,
                 stats_row,

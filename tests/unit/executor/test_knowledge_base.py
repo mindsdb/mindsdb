@@ -358,9 +358,7 @@ class TestKB(BaseExecutorDummyML):
             # wait loaded
             for i in range(1000):
                 time.sleep(0.2)
-                ret = self.run_sql(
-                    f"select * from information_schema.queries where id = {query_id}"
-                )
+                ret = self.run_sql(f"select * from information_schema.queries where id = {query_id}")
                 if ret["ERROR"][0] is not None:
                     raise RuntimeError(ret["ERROR"][0])
                 if ret["FINISHED_AT"][0] is not None:
@@ -371,9 +369,7 @@ class TestKB(BaseExecutorDummyML):
             assert len(ret) == len(df)
 
             # check queries table
-            ret = self.run_sql(
-                f"select * from information_schema.queries where id = {query_id}"
-            )
+            ret = self.run_sql(f"select * from information_schema.queries where id = {query_id}")
             assert len(ret) == 1
             rec = ret.iloc[0]
             assert "kb_part" in ret["SQL"][0]
@@ -465,9 +461,7 @@ class TestKB(BaseExecutorDummyML):
                 for shape in ("square", "triangle", "circle"):
                     i += 1
                     lines.append([i, i, f"{color} {size} {shape}", color, size, shape])
-        df = pd.DataFrame(
-            lines, columns=["id", "num", "content", "color", "size", "shape"]
-        )
+        df = pd.DataFrame(lines, columns=["id", "num", "content", "color", "size", "shape"])
 
         self.save_file("items", df)
 
@@ -629,9 +623,7 @@ class TestKB(BaseExecutorDummyML):
             self.run_sql("select * from kb2 where cont10='val2'")
 
     @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
-    @patch(
-        "mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores"
-    )
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_evaluate(self, mock_litellm_embedding, mock_get_scores, mock_openai):
         set_litellm_embedding(mock_litellm_embedding)
@@ -678,10 +670,7 @@ class TestKB(BaseExecutorDummyML):
         )
 
         # reranker model is used
-        assert (
-            mock_openai().chat.completions.create.call_args_list[0][1]["model"]
-            == "gpt-3"
-        )
+        assert mock_openai().chat.completions.create.call_args_list[0][1]["model"] == "gpt-3"
 
         # no response
         assert len(ret) == 0
@@ -708,10 +697,7 @@ class TestKB(BaseExecutorDummyML):
         )
 
         # custom model is used
-        assert (
-            mock_openai().chat.completions.create.call_args_list[0][1]["model"]
-            == "gpt-4"
-        )
+        assert mock_openai().chat.completions.create.call_args_list[0][1]["model"] == "gpt-4"
 
         # eval resul in response
         assert len(ret) == 1
@@ -813,9 +799,7 @@ class TestKB(BaseExecutorDummyML):
         )
         assert isinstance(ret, pd.DataFrame)
 
-    @patch(
-        "mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores"
-    )
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_alter_kb(self, mock_litellm_embedding, mock_get_scores):
         set_litellm_embedding(mock_litellm_embedding)
@@ -860,19 +844,13 @@ class TestKB(BaseExecutorDummyML):
 
         # update embedding fails
         with pytest.raises(ValueError):
-            self.run_sql(
-                "ALTER KNOWLEDGE BASE kb1 USING embedding_model={'model_name': 'my_model'}"
-            )
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'model_name': 'my_model'}")
 
         with pytest.raises(ValueError):
-            self.run_sql(
-                "ALTER KNOWLEDGE BASE kb1 USING embedding_model={'provider': 'ollama'}"
-            )
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'provider': 'ollama'}")
 
         # different provider: params are replaced
-        self.run_sql(
-            "ALTER KNOWLEDGE BASE kb1 USING reranking_model={'provider': 'ollama', 'model_name': 'mistral'}"
-        )
+        self.run_sql("ALTER KNOWLEDGE BASE kb1 USING reranking_model={'provider': 'ollama', 'model_name': 'mistral'}")
         kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
 
         assert kb.params["reranking_model"]["provider"] == "ollama"

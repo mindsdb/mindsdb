@@ -865,3 +865,24 @@ class TestKB(BaseExecutorDummyML):
 
         assert kb.params["reranking_model"]["provider"] == "ollama"
         assert "api_key" not in kb.params["reranking_model"]
+
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
+    def test_ollama(self, mock_openai, mock_get_scores):
+        mock_emb = MagicMock(data=[MagicMock(embedding=[0.1] * 10)])
+        mock_openai().embeddings.create.return_value = mock_emb
+
+        # reranking result
+        mock_get_scores.side_effect = lambda query, docs: [0.8 for _ in docs]
+
+        self.run_sql("""
+          create knowledge base kb1
+          USING 
+             reranking_model={'provider': 'ollama', 'model_name': 'mistral', "base_url": "http://localhost:11434/v1"},
+             embedding_model={'provider': 'ollama', 'model_name': 'nomic', "base_url": "http://localhost:11434/v1"}
+        """)
+
+        ret = self.run_sql("describe  knowledge base kb1")
+
+        assert "api_key" not in ret["EMBEDDING_MODEL"][0]
+        assert "api_key" not in ret["RERANKING_MODEL"][0]

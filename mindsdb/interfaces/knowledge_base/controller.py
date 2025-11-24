@@ -1,6 +1,6 @@
 import os
 import copy
-from typing import Dict, List, Optional, Any, Text
+from typing import Dict, List, Optional, Any, Text, Tuple
 import json
 import decimal
 
@@ -764,7 +764,7 @@ class KnowledgeBaseTable:
         else:
             db_handler.do_upsert(self._kb.vector_database_table, df)
 
-    def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _adapt_column_names(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, List[str]]]:
         """
         Convert input columns for vector db input
         - id, content and metadata

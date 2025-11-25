@@ -152,9 +152,6 @@ class HubspotHandler(MetaAPIHandler):
         deals_data = DealsTable(self)
         self._register_table("deals", deals_data)
 
-        self.connect()
-        self.connection.crm.properties.core_api.get_all(object_type="contacts")
-
     def connect(self) -> HubSpot:
         """Creates a new Hubspot API client if needed and sets it as the client to use for requests.
 

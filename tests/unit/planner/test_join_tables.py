@@ -21,6 +21,7 @@ from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep,
+    FetchDataframeStepPartition,
     ProjectStep,
     JoinStep,
     ApplyPredictorStep,
@@ -264,35 +265,45 @@ class TestPlanJoinTables:
 
         subquery = copy.deepcopy(query)
         subquery.from_table = None
+        subquery.offset = None
 
         plan = plan_query(query, integrations=["int", "int2"])
         expected_plan = QueryPlan(
             integrations=["int"],
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select column1 AS column1 from tab1")),
-                FetchDataframeStep(
-                    integration="int2",
-                    query=Select(
-                        targets=[
-                            Identifier("column1", alias=Identifier("column1")),
-                            Identifier("column2", alias=Identifier("column2")),
-                        ],  # Column pruning
-                        from_table=Identifier("tab2"),
-                    ),
-                ),
-                JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(
-                        left=Identifier("tab1"),
-                        right=Identifier("tab2"),
-                        condition=BinaryOperation(
-                            op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]
+                FetchDataframeStepPartition(
+                    step_num=0,
+                    integration="int",
+                    query=parse_sql("select column1 AS column1 from tab1 order by column1 offset 15"),
+                    condition={"limit": 10},
+                    steps=[
+                        FetchDataframeStep(
+                            step_num=1,
+                            integration="int2",
+                            query=Select(
+                                targets=[
+                                    Identifier("column1", alias=Identifier("column1")),
+                                    Identifier("column2", alias=Identifier("column2")),
+                                ],  # Column pruning
+                                from_table=Identifier("tab2"),
+                            ),
                         ),
-                        join_type=JoinType.INNER_JOIN,
-                    ),
+                        JoinStep(
+                            step_num=2,
+                            left=Result(0),
+                            right=Result(1),
+                            query=Join(
+                                left=Identifier("tab1"),
+                                right=Identifier("tab2"),
+                                condition=BinaryOperation(
+                                    op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]
+                                ),
+                                join_type=JoinType.INNER_JOIN,
+                            ),
+                        ),
+                    ],
                 ),
-                QueryStep(subquery, from_table=Result(2), strict_where=False),
+                QueryStep(subquery, from_table=Result(0), strict_where=False),
             ],
         )
 

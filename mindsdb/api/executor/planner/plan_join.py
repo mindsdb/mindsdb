@@ -383,13 +383,13 @@ class PlanJoinTablesQuery:
 
         query_in.where = query.where
 
-        if self.query_context['optimize_inner_join']:
+        if self.query_context["optimize_inner_join"]:
             self.planner.plan.steps = self.optimize_inner_join(self.planner.plan.steps)
 
         self.close_partition()
-        return self.step_stack.pop()
+        return self.planner.plan.steps[-1]
 
-    def optimize_inner_join(self,steps_in):
+    def optimize_inner_join(self, steps_in):
         steps_out = []
 
         partition_step = None
@@ -408,7 +408,7 @@ class PlanJoinTablesQuery:
                         query=step.query,
                         raw_query=step.raw_query,
                         params=step.params,
-                        max_count=limit,
+                        condition={"limit": limit},
                     )
                     steps_out.append(partition_step)
                     continue
@@ -597,7 +597,7 @@ class PlanJoinTablesQuery:
             order_by = None
             if query_in.order_by is not None:
                 order_by = []
-                # all order column be from this table
+                # all order column are from this table
                 for col in query_in.order_by:
                     table_info = self.get_table_for_column(col.field)
                     if table_info is None or table_info.table != item.table:

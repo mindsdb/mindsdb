@@ -1,3 +1,4 @@
+import copy
 import pandas as pd
 from typing import List
 
@@ -56,9 +57,12 @@ class FetchDataframePartitionCall(BaseStepCall):
         fill_params = get_fill_param_fnc(self.steps_data)
         query_traversal(query, fill_params)
 
+        self.table_alias = get_table_alias(step.query.from_table, self.context.get("database"))
+        self.current_step_num = step.step_num
+
         if step.condition is not None:
-            if 'limit' in step.condition:
-                return self.repeat_till_reach_limit(step, step.condition['limit'])
+            if "limit" in step.condition:
+                return self.repeat_till_reach_limit(step, step.condition["limit"])
 
         # get query record
         run_query = self.sql_query.run_query
@@ -66,8 +70,6 @@ class FetchDataframePartitionCall(BaseStepCall):
             raise RuntimeError("Error with partitioning of the query")
         run_query.set_params(step.params)
 
-        self.table_alias = get_table_alias(step.query.from_table, self.context.get("database"))
-        self.current_step_num = step.step_num
         self.substeps = step.steps
 
         # ml task queue enabled?
@@ -94,7 +96,7 @@ class FetchDataframePartitionCall(BaseStepCall):
             return self.fetch_iterate(run_query, query, on_error=on_error)
 
     def repeat_till_reach_limit(self, step, limit):
-        first_table_limit = limit
+        first_table_limit = limit * 2
         dn = self.session.datahub.get(step.integration)
 
         query = step.query
@@ -104,17 +106,23 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         try_num = 1
         while True:
-            if first_table_limit is not None:
-                query.limit = Constant(first_table_limit)
-            else:
-                query.limit = None
+            self.substeps = copy.deepcopy(step.steps)
+            query2 = copy.deepcopy(query)
 
-            response = dn.query(query=query, session=self.session)
+            if first_table_limit is not None:
+                query2.limit = Constant(int(first_table_limit))
+            else:
+                query2.limit = None
+
+            response = dn.query(query=query2, session=self.session)
             df = response.data_frame
 
             result = self.exec_sub_steps(df)
 
-            if len(result) >= limit or first_table_limit is None:
+            if len(result) >= limit or len(df) < first_table_limit or first_table_limit is None:
+                # we have enough results
+                #  OR first table doesn't return requested count of rows
+                #  OR it is a flag to stop
                 result = result[:limit]
                 break
 
@@ -126,9 +134,9 @@ class FetchDataframePartitionCall(BaseStepCall):
             # no enough results
             if len(result) > 0:
                 # forecast the required limit (depending on how much row we don't have)
-                first_table_limit = first_table_limit * limit / len(result) + 10**try_num
+                first_table_limit = first_table_limit * limit / len(result) * try_num + 10**try_num
             else:
-                first_table_limit  = first_table_limit * 10**try_num
+                first_table_limit = first_table_limit * 10
 
             try_num += 1
 

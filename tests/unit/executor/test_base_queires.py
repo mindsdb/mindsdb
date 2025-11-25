@@ -270,36 +270,78 @@ class TestSelect(BaseExecutorDummyML):
     def test_federated_query(self, data_handler):
         statuses = pd.DataFrame(
             [
-                [1, 'new'],
-                [2, 'progress'],
-                [3, 'done'],
-                [4, 'cancel'],
-                [5, 'backlog'],
-            ], columns=["id", "name"])
+                [1, "new"],
+                [2, "progress"],
+                [3, "done"],
+                [4, "cancel"],
+                [5, "duplicate"],
+                [6, "docs"],
+                [7, "backlog"],
+            ],
+            columns=["id", "name"],
+        )
 
         tasks = pd.DataFrame(
             [
-                [1, 1, 'new1'],
-                [2, 5, 'backlog2'],
-                [3, 5, 'backlog3'],
-                [4, 5, 'backlog4'],
-                [5, 5, 'backlog5'],
-                [6, 5, 'backlog6'],
-            ], columns=["id", "status", "name"]
+                [1, 1, "new1"],
+                [2, 7, "backlog2"],
+                [3, 7, "backlog3"],
+                [4, 7, "backlog4"],
+                [5, 7, "backlog5"],
+                [6, 7, "backlog6"],
+            ],
+            columns=["id", "status", "name"],
         )
 
-        # mixed case
-        self.set_handler(data_handler, name="db1", tables={"statuses": statuses})
-        self.set_handler(data_handler, name="db2", tables={"tasks": tasks})
+        self.set_handler(data_handler, name="db", tables={"statuses": statuses})
+        self.save_file("tasks", tasks)
 
+        # test inner join
         ret = self.run_sql("""
-          SELECT * FROM db1.statuses as t1
-          JOIN db2.tasks as t2 on t1.id=t2.status
-          limit 3
+          SELECT * FROM db.statuses as t1
+          JOIN files.tasks as t2 on t1.id=t2.status
+          limit 2
         """)
 
-        assert len(ret) == 3
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        assert len(tries) == 2
+        query1 = tries[0][0][0]
+        # not all record were fetched in first query
+        assert query1.limit.value < 6
 
+        # test with order by 2nd table
+        data_handler.reset_mock()
+
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          JOIN files.tasks as t2 on t1.id=t2.status
+          order by t2.id
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        # the first table was used once without the limit
+        assert len(tries) == 1
+        query1 = tries[0][0][0]
+        assert query1.limit is None
+
+        # test left join
+        data_handler.reset_mock()
+
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          left join files.tasks as t2 on t1.id=t2.status
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        # the first table was used once with the limit
+        assert len(tries) == 1
+        query1 = tries[0][0][0]
+        assert query1.limit.value == 2
 
     def test_complex_queries(self):
         # -- set up data --

@@ -152,6 +152,9 @@ class HubspotHandler(MetaAPIHandler):
         deals_data = DealsTable(self)
         self._register_table("deals", deals_data)
 
+        self.connect()
+        self.connection.crm.properties.core_api.get_all(object_type="contacts")
+
     def connect(self) -> HubSpot:
         """Creates a new Hubspot API client if needed and sets it as the client to use for requests.
 
@@ -288,12 +291,8 @@ class HubspotHandler(MetaAPIHandler):
             for table_name in accessible_tables:
                 try:
                     # Try to access each table with a minimal request
-                    if table_name == "companies":
-                        list(self.connection.crm.companies.get_all(limit=1))
-                    elif table_name == "contacts":
-                        list(self.connection.crm.contacts.get_all(limit=1))
-                    elif table_name == "deals":
-                        list(self.connection.crm.deals.get_all(limit=1))
+                    default_properties = self._tables[table_name].get_columns()
+                    getattr(self.connection.crm, table_name).get_all(limit=1, properties=default_properties)
 
                     # If successful, get full metadata
                     table_info = {
@@ -303,7 +302,6 @@ class HubspotHandler(MetaAPIHandler):
                     }
                     tables_data.append(table_info)
                     logger.info(f"Table '{table_name}' is accessible")
-
                 except Exception as access_error:
                     # Table is not accessible (likely missing scope)
                     if "403" in str(access_error) or "MISSING_SCOPES" in str(access_error):
@@ -418,15 +416,12 @@ class HubspotHandler(MetaAPIHandler):
             for table_name in tables_to_process:
                 try:
                     # Get sample data for statistics (use larger sample for better accuracy)
-                    sample_data = None
-                    if table_name == "companies":
-                        sample_data = list(self.connection.crm.companies.get_all(limit=1000))
-                    elif table_name == "contacts":
-                        sample_data = list(self.connection.crm.contacts.get_all(limit=1000))
-                    elif table_name == "deals":
-                        sample_data = list(self.connection.crm.deals.get_all(limit=1000))
+                    default_properties = self._tables[table_name].get_columns()
+                    sample_data = list(
+                        getattr(self.connection.crm, table_name).get_all(limit=1000, properties=default_properties)
+                    )
 
-                    if sample_data and len(sample_data) > 0:
+                    if len(sample_data) > 0:
                         sample_size = len(sample_data)
                         logger.info(f"Calculating statistics from {sample_size} records for {table_name}")
 
@@ -497,6 +492,9 @@ class HubspotHandler(MetaAPIHandler):
                                     "MOST_COMMON_FREQUENCIES": most_common_frequencies,
                                 }
                             )
+                            all_statistics = [
+                                column for column in all_statistics if column["COLUMN_NAME"] in default_properties
+                            ]
 
                 except Exception as e:
                     logger.warning(f"Could not get statistics for table {table_name}: {str(e)}")

@@ -129,7 +129,7 @@ services:
 
   postgres:
     <<: *autoRestartOnFailure
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg17
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -148,7 +148,7 @@ services:
 
   # Ensures the required databases and extensions are created before other services start
   migrate:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg17
     depends_on:
       postgres:
         condition: service_healthy

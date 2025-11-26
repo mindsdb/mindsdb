@@ -17,8 +17,8 @@ services:
     image: mindsdb/mindsdb:devel
 
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 #     Uncomment the following lines if you want to use the local version of otel-collector and langfuse
 #      otel-collector:
 #        condition: service_started
@@ -34,8 +34,8 @@ services:
       - '47334:47334'
       - '47335:47335'
     environment:
-      MINDSDB_DB_CON: "postgresql://mindsdb:mindsdb@postgres/mindsdb"
-      KB_PGVECTOR_URL: "postgresql://mindsdb:mindsdb@postgres/kb"
+      MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
+      KB_PGVECTOR_URL: "postgresql://postgres:postgres@postgres/kb"
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level
@@ -102,8 +102,8 @@ services:
     image: langfuse/langfuse:2.87.0
     restart: always
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "3000:3000"
     healthcheck:
@@ -129,7 +129,7 @@ services:
 
   postgres:
     <<: *autoRestartOnFailure
-    image: pgvector/pgvector:pg17
+    image: pgvector/pgvector:pg16
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -145,6 +145,21 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./scripts/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
+
+  # Ensures the required databases and extensions are created before other services start
+  migrate:
+    image: pgvector/pgvector:pg16
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - ./scripts/init-dbs.sh:/init-dbs.sh:ro
+    entrypoint: ["/bin/bash", "/init-dbs.sh"]
 
 volumes:
   db_data:

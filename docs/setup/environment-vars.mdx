@@ -22,7 +22,28 @@ MindsDB does not require authentication by default. If you want to enable authen
     export MINDSDB_USERNAME='mindsdb_user'
     export MINDSDB_PASSWORD='mindsdb_password'
     ```
+</CodeGroup>
 
+## MindsDB Authentication Type
+
+Users can define the authentication type by setting the `MINDSDB_HTTP_AUTH_TYPE` environment variable to one of the following values:
+
+* `session_or_token` is the default value. When a user logs in to MindsDB, the session cookie is set and the token is returned in the response. To use the MindsDB API, users can utilize either one or both of these methods.
+
+* `session` sets the session cookie when a user logs in. The session lifetime can be set with the `http_permanent_session_lifetime` parameter.
+
+* `token` returns the token in the response, which is valid indefinitely.
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_HTTP_AUTH_TYPE='session' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_HTTP_AUTH_TYPE='session_or_token'
+    ```
 </CodeGroup>
 
 ## MindsDB Configuration File

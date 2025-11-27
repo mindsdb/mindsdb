@@ -71,6 +71,7 @@ class LogSanitizer:
         self._compile_patterns()
     
     def _compile_patterns(self):
+        self.search_pattern = re.compile(r'\b(' + '|'.join(re.escape(key) for key in self.SENSITIVE_KEYS) + r')\b', re.IGNORECASE)
         self.patterns = []
         for key in self.SENSITIVE_KEYS:
             # Patterns for: key=value, key: value, "key": "value", 'key': 'value'
@@ -81,12 +82,15 @@ class LogSanitizer:
                 re.compile(f"'{key}'['\s]*:['\s]*'([^']+)'", re.IGNORECASE),
             ]
             self.patterns.extend(patterns)
-    
+
+    def _replace(self, m) -> str:
+        return m.group(0).replace(m.group(1), self.mask)
+
     def sanitize_text(self, text: str) -> str:
         for pattern in self.patterns:
-            text = pattern.sub(lambda m: m.group(0).replace(m.group(1), self.mask), text)
+            text = pattern.sub(self._replace, text)
         return text
-    
+
     def sanitize_dict(self, data: dict) -> dict:
         if not isinstance(data, dict):
             return data

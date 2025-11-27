@@ -1,5 +1,8 @@
 import time
 import threading
+from unittest.mock import patch
+
+import pytest
 
 from mindsdb.interfaces.database.data_handlers_cache import HandlersCache, HandlersCacheRecord
 from mindsdb.utilities.context import context as ctx
@@ -8,9 +11,11 @@ from mindsdb.utilities.context import context as ctx
 class MockDatabaseHandler:
     """Mock database handler for testing"""
 
-    def __init__(self, name: str, thread_safe: bool = True):
+    def __init__(self, name: str, thread_safe: bool = True, single_instance: bool = False, usage_lock: bool = True):
         self.name = name
         self.thread_safe = thread_safe
+        self.single_instance = single_instance
+        self.usage_lock = usage_lock
         self.is_connected = False
 
     def connect(self):
@@ -136,3 +141,43 @@ class TestHandlersCache:
                 record.expired_at = time.time() - 1
         time.sleep(0.3)
         assert len(cache.handlers) == 0
+
+        # Test usage_lock
+        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, usage_lock=True))
+        handler_a_1 = cache.get("test_handler_a")
+        handler_a_2 = cache.get("test_handler_a")
+        assert handler_a_1 is not None
+        assert handler_a_2 is None
+        handler_a_1 = None
+        cache.delete("test_handler_a")
+        assert len(cache.handlers) == 0
+
+        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, usage_lock=False))
+        handler_a_1 = cache.get("test_handler_a")
+        handler_a_2 = cache.get("test_handler_a")
+        assert handler_a_1 is not None
+        assert handler_a_2 is not None
+        assert handler_a_1 is handler_a_2
+        cache.delete("test_handler_a")
+        assert len(cache.handlers) == 0
+
+        # Test single_instance
+        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, single_instance=False))
+        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, single_instance=False))
+        assert len(cache.handlers[first_key()]) == 2
+        cache.delete("test_handler_a")
+        assert len(cache.handlers) == 0
+
+        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, single_instance=True, usage_lock=True))
+        with pytest.raises(ValueError):
+            # can't add second instance with single_instance=True
+            cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, single_instance=True))
+        handler_a_1 = cache.get("test_handler_a")
+        assert handler_a_2 is not None
+
+        # Mock wait_no_references (to not wait timeout while it still has references)
+        # and check that it is called when trying to get the handler again
+        with patch.object(HandlersCacheRecord, 'wait_no_references', return_value=handler_a_1) as mock_wait:
+            handler_a_2 = cache.get("test_handler_a")
+            assert handler_a_2 is handler_a_1
+            mock_wait.assert_called_once()

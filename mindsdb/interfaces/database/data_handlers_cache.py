@@ -23,6 +23,7 @@ class HandlersCacheRecord:
     handler: DatabaseHandler
     expired_at: float
     connect_attempt_done: threading.Event = field(default_factory=threading.Event)
+    _wait_lock: threading.Lock = field(default_factory=threading.Lock)
 
     @property
     def expired(self) -> bool:
@@ -41,6 +42,15 @@ class HandlersCacheRecord:
             bool: True if the handler has references, False otherwise
         """
         return sys.getrefcount(self.handler) > 2
+
+    def wait_no_references(self, timeout: int = 60) -> DatabaseHandler:
+        end_time = time.time() + timeout
+        with self._wait_lock:
+            while time.time() < end_time:
+                if self.has_references is False:
+                    return self.handler
+                time.sleep(0.5)
+        raise Exception('Hanlder has references')
 
     def connect(self) -> None:
         """connect to the handler"""
@@ -99,6 +109,11 @@ class HandlersCache:
         """
         thread_safe = getattr(handler, "thread_safe", True)
         with self._lock:
+            single_instance = getattr(handler, "single_instance", False)
+            if single_instance:
+                records, _ = self._get_cache_records(handler.name)
+                if len(records) > 0:
+                    raise ValueError("Attempt to add to the HandlersCache second instance of handler with single_instance=True")
             try:
                 # If the handler is defined to be thread safe, set 0 as the last element of the key, otherwise set the thrad ID.
                 key = (
@@ -138,14 +153,32 @@ class HandlersCache:
         Returns:
             DatabaseHandler
         """
+        record_to_wait = None
         with self._lock:
             records, _ = self._get_cache_records(name)
             for record in records:
-                if record.expired is False and record.has_references is False:
-                    record.expired_at = time.time() + self.ttl
-                    if record.connect_attempt_done.wait(timeout=10) is False:
-                        logger.warning(f"Handler's connection attempt has not finished in 10s: {record.handler.name}")
-                    return record.handler
+                single_instance = getattr(record.handler, "single_instance", False)
+                usage_lock = getattr(record.handler, "usage_lock", True)
+                has_references = record.has_references
+
+                if single_instance and has_references and usage_lock:
+                    # in this case - wait out of the current lock to prevent global lock of HandlerCache
+                    record_to_wait = record
+                    break
+
+                if has_references and usage_lock:
+                    continue
+
+                record.expired_at = time.time() + self.ttl
+                if record.connect_attempt_done.wait(timeout=10) is False:
+                    logger.warning(f"Handler's connection attempt has not finished in 10s: {record.handler.name}")
+                return record.handler
+
+            if record_to_wait:
+                handler = record_to_wait.wait_no_references()
+                record_to_wait.expired_at = time.time() + self.ttl
+                return handler
+
             return None
 
     def delete(self, name: str) -> None:

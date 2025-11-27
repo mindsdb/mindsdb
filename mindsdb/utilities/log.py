@@ -58,7 +58,7 @@ class LogSanitizer:
     SENSITIVE_KEYS = {
         'password', 'passwd', 'pwd',
         'token', 'access_token', 'refresh_token', 'bearer_token',
-        'api_key', 'apikey', 'api-key',
+        'api_key', 'apikey', 'api-key', 'openai_api_key',
         'secret', 'secret_key', 'client_secret',
         'credentials', 'auth', 'authorization',
         'private_key', 'private-key',
@@ -92,7 +92,7 @@ class LogSanitizer:
 
         sanitized = {}
         for key, value in data.items():
-            if any(sensitive in str(key).lower() for sensitive in self.sensitive_keys):
+            if any(sensitive in str(key).lower() for sensitive in self.SENSITIVE_KEYS):
                 sanitized[key] = self.mask
             elif isinstance(value, dict):
                 sanitized[key] = self.sanitize_dict(value)

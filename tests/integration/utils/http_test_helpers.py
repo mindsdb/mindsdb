@@ -52,6 +52,46 @@ class HTTPHelperMixin:
         self._sql_via_http_context = response['context']
         return response
 
+    def sql_query_const_via_http(
+        self,
+        query: str,
+        replace_constants: bool = False,
+        identifiers_to_replace: dict = {},
+        expected_resp_type: str = None,
+        context: dict = None,
+        headers: dict = None,
+        company_id: int = None,
+    ) -> dict:
+        if context is None:
+            context = self._sql_via_http_context
+
+        if headers is None:
+            headers = {}
+
+        if company_id is not None:
+            headers["company-id"] = str(company_id)
+
+        payload = {
+            "query": query,
+            "replace_constants": replace_constants,
+            "identifiers_to_replace": identifiers_to_replace,
+            "context": context,
+        }
+        response = self.api_request("post", "/sql/query/constants", payload, headers)
+
+        assert response.status_code == 200, f"sql/query/constants is not accessible - {response.text}"
+        response = response.json()
+        
+        # Add validation for response type
+        if expected_resp_type is not None:
+            assert response.get('type') == expected_resp_type, f"Expected {expected_resp_type} but got {response.get('type')}. Response: {response}"
+        
+        # Check for errors
+        if response.get('type') == 'error':
+            raise AssertionError(f"Query parsing failed: {response.get('error_message')}")
+        
+        return response
+
     def await_model(self, model_name: str, project_name: str = 'mindsdb',
                     version_number: int = 1, timeout: int = 60):
         start = time.time()

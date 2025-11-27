@@ -90,7 +90,7 @@ class IntegrationController:
 
         return integration_id
 
-    def modify(self, name, data):
+    def modify(self, name, data, check_connection=False):
         self.handlers_cache.delete(name)
         integration_record = self._get_integration_record(name)
         if isinstance(integration_record.data, dict) and integration_record.data.get("is_demo") is True:
@@ -99,6 +99,18 @@ class IntegrationController:
         for k in old_data:
             if k not in data:
                 data[k] = old_data[k]
+
+        # Test the new connection data before applying
+        if check_connection:
+            try:
+                temp_name = f"{integration_record.name}_update_{time.time()}".replace(".", "")
+                handler = self.create_tmp_handler(temp_name, integration_record.engine, data)
+                status = handler.check_connection()
+            except ImportError:
+                raise
+
+            if status.success is not True:
+                raise Exception(f"Connection test failed: {status.error_message}")
 
         integration_record.data = data
         db.session.commit()
@@ -412,6 +424,7 @@ class IntegrationController:
         """
         handler = self.handlers_cache.get(name)
         if handler is not None:
+            ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
             return handler
 
         integration_record = self._get_integration_record(name, case_sensitive)
@@ -485,6 +498,7 @@ class IntegrationController:
         if connect:
             self.handlers_cache.set(handler)
 
+        ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
         return handler
 
     def reload_handler_module(self, handler_name):

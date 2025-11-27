@@ -1,6 +1,2 @@
 file                 # Required by the core codebase
-postgres
-mysql
-openai
-web
-langchain            # For agents & completions
+

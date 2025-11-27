@@ -1,4 +1,5 @@
 import gc
+import os
 
 gc.disable()
 
@@ -15,12 +16,22 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
 from mindsdb.api.common.middleware import PATAuthMiddleware
-from mindsdb.api.a2a import get_a2a_app
-from mindsdb.api.mcp import get_mcp_app
 
 gc.enable()
 
 logger = log.getLogger(__name__)
+
+
+def _is_http_only_mode() -> bool:
+    """Return True when the user explicitly asked for only the HTTP API."""
+
+    apis = config.cmd_args.api
+
+    if apis is None:
+        return False
+
+    enabled = {name.strip().lower() for name in apis.split(",") if name.strip()}
+    return enabled == {"http"}
 
 
 def start(verbose, app: Flask = None, is_restart: bool = False):
@@ -35,14 +46,20 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
 
     process_cache.init()
 
+    http_only_mode = _is_http_only_mode()
+
     routes = []
-    # Specific mounts FIRST
-    a2a = get_a2a_app()
-    a2a.add_middleware(PATAuthMiddleware)
-    mcp = get_mcp_app()
-    mcp.add_middleware(PATAuthMiddleware)
-    routes.append(Mount("/a2a", app=a2a))
-    routes.append(Mount("/mcp", app=mcp))
+    if not http_only_mode:
+        # Specific mounts FIRST so root app doesn't shadow them
+        from mindsdb.api.a2a import get_a2a_app
+        from mindsdb.api.mcp import get_mcp_app
+
+        a2a = get_a2a_app()
+        a2a.add_middleware(PATAuthMiddleware)
+        mcp = get_mcp_app()
+        mcp.add_middleware(PATAuthMiddleware)
+        routes.append(Mount("/a2a", app=a2a))
+        routes.append(Mount("/mcp", app=mcp))
 
     # Root app LAST so it won't shadow the others
     routes.append(

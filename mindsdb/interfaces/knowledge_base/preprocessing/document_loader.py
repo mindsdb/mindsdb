@@ -1,16 +1,19 @@
 import os
-from typing import List, Iterator
+from typing import Iterator, List
+
 from langchain_core.documents import Document as LangchainDocument
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
-from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
-    FileSplitter,
-)
-from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
+from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter
 from mindsdb.interfaces.knowledge_base.preprocessing.models import Document
 from mindsdb.utilities import log
+
+try:  # Optional web handler dependency
+    from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
+except ImportError:  # pragma: no cover - executed when web handler extras missing
+    get_all_websites = None
 
 logger = log.getLogger(__name__)
 
@@ -71,6 +74,12 @@ class DocumentLoader:
         filters: List[str] = None,
     ) -> Iterator[Document]:
         """Load and split documents from web pages"""
+        if get_all_websites is None:
+            raise RuntimeError(
+                "Web crawling requires the optional web handler dependencies. "
+                "Install them via `pip install mindsdb[web]` or skip web sources."
+            )
+
         websites_df = get_all_websites(urls, crawl_depth=crawl_depth, limit=limit, filters=filters)
 
         for _, row in websites_df.iterrows():

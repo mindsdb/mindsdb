@@ -10,8 +10,10 @@ from mindsdb_sql_parser.ast import (
     Identifier,
     BinaryOperation,
     Constant,
+    NullConstant,
     Star,
     Tuple as AstTuple,
+    Function
 )
 
 from mindsdb.integrations.libs.response import (
@@ -25,6 +27,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterOperator,
 )
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
+from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
+
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
@@ -65,6 +69,15 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         self.duckdb_path = os.path.join(self.persist_directory, "duckdb.db")
         self.faiss_index_path = os.path.join(self.persist_directory, "faiss_index")
         self.connect()
+
+        # check keyword index
+        self.is_keyword_search_enabled = False
+        with self.connection.cursor() as cur:
+            # check index exists
+            df = cur.execute(
+                "SELECT * FROM information_schema.schemata WHERE schema_name = 'fts_main_meta_data'").fetchdf()
+            if len(df) > 0:
+                self.is_keyword_search_enabled = True
 
     def connect(self) -> duckdb.DuckDBPyConnection:
         """Connect to DuckDB database."""
@@ -149,7 +162,6 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         vector_filter = None
         meta_filters = []
-        ids = []
         for condition in conditions:
             if condition.column == "embeddings":
                 vector_filter = condition
@@ -159,7 +171,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         if vector_filter is None:
             # If only metadata in filter:
             # query duckdb only
-            return self._select_from_metadata(ids, meta_filters, limit).drop("faiss_id", axis=1)
+            return self._select_from_metadata(meta_filters=meta_filters, limit=limit).drop("faiss_id", axis=1)
 
         # vector_filter is not None
         if not meta_filters:
@@ -191,6 +203,52 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         return df[:limit]
 
+    def keyword_select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+        keyword_search_args: KeywordSearchArgs = None,
+    ) -> pd.DataFrame:
+
+        with self.connection.cursor() as cur:
+
+            if not self.is_keyword_search_enabled:
+                # keyword search is used for first time: create index
+                cur.execute("PRAGMA create_fts_index('meta_data', 'id', 'content')")
+                self.is_keyword_search_enabled = True
+
+            where_clause = self._translate_filters(conditions)
+
+            score = Function(namespace='fts_main_meta_data', op='match_bm25', args=[
+                Identifier('id'),
+                Constant(keyword_search_args.query),
+                BinaryOperation(op=":=", args=[Identifier('fields'), Constant(keyword_search_args.column)])
+            ])
+
+            no_emtpy_score = BinaryOperation(op='is not', args=[score, NullConstant])
+            if where_clause:
+                where_clause = BinaryOperation(op='and', args=[where_clause, no_emtpy_score])
+            else:
+                where_clause = no_emtpy_score
+
+            query = Select(
+                targets=[
+                    Star(),
+                    BinaryOperation(op='-', args=[Constant(1), score], alias='distance')
+                ],
+                from_table=Identifier("meta_data"),
+                where=where_clause
+            )
+
+            sql = self.renderer.get_string(query, with_failback=True)
+            cur.execute(sql)
+            df = cur.fetchdf()
+            df["metadata"] = df["metadata"].apply(json.loads)
+            return df
+
     def get_total_size(self):
         with self.connection.cursor() as cur:
             cur.execute("select count(1) size from meta_data")
@@ -209,7 +267,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             # ids = [str(idx) for idx in faiss_ids]
             meta_df = self._select_from_metadata(faiss_ids=faiss_ids, meta_filters=meta_filters)
             vector_df = pd.DataFrame({"faiss_id": faiss_ids, "distance": distances})
-            return vector_df.merge(meta_df, on="faiss_id").drop("faiss_id", axis=1)
+            return vector_df.merge(meta_df, on="faiss_id").drop("faiss_id", axis=1).sort_values(by='distance')
 
         return pd.DataFrame([], columns=["id", "content", "metadata", "distance"])
 

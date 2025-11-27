@@ -3,8 +3,9 @@ title: Environment Variables
 sidebarTitle: Environment Variables
 ---
 
-Most of the MindsDB functionality can be modified by extending the default configuration, but some of the configuration options 
+Most of the MindsDB functionality can be modified by extending the default configuration, but some of the configuration options
 can be added as environment variables on the server where MindsDB is deployed.
+[Here is the list](/setup/full-list-environment-vars) of all the available environment variables.
 
 ## MindsDB Authentication
 
@@ -23,6 +24,28 @@ MindsDB does not require authentication by default. If you want to enable authen
     ```
 </CodeGroup>
 
+## MindsDB Authentication Type
+
+Users can define the authentication type by setting the `MINDSDB_HTTP_AUTH_TYPE` environment variable to one of the following values:
+
+* `session_or_token` is the default value. When a user logs in to MindsDB, the session cookie is set and the token is returned in the response. To use the MindsDB API, users can utilize either one or both of these methods.
+
+* `session` sets the session cookie when a user logs in. The session lifetime can be set with the `http_permanent_session_lifetime` parameter.
+
+* `token` returns the token in the response, which is valid indefinitely.
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_HTTP_AUTH_TYPE='session' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_HTTP_AUTH_TYPE='session_or_token'
+    ```
+</CodeGroup>
+
 ## MindsDB Configuration File
 
 In order to start MindsDB with a [custom configuration file](/setup/custom-config), the `MINDSDB_CONFIG_PATH` environment variable should store the file path.
@@ -37,18 +60,19 @@ In order to start MindsDB with a [custom configuration file](/setup/custom-confi
     ```bash Shell
     export MINDSDB_CONFIG_PATH=/Users/username/path/config.json
     ```
+
 </CodeGroup>
 
-## MindsDB Storage 
+## MindsDB Storage
 
-By default, MindsDB stores the configuration files by determining appropriate platform-specific directories, e.g. a "user data dir": 
+By default, MindsDB stores the configuration files by determining appropriate platform-specific directories, e.g. a "user data dir":
 
-* On Linux `~/.local/share/mindsdb/var`
-* On MacOS `~/Library/Application Support/mindsdb/var`
-* On Windows `C:\Documents and Settings\<User>\Application Data\Local Settings\<AppAuthor>\mindsdb\var`
+- On Linux `~/.local/share/mindsdb/var`
+- On MacOS `~/Library/Application Support/mindsdb/var`
+- On Windows `C:\Documents and Settings\<User>\Application Data\Local Settings\<AppAuthor>\mindsdb\var`
 
-In the `MINDSDB_STORAGE_DIR` location, MindsDB stores users' data, models and uploaded data files, the static assets for the frontend application and the 
-`sqlite.db` file. 
+In the `MINDSDB_STORAGE_DIR` location, MindsDB stores users' data, models and uploaded data files, the static assets for the frontend application and the
+`sqlite.db` file.
 You can change the default storage location using `MINDSDB_STORAGE_DIR` variable.
 
 ### Example
@@ -61,25 +85,30 @@ You can change the default storage location using `MINDSDB_STORAGE_DIR` variable
     ```bash Shell
     export MINDSDB_STORAGE_DIR='~/home/mindsdb/var'
     ```
+
 </CodeGroup>
 
-## MindsDB Configuration Storage 
+## MindsDB Configuration Storage
 
-MindsDB uses `sqlite` database by default to store the required configuration as models, projects, files metadata etc. 
-The full list of the above schemas can be found [here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/interfaces/storage/db.py#L69). You can change the 
+MindsDB uses `sqlite` database by default to store the required configuration as models, projects, files metadata etc.
+The full list of the above schemas can be found [here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/interfaces/storage/db.py#L69). You can change the
 default storage option and use different database by adding the new connection string using `MINDSDB_DB_CON` variable.
 
 ### Example
 
 <CodeGroup>
-    ```bash Docker
-    docker run --name mindsdb_container -e MINDSDB_DB_CON='postgresql://user:secret@localhost' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
-    ```
-    
-    ```bash Shell
-    export MINDSDB_DB_CON='postgresql://user:secret@localhost'
-    ```
+  ```bash Docker docker run --name mindsdb_container -e
+  MINDSDB_DB_CON='postgresql://user:secret@localhost' -e MINDSDB_APIS=http,mysql
+  -p 47334:47334 -p 47335:47335 mindsdb/mindsdb ``` ```bash Shell export
+  MINDSDB_DB_CON='postgresql://user:secret@localhost' ```
 </CodeGroup>
+
+#### `MINDSDB_STORAGE_BACKUP_DISABLED`
+
+- **Type:** Boolean (`1`, `true`, `True`)
+- **Description:** Disables permanent storage backup
+- **Default:** `false`
+- **Example:** `MINDSDB_STORAGE_BACKUP_DISABLED=1`
 
 ## MindsDB APIs
 
@@ -95,6 +124,7 @@ The `MINDSDB_APIS` environment variable lets users define which APIs to start. L
     ```bash Shell
     export MINDSDB_APIS='http,mysql'
     ```
+
 </CodeGroup>
 
 ## MindsDB Logs
@@ -111,7 +141,22 @@ This environment variable defines the level of logging generated by MindsDB. You
     ```bash Shell
     export MINDSDB_LOG_LEVEL='DEBUG'
     ```
+
 </CodeGroup>
+
+#### `MINDSDB_CONSOLE_LOG_LEVEL`
+
+- **Type:** String (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- **Description:** Sets console log level
+- **Default:** `INFO`
+- **Example:** `MINDSDB_CONSOLE_LOG_LEVEL=DEBUG`
+
+#### `MINDSDB_FILE_LOG_LEVEL`
+
+- **Type:** String (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- **Description:** Sets file log level and enables file logging
+- **Default:** `INFO` (disabled by default)
+- **Example:** `MINDSDB_FILE_LOG_LEVEL=DEBUG`
 
 ## MindsDB Default Project
 
@@ -129,7 +174,29 @@ If this environment variable is set or modified after MindsDB has started, the d
     ```bash Shell
     export MINDSDB_DEFAULT_PROJECT='my_project'
     ```
+
 </CodeGroup>
+
+#### `MINDSDB_DEFAULT_LLM_API_KEY`
+
+- **Type:** String
+- **Description:** API key for default LLM (Large Language Model)
+- **Default:** None
+- **Example:** `MINDSDB_DEFAULT_LLM_API_KEY=sk-...`
+
+#### `MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY`
+
+- **Type:** String
+- **Description:** API key for default embedding model
+- **Default:** None
+- **Example:** `MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY=sk-...`
+
+#### `MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY`
+
+- **Type:** String
+- **Description:** API key for default reranking model
+- **Default:** None
+- **Example:** `MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY=sk-...`
 
 ## MindsDB's PID File
 
@@ -147,6 +214,7 @@ If used, the PID file is stored in the temp directory (`$TMPDIR` on MacOS and Li
     ```bash Shell
     export USE_PIDFILE=1
     ```
+
 </CodeGroup>
 
 ## MindsDB GUI Updates
@@ -165,6 +233,7 @@ By default, the automatic GUI updates are enabled and the `MINDSDB_GUI_AUTOUPDAT
     ```bash Shell
     export MINDSDB_GUI_AUTOUPDATE=false
     ```
+
 </CodeGroup>
 
 ## MindsDB GUI Startup and Updates
@@ -185,4 +254,113 @@ Note that the `MINDSDB_NO_STUDIO` is not recommended for the MindsDB instance ru
     ```bash Shell
     export MINDSDB_NO_STUDIO=true
     ```
+
 </CodeGroup>
+
+### ML Task Queue
+
+#### `MINDSDB_ML_QUEUE_TYPE`
+
+- **Type:** String (`local`, `redis`)
+- **Description:** Type of ML task queue to use
+- **Default:** `local`
+- **Example:** `MINDSDB_ML_QUEUE_TYPE=redis`
+
+#### `MINDSDB_ML_QUEUE_HOST`
+
+- **Type:** String (hostname)
+- **Description:** Redis host for ML task queue (only when `MINDSDB_ML_QUEUE_TYPE=redis`)
+- **Default:** `localhost`
+- **Example:** `MINDSDB_ML_QUEUE_HOST=redis.example.com`
+
+#### `MINDSDB_ML_QUEUE_PORT`
+
+- **Type:** Integer
+- **Description:** Redis port for ML task queue
+- **Default:** `6379`
+- **Example:** `MINDSDB_ML_QUEUE_PORT=6380`
+
+#### `MINDSDB_ML_QUEUE_DB`
+
+- **Type:** Integer
+- **Description:** Redis database number for ML task queue
+- **Default:** `0`
+- **Example:** `MINDSDB_ML_QUEUE_DB=1`
+
+#### `MINDSDB_ML_QUEUE_USERNAME`
+
+- **Type:** String
+- **Description:** Redis username for ML task queue
+- **Default:** None
+- **Example:** `MINDSDB_ML_QUEUE_USERNAME=redis_user`
+
+#### `MINDSDB_ML_QUEUE_PASSWORD`
+
+- **Type:** String
+- **Description:** Redis password for ML task queue
+- **Default:** None
+- **Example:** `MINDSDB_ML_QUEUE_PASSWORD=redis_pass`
+
+## Reranker Configuration
+
+#### `MINDSDB_RERANKER_N`
+
+- **Type:** Integer
+- **Description:** Number of results to rerank
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_N=10`
+
+#### `MINDSDB_RERANKER_LOGPROBS`
+
+- **Type:** Boolean (`true`, `false`, `1`, `0`, `yes`, `no`)
+- **Description:** Enable log probabilities in reranker
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_LOGPROBS=true`
+
+#### `MINDSDB_RERANKER_TOP_LOGPROBS`
+
+- **Type:** Integer
+- **Description:** Number of top log probabilities to return
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_TOP_LOGPROBS=5`
+
+#### `MINDSDB_RERANKER_MAX_TOKENS`
+
+- **Type:** Integer
+- **Description:** Maximum tokens for reranker
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_MAX_TOKENS=512`
+
+#### `MINDSDB_RERANKER_VALID_CLASS_TOKENS`
+
+- **Type:** String (comma-separated list)
+- **Description:** Valid class tokens for reranker
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_VALID_CLASS_TOKENS=token1,token2,token3`
+
+## Features
+
+#### `MINDSDB_DATA_CATALOG_ENABLED`
+
+- **Type:** Boolean (`1`, `true`)
+- **Description:** Enables the data catalog feature
+- **Default:** `false`
+- **Example:** `MINDSDB_DATA_CATALOG_ENABLED=1`
+
+## Runtime
+
+#### `MINDSDB_DOCKER_ENV`
+
+- **Type:** Any value (presence check)
+- **Description:** Indicates MindsDB is running in Docker environment (changes default API host to `0.0.0.0`)
+- **Default:** Not set
+- **Example:** `MINDSDB_DOCKER_ENV=1`
+
+#### `MINDSDB_RUNTIME`
+
+- **Type:** String (`1`)
+- **Description:** Indicates MindsDB runtime environment
+- **Default:** Not set
+- **Example:** `MINDSDB_RUNTIME=1`
+
+---

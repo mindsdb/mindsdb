@@ -38,7 +38,7 @@ class TestPlanInsertFromSelect:
         plan = plan_query(query, integrations=["INT_1", "INT_2"])
 
         step_1 = FetchDataframeStep(
-            integration="int_2",
+            integration="INT_2",
             query=Select(
                 targets=[Star()],
                 from_table=Identifier("table_2"),
@@ -65,7 +65,7 @@ class TestPlanInsertFromSelect:
         plan = plan_query(query, integrations=["INT_1", "INT_2"])
 
         step_1 = FetchDataframeStep(
-            integration="int_2",
+            integration="INT_2",
             query=Select(
                 targets=[
                     Identifier("column_1", alias=Identifier("column_1")),
@@ -105,7 +105,7 @@ class TestPlanInsertFromSelect:
                 ),
             ),
         )
-        plan = plan_query(query, integrations=["INT_1", "INT_2"])
+        plan = plan_query(query, integrations=["int_1", "int_2"])
 
         step_1 = FetchDataframeStep(
             integration="int_2",

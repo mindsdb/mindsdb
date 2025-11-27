@@ -265,6 +265,7 @@
                     "pages": [
                       "mindsdb_sql/knowledge_bases/overview",
                       "mindsdb_sql/knowledge_bases/create",
+                      "mindsdb_sql/knowledge_bases/alter",
                       "mindsdb_sql/knowledge_bases/insert_data",
                       "mindsdb_sql/knowledge_bases/query",
                       "mindsdb_sql/knowledge_bases/hybrid_search",
@@ -452,6 +453,7 @@
                           "group": "Knowledge Bases",
                           "pages": [
                             "rest/knowledge_bases/create",
+                            "rest/knowledge_bases/alter",
                             "rest/knowledge_bases/insert",
                             "rest/knowledge_bases/query",
                             "rest/knowledge_bases/list",

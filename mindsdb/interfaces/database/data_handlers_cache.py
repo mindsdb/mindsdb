@@ -107,19 +107,19 @@ class HandlersCache:
         Args:
             handler (DatabaseHandler)
         """
-        thread_safe = getattr(handler, "thread_safe", True)
+        cache_thread_safe = getattr(handler, "cache_thread_safe", True)
         with self._lock:
-            single_instance = getattr(handler, "single_instance", False)
-            if single_instance:
+            cache_single_instance = getattr(handler, "cache_single_instance", False)
+            if cache_single_instance:
                 records, _ = self._get_cache_records(handler.name)
                 if len(records) > 0:
-                    raise ValueError("Attempt to add to the HandlersCache second instance of handler with single_instance=True")
+                    raise ValueError("Attempt to add to the HandlersCache second instance of handler with cache_single_instance=True")
             try:
                 # If the handler is defined to be thread safe, set 0 as the last element of the key, otherwise set the thrad ID.
                 key = (
                     handler.name,
                     ctx.company_id,
-                    0 if thread_safe else threading.get_native_id(),
+                    0 if cache_thread_safe else threading.get_native_id(),
                 )
                 record = HandlersCacheRecord(handler=handler, expired_at=time.time() + self.ttl)
                 self.handlers[key].append(record)
@@ -157,16 +157,16 @@ class HandlersCache:
         with self._lock:
             records, _ = self._get_cache_records(name)
             for record in records:
-                single_instance = getattr(record.handler, "single_instance", False)
-                usage_lock = getattr(record.handler, "usage_lock", True)
+                cache_single_instance = getattr(record.handler, "cache_single_instance", False)
+                cache_usage_lock = getattr(record.handler, "cache_usage_lock", True)
                 has_references = record.has_references
 
-                if single_instance and has_references and usage_lock:
+                if cache_single_instance and has_references and cache_usage_lock:
                     # in this case - wait out of the current lock to prevent global lock of HandlerCache
                     record_to_wait = record
                     break
 
-                if has_references and usage_lock:
+                if has_references and cache_usage_lock:
                     continue
 
                 record.expired_at = time.time() + self.ttl

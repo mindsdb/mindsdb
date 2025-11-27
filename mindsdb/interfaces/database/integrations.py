@@ -519,7 +519,7 @@ class IntegrationController:
         handler_meta = self.handlers_import_status[handler_name]
         handler_meta["import"]["success"] = import_error is None
         handler_meta["version"] = module.version
-        handler_meta["thread_safe"] = getattr(module, "thread_safe", False)
+        handler_meta["thread_safe"] = getattr(module, "cache_thread_safe", False)
 
         if import_error is not None:
             handler_meta["import"]["error_message"] = str(import_error)

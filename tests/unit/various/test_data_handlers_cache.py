@@ -11,11 +11,11 @@ from mindsdb.utilities.context import context as ctx
 class MockDatabaseHandler:
     """Mock database handler for testing"""
 
-    def __init__(self, name: str, thread_safe: bool = True, single_instance: bool = False, usage_lock: bool = True):
+    def __init__(self, name: str, cache_thread_safe: bool = True, cache_single_instance: bool = False, cache_usage_lock: bool = True):
         self.name = name
-        self.thread_safe = thread_safe
-        self.single_instance = single_instance
-        self.usage_lock = usage_lock
+        self.cache_thread_safe = cache_thread_safe
+        self.cache_single_instance = cache_single_instance
+        self.cache_usage_lock = cache_usage_lock
         self.is_connected = False
 
     def connect(self):
@@ -56,12 +56,12 @@ class TestHandlersCache:
         assert len(cache.handlers) == 0
         assert cache.cleaner_thread is None
 
-        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True))
+        cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True))
 
         assert len(cache.handlers) == 1
         assert cache.cleaner_thread is not None
 
-        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True))
+        cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True))
 
         assert len(cache.handlers) == 1
         assert first_key()[2] == 0  # Thread id for thread safe handler
@@ -92,9 +92,9 @@ class TestHandlersCache:
         time.sleep(0.3)
         assert len(cache.handlers) == 0
 
-        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True))
-        cache.set(MockDatabaseHandler("test_handler_b", thread_safe=True))
-        cache.set(MockDatabaseHandler("test_handler_c", thread_safe=False))
+        cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True))
+        cache.set(MockDatabaseHandler("test_handler_b", cache_thread_safe=True))
+        cache.set(MockDatabaseHandler("test_handler_c", cache_thread_safe=False))
 
         # get non-thread-safe record from different threads
         # and set thread-safe handler in another thread
@@ -102,8 +102,8 @@ class TestHandlersCache:
             ctx.set_default()
             handler = cache.get("test_handler_c")
             assert handler is None
-            cache.set(MockDatabaseHandler("test_handler_c", thread_safe=False))
-            cache.set(MockDatabaseHandler("test_handler_d", thread_safe=True))
+            cache.set(MockDatabaseHandler("test_handler_c", cache_thread_safe=False))
+            cache.set(MockDatabaseHandler("test_handler_d", cache_thread_safe=True))
             handler = cache.get("test_handler_c")
             assert handler is not None
 
@@ -142,8 +142,8 @@ class TestHandlersCache:
         time.sleep(0.3)
         assert len(cache.handlers) == 0
 
-        # Test usage_lock
-        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, usage_lock=True))
+        # Test cache_usage_lock
+        cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True, cache_usage_lock=True))
         handler_a_1 = cache.get("test_handler_a")
         handler_a_2 = cache.get("test_handler_a")
         assert handler_a_1 is not None
@@ -152,7 +152,7 @@ class TestHandlersCache:
         cache.delete("test_handler_a")
         assert len(cache.handlers) == 0
 
-        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, usage_lock=False))
+        cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True, cache_usage_lock=False))
         handler_a_1 = cache.get("test_handler_a")
         handler_a_2 = cache.get("test_handler_a")
         assert handler_a_1 is not None
@@ -161,17 +161,17 @@ class TestHandlersCache:
         cache.delete("test_handler_a")
         assert len(cache.handlers) == 0
 
-        # Test single_instance
-        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, single_instance=False))
-        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, single_instance=False))
+        # Test cache_single_instance
+        cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True, cache_single_instance=False))
+        cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True, cache_single_instance=False))
         assert len(cache.handlers[first_key()]) == 2
         cache.delete("test_handler_a")
         assert len(cache.handlers) == 0
 
-        cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, single_instance=True, usage_lock=True))
+        cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True, cache_single_instance=True, cache_usage_lock=True))
         with pytest.raises(ValueError):
-            # can't add second instance with single_instance=True
-            cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True, single_instance=True))
+            # can't add second instance with cache_single_instance=True
+            cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True, cache_single_instance=True))
         handler_a_1 = cache.get("test_handler_a")
         assert handler_a_2 is not None
 

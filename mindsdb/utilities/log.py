@@ -1,6 +1,7 @@
 import re
 import json
 import logging
+import logging.handlers
 from typing import Any
 from logging.config import dictConfig
 
@@ -118,12 +119,15 @@ class LogSanitizer:
         return data
 
 
-class StreamSanitizingHandler(logging.StreamHandler):
+class SanitizingMixin:
+    """Mixin for sanitizing log records."""
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.sanitizer = LogSanitizer()
-
-    def emit(self, record):
+    
+    def sanitize_record(self, record):
+        """Sanitize a log record before emitting."""
         if hasattr(record, 'args') and isinstance(record.args, (list, tuple)) and isinstance(record.msg, str):
             record.msg = record.msg % record.args
             record.args = []
@@ -135,7 +139,19 @@ class StreamSanitizingHandler(logging.StreamHandler):
 
         if hasattr(record, 'args') and record.args:
             record.args = self.sanitizer.sanitize(record.args)
+        
+        return record
 
+
+class StreamSanitizingHandler(SanitizingMixin, logging.StreamHandler):
+    def emit(self, record):
+        record = self.sanitize_record(record)
+        super().emit(record)
+
+
+class FileSanitizingHandler(SanitizingMixin, logging.handlers.RotatingFileHandler):
+    def emit(self, record):
+        record = self.sanitize_record(record)
         super().emit(record)
 
 
@@ -178,7 +194,7 @@ def get_handlers_config(process_name: str) -> dict:
             else:
                 file_name = f"{file_name}_{process_name}"
         handlers_config["file"] = {
-            "class": "logging.handlers.RotatingFileHandler",
+            "class": "mindsdb.utilities.log.FileSanitizingHandler",
             "formatter": "file",
             "level": file_handler_config_level,
             "filename": app_config.paths["log"] / file_name,

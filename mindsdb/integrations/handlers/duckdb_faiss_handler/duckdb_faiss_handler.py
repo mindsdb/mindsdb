@@ -228,7 +228,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
                 BinaryOperation(op=":=", args=[Identifier('fields'), Constant(keyword_search_args.column)])
             ])
 
-            no_emtpy_score = BinaryOperation(op='is not', args=[score, NullConstant])
+            no_emtpy_score = BinaryOperation(op='is not', args=[score, NullConstant()])
             if where_clause:
                 where_clause = BinaryOperation(op='and', args=[where_clause, no_emtpy_score])
             else:
@@ -237,7 +237,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             query = Select(
                 targets=[
                     Star(),
-                    BinaryOperation(op='-', args=[Constant(1), score], alias='distance')
+                    BinaryOperation(op='-', args=[Constant(1), score], alias=Identifier('distance'))
                 ],
                 from_table=Identifier("meta_data"),
                 where=where_clause

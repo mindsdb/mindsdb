@@ -288,24 +288,22 @@ class PlanJoinTablesQuery:
         use_limit = False
         if query_in.having is None and query_in.group_by is None and query_in.limit is not None:
             use_limit = True
-            has_join = False
-            regular_table_count = 0
+
+            # Check what we're joining
+            has_predictor = False
 
             for item in join_sequence:
                 if isinstance(item, TableInfo):
-                    # Check if it's a regular table (not a predictor, not a subselect)
-                    if item.predictor_info is None and item.sub_select is None:
-                        regular_table_count += 1
-                elif isinstance(item, Join):
+                    if item.predictor_info is not None:
+                        has_predictor = True
+                elif isinstance(item, Join) and not has_predictor:
                     # LEFT JOIN preserves left table row count - LIMIT pushdown is safe
                     join_type = str(item.join_type).upper() if item.join_type else ""
-                    if join_type not in ("LEFT JOIN", "LEFT OUTER JOIN"):
-                        has_join = True
+                    if join_type in ("LEFT JOIN", "LEFT OUTER JOIN"):
+                        continue
 
-            # Disable limit pushdown only if joining MULTIPLE regular database tables
-            # Allow it for: single table, or table + predictor (predictor generates on-demand)
-            if has_join and regular_table_count > 1:
-                use_limit = False
+                    # INNER/RIGHT JOIN: can't push LIMIT down
+                    use_limit = False
 
         self.query_context["use_limit"] = use_limit
 
@@ -602,10 +600,8 @@ class PlanJoinTablesQuery:
         if "or" in self.query_context["binary_ops"]:
             conditions = []
 
-        # For cross-database joins, skip the IN clause optimization
-        # Reason: We can't predict row counts, and building large IN clauses causes errors
-        # Let the join happen in memory without filter pushdown
-        # conditions += self.get_filters_from_join_conditions(item, query_in.using)
+        if self.query_context.get("had_limit"):
+            conditions += self.get_filters_from_join_conditions(item)
 
         if self.query_context["use_limit"]:
             order_by = None
@@ -632,6 +628,7 @@ class PlanJoinTablesQuery:
                 query2.order_by = order_by
 
             self.query_context["use_limit"] = False
+            self.query_context["had_limit"] = True
         for cond in conditions:
             if query2.where is not None:
                 query2.where = BinaryOperation("and", args=[query2.where, cond])

@@ -389,7 +389,7 @@ def dump_result_set_to_mysql(
 
         # inplace modification of dt types raise SettingWithCopyWarning, so do regular replace
         # we may split this operation for dt and other types for optimisation
-        df[i] = series.replace([np.nan, pd.NA, pd.NaT], None)
+        df[i] = series.replace([np.NaN, pd.NA, pd.NaT], None)
 
     columns_dicts = [column_to_mysql_column_dict(column) for column in result_set.columns]
 

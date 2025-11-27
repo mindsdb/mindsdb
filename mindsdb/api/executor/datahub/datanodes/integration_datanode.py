@@ -312,13 +312,13 @@ class IntegrationDataNode(DataNode):
             df = df.to_frame()
 
         columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
-
         try:
-            # replace python's Nan, np.nan, np.nan and pd.NA to None
-            df.replace([np.nan, pd.NA, pd.NaT], None, inplace=True)
+            # replace python's Nan, np.NaN, np.nan and pd.NA to None
+            df.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
         except Exception:
             logger.exception("Issue with clearing DF from NaN values:")
         # endregion
+
 
         return DataHubResponse(
             data_frame=df, columns=columns_info, affected_rows=result.affected_rows, mysql_types=result.mysql_types

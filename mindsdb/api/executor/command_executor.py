@@ -1286,7 +1286,9 @@ class ExecuteCommands:
 
     def answer_alter_database(self, statement: AlterDatabase) -> ExecuteAnswer:
         db_name = match_one_part_name(statement.name)
-        self.session.database_controller.update(db_name, data=statement.params, strict_case=statement.name.is_quoted[0])
+        self.session.database_controller.update(
+            db_name, data=statement.params, strict_case=statement.name.is_quoted[0], check_connection=True
+        )
         return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):

@@ -74,8 +74,9 @@ class LogSanitizer:
         self.patterns = []
         for key in self.SENSITIVE_KEYS:
             # Patterns for: key=value, key: value, "key": "value", 'key': 'value'
+            # Note: negative lookahead (?!%) excludes Python format placeholders like %s, %d, etc.
             patterns = [
-                re.compile(f'{key}["\s]*[:=]["\s]*([^\s,}}\\]"\n]+)', re.IGNORECASE),
+                re.compile(f'{key}["\s]*[:=]["\s]*(?!%)([^\s,}}\\]"\n]+)', re.IGNORECASE),
                 re.compile(f'"{key}"["\s]*:["\s]*"([^"]+)"', re.IGNORECASE),
                 re.compile(f"'{key}'['\s]*:['\s]*'([^']+)'", re.IGNORECASE),
             ]
@@ -119,6 +120,10 @@ class StreamSanitizingHandler(logging.StreamHandler):
         self.sanitizer = LogSanitizer()
 
     def emit(self, record):
+        if hasattr(record, 'args') and isinstance(record.args, (list, tuple)) and isinstance(record.msg, str):
+            record.msg = record.msg % record.args
+            record.args = []
+
         if isinstance(record.msg, str):
             record.msg = self.sanitizer.sanitize_text(record.msg)
         elif isinstance(record.msg, dict):

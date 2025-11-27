@@ -44,6 +44,14 @@ class HandlersCacheRecord:
         return sys.getrefcount(self.handler) > 2
 
     def wait_no_references(self, timeout: int = 60) -> DatabaseHandler:
+        """wait for the handler to have no references
+
+        Args:
+            timeout (int): timeout in seconds
+
+        Returns:
+            DatabaseHandler: handler instance
+        """
         end_time = time.time() + timeout
         with self._wait_lock:
             while time.time() < end_time:
@@ -64,7 +72,12 @@ class HandlersCacheRecord:
 
 
 class HandlersCache:
-    """Cache for data handlers that keep connections opened during ttl time from handler last use"""
+    """Cache for data handlers that keep connections opened during ttl time from handler last use
+       The cache manages handlers basing on the following properties:
+       - cache_thread_safe (default True): if True, the handler can be used in any thread, otherwise only in the thread that created it
+       - cache_single_instance (default False): if True, only one instance of the handler can be in the cache
+       - cache_usage_lock (default True): if True, the handler can be returned only if there are no references to it (no one use it)
+    """
 
     def __init__(self, ttl: int = 60, clean_timeout: float = 3):
         """init cache

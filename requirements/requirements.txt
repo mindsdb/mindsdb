@@ -36,13 +36,15 @@ langchain-anthropic==0.2.4
 langchain-text-splitters==0.3.9
 langchain-google-genai>=2.0.0
 langchain_writer==0.3.2 # Required for Writer agent
+sentry-sdk[flask] == 2.14.0
 lark
 lxml==5.3.0 # Required for knowledge base webpage embeddings
 pgvector==0.3.6 # Required for knowledge bases
 prometheus-client==0.20.0
-sentry-sdk[flask] == 2.14.0
 pyaml==23.12.0
 uvicorn>=0.30.0, <1.0.0   # For all HTTP-based APIs
+starlette>=0.27     # Required for A2A, MCP servers
+a2wsgi ~= 1.10.10
 
 # files reading
 pymupdf==1.25.2

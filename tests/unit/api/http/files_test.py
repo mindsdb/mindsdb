@@ -1,6 +1,9 @@
 import io
 import os.path
+import os
 from http import HTTPStatus
+from unittest.mock import patch
+import tempfile
 
 
 def test_get_files_list(client):
@@ -27,14 +30,35 @@ def test_put_file(client):
 
 def test_put_file_payload(client):
     """Test uploading a file via payload"""
-    payload = {"file": "tmp_file.txt", "content": "Hello, World!"}
-    response = client.put(
-        "/api/files/payload_file",
-        json=payload,
-        content_type="application/json",
-        follow_redirects=True,
-    )
-    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", delete=False, suffix=".txt", prefix="tmp_file"
+    ) as tmp_file:
+        tmp_file.write("Hello, World!")
+        tmp_file_path = tmp_file.name
+        tmp_filename = os.path.basename(tmp_file_path)
+
+    try:
+        with patch("tempfile.mkdtemp") as mock_mkdtemp:
+            temp_dir = os.path.dirname(tmp_file_path)
+            mock_mkdtemp.return_value = temp_dir
+
+            payload = {
+                "file": tmp_filename,
+                "source_type": "file",
+                "original_file_name": "test.txt",
+            }
+            response = client.put(
+                "/api/files/payload_file",
+                json=payload,
+                content_type="application/json",
+                follow_redirects=True,
+            )
+
+            assert response.status_code == HTTPStatus.OK
+    finally:
+        if os.path.exists(tmp_file_path):
+            os.unlink(tmp_file_path)
 
 
 def test_path_traversal(client):
@@ -64,7 +88,10 @@ def test_delete_nonexistent_file(client):
     assert response.status_code == HTTPStatus.BAD_REQUEST
     data = response.get_json()
     assert "Error deleting file" in data["title"]
-    assert "There was an error while trying to delete file with name 'nonexistent.txt'" in data["detail"]
+    assert (
+        "There was an error while trying to delete file with name 'nonexistent.txt'"
+        in data["detail"]
+    )
 
 
 def test_put_file_invalid_url(client):

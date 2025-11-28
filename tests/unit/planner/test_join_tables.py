@@ -278,7 +278,7 @@ class TestPlanJoinTables:
                 left=Identifier("int.tab1"),
                 right=Identifier("int2.tab2"),
                 condition=BinaryOperation(op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]),
-                join_type=JoinType.INNER_JOIN,
+                join_type=JoinType.LEFT_JOIN,
             ),
             limit=Constant(10),
             offset=Constant(15),
@@ -286,6 +286,7 @@ class TestPlanJoinTables:
 
         subquery = copy.deepcopy(query)
         subquery.from_table = None
+        subquery.offset = None
 
         plan = plan_query(query, integrations=["int", "int2"])
         expected_plan = QueryPlan(
@@ -296,7 +297,8 @@ class TestPlanJoinTables:
                     query=Select(
                         targets=[Identifier("column1", alias=Identifier("column1"))],  # Column pruning
                         from_table=Identifier("tab1"),
-                        # LIMIT should NOT be pushed down to individual table fetches in joins
+                        limit=Constant(10),
+                        offset=Constant(15),
                     ),
                 ),
                 FetchDataframeStep(
@@ -318,10 +320,9 @@ class TestPlanJoinTables:
                         condition=BinaryOperation(
                             op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]
                         ),
-                        join_type=JoinType.INNER_JOIN,
+                        join_type=JoinType.LEFT_JOIN,
                     ),
                 ),
-                # LIMIT and OFFSET applied after join
                 QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
@@ -349,14 +350,7 @@ class TestPlanJoinTables:
         expected_plan = QueryPlan(
             integrations=["int"],
             steps=[
-                FetchDataframeStep(
-                    integration="int",
-                    query=Select(
-                        targets=[Identifier("column1", alias=Identifier("column1"))],  # Column pruning
-                        from_table=Identifier("tab1"),
-                        # ORDER BY and LIMIT should NOT be pushed down to individual table fetches in joins
-                    ),
-                ),
+                FetchDataframeStep(integration="int", query=parse_sql("select column1 AS column1 from tab1")),
                 FetchDataframeStep(
                     integration="int2",
                     query=Select(
@@ -379,7 +373,6 @@ class TestPlanJoinTables:
                         join_type=JoinType.INNER_JOIN,
                     ),
                 ),
-                # ORDER BY, LIMIT and OFFSET applied after join
                 QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )

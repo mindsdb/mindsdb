@@ -48,6 +48,9 @@ AutogluonModels
 doc/lib/
 run.csh
 
+# Emacs backup files
+*~
+
 # Virtualenv
 mindsdb/bin
 mindsdb/lib

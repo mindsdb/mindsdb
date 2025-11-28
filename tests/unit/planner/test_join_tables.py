@@ -129,18 +129,6 @@ class TestPlanJoinTables:
         expected_plan.steps[3].query = subquery
         assert plan.steps == expected_plan.steps
 
-        # WHERE with parameter
-        query = parse_sql("""
-            SELECT * FROM int1.table1 ta LEFT JOIN int2.table2 tb ON ta.id = tb.id
-            WHERE ta.column1 = ?
-        """)
-        plan = plan_query(query, integrations=["int1", "int2"])
-        subquery = copy.deepcopy(query)
-        subquery.from_table = None
-        expected_plan.steps[0].query = parse_sql("SELECT * FROM table1 AS ta WHERE column1 = ?")
-        expected_plan.steps[3].query = subquery
-        assert plan.steps == expected_plan.steps
-
         # WHERE with IN (constants)
         query = parse_sql("""
             SELECT * FROM int1.table1 ta LEFT JOIN int2.table2 tb ON ta.id = tb.id

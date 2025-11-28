@@ -1,174 +1,272 @@
-# Gong Handler
-
-Gong handler for MindsDB provides interfaces to connect to Gong conversation intelligence platform via APIs and pull conversation data into MindsDB.
-
+---
+title: Gong
+sidebarTitle: Gong
 ---
 
-## Table of Contents
+This documentation describes the integration of MindsDB with [Gong](https://www.gong.io/), a conversation intelligence platform that captures, analyzes, and provides insights from customer conversations.
+The integration allows MindsDB to access call recordings, transcripts, analytics, and other conversation data from Gong and enhance it with AI capabilities.
 
-- [Gong Handler](#gong-handler)
-  - [Table of Contents](#table-of-contents)
-  - [About Gong](#about-gong)
-  - [Gong Handler Implementation](#gong-handler-implementation)
-  - [Gong Handler Initialization](#gong-handler-initialization)
-  - [Implemented Features](#implemented-features)
-  - [Example Usage](#example-usage)
+## Prerequisites
 
----
+Before proceeding, ensure the following prerequisites are met:
 
-## About Gong
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect Gong to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
+3. Obtain a Gong API key from your [Gong API settings page](https://app.gong.io/settings/api-keys).
 
-Gong is a conversation intelligence platform that captures, analyzes, and provides insights from customer conversations. It helps sales teams understand customer interactions, improve sales performance, and make data-driven decisions.
+## Connection
 
-The platform provides APIs for accessing call recordings, transcripts, analytics, and other conversation data.
+Establish a connection to Gong from MindsDB by executing the following SQL command and providing its handler name as an engine.
 
-## Gong Handler Implementation
-
-This handler was implemented using the `requests` library to interact with the Gong REST API. The handler provides access to conversation data including calls, users, analytics, and transcripts.
-
-## Gong Handler Initialization
-
-The Gong handler is initialized with the following parameters:
-
-- `api_key`: A required Gong API key for authentication
-- `base_url`: An optional Gong API base URL (defaults to production)
-
-Read about creating a Gong API key [here](https://app.gong.io/settings/api-keys).
-
-## Implemented Features
-
-- [x] Gong Calls Table
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE (date, user_id, call_type)
-    - [x] Support ORDER BY (date, duration)
-    - [x] Support column selection
-- [x] Gong Users Table
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE (user_id, email)
-    - [x] Support column selection
-- [x] Gong Analytics Table
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE (call_id, sentiment_score, topic_score)
-    - [x] Support column selection
-- [x] Gong Transcripts Table
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE (call_id, text, speaker)
-    - [x] Support text search in transcripts
-    - [x] Support column selection
-
-## Example Usage
-
-The first step is to create a database with the new `gong` engine. You'll need a Gong API key to authenticate.
+### Using Bearer Token (Recommended)
 
 ```sql
-CREATE DATABASE gong_data
-WITH ENGINE = 'gong',
-PARAMETERS = {
-  "api_key": "your_gong_api_key_here"
-};
+CREATE DATABASE gong_datasource
+WITH
+    ENGINE = 'gong',
+    PARAMETERS = {
+        "api_key": "your_gong_api_key_here"
+    };
 ```
 
-Use the established connection to query your database:
+### Using Basic Authentication
 
 ```sql
--- Get all calls
-SELECT * FROM gong_data.calls LIMIT 10;
+CREATE DATABASE gong_datasource
+WITH
+    ENGINE = 'gong',
+    PARAMETERS = {
+        "access_key": "your_access_key",
+        "secret_key": "your_secret_key"
+    };
 ```
 
+Required connection parameters include the following:
+
+**Authentication (choose one method):**
+
+* `api_key`: Bearer token for authentication (recommended)
+* `access_key` + `secret_key`: Basic authentication credentials (alternative method)
+
+Optional connection parameters include the following:
+
+* `base_url`: Gong API base URL. This parameter defaults to `https://api.gong.io`.
+* `timeout`: Request timeout in seconds. This parameter defaults to `30`.
+
+<Note>
+If both authentication methods are provided, basic auth (`access_key` + `secret_key`) takes precedence.
+</Note>
+
+## Usage
+
+The following usage examples utilize `gong_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+
+### Available Tables
+
+The Gong handler provides access to the following tables:
+
+* `calls` - Access call recordings and metadata
+* `users` - Get user information and permissions
+* `analytics` - Access AI-generated conversation insights
+* `transcripts` - Get full conversation transcripts
+
+### Basic Queries
+
+Retrieve recent calls with date filters (recommended for best performance):
+
 ```sql
--- Get calls from a specific date range
-SELECT * FROM gong_data.calls 
-WHERE date >= '2024-01-01' AND date <= '2024-01-31'
+SELECT * 
+FROM gong_datasource.calls 
+WHERE date >= '2024-01-01' AND date < '2024-02-01'
 ORDER BY date DESC
 LIMIT 20;
 ```
 
-```sql
--- Get users
-SELECT * FROM gong_data.users LIMIT 10;
-```
+Get all users in your organization:
 
 ```sql
--- Get analytics for calls with high sentiment scores
-SELECT * FROM gong_data.analytics 
-WHERE sentiment_score > 0.7
-LIMIT 10;
+SELECT user_id, name, email, role, status 
+FROM gong_datasource.users 
+LIMIT 100;
 ```
 
-```sql
--- Search for specific text in transcripts
-SELECT * FROM gong_data.transcripts 
-WHERE text LIKE '%sales%' 
-AND call_id = '12345';
-```
+Get analytics for calls with high sentiment scores:
 
 ```sql
--- Get transcripts for a specific call
+SELECT call_id, sentiment_score, key_phrases, topics 
+FROM gong_datasource.analytics 
+WHERE sentiment_score > 0.7 
+  AND date >= '2024-01-01'
+LIMIT 50;
+```
+
+Get transcripts for a specific call:
+
+```sql
 SELECT speaker, timestamp, text 
-FROM gong_data.transcripts 
+FROM gong_datasource.transcripts 
 WHERE call_id = '12345'
 ORDER BY timestamp;
 ```
 
-## API Endpoints
+### Advanced Queries with JOINs
 
-The handler connects to the following Gong API endpoints:
+Get calls with their sentiment analysis:
 
-- `/v2/calls` - Access call recordings and metadata
-- `/v2/users` - Get user information and permissions
-- `/v2/analytics` - Access conversation analytics and insights
-- `/v2/transcripts` - Get full conversation transcripts
+```sql
+SELECT 
+    c.title,
+    c.date,
+    c.duration,
+    a.sentiment_score,
+    a.key_phrases
+FROM gong_datasource.calls c
+JOIN gong_datasource.analytics a ON c.call_id = a.call_id
+WHERE c.date >= '2024-01-01' AND c.date < '2024-02-01'
+ORDER BY a.sentiment_score DESC
+LIMIT 25;
+```
+
+Find calls where specific keywords were mentioned:
+
+```sql
+SELECT 
+    c.title,
+    c.date,
+    t.speaker,
+    t.text
+FROM gong_datasource.calls c
+JOIN gong_datasource.transcripts t ON c.call_id = t.call_id
+WHERE c.date >= '2024-01-01'
+  AND t.text LIKE '%pricing%'
+LIMIT 50;
+```
+
+Get user performance with call sentiment:
+
+```sql
+SELECT 
+    u.name,
+    u.email,
+    c.call_id,
+    c.title,
+    a.sentiment_score
+FROM gong_datasource.users u
+JOIN gong_datasource.calls c ON u.user_id = c.user_id
+JOIN gong_datasource.analytics a ON c.call_id = a.call_id
+WHERE c.date >= '2024-01-01'
+  AND a.sentiment_score > 0.8
+LIMIT 100;
+```
+
+### Querying the Data Catalog
+
+The handler supports `INFORMATION_SCHEMA` queries for AI agents to discover available tables and columns:
+
+```sql
+-- Get all available tables
+SELECT * 
+FROM INFORMATION_SCHEMA.TABLES 
+WHERE TABLE_SCHEMA = 'gong_datasource';
+
+-- Get columns for a specific table
+SELECT * 
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_SCHEMA = 'gong_datasource' 
+  AND TABLE_NAME = 'calls';
+
+-- Get foreign key relationships
+SELECT * 
+FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+WHERE TABLE_SCHEMA = 'gong_datasource' 
+  AND CONSTRAINT_NAME LIKE 'fk_%';
+```
+
+<Note>
+The above examples utilize `gong_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
 
 ## Data Schema
 
-### Calls Table
-- `call_id`: Unique identifier for the call
-- `title`: Call title or description
-- `date`: Call date and time
-- `duration`: Call duration in seconds
-- `recording_url`: URL to the call recording
-- `call_type`: Type of call (e.g., "sales", "demo")
-- `user_id`: ID of the user who made the call
-- `participants`: Comma-separated list of participants
-- `status`: Call status
+### calls Table
 
-### Users Table
-- `user_id`: Unique identifier for the user
-- `name`: User's full name
-- `email`: User's email address
-- `role`: User's role in the organization
-- `permissions`: Comma-separated list of user permissions
-- `status`: User status
+| Column | Description |
+|--------|-------------|
+| `call_id` | Unique identifier for the call (Primary Key) |
+| `title` | Call title or description |
+| `date` | Call date and time (ISO-8601 format) |
+| `duration` | Call duration in seconds |
+| `recording_url` | URL to the call recording |
+| `call_type` | Type of call (e.g., "sales", "demo") |
+| `user_id` | ID of the user who made the call |
+| `participants` | Comma-separated list of participants |
+| `status` | Call status |
 
-### Analytics Table
-- `call_id`: Reference to the call
-- `sentiment_score`: Sentiment analysis score
-- `topic_score`: Topic detection score
-- `key_phrases`: Comma-separated list of key phrases
-- `topics`: Comma-separated list of detected topics
-- `emotions`: Comma-separated list of detected emotions
-- `confidence_score`: Confidence score for the analysis
+### users Table
 
-### Transcripts Table
-- `call_id`: Reference to the call
-- `speaker`: Name of the speaker
-- `timestamp`: Timestamp of the transcript segment
-- `text`: Transcribed text
-- `confidence`: Confidence score for the transcription
-- `segment_id`: Unique identifier for the transcript segment
+| Column | Description |
+|--------|-------------|
+| `user_id` | Unique identifier for the user (Primary Key) |
+| `name` | User's full name |
+| `email` | User's email address |
+| `role` | User's role in the organization |
+| `permissions` | Comma-separated list of user permissions |
+| `status` | User status |
 
-## Error Handling
+### analytics Table
 
-The handler includes comprehensive error handling for:
-- Authentication failures
-- API rate limiting
-- Invalid API responses
-- Network connectivity issues
+| Column | Description |
+|--------|-------------|
+| `call_id` | Reference to the call (Primary Key, Foreign Key to calls.call_id) |
+| `sentiment_score` | Sentiment analysis score |
+| `topic_score` | Topic detection score |
+| `key_phrases` | Comma-separated list of key phrases |
+| `topics` | Comma-separated list of detected topics |
+| `emotions` | Comma-separated list of detected emotions |
+| `confidence_score` | Confidence score for the analysis |
 
-## Rate Limiting
+### transcripts Table
 
-The handler respects Gong's API rate limits and includes appropriate delays between requests when necessary. 
+| Column | Description |
+|--------|-------------|
+| `segment_id` | Unique identifier for the transcript segment (Primary Key) |
+| `call_id` | Reference to the call (Foreign Key to calls.call_id) |
+| `speaker` | Name of the speaker |
+| `timestamp` | Timestamp of the transcript segment (ISO-8601 format) |
+| `text` | Transcribed text |
+| `confidence` | Confidence score for the transcription |
+
+## Troubleshooting
+
+<Warning>
+`Authentication Error`
+
+* **Symptoms**: Failure to connect MindsDB with Gong.
+* **Checklist**:
+    1. Verify that your Gong API key is valid and not expired.
+    2. Ensure you have the necessary permissions in Gong to access the API.
+    3. Check that your API key has access to the specific data you're querying.
+    4. If using basic authentication, verify both `access_key` and `secret_key` are correct.
+</Warning>
+
+<Warning>
+`Empty Results or Missing Data`
+
+* **Symptoms**: Queries return no results or incomplete data.
+* **Checklist**:
+    1. Verify that date filters are included in your query (required for calls, analytics, transcripts).
+    2. Check that the date range includes data (analytics and transcripts have ~1 hour lag).
+    3. Ensure call_id exists when querying transcripts for a specific call.
+    4. Verify that your Gong account has data for the requested time period.
+</Warning>
+
+<Warning>
+`Slow Query Performance`
+
+* **Symptoms**: Queries take a long time to execute.
+* **Checklist**:
+    1. Add date filters to limit the data range (essential for large datasets).
+    2. Use LIMIT to restrict the number of results.
+    3. Filter by call_id when querying transcripts.
+    4. Avoid querying transcripts without filters (can return thousands of rows per call).
+</Warning>

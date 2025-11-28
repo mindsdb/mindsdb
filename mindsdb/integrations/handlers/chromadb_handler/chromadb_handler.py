@@ -471,9 +471,16 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         self.connect()
         try:
+            # NOTE: there is a bug in chromadb v0.6.3 - it delete only segments that loaded in memory,
+            # so we delete them manually
+            if self._client_config.get("persist_directory") is not None:
+                collection = self._client.get_collection(table_name)
+                segments = self._client._server._sysdb.get_segments(collection.id)
+                for segment in segments:
+                    self._client._server._sysdb.delete_segment(collection=collection.id, id=segment['id'])
+                    shutil.rmtree(os.path.join(self._client_config["persist_directory"], str(segment['id'])), ignore_errors=True)
+
             self._client.delete_collection(table_name)
-            if "persist_directory" in self._client_config:
-                shutil.rmtree(self._client_config["persist_directory"], ignore_errors=True)
             self._sync()
         except ValueError:
             if if_exists:

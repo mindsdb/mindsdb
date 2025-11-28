@@ -2,7 +2,6 @@ import re
 import os
 import json
 import logging
-# import logging.handlers
 import threading
 from typing import Any
 from logging.config import dictConfig
@@ -59,14 +58,30 @@ class LogSanitizer:
     """Log Sanitizer"""
 
     SENSITIVE_KEYS = {
-        'password', 'passwd', 'pwd',
-        'token', 'access_token', 'refresh_token', 'bearer_token',
-        'api_key', 'apikey', 'api-key', 'openai_api_key',
-        'secret', 'secret_key', 'client_secret',
-        'credentials', 'auth', 'authorization',
-        'private_key', 'private-key',
-        'session_id', 'sessionid',
-        'credit_card', 'card_number', 'cvv'
+        "password",
+        "passwd",
+        "pwd",
+        "token",
+        "access_token",
+        "refresh_token",
+        "bearer_token",
+        "api_key",
+        "apikey",
+        "api-key",
+        "openai_api_key",
+        "secret",
+        "secret_key",
+        "client_secret",
+        "credentials",
+        "auth",
+        "authorization",
+        "private_key",
+        "private-key",
+        "session_id",
+        "sessionid",
+        "credit_card",
+        "card_number",
+        "cvv",
     }
 
     def __init__(self, mask: str | None = None):
@@ -74,7 +89,9 @@ class LogSanitizer:
         self._compile_patterns()
 
     def _compile_patterns(self):
-        self.search_pattern = re.compile(r'\b(' + '|'.join(re.escape(key) for key in self.SENSITIVE_KEYS) + r')\b', re.IGNORECASE)
+        self.search_pattern = re.compile(
+            r"\b(" + "|".join(re.escape(key) for key in self.SENSITIVE_KEYS) + r")\b", re.IGNORECASE
+        )
         self.patterns = []
         for key in self.SENSITIVE_KEYS:
             # Patterns for: key=value, key: value, "key": "value", 'key': 'value'
@@ -106,8 +123,7 @@ class LogSanitizer:
             elif isinstance(value, dict):
                 sanitized[key] = self.sanitize_dict(value)
             elif isinstance(value, list):
-                sanitized[key] = [self.sanitize_dict(item) if isinstance(item, dict) 
-                                 else item for item in value]
+                sanitized[key] = [self.sanitize_dict(item) if isinstance(item, dict) else item for item in value]
             else:
                 sanitized[key] = value
         return sanitized
@@ -124,14 +140,14 @@ class LogSanitizer:
 
 class SanitizingMixin:
     """Mixin for sanitizing log records."""
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.sanitizer = LogSanitizer()
-    
+
     def sanitize_record(self, record):
         """Sanitize a log record before emitting."""
-        if hasattr(record, 'args') and isinstance(record.args, (list, tuple)) and isinstance(record.msg, str):
+        if hasattr(record, "args") and isinstance(record.args, (list, tuple)) and isinstance(record.msg, str):
             record.msg = record.msg % record.args
             record.args = []
 
@@ -140,9 +156,9 @@ class SanitizingMixin:
         elif isinstance(record.msg, dict):
             record.msg = self.sanitizer.sanitize_dict(record.msg)
 
-        if hasattr(record, 'args') and record.args:
+        if hasattr(record, "args") and record.args:
             record.args = self.sanitizer.sanitize(record.args)
-        
+
         return record
 
 

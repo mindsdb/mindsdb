@@ -304,9 +304,13 @@ class PlanJoinTablesQuery:
                 elif isinstance(item, Join) and not has_predictor:
                     # LEFT JOIN preserves left table row count - LIMIT pushdown is safe
                     join_type = str(item.join_type).upper() if item.join_type else ""
-                    if join_type not in ("LEFT JOIN", "LEFT OUTER JOIN"):
+                    if join_type in ("LEFT JOIN", "LEFT OUTER JOIN"):
+                        continue
+
+                    if query_in.offset is None:
                         optimize_inner_join = True
-                    continue
+                        continue
+                    use_limit = False
 
         self.query_context["use_limit"] = use_limit
         self.query_context["optimize_inner_join"] = optimize_inner_join

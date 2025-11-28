@@ -59,14 +59,14 @@ class FaissIndex:
         required_ram = index_size * 1.1 + 2 * 1024**3
         available_ram = psutil.virtual_memory().available
         if available_ram < required_ram:
-            to_free_gb = round ((required_ram-available_ram) / 1024**3, 2)
-            raise ValueError(f'Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb')
+            to_free_gb = round((required_ram - available_ram) / 1024**3, 2)
+            raise ValueError(f"Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb")
 
         self.index_fd = open(self.path, "rb")
         try:
             portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
         except portalocker.exceptions.AlreadyLocked:
-            raise ValueError(f'Index is already used: {self.path}')
+            raise ValueError(f"Index is already used: {self.path}")
 
         self.index = faiss.read_index(self.path)
         self.dim = self.index.d
@@ -90,7 +90,7 @@ class FaissIndex:
 
         self.index = index
 
-    def check_ram_usage(self, count_vectors, index_type: str = 'flat', m=32, nlist=4096):
+    def check_ram_usage(self, count_vectors, index_type: str = "flat", m=32, nlist=4096):
         self._since_ram_checked += count_vectors
 
         # check after every 10k vectors
@@ -98,21 +98,21 @@ class FaissIndex:
             return
 
         match index_type:
-            case 'flat':
+            case "flat":
                 required = self.dim * 4 * count_vectors
-            case 'hnsw':
-                required =  (self.dim * 4 + m * 2 * 4) * count_vectors
-            case 'ivf':
-                required =  (self.dim * 4 + 8) * count_vectors + self.dim * 4 * nlist
+            case "hnsw":
+                required = (self.dim * 4 + m * 2 * 4) * count_vectors
+            case "ivf":
+                required = (self.dim * 4 + 8) * count_vectors + self.dim * 4 * nlist
             case _:
-                raise ValueError(f'Unknown index type: {index_type}')
+                raise ValueError(f"Unknown index type: {index_type}")
 
         # check RAM usage
         # keep extra 2Gb
-        available = psutil.virtual_memory().available - 2 * 1024 ** 3
+        available = psutil.virtual_memory().available - 2 * 1024**3
 
         if available < required:
-            raise ValueError(f'Unable insert records, not enough RAM')
+            raise ValueError("Unable insert records, not enough RAM")
 
         self._since_ram_checked = 0
 
@@ -124,7 +124,7 @@ class FaissIndex:
         if len(vectors) == 0:
             return
 
-        self.check_ram_usage(len(vectors), 'flat')
+        self.check_ram_usage(len(vectors), "flat")
 
         vectors = np.array(vectors)
         ids = np.array(ids)

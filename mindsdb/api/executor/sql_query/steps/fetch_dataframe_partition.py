@@ -110,7 +110,7 @@ class FetchDataframePartitionCall(BaseStepCall):
             query2 = copy.deepcopy(query)
 
             if first_table_limit is not None:
-                query2.limit = Constant(int(first_table_limit))
+                query2.limit = Constant(first_table_limit)
             else:
                 query2.limit = None
 
@@ -119,7 +119,7 @@ class FetchDataframePartitionCall(BaseStepCall):
 
             result = self.exec_sub_steps(df)
 
-            if len(result) >= limit or len(df) < first_table_limit or first_table_limit is None:
+            if len(result) >= limit or first_table_limit is None or len(df) < first_table_limit:
                 # we have enough results
                 #  OR first table doesn't return requested count of rows
                 #  OR it is a flag to stop
@@ -134,7 +134,7 @@ class FetchDataframePartitionCall(BaseStepCall):
             # no enough results
             if len(result) > 0:
                 # forecast the required limit (depending on how much row we don't have)
-                first_table_limit = first_table_limit * limit / len(result) * try_num + 10**try_num
+                first_table_limit = int(first_table_limit * limit / len(result) * try_num + 10**try_num)
             else:
                 first_table_limit = first_table_limit * 10
 

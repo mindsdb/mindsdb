@@ -31,9 +31,7 @@ def test_put_file(client):
 def test_put_file_payload(client):
     """Test uploading a file via payload"""
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", delete=False, suffix=".txt", prefix="tmp_file"
-    ) as tmp_file:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt", prefix="tmp_file") as tmp_file:
         tmp_file.write("Hello, World!")
         tmp_file_path = tmp_file.name
         tmp_filename = os.path.basename(tmp_file_path)
@@ -88,10 +86,7 @@ def test_delete_nonexistent_file(client):
     assert response.status_code == HTTPStatus.BAD_REQUEST
     data = response.get_json()
     assert "Error deleting file" in data["title"]
-    assert (
-        "There was an error while trying to delete file with name 'nonexistent.txt'"
-        in data["detail"]
-    )
+    assert "There was an error while trying to delete file with name 'nonexistent.txt'" in data["detail"]
 
 
 def test_put_file_invalid_url(client):

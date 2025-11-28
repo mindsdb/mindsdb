@@ -14,6 +14,7 @@ from mindsdb_sql_parser.ast import (
     Parameter,
     Function,
     Last,
+    Tuple,
 )
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -256,10 +257,12 @@ class PlanJoinTablesQuery:
     def can_be_table_filter(self, node):
         """
         Check if node can be used as a filter.
-        It can contain only: Constant, Parameter, Function (with Last)
+        It can contain only: Constant, Parameter, Tuple (for IN clauses), Function (with Last)
         """
         if isinstance(node, (Constant, Parameter)):
             return True
+        if isinstance(node, Tuple):
+            return all(isinstance(item, Constant) for item in node.items)
         if isinstance(node, Function):
             # `Last` must be in args
             if not any(isinstance(arg, Last) for arg in node.args):

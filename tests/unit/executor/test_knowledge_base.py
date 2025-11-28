@@ -768,7 +768,11 @@ class TestKB(BaseExecutorDummyML):
 
     @patch("mindsdb.utilities.config.Config.get")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_save_default_params(self, mock_litellm_embedding, mock_config_get):
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    def test_save_default_params(self, mock_get_scores, mock_litellm_embedding, mock_config_get):
+        # reranking result
+        mock_get_scores.side_effect = lambda query, docs: [0.8 for _ in docs]
+
         set_litellm_embedding(mock_litellm_embedding)
 
         def config_get_side_effect(key, default=None):
@@ -777,6 +781,12 @@ class TestKB(BaseExecutorDummyML):
                     "provider": "bedrock",
                     "model_name": "dummy_model",
                     "api_key": "dummy_key",
+                }
+            if key == "default_reranking_model":
+                return {
+                    "provider": "openai",
+                    "model_name": "openai_model",
+                    "api_key": "openai_key",
                 }
             return default
 
@@ -788,6 +798,14 @@ class TestKB(BaseExecutorDummyML):
 
         # default model was saved
         assert "dummy_model" in ret["EMBEDDING_MODEL"][0]
+        assert "openai_model" in ret["RERANKING_MODEL"][0]
+
+        # disable default reranking
+        self.run_sql("create knowledge base kb2 using reranking_model=false")
+
+        ret = self.run_sql("describe knowledge base kb2")
+
+        assert "openai_model" not in ret["RERANKING_MODEL"][0]
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_relevance_filtering_gt_operator(self, mock_litellm_embedding):

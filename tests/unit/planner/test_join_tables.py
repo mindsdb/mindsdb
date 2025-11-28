@@ -10,7 +10,6 @@ from mindsdb_sql_parser.ast import (
     Constant,
     Star,
     BinaryOperation,
-    OrderBy,
     Function,
 )
 from mindsdb_sql_parser.utils import JoinType

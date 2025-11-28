@@ -72,7 +72,7 @@ class LogSanitizer:
     def __init__(self, mask: str | None = None):
         self.mask = mask or "********"
         self._compile_patterns()
-    
+
     def _compile_patterns(self):
         self.search_pattern = re.compile(r'\b(' + '|'.join(re.escape(key) for key in self.SENSITIVE_KEYS) + r')\b', re.IGNORECASE)
         self.patterns = []
@@ -90,8 +90,9 @@ class LogSanitizer:
         return m.group(0).replace(m.group(1), self.mask)
 
     def sanitize_text(self, text: str) -> str:
-        for pattern in self.patterns:
-            text = pattern.sub(self._replace, text)
+        if self.search_pattern.search(text):
+            for pattern in self.patterns:
+                text = pattern.sub(self._replace, text)
         return text
 
     def sanitize_dict(self, data: dict) -> dict:

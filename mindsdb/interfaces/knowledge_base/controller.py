@@ -1,6 +1,6 @@
 import os
 import copy
-from typing import Dict, List, Optional, Any, Text
+from typing import Dict, List, Optional, Any, Text, Union
 import json
 import decimal
 
@@ -58,7 +58,7 @@ class KnowledgeBaseInputParams(BaseModel):
     embedding_model: Dict[Text, Any] | None = None
     is_sparse: bool = False
     vector_size: int | None = None
-    reranking_model: Dict[Text, Any] | None = None
+    reranking_model: Union[Dict[Text, Any], bool] | None = None
     preprocessing: Dict[Text, Any] | None = None
 
     class Config:
@@ -1214,8 +1214,9 @@ class KnowledgeBaseController:
 
         if isinstance(reranking_model_params, bool) and not reranking_model_params:
             params["reranking_model"] = {}
+        else:
+            reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
 
-        reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
         params["reranking_model"] = reranking_model_params
         if reranking_model_params:
             # Get reranking model from params.

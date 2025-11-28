@@ -83,7 +83,7 @@ class IBMCloudObjectStorageHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.cache_thread_safe = True
         self._regions = {}
 
         self.bucket = self.connection_data.get("bucket")

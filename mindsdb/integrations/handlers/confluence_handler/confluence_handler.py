@@ -41,7 +41,7 @@ class ConfluenceHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.cache_thread_safe = True
 
         self._register_table("spaces", ConfluenceSpacesTable(self))
         self._register_table("pages", ConfluencePagesTable(self))

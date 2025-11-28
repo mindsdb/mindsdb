@@ -41,7 +41,7 @@ class DynamoDBHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.cache_thread_safe = True
 
     def __del__(self) -> None:
         """

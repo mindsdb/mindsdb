@@ -58,7 +58,7 @@ class HandlersCacheRecord:
                 if self.has_references is False:
                     return self.handler
                 time.sleep(0.5)
-        raise Exception('Hanlder has references')
+        raise Exception("Hanlder has references")
 
     def connect(self) -> None:
         """connect to the handler"""
@@ -73,10 +73,10 @@ class HandlersCacheRecord:
 
 class HandlersCache:
     """Cache for data handlers that keep connections opened during ttl time from handler last use
-       The cache manages handlers basing on the following properties:
-       - cache_thread_safe (default True): if True, the handler can be used in any thread, otherwise only in the thread that created it
-       - cache_single_instance (default False): if True, only one instance of the handler can be in the cache
-       - cache_usage_lock (default True): if True, the handler can be returned only if there are no references to it (no one use it)
+    The cache manages handlers basing on the following properties:
+    - cache_thread_safe (default True): if True, the handler can be used in any thread, otherwise only in the thread that created it
+    - cache_single_instance (default False): if True, only one instance of the handler can be in the cache
+    - cache_usage_lock (default True): if True, the handler can be returned only if there are no references to it (no one use it)
     """
 
     def __init__(self, ttl: int = 60, clean_timeout: float = 3):
@@ -126,7 +126,9 @@ class HandlersCache:
             if cache_single_instance:
                 records, _ = self._get_cache_records(handler.name)
                 if len(records) > 0:
-                    raise ValueError("Attempt to add to the HandlersCache second instance of handler with cache_single_instance=True")
+                    raise ValueError(
+                        "Attempt to add to the HandlersCache second instance of handler with cache_single_instance=True"
+                    )
             try:
                 # If the handler is defined to be thread safe, set 0 as the last element of the key, otherwise set the thrad ID.
                 key = (

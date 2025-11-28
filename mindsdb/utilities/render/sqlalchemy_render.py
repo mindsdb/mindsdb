@@ -428,7 +428,6 @@ class SqlalchemyRender:
         return col
 
     def to_function(self, t):
-
         if t.namespace is not None:
             op = getattr(sa.func, t.namespace)
         else:

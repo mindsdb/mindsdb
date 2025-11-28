@@ -11,7 +11,13 @@ from mindsdb.utilities.context import context as ctx
 class MockDatabaseHandler:
     """Mock database handler for testing"""
 
-    def __init__(self, name: str, cache_thread_safe: bool = True, cache_single_instance: bool = False, cache_usage_lock: bool = True):
+    def __init__(
+        self,
+        name: str,
+        cache_thread_safe: bool = True,
+        cache_single_instance: bool = False,
+        cache_usage_lock: bool = True,
+    ):
         self.name = name
         self.cache_thread_safe = cache_thread_safe
         self.cache_single_instance = cache_single_instance
@@ -168,7 +174,11 @@ class TestHandlersCache:
         cache.delete("test_handler_a")
         assert len(cache.handlers) == 0
 
-        cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True, cache_single_instance=True, cache_usage_lock=True))
+        cache.set(
+            MockDatabaseHandler(
+                "test_handler_a", cache_thread_safe=True, cache_single_instance=True, cache_usage_lock=True
+            )
+        )
         with pytest.raises(ValueError):
             # can't add second instance with cache_single_instance=True
             cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True, cache_single_instance=True))
@@ -177,7 +187,7 @@ class TestHandlersCache:
 
         # Mock wait_no_references (to not wait timeout while it still has references)
         # and check that it is called when trying to get the handler again
-        with patch.object(HandlersCacheRecord, 'wait_no_references', return_value=handler_a_1) as mock_wait:
+        with patch.object(HandlersCacheRecord, "wait_no_references", return_value=handler_a_1) as mock_wait:
             handler_a_2 = cache.get("test_handler_a")
             assert handler_a_2 is handler_a_1
             mock_wait.assert_called_once()

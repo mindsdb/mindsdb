@@ -26,21 +26,6 @@ logger = log.getLogger(__name__)
 MAX_FILE_SIZE = 1024 * 1024 * 100  # 100Mb
 
 
-# helpers
-def _validate_file_size(file_size) -> bool:
-    if file_size is None:
-        return False
-    try:
-        return int(file_size) > MAX_FILE_SIZE
-    except ValueError:
-        return False
-
-
-def _is_multipart_request() -> bool:
-    content_type = request.headers.get("Content-Type", "")
-    return content_type.startswith("multipart/form-data")
-
-
 @ns_conf.route("/")
 class FilesList(Resource):
     @ns_conf.doc("get_files_list")
@@ -93,7 +78,7 @@ class File(Resource):
 
         temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
 
-        if _is_multipart_request():
+        if request.headers["Content-Type"].startswith("multipart/form-data"):
             parser = multipart.create_form_parser(
                 headers=request.headers,
                 on_field=on_field,
@@ -126,12 +111,7 @@ class File(Resource):
                 file_object = None
         else:
             data = request.json
-            if "file" in data:
-                return http_error(
-                    400,
-                    "Fields conflict",
-                    'JSON source type can not be used together with "file" field.',
-                )
+
         existing_file_names = ca.file_controller.get_files_names(lower=True)
         if mindsdb_file_name.lower() in existing_file_names:
             return http_error(

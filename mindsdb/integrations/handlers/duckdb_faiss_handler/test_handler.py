@@ -29,13 +29,10 @@ def test_handler():
             },
         )
 
-        print("✓ Handler initialized successfully")
-
         # Create a simple table with vector column
         table_name = "test_table"
 
         handler.create_table(table_name)
-        print("✓ Table created successfully")
 
         # Test data insertion
         test_data = pd.DataFrame(
@@ -54,7 +51,6 @@ def test_handler():
         )
 
         handler.insert(table_name, test_data)
-        print("✓ Data inserted successfully")
 
         # Test vector search
         query_vector = [0.1, 0.2, 0.3] + [0.0] * 381
@@ -64,48 +60,29 @@ def test_handler():
 
         metadata_conditions = [FilterCondition(column="metadata.category", op=FilterOperator.EQUAL, value="news")]
 
-        results = handler.select(
+        handler.select(
             table_name=table_name, columns=["id", "content", "title", "distance"], conditions=vector_conditions, limit=5
         )
 
-        print(f"✓ Vector search returned {len(results)} results")
-        print("Search results:")
-        print(results)
-
         # Test metadata filtering
 
-        metadata_results = handler.select(
+        handler.select(
             table_name=table_name,
             columns=["id", "content", "metadata"],
             conditions=metadata_conditions + vector_conditions,
         )
 
-        print(f"✓ Metadata filtering returned {len(metadata_results)} results")
-        print("Metadata filter results:")
-        print(metadata_results)
-
         # Test keyword search
 
-        hybrid_results = handler.keyword_select(
+        handler.keyword_select(
             table_name=table_name,
             columns=["id", "content", "title", "distance"],
             conditions=metadata_conditions,
             keyword_search_args=KeywordSearchArgs(column="content", query="Document"),
             limit=5,
         )
-
-        print(f"✓ Hybrid search returned {len(hybrid_results)} results")
-        print("Hybrid search results:")
-        print(hybrid_results)
-
         # Test table listing
-        tables = handler.get_tables()
-        print("✓ Tables retrieved successfully")
-        print("Tables:", tables.data_frame)
+        handler.get_tables()
 
         # Test column listing
-        columns = handler.get_columns(table_name)
-        print("✓ Columns retrieved successfully")
-        print("Columns:", columns.data_frame)
-
-        print("\n🎉 All tests passed successfully!")
+        handler.get_columns(table_name)

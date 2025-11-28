@@ -3,6 +3,7 @@ import sys
 import json
 import argparse
 import datetime
+import dataclasses
 from pathlib import Path
 from copy import deepcopy
 
@@ -55,6 +56,16 @@ def create_data_dir(path: Path) -> None:
 
     if not os.access(path, os.W_OK):
         raise PermissionError(f"The directory is not allowed for writing: {path}")
+
+
+@dataclasses.dataclass(frozen=True)
+class HTTP_AUTH_TYPE:
+    SESSION: str = "session"
+    TOKEN: str = "token"
+    SESSION_OR_TOKEN: str = "session_or_token"
+
+
+HTTP_AUTH_TYPE = HTTP_AUTH_TYPE()
 
 
 class Config:
@@ -138,6 +149,7 @@ class Config:
                 "locks": self.storage_root_path / "locks",
             },
             "auth": {
+                "http_auth_type": HTTP_AUTH_TYPE.SESSION_OR_TOKEN,  # token | session | session_or_token
                 "http_auth_enabled": False,
                 "http_permanent_session_lifetime": datetime.timedelta(days=31),
                 "username": "mindsdb",
@@ -157,7 +169,8 @@ class Config:
                         "maxBytes": 1 << 19,  # 0.5 Mb
                         "backupCount": 3,
                     },
-                }
+                },
+                "resources_log": {"enabled": False, "level": "INFO", "interval": 60},
             },
             "gui": {"open_on_start": True, "autoupdate": True},
             "debug": False,
@@ -281,6 +294,12 @@ class Config:
             self._env_config["auth"]["username"] = http_username
             self._env_config["auth"]["password"] = http_password
         # endregion
+
+        http_auth_type = os.environ.get("MINDSDB_HTTP_AUTH_TYPE", "").lower()
+        if http_auth_type in dataclasses.astuple(HTTP_AUTH_TYPE):
+            self._env_config["auth"]["http_auth_type"] = http_auth_type
+        elif http_auth_type != "":
+            raise ValueError(f"Wrong value of env var MINDSDB_HTTP_AUTH_TYPE={http_auth_type}")
 
         # region logging
         if os.environ.get("MINDSDB_LOG_LEVEL", "") != "":
@@ -558,6 +577,7 @@ class Config:
 
         parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
         parser.add_argument("--update-gui", action="store_true", default=False, help="Update GUI and exit")
+        parser.add_argument("--load-tokenizer", action="store_true", default=False, help="Preload tokenizer and exit")
 
         self._cmd_args = parser.parse_args()
 

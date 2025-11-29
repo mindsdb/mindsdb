@@ -5,25 +5,40 @@ from array import array
 from decimal import Decimal
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
+from requests.exceptions import HTTPError
+
 
 from base_handler_test import BaseDatabaseHandlerTest
 
+from mindsdb.integrations.handlers.jira_handler.jira_handler import JiraHandler
+
 
 class TestJiraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
-    handler_name = "jira"
-    required_connection_keys = ["jira_url", "username", "api_token"]
-    default_tables = [
-        "projects",
-        "issues",
-        "users",
-        "groups",
-        "attachments",
-        "comments",
-    ]
 
-    @pytest.fixture(autouse=True)
-    def _setup_handler(self):
-        self.handler_setup()
+    @property
+    def dummy_connection_data(self):
+        return {
+            "jira_url": "https://your-domain.atlassian.net",
+            "jira_username": "username",
+            "jira_api_token": "your_api_token",
+            "is_cloud": False,
+        }
+
+    @property
+    def err_to_raise_on_connect_failure(self):
+        return HTTPError("Failed to connect to Jira")
+
+    def create_handler(self):
+        return JiraHandler("jira", self.dummy_connection_data)
+
+    def create_patcher(self):
+        return patch("mindsdb.integrations.handlers.jira_handler.jira_handler.Jira")
+
+    def get_tables_query(self):
+        pass
+
+    def get_columns_query(self, table_name):
+        pass
 
     def test_connect_cloud_success(self):
         pass

@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Type, Optional
 
 from atlassian import Jira
 from requests.exceptions import HTTPError
@@ -113,9 +113,9 @@ class JiraHandler(MetaAPIHandler):
         self.connection_data = self._normalize_connection_data(connection_data)
         self.kwargs = kwargs
 
-        self.connection = None
-        self.is_connected = False
-        table_factories = {
+        self.connection: Optional[Jira] = None
+        self.is_connected: bool = False
+        table_factories: Dict[str, Type] = {
             "projects": JiraProjectsTable,
             "issues": JiraIssuesTable,
             "groups": JiraGroupsTable,
@@ -146,7 +146,10 @@ class JiraHandler(MetaAPIHandler):
             atlassian.jira.Jira: A connection object to the Jira API.
         """
         if self.is_connected is True:
-            return self.connection
+            if self.connection is not None:
+                return self.connection
+            else:
+                raise RuntimeError("Jira connection is not established.")
 
         is_cloud = self.connection_data.get("cloud", True)
 

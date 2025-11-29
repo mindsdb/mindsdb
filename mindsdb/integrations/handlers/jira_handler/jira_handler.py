@@ -4,10 +4,12 @@ from atlassian import Jira
 from requests.exceptions import HTTPError
 
 from mindsdb.integrations.handlers.jira_handler.jira_tables import (
-    JiraProjectsTable,
-    JiraIssuesTable,
-    JiraUsersTable,
+    JiraAttachmentsTable,
+    JiraCommentsTable,
     JiraGroupsTable,
+    JiraIssuesTable,
+    JiraProjectsTable,
+    JiraUsersTable,
 )
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
@@ -19,8 +21,6 @@ from mindsdb.utilities import log
 
 
 logger = log.getLogger(__name__)
-
-DEFAULT_TABLES = ["projects", "issues", "users", "groups", "attachments", "comments"]
 
 
 class JiraHandler(MetaAPIHandler):
@@ -43,20 +43,24 @@ class JiraHandler(MetaAPIHandler):
 
         self.connection = None
         self.is_connected = False
+        table_factories = {
+            "projects": JiraProjectsTable,
+            "issues": JiraIssuesTable,
+            "groups": JiraGroupsTable,
+            "users": JiraUsersTable,
+            "attachments": JiraAttachmentsTable,
+            "comments": JiraCommentsTable,
+        }
         for table in self.connection_data["register_tables"]:
-            if table == "projects":
-                self._register_table("projects", JiraProjectsTable(self))
-            elif table == "issues":
-                self._register_table("issues", JiraIssuesTable(self))
-            elif table == "groups":
-                self._register_table("groups", JiraGroupsTable(self))
-            elif table == "users":
-                self._register_table("users", JiraUsersTable(self))
-            elif table == "attachments":
-                self._register_table("attachments", JiraAttachmentsTable(self))
-            elif table == "comments":
-                self._register_table("comments", JiraCommentsTable(self))
+            table_name = table.lower()
+            table_class = table_factories.get(table_name)
+            if table_class is None:
+                logger.warning(f"Skipping unsupported Jira table '{table}'.")
+                continue
+            self._register_table(table_name, table_class(self))
 
+    # TODO: Refactor normalization method to a utility if more handlers require similar logic. Separation between Cloud and Server logic.
+    
     def _normalize_connection_data(self, connection_data: Dict) -> Dict:
         normalized_data: Dict[str, Any] = {}
         if "jira_url" not in connection_data:

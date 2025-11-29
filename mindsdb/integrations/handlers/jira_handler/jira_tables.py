@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List, Optional
 
 from atlassian import Jira
 import pandas as pd
@@ -15,7 +15,25 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class JiraProjectsTable(APIResource):
+class BaseJiraTable(APIResource):
+    """
+    Base class for Jira tables.
+    """
+
+    def __init__(self, handler: Any):
+        super().__init__(handler)
+        self.handler = handler
+
+    def to_dataframe(self, records: Optional[List[dict]]) -> pd.DataFrame:
+        if records:
+            df = pd.DataFrame(records)
+            df = df.reindex(columns=self.get_columns(), fill_value=None)
+        else:
+            df = pd.DataFrame([], columns=self.get_columns())
+        return df
+
+
+class JiraProjectsTable(BaseJiraTable):
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -66,15 +84,15 @@ class JiraProjectsTable(APIResource):
         ]
 
 
-class JiraAttachmentsTable(APIResource):
+class JiraAttachmentsTable(BaseJiraTable):
     pass
 
 
-class JiraCommentsTable(APIResource):
+class JiraCommentsTable(BaseJiraTable):
     pass
 
 
-class JiraIssuesTable(APIResource):
+class JiraIssuesTable(BaseJiraTable):
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -177,7 +195,7 @@ class JiraIssuesTable(APIResource):
         ]
 
 
-class JiraGroupsTable(APIResource):
+class JiraGroupsTable(BaseJiraTable):
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -209,7 +227,7 @@ class JiraGroupsTable(APIResource):
         ]
 
 
-class JiraUsersTable(APIResource):
+class JiraUsersTable(BaseJiraTable):
     def list(
         self,
         conditions: List[FilterCondition] = None,

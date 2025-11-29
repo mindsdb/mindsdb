@@ -41,27 +41,12 @@ connection_args = OrderedDict(
         "description": "Indicates whether to connect to Jira Cloud (True) or Jira Server (False). Default is True.",
         "required": False,
         "label": "Jira Cloud",
-    },
-    register_tables={
-        "type": ARG_TYPE.LIST,
-        "description": "List of tables to register (e.g., projects, issues, users, groups). If not provided, default tables will be registered.",
-        "required": False,
-        "default": ["projects", "issues", "users", "groups", "attachments", "comments"],
-        "label": "Register Tables",
-    },
+    }
 )
 
 connection_args_example = OrderedDict(
     jira_url="https://your-domain.atlassian.net",
     jira_username="user@example.com",
     jira_api_token="YOUR_API_TOKEN",
-    cloud=True,
-    register_tables=[
-        "projects",
-        "issues",
-        "users",
-        "groups",
-        "attachments",
-        "comments",
-    ],
+    cloud=True
 )

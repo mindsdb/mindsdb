@@ -11,6 +11,9 @@ from mindsdb.integrations.handlers.jira_handler.jira_tables import (
     JiraProjectsTable,
     JiraUsersTable,
 )
+from mindsdb.integrations.handlers.jira_handler.connection_args import (
+    connection_args,
+)
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -21,6 +24,69 @@ from mindsdb.utilities import log
 
 
 logger = log.getLogger(__name__)
+
+
+
+def _normalize_cloud_credentials(connection_data: Dict[str, Any]) -> Dict[str, Any]:
+    if (
+        "jira_username" not in connection_data
+        or "jira_api_token" not in connection_data
+    ):
+        raise ValueError(
+            "For Jira Cloud, both 'jira_username' and 'jira_api_token' parameters are required in the connection data."
+        )
+
+    return {
+        "username": connection_data["jira_username"],
+        "api_token": connection_data["jira_api_token"],
+    }
+
+
+def _normalize_server_credentials(connection_data: Dict[str, Any]) -> Dict[str, Any]:
+    if "jira_personal_access_token" in connection_data:
+        return {"personal_access_token": connection_data["jira_personal_access_token"]}
+
+    if "jira_username" in connection_data and "jira_password" in connection_data:
+        return {
+            "username": connection_data["jira_username"],
+            "password": connection_data["jira_password"],
+        }
+
+    raise ValueError(
+        "For Jira Server, either 'jira_personal_access_token' or both 'jira_username' and 'jira_password' parameters are required in the connection data."
+    )
+
+
+def normalize_jira_connection_data(connection_data: Dict[str, Any]) -> Dict[str, Any]:
+    if "jira_url" not in connection_data:
+        raise ValueError("The 'jira_url' parameter is required in the connection data.")
+
+    cloud_flag = connection_data.get("cloud")
+    if cloud_flag is None and "is_cloud" in connection_data:
+        cloud_flag = connection_data["is_cloud"]
+
+    cloud = bool(cloud_flag) if cloud_flag is not None else True
+
+    if (
+        not cloud
+        and "jira_api_token" in connection_data
+        and "jira_password" not in connection_data
+        and "jira_personal_access_token" not in connection_data
+    ):
+        cloud = True
+
+    credentials = (
+        _normalize_cloud_credentials(connection_data)
+        if cloud
+        else _normalize_server_credentials(connection_data)
+    )
+
+    return {
+        "url": connection_data["jira_url"],
+        "cloud": cloud,
+        "register_tables": connection_data.get("register_tables", DEFAULT_TABLES),
+        **credentials,
+    }
 
 
 class JiraHandler(MetaAPIHandler):
@@ -59,49 +125,8 @@ class JiraHandler(MetaAPIHandler):
                 continue
             self._register_table(table_name, table_class(self))
 
-    # TODO: Refactor normalization method to a utility if more handlers require similar logic. Separation between Cloud and Server logic.
-    
     def _normalize_connection_data(self, connection_data: Dict) -> Dict:
-        normalized_data: Dict[str, Any] = {}
-        if "jira_url" not in connection_data:
-            raise ValueError(
-                "The 'jira_url' parameter is required in the connection data."
-            )
-        else:
-            normalized_data["url"] = connection_data["jira_url"]
-
-        normalized_data["cloud"] = connection_data.get("cloud", False)
-
-        if normalized_data["cloud"]:
-            if (
-                "jira_username" not in connection_data
-                or "jira_api_token" not in connection_data
-            ):
-                raise ValueError(
-                    "For Jira Cloud, both 'jira_username' and 'jira_api_token' parameters are required in the connection data."
-                )
-            normalized_data["username"] = connection_data["jira_username"]
-            normalized_data["api_token"] = connection_data["jira_api_token"]
-        else:
-            if "jira_personal_access_token" in connection_data:
-                normalized_data["personal_access_token"] = connection_data[
-                    "jira_personal_access_token"
-                ]
-            elif (
-                "jira_username" in connection_data
-                and "jira_password" in connection_data
-            ):
-                normalized_data["username"] = connection_data["jira_username"]
-                normalized_data["password"] = connection_data["jira_password"]
-            else:
-                raise ValueError(
-                    "For Jira Server, either 'jira_personal_access_token' or both 'jira_username' and 'jira_password' parameters are required in the connection data."
-                )
-        normalized_data["register_tables"] = connection_data.get(
-            "register_tables", DEFAULT_TABLES
-        )
-
-        return normalized_data
+        return normalize_jira_connection_data(connection_data)
 
     def connect(self) -> Jira:
         """

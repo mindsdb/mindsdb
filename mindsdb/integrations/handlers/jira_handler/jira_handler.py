@@ -11,9 +11,7 @@ from mindsdb.integrations.handlers.jira_handler.jira_tables import (
     JiraProjectsTable,
     JiraUsersTable,
 )
-from mindsdb.integrations.handlers.jira_handler.connection_args import (
-    connection_args,
-)
+
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -25,9 +23,14 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+DEFAULT_TABLES = ["projects", "issues", "users", "groups", "attachments", "comments"]
 
 
 def _normalize_cloud_credentials(connection_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalizes credentials for Jira Cloud connections.
+    Checks for the presence of required parameters and returns a dictionary
+    with the normalized credentials.
+    """
     if (
         "jira_username" not in connection_data
         or "jira_api_token" not in connection_data
@@ -43,6 +46,10 @@ def _normalize_cloud_credentials(connection_data: Dict[str, Any]) -> Dict[str, A
 
 
 def _normalize_server_credentials(connection_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalizes credentials for Jira Server connections.
+    Checks for the presence of required parameters and returns a dictionary
+    with the normalized credentials.
+    """
     if "jira_personal_access_token" in connection_data:
         return {"personal_access_token": connection_data["jira_personal_access_token"]}
 
@@ -84,7 +91,6 @@ def normalize_jira_connection_data(connection_data: Dict[str, Any]) -> Dict[str,
     return {
         "url": connection_data["jira_url"],
         "cloud": cloud,
-        "register_tables": connection_data.get("register_tables", DEFAULT_TABLES),
         **credentials,
     }
 
@@ -117,7 +123,7 @@ class JiraHandler(MetaAPIHandler):
             "attachments": JiraAttachmentsTable,
             "comments": JiraCommentsTable,
         }
-        for table in self.connection_data["register_tables"]:
+        for table in DEFAULT_TABLES:
             table_name = table.lower()
             table_class = table_factories.get(table_name)
             if table_class is None:

@@ -28,8 +28,9 @@ DEFAULT_TABLES = ["projects", "issues", "users", "groups", "attachments", "comme
 
 def _normalize_cloud_credentials(connection_data: Dict[str, Any]) -> Dict[str, Any]:
     """Normalizes credentials for Jira Cloud connections.
-    Checks for the presence of required parameters and returns a dictionary
-    with the normalized credentials.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the normalized credentials.
     """
     if (
         "jira_username" not in connection_data
@@ -47,8 +48,9 @@ def _normalize_cloud_credentials(connection_data: Dict[str, Any]) -> Dict[str, A
 
 def _normalize_server_credentials(connection_data: Dict[str, Any]) -> Dict[str, Any]:
     """Normalizes credentials for Jira Server connections.
-    Checks for the presence of required parameters and returns a dictionary
-    with the normalized credentials.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the normalized credentials.
     """
     if "jira_personal_access_token" in connection_data:
         return {"personal_access_token": connection_data["jira_personal_access_token"]}
@@ -65,6 +67,10 @@ def _normalize_server_credentials(connection_data: Dict[str, Any]) -> Dict[str, 
 
 
 def normalize_jira_connection_data(connection_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalizes the connection data for Jira connections.
+    Returns:
+        Dict[str, Any]: A dictionary containing the normalized connection data.
+    """
     if "jira_url" not in connection_data:
         raise ValueError("The 'jira_url' parameter is required in the connection data.")
 
@@ -220,7 +226,22 @@ class JiraHandler(MetaAPIHandler):
 
     def native_query(self, query: str) -> Response:
         """
-        Executes a native JQL query on Jira and returns the result.
+        Execute a native JQL query and return the result as rows from the `issues` table.
+
+        This uses Jira's issue search endpoint, which always returns an `issues` array,
+        so native_query is intentionally *issue-centric* and does not return projects,
+        users, or groups directly.
+
+        For JQL Cloud REST endpoints and behavior, see:
+        - JQL REST API group:
+        https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-jql/
+        - Issue search using JQL:
+        https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-search/
+
+        For Jira Server REST endpoints and behavior, see:
+        - JQL REST API group:
+        https://developer.atlassian.com/server/jira/platform/rest/v11002/api-group-jql/#api-group-jql
+
 
         Args:
             query (Text): The JQL query to be executed.
@@ -231,8 +252,11 @@ class JiraHandler(MetaAPIHandler):
         connection = self.connect()
 
         try:
+            logger.debug(f"Running query: {query} on Jira.")
             results = connection.jql(query)
-            df = JiraIssuesTable(self).normalize(results["issues"])
+            issues = results.get("issues", [])
+            issues_table = JiraIssuesTable(self)
+            df = issues_table.normalize(issues)
             response = Response(RESPONSE_TYPE.TABLE, df)
         except HTTPError as http_error:
             logger.error(f"Error running query: {query} on Jira, {http_error}!")
@@ -246,3 +270,24 @@ class JiraHandler(MetaAPIHandler):
             )
 
         return response
+
+    # Metadata methods
+
+    # def get_tables(self) -> Response:
+    #     """
+    #     Retrieves the list of available tables in Jira.
+
+    #     Returns:
+    #         Response: A response object containing the list of tables or an error message.
+    #     """
+    #     try:
+    #         table_names = list(self.tables.keys())
+    #         df = pd.DataFrame(table_names, columns=["table_name"])
+    #         response = Response(RESPONSE_TYPE.TABLE, df)
+    #     except Exception as unknown_error:
+    #         logger.error(f"Error retrieving tables from Jira, {unknown_error}!")
+    #         response = Response(
+    #             RESPONSE_TYPE.ERROR, error_code=0, error_message=str(unknown_error)
+    #         )
+
+    #     return response

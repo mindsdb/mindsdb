@@ -1,0 +1,102 @@
+---
+title: How to Alter Existing Knowledge Bases
+sidebarTitle: Alter KB
+---
+
+The `ALTER KNOWLEDGE_BASE` command enables users to modify the configuration of the existing knowledge base without the need to recreate it.
+
+This document lists parameters that can be altered, explains the process and the effect on the existing knowledge base.
+
+## `ALTER KNOWLEDGE_BASE` Syntax
+
+Here is the syntax used to alter the existing knowledge base.
+
+```sql
+ALTER KNOWLEDGE_BASE <kb_name>
+USING
+	<param_name> = <value>,
+	...;
+```
+
+The following parameters can be altered:
+
+* `embedding_model`
+
+    Users can alter only the API key of the provider used for the embedding model, while users cannot alter the provider and the model itself because it would be incompatible with the already embedded content that is stored in a knowledge base.
+
+    ```sql
+    ALTER KNOWLEDGE_BASE my_kb
+    USING
+        embedding_model = { 'api_key': 'new-api-key' };
+    ```
+
+    Upon altering the API key of the embedding model’s provider, ensure that the new API key has access to the same embedding model so that the knowledge base can continue to function without issues.
+
+* `reranking_model`
+
+    Users can turn off reranking by setting `reranking_model = false`, or change the provider, API key, and model used for reranking.
+
+    ```sql
+    ALTER KNOWLEDGE_BASE my_kb
+    USING
+        reranking_model = { ‘provider’: ‘new_provider’, ‘model_name’: ‘new_model’, 'api_key': 'new-api-key' };
+
+    ALTER KNOWLEDGE_BASE my_kb
+    USING
+        reranking_model = false;
+    ```
+
+    Upon updating the reranking model, the knowledge base will use the newly defined reranking model when reranking results, provided that reranking is turned on.
+
+* `content_columns`
+
+    Users can change the content columns.
+
+    ```sql
+    ALTER KNOWLEDGE_BASE my_kb
+    USING
+        content_columns=['content_col1', 'conten_col2', ...];
+    ```
+
+    Upon changing the content columns, all the previously inserted content stays unchanged. Now the knowledge base will be embedding content from columns defined in the most recent call to `ALTER KNOWLEDGE_BASE`.
+
+* `metadata_columns`
+
+    Users can change the metadata columns, overriding the existing metadata columns.
+
+    ```sql
+    ALTER KNOWLEDGE_BASE my_kb
+    USING
+        metadata_columns=['metadata_col1', 'metadata_col2', ...];
+    ```
+
+    Upon changing the metadata columns:
+    - All metadata fields are stored in the knowledge base. No data is removed.
+    - Users can filter only by metadata fields defined in the most recent call to `ALTER KNOWLEDGE_BASE`.
+    - To be able to filter by all metadata fields, include them in the list as below.
+        
+        ```sql
+        ALTER KNOWLEDGE_BASE my_kb
+        USING
+            metadata_columns=[‘existing_metadata_fields’, ..., 'new_metadata_fields', ...];
+        ```
+
+* `id_column`
+
+    Users can change the ID column.
+
+    ```sql
+    ALTER KNOWLEDGE BASE my_kb
+    USING
+        id_column='my_id';
+    ```
+
+    Upon changing the ID column, users must keep in mind that inserting data with an already existing ID value will update the existing row and not create a new one.
+
+* `storage`
+
+    Users cannot update the underlying vector database of the existing knowledge base.
+
+* `preprocessing`
+
+    Users can modify the [`preprocessing` parameters as defined here](/mindsdb_sql/knowledge_bases/insert_data#chunking-data).

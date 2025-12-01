@@ -76,9 +76,7 @@ class JiraIssueFetcherMixin:
                     issues.append(issue)
                 condition.applied = True
             elif condition.column in self.PROJECT_FIELDS:
-                project_ids = self._resolve_project_ids(
-                    client, condition.column, condition.value
-                )
+                project_ids = self._resolve_project_ids(client, condition.column, condition.value)
                 if len(project_ids) > 0:
                     self._fetch_by_projects(client, project_ids, limit, issues)
                     condition.applied = True
@@ -94,9 +92,7 @@ class JiraIssueFetcherMixin:
 
         return issues
 
-    def _fetch_by_identifier(
-        self, client: Jira, condition: FilterCondition
-    ) -> List[dict]:
+    def _fetch_by_identifier(self, client: Jira, condition: FilterCondition) -> List[dict]:
         """
         Fetch issues by id or key. For IN, we still call get_issue for each identifier.
         """
@@ -119,9 +115,7 @@ class JiraIssueFetcherMixin:
                         type(issue).__name__,
                     )
             else:
-                raise ValueError(
-                    f"Unsupported operator {condition.op} for column {condition.column}."
-                )
+                raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
 
         return issues
 
@@ -306,9 +300,7 @@ class JiraProjectsTable(JiraTableBase):
                         project = client.get_project(project_id)
                         projects.append(project)
                 else:
-                    raise ValueError(
-                        f"Unsupported operator {condition.op} for column {condition.column}."
-                    )
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
                 condition.applied = True
 
         if not projects:
@@ -513,9 +505,7 @@ class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
                     "thumbnail_url": attachment.get("thumbnail"),
                     "created": attachment.get("created"),
                     "author": (attachment.get("author") or {}).get("displayName"),
-                    "author_account_id": (attachment.get("author") or {}).get(
-                        "accountId"
-                    ),
+                    "author_account_id": (attachment.get("author") or {}).get("accountId"),
                 }
                 attachments.append(row)
 
@@ -688,9 +678,7 @@ class JiraUsersTable(JiraTableBase):
                                 type(user).__name__,
                             )
                 else:
-                    raise ValueError(
-                        f"Unsupported operator {condition.op} for column {condition.column}."
-                    )
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
                 condition.applied = True
 
         if not users:
@@ -721,9 +709,7 @@ class JiraUsersTable(JiraTableBase):
                     page_size,
                     exc,
                 )
-                resp, page_users = self._fallback_user_search(
-                    client, start, page_size, exc
-                )
+                resp, page_users = self._fallback_user_search(client, start, page_size, exc)
 
             users.extend(page_users)
 

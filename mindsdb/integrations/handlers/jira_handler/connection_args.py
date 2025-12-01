@@ -41,12 +41,12 @@ connection_args = OrderedDict(
         "description": "Indicates whether to connect to Jira Cloud (True) or Jira Server (False). Default is True.",
         "required": False,
         "label": "Jira Cloud",
-    }
+    },
 )
 
 connection_args_example = OrderedDict(
     jira_url="https://your-domain.atlassian.net",
     jira_username="user@example.com",
     jira_api_token="YOUR_API_TOKEN",
-    cloud=True
+    cloud=True,
 )

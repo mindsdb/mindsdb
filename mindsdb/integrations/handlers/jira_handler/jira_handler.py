@@ -32,7 +32,10 @@ def _normalize_cloud_credentials(connection_data: Dict[str, Any]) -> Dict[str, A
     Returns:
         Dict[str, Any]: A dictionary containing the normalized credentials.
     """
-    if "jira_username" not in connection_data or "jira_api_token" not in connection_data:
+    if (
+        "jira_username" not in connection_data
+        or "jira_api_token" not in connection_data
+    ):
         raise ValueError(
             "For Jira Cloud, both 'jira_username' and 'jira_api_token' parameters are required in the connection data."
         )
@@ -86,7 +89,9 @@ def normalize_jira_connection_data(connection_data: Dict[str, Any]) -> Dict[str,
         cloud = True
 
     credentials = (
-        _normalize_cloud_credentials(connection_data) if cloud else _normalize_server_credentials(connection_data)
+        _normalize_cloud_credentials(connection_data)
+        if cloud
+        else _normalize_server_credentials(connection_data)
     )
 
     return {
@@ -116,11 +121,13 @@ class JiraHandler(MetaAPIHandler):
 
         self.connection: Optional[Jira] = None
         self.is_connected: bool = False
+
+        username = self.connection_data.get("username", "")
         table_factories: Dict[str, Type] = {
             "projects": JiraProjectsTable,
             "issues": JiraIssuesTable,
             "groups": JiraGroupsTable,
-            "users": JiraUsersTable,
+            "users": JiraUsersTable(username=username),
             "attachments": JiraAttachmentsTable,
             "comments": JiraCommentsTable,
         }
@@ -156,8 +163,12 @@ class JiraHandler(MetaAPIHandler):
 
         if is_cloud:
             # Jira Cloud supports API token authentication.
-            if not all(key in self.connection_data for key in ["username", "api_token", "url"]):
-                raise ValueError("Required parameters (username, api_token, url) must be provided.")
+            if not all(
+                key in self.connection_data for key in ["username", "api_token", "url"]
+            ):
+                raise ValueError(
+                    "Required parameters (username, api_token, url) must be provided."
+                )
 
             config = {
                 "username": self.connection_data["username"],
@@ -174,7 +185,10 @@ class JiraHandler(MetaAPIHandler):
 
             if "personal_access_token" in self.connection_data:
                 config["token"] = self.connection_data["personal_access_token"]
-            elif "username" in self.connection_data and "password" in self.connection_data:
+            elif (
+                "username" in self.connection_data
+                and "password" in self.connection_data
+            ):
                 config["username"] = self.connection_data["username"]
                 config["password"] = self.connection_data["password"]
 
@@ -203,7 +217,9 @@ class JiraHandler(MetaAPIHandler):
             logger.error(f"Connection check to Jira failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f"Connection check to Jira failed due to an unknown error, {unknown_error}!")
+            logger.error(
+                f"Connection check to Jira failed due to an unknown error, {unknown_error}!"
+            )
             response.error_message = str(unknown_error)
 
         self.is_connected = response.success
@@ -246,30 +262,14 @@ class JiraHandler(MetaAPIHandler):
             response = Response(RESPONSE_TYPE.TABLE, df)
         except HTTPError as http_error:
             logger.error(f"Error running query: {query} on Jira, {http_error}!")
-            response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(http_error))
+            response = Response(
+                RESPONSE_TYPE.ERROR, error_code=0, error_message=str(http_error)
+            )
         except Exception as unknown_error:
             logger.error(f"Error running query: {query} on Jira, {unknown_error}!")
-            response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(unknown_error))
+            response = Response(
+                RESPONSE_TYPE.ERROR, error_code=0, error_message=str(unknown_error)
+            )
 
         return response
 
-    # Metadata methods
-
-    # def get_tables(self) -> Response:
-    #     """
-    #     Retrieves the list of available tables in Jira.
-
-    #     Returns:
-    #         Response: A response object containing the list of tables or an error message.
-    #     """
-    #     try:
-    #         table_names = list(self.tables.keys())
-    #         df = pd.DataFrame(table_names, columns=["table_name"])
-    #         response = Response(RESPONSE_TYPE.TABLE, df)
-    #     except Exception as unknown_error:
-    #         logger.error(f"Error retrieving tables from Jira, {unknown_error}!")
-    #         response = Response(
-    #             RESPONSE_TYPE.ERROR, error_code=0, error_message=str(unknown_error)
-    #         )
-
-    #     return response

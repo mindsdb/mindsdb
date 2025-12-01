@@ -641,6 +641,10 @@ class JiraUsersTable(JiraTableBase):
     Users table: users accessible to the current Jira context.
     """
 
+    def __init__(self, handler: Any, username: Optional[str] = None) -> None:
+        super().__init__(handler)
+        self.username = username
+
     def list(
         self,
         conditions: Optional[List[FilterCondition]] = None,
@@ -651,6 +655,17 @@ class JiraUsersTable(JiraTableBase):
     ) -> pd.DataFrame:
         client: Jira = self.handler.connect()
 
+        is_cloud = getattr(client, "cloud", None)
+        if is_cloud is False:
+            users = self.get_server_users(client, conditions, limit)
+        else:
+            users = self.get_cloud_users(client, conditions, limit)
+
+        return self.to_dataframe(users)
+
+    def get_cloud_users(
+        self, client: Jira, conditions: Optional[List[FilterCondition]], limit: Optional[int]
+    ) -> List[Dict]:
         users: List[Dict] = []
         conditions = conditions or []
 
@@ -684,7 +699,44 @@ class JiraUsersTable(JiraTableBase):
         if not users:
             users = self._fetch_all_users(client, limit)
 
-        return self.to_dataframe(users)
+        return users
+
+    def get_server_users(
+        self, client: Jira, conditions: Optional[List[FilterCondition]], limit: Optional[int]
+    ) -> List[Dict]:
+        users: List[Dict] = []
+        conditions = conditions or []
+
+        for condition in conditions:
+            if condition.column in ("username", "name", "accountId"):
+                if condition.op == FilterOperator.IN:
+                    values = condition.value if isinstance(condition.value, (list, tuple, set)) else [condition.value]
+                elif condition.op == FilterOperator.EQUAL:
+                    values = [condition.value]
+                else:
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
+                for value in values:
+                    try:
+                        user = client.user(username=value)
+                    except HTTPError as user_error:
+                        logger.debug("Failed to fetch server user '%s': %s", value, user_error)
+                        continue
+                    if isinstance(user, dict):
+                        users.append(user)
+                condition.applied = True
+
+        if not users and self.username:
+            try:
+                user = client.user(username=self.username)
+                if isinstance(user, dict):
+                    users.append(user)
+            except HTTPError as user_error:
+                logger.debug("Failed to fetch default server user '%s': %s", self.username, user_error)
+
+        if not users:
+            users = self._fetch_all_users(client, limit)
+
+        return users
 
     def _fetch_all_users(self, client: Jira, limit: Optional[int]) -> List[Dict]:
         """
@@ -727,7 +779,7 @@ class JiraUsersTable(JiraTableBase):
         self, client: Jira, start: int, page_size: int, original_exc: HTTPError
     ) -> Tuple[Any, List[Dict]]:
         """
-        Try Jira user search using both cloud and server parameter styles.
+        Jira user search using both cloud and server parameter styles.
         """
         is_cloud = getattr(client, "cloud", None)
         search_variants: List[Dict[str, Any]] = []
@@ -770,7 +822,11 @@ class JiraUsersTable(JiraTableBase):
             return resp
         if isinstance(resp, dict):
             users = resp.get("users") or resp.get("values") or []
-            return users or []
+            if users:
+                return users
+            if resp:
+                return [resp]
+            return []
         logger.debug("Unexpected users response type: %s", type(resp).__name__)
         return []
 

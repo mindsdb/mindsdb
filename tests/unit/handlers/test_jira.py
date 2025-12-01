@@ -7,11 +7,17 @@ from requests.exceptions import HTTPError
 import pandas as pd
 
 
-from base_handler_test import BaseDatabaseHandlerTest
+from base_handler_test import BaseHandlerTestSetup
+from mindsdb.integrations.libs.response import (
+    HandlerResponse as Response,
+    HandlerStatusResponse as StatusResponse,
+    RESPONSE_TYPE,
+)
 
 try:
     from mindsdb.integrations.handlers.jira_handler.jira_handler import JiraHandler
     from mindsdb.integrations.handlers.jira_handler.jira_tables import (
+        JiraAttachmentsTable,
         JiraIssuesTable,
         JiraUsersTable,
         JiraProjectsTable,
@@ -21,7 +27,7 @@ except ImportError:
     pytestmark = pytest.mark.skip("Jira handler not installed")
 
 
-class TestJiraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
+class TestJiraHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     @property
     def dummy_connection_data(self):
@@ -42,11 +48,103 @@ class TestJiraHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def create_patcher(self):
         return patch("mindsdb.integrations.handlers.jira_handler.jira_handler.Jira")
 
-    def get_tables_query(self):
-        pass
+    def test_connect_cloud_success(self):
+        """Ensure cloud connections normalize credentials and reuse Jira constructor correctly."""
+        mock_client = MagicMock()
+        self.mock_connect.return_value = mock_client
 
-    def get_columns_query(self, table_name: str):
-        pass
+        connection = self.handler.connect()
+
+        self.assertIs(connection, mock_client)
+        self.assertTrue(self.handler.is_connected)
+        self.mock_connect.assert_called_once_with(
+            username=self.dummy_connection_data["jira_username"],
+            password=self.dummy_connection_data["jira_api_token"],
+            url=self.dummy_connection_data["jira_url"],
+            cloud=True,
+        )
+
+    def test_connect_reuse_existing_connection(self):
+        """If already connected, connect should reuse the existing client."""
+        cached_connection = MagicMock()
+        self.handler.connection = cached_connection
+        self.handler.is_connected = True
+
+        connection = self.handler.connect()
+
+        self.assertIs(connection, cached_connection)
+        self.mock_connect.assert_not_called()
+
+    def test_connect_runtime_error_on_missing_cached_connection(self):
+        """Marking the handler as connected without a cached client should raise."""
+        self.handler.is_connected = True
+        self.handler.connection = None
+
+        with self.assertRaises(RuntimeError):
+            self.handler.connect()
+
+    def test_check_connection_http_error(self):
+        """check_connection should surface HTTP errors from the Jira client."""
+        mock_client = MagicMock()
+        mock_client.myself.side_effect = HTTPError("Unauthorized")
+        self.mock_connect.return_value = mock_client
+
+        response = self.handler.check_connection()
+
+        assert isinstance(response, StatusResponse)
+        self.assertFalse(response.success)
+        self.assertIn("Unauthorized", response.error_message)
+        self.assertFalse(self.handler.is_connected)
+
+    def test_native_query_http_error(self):
+        """native_query should return an error response when Jira raises HTTPError."""
+        mock_client = MagicMock()
+        mock_client.jql.side_effect = HTTPError("Bad JQL")
+        self.mock_connect.return_value = mock_client
+
+        response = self.handler.native_query("project = TEST")
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+        self.assertIn("Bad JQL", response.error_message)
+
+    def test_native_query_returns_empty_dataframe_when_no_issues(self):
+        """Ensure native_query returns an empty dataframe with expected columns."""
+        mock_client = MagicMock()
+        mock_client.jql.return_value = {}
+        self.mock_connect.return_value = mock_client
+
+        response = self.handler.native_query("project = TEST")
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertTrue(response.data_frame.empty)
+        issues_columns = JiraIssuesTable(self.handler).get_columns()
+        self.assertListEqual(list(response.data_frame.columns), issues_columns)
+
+    def test_attachments_table_fetches_missing_fields(self):
+        """Attachments table should refresh issues to retrieve missing attachment fields."""
+        mock_client = MagicMock()
+        self.mock_connect.return_value = mock_client
+
+        issue_without_attachments = {"id": "1", "key": "ISSUE-1", "fields": {}}
+        mock_client.get_all_projects.return_value = [{"id": "100"}]
+        mock_client.get_all_project_issues.return_value = [issue_without_attachments]
+        mock_client.get_issue.return_value = {
+            "fields": {
+                "attachment": [
+                    {"id": "att-1", "filename": "log.txt", "size": 10, "mimeType": "text/plain"}
+                ]
+            }
+        }
+
+        attachments_table = JiraAttachmentsTable(self.handler)
+        result_df = attachments_table.list(limit=1)
+
+        self.assertEqual(len(result_df), 1)
+        self.assertEqual(result_df.loc[0, "attachment_id"], "att-1")
+        self.assertEqual(result_df.loc[0, "issue_key"], "ISSUE-1")
+        self.assertEqual(result_df.loc[0, "filename"], "log.txt")
 
     def test_issues_table_missing_assignee(self):
         """Test that issues without assignee are handled correctly."""

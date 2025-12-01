@@ -113,14 +113,14 @@ For functions like [LLM()](/mindsdb_sql/functions/llm_function) and [TO_MARKDOWN
 
 Refer to the individual function documentation for details on environment variables.
 
-**Option 4: Define Defaults at Object Creation**
+**Option 4: Define Models at Object Creation**
 
-You can specify default models when creating [agents](/mindsdb_sql/agents/agent_syntax) and [knowledge bases](/mindsdb_sql/knowledge_bases/create). These local defaults override the global system defaults for that specific object.
+You can specify models when creating [agents](/mindsdb_sql/agents/agent_syntax) and [knowledge bases](/mindsdb_sql/knowledge_bases/create). These models override the system defaults for that specific object.
 
 This allows you to tailor model behavior per agent or per knowledge base while keeping system-wide defaults in place.
 
 <Note>
-Note that after changing the default model, the existing objects are not updated with the new default model. All objects going forward will use the updated default models.
+Note that after changing the default model, the existing objects are not updated with the new default model. All objects being created going forward will use the updated default models.
 </Note>
 
 ## Summary

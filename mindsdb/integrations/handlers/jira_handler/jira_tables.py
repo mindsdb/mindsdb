@@ -4,6 +4,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from atlassian import Jira
 import pandas as pd
+from requests.exceptions import HTTPError
 
 from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.utilities.sql_utils import (
@@ -385,56 +386,10 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
                 "fields.duedate": "due_date",
                 "fields.created": "created",
                 "fields.updated": "updated",
-                "fields.resolution.name": "resolution",
-                "fields.resolutiondate": "resolution_date",
-                "fields.timespent": "time_spent",
-                "fields.timeoriginalestimate": "time_original_estimate",
-                "fields.timeestimate": "time_remaining_estimate",
-                "fields.aggregatetimespent": "aggregate_time_spent",
-                "fields.aggregatetimeoriginalestimate": "aggregate_time_original_estimate",
-                "fields.aggregatetimeestimate": "aggregate_time_remaining",
-                "fields.comment.total": "comment_count",
             },
             inplace=True,
             errors="ignore",
         )
-
-        # Project alias
-        if "project_name" in issues_df.columns:
-            issues_df["project"] = issues_df["project_name"]
-        else:
-            issues_df["project"] = None
-
-        # Labels
-        if "fields.labels" in issues_df.columns:
-            issues_df["labels"] = issues_df["fields.labels"].apply(
-                self._join_simple_list
-            )
-        else:
-            issues_df["labels"] = None
-
-        # Components
-        if "fields.components" in issues_df.columns:
-            issues_df["components"] = issues_df["fields.components"].apply(
-                self._join_component_names
-            )
-        else:
-            issues_df["components"] = None
-
-        # Comments
-        if "fields.comment.comments" in issues_df.columns:
-            issues_df["comments"] = issues_df["fields.comment.comments"].apply(
-                self._join_comment_bodies
-            )
-            if "comment_count" not in issues_df.columns:
-                issues_df["comment_count"] = issues_df["fields.comment.comments"].apply(
-                    lambda comments: len(comments) if isinstance(comments, list) else 0
-                )
-        else:
-            issues_df["comments"] = None
-
-        if "comment_count" not in issues_df.columns:
-            issues_df["comment_count"] = 0
 
         issues_df = issues_df.reindex(columns=self.get_columns(), fill_value=None)
 
@@ -466,16 +421,6 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
             "due_date",
             "created",
             "updated",
-            "resolution",
-            "resolution_date",
-            "time_spent",
-            "time_original_estimate",
-            "time_remaining_estimate",
-            "aggregate_time_spent",
-            "aggregate_time_original_estimate",
-            "aggregate_time_remaining",
-            "comments",
-            "comment_count",
         ]
 
     @staticmethod
@@ -517,120 +462,6 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
                 return "\n\n".join(comments)
             return None
         return None
-
-    @staticmethod
-    def meta_get_tables(table_name: str, **kwargs: Any) -> Dict:
-        return {
-            "table_name": "issues",
-            "table_schema": "jira",
-            "table_type": "BASE TABLE",
-            "table_description": "Jira issues normalized across projects.",
-            "row_count": None,
-        }
-
-    @staticmethod
-    def meta_get_columns(table_name: str, **kwargs: Any) -> List[Dict]:
-        columns: List[Dict] = []
-        column_definitions = [
-            ("id", "str", "Internal Jira issue ID", False),
-            ("key", "str", "Issue key (e.g. PROJ-1)", False),
-            ("project_id", "str", "Internal Jira project ID", False),
-            ("project_key", "str", "Project key", False),
-            ("project_name", "str", "Project name", False),
-            ("project", "str", "Project alias (same as project_name)", True),
-            ("issue_type", "str", "Issue type (Bug, Task, Story, etc.)", True),
-            ("summary", "str", "Issue summary", True),
-            ("description", "str", "Issue description", True),
-            ("priority", "str", "Issue priority name", True),
-            ("creator", "str", "Creator display name", True),
-            ("creator_account_id", "str", "Creator account ID", True),
-            ("reporter", "str", "Reporter display name", True),
-            ("reporter_account_id", "str", "Reporter account ID", True),
-            ("assignee", "str", "Assignee display name", True),
-            ("assignee_account_id", "str", "Assignee account ID", True),
-            ("status", "str", "Current workflow status", True),
-            (
-                "status_category",
-                "str",
-                "Status category (To Do, In Progress, Done)",
-                True,
-            ),
-            (
-                "status_category_change_date",
-                "datetime",
-                "Last status category change date",
-                True,
-            ),
-            ("labels", "str", "Comma-separated labels", True),
-            ("components", "str", "Comma-separated component names", True),
-            ("due_date", "datetime", "Due date", True),
-            ("created", "datetime", "Creation timestamp", False),
-            ("updated", "datetime", "Last update timestamp", True),
-            ("resolution", "str", "Resolution name", True),
-            ("resolution_date", "datetime", "Resolution date", True),
-            ("time_spent", "int", "Time spent in seconds", True),
-            ("time_original_estimate", "int", "Original estimate in seconds", True),
-            ("time_remaining_estimate", "int", "Remaining estimate in seconds", True),
-            ("aggregate_time_spent", "int", "Aggregate time spent in seconds", True),
-            (
-                "aggregate_time_original_estimate",
-                "int",
-                "Aggregate original estimate in seconds",
-                True,
-            ),
-            (
-                "aggregate_time_remaining",
-                "int",
-                "Aggregate remaining time in seconds",
-                True,
-            ),
-            ("comments", "str", "Concatenated issue comments", True),
-            ("comment_count", "int", "Number of comments", True),
-        ]
-        for name, dtype, desc, nullable in column_definitions:
-            row = {
-                "table_name": "issues",
-                "column_name": name,
-                "data_type": dtype,
-                "column_description": desc,
-                "column_default": None,
-                "is_nullable": nullable,
-            }
-            columns.append(row)
-        return columns
-
-    @staticmethod
-    def meta_get_primary_keys(table_name: str, **kwargs: Any) -> List[Dict]:
-        return [
-            {
-                "table_name": "issues",
-                "column_name": "key",
-                "constraint_name": "pk_jira_issues_key",
-            }
-        ]
-
-    @staticmethod
-    def meta_get_foreign_keys(
-        table_name: str, all_tables: List[str], **kwargs: Any
-    ) -> List[Dict]:
-        fks: List[Dict] = []
-        if "projects" in all_tables:
-            fks.append(
-                {
-                    "table_name": "issues",
-                    "column_name": "project_key",
-                    "referenced_table_name": "projects",
-                    "referenced_column_name": "key",
-                    "constraint_name": "fk_jira_issues_project",
-                }
-            )
-        return fks
-
-    @staticmethod
-    def meta_get_column_statistics(
-        table_names: Optional[List[str]] = None, **kwargs: Any
-    ) -> List[Dict]:
-        return []
 
 
 class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
@@ -708,77 +539,6 @@ class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
             "author_account_id",
         ]
 
-    @staticmethod
-    def meta_get_tables(table_name: str, **kwargs: Any) -> Dict:
-        return {
-            "table_name": "attachments",
-            "table_schema": "jira",
-            "table_type": "BASE TABLE",
-            "table_description": "Issue attachments from Jira.",
-            "row_count": None,
-        }
-
-    @staticmethod
-    def meta_get_columns(table_name: str, **kwargs: Any) -> List[Dict]:
-        columns: List[Dict] = []
-        defs = [
-            ("issue_id", "str", "Internal Jira issue ID", False),
-            ("issue_key", "str", "Issue key", False),
-            ("attachment_id", "str", "Attachment ID", False),
-            ("filename", "str", "Attachment filename", True),
-            ("mime_type", "str", "Attachment MIME type", True),
-            ("size", "int", "Attachment size in bytes", True),
-            ("content_url", "str", "Direct URL to attachment content", True),
-            ("thumbnail_url", "str", "Thumbnail URL, if available", True),
-            ("created", "datetime", "Attachment creation datetime", True),
-            ("author", "str", "Author display name", True),
-            ("author_account_id", "str", "Author account ID", True),
-        ]
-        for name, dtype, desc, nullable in defs:
-            row = {
-                "table_name": "attachments",
-                "column_name": name,
-                "data_type": dtype,
-                "column_description": desc,
-                "column_default": None,
-                "is_nullable": nullable,
-            }
-            columns.append(row)
-        return columns
-
-    @staticmethod
-    def meta_get_primary_keys(table_name: str, **kwargs: Any) -> List[Dict]:
-        return [
-            {
-                "table_name": "attachments",
-                "column_name": "attachment_id",
-                "constraint_name": "pk_jira_attachments_id",
-            }
-        ]
-
-    @staticmethod
-    def meta_get_foreign_keys(
-        table_name: str, all_tables: List[str], **kwargs: Any
-    ) -> List[Dict]:
-        fks: List[Dict] = []
-        if "issues" in all_tables:
-            fks.append(
-                {
-                    "table_name": "attachments",
-                    "column_name": "issue_key",
-                    "referenced_table_name": "issues",
-                    "referenced_column_name": "key",
-                    "constraint_name": "fk_jira_attachments_issue",
-                }
-            )
-        return fks
-
-    @staticmethod
-    def meta_get_column_statistics(
-        table_names: Optional[List[str]] = None, **kwargs: Any
-    ) -> List[Dict]:
-        return []
-
 
 class JiraCommentsTable(JiraIssueFetcherMixin, JiraTableBase):
     """
@@ -853,76 +613,6 @@ class JiraCommentsTable(JiraIssueFetcherMixin, JiraTableBase):
             "visibility_value",
         ]
 
-    @staticmethod
-    def meta_get_tables(table_name: str, **kwargs: Any) -> Dict:
-        return {
-            "table_name": "comments",
-            "table_schema": "jira",
-            "table_type": "BASE TABLE",
-            "table_description": "Issue comments from Jira.",
-            "row_count": None,
-        }
-
-    @staticmethod
-    def meta_get_columns(table_name: str, **kwargs: Any) -> List[Dict]:
-        columns: List[Dict] = []
-        defs = [
-            ("issue_id", "str", "Internal Jira issue ID", False),
-            ("issue_key", "str", "Issue key", False),
-            ("comment_id", "str", "Comment ID", False),
-            ("body", "str", "Comment body", True),
-            ("created", "datetime", "Comment creation datetime", True),
-            ("updated", "datetime", "Comment last update datetime", True),
-            ("author", "str", "Author display name", True),
-            ("author_account_id", "str", "Author account ID", True),
-            ("visibility_type", "str", "Visibility type", True),
-            ("visibility_value", "str", "Visibility value", True),
-        ]
-        for name, dtype, desc, nullable in defs:
-            row = {
-                "table_name": "comments",
-                "column_name": name,
-                "data_type": dtype,
-                "column_description": desc,
-                "column_default": None,
-                "is_nullable": nullable,
-            }
-            columns.append(row)
-        return columns
-
-    @staticmethod
-    def meta_get_primary_keys(table_name: str, **kwargs: Any) -> List[Dict]:
-        return [
-            {
-                "table_name": "comments",
-                "column_name": "comment_id",
-                "constraint_name": "pk_jira_comments_id",
-            }
-        ]
-
-    @staticmethod
-    def meta_get_foreign_keys(
-        table_name: str, all_tables: List[str], **kwargs: Any
-    ) -> List[Dict]:
-        fks: List[Dict] = []
-        if "issues" in all_tables:
-            fks.append(
-                {
-                    "table_name": "comments",
-                    "column_name": "issue_key",
-                    "referenced_table_name": "issues",
-                    "referenced_column_name": "key",
-                    "constraint_name": "fk_jira_comments_issue",
-                }
-            )
-        return fks
-
-    @staticmethod
-    def meta_get_column_statistics(
-        table_names: Optional[List[str]] = None, **kwargs: Any
-    ) -> List[Dict]:
-        return []
-
 
 class JiraGroupsTable(JiraTableBase):
     """
@@ -955,58 +645,6 @@ class JiraGroupsTable(JiraTableBase):
             "html",
         ]
 
-    @staticmethod
-    def meta_get_tables(table_name: str, **kwargs: Any) -> Dict:
-        return {
-            "table_name": "groups",
-            "table_schema": "jira",
-            "table_type": "BASE TABLE",
-            "table_description": "User groups in Jira.",
-            "row_count": None,
-        }
-
-    @staticmethod
-    def meta_get_columns(table_name: str, **kwargs: Any) -> List[Dict]:
-        columns: List[Dict] = []
-        defs = [
-            ("groupId", "str", "Group ID", False),
-            ("name", "str", "Group name", False),
-            ("html", "str", "HTML representation from Jira API", True),
-        ]
-        for name, dtype, desc, nullable in defs:
-            row = {
-                "table_name": "groups",
-                "column_name": name,
-                "data_type": dtype,
-                "column_description": desc,
-                "column_default": None,
-                "is_nullable": nullable,
-            }
-            columns.append(row)
-        return columns
-
-    @staticmethod
-    def meta_get_primary_keys(table_name: str, **kwargs: Any) -> List[Dict]:
-        return [
-            {
-                "table_name": "groups",
-                "column_name": "groupId",
-                "constraint_name": "pk_jira_groups_id",
-            }
-        ]
-
-    @staticmethod
-    def meta_get_foreign_keys(
-        table_name: str, all_tables: List[str], **kwargs: Any
-    ) -> List[Dict]:
-        return []
-
-    @staticmethod
-    def meta_get_column_statistics(
-        table_names: Optional[List[str]] = None, **kwargs: Any
-    ) -> List[Dict]:
-        return []
-
 
 class JiraUsersTable(JiraTableBase):
     """
@@ -1030,11 +668,25 @@ class JiraUsersTable(JiraTableBase):
             if condition.column == "accountId":
                 if condition.op == FilterOperator.EQUAL:
                     user = client.user(account_id=condition.value)
-                    users.append(user)
+                    if isinstance(user, dict):
+                        users.append(user)
+                    else:
+                        logger.debug(
+                            "Skipping non-dict user result for account_id %s: %s",
+                            condition.value,
+                            type(user).__name__,
+                        )
                 elif condition.op == FilterOperator.IN:
                     for account_id in condition.value:
                         user = client.user(account_id=account_id)
-                        users.append(user)
+                        if isinstance(user, dict):
+                            users.append(user)
+                        else:
+                            logger.debug(
+                                "Skipping non-dict user result for account_id %s: %s",
+                                account_id,
+                                type(user).__name__,
+                            )
                 else:
                     raise ValueError(
                         f"Unsupported operator {condition.op} for column {condition.column}."
@@ -1042,12 +694,61 @@ class JiraUsersTable(JiraTableBase):
                 condition.applied = True
 
         if not users:
-            if limit is not None:
-                users = client.users_get_all(limit=limit)
-            else:
-                users = client.users_get_all()
+            users = self._fetch_all_users(client, limit)
 
         return self.to_dataframe(users)
+
+    def _fetch_all_users(self, client: Jira, limit: Optional[int]) -> List[Dict]:
+        """
+        Fetch all accessible users with pagination and a fallback for Jira Cloud.
+        """
+        users: List[Dict] = []
+        start = 0
+        page_size = limit or 50
+        if page_size <= 0:
+            page_size = 50
+
+        while True:
+            try:
+                resp = client.users_get_all(start=start, limit=page_size)
+            except HTTPError as exc:
+                logger.warning(
+                    "users_get_all failed (start=%s, limit=%s): %s; falling back to user search",
+                    start,
+                    page_size,
+                    exc,
+                )
+                resp = client.user_find_by_user_string(
+                    query=".", start=start, limit=page_size
+                )
+            print("**********************************************************************")
+            page_users = self._normalize_users_response(resp)
+            print(page_users)
+            users.extend(page_users)
+            print(users)
+            print("**********************************************************************")
+
+            if limit is not None and len(users) >= limit:
+                return users[:limit]
+
+            if len(page_users) < page_size:
+                break
+
+            start += len(page_users)
+
+        return users
+
+    def _normalize_users_response(self, resp: Any) -> List[Dict]:
+        """
+        Normalize user API responses to a list of dicts.
+        """
+        if isinstance(resp, list):
+            return resp
+        if isinstance(resp, dict):
+            users = resp.get("users") or resp.get("values") or []
+            return users or []
+        logger.debug("Unexpected users response type: %s", type(resp).__name__)
+        return []
 
     def get_columns(self) -> List[str]:
         return [
@@ -1059,59 +760,3 @@ class JiraUsersTable(JiraTableBase):
             "timeZone",
             "locale",
         ]
-
-    @staticmethod
-    def meta_get_tables(table_name: str, **kwargs: Any) -> Dict:
-        return {
-            "table_name": "users",
-            "table_schema": "jira",
-            "table_type": "BASE TABLE",
-            "table_description": "Users accessible to the configured Jira account.",
-            "row_count": None,
-        }
-
-    @staticmethod
-    def meta_get_columns(table_name: str, **kwargs: Any) -> List[Dict]:
-        columns: List[Dict] = []
-        defs = [
-            ("accountId", "str", "User account ID", False),
-            ("accountType", "str", "Account type", True),
-            ("emailAddress", "str", "Email address (if available)", True),
-            ("displayName", "str", "Display name", True),
-            ("active", "bool", "Whether the user is active", True),
-            ("timeZone", "str", "Time zone", True),
-            ("locale", "str", "Locale", True),
-        ]
-        for name, dtype, desc, nullable in defs:
-            row = {
-                "table_name": "users",
-                "column_name": name,
-                "data_type": dtype,
-                "column_description": desc,
-                "column_default": None,
-                "is_nullable": nullable,
-            }
-            columns.append(row)
-        return columns
-
-    @staticmethod
-    def meta_get_primary_keys(table_name: str, **kwargs: Any) -> List[Dict]:
-        return [
-            {
-                "table_name": "users",
-                "column_name": "accountId",
-                "constraint_name": "pk_jira_users_account_id",
-            }
-        ]
-
-    @staticmethod
-    def meta_get_foreign_keys(
-        table_name: str, all_tables: List[str], **kwargs: Any
-    ) -> List[Dict]:
-        return []
-
-    @staticmethod
-    def meta_get_column_statistics(
-        table_names: Optional[List[str]] = None, **kwargs: Any
-    ) -> List[Dict]:
-        return []

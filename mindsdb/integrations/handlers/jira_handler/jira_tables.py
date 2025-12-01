@@ -1,6 +1,6 @@
 # mindsdb/integrations/handlers/jira_handler/jira_tables.py
 
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from atlassian import Jira
 import pandas as pd
@@ -711,6 +711,9 @@ class JiraUsersTable(JiraTableBase):
         while True:
             try:
                 resp = client.users_get_all(start=start, limit=page_size)
+                page_users = self._normalize_users_response(resp)
+                if not isinstance(resp, (list, dict)) and not page_users:
+                    raise HTTPError(f"Unexpected users response: {resp}")
             except HTTPError as exc:
                 logger.warning(
                     "users_get_all failed (start=%s, limit=%s): %s; falling back to user search",
@@ -718,15 +721,11 @@ class JiraUsersTable(JiraTableBase):
                     page_size,
                     exc,
                 )
-                resp = client.user_find_by_user_string(
-                    query=".", start=start, limit=page_size
+                resp, page_users = self._fallback_user_search(
+                    client, start, page_size, exc
                 )
-            print("**********************************************************************")
-            page_users = self._normalize_users_response(resp)
-            print(page_users)
+
             users.extend(page_users)
-            print(users)
-            print("**********************************************************************")
 
             if limit is not None and len(users) >= limit:
                 return users[:limit]
@@ -737,6 +736,45 @@ class JiraUsersTable(JiraTableBase):
             start += len(page_users)
 
         return users
+
+    def _fallback_user_search(
+        self, client: Jira, start: int, page_size: int, original_exc: HTTPError
+    ) -> Tuple[Any, List[Dict]]:
+        """
+        Try Jira user search using both cloud and server parameter styles.
+        """
+        is_cloud = getattr(client, "cloud", None)
+        search_variants: List[Dict[str, Any]] = []
+
+        if is_cloud is False:
+            search_variants.append({"username": ".", "start": start, "limit": page_size})
+            search_variants.append({"query": ".", "start": start, "limit": page_size})
+        else:
+            search_variants.append({"query": ".", "start": start, "limit": page_size})
+            search_variants.append({"username": ".", "start": start, "limit": page_size})
+
+        for params in search_variants:
+            try:
+                resp = client.user_find_by_user_string(**params)
+            except HTTPError as search_exc:
+                logger.error(
+                    "user search failed (params=%s): %s",
+                    params,
+                    search_exc,
+                )
+                continue
+
+            page_users = self._normalize_users_response(resp)
+            if isinstance(resp, (list, dict)) or page_users:
+                return resp, page_users
+
+            logger.debug(
+                "Unexpected users search response (params=%s): %s",
+                params,
+                resp,
+            )
+
+        raise HTTPError(f"Unexpected users response: {original_exc}")
 
     def _normalize_users_response(self, resp: Any) -> List[Dict]:
         """

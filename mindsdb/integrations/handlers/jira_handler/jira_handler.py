@@ -122,12 +122,11 @@ class JiraHandler(MetaAPIHandler):
         self.connection: Optional[Jira] = None
         self.is_connected: bool = False
 
-        username = self.connection_data.get("username", "")
         table_factories: Dict[str, Type] = {
             "projects": JiraProjectsTable,
             "issues": JiraIssuesTable,
             "groups": JiraGroupsTable,
-            "users": JiraUsersTable(username=username),
+            "users": JiraUsersTable,
             "attachments": JiraAttachmentsTable,
             "comments": JiraCommentsTable,
         }

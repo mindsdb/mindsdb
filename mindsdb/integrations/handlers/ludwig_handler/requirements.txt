@@ -1,3 +1,4 @@
 ludwig[distributed]>=0.5.2
 ray==2.43.0
 dask
+werkzeug>=3.1.4 # not directly required, pinned by Snyk to avoid a vulnerability

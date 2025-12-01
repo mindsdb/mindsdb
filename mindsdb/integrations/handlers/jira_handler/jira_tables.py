@@ -36,15 +36,16 @@ class BaseJiraTable(APIResource):
 class JiraProjectsTable(BaseJiraTable):
     def list(
         self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        sort: List[SortColumn] = None,
-        targets: List[str] = None,
+        conditions: Optional[List[FilterCondition]] = None,
+        limit: Optional[int] = None,
+        sort: Optional[List[SortColumn]] = None,
+        targets: Optional[List[str]] = None,
         **kwargs,
     ) -> pd.DataFrame:
         client: Jira = self.handler.connect()
 
         projects = []
+        conditions = conditions or []
         for condition in conditions:
             if condition.column in ("id", "key"):
                 if condition.op == FilterOperator.EQUAL:
@@ -62,13 +63,7 @@ class JiraProjectsTable(BaseJiraTable):
         if not projects:
             projects = client.get_all_projects()
 
-        if projects:
-            projects_df = pd.DataFrame(projects)
-            projects_df = projects_df[self.get_columns()]
-        else:
-            projects_df = pd.DataFrame([], columns=self.get_columns())
-
-        return projects_df
+        return self.to_dataframe(projects)
 
     def get_columns(self) -> List[str]:
         return [
@@ -84,26 +79,19 @@ class JiraProjectsTable(BaseJiraTable):
         ]
 
 
-class JiraAttachmentsTable(BaseJiraTable):
-    pass
-
-
-class JiraCommentsTable(BaseJiraTable):
-    pass
-
-
 class JiraIssuesTable(BaseJiraTable):
     def list(
         self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        sort: List[SortColumn] = None,
-        targets: List[str] = None,
+        conditions: Optional[List[FilterCondition]] = None,
+        limit: Optional[int] = None,
+        sort: Optional[List[SortColumn]] = None,
+        targets: Optional[List[str]] = None,
         **kwargs,
     ) -> pd.DataFrame:
         client: Jira = self.handler.connect()
 
         issues = []
+        conditions = conditions or []
         for condition in conditions:
             if condition.column in ("id", "key"):
                 if condition.op == FilterOperator.EQUAL:
@@ -139,14 +127,16 @@ class JiraIssuesTable(BaseJiraTable):
                 )
 
         if issues:
-            issues_df = self.normalize(issues)
+            return self.normalize(issues)
         else:
-            issues_df = pd.DataFrame([], columns=self.get_columns())
-
-        return issues_df
+            return self.to_dataframe(issues)
 
     def _get_project_issues_with_limit(
-        self, client: Jira, project_id, limit=None, current_issues=None
+        self,
+        client: Jira,
+        project_id: str,
+        limit: Optional[int] = None,
+        current_issues: Optional[List] = None,
     ):
         """
         Helper to get issues from a project, respecting the limit.
@@ -163,6 +153,7 @@ class JiraIssuesTable(BaseJiraTable):
 
     def normalize(self, issues: dict) -> pd.DataFrame:
         issues_df = pd.json_normalize(issues)
+        # Use errors='ignore' to skip columns that don't exist in the data
         issues_df.rename(
             columns={
                 "fields.project.id": "project_id",
@@ -175,6 +166,7 @@ class JiraIssuesTable(BaseJiraTable):
                 "fields.status.name": "status",
             },
             inplace=True,
+            errors="ignore",
         )
         issues_df = issues_df.reindex(columns=self.get_columns(), fill_value=None)
 
@@ -198,10 +190,10 @@ class JiraIssuesTable(BaseJiraTable):
 class JiraGroupsTable(BaseJiraTable):
     def list(
         self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        sort: List[SortColumn] = None,
-        targets: List[str] = None,
+        conditions: Optional[List[FilterCondition]] = None,
+        limit: Optional[int] = None,
+        sort: Optional[List[SortColumn]] = None,
+        targets: Optional[List[str]] = None,
         **kwargs,
     ) -> pd.DataFrame:
         client: Jira = self.handler.connect()
@@ -211,13 +203,7 @@ class JiraGroupsTable(BaseJiraTable):
         else:
             groups = client.get_groups()["groups"]
 
-        if groups:
-            groups_df = pd.DataFrame(groups)
-            groups_df = groups_df[self.get_columns()]
-        else:
-            groups_df = pd.DataFrame([], columns=self.get_columns())
-
-        return groups_df
+        return self.to_dataframe(groups)
 
     def get_columns(self) -> List[str]:
         return [
@@ -230,15 +216,16 @@ class JiraGroupsTable(BaseJiraTable):
 class JiraUsersTable(BaseJiraTable):
     def list(
         self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        sort: List[SortColumn] = None,
-        targets: List[str] = None,
+        conditions: Optional[List[FilterCondition]] = None,
+        limit: Optional[int] = None,
+        sort: Optional[List[SortColumn]] = None,
+        targets: Optional[List[str]] = None,
         **kwargs,
     ) -> pd.DataFrame:
         client: Jira = self.handler.connect()
 
         users = []
+        conditions = conditions or []
         for condition in conditions:
             if condition.column == "accountId":
                 if condition.op == FilterOperator.EQUAL:
@@ -260,13 +247,7 @@ class JiraUsersTable(BaseJiraTable):
             else:
                 users = client.users_get_all()
 
-        if users:
-            users_df = pd.DataFrame(users)
-            users_df = users_df[self.get_columns()]
-        else:
-            users_df = pd.DataFrame([], columns=self.get_columns())
-
-        return users_df
+        return self.to_dataframe(users)
 
     def get_columns(self) -> List[str]:
         return [
@@ -278,3 +259,11 @@ class JiraUsersTable(BaseJiraTable):
             "timeZone",
             "locale",
         ]
+
+
+class JiraAttachmentsTable(BaseJiraTable):
+    pass
+
+
+class JiraCommentsTable(BaseJiraTable):
+    pass

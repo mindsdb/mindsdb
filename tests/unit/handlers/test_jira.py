@@ -18,10 +18,12 @@ try:
     from mindsdb.integrations.handlers.jira_handler.jira_handler import JiraHandler
     from mindsdb.integrations.handlers.jira_handler.jira_tables import (
         JiraAttachmentsTable,
+        JiraCommentsTable,
         JiraIssuesTable,
         JiraUsersTable,
         JiraProjectsTable,
         JiraGroupsTable,
+        SERVER_COLUMNS,
     )
 except ImportError:
     pytestmark = pytest.mark.skip("Jira handler not installed")
@@ -331,6 +333,69 @@ class TestJiraHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertEqual(result_df.loc[0, "html"], "<a>Developers</a>")
         self.assertTrue(pd.isna(result_df.loc[1, "html"]))
+
+    def test_comments_table_fetches_missing_fields(self):
+        """Comments table should refresh issues to retrieve missing comment fields."""
+        mock_client = MagicMock()
+        self.mock_connect.return_value = mock_client
+
+        issue_without_comments = {"id": "1", "key": "ISSUE-1", "fields": {}}
+        mock_client.get_all_projects.return_value = [{"id": "100"}]
+        mock_client.get_all_project_issues.return_value = [issue_without_comments]
+        mock_client.get_issue.return_value = {
+            "fields": {
+                "comment": {
+                    "comments": [
+                        {
+                            "id": "c-1",
+                            "body": "First comment",
+                            "created": "2024-01-01",
+                            "updated": "2024-01-02",
+                            "author": {
+                                "displayName": "Commenter",
+                                "accountId": "acc-1",
+                            },
+                            "visibility": {
+                                "type": "role",
+                                "value": "admin",
+                            },
+                        }
+                    ]
+                }
+            }
+        }
+
+        comments_table = JiraCommentsTable(self.handler)
+        result_df = comments_table.list(limit=1)
+
+        self.assertEqual(len(result_df), 1)
+        self.assertEqual(result_df.loc[0, "comment_id"], "c-1")
+        self.assertEqual(result_df.loc[0, "issue_key"], "ISSUE-1")
+        self.assertEqual(result_df.loc[0, "body"], "First comment")
+        self.assertEqual(result_df.loc[0, "author"], "Commenter")
+        self.assertEqual(result_df.loc[0, "visibility_type"], "role")
+        self.assertEqual(result_df.loc[0, "visibility_value"], "admin")
+
+    def test_users_table_server_mode_columns(self):
+        """Users table should switch to server columns when client.cloud is False."""
+        mock_client = MagicMock()
+        mock_client.cloud = False
+        self.mock_connect.return_value = mock_client
+
+        mock_client.user.return_value = {
+            "name": "serveruser",
+            "displayName": "Server User",
+            "emailAddress": "server@example.com",
+        }
+
+        users_table = JiraUsersTable(self.handler)
+        result_df = users_table.list()
+
+        self.assertEqual(len(result_df), 1)
+        self.assertListEqual(list(result_df.columns), SERVER_COLUMNS)
+        self.assertEqual(result_df.loc[0, "name"], "serveruser")
+        self.assertEqual(result_df.loc[0, "displayName"], "Server User")
+        self.assertEqual(result_df.loc[0, "emailAddress"], "server@example.com")
 
 
 if __name__ == "__main__":

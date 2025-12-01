@@ -45,7 +45,6 @@ CLOUD_COLUMNS = [
     "groups",
 ]
 
-# TODO: Expand the tests with table-specific tests
 class JiraTableBase(APIResource):
     """
     Base class for Jira tables.

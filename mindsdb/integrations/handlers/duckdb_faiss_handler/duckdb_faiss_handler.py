@@ -14,6 +14,7 @@ from mindsdb_sql_parser.ast import (
     Star,
     Tuple as AstTuple,
     Function,
+    TypeCast,
 )
 
 from mindsdb.integrations.libs.response import (
@@ -342,6 +343,28 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
                 # last element
                 key = BinaryOperation(op="->>", args=[key, Constant(parts[-1])])
+
+            is_orig_id = item.column == "metadata._original_doc_id"
+
+            type_cast = None
+            value = item.value
+
+            if isinstance(value, list) and len(value) > 0 and item.op in (FilterOperator.IN, FilterOperator.NOT_IN):
+                if is_orig_id:
+                    # convert to str
+                    item.value = [str(i) for i in value]
+                value = item.value[0]
+            elif is_orig_id:
+                if not isinstance(value, str):
+                    value = item.value = str(item.value)
+
+            if isinstance(value, int):
+                type_cast = "int"
+            elif isinstance(value, float):
+                type_cast = "float"
+
+            if type_cast is not None:
+                key = TypeCast(type_cast, key)
 
             if item.op in (FilterOperator.NOT_IN, FilterOperator.IN):
                 values = [Constant(i) for i in item.value]

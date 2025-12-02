@@ -161,6 +161,7 @@ class FaissIndex:
         ...
 
     def drop(self):
+        self.close()
         if os.path.exists(self.path):
             os.remove(self.path)
 

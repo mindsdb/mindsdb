@@ -7,6 +7,7 @@ from snowflake import connector
 from snowflake.connector.errors import NotSupportedError
 from snowflake.connector.cursor import SnowflakeCursor, ResultMetadata
 from typing import Any, Optional, List
+from pathlib import Path
 
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier
@@ -19,7 +20,17 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE,
+)
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+
+from .auth_types import (
+    PasswordAuthType,
+    KeyPairAuthType,
+)
 
 try:
     import pyarrow as pa
@@ -172,6 +183,11 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
     name = "snowflake"
 
+    _auth_types = {
+        None: PasswordAuthType(),
+        "key_pair": KeyPairAuthType(),
+    }
+
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data")
@@ -184,6 +200,10 @@ class SnowflakeHandler(MetaDatabaseHandler):
         """
         Establishes a connection to a Snowflake account.
 
+        Supports two authentication methods:
+        1. User/password authentication (legacy)
+        2. Key pair authentication (recommended)
+
         Raises:
             ValueError: If the required connection parameters are not provided.
             snowflake.connector.errors.Error: If an error occurs while connecting to the Snowflake account.
@@ -195,23 +215,20 @@ class SnowflakeHandler(MetaDatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        # Mandatory connection parameters
-        if not all(key in self.connection_data for key in ["account", "user", "password", "database"]):
-            raise ValueError("Required parameters (account, user, password, database) must be provided.")
+        credential_type = self.connection_data.get("credential_type", None)
 
-        config = {
-            "account": self.connection_data.get("account"),
-            "user": self.connection_data.get("user"),
-            "password": self.connection_data.get("password"),
-            "database": self.connection_data.get("database"),
-            "schema": self.connection_data.get("schema", "PUBLIC"),
-        }
+        # Fallback logic for backward compatibility if credential_type is not set
+        if credential_type is None:
+            if "private_key_path" in self.connection_data and self.connection_data.get("private_key_path"):
+                credential_type = "custom-key-pair"
+            else:
+                credential_type = None  # Default to PasswordAuthType
 
-        # Optional connection parameters
-        optional_params = ["warehouse", "role"]
-        for param in optional_params:
-            if param in self.connection_data:
-                config[param] = self.connection_data[param]
+        auth_type = self._auth_types.get(credential_type)
+        if not auth_type:
+            raise ValueError("Invalid credential type provided.")
+
+        config = auth_type.get_config(**self.connection_data)
 
         try:
             self.connection = connector.connect(**config)

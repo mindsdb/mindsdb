@@ -13,10 +13,10 @@ class PasswordAuthType(SnowflakeAuthType):
     def get_config(self, **kwargs) -> Dict[str, Any]:
         required_keys = ["account", "user", "database"]
         if not all(kwargs.get(key) for key in required_keys):
-             raise ValueError("Required parameters (account, user, database) must be provided.")
-        
+            raise ValueError("Required parameters (account, user, database) must be provided.")
+
         if not kwargs.get("password"):
-             raise ValueError("Either password or private_key_path must be provided for authentication.")
+            raise ValueError("Either password or private_key_path must be provided for authentication.")
 
         return {
             "account": kwargs.get("account"),
@@ -32,10 +32,10 @@ class PasswordAuthType(SnowflakeAuthType):
 class KeyPairAuthType(SnowflakeAuthType):
     def get_config(self, **kwargs) -> Dict[str, Any]:
         if not kwargs.get("private_key_path"):
-             raise ValueError("Either password or private_key_path must be provided for authentication.")
-        
+            raise ValueError("Either password or private_key_path must be provided for authentication.")
+
         if not all(kwargs.get(key) for key in ["account", "user", "database"]):
-             raise ValueError("Required parameters (account, user, database) must be provided.")
+            raise ValueError("Required parameters (account, user, database) must be provided.")
 
         private_key_path = kwargs.get("private_key_path")
         if not Path(private_key_path).exists():

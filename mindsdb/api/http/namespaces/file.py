@@ -195,7 +195,12 @@ class File(Resource):
 
         original_file_name = clear_filename(data.get("original_file_name"))
 
-        file_path = os.path.join(temp_dir_path, data["file"])
+        safe_file = Path(data["file"]).name
+        if safe_file != data["file"] or safe_file in ("", ".", ".."):
+            shutil.rmtree(temp_dir_path, ignore_errors=True)
+            return http_error(400, "Invalid file name", "Provided file name is not allowed.")
+        data["file"] = safe_file
+        file_path = os.path.join(temp_dir_path, safe_file)
         lp = file_path.lower()
         if lp.endswith((".zip", ".tar.gz")):
             if lp.endswith(".zip"):
@@ -218,6 +223,9 @@ class File(Resource):
         try:
             if not Path(mindsdb_file_name).suffix == "":
                 return http_error(400, "Error", "File name cannot contain extension.")
+            print("**********************************************************************************")
+            print(f"Saving file {mindsdb_file_name} from path {file_path}")
+            print("**********************************************************************************")
             ca.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
         except FileProcessingError as e:
             return http_error(400, "Error", str(e))

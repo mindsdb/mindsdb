@@ -75,7 +75,7 @@ Required parameters:
 * `database`: The name of the Snowflake database to connect to.
 
 Authentication parameters (one method required):
-* `credential_type`: The authentication type to use. Options: "key_pair" or leave empty for password auth.
+
 * `password`: The password for the Snowflake account (password authentication).
 * `private_key_path`: Path to the private key file for key pair authentication.
 * `private_key_passphrase`: Optional passphrase for encrypted private key (key pair authentication).
@@ -85,6 +85,7 @@ Optional parameters:
 * `warehouse`: The Snowflake warehouse to use for running queries.
 * `schema`: The database schema to use within the Snowflake database. Default is `PUBLIC`.
 * `role`: The Snowflake role to use.
+* `credential_type`: The authentication type to use. Options: "key_pair" or leave empty for password auth.
 
 <Note>
 For detailed instructions on setting up key pair authentication, please refer to [AUTHENTICATION.md](AUTHENTICATION.md) or the [Snowflake Key Pair Authentication documentation](https://docs.snowflake.com/en/user-guide/key-pair-auth.html).

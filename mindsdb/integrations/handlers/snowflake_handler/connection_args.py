@@ -4,17 +4,11 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
-    host={
-        'type': ARG_TYPE.STR,
-        'description': 'The Snowflake host.',
-        'required': True,
-        'label': 'Host'
-    },
     account={
         'type': ARG_TYPE.STR,
-        'description': 'The Snowflake account name.',
-        'required': False,
-        'label': 'Server'
+        'description': 'The Snowflake account identifier.',
+        'required': True,
+        'label': 'Account'
     },
     user={
         'type': ARG_TYPE.STR,
@@ -24,9 +18,22 @@ connection_args = OrderedDict(
     },
     password={
         'type': ARG_TYPE.PWD,
-        'description': 'The password to authenticate the user with the Snowflake account.',
-        'required': True,
+        'description': 'The password to authenticate the user with the Snowflake account. Required for password authentication.',
+        'required': False,
         'label': 'Password',
+        'secret': True
+    },
+    private_key_path={
+        'type': ARG_TYPE.PATH,
+        'description': 'Path to the private key file for key pair authentication. Required for key pair authentication.',
+        'required': False,
+        'label': 'Private Key Path'
+    },
+    private_key_passphrase={
+        'type': ARG_TYPE.PWD,
+        'description': 'Optional passphrase for the encrypted private key.',
+        'required': False,
+        'label': 'Private Key Passphrase',
         'secret': True
     },
     database={
@@ -52,6 +59,12 @@ connection_args = OrderedDict(
         'description': 'The role to use when executing queries on the Snowflake account.',
         'required': False,
         'label': 'Role'
+    },
+    credential_type={
+        'type': ARG_TYPE.STR,
+        'description': 'The authentication type to use. Options: "key_pair" or leave empty for password auth.',
+        'required': False,
+        'label': 'Credential Type'
     }
 )
 

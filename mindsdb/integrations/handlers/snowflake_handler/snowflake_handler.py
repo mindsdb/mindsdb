@@ -217,10 +217,9 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
         credential_type = self.connection_data.get("credential_type", None)
 
-        # Fallback logic for backward compatibility if credential_type is not set
         if credential_type is None:
             if "private_key_path" in self.connection_data and self.connection_data.get("private_key_path"):
-                credential_type = "custom-key-pair"
+                credential_type = "key_pair"
             else:
                 credential_type = None  # Default to PasswordAuthType
 

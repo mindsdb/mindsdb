@@ -300,20 +300,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.rollback.assert_not_called()
         mock_conn.commit.assert_not_called()
 
-    def create_temp_key_file(self, content: str) -> str:
-        """Helper to create a temporary private key file for testing."""
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".pem") as temp_key_file:
-            temp_key_file.write(content)
-            return temp_key_file.name
-
-    def get_key_pair_connection_data(self, private_key_path: str, passphrase: Optional[str] = None) -> OrderedDict:
-        """Helper to create connection data for key pair authentication."""
-        data = OrderedDict(
-            account="tvuibdy-vm85921", user="example_user", database="example_db", private_key_path=private_key_path
-        )
-        if passphrase:
-            data["private_key_passphrase"] = passphrase
-        return data
 
     def test_key_pair_authentication_success(self):
         """

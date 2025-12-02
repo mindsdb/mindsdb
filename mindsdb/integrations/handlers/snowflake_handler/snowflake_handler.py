@@ -7,7 +7,6 @@ from snowflake import connector
 from snowflake.connector.errors import NotSupportedError
 from snowflake.connector.cursor import SnowflakeCursor, ResultMetadata
 from typing import Any, Optional, List
-from pathlib import Path
 
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier
@@ -15,11 +14,6 @@ from mindsdb_sql_parser.ast import Select, Identifier
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE,
-)
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,

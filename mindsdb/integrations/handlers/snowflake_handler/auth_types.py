@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any
+from pathlib import Path
 
 
 class SnowflakeAuthType(ABC):
@@ -10,6 +11,13 @@ class SnowflakeAuthType(ABC):
 
 class PasswordAuthType(SnowflakeAuthType):
     def get_config(self, **kwargs) -> Dict[str, Any]:
+        required_keys = ["account", "user", "database"]
+        if not all(kwargs.get(key) for key in required_keys):
+             raise ValueError("Required parameters (account, user, database) must be provided.")
+        
+        if not kwargs.get("password"):
+             raise ValueError("Either password or private_key_path must be provided for authentication.")
+
         return {
             "account": kwargs.get("account"),
             "user": kwargs.get("user"),
@@ -23,10 +31,20 @@ class PasswordAuthType(SnowflakeAuthType):
 
 class KeyPairAuthType(SnowflakeAuthType):
     def get_config(self, **kwargs) -> Dict[str, Any]:
+        if not kwargs.get("private_key_path"):
+             raise ValueError("Either password or private_key_path must be provided for authentication.")
+        
+        if not all(kwargs.get(key) for key in ["account", "user", "database"]):
+             raise ValueError("Required parameters (account, user, database) must be provided.")
+
+        private_key_path = kwargs.get("private_key_path")
+        if not Path(private_key_path).exists():
+            raise ValueError(f"Private key file not found: {private_key_path}")
+
         config = {
             "account": kwargs.get("account"),
             "user": kwargs.get("user"),
-            "private_key_file": kwargs.get("private_key_path"),
+            "private_key_file": private_key_path,
             "database": kwargs.get("database"),
             "schema": kwargs.get("schema"),
             "role": kwargs.get("role"),

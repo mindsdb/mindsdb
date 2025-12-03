@@ -300,7 +300,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.rollback.assert_not_called()
         mock_conn.commit.assert_not_called()
 
-
     def test_key_pair_authentication_success(self):
         """
         Tests successful connection using key pair authentication

@@ -31,7 +31,7 @@ scikit-learn==1.5.2
 hierarchicalforecast~=0.4.0
 langchain==0.3.27
 langchain-community==0.3.27
-langchain-core==0.3.72
+langchain-core==0.3.80
 langchain-experimental==0.3.4
 langchain-nvidia-ai-endpoints==0.3.3
 langchain-openai==0.3.6

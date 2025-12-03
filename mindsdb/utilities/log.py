@@ -147,7 +147,12 @@ class SanitizingMixin:
 
     def sanitize_record(self, record):
         """Sanitize a log record before emitting."""
-        if hasattr(record, "args") and isinstance(record.args, (list, tuple)) and isinstance(record.msg, str):
+        if (
+            hasattr(record, "args")
+            and isinstance(record.args, (list, tuple))
+            and len(record.args) > 0
+            and isinstance(record.msg, str)
+        ):
             record.msg = record.msg % record.args
             record.args = []
 

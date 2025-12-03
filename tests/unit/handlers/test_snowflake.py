@@ -16,7 +16,6 @@ import datetime
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from typing import Optional
 
 
 from base_handler_test import BaseDatabaseHandlerTest

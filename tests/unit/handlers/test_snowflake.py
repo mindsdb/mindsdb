@@ -37,6 +37,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             user="example_user",
             password="example_pass",
             database="example_db",
+            auth_type="password",
         )
 
     @property
@@ -102,7 +103,11 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         Helper to create connection data for key pair authentication.
         """
         data = OrderedDict(
-            account="tvuibdy-vm85921", user="example_user", database="example_db", private_key_path=private_key_path
+            account="tvuibdy-vm85921",
+            user="example_user",
+            database="example_db",
+            private_key_path=private_key_path,
+            auth_type="key_pair",
         )
         if passphrase:
             data["private_key_passphrase"] = passphrase
@@ -132,7 +137,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         handler = SnowflakeHandler("snowflake", connection_data=invalid_connection_args)
         with self.assertRaises(ValueError) as context:
             handler.connect()
-        self.assertIn("Either password or private_key_path must be provided", str(context.exception))
+        self.assertIn("Password must be provided", str(context.exception))
 
         # Test missing 'database'
         invalid_connection_args = self.dummy_connection_data.copy()
@@ -140,6 +145,14 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         handler = SnowflakeHandler("snowflake", connection_data=invalid_connection_args)
         with self.assertRaises(ValueError):
             handler.connect()
+
+        # Test missing 'auth_type'
+        invalid_connection_args = self.dummy_connection_data.copy()
+        del invalid_connection_args["auth_type"]
+        handler = SnowflakeHandler("snowflake", connection_data=invalid_connection_args)
+        with self.assertRaises(ValueError) as context:
+            handler.connect()
+        self.assertIn("auth_type is required", str(context.exception))
 
     def test_disconnect(self):
         """
@@ -379,6 +392,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             user="example_user",
             database="example_db",
             private_key_path="/nonexistent/path/to/key.pem",
+            auth_type="key_pair",
         )
 
         handler = SnowflakeHandler("snowflake", connection_data=key_pair_connection_data)
@@ -397,7 +411,11 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         try:
             key_pair_connection_data = OrderedDict(
-                account="tvuibdy-vm85921", user="example_user", database="example_db", private_key_path=temp_key_path
+                account="tvuibdy-vm85921",
+                user="example_user",
+                database="example_db",
+                private_key_path=temp_key_path,
+                auth_type="key_pair",
             )
 
             handler = SnowflakeHandler("snowflake", connection_data=key_pair_connection_data)
@@ -436,6 +454,19 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
             self.assertTrue(handler.is_connected)
             self.assertEqual(connection, mock_conn)
+
+    def test_invalid_auth_type_fails(self):
+        """
+        Tests that providing an unknown auth_type raises a ValueError.
+        """
+        connection_data = self.dummy_connection_data.copy()
+        connection_data["auth_type"] = "invalid"
+
+        handler = SnowflakeHandler("snowflake", connection_data=connection_data)
+
+        with self.assertRaises(ValueError) as context:
+            handler.connect()
+        self.assertIn("Invalid auth_type", str(context.exception))
 
     def test_query_method(self):
         """

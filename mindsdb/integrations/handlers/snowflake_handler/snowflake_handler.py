@@ -178,8 +178,8 @@ class SnowflakeHandler(MetaDatabaseHandler):
     name = "snowflake"
 
     _auth_types = {
-        None: PasswordAuthType(),
         "key_pair": KeyPairAuthType(),
+        "password": PasswordAuthType(),
     }
 
     def __init__(self, name, **kwargs):
@@ -209,17 +209,15 @@ class SnowflakeHandler(MetaDatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        credential_type = self.connection_data.get("credential_type", None)
+        auth_type_key = self.connection_data.get("auth_type")
+        if auth_type_key is None:
+            supported = ", ".join(self._auth_types.keys())
+            raise ValueError(f"auth_type is required. Supported values: {supported}.")
 
-        if credential_type is None:
-            if "private_key_path" in self.connection_data and self.connection_data.get("private_key_path"):
-                credential_type = "key_pair"
-            else:
-                credential_type = None  # Default to PasswordAuthType
-
-        auth_type = self._auth_types.get(credential_type)
+        auth_type = self._auth_types.get(auth_type_key)
         if not auth_type:
-            raise ValueError("Invalid credential type provided.")
+            supported = ", ".join(self._auth_types.keys())
+            raise ValueError(f"Invalid auth_type '{auth_type_key}'. Supported values: {supported}.")
 
         config = auth_type.get_config(**self.connection_data)
 
@@ -249,7 +247,6 @@ class SnowflakeHandler(MetaDatabaseHandler):
         Returns:
             StatusResponse: An object containing the success status and an error message if an error occurs.
         """
-
         response = StatusResponse(False)
         need_to_close = not self.is_connected
 

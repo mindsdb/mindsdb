@@ -65,7 +65,8 @@ WITH
         "account": "tvuibdy-vm85921",
         "user": "your_username",
         "password": "your_password",
-        "database": "test_db"
+        "database": "test_db",
+        "auth_type": "password"
     };
 ```
 
@@ -82,7 +83,7 @@ WITH
         "user": "your_username",
         "private_key_path": "/path/to/your/private_key.pem",
         "database": "test_db",
-        "credential_type": "key_pair"
+        "auth_type": "key_pair"
     };
 ```
 
@@ -98,7 +99,7 @@ WITH
         "private_key_path": "/path/to/your/private_key.pem",
         "private_key_passphrase": "your_passphrase",
         "database": "test_db",
-        "credential_type": "key_pair"
+        "auth_type": "key_pair"
     };
 ```
 
@@ -109,6 +110,7 @@ Required parameters:
 * `account`: The Snowflake account identifier. This [guide](https://docs.snowflake.com/en/user-guide/admin-account-identifier) will help you find your account identifier.
 * `user`: The username for the Snowflake account.
 * `database`: The name of the Snowflake database to connect to.
+* `auth_type`: The authentication type to use. Options: `"password"` or `"key_pair"`.
 
 Authentication parameters (one method required):
 
@@ -121,7 +123,6 @@ Optional parameters:
 * `warehouse`: The Snowflake warehouse to use for running queries.
 * `schema`: The database schema to use within the Snowflake database. Default is `PUBLIC`.
 * `role`: The Snowflake role to use.
-* `credential_type`: The authentication type to use. Options: "key_pair" or leave empty for password auth.
 
 <Note>
 For detailed instructions on setting up key pair authentication, please refer to [AUTHENTICATION.md](AUTHENTICATION.md) or the [Snowflake Key Pair Authentication documentation](https://docs.snowflake.com/en/user-guide/key-pair-auth.html).

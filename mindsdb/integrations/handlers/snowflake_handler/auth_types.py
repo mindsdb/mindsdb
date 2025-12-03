@@ -16,8 +16,7 @@ class PasswordAuthType(SnowflakeAuthType):
             raise ValueError("Required parameters (account, user, database) must be provided.")
 
         if not kwargs.get("password"):
-            raise ValueError("Either password or private_key_path must be provided for authentication.")
-
+            raise ValueError("Password must be provided when auth_type is 'password'.")
         return {
             "account": kwargs.get("account"),
             "user": kwargs.get("user"),
@@ -26,13 +25,14 @@ class PasswordAuthType(SnowflakeAuthType):
             "schema": kwargs.get("schema"),
             "role": kwargs.get("role"),
             "warehouse": kwargs.get("warehouse"),
+            "auth_type": "password",
         }
 
 
 class KeyPairAuthType(SnowflakeAuthType):
     def get_config(self, **kwargs) -> Dict[str, Any]:
         if not kwargs.get("private_key_path"):
-            raise ValueError("Either password or private_key_path must be provided for authentication.")
+            raise ValueError("private_key_path must be provided when auth_type is 'key_pair'.")
 
         if not all(kwargs.get(key) for key in ["account", "user", "database"]):
             raise ValueError("Required parameters (account, user, database) must be provided.")
@@ -50,6 +50,7 @@ class KeyPairAuthType(SnowflakeAuthType):
             "role": kwargs.get("role"),
             "warehouse": kwargs.get("warehouse"),
             "authenticator": "SNOWFLAKE_JWT",
+            "auth_type": "key_pair",
         }
         if kwargs.get("private_key_passphrase"):
             config["private_key_file_pwd"] = kwargs.get("private_key_passphrase")

@@ -60,12 +60,14 @@ connection_args = OrderedDict(
         "required": False,
         "label": "Role",
     },
-    credential_type={
+    auth_type={
         "type": ARG_TYPE.STR,
-        "description": 'The authentication type to use. Options: "key_pair" or leave empty for password auth.',
-        "required": False,
-        "label": "Credential Type",
+        "description": 'Required authentication type. Options: "password" or "key_pair".',
+        "required": True,
+        "label": "Auth Type",
     },
 )
 
-connection_args_example = OrderedDict(account="abcxyz-1234567", user="user", password="password", database="test")
+connection_args_example = OrderedDict(
+    account="abcxyz-1234567", user="user", password="password", database="test", auth_type="password"
+)

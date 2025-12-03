@@ -118,21 +118,21 @@ class BaseStuff:
         while time.time() < threshold:
             _query = "SELECT status, error FROM mindsdb.models WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
-            if "STATUS" in res:
-                if res.get_record("STATUS", "complete"):
+            if "status" in res:
+                if res.get_record("status", "complete"):
                     break
-                elif res.get_record("STATUS", "error"):
+                elif res.get_record("status", "error"):
                     raise Exception(res[0]["error"])
             elif len(res) == 0 and time.time() > model_not_found_threshold:
                 raise Exception(f"Model {predictor_name} not found in models table after 30 seconds")
             time.sleep(check_interval)
-        assert "STATUS" in res and res.get_record("STATUS", "complete"), (
+        assert "status" in res and res.get_record("status", "complete"), (
             f"predictor {predictor_name} is not complete after {timeout} seconds. Last result: {res}"
         )
 
     def validate_database_creation(self, name):
         res = self.query(f"SELECT name FROM information_schema.databases WHERE name='{name}';")
-        assert "NAME" in res and res.get_record("NAME", name), (
+        assert "name" in res and res.get_record("name", name), (
             f"Expected datasource is not found after creation - {name}: {res}"
         )
 

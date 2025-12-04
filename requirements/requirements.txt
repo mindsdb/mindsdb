@@ -63,5 +63,6 @@ pydantic_core>=2.33.2
 
 # When using agents, some LLMs may require the 'transformers' library (like Ollama):
 transformers >= 4.42.4
+pydantic-ai>=0.0.14 # Required for Pydantic AI agents
 
 mind-castle >= 0.4.9

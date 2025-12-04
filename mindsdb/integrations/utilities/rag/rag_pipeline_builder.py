@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import Any
-from langchain.storage import InMemoryByteStore
+from mindsdb.integrations.utilities.rag.storage.in_memory_byte_store import InMemoryByteStore
 from mindsdb.integrations.utilities.rag.pipelines.rag import LangChainRAGPipeline
 from mindsdb.integrations.utilities.rag.settings import (
     RetrieverType,

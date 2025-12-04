@@ -598,7 +598,7 @@ class AgentsController:
         """
         if stream:
             return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools, params=params)
-        from .langchain_agent import LangchainAgent
+        from .pydantic_ai_agent import PydanticAIAgent
 
         model, provider = self.check_model_provider(agent.model_name, agent.provider)
         # update old agents
@@ -609,8 +609,8 @@ class AgentsController:
         # Get agent parameters and combine with default LLM parameters at runtime
         llm_params = self.get_agent_llm_params(agent.params)
 
-        lang_agent = LangchainAgent(agent, model, llm_params=llm_params)
-        return lang_agent.get_completion(messages, params=params)
+        pydantic_agent = PydanticAIAgent(agent, model, llm_params=llm_params)
+        return pydantic_agent.get_completion(messages, params=params)
 
     def _get_completion_stream(
         self,
@@ -639,7 +639,7 @@ class AgentsController:
             ValueError: Agent's model does not exist.
         """
         # For circular dependency.
-        from .langchain_agent import LangchainAgent
+        from .pydantic_ai_agent import PydanticAIAgent
 
         model, provider = self.check_model_provider(agent.model_name, agent.provider)
 
@@ -651,5 +651,5 @@ class AgentsController:
         # Get agent parameters and combine with default LLM parameters at runtime
         llm_params = self.get_agent_llm_params(agent.params)
 
-        lang_agent = LangchainAgent(agent, model=model, llm_params=llm_params)
-        return lang_agent.get_completion(messages, stream=True, params=params)
+        pydantic_agent = PydanticAIAgent(agent, model=model, llm_params=llm_params)
+        return pydantic_agent.get_completion(messages, stream=True, params=params)

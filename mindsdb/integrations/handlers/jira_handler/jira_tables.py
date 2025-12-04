@@ -391,7 +391,6 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
         Normalize Jira issues into a flat DataFrame schema suitable for SQL and KB usage.
         """
         issues_df = pd.json_normalize(issues)
-
         issues_df.rename(
             columns={
                 "fields.project.id": "project_id",

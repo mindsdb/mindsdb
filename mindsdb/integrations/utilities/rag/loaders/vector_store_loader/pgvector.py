@@ -1,35 +1,66 @@
-from typing import Any, List, Union, Optional, Dict
-
-from langchain_community.vectorstores import PGVector
-from langchain_community.vectorstores.pgvector import Base
+from typing import Any, List, Union, Optional, Dict, Tuple
 
 from pgvector.sqlalchemy import SPARSEVEC, Vector
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
-
 from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
 
+from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.base_vector_store import VectorStore
+from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
+# SQLAlchemy declarative base
+Base = declarative_base()
 
 _generated_sa_tables = {}
 
 
-class PGVectorMDB(PGVector):
+class PGVectorMDB(VectorStore):
     """
-    langchain_community.vectorstores.PGVector adapted for mindsdb vector store table structure
+    Custom PGVector implementation for mindsdb vector store table structure
+    Replaces langchain_community.vectorstores.PGVector
     """
 
-    def __init__(self, *args, is_sparse: bool = False, vector_size: Optional[int] = None, **kwargs):
-        # todo get is_sparse and vector_size from kb vector table
+    def __init__(
+        self,
+        connection_string: str,
+        collection_name: str,
+        embedding_function: Any = None,
+        is_sparse: bool = False,
+        vector_size: Optional[int] = None,
+        **kwargs
+    ):
+        """
+        Initialize PGVectorMDB
+        
+        Args:
+            connection_string: PostgreSQL connection string
+            collection_name: Name of the table/collection
+            embedding_function: Embedding function/model
+            is_sparse: Whether to use sparse vectors
+            vector_size: Size of sparse vectors (required if is_sparse=True)
+        """
         self.is_sparse = is_sparse
         if is_sparse and vector_size is None:
             raise ValueError("vector_size is required when is_sparse=True")
         self.vector_size = vector_size
-        super().__init__(*args, **kwargs)
+        self.collection_name = collection_name
+        self.embedding_function = embedding_function
+        
+        # Create SQLAlchemy engine
+        self._bind = create_engine(connection_string, pool_pre_ping=True)
+        
+        # Initialize table structure
+        self.__post_init__()
 
     def __post_init__(
         self,
     ) -> None:
-
+        """Initialize SQLAlchemy table structure"""
         collection_name = self.collection_name
 
         if collection_name not in _generated_sa_tables:
@@ -51,6 +82,68 @@ class PGVectorMDB(PGVector):
             _generated_sa_tables[collection_name] = EmbeddingStore
 
         self.EmbeddingStore = _generated_sa_tables[collection_name]
+    
+    @property
+    def embeddings(self) -> Optional[Any]:
+        """Return embedding function if available"""
+        return self.embedding_function
+    
+    def similarity_search(
+        self,
+        query: str,
+        k: int = 4,
+        **kwargs: Any,
+    ) -> List[SimpleDocument]:
+        """Return most similar documents to query"""
+        # Get embedding for query
+        if self.embedding_function is None:
+            raise ValueError("embedding_function is required for similarity_search")
+        
+        # Embed the query
+        query_embedding = self.embedding_function.embed_query(query)
+        
+        # Query collection
+        results = self.__query_collection(query_embedding, k=k, filter=kwargs.get('filter'))
+        
+        # Convert to SimpleDocument objects
+        docs = []
+        for result in results:
+            embedding_store = result.EmbeddingStore
+            page_content = embedding_store.document or ""
+            metadata = embedding_store.cmetadata or {}
+            docs.append(SimpleDocument(page_content=page_content, metadata=metadata))
+        
+        return docs
+    
+    def similarity_search_with_score(
+        self,
+        query: str,
+        k: int = 4,
+        **kwargs: Any,
+    ) -> List[Tuple[SimpleDocument, float]]:
+        """Return most similar documents with scores"""
+        # Get embedding for query
+        if self.embedding_function is None:
+            raise ValueError("embedding_function is required for similarity_search_with_score")
+        
+        # Embed the query
+        query_embedding = self.embedding_function.embed_query(query)
+        
+        # Query collection
+        results = self.__query_collection(query_embedding, k=k, filter=kwargs.get('filter'))
+        
+        # Convert to SimpleDocument objects with scores
+        docs_with_scores = []
+        for result in results:
+            embedding_store = result.EmbeddingStore
+            page_content = embedding_store.document or ""
+            metadata = embedding_store.cmetadata or {}
+            doc = SimpleDocument(page_content=page_content, metadata=metadata)
+            # Distance is already calculated in __query_collection
+            score = float(result.distance) if hasattr(result, 'distance') else 0.0
+            docs_with_scores.append((doc, score))
+        
+        return docs_with_scores
 
     def __query_collection(
             self,
@@ -112,9 +205,8 @@ class PGVectorMDB(PGVector):
 
             return formatted_results
 
-    # aliases for different langchain versions
+    # Aliases for compatibility
     def _PGVector__query_collection(self, *args, **kwargs):
-
         return self.__query_collection(*args, **kwargs)
 
     def _query_collection(self, *args, **kwargs):

@@ -1,11 +1,9 @@
-
-from langchain_core.embeddings import Embeddings
-from langchain_community.vectorstores import Chroma, PGVector
-from langchain_core.vectorstores import VectorStore
+from typing import Any
 
 from pydantic import BaseModel
 
 from mindsdb.integrations.utilities.rag.settings import VectorStoreType, VectorStoreConfig
+from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.base_vector_store import VectorStore
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.MDBVectorStore import MDBVectorStore
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.pgvector import PGVectorMDB
 from mindsdb.utilities import log
@@ -15,7 +13,7 @@ logger = log.getLogger(__name__)
 
 
 class VectorStoreLoader(BaseModel):
-    embedding_model: Embeddings
+    embedding_model: Any  # Embedding model interface
     vector_store: VectorStore = None
     config: VectorStoreConfig = None
 
@@ -48,7 +46,7 @@ class VectorStoreLoader(BaseModel):
 
 class VectorStoreFactory:
     @staticmethod
-    def create(embedding_model: Embeddings, config: VectorStoreConfig):
+    def create(embedding_model: Any, config: VectorStoreConfig) -> VectorStore:
 
         if config.vector_store_type == VectorStoreType.CHROMA:
             return VectorStoreFactory._load_chromadb_store(embedding_model, config)
@@ -58,7 +56,9 @@ class VectorStoreFactory:
             raise ValueError(f"Invalid vector store type, must be one either {VectorStoreType.__members__.keys()}")
 
     @staticmethod
-    def _load_chromadb_store(embedding_model: Embeddings, settings) -> Chroma:
+    def _load_chromadb_store(embedding_model: Any, settings) -> VectorStore:
+        # Chroma still uses langchain, import only when needed
+        from langchain_community.vectorstores import Chroma
         return Chroma(
             persist_directory=settings.persist_directory,
             collection_name=settings.collection_name,
@@ -66,7 +66,7 @@ class VectorStoreFactory:
         )
 
     @staticmethod
-    def _load_pgvector_store(embedding_model: Embeddings, settings) -> PGVector:
+    def _load_pgvector_store(embedding_model: Any, settings) -> VectorStore:
         from .pgvector import PGVectorMDB
         return PGVectorMDB(
             connection_string=settings.connection_string,

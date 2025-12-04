@@ -107,6 +107,38 @@ class TestJiraHandler(BaseAPIHandlerTest, unittest.TestCase):
         self.assertIn("Unauthorized", response.error_message)
         self.assertFalse(self.handler.is_connected)
 
+    def test_connect_server_personal_access_token(self):
+        """connect should pass token config for server connections."""
+        server_handler = JiraHandler(
+            "server",
+            {
+                "jira_url": "https://jira.internal",
+                "jira_personal_access_token": "pat-xyz",
+                "cloud": False,
+            },
+        )
+        server_handler.connect()
+        self.mock_connect.assert_called_once_with(url="https://jira.internal", cloud=False, token="pat-xyz")
+
+    def test_connect_server_username_password(self):
+        """connect should pass username/password when provided for server."""
+        server_handler = JiraHandler(
+            "server",
+            {
+                "jira_url": "https://jira.internal",
+                "jira_username": "alice",
+                "jira_password": "secret",
+                "cloud": False,
+            },
+        )
+        server_handler.connect()
+        self.mock_connect.assert_called_once_with(
+            url="https://jira.internal",
+            cloud=False,
+            username="alice",
+            password="secret",
+        )
+
     def test_native_query_http_error(self):
         """native_query should return an error response when Jira raises HTTPError."""
         mock_client = MagicMock()
@@ -508,6 +540,98 @@ class TestJiraHandler(BaseAPIHandlerTest, unittest.TestCase):
         """normalize_jira_connection_data should raise when url is missing."""
         with self.assertRaises(ValueError):
             normalize_jira_connection_data({"jira_username": "user@example.com", "jira_api_token": "token"})
+
+    def test_normalize_connection_data_server_token(self):
+        """Server connections should honor personal access tokens."""
+        result = normalize_jira_connection_data(
+            {
+                "jira_url": "https://jira.internal",
+                "jira_personal_access_token": "pat-123",
+                "cloud": False,
+            }
+        )
+        self.assertFalse(result["cloud"])
+        self.assertEqual(result["personal_access_token"], "pat-123")
+        self.assertEqual(result["url"], "https://jira.internal")
+
+    def test_normalize_connection_data_server_username_password(self):
+        """Server connections should pick username/password when provided."""
+        result = normalize_jira_connection_data(
+            {
+                "jira_url": "https://jira.internal",
+                "jira_username": "user",
+                "jira_password": "pass",
+                "cloud": False,
+            }
+        )
+        self.assertFalse(result["cloud"])
+        self.assertEqual(result["username"], "user")
+        self.assertEqual(result["password"], "pass")
+
+    def test_connect_cloud_missing_credentials_raises(self):
+        """connect should raise ValueError when mandatory cloud credentials are missing."""
+        with self.assertRaises(ValueError):
+            normalize_jira_connection_data(
+                {
+                    "jira_url": "https://example.atlassian.net",
+                    "jira_api_token": "token",
+                    "cloud": True,
+                }
+            )
+
+    def test_users_table_cloud_account_filter_in(self):
+        """Cloud users fetch should respect IN filters and skip non-dict responses."""
+        mock_client = MagicMock()
+        mock_client.cloud = True
+        user_calls = []
+
+        def fake_user(account_id):
+            user_calls.append(account_id)
+            return {"accountId": account_id, "displayName": f"User {account_id}"}
+
+        mock_client.user.side_effect = [fake_user("a1"), "not-a-dict", fake_user("a3")]
+        self.mock_connect.return_value = mock_client
+
+        conditions = [FilterCondition("accountId", FilterOperator.IN, ["a1", "a2", "a3"])]
+
+        users_table = JiraUsersTable(self.handler)
+        df = users_table.list(conditions=conditions)
+
+        self.assertListEqual(sorted(user_calls), ["a1", "a3"])
+        self.assertEqual(len(df), 2)
+        self.assertSetEqual(set(df["accountId"]), {"a1", "a3"})
+
+    def test_users_table_cloud_invalid_operator(self):
+        """Cloud users should reject unsupported operators."""
+        mock_client = MagicMock()
+        mock_client.cloud = True
+        self.mock_connect.return_value = mock_client
+
+        conditions = [FilterCondition("accountId", FilterOperator.GREATER_THAN, "x")]
+        with self.assertRaises(ValueError):
+            JiraUsersTable(self.handler).list(conditions=conditions)
+
+    def test_cloud_users_equal_filter_non_dict(self):
+        """Cloud user equal filter should ignore non-dict responses."""
+        mock_client = MagicMock()
+        mock_client.cloud = True
+        mock_client.user.return_value = "not-a-dict"
+        mock_client.users_get_all.return_value = []
+        self.mock_connect.return_value = mock_client
+
+        conditions = [FilterCondition("accountId", FilterOperator.EQUAL, "abc")]
+        result = JiraUsersTable(self.handler).list(conditions=conditions)
+        self.assertTrue(result.empty)
+
+    def test_server_users_invalid_operator_raises(self):
+        """Server users should validate operators."""
+        mock_client = MagicMock()
+        mock_client.cloud = False
+        self.mock_connect.return_value = mock_client
+
+        conditions = [FilterCondition("username", FilterOperator.LIKE, "abc")]
+        with self.assertRaises(ValueError):
+            JiraUsersTable(self.handler).list(conditions=conditions)
 
 
 if __name__ == "__main__":

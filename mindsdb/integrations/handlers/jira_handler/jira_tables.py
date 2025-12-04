@@ -397,6 +397,8 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
                 "fields.project.key": "project_key",
                 "fields.project.name": "project_name",
                 "fields.issuetype.name": "issue_type",
+                "fields.labels": "labels",
+                "fields.components": "components",
                 "fields.summary": "summary",
                 "fields.description": "description",
                 "fields.priority.name": "priority",
@@ -416,6 +418,14 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
             inplace=True,
             errors="ignore",
         )
+
+        # Flatten list-like fields so type inference keeps them as text columns.
+        if "labels" in issues_df.columns:
+            issues_df["labels"] = issues_df["labels"].apply(self._join_simple_list)
+        if "components" in issues_df.columns:
+            issues_df["components"] = issues_df["components"].apply(
+                self._join_component_names
+            )
 
         issues_df = issues_df.reindex(columns=self.get_columns(), fill_value=None)
 
@@ -451,7 +461,7 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
 
     @staticmethod
     def _join_simple_list(values: Optional[Iterable]) -> Optional[str]:
-        if isinstance(values, list):
+        if isinstance(values, (list, tuple, set)):
             filtered = []
             for val in values:
                 if val not in (None, ""):
@@ -459,7 +469,9 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
             if filtered:
                 return ", ".join(filtered)
             return None
-        return None
+        if values in (None, ""):
+            return None
+        return str(values)
 
     @staticmethod
     def _join_component_names(values: Optional[Iterable]) -> Optional[str]:
@@ -470,10 +482,14 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
                     name = component.get("name")
                     if name:
                         names.append(name)
+                elif component not in (None, ""):
+                    names.append(str(component))
             if names:
                 return ", ".join(names)
             return None
-        return None
+        if values in (None, ""):
+            return None
+        return str(values)
 
     @staticmethod
     def _join_comment_bodies(values: Optional[Iterable]) -> Optional[str]:

@@ -8,7 +8,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langchain_core.stores import BaseStore
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from langchain_text_splitters import TextSplitter
 
 DEFAULT_COLLECTION_NAME = "default_collection"
@@ -377,6 +377,7 @@ class LLMConfig(BaseModel):
         description="LLM model provider to use for generation",
     )
     params: Dict[str, Any] = Field(default_factory=dict)
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class MultiVectorRetrieverMode(Enum):
@@ -689,11 +690,30 @@ class SummarizationConfig(BaseModel):
     )
 
 
+class RerankerMode(str, Enum):
+    POINTWISE = "pointwise"
+    LISTWISE = "listwise"
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            value = value.lower()
+            for member in cls:
+                if member.value == value:
+                    return member
+        return None
+
+
 class RerankerConfig(BaseModel):
     model: str = DEFAULT_RERANKING_MODEL
     base_url: str = DEFAULT_LLM_ENDPOINT
     filtering_threshold: float = 0.5
     num_docs_to_keep: Optional[int] = None
+    mode: RerankerMode = Field(
+        default=RerankerMode.POINTWISE,
+        description="Reranking mode to use. 'pointwise' for individual scoring, '"
+        "listwise' for joint scoring of all documents.",
+    )
     max_concurrent_requests: int = 20
     max_retries: int = 3
     retry_delay: float = 1.0

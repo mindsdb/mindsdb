@@ -1,11 +1,12 @@
 import json
+import orjson
 import datetime
+import os
 from typing import Dict, List, Optional
 
 import numpy as np
 from sqlalchemy import (
     JSON,
-    BigInteger,
     Boolean,
     Column,
     DateTime,
@@ -29,6 +30,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 from sqlalchemy.sql.schema import ForeignKey
+from mind_castle.sqlalchemy_type import SecretData
 
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.config import config
@@ -47,10 +49,20 @@ def init(connection_str: str = None):
     global Base, session, engine
     if connection_str is None:
         connection_str = config["storage_db"]
+    # Use orjson with our CustomJSONEncoder.default for JSON serialization
+    _default_json = CustomJSONEncoder().default
+
+    def _json_serializer(value):
+        return orjson.dumps(
+            value,
+            default=_default_json,
+            option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
+        ).decode("utf-8")
+
     base_args = {
         "pool_size": 30,
         "max_overflow": 200,
-        "json_serializer": CustomJSONEncoder().encode,
+        "json_serializer": _json_serializer,
     }
     engine = create_engine(connection_str, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
@@ -127,6 +139,11 @@ class Json(types.TypeDecorator):
         return json.loads(value) if value is not None else None
 
 
+# Use MindsDB's "Json" column type as a backend for mind-castle
+class SecretDataJson(SecretData):
+    impl = Json
+
+
 class PREDICTOR_STATUS:
     __slots__ = ()
     COMPLETE = "complete"
@@ -151,7 +168,7 @@ class Predictor(Base):
     name = Column(String)
     data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
-    company_id = Column(Integer)
+    company_id = Column(String)
     mindsdb_version = Column(String)
     native_version = Column(String)
     integration_id = Column(ForeignKey("integration.id", name="fk_integration_id"))
@@ -206,7 +223,7 @@ class Project(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     deleted_at = Column(DateTime)
     name = Column(String, nullable=False)
-    company_id = Column(Integer, default=0)
+    company_id = Column(String, default="0")
     metadata_: dict = Column("metadata", JSON, nullable=True)
     __table_args__ = (UniqueConstraint("name", "company_id", name="unique_project_name_company_id"),)
 
@@ -218,10 +235,8 @@ class Integration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
-    data = Column(Json)
-    company_id = Column(Integer)
-
-    meta_tables = relationship("MetaTables", back_populates="integration")
+    data = Column(SecretDataJson(os.environ.get("MINDSDB_DATA_ENCRYPTION_TYPE", "none")))
+    company_id = Column(String)
 
     __table_args__ = (UniqueConstraint("name", "company_id", name="unique_integration_name_company_id"),)
 
@@ -230,7 +245,7 @@ class File(Base):
     __tablename__ = "file"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    company_id = Column(Integer)
+    company_id = Column(String)
     source_file_path = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
     row_count = Column(Integer, nullable=False)
@@ -245,7 +260,7 @@ class View(Base):
     __tablename__ = "view"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    company_id = Column(Integer)
+    company_id = Column(String)
     query = Column(String, nullable=False)
     project_id = Column(Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False)
     __table_args__ = (UniqueConstraint("name", "company_id", name="unique_view_name_company_id"),)
@@ -259,7 +274,7 @@ class JsonStorage(Base):
     name = Column(String)
     content = Column(JSON)
     encrypted_content = Column(LargeBinary, nullable=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
 
     def to_dict(self) -> Dict:
         return {
@@ -276,7 +291,7 @@ class JsonStorage(Base):
 class Jobs(Base):
     __tablename__ = "jobs"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
     user_class = Column(Integer, nullable=True)
     active = Column(Boolean, default=True)
 
@@ -297,7 +312,7 @@ class Jobs(Base):
 class JobsHistory(Base):
     __tablename__ = "jobs_history"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
 
     job_id = Column(Integer)
 
@@ -374,7 +389,7 @@ class Triggers(Base):
 class Tasks(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
+    company_id = Column(String)
     user_class = Column(Integer, nullable=True)
 
     # trigger, chatbot
@@ -433,7 +448,7 @@ class Agents(Base):
     __tablename__ = "agents"
     id = Column(Integer, primary_key=True)
     skills_relationships: Mapped[List["Skills"]] = relationship(AgentSkillsAssociation, back_populates="agent")
-    company_id = Column(Integer, nullable=True)
+    company_id = Column(String, nullable=True)
     user_class = Column(Integer, nullable=True)
 
     name = Column(String, nullable=False)
@@ -534,11 +549,10 @@ class KnowledgeBase(Base):
         reranking_model = params.pop("reranking_model", None)
 
         if not with_secrets:
-            if embedding_model and "api_key" in embedding_model:
-                embedding_model["api_key"] = "******"
-
-            if reranking_model and "api_key" in reranking_model:
-                reranking_model["api_key"] = "******"
+            for key in ("api_key", "private_key"):
+                for el in (embedding_model, reranking_model):
+                    if el and key in el:
+                        el[key] = "******"
 
         return {
             "id": self.id,
@@ -561,7 +575,7 @@ class KnowledgeBase(Base):
 class QueryContext(Base):
     __tablename__ = "query_context"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=True)
+    company_id: int = Column(String, nullable=True)
 
     query: str = Column(String, nullable=False)
     context_name: str = Column(String, nullable=False)
@@ -574,7 +588,7 @@ class QueryContext(Base):
 class Queries(Base):
     __tablename__ = "queries"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=True)
+    company_id: int = Column(String, nullable=True)
 
     sql: str = Column(String, nullable=False)
     database: str = Column(String, nullable=True)
@@ -594,7 +608,7 @@ class Queries(Base):
 class LLMLog(Base):
     __tablename__ = "llm_log"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=False)
+    company_id: int = Column(String, nullable=False)
     api_key: str = Column(String, nullable=True)
     model_id: int = Column(Integer, nullable=True)
     model_group: str = Column(String, nullable=True)
@@ -626,194 +640,3 @@ class LLMData(Base):
     model_id: int = Column(Integer, nullable=False)
     created_at: datetime = Column(DateTime, default=datetime.datetime.now)
     updated_at: datetime = Column(DateTime, onupdate=datetime.datetime.now)
-
-
-# Data Catalog
-class MetaTables(Base):
-    __tablename__ = "meta_tables"
-    id: int = Column(Integer, primary_key=True)
-
-    integration_id: int = Column(Integer, ForeignKey("integration.id"))
-    integration = relationship("Integration", back_populates="meta_tables")
-
-    name: str = Column(String, nullable=False)
-    schema: str = Column(String, nullable=True)
-    description: str = Column(String, nullable=True)
-    type: str = Column(String, nullable=True)
-    row_count: int = Column(BigInteger, nullable=True)
-
-    meta_columns: Mapped[List["MetaColumns"]] = relationship("MetaColumns", back_populates="meta_tables")
-    meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_tables")
-    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship(
-        "MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_table_id", back_populates="parent_table"
-    )
-    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship(
-        "MetaForeignKeys", foreign_keys="MetaForeignKeys.child_table_id", back_populates="child_table"
-    )
-
-    def as_string(self, indent: int = 0) -> str:
-        pad = " " * indent
-
-        table_info = f"`{self.integration.name}`.`{self.name}` ({self.type})"
-
-        if self.description:
-            table_info += f" : {self.description}"
-
-        if self.schema:
-            table_info += f"\n{pad}Schema: {self.schema}"
-
-        if self.row_count and self.row_count > 0:
-            table_info += f"\n{pad}Estimated Row Count: {self.row_count}"
-
-        if self.meta_primary_keys:
-            table_info += f"\n{pad}Primary Keys (in defined order): {', '.join([pk.as_string() for pk in self.meta_primary_keys])}"
-
-        if self.meta_columns:
-            table_info += f"\n\n{pad}Columns:"
-            for index, column in enumerate(self.meta_columns, start=1):
-                table_info += f"\n{index}. {column.as_string(indent + 4)}\n"
-
-        if self.meta_foreign_keys_children:
-            table_info += f"\n\n{pad}Key Relationships:"
-            for fk in self.meta_foreign_keys_children:
-                table_info += f"\n{pad}  {fk.as_string()}"
-
-        return table_info
-
-
-class MetaColumns(Base):
-    __tablename__ = "meta_columns"
-    id: int = Column(Integer, primary_key=True)
-
-    table_id: int = Column(Integer, ForeignKey("meta_tables.id"))
-    meta_tables = relationship("MetaTables", back_populates="meta_columns")
-
-    name: str = Column(String, nullable=False)
-    data_type: str = Column(String, nullable=False)
-    description: str = Column(String, nullable=True)
-    default_value: str = Column(String, nullable=True)
-    is_nullable: bool = Column(Boolean, nullable=True)
-
-    meta_column_statistics: Mapped[List["MetaColumnStatistics"]] = relationship(
-        "MetaColumnStatistics", back_populates="meta_columns"
-    )
-    meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_columns")
-    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship(
-        "MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_column_id", back_populates="parent_column"
-    )
-    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship(
-        "MetaForeignKeys", foreign_keys="MetaForeignKeys.child_column_id", back_populates="child_column"
-    )
-
-    def as_string(self, indent: int = 0) -> str:
-        pad = " " * indent
-
-        column_info = f"{self.name} ({self.data_type}):"
-        if self.description:
-            column_info += f"\n{pad}Description: {self.description}"
-
-        if self.is_nullable:
-            column_info += f"\n{pad}- Nullable: Yes"
-
-        if self.default_value:
-            column_info += f"\n{pad}- Default Value: {self.default_value}"
-
-        stats = self.meta_column_statistics or []
-        if stats and callable(getattr(stats[0], "as_string", None)):
-            column_info += f"\n\n{pad}- Column Statistics:"
-            column_info += f"\n{stats[0].as_string(indent + 4)}"
-        return column_info
-
-
-class MetaColumnStatistics(Base):
-    __tablename__ = "meta_column_statistics"
-    column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
-    meta_columns = relationship("MetaColumns", back_populates="meta_column_statistics")
-
-    most_common_values: str = Column(Array, nullable=True)
-    most_common_frequencies: str = Column(Array, nullable=True)
-    null_percentage: float = Column(Numeric(5, 2), nullable=True)
-    distinct_values_count: int = Column(BigInteger, nullable=True)
-    minimum_value: str = Column(String, nullable=True)
-    maximum_value: str = Column(String, nullable=True)
-
-    def as_string(self, indent: int = 0) -> str:
-        pad = " " * indent
-        inner_pad = " " * (indent + 4)
-
-        column_statistics = ""
-        most_common_values = self.most_common_values or []
-        most_common_frequencies = self.most_common_frequencies or []
-
-        if most_common_values and most_common_frequencies:
-            column_statistics += f"{pad}- Top 10 Most Common Values and Frequencies:"
-            for i in range(min(10, len(most_common_values))):
-                freq = most_common_frequencies[i]
-                try:
-                    percent = float(freq) * 100
-                    freq_str = f"{percent:.2f}%"
-                except (ValueError, TypeError):
-                    freq_str = str(freq)
-
-                column_statistics += f"\n{inner_pad}- {most_common_values[i]}: {freq_str}"
-            column_statistics += "\n"
-
-        if self.null_percentage:
-            column_statistics += f"{pad}- Null Percentage: {self.null_percentage}\n"
-
-        if self.distinct_values_count:
-            column_statistics += f"{pad}- No. of Distinct Values: {self.distinct_values_count}\n"
-
-        if self.minimum_value:
-            column_statistics += f"{pad}- Minimum Value: {self.minimum_value}\n"
-
-        if self.maximum_value:
-            column_statistics += f"{pad}- Maximum Value: {self.maximum_value}"
-
-        return column_statistics
-
-
-class MetaPrimaryKeys(Base):
-    __tablename__ = "meta_primary_keys"
-    table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
-    meta_tables = relationship("MetaTables", back_populates="meta_primary_keys")
-
-    column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
-    meta_columns = relationship("MetaColumns", back_populates="meta_primary_keys")
-
-    ordinal_position: int = Column(Integer, nullable=True)
-    constraint_name: str = Column(String, nullable=True)
-
-    def as_string(self) -> str:
-        pk_list = sorted(
-            self.meta_tables.meta_primary_keys,
-            key=lambda pk: pk.ordinal_position if pk.ordinal_position is not None else 0,
-        )
-
-        return ", ".join(f"{pk.meta_columns.name} ({pk.meta_columns.data_type})" for pk in pk_list)
-
-
-class MetaForeignKeys(Base):
-    __tablename__ = "meta_foreign_keys"
-    parent_table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
-    parent_table = relationship(
-        "MetaTables", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_table_id]
-    )
-
-    parent_column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
-    parent_column = relationship(
-        "MetaColumns", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_column_id]
-    )
-
-    child_table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
-    child_table = relationship("MetaTables", back_populates="meta_foreign_keys_children", foreign_keys=[child_table_id])
-
-    child_column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
-    child_column = relationship(
-        "MetaColumns", back_populates="meta_foreign_keys_children", foreign_keys=[child_column_id]
-    )
-
-    constraint_name: str = Column(String, nullable=True)
-
-    def as_string(self) -> str:
-        return f"{self.child_column.name} in {self.child_table.name} references {self.parent_column.name} in {self.parent_table.name}"

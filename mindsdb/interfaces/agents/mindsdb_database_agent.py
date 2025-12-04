@@ -3,11 +3,11 @@ Wrapper around MindsDB's executor and integration controller following the imple
 langchain.sql_database.SQLDatabase class to partly replicate its behavior.
 """
 
-import traceback
 from typing import Any, Iterable, List, Optional
 
-from mindsdb.utilities import log
 from langchain_community.utilities import SQLDatabase
+
+from mindsdb.utilities import log
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
 
 logger = log.getLogger(__name__)
@@ -99,7 +99,7 @@ class MindsDBSQL(SQLDatabase):
             return self._sql_agent.query(command)
 
         except Exception as e:
-            logger.error(f"Error executing SQL command: {str(e)}\n{traceback.format_exc()}")
+            logger.exception("Error executing SQL command:")
             # If this is a knowledge base query, provide a more helpful error message
             if "knowledge_base" in command.lower() or any(
                 kb in command for kb in self._sql_agent.get_usable_knowledge_base_names()
@@ -115,8 +115,8 @@ class MindsDBSQL(SQLDatabase):
         """
         try:
             return self._sql_agent.get_usable_knowledge_base_names()
-        except Exception as e:
-            logger.error(f"Error getting usable knowledge base names: {str(e)}")
+        except Exception:
+            logger.exception("Error getting usable knowledge base names:")
             return []
 
     def check_knowledge_base_permission(self, name):

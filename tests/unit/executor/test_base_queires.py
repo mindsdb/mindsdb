@@ -4,7 +4,7 @@ import pytest
 
 import pandas as pd
 
-from tests.unit.executor_test_base import BaseExecutorDummyML
+from tests.unit.executor_test_base import BaseExecutorDummyML, BaseExecutorTest
 
 
 class TestSelect(BaseExecutorDummyML):
@@ -237,6 +237,75 @@ class TestSelect(BaseExecutorDummyML):
         """)
         assert ret["c"][0] == 1  # alias is the same as column
         assert ret["col1"][0] == 7
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_db_mixed_case(self, data_handler):
+        df = pd.DataFrame(
+            [
+                {"a": 6, "c": 1},
+                {"a": 4, "c": 2},
+                {"a": 2, "c": 3},
+            ]
+        )
+        # mixed case
+        self.set_handler(data_handler, name="mixDb", tables={"tbl": df, "mixTbl": df})
+        self.set_handler(data_handler, name="mixDb2", tables={"tbl": df, "mixTbl": df})
+
+        # --- works with right case (with quotes and without)
+        self.run_sql("""
+          SELECT * FROM `mixDb`.tbl as t1
+          JOIN `mixDb2`.tbl as t2 on t1.c=t2.c
+        """)
+
+        self.run_sql("""
+          SELECT * FROM mixDb.tbl as t1
+          JOIN mixDb2.tbl as t2 on t1.c=t2.c
+        """)
+
+        self.run_sql("SELECT * FROM mixDb.tbl")
+
+        self.run_sql("SELECT * FROM `mixDb`.tbl")
+
+        # --- doesn't work with wrong case
+        with pytest.raises(Exception):
+            self.run_sql("""
+              SELECT * FROM mixdb.tbl as t1
+              JOIN mixDb2.tbl as t2 on t1.c=t2.c
+            """)
+
+        with pytest.raises(Exception):
+            self.run_sql("""
+              SELECT * FROM `mixdb`.tbl as t1
+              JOIN `mixDb2`.tbl as t2 on t1.c=t2.c
+            """)
+
+        with pytest.raises(Exception):
+            self.run_sql("SELECT * FROM mixdb.tbl")
+
+        with pytest.raises(Exception):
+            self.run_sql("SELECT * FROM `mixdb`.tbl")
+
+        # lower case
+        self.set_handler(data_handler, name="low_db", tables={"tbl": df, "mixTbl": df})
+        self.set_handler(data_handler, name="low_db2", tables={"tbl": df, "mixTbl": df})
+
+        # --- works with any case if not quoted
+        self.run_sql("""
+          SELECT * FROM low_DB.tbl as t1
+          JOIN low_DB2.tbl as t2 on t1.c=t2.c
+        """)
+
+        self.run_sql("SELECT * FROM low_DB.tbl")
+
+        # -- doesn't work quoted
+        with pytest.raises(Exception):
+            self.run_sql("""
+             SELECT * FROM `low_DB`.tbl as t1
+             JOIN `low_DB2`.tbl as t2 on t1.c=t2.c
+           """)
+
+        with pytest.raises(Exception):
+            self.run_sql("SELECT * FROM `low_DB`.tbl")
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_implicit_join(self, data_handler):
@@ -577,29 +646,49 @@ class TestSelect(BaseExecutorDummyML):
 
         self.set_data("tasks", df)
 
-        sql = """
-            select * from dummy_data.tasks
-            where a > coalesce(last, 1)
-        """
+        # -- create model --
+        self.run_sql(
+            """
+                CREATE model task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            """
+        )
+
+        sqls = [
+            """
+                select * from dummy_data.tasks
+                where a > coalesce(last, 1)
+            """,
+            """
+                select t.* from dummy_data.tasks t
+                join task_model m
+                where t.a > coalesce(last, 1)
+            """,
+        ]
 
         # first call two rows
-        ret = self.run_sql(sql)
-        assert len(ret) == 2
+        for sql in sqls:
+            ret = self.run_sql(sql)
+            assert len(ret) == 2
 
         # second call zero rows
-        ret = self.run_sql(sql)
-        assert len(ret) == 0
+        for sql in sqls:
+            ret = self.run_sql(sql)
+            assert len(ret) == 0
 
         # add rows to dataframe
         df.loc[len(df.index)] = [4, "d"]  # should be tracked
         df.loc[len(df.index)] = [0, "z"]  # not tracked
         self.set_data("tasks", df)
 
-        ret = self.run_sql(sql)
+        for sql in sqls:
+            ret = self.run_sql(sql)
 
-        # have to be one new line
-        assert len(ret) == 1
-        assert ret.a[0] == 4
+            # have to be one new line
+            assert len(ret) == 1
+            assert ret.a[0] == 4
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_interval(self, data_handler):
@@ -689,6 +778,18 @@ class TestSelect(BaseExecutorDummyML):
         """)
         assert res["NAME"][0] == "test_db"
         assert res["CONNECTION_DATA"][0] == '{"key": 2}'
+
+
+class TestSet(BaseExecutorTest):
+    @pytest.mark.parametrize("var", ["var", "@@var", "@@session.var", "session var"])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "on", "off"])
+    def test_set(self, var, value):
+        query = f"set {var} = {value}"
+        self.run_sql(query)
+
+    def test_multy_set(self):
+        query = "set @@var = ON, session var = 0"
+        self.run_sql(query)
 
 
 class TestDML(BaseExecutorDummyML):

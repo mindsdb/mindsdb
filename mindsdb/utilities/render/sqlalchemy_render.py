@@ -10,6 +10,7 @@ from sqlalchemy.dialects import mysql, postgresql, sqlite, mssql, oracle
 from sqlalchemy.schema import CreateTable, DropTable
 from sqlalchemy.sql import ColumnElement
 from sqlalchemy.sql import functions as sa_fnc
+from sqlalchemy.engine.interfaces import Dialect
 
 from mindsdb_sql_parser import ast
 
@@ -80,27 +81,27 @@ def get_is_quoted(identifier: ast.Identifier):
     return quoted
 
 
-class SqlalchemyRender:
-    def __init__(self, dialect_name):
-        dialects = {
-            "mysql": mysql,
-            "postgresql": postgresql,
-            "postgres": postgresql,
-            "sqlite": sqlite,
-            "mssql": mssql,
-            "oracle": oracle,
-            "Snowflake": oracle,
-        }
+dialects = {
+    "mysql": mysql,
+    "postgresql": postgresql,
+    "postgres": postgresql,
+    "sqlite": sqlite,
+    "mssql": mssql,
+    "oracle": oracle,
+}
 
+
+class SqlalchemyRender:
+    def __init__(self, dialect_name: str | Dialect):
         if isinstance(dialect_name, str):
             dialect = dialects[dialect_name].dialect
         else:
             dialect = dialect_name
 
         # override dialect's preparer
-        if hasattr(dialect, "preparer"):
+        if hasattr(dialect, "preparer") and dialect.preparer.__name__ != "MDBPreparer":
 
-            class Preparer(dialect.preparer):
+            class MDBPreparer(dialect.preparer):
                 def _requires_quotes(self, value: str) -> bool:
                     # check force-quote flag
                     if isinstance(value, AttributedStr):
@@ -116,7 +117,7 @@ class SqlalchemyRender:
                         # or (lc_value != value)
                     )
 
-            dialect.preparer = Preparer
+            dialect.preparer = MDBPreparer
 
         # remove double percent signs
         # https://docs.sqlalchemy.org/en/14/faq/sqlexpressions.html#why-are-percent-signs-being-doubled-up-when-stringifying-sql-statements
@@ -212,7 +213,12 @@ class SqlalchemyRender:
             if col is None:
                 col = self.to_column(t)
             if t.alias:
-                col = col.label(self.get_alias(t.alias))
+                alias_name = self.get_alias(t.alias)
+                # Skip self-referencing aliases (e.g., "column AS column")
+                if len(t.parts) == 1 and t.parts[0] == alias_name:
+                    pass  # Don't add alias if it matches the column name
+                else:
+                    col = col.label(alias_name)
         elif isinstance(t, ast.Select):
             sub_stmt = self.prepare_select(t)
             col = sub_stmt.scalar_subquery()
@@ -383,7 +389,7 @@ class SqlalchemyRender:
         elif isinstance(t, ast.Parameter):
             col = sa.column(t.value, is_literal=True)
             if t.alias:
-                raise RenderError()
+                raise RenderError("Parameter aliases are not supported in the renderer")
         elif isinstance(t, ast.Tuple):
             col = [self.to_expression(i) for i in t.items]
         elif isinstance(t, ast.Variable):

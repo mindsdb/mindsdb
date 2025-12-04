@@ -41,16 +41,25 @@ class File(Resource):
     @ns_conf.doc("put_file")
     @api_endpoint_metrics("PUT", "/files/file")
     def put(self, name: str):
-        """add new file
-        params in FormData:
-            - file
-            - original_file_name [optional]
+        """add new file as table
+
+        The table name is <name> path paramether
+
+        Data is provided as json or form data. File can be provided with FormData or via URL.
+
+        If file is in FormData, then the form contain:
+            - source_type (str) - 'file'
+            - file (binary) - the file itself
+            - original_file_name (str, optional) - the name with which the file will be saved
+
+        If file should be uploaded from URL:
+            - source_type (str) - 'url'
+            - source (str) - the URL
+            - original_file_name (str, optional) - the name with which the file will be saved
         """
 
         data = {}
         mindsdb_file_name = name.lower()
-
-        existing_file_names = ca.file_controller.get_files_names()
 
         def on_field(field):
             name = field.field_name.decode()
@@ -103,14 +112,39 @@ class File(Resource):
         else:
             data = request.json
 
-        if mindsdb_file_name in existing_file_names:
+        existing_file_names = ca.file_controller.get_files_names(lower=True)
+        if mindsdb_file_name.lower() in existing_file_names:
             return http_error(
                 400,
                 "File already exists",
                 f"File with name '{mindsdb_file_name}' already exists",
             )
 
-        if data.get("source_type") == "url":
+        source_type = data.get("source_type", "file")
+        if source_type not in ("file", "url"):
+            return http_error(
+                400,
+                "Wrong file source type",
+                f'Only "file" and "url" supported as file source, got "{source_type}"',
+            )
+
+        if source_type == "url":
+            url_file_upload_enabled = config["url_file_upload"]["enabled"]
+            if url_file_upload_enabled is False:
+                return http_error(400, "URL file upload is disabled.", "URL file upload is disabled.")
+
+            if "file" in data:
+                return http_error(
+                    400,
+                    "Fields conflict",
+                    'URL source type can not be used together with "file" field.',
+                )
+            if "source" not in data:
+                return http_error(
+                    400,
+                    "Missed file source",
+                    'If the file\'s source type is URL, the "source" field should be specified.',
+                )
             url = data["source"]
             try:
                 url = urlparse(url)
@@ -124,10 +158,6 @@ class File(Resource):
                     f"The URL is not valid: {data['source']}",
                 )
 
-            url_file_upload_enabled = config["url_file_upload"]["enabled"]
-            if url_file_upload_enabled is False:
-                return http_error(400, "URL file upload is disabled.", "URL file upload is disabled.")
-
             allowed_origins = config["url_file_upload"]["allowed_origins"]
             disallowed_origins = config["url_file_upload"]["disallowed_origins"]
 
@@ -139,9 +169,8 @@ class File(Resource):
                     f"{', '.join(allowed_origins) if allowed_origins else 'not specified'}.",
                 )
 
-            data["file"] = clear_filename(data["name"])
-            is_cloud = config.get("cloud", False)
-            if is_cloud:
+            data["file"] = clear_filename(mindsdb_file_name)
+            if config.is_cloud:
                 if is_private_url(url):
                     return http_error(400, f"URL is private: {url}")
 
@@ -157,10 +186,14 @@ class File(Resource):
                         return http_error(
                             400,
                             "Error getting file info",
-                            "Сan't determine remote file size",
+                            "Can't determine remote file size",
                         )
                     if file_size > MAX_FILE_SIZE:
-                        return http_error(400, "File is too big", f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB")
+                        return http_error(
+                            400,
+                            "File is too big",
+                            f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB",
+                        )
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:
                     return http_error(400, "Error getting file", f"Got status code: {r.status_code}")
@@ -168,6 +201,13 @@ class File(Resource):
                 with open(file_path, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)
+
+        if "file" not in data:
+            return http_error(
+                400,
+                "File field is missed",
+                'The "field" field is missed in the form',
+            )
 
         original_file_name = clear_filename(data.get("original_file_name"))
 
@@ -192,6 +232,8 @@ class File(Resource):
                 return http_error(400, "Wrong content.", "Archive must contain data file in root.")
 
         try:
+            if not Path(mindsdb_file_name).suffix == "":
+                return http_error(400, "Error", "File name cannot contain extension.")
             ca.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
         except FileProcessingError as e:
             return http_error(400, "Error", str(e))
@@ -209,11 +251,18 @@ class File(Resource):
 
         try:
             ca.file_controller.delete_file(name)
-        except Exception as e:
-            logger.error(e)
+        except FileNotFoundError:
+            logger.exception(f"Error when deleting file '{name}'")
             return http_error(
                 400,
                 "Error deleting file",
-                f"There was an error while tring to delete file with name '{name}'",
+                f"There was an error while trying to delete file with name '{name}'",
+            )
+        except Exception as e:
+            logger.error(e)
+            return http_error(
+                500,
+                "Error occured while deleting file",
+                f"There was an error while trying to delete file with name '{name}'",
             )
         return "", 200

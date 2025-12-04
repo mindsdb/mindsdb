@@ -3,6 +3,7 @@ import sys
 import json
 import argparse
 import datetime
+import dataclasses
 from pathlib import Path
 from copy import deepcopy
 
@@ -55,6 +56,16 @@ def create_data_dir(path: Path) -> None:
 
     if not os.access(path, os.W_OK):
         raise PermissionError(f"The directory is not allowed for writing: {path}")
+
+
+@dataclasses.dataclass(frozen=True)
+class HTTP_AUTH_TYPE:
+    SESSION: str = "session"
+    TOKEN: str = "token"
+    SESSION_OR_TOKEN: str = "session_or_token"
+
+
+HTTP_AUTH_TYPE = HTTP_AUTH_TYPE()
 
 
 class Config:
@@ -138,6 +149,7 @@ class Config:
                 "locks": self.storage_root_path / "locks",
             },
             "auth": {
+                "http_auth_type": HTTP_AUTH_TYPE.SESSION_OR_TOKEN,  # token | session | session_or_token
                 "http_auth_enabled": False,
                 "http_permanent_session_lifetime": datetime.timedelta(days=31),
                 "username": "mindsdb",
@@ -157,7 +169,8 @@ class Config:
                         "maxBytes": 1 << 19,  # 0.5 Mb
                         "backupCount": 3,
                     },
-                }
+                },
+                "resources_log": {"enabled": False, "level": "INFO", "interval": 60},
             },
             "gui": {"open_on_start": True, "autoupdate": True},
             "debug": False,
@@ -170,6 +183,7 @@ class Config:
                     "restart_on_failure": True,
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60,
+                    "a2wsgi": {"workers": 10, "send_queue_size": 10},
                 },
                 "mysql": {
                     "host": api_host,
@@ -180,7 +194,6 @@ class Config:
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60,
                 },
-                "postgres": {"host": api_host, "port": "55432", "database": "mindsdb"},
                 "litellm": {
                     "host": "0.0.0.0",  # API server binds to all interfaces by default
                     "port": "8000",
@@ -233,7 +246,17 @@ class Config:
 
         # region storage root path
         if os.environ.get("MINDSDB_STORAGE_DIR", "") != "":
-            self._env_config["paths"] = {"root": Path(os.environ["MINDSDB_STORAGE_DIR"])}
+            storage_root_path = Path(os.environ["MINDSDB_STORAGE_DIR"])
+            self._env_config["paths"] = {
+                "root": storage_root_path,
+                "content": storage_root_path / "content",
+                "storage": storage_root_path / "storage",
+                "static": storage_root_path / "static",
+                "tmp": storage_root_path / "tmp",
+                "log": storage_root_path / "log",
+                "cache": storage_root_path / "cache",
+                "locks": storage_root_path / "locks",
+            }
         # endregion
 
         # region vars: permanent storage disabled?
@@ -271,6 +294,12 @@ class Config:
             self._env_config["auth"]["username"] = http_username
             self._env_config["auth"]["password"] = http_password
         # endregion
+
+        http_auth_type = os.environ.get("MINDSDB_HTTP_AUTH_TYPE", "").lower()
+        if http_auth_type in dataclasses.astuple(HTTP_AUTH_TYPE):
+            self._env_config["auth"]["http_auth_type"] = http_auth_type
+        elif http_auth_type != "":
+            raise ValueError(f"Wrong value of env var MINDSDB_HTTP_AUTH_TYPE={http_auth_type}")
 
         # region logging
         if os.environ.get("MINDSDB_LOG_LEVEL", "") != "":
@@ -354,6 +383,14 @@ class Config:
         if os.environ.get("MINDSDB_NO_STUDIO", "").lower() in ("1", "true"):
             self._env_config["gui"]["open_on_start"] = False
             self._env_config["gui"]["autoupdate"] = False
+
+        mindsdb_gui_autoupdate = os.environ.get("MINDSDB_GUI_AUTOUPDATE", "").lower()
+        if mindsdb_gui_autoupdate in ("0", "false"):
+            self._env_config["gui"]["autoupdate"] = False
+        elif mindsdb_gui_autoupdate in ("1", "true"):
+            self._env_config["gui"]["autoupdate"] = True
+        elif mindsdb_gui_autoupdate != "":
+            raise ValueError(f"Wrong value of env var MINDSDB_GUI_AUTOUPDATE={mindsdb_gui_autoupdate}")
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
@@ -540,6 +577,7 @@ class Config:
 
         parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
         parser.add_argument("--update-gui", action="store_true", default=False, help="Update GUI and exit")
+        parser.add_argument("--load-tokenizer", action="store_true", default=False, help="Preload tokenizer and exit")
 
         self._cmd_args = parser.parse_args()
 

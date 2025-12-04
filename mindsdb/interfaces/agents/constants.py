@@ -208,7 +208,7 @@ DEFAULT_TEMPERATURE = 0.0
 USER_COLUMN = "question"
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = "openai"
 DEFAULT_EMBEDDINGS_MODEL_CLASS = OpenAIEmbeddings
-MAX_INSERT_BATCH_SIZE = 50_000
+MAX_INSERT_BATCH_SIZE = int(os.getenv("KB_MAX_INSERT_BATCH_SIZE", 50_000))
 DEFAULT_TIKTOKEN_MODEL_NAME = os.getenv("DEFAULT_TIKTOKEN_MODEL_NAME", "gpt-4")
 AGENT_CHUNK_POLLING_INTERVAL_SECONDS = os.getenv("AGENT_CHUNK_POLLING_INTERVAL_SECONDS", 1.0)
 DEFAULT_TEXT2SQL_DATABASE = "mindsdb"
@@ -259,8 +259,6 @@ MINDSDB_PREFIX = """You are an AI assistant powered by MindsDB. You have access 
 - Finally use kb_query_tool to query the knowledge base for specific information
 
 For factual questions, ALWAYS use the available tools to look up information rather than relying on your internal knowledge.
-
-Here is the user's question: {{question}}   
 
 TOOLS:
 ------

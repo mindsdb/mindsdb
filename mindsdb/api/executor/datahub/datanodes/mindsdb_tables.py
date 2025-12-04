@@ -6,7 +6,6 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
-from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
@@ -380,29 +379,9 @@ class KBTable(MdbTable):
         return pd.DataFrame(data, columns=cls.columns)
 
 
-class SkillsTable(MdbTable):
-    name = "SKILLS"
-    columns = ["NAME", "PROJECT", "TYPE", "PARAMS"]
-
-    @classmethod
-    def get_data(cls, query: ASTNode = None, **kwargs):
-        skills_controller = SkillsController()
-
-        project_name = get_project_name(query)
-
-        all_skills = skills_controller.get_skills(project_name)
-
-        project_controller = ProjectController()
-        project_names = {p.id: p.name for p in project_controller.get_list()}
-
-        # NAME, PROJECT, TYPE, PARAMS
-        data = [(s.name, project_names[s.project_id], s.type, s.params) for s in all_skills]
-        return pd.DataFrame(data, columns=cls.columns)
-
-
 class AgentsTable(MdbTable):
     name = "AGENTS"
-    columns = ["NAME", "PROJECT", "MODEL_NAME", "SKILLS", "PARAMS"]
+    columns = ["NAME", "PROJECT", "MODEL_NAME", "PARAMS"]
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
@@ -414,13 +393,12 @@ class AgentsTable(MdbTable):
         project_controller = ProjectController()
         project_names = {i.id: i.name for i in project_controller.get_list()}
 
-        # NAME, PROJECT, MODEL, SKILLS, PARAMS
+        # NAME, PROJECT, MODEL, PARAMS (skills removed)
         data = [
             (
                 a.name,
                 project_names[a.project_id],
                 a.model_name,
-                [rel.skill.name for rel in a.skills_relationships],
                 to_json(a.params),
             )
             for a in all_agents

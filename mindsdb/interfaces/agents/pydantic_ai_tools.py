@@ -2,7 +2,7 @@
 
 from typing import Dict, Any, List, Optional
 from mindsdb.utilities import log
-from mindsdb.interfaces.skills.sql_agent import SQLAgent
+from mindsdb.interfaces.agents.sql_agent import SQLAgent
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities.cache import get_cache
 

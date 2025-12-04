@@ -12,8 +12,8 @@ from langchain.chains.llm import LLMChain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
-from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.utilities import log
+from mindsdb.utilities.config import config
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langchain_text_splitters import CharacterTextSplitter
@@ -105,7 +105,13 @@ def get_mdb_write_tool(executor) -> Callable:
 
 
 def _setup_standard_tools(tools, llm, model_kwargs):
-    executor = skill_tool.get_command_executor()
+    # Create command executor directly (replacing skill_tool.get_command_executor())
+    from mindsdb.api.executor.command_executor import ExecuteCommands
+    from mindsdb.api.executor.controllers import SessionController
+    
+    sql_session = SessionController()
+    sql_session.database = config.get("default_project")
+    executor = ExecuteCommands(sql_session)
 
     all_standard_tools = []
     langchain_tools = []

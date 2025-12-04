@@ -369,10 +369,6 @@ class LangchainAgent:
         # Keep conversation history for context - don't nullify previous messages
 
         # Only use the last message as the current prompt, but preserve history for agent memory
-        try:
-            from langchain.agents import AgentExecutor
-        except ImportError:
-            raise ImportError("langchain is required for agent features. Install with: pip install mindsdb[agent]")
         response = self.run_agent(df, agent, args)
 
         # End the run completion span and update the metadata with tool usage

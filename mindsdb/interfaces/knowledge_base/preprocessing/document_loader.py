@@ -21,14 +21,14 @@ logger = log.getLogger(__name__)
 
 def _get_langchain_document(feature: str):
     try:
-        from langchain_core.documents import Document as LangchainDocument
+        from langchain_core.documents import Document
     except ModuleNotFoundError as exc:  # pragma: no cover - runtime guard
         if getattr(exc, "name", "").startswith("langchain") or "langchain" in str(exc):
             raise ImportError(
                 f"{feature} requires the optional knowledge base dependencies. Install them via `pip install mindsdb[kb]`."
             ) from exc
         raise
-    return LangchainDocument
+    return Document
 
 
 class DocumentLoader:

@@ -22,6 +22,7 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep,
+    FetchDataframeStepPartition,
     JoinStep,
     ApplyPredictorStep,
     SubSelectStep,
@@ -289,6 +290,7 @@ class PlanJoinTablesQuery:
     def check_use_limit(self, query_in, join_sequence):
         # if only models (predictors), not for regular table joins
         use_limit = False
+        optimize_inner_join = False
         if query_in.having is None and query_in.group_by is None and query_in.limit is not None:
             use_limit = True
 
@@ -305,10 +307,13 @@ class PlanJoinTablesQuery:
                     if join_type in ("LEFT JOIN", "LEFT OUTER JOIN"):
                         continue
 
-                    # INNER/RIGHT JOIN: can't push LIMIT down
+                    if query_in.offset is None:
+                        optimize_inner_join = True
+                        continue
                     use_limit = False
 
         self.query_context["use_limit"] = use_limit
+        self.query_context["optimize_inner_join"] = optimize_inner_join
 
     def plan_join_tables(self, query_in):
         # plan all nested selects in 'where'
@@ -391,8 +396,45 @@ class PlanJoinTablesQuery:
 
         query_in.where = query.where
 
+        if self.query_context["optimize_inner_join"]:
+            self.planner.plan.steps = self.optimize_inner_join(self.planner.plan.steps)
+
         self.close_partition()
-        return self.step_stack.pop()
+        return self.planner.plan.steps[-1]
+
+    def optimize_inner_join(self, steps_in):
+        steps_out = []
+
+        partition_step = None
+        partition_used = False
+
+        for step in steps_in:
+            if partition_step is None:
+                if isinstance(step, FetchDataframeStep) and not partition_used and step.query.limit is not None:
+                    limit = step.query.limit.value
+                    step.query.limit = None
+                    partition_used = True
+
+                    partition_step = FetchDataframeStepPartition(
+                        step_num=step.step_num,
+                        integration=step.integration,
+                        query=step.query,
+                        raw_query=step.raw_query,
+                        params=step.params,
+                        condition={"limit": limit},
+                    )
+                    steps_out.append(partition_step)
+                    continue
+
+            elif isinstance(step, (JoinStep, FetchDataframeStep, SubSelectStep)):
+                partition_step.steps.append(step)
+                continue
+            else:
+                partition_step = None
+
+            steps_out.append(step)
+
+        return steps_out
 
     def process_subselect(self, item, query_in):
         # is sub select
@@ -568,7 +610,7 @@ class PlanJoinTablesQuery:
             order_by = None
             if query_in.order_by is not None:
                 order_by = []
-                # all order column be from this table
+                # all order column are from this table
                 for col in query_in.order_by:
                     table_info = self.get_table_for_column(col.field)
                     if table_info is None or table_info.table != item.table:

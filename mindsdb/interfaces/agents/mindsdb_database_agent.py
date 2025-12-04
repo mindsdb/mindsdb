@@ -1,11 +1,9 @@
 """
-Wrapper around MindsDB's executor and integration controller following the implementation of the original
-langchain.sql_database.SQLDatabase class to partly replicate its behavior.
+Wrapper around MindsDB's executor and integration controller.
+Standalone implementation (no langchain dependency) that provides SQLDatabase-like interface.
 """
 
 from typing import Any, Iterable, List, Optional
-
-from langchain_community.utilities import SQLDatabase
 
 from mindsdb.utilities import log
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
@@ -24,14 +22,17 @@ def extract_essential(input: str) -> str:
     return input.strip(" ")
 
 
-class MindsDBSQL(SQLDatabase):
+class MindsDBSQL:
+    """
+    Standalone SQL database wrapper for MindsDB (no langchain dependency).
+    Provides interface compatible with langchain's SQLDatabase for backward compatibility.
+    """
+    
     @staticmethod
     def custom_init(sql_agent: "SQLAgent") -> "MindsDBSQL":
         instance = MindsDBSQL()
         instance._sql_agent = sql_agent
         return instance
-
-    """ Can't modify signature, as LangChain does a Pydantic check."""
 
     def __init__(
         self,
@@ -47,7 +48,8 @@ class MindsDBSQL(SQLDatabase):
         max_string_length: int = 300,
         lazy_table_reflection: bool = False,
     ):
-        pass
+        """Initialize MindsDBSQL. Parameters are kept for compatibility but not used."""
+        self._sql_agent: Optional[SQLAgent] = None
 
     @property
     def dialect(self) -> str:

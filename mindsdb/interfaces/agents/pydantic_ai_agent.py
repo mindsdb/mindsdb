@@ -69,7 +69,7 @@ class PydanticAIAgent:
     
     def _get_llm_provider(self, args: Dict) -> str:
         """Get LLM provider from args"""
-        from mindsdb.interfaces.agents.langchain_agent import get_llm_provider
+        from mindsdb.interfaces.agents.pydantic_ai_model_factory import get_llm_provider
         return get_llm_provider(args)
     
     def _initialize_args(self, llm_params: dict = None) -> dict:
@@ -119,7 +119,7 @@ class PydanticAIAgent:
     
     def _get_embedding_model_provider(self, args: Dict) -> str:
         """Get embedding model provider from args"""
-        from mindsdb.interfaces.agents.langchain_agent import get_embedding_model_provider
+        from mindsdb.interfaces.agents.pydantic_ai_model_factory import get_embedding_model_provider
         return get_embedding_model_provider(args)
     
     def _get_command_executor(self):

@@ -2,11 +2,8 @@
 
 from typing import Dict, Any, Optional
 from mindsdb.utilities import log
-from mindsdb.interfaces.agents.langchain_agent import (
-    get_llm_provider,
-    get_chat_model_params,
-    get_embedding_model_provider,
-)
+from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.interfaces.agents.constants import (
     OPEN_AI_CHAT_MODELS,
     ANTHROPIC_CHAT_MODELS,
@@ -14,9 +11,113 @@ from mindsdb.interfaces.agents.constants import (
     OLLAMA_CHAT_MODELS,
     NVIDIA_NIM_CHAT_MODELS,
     WRITER_CHAT_MODELS,
+    SUPPORTED_PROVIDERS,
+    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
 )
 
 logger = log.getLogger(__name__)
+
+
+def get_llm_provider(args: Dict) -> str:
+    """
+    Get LLM provider from args.
+    
+    Args:
+        args: Dictionary containing model_name and optionally provider
+        
+    Returns:
+        Provider name string
+    """
+    # If provider is explicitly specified, use that
+    if "provider" in args:
+        return args["provider"]
+
+    # Check for known model names from other providers first
+    model_name = args.get("model_name")
+    if not model_name:
+        raise ValueError("model_name is required to determine provider")
+    
+    if model_name in ANTHROPIC_CHAT_MODELS:
+        return "anthropic"
+    if model_name in OPEN_AI_CHAT_MODELS:
+        return "openai"
+    if model_name in OLLAMA_CHAT_MODELS:
+        return "ollama"
+    if model_name in NVIDIA_NIM_CHAT_MODELS:
+        return "nvidia_nim"
+    if model_name in GOOGLE_GEMINI_CHAT_MODELS:
+        return "google"
+    # Check for writer models
+    if model_name in WRITER_CHAT_MODELS:
+        return "writer"
+
+    # For vLLM, require explicit provider specification
+    raise ValueError("Invalid model name. Please define a supported llm provider")
+
+
+def get_embedding_model_provider(args: Dict) -> str:
+    """
+    Get the embedding model provider from args.
+    
+    Args:
+        args: Dictionary containing embedding model configuration
+        
+    Returns:
+        Provider name string
+    """
+    # Check for explicit embedding model provider
+    if "embedding_model_provider" in args:
+        provider = args["embedding_model_provider"]
+        if provider == "vllm":
+            if not (args.get("openai_api_base") and args.get("model")):
+                raise ValueError(
+                    "VLLM embeddings configuration error:\n"
+                    "- Missing required parameters: 'openai_api_base' and/or 'model'\n"
+                    "- Example: openai_api_base='http://localhost:8003/v1', model='your-model-name'"
+                )
+            logger.info("Using custom VLLMEmbeddings class")
+            return "vllm"
+        return provider
+
+    # Check if LLM provider is vLLM
+    llm_provider = args.get("provider", DEFAULT_EMBEDDINGS_MODEL_PROVIDER)
+    if llm_provider == "vllm":
+        if not (args.get("openai_api_base") and args.get("model")):
+            raise ValueError(
+                "VLLM embeddings configuration error:\n"
+                "- Missing required parameters: 'openai_api_base' and/or 'model'\n"
+                "- When using VLLM as LLM provider, you must specify the embeddings server location and model\n"
+                "- Example: openai_api_base='http://localhost:8003/v1', model='your-model-name'"
+            )
+        logger.info("Using custom VLLMEmbeddings class")
+        return "vllm"
+
+    # Default to LLM provider
+    return llm_provider
+
+
+def get_chat_model_params(args: Dict) -> Dict:
+    """
+    Get chat model parameters from args.
+    
+    Args:
+        args: Dictionary containing model configuration
+        
+    Returns:
+        Dictionary of formatted model parameters
+    """
+    model_config = args.copy()
+    # Include API keys.
+    model_config["api_keys"] = {p: get_api_key(p, model_config, None, strict=False) for p in SUPPORTED_PROVIDERS}
+    llm_config = get_llm_config(args.get("provider", get_llm_provider(args)), model_config)
+    config_dict = llm_config.model_dump(by_alias=True)
+    config_dict = {k: v for k, v in config_dict.items() if v is not None}
+
+    # If provider is writer, ensure the API key is passed as 'api_key'
+    if args.get("provider") == "writer" and "writer_api_key" in config_dict:
+        config_dict["api_key"] = config_dict.pop("writer_api_key")
+
+    return config_dict
 
 
 def create_pydantic_ai_model(args: Dict[str, Any]) -> str:

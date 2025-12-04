@@ -9,7 +9,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langchain_core.stores import BaseStore
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from langchain_text_splitters import TextSplitter
+from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter as TextSplitter
 
 DEFAULT_COLLECTION_NAME = "default_collection"
 

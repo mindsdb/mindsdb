@@ -8,8 +8,8 @@ from mindsdb.integrations.utilities.rag.settings import (
 )
 from mindsdb.integrations.utilities.rag.utils import documents_to_df
 from mindsdb.integrations.utilities.rag.retrievers.multi_hop_retriever import MultiHopRetriever
+from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter
 from mindsdb.utilities.log import getLogger
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger = getLogger(__name__)
 

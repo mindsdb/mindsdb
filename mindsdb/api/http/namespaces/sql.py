@@ -37,6 +37,7 @@ class Query(Resource):
         start_time = time.time()
         query = request.json["query"]
         context = request.json.get("context", {})
+        params = request.json.get("params", {})
 
         if isinstance(query, str) is False or isinstance(context, dict) is False:
             return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" with the request.')
@@ -55,7 +56,7 @@ class Query(Resource):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
             try:
-                result: SQLAnswer = mysql_proxy.process_query(query)
+                result: SQLAnswer = mysql_proxy.process_query(query, params=params)
                 query_response: dict = result.dump_http_response()
             except ExecutorException as e:
                 # classified error

@@ -117,6 +117,81 @@ class RecursiveCharacterTextSplitter:
                     )
                 )
         return split_docs
+    
+    def create_documents(self, texts: List[str], metadatas: Optional[List[dict]] = None) -> List[SimpleDocument]:
+        """
+        Create documents from a list of texts (compatible with langchain interface)
+
+        Args:
+            texts: List of text strings
+            metadatas: Optional list of metadata dicts (one per text)
+
+        Returns:
+            List of SimpleDocument objects
+        """
+        if metadatas is None:
+            metadatas = [{}] * len(texts)
+        
+        docs = []
+        for text, metadata in zip(texts, metadatas):
+            docs.append(SimpleDocument(page_content=text, metadata=metadata))
+        
+        return docs
+    
+    @classmethod
+    def from_language(
+        cls,
+        language: Any,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 200,
+        **kwargs
+    ) -> 'RecursiveCharacterTextSplitter':
+        """
+        Create a RecursiveCharacterTextSplitter with language-specific separators
+        
+        Args:
+            language: Language enum or string (e.g., Language.PYTHON or "python")
+            chunk_size: Maximum size of chunks
+            chunk_overlap: Overlap between chunks
+            **kwargs: Additional arguments
+            
+        Returns:
+            RecursiveCharacterTextSplitter instance with language-specific separators
+        """
+        # Get language name as string (handle both enum and string)
+        if hasattr(language, 'value'):
+            lang_name = language.value.lower()
+        elif hasattr(language, 'name'):
+            lang_name = language.name.lower()
+        else:
+            lang_name = str(language).lower()
+        
+        # Language-specific separators (based on langchain's implementation)
+        language_separators = {
+            'python': ["\n\n", "\n", "def ", "class ", "    ", " ", ""],
+            'javascript': ["\n\n", "\n", "function ", "class ", "    ", " ", ""],
+            'typescript': ["\n\n", "\n", "function ", "class ", "    ", " ", ""],
+            'java': ["\n\n", "\n", "public ", "private ", "class ", "    ", " ", ""],
+            'cpp': ["\n\n", "\n", "namespace ", "class ", "    ", " ", ""],
+            'c': ["\n\n", "\n", "    ", " ", ""],
+            'go': ["\n\n", "\n", "func ", "    ", " ", ""],
+            'rust': ["\n\n", "\n", "fn ", "    ", " ", ""],
+            'ruby': ["\n\n", "\n", "def ", "class ", "    ", " ", ""],
+            'php': ["\n\n", "\n", "function ", "class ", "    ", " ", ""],
+            'swift': ["\n\n", "\n", "func ", "class ", "    ", " ", ""],
+            'kotlin': ["\n\n", "\n", "fun ", "class ", "    ", " ", ""],
+            'scala': ["\n\n", "\n", "def ", "class ", "    ", " ", ""],
+        }
+        
+        # Get separators for language, or use default
+        separators = language_separators.get(lang_name, ["\n\n", "\n", ". ", " ", ""])
+        
+        return cls(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            separators=separators,
+            **kwargs
+        )
 
 
 class MarkdownHeaderTextSplitter:

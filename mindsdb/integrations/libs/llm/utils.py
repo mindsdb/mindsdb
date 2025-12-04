@@ -19,7 +19,23 @@ from mindsdb.integrations.libs.llm.config import (
     BedrockConfig,
 )
 from mindsdb.utilities.config import config
-from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter
+
+# Simple Language enum replacement
+class Language:
+    PYTHON = "python"
+    JAVASCRIPT = "javascript"
+    TYPESCRIPT = "typescript"
+    JAVA = "java"
+    CPP = "cpp"
+    C = "c"
+    GO = "go"
+    RUST = "rust"
+    RUBY = "ruby"
+    PHP = "php"
+    SWIFT = "swift"
+    KOTLIN = "kotlin"
+    SCALA = "scala"
 
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
@@ -525,8 +541,10 @@ def ft_code_formatter(
         raise Exception(f"Invalid format. Please choose one of {supported_formats}")
 
     # split code into chunks
+    # Get language enum value (handle both string and enum)
+    lang_enum = getattr(Language, language.upper(), None) if hasattr(Language, language.upper()) else language
     code_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=getattr(Language, language.upper()),
+        language=lang_enum,
         chunk_size=3 * chunk_size,  # each triplet element has `chunk_size`
         chunk_overlap=chunk_overlap,  # some overlap here is fine
     )
@@ -535,7 +553,7 @@ def ft_code_formatter(
 
     # split each chunk into a triplet, with no overlap
     triplet_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=getattr(Language, language.upper()),
+        language=lang_enum,
         chunk_size=chunk_size,
         chunk_overlap=0,  # no overlap admitted, otherwise context may leak into answer
     )

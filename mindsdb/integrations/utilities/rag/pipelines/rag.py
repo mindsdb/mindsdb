@@ -121,33 +121,19 @@ class SimpleRAGPipeline:
         # 2. Apply reranker if enabled
         if self.reranker and docs:
             try:
-                # Convert to langchain Document format if needed for reranker
-                from langchain_core.documents import Document as LangchainDocument
-                langchain_docs = []
+                # Reranker should work with SimpleDocument via duck typing (page_content, metadata attributes)
+                docs = await self.reranker.acompress_documents(docs, question)
+                # Ensure all docs are SimpleDocument instances
+                simple_docs = []
                 for doc in docs:
                     if isinstance(doc, SimpleDocument):
-                        langchain_docs.append(LangchainDocument(
-                            page_content=doc.page_content,
-                            metadata=doc.metadata
-                        ))
-                    elif hasattr(doc, 'page_content'):
-                        langchain_docs.append(doc)
+                        simple_docs.append(doc)
                     else:
-                        langchain_docs.append(LangchainDocument(page_content=str(doc)))
-                
-                if langchain_docs:
-                    docs = await self.reranker.acompress_documents(langchain_docs, question)
-                    # Convert back to SimpleDocument if needed
-                    simple_docs = []
-                    for doc in docs:
-                        if isinstance(doc, SimpleDocument):
-                            simple_docs.append(doc)
-                        else:
-                            simple_docs.append(SimpleDocument(
-                                page_content=doc.page_content if hasattr(doc, 'page_content') else str(doc),
-                                metadata=doc.metadata if hasattr(doc, 'metadata') else {}
-                            ))
-                    docs = simple_docs
+                        simple_docs.append(SimpleDocument(
+                            page_content=doc.page_content if hasattr(doc, 'page_content') else str(doc),
+                            metadata=doc.metadata if hasattr(doc, 'metadata') else {}
+                        ))
+                docs = simple_docs
             except Exception as e:
                 logger.warning(f"Error during reranking, continuing without reranking: {e}")
         
@@ -158,23 +144,25 @@ class SimpleRAGPipeline:
         formatted_prompt = self._format_prompt(question, context)
         
         # 5. Generate answer using LLM
-        # Langchain LLMs can accept strings (converted to HumanMessage) or messages
-        # Try to use messages format if LLM supports it, otherwise use string
-        try:
-            # Try to import HumanMessage to create proper message format
-            from langchain_core.messages import HumanMessage
-            messages = [HumanMessage(content=formatted_prompt)]
-        except ImportError:
-            # Fallback to string if langchain not available
-            messages = formatted_prompt
+        # Use dict format for messages instead of HumanMessage
+        messages = [{"role": "user", "content": formatted_prompt}]
         
-        if hasattr(self.llm, 'ainvoke'):
+        # Try different LLM interfaces
+        if hasattr(self.llm, 'abatch'):
+            # CustomLLMWrapper interface
+            responses = await self.llm.abatch([formatted_prompt])
+            llm_response = responses[0] if responses else None
+        elif hasattr(self.llm, 'ainvoke'):
             llm_response = await self.llm.ainvoke(messages)
+        elif hasattr(self.llm, 'batch'):
+            # CustomLLMWrapper sync interface
+            responses = self.llm.batch([formatted_prompt])
+            llm_response = responses[0] if responses else None
         elif hasattr(self.llm, 'invoke'):
             loop = asyncio.get_event_loop()
             llm_response = await loop.run_in_executor(None, self.llm.invoke, messages)
         else:
-            raise ValueError("LLM must have ainvoke or invoke method")
+            raise ValueError("LLM must have ainvoke, invoke, abatch, or batch method")
         
         # 6. Extract text from LLM response
         answer = self._extract_llm_response(llm_response)

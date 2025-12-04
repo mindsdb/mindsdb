@@ -96,9 +96,10 @@ class MultiVectorRetriever(BaseRetriever):
                 else:
                     summary = str(llm_response)
                 
-                # Use SafeOutputParser to clean the output
+                # Use SafeOutputParser to clean the output (extract actual text from parse result)
                 parser = SafeOutputParser()
-                summary = parser.parse(summary)
+                parsed_result = parser.parse(summary)
+                summary = parser.extract_output(parsed_result)
                 summaries.append(summary)
             except Exception as e:
                 logger.warning(f"Error generating summary for document: {e}")
@@ -114,7 +115,7 @@ class MultiVectorRetriever(BaseRetriever):
         llm = getattr(self, 'llm', None)
         if llm is None:
             # Try to create a default LLM - this might need adjustment
-            from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+            from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
             llm = create_chat_model({
                 'model_name': DEFAULT_LLM_MODEL,
                 'provider': 'openai'

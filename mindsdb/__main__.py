@@ -348,14 +348,7 @@ if __name__ == "__main__":
             logger.info("Updating the GUI version")
             initialize_static()
 
-        if config.cmd_args.load_tokenizer:
-            try:
-                from langchain_core.language_models import get_tokenizer
-
-                get_tokenizer()
-                logger.info("Tokenizer successfully loaded")
-            except Exception:
-                logger.info("Failed to load tokenizer: ", exc_info=True)
+        # Tokenizer loading removed - was optional feature using langchain
 
         sys.exit(0)
 

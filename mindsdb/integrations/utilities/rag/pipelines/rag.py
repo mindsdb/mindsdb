@@ -1,12 +1,6 @@
 from copy import copy
-from typing import Optional, Any, List
-
-from langchain_core.output_parsers import StrOutputParser
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain_core.documents import Document
-
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
+from typing import Optional, Any, List, Union
+import asyncio
 
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.integrations.libs.vectordatabase_handler import DistanceFunction
@@ -24,6 +18,204 @@ from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
+
+class SimpleRAGPipeline:
+    """
+    Custom RAG pipeline implementation to replace LangChain LCEL components
+    """
+    
+    def __init__(
+        self,
+        retriever_runnable: Any,
+        prompt_template: str,
+        llm: Any,
+        reranker: Optional[Any] = None,
+        summarizer: Optional[Any] = None,
+    ):
+        """
+        Initialize SimpleRAGPipeline
+        
+        Args:
+            retriever_runnable: Retriever that can be invoked with question
+            prompt_template: Prompt template string with {question} and {context} placeholders
+            llm: Language model with invoke/ainvoke methods
+            reranker: Optional reranker for document reranking
+            summarizer: Optional summarizer chain
+        """
+        self.retriever_runnable = retriever_runnable
+        self.prompt_template = prompt_template
+        self.llm = llm
+        self.reranker = reranker
+        self.summarizer = summarizer
+    
+    def _format_docs(self, docs: Union[List[Any], str]) -> str:
+        """Format documents into context string"""
+        if isinstance(docs, str):
+            # Handle case where retriever returns a string (e.g., SQLRetriever)
+            return docs
+        if not docs:
+            return ''
+        
+        # Sort by original document so we can group source summaries together
+        docs.sort(key=lambda d: d.metadata.get('original_row_id') if hasattr(d, 'metadata') and d.metadata else 0)
+        original_document_id = None
+        summary_prepended_text = 'Summary of the original document that the below context was taken from:\n'
+        document_content = ''
+        
+        for d in docs:
+            metadata = d.metadata if hasattr(d, 'metadata') else {}
+            if metadata.get('original_row_id') != original_document_id and metadata.get('summary'):
+                # We have a summary of a new document to prepend
+                original_document_id = metadata.get('original_row_id')
+                summary = f"{summary_prepended_text}{metadata.get('summary')}\n"
+                document_content += summary
+            
+            page_content = d.page_content if hasattr(d, 'page_content') else str(d)
+            document_content += f'{page_content}\n\n'
+        
+        return document_content
+    
+    def _format_prompt(self, question: str, context: str) -> str:
+        """Format prompt template with question and context"""
+        return self.prompt_template.format(question=question, context=context)
+    
+    def _extract_llm_response(self, response: Any) -> str:
+        """Extract text content from LLM response"""
+        # Handle different response types
+        if isinstance(response, str):
+            return response
+        if hasattr(response, 'content'):
+            return response.content
+        if hasattr(response, 'text'):
+            return response.text
+        # Try to get from message if it's a message object
+        if hasattr(response, 'message') and hasattr(response.message, 'content'):
+            return response.message.content
+        # Fallback to string conversion
+        return str(response)
+    
+    async def _retrieve_documents(self, question: str) -> List[Any]:
+        """Retrieve documents using retriever"""
+        # Try async first
+        if hasattr(self.retriever_runnable, 'ainvoke'):
+            return await self.retriever_runnable.ainvoke(question)
+        elif hasattr(self.retriever_runnable, 'invoke'):
+            return self.retriever_runnable.invoke(question)
+        elif hasattr(self.retriever_runnable, 'get_relevant_documents'):
+            # Sync method, run in executor for async compatibility
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self.retriever_runnable.get_relevant_documents, question)
+        else:
+            raise ValueError("Retriever must have ainvoke, invoke, or get_relevant_documents method")
+    
+    async def ainvoke(self, question: Union[str, dict]) -> dict:
+        """Async invocation of the RAG pipeline"""
+        # Handle both string and dict input (for compatibility)
+        if isinstance(question, dict):
+            question = question.get('question', question.get('input', ''))
+        
+        # 1. Retrieve documents
+        docs = await self._retrieve_documents(question)
+        
+        # 2. Apply reranker if enabled
+        if self.reranker and docs:
+            try:
+                # Convert to langchain Document format if needed for reranker
+                from langchain_core.documents import Document as LangchainDocument
+                langchain_docs = []
+                for doc in docs:
+                    if isinstance(doc, SimpleDocument):
+                        langchain_docs.append(LangchainDocument(
+                            page_content=doc.page_content,
+                            metadata=doc.metadata
+                        ))
+                    elif hasattr(doc, 'page_content'):
+                        langchain_docs.append(doc)
+                    else:
+                        langchain_docs.append(LangchainDocument(page_content=str(doc)))
+                
+                if langchain_docs:
+                    docs = await self.reranker.acompress_documents(langchain_docs, question)
+                    # Convert back to SimpleDocument if needed
+                    simple_docs = []
+                    for doc in docs:
+                        if isinstance(doc, SimpleDocument):
+                            simple_docs.append(doc)
+                        else:
+                            simple_docs.append(SimpleDocument(
+                                page_content=doc.page_content if hasattr(doc, 'page_content') else str(doc),
+                                metadata=doc.metadata if hasattr(doc, 'metadata') else {}
+                            ))
+                    docs = simple_docs
+            except Exception as e:
+                logger.warning(f"Error during reranking, continuing without reranking: {e}")
+        
+        # 3. Apply summarizer if enabled
+        if self.summarizer and docs:
+            try:
+                # Summarizer expects dict with 'context' and 'question' keys
+                summarizer_input = {
+                    'context': docs,
+                    'question': question
+                }
+                if hasattr(self.summarizer, 'ainvoke'):
+                    summarizer_result = await self.summarizer.ainvoke(summarizer_input)
+                elif hasattr(self.summarizer, 'invoke'):
+                    summarizer_result = self.summarizer.invoke(summarizer_input)
+                else:
+                    summarizer_result = summarizer_input
+                
+                # Extract context from summarizer result
+                if isinstance(summarizer_result, dict):
+                    docs = summarizer_result.get('context', docs)
+                else:
+                    docs = summarizer_result
+            except Exception as e:
+                logger.warning(f"Error during summarization, continuing without summarization: {e}")
+        
+        # 4. Format documents into context
+        context = self._format_docs(docs)
+        
+        # 5. Format prompt
+        formatted_prompt = self._format_prompt(question, context)
+        
+        # 6. Generate answer using LLM
+        # Langchain LLMs can accept strings (converted to HumanMessage) or messages
+        # Try to use messages format if LLM supports it, otherwise use string
+        try:
+            # Try to import HumanMessage to create proper message format
+            from langchain_core.messages import HumanMessage
+            messages = [HumanMessage(content=formatted_prompt)]
+        except ImportError:
+            # Fallback to string if langchain not available
+            messages = formatted_prompt
+        
+        if hasattr(self.llm, 'ainvoke'):
+            llm_response = await self.llm.ainvoke(messages)
+        elif hasattr(self.llm, 'invoke'):
+            loop = asyncio.get_event_loop()
+            llm_response = await loop.run_in_executor(None, self.llm.invoke, messages)
+        else:
+            raise ValueError("LLM must have ainvoke or invoke method")
+        
+        # 7. Extract text from LLM response
+        answer = self._extract_llm_response(llm_response)
+        
+        # 8. Return dict with context, question, answer
+        return {
+            'context': docs,
+            'question': question,
+            'answer': answer
+        }
+    
+    def invoke(self, question: Union[str, dict]) -> dict:
+        """Sync invocation of the RAG pipeline"""
+        return asyncio.run(self.ainvoke(question))
 
 
 class LangChainRAGPipeline:
@@ -79,93 +271,25 @@ class LangChainRAGPipeline:
                 summarization_config=summarization_config
             )
 
-    def with_returned_sources(self) -> RunnableSerializable:
+    def with_returned_sources(self) -> SimpleRAGPipeline:
         """
         Builds a RAG pipeline with returned sources
-        :return:
+        :return: SimpleRAGPipeline instance
         """
-
-        def format_docs(docs):
-            if isinstance(docs, str):
-                # this is to handle the case where the retriever returns a string
-                # instead of a list of documents e.g. SQLRetriever
-                return docs
-            if not docs:
-                return ''
-            # Sort by original document so we can group source summaries together.
-            docs.sort(key=lambda d: d.metadata.get('original_row_id') if d.metadata else 0)
-            original_document_id = None
-            summary_prepended_text = 'Summary of the original document that the below context was taken from:\n'
-            document_content = ''
-            for d in docs:
-                metadata = d.metadata or {}
-                if metadata.get('original_row_id') != original_document_id and metadata.get('summary'):
-                    # We have a summary of a new document to prepend.
-                    original_document_id = metadata.get('original_row_id')
-                    summary = f"{summary_prepended_text}{metadata.get('summary')}\n"
-                    document_content += summary
-                document_content += f'{d.page_content}\n\n'
-            return document_content
-
-        prompt = ChatPromptTemplate.from_template(self.prompt_template)
-
         # Ensure all the required components are not None
-        if prompt is None:
-            raise ValueError("One of the required components (prompt) is None")
+        if self.prompt_template is None:
+            raise ValueError("One of the required components (prompt_template) is None")
         if self.llm is None:
             raise ValueError("One of the required components (llm) is None")
 
-        if self.reranker:
-            # Create a custom retriever that handles async operations properly
-            class AsyncRerankerRetriever(ContextualCompressionRetriever):
-                """Async-aware retriever that properly handles concurrent reranking operations."""
-
-                def __init__(self, base_retriever, reranker):
-                    super().__init__(
-                        base_compressor=reranker,
-                        base_retriever=base_retriever
-                    )
-
-                async def ainvoke(self, query: str) -> List[Document]:
-                    """Async retrieval with proper concurrency handling."""
-                    # Get initial documents
-                    if hasattr(self.base_retriever, 'ainvoke'):
-                        docs = await self.base_retriever.ainvoke(query)
-                    else:
-                        docs = await RunnablePassthrough(self.base_retriever.get_relevant_documents)(query)
-
-                    # Rerank documents
-                    if docs:
-                        docs = await self.base_compressor.acompress_documents(docs, query)
-                    return docs
-
-                def get_relevant_documents(self, query: str) -> List[Document]:
-                    """Sync wrapper for async retrieval."""
-                    import asyncio
-                    return asyncio.run(self.ainvoke(query))
-
-            # Use our custom async-aware retriever
-            self.retriever_runnable = AsyncRerankerRetriever(
-                base_retriever=copy(self.retriever_runnable),
-                reranker=self.reranker
-            )
-
-        rag_chain_from_docs = (
-            RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))
-            | prompt
-            | self.llm
-            | StrOutputParser()
+        # Return SimpleRAGPipeline instance that handles all the pipeline logic
+        return SimpleRAGPipeline(
+            retriever_runnable=self.retriever_runnable,
+            prompt_template=self.prompt_template,
+            llm=self.llm,
+            reranker=self.reranker,
+            summarizer=self.summarizer
         )
-
-        retrieval_chain = RunnableParallel(
-            context=self.retriever_runnable,
-            question=RunnablePassthrough()
-        )
-        if self.summarizer is not None:
-            retrieval_chain = retrieval_chain | self.summarizer
-
-        rag_chain_with_source = retrieval_chain.assign(answer=rag_chain_from_docs)
-        return rag_chain_with_source
 
     async def ainvoke(self, input_dict: dict) -> dict:
         """Async invocation of the RAG pipeline."""

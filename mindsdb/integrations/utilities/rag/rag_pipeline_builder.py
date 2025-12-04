@@ -1,6 +1,6 @@
 import pandas as pd
+from typing import Any
 from langchain.storage import InMemoryByteStore
-from langchain_core.runnables import RunnableSerializable
 from mindsdb.integrations.utilities.rag.pipelines.rag import LangChainRAGPipeline
 from mindsdb.integrations.utilities.rag.settings import (
     RetrieverType,
@@ -75,7 +75,7 @@ def _process_documents_to_df(config: RAGPipelineModel) -> pd.DataFrame:
                            with_embeddings=True)
 
 
-def get_pipeline_from_retriever(config: RAGPipelineModel) -> RunnableSerializable:
+def get_pipeline_from_retriever(config: RAGPipelineModel) -> Any:
     retriever_strategy = _retriever_strategies.get(config.retriever_type)
     if retriever_strategy:
         return retriever_strategy(config).with_returned_sources()

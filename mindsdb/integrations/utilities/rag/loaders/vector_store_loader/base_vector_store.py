@@ -54,8 +54,58 @@ class VectorStore(ABC):
         """Add texts to the vector store"""
         raise NotImplementedError("add_texts not implemented")
     
+    def add_documents(self, documents: List[Any], **kwargs: Any) -> List[str]:
+        """
+        Add documents to the vector store.
+        Extracts page_content and metadata from documents and calls add_texts.
+        
+        Args:
+            documents: List of document-like objects with page_content and metadata attributes
+            **kwargs: Additional arguments to pass to add_texts
+            
+        Returns:
+            List of document IDs (if supported by implementation)
+        """
+        texts = []
+        metadatas = []
+        for doc in documents:
+            # Use duck typing to access page_content and metadata
+            page_content = getattr(doc, 'page_content', str(doc))
+            metadata = getattr(doc, 'metadata', {})
+            texts.append(page_content)
+            metadatas.append(metadata)
+        
+        # Call add_texts with texts and metadatas
+        return self.add_texts(texts, metadatas=metadatas, **kwargs)
+    
     @classmethod
     def from_texts(cls, *args: Any, **kwargs: Any):
         """Create vector store from texts"""
         raise NotImplementedError("from_texts not implemented")
+    
+    @classmethod
+    def from_documents(cls, documents: List[Any], embedding: Any, **kwargs: Any):
+        """
+        Create vector store from documents.
+        Extracts texts and metadata from documents and calls from_texts.
+        
+        Args:
+            documents: List of document-like objects with page_content and metadata attributes
+            embedding: Embedding model/function
+            **kwargs: Additional arguments to pass to from_texts
+            
+        Returns:
+            VectorStore instance
+        """
+        texts = []
+        metadatas = []
+        for doc in documents:
+            # Use duck typing to access page_content and metadata
+            page_content = getattr(doc, 'page_content', str(doc))
+            metadata = getattr(doc, 'metadata', {})
+            texts.append(page_content)
+            metadatas.append(metadata)
+        
+        # Call from_texts with texts, metadatas, and embedding
+        return cls.from_texts(texts, embedding=embedding, metadatas=metadatas, **kwargs)
 

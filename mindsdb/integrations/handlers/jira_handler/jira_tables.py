@@ -45,6 +45,7 @@ CLOUD_COLUMNS = [
     "groups",
 ]
 
+
 class JiraTableBase(APIResource):
     """
     Base class for Jira tables.
@@ -103,9 +104,7 @@ class JiraIssueFetcherMixin:
                     issues.append(issue)
                 condition.applied = True
             elif condition.column in self.PROJECT_FIELDS:
-                project_ids = self._resolve_project_ids(
-                    client, condition.column, condition.value
-                )
+                project_ids = self._resolve_project_ids(client, condition.column, condition.value)
                 if len(project_ids) > 0:
                     self._fetch_by_projects(client, project_ids, limit, issues)
                     condition.applied = True
@@ -121,9 +120,7 @@ class JiraIssueFetcherMixin:
 
         return issues
 
-    def _fetch_by_identifier(
-        self, client: Jira, condition: FilterCondition
-    ) -> List[dict]:
+    def _fetch_by_identifier(self, client: Jira, condition: FilterCondition) -> List[dict]:
         """
         Fetch issues by id or key. For IN, we still call get_issue for each identifier.
         """
@@ -146,9 +143,7 @@ class JiraIssueFetcherMixin:
                         type(issue).__name__,
                     )
             else:
-                raise ValueError(
-                    f"Unsupported operator {condition.op} for column {condition.column}."
-                )
+                raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
 
         return issues
 
@@ -333,9 +328,7 @@ class JiraProjectsTable(JiraTableBase):
                         project = client.get_project(project_id)
                         projects.append(project)
                 else:
-                    raise ValueError(
-                        f"Unsupported operator {condition.op} for column {condition.column}."
-                    )
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
                 condition.applied = True
 
         if not projects:
@@ -423,9 +416,7 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
         if "labels" in issues_df.columns:
             issues_df["labels"] = issues_df["labels"].apply(self._join_simple_list)
         if "components" in issues_df.columns:
-            issues_df["components"] = issues_df["components"].apply(
-                self._join_component_names
-            )
+            issues_df["components"] = issues_df["components"].apply(self._join_component_names)
 
         issues_df = issues_df.reindex(columns=self.get_columns(), fill_value=None)
 
@@ -555,9 +546,7 @@ class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
                     "thumbnail_url": attachment.get("thumbnail"),
                     "created": attachment.get("created"),
                     "author": (attachment.get("author") or {}).get("displayName"),
-                    "author_account_id": (attachment.get("author") or {}).get(
-                        "accountId"
-                    ),
+                    "author_account_id": (attachment.get("author") or {}).get("accountId"),
                 }
                 attachments.append(row)
 
@@ -746,9 +735,7 @@ class JiraUsersTable(JiraTableBase):
                                 type(user).__name__,
                             )
                 else:
-                    raise ValueError(
-                        f"Unsupported operator {condition.op} for column {condition.column}."
-                    )
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
                 condition.applied = True
 
         if not users:
@@ -768,24 +755,16 @@ class JiraUsersTable(JiraTableBase):
         for condition in conditions:
             if condition.column in ("username", "name", "accountId"):
                 if condition.op == FilterOperator.IN:
-                    values = (
-                        condition.value
-                        if isinstance(condition.value, (list, tuple, set))
-                        else [condition.value]
-                    )
+                    values = condition.value if isinstance(condition.value, (list, tuple, set)) else [condition.value]
                 elif condition.op == FilterOperator.EQUAL:
                     values = [condition.value]
                 else:
-                    raise ValueError(
-                        f"Unsupported operator {condition.op} for column {condition.column}."
-                    )
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
                 for value in values:
                     try:
                         user = client.user(username=value)
                     except HTTPError as user_error:
-                        logger.debug(
-                            "Failed to fetch server user '%s': %s", value, user_error
-                        )
+                        logger.debug("Failed to fetch server user '%s': %s", value, user_error)
                         continue
                     if isinstance(user, dict):
                         users.append(user)
@@ -797,9 +776,7 @@ class JiraUsersTable(JiraTableBase):
                 if isinstance(user, dict):
                     users.append(user)
             except HTTPError as user_error:
-                logger.debug(
-                    "Failed to fetch default server user '%s': %s", ".", user_error
-                )
+                logger.debug("Failed to fetch default server user '%s': %s", ".", user_error)
         if not users:
             users = self._fetch_all_users(client, limit)
 
@@ -828,9 +805,7 @@ class JiraUsersTable(JiraTableBase):
                     page_size,
                     exc,
                 )
-                resp, page_users = self._fallback_user_search(
-                    client, start, page_size, exc
-                )
+                resp, page_users = self._fallback_user_search(client, start, page_size, exc)
 
             users.extend(page_users)
 
@@ -854,15 +829,11 @@ class JiraUsersTable(JiraTableBase):
         search_variants: List[Dict[str, Any]] = []
 
         if is_cloud is False:
-            search_variants.append(
-                {"username": ".", "start": start, "limit": page_size}
-            )
+            search_variants.append({"username": ".", "start": start, "limit": page_size})
             search_variants.append({"query": ".", "start": start, "limit": page_size})
         else:
             search_variants.append({"query": ".", "start": start, "limit": page_size})
-            search_variants.append(
-                {"username": ".", "start": start, "limit": page_size}
-            )
+            search_variants.append({"username": ".", "start": start, "limit": page_size})
 
         for params in search_variants:
             try:

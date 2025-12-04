@@ -3,8 +3,6 @@
 from typing import Dict, Any, List, Optional
 from mindsdb.utilities import log
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
-from mindsdb.interfaces.agents.mindsdb_database_agent import MindsDBSQL
-from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities.cache import get_cache
 
@@ -70,9 +68,6 @@ def create_text2sql_tool(
         cache=get_cache("agent", max_size=_MAX_CACHE_SIZE),
     )
     
-    # Create MindsDBSQL wrapper
-    db_wrapper = MindsDBSQL.custom_init(sql_agent=sql_agent)
-    
     # Get table info for tool description
     table_info = ""
     if tables_list:
@@ -92,19 +87,38 @@ def create_text2sql_tool(
     
     # Create tool description
     description_parts = [
-        "Execute SQL queries against the configured database tables.",
-        "Use this tool to answer questions about data in the database.",
+        "Execute MindsDB SQL queries against database tables and knowledge bases.",
+        "Use this tool to answer questions about data in the database or query knowledge bases.",
+        "",
+        "**Knowledge Base Queries:**",
+        "Knowledge bases can be queried using semantic search and metadata filtering:",
+        "- Semantic search: SELECT * FROM kb_name WHERE content = 'your query'",
+        "- Metadata filtering: SELECT * FROM kb_name WHERE metadata_column = 'value'",
+        "- Combined: SELECT * FROM kb_name WHERE content = 'query' AND metadata_column = 'value' AND relevance >= 0.5",
+        "- Knowledge bases support standard SQL operations including JOINs",
+        "",
+        "**Important:**",
+        "- Always execute the SQL query using this tool.",
+        "- The SQL query string itself is NOT the final answer unless the user specifically asks for the query.",
+        "- All SQL commands must be valid MindsDB SQL syntax.",
     ]
     if table_info:
-        description_parts.append(f"\nTable information:\n{table_info}")
+        description_parts.append(f"\n**Available Tables:**\n{table_info}")
     if kb_info:
-        description_parts.append(f"\nKnowledge base information:\n{kb_info}")
-    description_parts.append(
-        "\nImportant: Always execute the SQL query using this tool. "
-        "The SQL query string itself is NOT the final answer unless the user specifically asks for the query."
-    )
+        description_parts.append(f"\n**Available Knowledge Bases:**\n{kb_info}")
     
     tool_description = "\n".join(description_parts)
+    
+    # Helper function to clean query input (extracted from mindsdb_database_agent)
+    def extract_essential(input: str) -> str:
+        """Sometimes LLM include to input unnecessary data. We can't control stochastic nature of LLM, so we need to
+        'clean' input somehow. LLM prompt contains instruction to enclose input between '$START$' and '$STOP$'.
+        """
+        if "$START$" in input:
+            input = input.partition("$START$")[-1]
+        if "$STOP$" in input:
+            input = input.partition("$STOP$")[0]
+        return input.strip(" ")
     
     # Create async tool function
     async def sql_db_query(query: str) -> str:
@@ -118,12 +132,21 @@ def create_text2sql_tool(
             Query results as a formatted string
         """
         try:
-            # Clean and execute query
-            result = db_wrapper.run_no_throw(query, fetch="all")
+            # Clean query input
+            query = extract_essential(query)
+            
+            # Execute query directly using SQLAgent
+            logger.info(f"Executing SQL query via tool: {query}")
+            result = sql_agent.query(query)
             return result
         except Exception as e:
-            logger.error(f"Error executing SQL query: {e}", exc_info=True)
-            return f"Error executing SQL query: {str(e)}"
+            logger.exception("Error executing SQL command:")
+            # If this is a knowledge base query, provide a more helpful error message
+            if "knowledge_base" in query.lower() or any(
+                kb in query for kb in sql_agent.get_usable_knowledge_base_names()
+            ):
+                return f"Error executing knowledge base query: {str(e)}. Please check that the knowledge base exists and your query syntax is correct."
+            return f"Error: {str(e)}"
     
     # Set tool metadata
     sql_db_query.__name__ = "sql_db_query"
@@ -132,211 +155,32 @@ def create_text2sql_tool(
     return sql_db_query
 
 
-def create_knowledge_base_tool(
-    kb_name: str,
-    project_id: int,
-    kb_controller: KnowledgeBaseController,
-) -> Any:
-    """
-    Create a knowledge base query tool for a specific KB.
-    
-    Args:
-        kb_name: Name of the knowledge base
-        project_id: Project ID containing the KB
-        kb_controller: Knowledge base controller instance
-        
-    Returns:
-        Async function that can be used as a Pydantic AI tool
-    """
-    # Get KB table
-    try:
-        kb_table = kb_controller.get_table(kb_name, project_id)
-    except Exception as e:
-        logger.error(f"Error getting KB table for {kb_name}: {e}", exc_info=True)
-        return None
-    
-    # Create async tool function
-    async def query_knowledge_base(question: str) -> str:
-        """
-        Query the knowledge base to get relevant information.
-        
-        Args:
-            question: Natural language question to search the knowledge base
-            
-        Returns:
-            Retrieved information from the knowledge base
-        """
-        try:
-            from mindsdb_sql_parser.ast import Select, BinaryOperation, Constant, Identifier, TableField
-            
-            # Create a SELECT query with content condition
-            query = Select(
-                targets=[Identifier(parts=["*"])],
-                where=BinaryOperation(
-                    op="=",
-                    args=[
-                        Identifier(parts=[TableField.CONTENT.value]),
-                        Constant(question)
-                    ]
-                ),
-                limit=Constant(5)  # Top 5 results
-            )
-            
-            # Execute query
-            result_df = kb_table.select_query(query)
-            
-            # Format results
-            if result_df.empty:
-                return f"No relevant information found in knowledge base '{kb_name}' for the question: {question}"
-            
-            # Extract content from results
-            content_column = "chunk_content" if "chunk_content" in result_df.columns else "content"
-            if content_column in result_df.columns:
-                contents = result_df[content_column].tolist()
-                return "\n\n".join([str(c) for c in contents if c])
-            else:
-                # Fallback: return first few columns as string
-                return result_df.head(5).to_string()
-                
-        except Exception as e:
-            logger.error(f"Error querying knowledge base {kb_name}: {e}", exc_info=True)
-            return f"Error querying knowledge base '{kb_name}': {str(e)}"
-    
-    # Set tool metadata
-    query_knowledge_base.__name__ = f"query_kb_{kb_name}"
-    query_knowledge_base.__doc__ = (
-        f"Query the knowledge base '{kb_name}' to get relevant information. "
-        f"Use this tool to answer questions about topics covered in this knowledge base. "
-        f"The input should be a clear, specific question."
-    )
-    
-    return query_knowledge_base
-
-
-def create_retrieval_tool(
-    kb_name: str,
-    project_id: int,
-    kb_controller: KnowledgeBaseController,
-    llm: Any,
-    embedding_model: Any,
-) -> Optional[Any]:
-    """
-    Create a RAG/retrieval tool for a knowledge base using the RAG pipeline.
-    
-    Args:
-        kb_name: Name of the knowledge base
-        project_id: Project ID containing the KB
-        kb_controller: Knowledge base controller instance
-        llm: LLM instance for RAG pipeline
-        embedding_model: Embedding model for RAG pipeline
-        
-    Returns:
-        Async function that can be used as a Pydantic AI tool, or None if KB not found
-    """
-    # Get KB
-    try:
-        kb = kb_controller.get(kb_name, project_id)
-        if kb is None:
-            logger.warning(f"Knowledge base '{kb_name}' not found")
-            return None
-    except Exception as e:
-        logger.error(f"Error getting knowledge base {kb_name}: {e}", exc_info=True)
-        return None
-    
-    # Import RAG pipeline components
-    try:
-        from mindsdb.integrations.utilities.rag.rag_pipeline_builder import get_pipeline_from_knowledge_base
-        from mindsdb.interfaces.knowledge_base.embedding_model_utils import construct_embedding_model_from_args
-        
-        # Get KB params for RAG pipeline
-        kb_params = kb.params or {}
-        rag_config = kb_params.get("rag", {})
-        
-        # Create embedding model if not provided
-        if embedding_model is None:
-            embedding_args = rag_config.get("embedding_model", {})
-            if embedding_args:
-                embedding_model = construct_embedding_model_from_args(embedding_args, session=kb_controller.session)
-        
-        # Get RAG pipeline
-        pipeline = get_pipeline_from_knowledge_base(
-            kb_name=kb_name,
-            project_id=project_id,
-            llm=llm,
-            embedding_model=embedding_model,
-            config=rag_config,
-        )
-        
-    except Exception as e:
-        logger.warning(f"Could not create RAG pipeline for {kb_name}, falling back to simple query: {e}")
-        # Fallback to simple KB query
-        return create_knowledge_base_tool(kb_name, project_id, kb_controller)
-    
-    # Create async tool function
-    async def rag_query(question: str) -> str:
-        """
-        Query the knowledge base using RAG pipeline to get comprehensive answers.
-        
-        Args:
-            question: Natural language question to answer using the knowledge base
-            
-        Returns:
-            Answer generated from the knowledge base using RAG
-        """
-        try:
-            # Use RAG pipeline to get answer
-            if hasattr(pipeline, 'ainvoke'):
-                result = await pipeline.ainvoke({"question": question})
-            elif hasattr(pipeline, 'invoke'):
-                result = pipeline.invoke({"question": question})
-            else:
-                # Fallback: try calling directly
-                result = pipeline(question)
-            
-            # Extract answer from result
-            if isinstance(result, dict):
-                answer = result.get("answer", result.get("output", str(result)))
-            else:
-                answer = str(result)
-            
-            return answer
-            
-        except Exception as e:
-            logger.error(f"Error in RAG query for {kb_name}: {e}", exc_info=True)
-            return f"Error querying knowledge base '{kb_name}': {str(e)}"
-    
-    # Set tool metadata
-    rag_query.__name__ = f"rag_query_{kb_name}"
-    rag_query.__doc__ = (
-        f"Query the knowledge base '{kb_name}' using RAG (Retrieval-Augmented Generation) "
-        f"to get comprehensive answers. Use this tool to answer questions about topics "
-        f"covered in this knowledge base. The input should be a clear, specific question."
-    )
-    
-    return rag_query
-
-
 def build_tools_from_agent_config(
     agent_params: Dict[str, Any],
     command_executor: Any,
     llm: Any,
     embedding_model: Any,
-    kb_controller: KnowledgeBaseController,
+    kb_controller: Any,
     project_id: int,
 ) -> List[Any]:
     """
     Build all tools from agent configuration.
     
+    This function creates a single SQL tool that handles all queries including:
+    - Database table queries
+    - Knowledge base queries (semantic search and metadata filtering)
+    
     Args:
         agent_params: Agent parameters containing data configuration
         command_executor: Command executor for SQL queries
-        llm: LLM instance
-        embedding_model: Embedding model instance
-        kb_controller: Knowledge base controller
-        project_id: Project ID
+        llm: LLM instance (not used directly, kept for compatibility)
+        embedding_model: Embedding model instance (not used, kept for compatibility)
+        kb_controller: Knowledge base controller (not used directly, kept for compatibility)
+        project_id: Project ID (not used directly, kept for compatibility)
         
     Returns:
         List of tool functions ready to be registered with Pydantic AI agent
+        (currently returns a single SQL tool that handles everything)
     """
     tools = []
     
@@ -344,26 +188,14 @@ def build_tools_from_agent_config(
     tables_list = data_config.get("tables")
     knowledge_bases_list = data_config.get("knowledge_bases")
     
-    # Create text2sql tool if tables are configured
+    # Create a single SQL tool that handles both tables and knowledge bases
+    # Knowledge bases are queried using MindsDB SQL syntax:
+    # - SELECT * FROM kb_name WHERE content = 'query' (semantic search)
+    # - SELECT * FROM kb_name WHERE metadata_column = 'value' (metadata filtering)
     if tables_list or knowledge_bases_list:
         sql_tool = create_text2sql_tool(agent_params, command_executor, llm)
         if sql_tool:
             tools.append(sql_tool)
-    
-    # Create knowledge base tools
-    if knowledge_bases_list:
-        for kb_name in knowledge_bases_list:
-            # Try to create RAG tool first, fallback to simple KB query
-            rag_tool = create_retrieval_tool(
-                kb_name, project_id, kb_controller, llm, embedding_model
-            )
-            if rag_tool:
-                tools.append(rag_tool)
-            else:
-                # Fallback to simple KB query tool
-                kb_tool = create_knowledge_base_tool(kb_name, project_id, kb_controller)
-                if kb_tool:
-                    tools.append(kb_tool)
     
     return tools
 

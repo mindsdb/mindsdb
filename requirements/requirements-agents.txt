@@ -25,5 +25,4 @@ starlette>=0.27
 transformers >= 4.42.4
 
 mcp~=1.10.1
-a2wsgi ~= 1.10.10  # WSGI wrapper for flask+starlette
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server

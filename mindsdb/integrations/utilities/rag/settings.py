@@ -1,15 +1,10 @@
 from enum import Enum
 from typing import List, Union, Any, Optional, Dict, OrderedDict
 
-from langchain_community.vectorstores.chroma import Chroma
-from langchain_community.vectorstores.pgvector import PGVector
-from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
-from langchain_core.language_models import BaseChatModel
-from langchain_core.vectorstores import VectorStore
-from langchain_core.stores import BaseStore
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter as TextSplitter
+from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.base_vector_store import VectorStore
+from mindsdb.integrations.utilities.rag.storage.in_memory_byte_store import InMemoryByteStore
 
 DEFAULT_COLLECTION_NAME = "default_collection"
 
@@ -28,7 +23,6 @@ DEFAULT_LLM_MODEL_PROVIDER = "openai"
 DEFAULT_CONTENT_COLUMN_NAME = "body"
 DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
-DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_RERANKER_FLAG = False
 DEFAULT_RERANKING_MODEL = "gpt-4o"
 DEFAULT_LLM_ENDPOINT = "https://api.openai.com/v1"
@@ -395,9 +389,6 @@ class VectorStoreType(Enum):
     PGVECTOR = "pgvector"
 
 
-vector_store_map = {VectorStoreType.CHROMA: Chroma, VectorStoreType.PGVECTOR: PGVector}
-
-
 class VectorStoreConfig(BaseModel):
     vector_store_type: VectorStoreType = VectorStoreType.CHROMA
     persist_directory: str = None
@@ -745,17 +736,17 @@ class MultiHopRetrieverConfig(BaseModel):
 
 
 class RAGPipelineModel(BaseModel):
-    documents: Optional[List[Document]] = Field(default=None, description="List of documents")
+    documents: Optional[List[Any]] = Field(default=None, description="List of documents")
 
     vector_store_config: VectorStoreConfig = Field(
         default_factory=VectorStoreConfig, description="Vector store configuration"
     )
 
-    llm: Optional[BaseChatModel] = Field(default=None, description="Language model")
+    llm: Optional[Any] = Field(default=None, description="Language model")
     llm_model_name: str = Field(default=DEFAULT_LLM_MODEL, description="Language model name")
     llm_provider: Optional[str] = Field(default=None, description="Language model provider")
-    vector_store: VectorStore = Field(
-        default_factory=lambda: vector_store_map[VectorStoreConfig().vector_store_type],
+    vector_store: Optional[VectorStore] = Field(
+        default=None,
         description="Vector store",
     )
     db_connection_string: Optional[str] = Field(default=None, description="Database connection string")
@@ -763,7 +754,7 @@ class RAGPipelineModel(BaseModel):
         default=None, description="Configuration for metadata to be used for retrieval"
     )
     table_name: str = Field(default=DEFAULT_TEST_TABLE_NAME, description="Table name")
-    embedding_model: Optional[Embeddings] = Field(default=None, description="Embedding model")
+    embedding_model: Optional[Any] = Field(default=None, description="Embedding model")
     rag_prompt_template: str = Field(default=DEFAULT_RAG_PROMPT_TEMPLATE, description="RAG prompt template")
     retriever_prompt_template: Optional[Union[str, dict]] = Field(default=None, description="Retriever prompt template")
     retriever_type: RetrieverType = Field(default=RetrieverType.VECTOR_STORE, description="Retriever type")
@@ -788,7 +779,7 @@ class RAGPipelineModel(BaseModel):
     )
     max_concurrency: int = Field(default=DEFAULT_MAX_CONCURRENCY, description="Maximum concurrency")
     id_key: int = Field(default=DEFAULT_ID_KEY, description="ID key")
-    parent_store: Optional[BaseStore] = Field(default=None, description="Parent store")
+    parent_store: Optional[Any] = Field(default=None, description="Parent store")
     text_splitter: Optional[TextSplitter] = Field(default=None, description="Text splitter")
     chunk_size: int = Field(default=DEFAULT_CHUNK_SIZE, description="Chunk size")
     chunk_overlap: int = Field(default=DEFAULT_CHUNK_OVERLAP, description="Chunk overlap")

@@ -32,6 +32,7 @@ sentry-sdk[flask] == 2.14.0
 pyaml==23.12.0
 uvicorn>=0.30.0, <1.0.0   # For all HTTP-based APIs
 a2wsgi ~= 1.10.10  # WSGI wrapper for flask+starlette
+starlette>=0.27 
 # files reading
 pymupdf==1.25.2
 filetype

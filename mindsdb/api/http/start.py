@@ -1,10 +1,13 @@
 import gc
+import os
 
 gc.disable()
 
 from flask import Flask
-import uvicorn
+from starlette.applications import Starlette
+from starlette.routing import Mount
 from a2wsgi import WSGIMiddleware
+import uvicorn
 
 from mindsdb.api.http.initialize import initialize_app
 from mindsdb.interfaces.storage import db
@@ -31,17 +34,6 @@ def _is_http_only_mode() -> bool:
     return enabled == {"http"}
 
 
-def _wrap_flask_app(app: Flask):
-    """Convert the Flask WSGI app into an ASGI-compatible callable."""
-
-    a2wsgi_cfg = config["api"]["http"]["a2wsgi"]
-    return WSGIMiddleware(
-        app,
-        workers=a2wsgi_cfg["workers"],
-        send_queue_size=a2wsgi_cfg["send_queue_size"],
-    )
-
-
 def start(verbose, app: Flask = None, is_restart: bool = False):
     db.init()
     init_lexer_parsers()
@@ -56,9 +48,9 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
 
     http_only_mode = _is_http_only_mode()
 
+    routes = []
     if not http_only_mode:
-        from starlette.applications import Starlette
-        from starlette.routing import Mount
+        # Specific mounts FIRST so root app doesn't shadow them
         from mindsdb.api.a2a import get_a2a_app
         from mindsdb.api.mcp import get_mcp_app
 
@@ -66,21 +58,20 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
         a2a.add_middleware(PATAuthMiddleware)
         mcp = get_mcp_app()
         mcp.add_middleware(PATAuthMiddleware)
-        routes = [
-            Mount("/a2a", app=a2a),
-            Mount("/mcp", app=mcp),
-            Mount("/", app=_wrap_flask_app(app)),
-        ]
+        routes.append(Mount("/a2a", app=a2a))
+        routes.append(Mount("/mcp", app=mcp))
 
-        root_app = Starlette(routes=routes, debug=verbose)
-    else:
-        root_app = _wrap_flask_app(app)
+    # Root app LAST so it won't shadow the others
+    routes.append(
+        Mount(
+            "/",
+            app=WSGIMiddleware(
+                app,
+                workers=config["api"]["http"]["a2wsgi"]["workers"],
+                send_queue_size=config["api"]["http"]["a2wsgi"]["send_queue_size"],
+            ),
+        )
+    )
 
     # Setting logging to None makes uvicorn use the existing logging configuration
-    uvicorn.run(
-        root_app,
-        host=host,
-        port=int(port),
-        log_level=None,
-        log_config=None,
-    )
+    uvicorn.run(Starlette(routes=routes, debug=verbose), host=host, port=int(port), log_level=None, log_config=None)

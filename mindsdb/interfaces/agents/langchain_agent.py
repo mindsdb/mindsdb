@@ -45,7 +45,7 @@ from .providers import get_bedrock_chat_model
 from mindsdb.interfaces.agents.constants import (
     OPEN_AI_CHAT_MODELS,
     DEFAULT_AGENT_TIMEOUT_SECONDS,
-    DEFAULT_AGENT_TYPE,
+    get_default_agent_type,
     DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
@@ -369,6 +369,10 @@ class LangchainAgent:
         # Keep conversation history for context - don't nullify previous messages
 
         # Only use the last message as the current prompt, but preserve history for agent memory
+        try:
+            from langchain.agents import AgentExecutor
+        except ImportError:
+            raise ImportError("langchain is required for agent features. Install with: pip install mindsdb[agent]")
         response = self.run_agent(df, agent, args)
 
         # End the run completion span and update the metadata with tool usage
@@ -468,8 +472,8 @@ class LangchainAgent:
 
         # Store memory for agent use
         self._conversation_memory = memory
-
-        agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)
+        default_agent = get_default_agent_type()
+        agent_type = args.get("agent_type", default_agent)
         agent_executor = initialize_agent(
             tools,
             llm,

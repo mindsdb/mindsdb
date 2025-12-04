@@ -26,8 +26,19 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get
 
 from mindsdb.integrations.utilities.rag.settings import RerankerMode
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
-from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
+from mindsdb.interfaces.agents.constants import get_default_embeddings_model_class, MAX_INSERT_BATCH_SIZE
+from mindsdb.interfaces.agents.provider_utils import get_llm_provider
+
+try:
+    from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+    if getattr(exc, "name", "") and "langchain" in exc.name:
+        create_chat_model = None
+        _LANGCHAIN_IMPORT_ERROR = exc
+    else:  # Unknown import error, surface it
+        raise
+else:
+    _LANGCHAIN_IMPORT_ERROR = None
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
@@ -47,6 +58,13 @@ from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMRe
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
+
+
+def _require_agent_extra(feature: str):
+    if create_chat_model is None:
+        raise ImportError(
+            f"{feature} requires the optional agent dependencies. Install them via `pip install mindsdb[kb]`."
+        ) from _LANGCHAIN_IMPORT_ERROR
 
 
 class KnowledgeBaseInputParams(BaseModel):
@@ -1034,7 +1052,7 @@ class KnowledgeBaseTable:
             embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
-            embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+            embeddings_model = get_default_embeddings_model_class()
             logger.debug("Using default embedding model as knowledge base has no embedding model")
 
         # Update retrieval config with knowledge base parameters
@@ -1051,6 +1069,7 @@ class KnowledgeBaseTable:
                     llm_args["provider"] = get_llm_provider(llm_args)
                 else:
                     llm_args["provider"] = rag_config.llm_provider
+                _require_agent_extra("Building knowledge base retrieval pipelines")
                 rag_config.llm = create_chat_model(llm_args)
 
             # Create RAG pipeline

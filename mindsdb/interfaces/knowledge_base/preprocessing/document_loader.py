@@ -1,21 +1,34 @@
 import os
-from typing import Iterator, List
+from typing import Iterator, List, TYPE_CHECKING
 
-from langchain_core.documents import Document as LangchainDocument
-from langchain_text_splitters import MarkdownHeaderTextSplitter
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+    from langchain_core.documents import Document as LangchainDocument
 
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
-from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter
+from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
+    FileSplitter,
+)
 from mindsdb.interfaces.knowledge_base.preprocessing.models import Document
 from mindsdb.utilities import log
-
 try:  # Optional web handler dependency
     from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 except ImportError:  # pragma: no cover - executed when web handler extras missing
     get_all_websites = None
 
 logger = log.getLogger(__name__)
+
+
+def _get_langchain_document(feature: str):
+    try:
+        from langchain_core.documents import Document as LangchainDocument
+    except ModuleNotFoundError as exc:  # pragma: no cover - runtime guard
+        if getattr(exc, "name", "").startswith("langchain") or "langchain" in str(exc):
+            raise ImportError(
+                f"{feature} requires the optional knowledge base dependencies. Install them via `pip install mindsdb[kb]`."
+            ) from exc
+        raise
+    return LangchainDocument
 
 
 class DocumentLoader:
@@ -25,7 +38,6 @@ class DocumentLoader:
         self,
         file_controller: FileController,
         file_splitter: FileSplitter,
-        markdown_splitter: MarkdownHeaderTextSplitter,
         file_loader_class=FileLoader,
         mysql_proxy=None,
     ):
@@ -35,13 +47,11 @@ class DocumentLoader:
         Args:
             file_controller: Controller for file operations
             file_splitter: Splitter for file content
-            markdown_splitter: Splitter for markdown content
             file_loader_class: Class to use for file loading
             mysql_proxy: Proxy for executing MySQL queries
         """
         self.file_controller = file_controller
         self.file_splitter = file_splitter
-        self.markdown_splitter = markdown_splitter
         self.file_loader_class = file_loader_class
         self.mysql_proxy = mysql_proxy
 
@@ -81,6 +91,13 @@ class DocumentLoader:
             )
 
         websites_df = get_all_websites(urls, crawl_depth=crawl_depth, limit=limit, filters=filters)
+        if get_all_websites is None:
+            raise RuntimeError(
+                "Web crawling requires the optional web handler dependencies. "
+                "Install them via `pip install mindsdb[web]` or skip web sources."
+            )
+
+        LangchainDocument = _get_langchain_document("Web page ingestion for knowledge bases")
 
         for _, row in websites_df.iterrows():
             # Create a document with HTML extension for proper splitting

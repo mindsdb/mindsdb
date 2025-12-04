@@ -2,7 +2,7 @@ from copy import copy
 from typing import Optional, Any, List, Union
 import asyncio
 
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
+from mindsdb.interfaces.knowledge_base.embedding_model_utils import construct_embedding_model_from_args
 from mindsdb.integrations.libs.vectordatabase_handler import DistanceFunction
 from mindsdb.integrations.utilities.rag.chains.map_reduce_summarizer_chain import MapReduceSummarizerChain
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
@@ -17,7 +17,7 @@ from mindsdb.integrations.utilities.rag.settings import (RAGPipelineModel,
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
-from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 from mindsdb.utilities import log
 
@@ -397,7 +397,7 @@ class LangChainRAGPipeline:
         if knowledge_base_table is None:
             raise ValueError('Must provide valid "vector_store_config" for RAG pipeline config')
         embedding_args = knowledge_base_table._kb.embedding_model.learn_args.get('using', {})
-        embeddings = construct_model_from_args(embedding_args)
+        embeddings = construct_embedding_model_from_args(embedding_args)
         sql_llm = create_chat_model({
             'model_name': retriever_config.llm_config.model_name,
             'provider': retriever_config.llm_config.provider,

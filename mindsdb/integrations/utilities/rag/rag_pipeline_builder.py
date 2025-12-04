@@ -63,8 +63,7 @@ def _create_pipeline_from_multi_hop_retriever(config: RAGPipelineModel) -> LangC
         llm=config.llm,
         reranker_config=config.reranker_config,
         reranker=config.reranker,
-        vector_store_config=config.vector_store_config,
-        summarization_config=config.summarization_config
+        vector_store_config=config.vector_store_config
     )
 
 

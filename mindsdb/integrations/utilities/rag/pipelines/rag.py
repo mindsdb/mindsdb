@@ -4,7 +4,6 @@ import asyncio
 
 from mindsdb.interfaces.knowledge_base.embedding_model_utils import construct_embedding_model_from_args
 from mindsdb.integrations.libs.vectordatabase_handler import DistanceFunction
-from mindsdb.integrations.utilities.rag.chains.map_reduce_summarizer_chain import MapReduceSummarizerChain
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
 from mindsdb.integrations.utilities.rag.retrievers.sql_retriever import SQLRetriever
@@ -13,7 +12,7 @@ from mindsdb.integrations.utilities.rag.settings import (RAGPipelineModel,
                                                          DEFAULT_AUTO_META_PROMPT_TEMPLATE,
                                                          SearchKwargs, SearchType,
                                                          RerankerConfig,
-                                                         SummarizationConfig, VectorStoreConfig)
+                                                         VectorStoreConfig)
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
@@ -35,7 +34,6 @@ class SimpleRAGPipeline:
         prompt_template: str,
         llm: Any,
         reranker: Optional[Any] = None,
-        summarizer: Optional[Any] = None,
     ):
         """
         Initialize SimpleRAGPipeline
@@ -45,13 +43,11 @@ class SimpleRAGPipeline:
             prompt_template: Prompt template string with {question} and {context} placeholders
             llm: Language model with invoke/ainvoke methods
             reranker: Optional reranker for document reranking
-            summarizer: Optional summarizer chain
         """
         self.retriever_runnable = retriever_runnable
         self.prompt_template = prompt_template
         self.llm = llm
         self.reranker = reranker
-        self.summarizer = summarizer
     
     def _format_docs(self, docs: Union[List[Any], str]) -> str:
         """Format documents into context string"""
@@ -155,36 +151,13 @@ class SimpleRAGPipeline:
             except Exception as e:
                 logger.warning(f"Error during reranking, continuing without reranking: {e}")
         
-        # 3. Apply summarizer if enabled
-        if self.summarizer and docs:
-            try:
-                # Summarizer expects dict with 'context' and 'question' keys
-                summarizer_input = {
-                    'context': docs,
-                    'question': question
-                }
-                if hasattr(self.summarizer, 'ainvoke'):
-                    summarizer_result = await self.summarizer.ainvoke(summarizer_input)
-                elif hasattr(self.summarizer, 'invoke'):
-                    summarizer_result = self.summarizer.invoke(summarizer_input)
-                else:
-                    summarizer_result = summarizer_input
-                
-                # Extract context from summarizer result
-                if isinstance(summarizer_result, dict):
-                    docs = summarizer_result.get('context', docs)
-                else:
-                    docs = summarizer_result
-            except Exception as e:
-                logger.warning(f"Error during summarization, continuing without summarization: {e}")
-        
-        # 4. Format documents into context
+        # 3. Format documents into context
         context = self._format_docs(docs)
         
-        # 5. Format prompt
+        # 4. Format prompt
         formatted_prompt = self._format_prompt(question, context)
         
-        # 6. Generate answer using LLM
+        # 5. Generate answer using LLM
         # Langchain LLMs can accept strings (converted to HumanMessage) or messages
         # Try to use messages format if LLM supports it, otherwise use string
         try:
@@ -203,10 +176,10 @@ class SimpleRAGPipeline:
         else:
             raise ValueError("LLM must have ainvoke or invoke method")
         
-        # 7. Extract text from LLM response
+        # 6. Extract text from LLM response
         answer = self._extract_llm_response(llm_response)
         
-        # 8. Return dict with context, question, answer
+        # 7. Return dict with context, question, answer
         return {
             'context': docs,
             'question': question,
@@ -237,7 +210,6 @@ class LangChainRAGPipeline:
             - early_stop (bool): Whether to enable early stopping
             - early_stop_threshold: Confidence threshold for early stopping
         vector_store_config (VectorStoreConfig): Vector store configuration
-        summarization_config (SummarizationConfig): Summarization configuration
     """
 
     def __init__(
@@ -247,8 +219,7 @@ class LangChainRAGPipeline:
             llm,
             reranker: bool = DEFAULT_RERANKER_FLAG,
             reranker_config: Optional[RerankerConfig] = None,
-            vector_store_config: Optional[VectorStoreConfig] = None,
-            summarization_config: Optional[SummarizationConfig] = None
+            vector_store_config: Optional[VectorStoreConfig] = None
     ):
         self.retriever_runnable = retriever_runnable
         self.prompt_template = prompt_template
@@ -261,15 +232,7 @@ class LangChainRAGPipeline:
             self.reranker = LLMReranker(**reranker_kwargs)
         else:
             self.reranker = None
-        self.summarizer = None
         self.vector_store_config = vector_store_config
-        knowledge_base_table = self.vector_store_config.kb_table if self.vector_store_config is not None else None
-        if summarization_config is not None and knowledge_base_table is not None:
-            self.summarizer = MapReduceSummarizerChain(
-                vector_store_handler=knowledge_base_table.get_vector_db(),
-                table_name=knowledge_base_table.get_vector_db_table_name(),
-                summarization_config=summarization_config
-            )
 
     def with_returned_sources(self) -> SimpleRAGPipeline:
         """
@@ -287,8 +250,7 @@ class LangChainRAGPipeline:
             retriever_runnable=self.retriever_runnable,
             prompt_template=self.prompt_template,
             llm=self.llm,
-            reranker=self.reranker,
-            summarizer=self.summarizer
+            reranker=self.reranker
         )
 
     async def ainvoke(self, input_dict: dict) -> dict:
@@ -352,8 +314,7 @@ class LangChainRAGPipeline:
             config.llm,
             vector_store_config=config.vector_store_config,
             reranker=config.reranker,
-            reranker_config=config.reranker_config,
-            summarization_config=config.summarization_config
+            reranker_config=config.reranker_config
         )
 
     @classmethod

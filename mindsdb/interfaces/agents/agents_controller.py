@@ -435,7 +435,7 @@ class AgentsController:
         agent: db.Agents,
         messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: list[BaseTool] = None,
+        tools: list[Any] = None,
         stream: bool = False,
         params: dict | None = None,
     ) -> Union[Iterator[object], pd.DataFrame]:
@@ -446,7 +446,7 @@ class AgentsController:
             agent (db.Agents): Existing agent to get completion from
             messages (list[Dict[str, str]]): Chat history to send to the agent
             project_name (str): Project the agent belongs to (default mindsdb)
-            tools (list[BaseTool]): Tools to use while getting the completion
+            tools (list[Any]): Tools to use while getting the completion
             stream (bool): Whether to stream the response
             params (dict | None): params to redefine agent params
 

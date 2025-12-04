@@ -10,6 +10,7 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
     FileSplitterConfig,
 )
+
 try:
     from mindsdb.interfaces.agents.langchain_agent import create_chat_model
 except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency

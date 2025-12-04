@@ -319,7 +319,6 @@ class IntegrationDataNode(DataNode):
             logger.exception("Issue with clearing DF from NaN values:")
         # endregion
 
-
         return DataHubResponse(
             data_frame=df, columns=columns_info, affected_rows=result.affected_rows, mysql_types=result.mysql_types
         )

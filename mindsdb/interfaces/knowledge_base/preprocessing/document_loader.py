@@ -8,6 +8,7 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
 )
 from mindsdb.interfaces.knowledge_base.preprocessing.models import Document
 from mindsdb.utilities import log
+
 try:  # Optional web handler dependency
     from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 except ImportError:  # pragma: no cover - executed when web handler extras missing

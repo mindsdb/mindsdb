@@ -34,6 +34,7 @@ def _load_vector_store_classes():
         raise
     return {"chromadb": Chroma, "pgvector": PGVector}
 
+
 DEFAULT_COLLECTION_NAME = "default_collection"
 
 # Multi retriever specific
@@ -415,7 +416,8 @@ class MultiVectorRetrieverMode(Enum):
 class VectorStoreType(Enum):
     CHROMA = "chromadb"
     PGVECTOR = "pgvector"
-    
+
+
 def get_vector_store_map():
     """Return available vector store classes, importing on demand."""
     classes = _load_vector_store_classes()

@@ -837,7 +837,6 @@ class ExecuteCommands:
             from mindsdb_evaluator.accuracy.general import evaluate_accuracy
         except ImportError:
             logger.error("mindsdb-evaluator is not installed. Please install it with `pip install mindsdb-evaluator]`.")
-        
 
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)

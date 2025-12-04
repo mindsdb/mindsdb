@@ -88,7 +88,9 @@ class FileSplitterConfig:
             )
         if self.markdown_splitter is None:
             _, MarkdownHeaderTextSplitter, _, _ = _get_splitter_dependencies(feature)
-            self.markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON)
+            self.markdown_splitter = MarkdownHeaderTextSplitter(
+                headers_to_split_on=DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON
+            )
         if self.html_splitter is None:
             _, _, HTMLHeaderTextSplitter, _ = _get_splitter_dependencies(feature)
             self.html_splitter = HTMLHeaderTextSplitter(headers_to_split_on=DEFAULT_HTML_HEADERS_TO_SPLIT_ON)

@@ -2,18 +2,13 @@ import re
 import math
 import logging
 import collections
+import json
 from typing import List, Any, Optional, Dict, Tuple, Union, Callable
 
 from pydantic import BaseModel, Field
-from langchain.chains.llm import LLMChain
-from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
-from langchain_core.documents.base import Document
-from langchain_core.embeddings import Embeddings
-from langchain_core.exceptions import OutputParserException
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
-from langchain_core.retrievers import BaseRetriever
+
+from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever, RunnableRetriever
+from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
@@ -73,7 +68,7 @@ class SQLRetriever(BaseRetriever):
     4. Actually execute the query against our vector database to retrieve documents & return them.
     """
 
-    fallback_retriever: BaseRetriever
+    fallback_retriever: Any  # Must have get_relevant_documents or invoke method
     vector_store_handler: VectorStoreHandler
     # search parameters
     max_filters: int
@@ -84,7 +79,7 @@ class SQLRetriever(BaseRetriever):
     database_schema: Optional[DatabaseSchema] = None
 
     # Embeddings
-    embeddings_model: Embeddings
+    embeddings_model: Any  # Must have embed_query method
     search_kwargs: SearchKwargs
 
     # prompt templates
@@ -107,7 +102,7 @@ class SQLRetriever(BaseRetriever):
     distance_function: DistanceFunction
 
     # Re-rank and metadata generation model.
-    llm: BaseChatModel
+    llm: Any  # Must have invoke method
 
     def _sort_schema_by_priority_key(
         self,
@@ -172,25 +167,15 @@ class SQLRetriever(BaseRetriever):
         table_schema: TableSchema,
         boolean_system_prompt: bool = True,
         format_instructions: Optional[str] = None,
-    ) -> ChatPromptTemplate:
+    ) -> str:
         if boolean_system_prompt is True:
             system_prompt = self.boolean_system_prompt
         else:
             system_prompt = self.generative_system_prompt
 
         prepared_column_prompt = self._prepare_column_prompt(column_schema=column_schema, table_schema=table_schema)
-        column_schema_str = (
-            prepared_column_prompt.messages[1]
-            .format(
-                **prepared_column_prompt.partial_variables,
-                query="See query at the lowest level schema.",
-            )
-            .content
-        )
-
-        base_prompt_template = ChatPromptTemplate.from_messages(
-            [("system", system_prompt), ("user", self.value_prompt_template)]
-        )
+        # Extract column schema string from prepared prompt (it's now a string)
+        column_schema_str = prepared_column_prompt.split("Query:")[0] if "Query:" in prepared_column_prompt else prepared_column_prompt
 
         value_str = ""
         header_str = ""
@@ -251,24 +236,43 @@ Below is a list of comparison operators for constructing filters for this value 
         else:
             example_str = ""
 
-        return base_prompt_template.partial(
-            format_instructions=format_instructions,
-            header=header_str,
-            column_schema=column_schema_str,
-            value=value_str,
-            comparator=comparator_str,
-            type=value_schema.type,
-            description=value_schema.description,
-            usage=value_schema.usage,
-            examples=example_str,
-        )
+        # Format prompt as string instead of ChatPromptTemplate
+        format_instructions_str = format_instructions or ""
+        prompt = f"""{system_prompt}
+
+{self.value_prompt_template}
+
+Format Instructions:
+{format_instructions_str}
+
+Header:
+{header_str}
+
+Column Schema:
+{column_schema_str}
+
+Value:
+{value_str}
+
+Comparator:
+{comparator_str}
+
+Type: {value_schema.type}
+Description: {value_schema.description}
+Usage: {value_schema.usage}
+
+Examples:
+{example_str}
+
+Query: {{query}}"""
+        return prompt
 
     def _prepare_column_prompt(
         self,
         column_schema: ColumnSchema,
         table_schema: TableSchema,
         boolean_system_prompt: bool = True,
-    ) -> ChatPromptTemplate:
+    ) -> str:
         if boolean_system_prompt is True:
             system_prompt = self.boolean_system_prompt
         else:
@@ -277,18 +281,8 @@ Below is a list of comparison operators for constructing filters for this value 
         prepared_table_prompt = self._prepare_table_prompt(
             table_schema=table_schema, boolean_system_prompt=boolean_system_prompt
         )
-        table_schema_str = (
-            prepared_table_prompt.messages[1]
-            .format(
-                **prepared_table_prompt.partial_variables,
-                query="See query at the lowest level schema",
-            )
-            .content
-        )
-
-        base_prompt_template = ChatPromptTemplate.from_messages(
-            [("system", system_prompt), ("user", self.column_prompt_template)]
-        )
+        # Extract table schema string from prepared prompt (it's now a string)
+        table_schema_str = prepared_table_prompt.split("Query:")[0] if "Query:" in prepared_table_prompt else prepared_table_prompt
 
         header_str = f"This schema describes a column in the {table_schema.table} table."
 
@@ -314,28 +308,38 @@ Below is a description of the contents in this column in list format:
         else:
             example_str = ""
 
-        return base_prompt_template.partial(
-            table_schema=table_schema_str,
-            header=header_str,
-            column=column_schema.column,
-            type=column_schema.type,
-            description=column_schema.description,
-            usage=column_schema.usage,
-            values=value_str,
-            examples=example_str,
-        )
+        # Format prompt as string instead of ChatPromptTemplate
+        prompt = f"""{system_prompt}
+
+{self.column_prompt_template}
+
+Header:
+{header_str}
+
+Table Schema:
+{table_schema_str}
+
+Column: {column_schema.column}
+Type: {column_schema.type}
+Description: {column_schema.description}
+Usage: {column_schema.usage}
+
+Values:
+{value_str}
+
+Examples:
+{example_str}
+
+Query: {{query}}"""
+        return prompt
 
     def _prepare_table_prompt(
         self, table_schema: TableSchema, boolean_system_prompt: bool = True
-    ) -> ChatPromptTemplate:
+    ) -> str:
         if boolean_system_prompt is True:
             system_prompt = self.boolean_system_prompt
         else:
             system_prompt = self.generative_system_prompt
-
-        base_prompt_template = ChatPromptTemplate.from_messages(
-            [("system", system_prompt), ("user", self.table_prompt_template)]
-        )
 
         header_str = "This schema describes a table in the database."
 
@@ -354,31 +358,87 @@ Below is a description of the contents in this column in list format:
         else:
             example_str = ""
 
-        return base_prompt_template.partial(
-            header=header_str,
-            table=table_schema.table,
-            description=table_schema.description,
-            usage=table_schema.usage,
-            columns=columns_str,
-            examples=example_str,
-        )
+        # Format prompt as string instead of ChatPromptTemplate
+        prompt = f"""{system_prompt}
 
-    def _rank_schema(self, prompt: ChatPromptTemplate, query: str) -> float:
-        rank_chain = LLMChain(llm=self.llm.bind(logprobs=True), prompt=prompt, return_final_only=False)
-        output = rank_chain({"query": query})  # returns metadata
+{self.table_prompt_template}
 
-        #  parse through metadata tokens until encountering either yes, or no.
-        score = None  # a None score indicates the model output could not be parsed.
-        for content in output["full_generation"][0].message.response_metadata["logprobs"]["content"]:
-            #  Convert answer to score using the model's confidence
-            if content["token"].lower().strip() == "yes":
-                score = (1 + math.exp(content["logprob"])) / 2  # If yes, use the model's confidence
-                break
-            elif content["token"].lower().strip() == "no":
-                score = (1 - math.exp(content["logprob"])) / 2  # If no, invert the confidence
-                break
+Header:
+{header_str}
 
-        if score is None:
+Table: {table_schema.table}
+Description: {table_schema.description}
+Usage: {table_schema.usage}
+
+Columns:
+{columns_str}
+
+Examples:
+{example_str}
+
+Query: {{query}}"""
+        return prompt
+
+    def _rank_schema(self, prompt: str, query: str) -> float:
+        """
+        Rank schema by calling LLM with prompt and query.
+        
+        Args:
+            prompt: Prompt template string with {query} placeholder
+            query: Query string
+            
+        Returns:
+            Relevance score between 0 and 1
+        """
+        # Format prompt with query
+        formatted_prompt = prompt.format(query=query)
+        
+        try:
+            # Call LLM - try to get logprobs if supported
+            if hasattr(self.llm, 'bind') and hasattr(self.llm.bind(logprobs=True), 'invoke'):
+                llm_with_logprobs = self.llm.bind(logprobs=True)
+                output = llm_with_logprobs.invoke(formatted_prompt)
+            else:
+                # Fallback to regular invoke
+                output = self.llm.invoke(formatted_prompt)
+            
+            # Try to extract logprobs from response
+            score = None
+            if hasattr(output, 'response_metadata') and 'logprobs' in output.response_metadata:
+                logprobs = output.response_metadata['logprobs']
+                if 'content' in logprobs:
+                    for content in logprobs['content']:
+                        token = content.get('token', '').lower().strip()
+                        logprob = content.get('logprob', 0.0)
+                        if token == "yes":
+                            score = (1 + math.exp(logprob)) / 2
+                            break
+                        elif token == "no":
+                            score = (1 - math.exp(logprob)) / 2
+                            break
+            
+            # If no logprobs, try to parse yes/no from content
+            if score is None:
+                content_text = ""
+                if hasattr(output, 'content'):
+                    content_text = output.content.lower().strip()
+                elif isinstance(output, str):
+                    content_text = output.lower().strip()
+                else:
+                    content_text = str(output).lower().strip()
+                
+                if "yes" in content_text:
+                    score = 0.75  # Default positive score
+                elif "no" in content_text:
+                    score = 0.25  # Default negative score
+                else:
+                    score = 0.5  # Neutral score
+            
+            if score is None:
+                score = 0.0
+                
+        except Exception as e:
+            logger.warning(f"Error ranking schema: {e}")
             score = 0.0
 
         return score
@@ -396,7 +456,7 @@ Below is a description of the contents in this column in list format:
         tables = {}
         # rank tables by relevance
         for table_key, table_schema in ordered_database_schema.tables.items():
-            prompt: ChatPromptTemplate = self._prepare_table_prompt(
+            prompt: str = self._prepare_table_prompt(
                 table_schema=table_schema, boolean_system_prompt=True
             )
             table_schema.relevance = self._rank_schema(prompt=prompt, query=query)
@@ -428,7 +488,7 @@ Below is a description of the contents in this column in list format:
                 # rank columns by relevance
                 columns = {}
                 for column_key, column_schema in table_schema.columns.items():
-                    prompt: ChatPromptTemplate = self._prepare_column_prompt(
+                    prompt: str = self._prepare_column_prompt(
                         column_schema=column_schema,
                         table_schema=table_schema,
                         boolean_system_prompt=True,
@@ -472,7 +532,7 @@ Below is a description of the contents in this column in list format:
                     values = {}
                     #  rank values by relevance
                     for value_key, value_schema in column_schema.values.items():
-                        prompt: ChatPromptTemplate = self._prepare_value_prompt(
+                        prompt: str = self._prepare_value_prompt(
                             value_schema=value_schema,
                             column_schema=column_schema,
                             table_schema=table_schema,
@@ -600,9 +660,20 @@ Below is a description of the contents in this column in list format:
         pass
 
     def _prepare_retrieval_query(self, query: str) -> str:
-        rewrite_prompt = PromptTemplate(input_variables=["input"], template=self.rewrite_prompt_template)
-        rewrite_chain = LLMChain(llm=self.llm, prompt=rewrite_prompt)
-        return rewrite_chain.predict(input=query)
+        """Rewrite query to be suitable for retrieval using LLM"""
+        # Format prompt with query
+        formatted_prompt = self.rewrite_prompt_template.format(input=query)
+        
+        # Call LLM
+        llm_response = self.llm.invoke(formatted_prompt)
+        
+        # Extract content from LLM response
+        if hasattr(llm_response, 'content'):
+            return llm_response.content
+        elif isinstance(llm_response, str):
+            return llm_response
+        else:
+            return str(llm_response)
 
     def _prepare_pgvector_query(
         self,
@@ -643,15 +714,40 @@ Below is a description of the contents in this column in list format:
         )
         return base_query
 
-    def _generate_filter(self, prompt: ChatPromptTemplate, query: str) -> MetadataFilter:
-        gen_filter_chain = LLMChain(llm=self.llm, prompt=prompt)
-        output = gen_filter_chain({"query": query})
-        return output
+    def _generate_filter(self, prompt: str, query: str) -> MetadataFilter:
+        """Generate metadata filter using LLM"""
+        # Format prompt with query
+        formatted_prompt = prompt.format(query=query)
+        
+        # Call LLM
+        llm_response = self.llm.invoke(formatted_prompt)
+        
+        # Extract content from LLM response
+        if hasattr(llm_response, 'content'):
+            response_text = llm_response.content
+        elif isinstance(llm_response, str):
+            response_text = llm_response
+        else:
+            response_text = str(llm_response)
+        
+        # Parse JSON response to get MetadataFilter
+        try:
+            parsed = json.loads(response_text)
+            # If it's a dict, try to create MetadataFilter
+            if isinstance(parsed, dict):
+                return MetadataFilter(**parsed)
+            else:
+                # If it's already a MetadataFilter-like object
+                return parsed
+        except (json.JSONDecodeError, TypeError, Exception) as e:
+            logger.warning(f"Error parsing filter response: {e}")
+            # Return empty filter on error
+            return MetadataFilter(attribute="", comparator="=", value="")
 
     def _generate_metadata_filters(
         self, query: str, ranked_database_schema
     ) -> Union[List[AblativeMetadataFilter], HandlerResponse]:
-        parser = PydanticOutputParser(pydantic_object=MetadataFilter)
+        """Generate metadata filters using LLM"""
 
         metadata_filter_list = []
         #  iterate through tables to rank values
@@ -664,39 +760,55 @@ Below is a description of the contents in this column in list format:
                         # must use generation if field is a dictionary of tuples or a list
                         if type(value_schema.value) in [list, dict]:
                             try:
-                                metadata_prompt: ChatPromptTemplate = self._prepare_value_prompt(
-                                    format_instructions=parser.get_format_instructions(),
+                                # Create format instructions for JSON output
+                                format_instructions = """Return a JSON object with the following structure:
+{
+  "attribute": "column_name",
+  "comparator": "comparison_operator",
+  "value": "filter_value"
+}"""
+                                
+                                metadata_prompt: str = self._prepare_value_prompt(
+                                    format_instructions=format_instructions,
                                     value_schema=value_schema,
                                     column_schema=column_schema,
                                     table_schema=table_schema,
                                     boolean_system_prompt=False,
                                 )
 
-                                metadata_filters_chain = LLMChain(llm=self.llm, prompt=metadata_prompt)
-                                metadata_filter_output = metadata_filters_chain.predict(
-                                    query=query,
-                                )
+                                # Call LLM directly
+                                formatted_prompt = metadata_prompt.format(query=query)
+                                llm_response = self.llm.invoke(formatted_prompt)
+                                
+                                # Extract content from LLM response
+                                if hasattr(llm_response, 'content'):
+                                    metadata_filter_output = llm_response.content
+                                elif isinstance(llm_response, str):
+                                    metadata_filter_output = llm_response
+                                else:
+                                    metadata_filter_output = str(llm_response)
 
                                 # If the LLM outputs raw JSON, use it as-is.
                                 # If the LLM outputs anything including a json markdown section, use the last one.
-                                json_markdown_output = re.findall(r"```json.*```", metadata_filter_output, re.DOTALL)
+                                json_markdown_output = re.findall(r"```json.*?```", metadata_filter_output, re.DOTALL)
                                 if json_markdown_output:
                                     metadata_filter_output = json_markdown_output[-1]
                                     # Clean the json tags.
                                     metadata_filter_output = metadata_filter_output[7:]
                                     metadata_filter_output = metadata_filter_output[:-3]
 
-                                metadata_filter = parser.invoke(metadata_filter_output)
-                                model_dump = metadata_filter.model_dump()
-                                model_dump.update(
-                                    {
-                                        "schema_table": table_key,
-                                        "schema_column": column_key,
-                                        "schema_value": value_key,
-                                    }
-                                )
+                                # Parse JSON directly instead of using PydanticOutputParser
+                                parsed = json.loads(metadata_filter_output.strip())
+                                model_dump = {
+                                    "attribute": parsed.get("attribute", ""),
+                                    "comparator": parsed.get("comparator", "="),
+                                    "value": parsed.get("value", ""),
+                                    "schema_table": table_key,
+                                    "schema_column": column_key,
+                                    "schema_value": value_key,
+                                }
                                 metadata_filter = AblativeMetadataFilter(**model_dump)
-                            except OutputParserException as e:
+                            except (json.JSONDecodeError, TypeError, Exception) as e:
                                 logger.warning(
                                     f"LLM failed to generate structured metadata filters: {e}",
                                     exc_info=logger.isEnabledFor(logging.DEBUG),
@@ -732,7 +844,7 @@ Below is a description of the contents in this column in list format:
             )
             return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
 
-    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun) -> List[Document]:
+    def _get_relevant_documents(self, query: str, *, run_manager: Optional[Any] = None) -> List[Any]:
         # Rewrite query to be suitable for retrieval.
         retrieval_query = self._prepare_retrieval_query(query)
 
@@ -788,8 +900,8 @@ Below is a description of the contents in this column in list format:
                 document_df = document_response.data_frame
                 for _, document_row in document_df.iterrows():
                     retrieved_documents.append(
-                        Document(
-                            document_row.get("content", ""),
+                        SimpleDocument(
+                            page_content=document_row.get("content", ""),
                             metadata=document_row.get("metadata", {}),
                         )
                     )
@@ -798,8 +910,37 @@ Below is a description of the contents in this column in list format:
 
             # If the SQL query constructed did not return any documents, fallback.
             logger.info("No documents returned from SQL retriever, using fallback retriever.")
-            return self.fallback_retriever._get_relevant_documents(retrieval_query, run_manager=run_manager)
+            return self._retrieve_from_fallback_retriever(retrieval_query)
         else:
             # If no metadata fields could be generated fallback.
             logger.info("No metadata fields were successfully generated, using fallback retriever.")
-            return self.fallback_retriever._get_relevant_documents(retrieval_query, run_manager=run_manager)
+            return self._retrieve_from_fallback_retriever(retrieval_query)
+    
+    def _retrieve_from_fallback_retriever(self, query: str) -> List[Any]:
+        """Retrieve documents from fallback retriever using duck typing"""
+        if hasattr(self.fallback_retriever, '_get_relevant_documents'):
+            return self.fallback_retriever._get_relevant_documents(query)
+        elif hasattr(self.fallback_retriever, 'get_relevant_documents'):
+            return self.fallback_retriever.get_relevant_documents(query)
+        elif hasattr(self.fallback_retriever, 'invoke'):
+            return self.fallback_retriever.invoke(query)
+        else:
+            raise ValueError("Fallback retriever must have _get_relevant_documents, get_relevant_documents, or invoke method")
+    
+    def invoke(self, query: str) -> List[Any]:
+        """Sync invocation - retrieve documents for a query"""
+        return self._get_relevant_documents(query)
+    
+    async def ainvoke(self, query: str) -> List[Any]:
+        """Async invocation - retrieve documents for a query"""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._get_relevant_documents, query)
+    
+    def get_relevant_documents(self, query: str) -> List[Any]:
+        """Get relevant documents (sync)"""
+        return self._get_relevant_documents(query)
+    
+    def as_runnable(self) -> RunnableRetriever:
+        """Return self as a runnable retriever"""
+        return self

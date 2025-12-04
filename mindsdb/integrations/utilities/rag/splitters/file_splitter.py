@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Callable, List, Union, TYPE_CHECKING, Any
+from typing import Callable, List, TYPE_CHECKING, Any
 
 from mindsdb.interfaces.knowledge_base.preprocessing.models import TextChunkingConfig
 

@@ -1,8 +1,5 @@
 import os
-from typing import Iterator, List, TYPE_CHECKING
-
-if TYPE_CHECKING:  # pragma: no cover - type checking only
-    from langchain_core.documents import Document as LangchainDocument
+from typing import Iterator, List
 
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader

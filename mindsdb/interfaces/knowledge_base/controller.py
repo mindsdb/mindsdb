@@ -1052,7 +1052,8 @@ class KnowledgeBaseTable:
             embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
-            embeddings_model = get_default_embeddings_model_class()
+            embeddings_model_class = get_default_embeddings_model_class()
+            embeddings_model = embeddings_model_class()
             logger.debug("Using default embedding model as knowledge base has no embedding model")
 
         # Update retrieval config with knowledge base parameters

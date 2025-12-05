@@ -51,10 +51,12 @@ def _load_rag_config(tool: dict, pred_args: dict, skill: db.Skills) -> RAGPipeli
             embeddings_model = construct_model_from_args(embedding_args)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         else:
-            embeddings_model = get_default_embeddings_model_class()
+            embeddings_model_class = get_default_embeddings_model_class()
+            embeddings_model = embeddings_model_class()
             logger.debug("Using default embedding model as knowledge base has no embedding model")
     elif "embedding_model" not in tools_config:
-        embeddings_model = get_default_embeddings_model_class()
+        embeddings_model_class = get_default_embeddings_model_class()
+        embeddings_model = embeddings_model_class()
         logger.debug("Using default embedding model as no knowledge base provided")
 
     # Load and validate config

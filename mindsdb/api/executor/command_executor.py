@@ -514,6 +514,10 @@ class ExecuteCommands:
                 db_name = database_name
                 if statement.from_table is not None:
                     db_name = statement.from_table.parts[-1]
+                
+                # Ensure db_name is not None - default to session database or "mindsdb"
+                if db_name is None:
+                    db_name = self.session.database or "mindsdb"
 
                 where = BinaryOperation(op="=", args=[Identifier("project"), Constant(db_name)])
 
@@ -522,7 +526,8 @@ class ExecuteCommands:
                     from_table=Identifier(parts=["information_schema", sql_category]),
                     where=_get_show_where(statement, like_name="name", initial=where),
                 )
-                query = SQLQuery(select_statement, session=self.session)
+                # Pass database_name to SQLQuery to ensure it's set correctly
+                query = SQLQuery(select_statement, session=self.session, database=db_name)
                 return self.answer_select(query)
 
             elif sql_category == "projects":

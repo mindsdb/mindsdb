@@ -230,7 +230,7 @@ class ParametrizeConstants(Resource):
 
         # to lists:
         databases = {k: list(v) for k, v in databases.items()}
-        response = {"query": query, "parameters": parameters, "databases": databases}
+        response = {"query": str(query), "parameters": parameters, "databases": databases}
         return response, 200
 
 

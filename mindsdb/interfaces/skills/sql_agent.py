@@ -446,7 +446,7 @@ class SQLAgent:
         for kb in kb_names:
             key = f"{ctx.company_id}_{kb}_info"
             kb_info = self._cache.get(key) if self._cache else None
-            if True or kb_info is None:
+            if kb_info is None:
                 kb_info = self.get_kb_sample_rows(kb)
                 if self._cache:
                     self._cache.set(key, kb_info)
@@ -504,7 +504,7 @@ class SQLAgent:
             for table in all_tables:
                 key = f"{ctx.company_id}_{table}_info"
                 table_info = self._cache.get(key) if self._cache else None
-                if True or table_info is None:
+                if table_info is None:
                     table_info = self._get_single_table_info(table)
                     if self._cache:
                         self._cache.set(key, table_info)

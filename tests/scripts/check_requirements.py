@@ -28,10 +28,7 @@ UTILITIES_REQS_PATHS = [
     "mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt",
 ]
 
-EXTRA_REQS_PATHS = [
-    "requirements/requirements-agents.txt",
-    "requirements/requirements-kb.txt"
-]
+EXTRA_REQS_PATHS = ["requirements/requirements-agents.txt", "requirements/requirements-kb.txt"]
 
 
 HANDLER_REQS_PATHS = list(

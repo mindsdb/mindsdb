@@ -95,6 +95,7 @@ def define_deps():
             full_requirements += extra
 
     extra_requirements["all_extras"] = list(set(full_requirements))
+    extra_requirements["all"] = list(set(full_requirements))
 
     full_handlers_requirements = []
     handlers_dir_path = os.path.normpath("./mindsdb/integrations/handlers")

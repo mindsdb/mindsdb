@@ -4,7 +4,8 @@ gc.disable()
 
 from flask import Flask
 from starlette.applications import Starlette
-from starlette.routing import Mount
+from starlette.routing import Mount, Route
+from starlette.responses import JSONResponse
 from a2wsgi import WSGIMiddleware
 import uvicorn
 
@@ -23,6 +24,11 @@ gc.enable()
 logger = log.getLogger(__name__)
 
 
+async def health_check(request):
+    """Async health check that bypasses the WSGI worker pool."""
+    return JSONResponse({"status": "ok"})
+
+
 def start(verbose, app: Flask = None, is_restart: bool = False):
     db.init()
     init_lexer_parsers()
@@ -36,7 +42,11 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
     process_cache.init()
 
     routes = []
-    # Specific mounts FIRST
+    # Health check FIRST - async endpoint that bypasses WSGI worker pool
+    # This ensures health checks respond even when all workers are blocked
+    routes.append(Route("/api/util/ping", health_check, methods=["GET"]))
+
+    # Specific mounts
     a2a = get_a2a_app()
     a2a.add_middleware(PATAuthMiddleware)
     mcp = get_mcp_app()

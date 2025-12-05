@@ -1,1 +1,4 @@
 tiktoken
+# For now workaround to install langchain dependencies
+#TODO we are depricating langchain and rag in next version so this is temporary solution
+langchain-core==0.3.72

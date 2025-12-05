@@ -20,12 +20,20 @@ MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
 
+
 # Utilities that have their own requirements.txt files.
 # These are used only within handlers.
 UTILITIES_REQS_PATHS = [
     "mindsdb/integrations/utilities/handlers/auth_utilities/microsoft/requirements.txt",
     "mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt",
 ]
+
+EXTRA_REQS_PATHS = [
+    "requirements/requirements-agents.txt",
+    "requirements/requirements-kb.txt",
+    "requirements/requirements-ml.txt",
+]
+
 
 HANDLER_REQS_PATHS = list(
     set(glob.glob("**/requirements*.txt", recursive=True)) - set(glob.glob("requirements/requirements*.txt"))
@@ -64,6 +72,7 @@ MAIN_RULE_IGNORES = {
         "lxml",
         "openpyxl",
         "onnxruntime",
+        "litellm",
     ],
 }
 
@@ -220,6 +229,7 @@ PACKAGE_NAME_MAP = {
     "pydantic_core": ["pydantic"],
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
+    "sklearn": ["scikit-learn"],
 }
 
 # We use this to exit with a non-zero status code if any check fails
@@ -392,7 +402,7 @@ def check_requirements_imports():
 
     # Run against the main codebase
     errors = run_deptry(
-        ",".join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS),
+        ",".join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS + EXTRA_REQS_PATHS),
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f'--extend-exclude "{"|".join(MAIN_EXCLUDE_PATHS)}"',

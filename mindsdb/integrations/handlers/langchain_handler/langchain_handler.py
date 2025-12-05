@@ -22,7 +22,7 @@ from mindsdb.interfaces.agents.langchain_agent import (
 from mindsdb.interfaces.agents.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
-    DEFAULT_AGENT_TYPE,
+    get_default_agent_type,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
@@ -186,8 +186,8 @@ AI: {response}"""
                 memory.chat_memory.add_user_message(question)
             if answer:
                 memory.chat_memory.add_ai_message(answer)
-
-        agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)
+        default_agent = get_default_agent_type()
+        agent_type = args.get("agent_type", default_agent)
         agent_executor = initialize_agent(
             tools,
             llm,

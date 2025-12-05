@@ -2,3 +2,7 @@
 nltk>=3.9
 rouge-score>=0.1.2
 scipy
+# For now workaround to install all langchain dependencies
+#TODO we are depricating langchain and rag in next version so this is temporary solution
+langchain_core==0.3.27
+langchain-community==0.3.27

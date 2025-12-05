@@ -5,3 +5,10 @@ litellm==1.63.14
 chromadb~=0.6.3 # Knowledge bases.
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt
 -r mindsdb/integrations/handlers/langchain_embedding_handler/requirements.txt
+# For now workaround to install all langchain dependencies instead of relative path to requirements-agents
+#TODO we are depricating langchain and rag in next version so this is temporary solution
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-core==0.3.72
+langchain-experimental==0.3.4
+langchain-text-splitters==0.3.9

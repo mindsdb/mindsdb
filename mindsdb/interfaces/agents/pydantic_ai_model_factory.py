@@ -213,6 +213,8 @@ def get_pydantic_ai_model_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
     Get keyword arguments for Pydantic AI model initialization.
     
     This extracts API keys and other configuration needed by Pydantic AI models.
+    API keys are retrieved from system configuration if not provided in args,
+    following the same pattern as knowledge bases.
     
     Args:
         args: Dictionary containing model configuration
@@ -220,6 +222,8 @@ def get_pydantic_ai_model_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dictionary of keyword arguments for Pydantic AI model
     """
+    from mindsdb.integrations.utilities.handler_utils import get_api_key
+    
     kwargs = {}
     
     # Get provider
@@ -227,11 +231,15 @@ def get_pydantic_ai_model_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
     if provider is None:
         provider = get_llm_provider(args)
     
-    # Extract API keys based on provider
+    # Extract API keys based on provider, using get_api_key to get from system config if needed
     if provider == "openai" or provider == "vllm":
+        # Try to get API key from args first, then from system config
         api_key = args.get("openai_api_key") or args.get("api_key")
+        if not api_key:
+            api_key = get_api_key("openai", args, strict=False)
         if api_key:
             kwargs["api_key"] = api_key
+        
         base_url = args.get("openai_api_base") or args.get("base_url")
         if base_url:
             kwargs["base_url"] = base_url
@@ -240,15 +248,22 @@ def get_pydantic_ai_model_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
             kwargs["organization"] = organization
     
     elif provider == "anthropic":
+        # Try to get API key from args first, then from system config
         api_key = args.get("anthropic_api_key") or args.get("api_key")
+        if not api_key:
+            api_key = get_api_key("anthropic", args, strict=False)
         if api_key:
             kwargs["api_key"] = api_key
+        
         base_url = args.get("anthropic_api_url") or args.get("base_url")
         if base_url:
             kwargs["base_url"] = base_url
     
     elif provider == "google":
+        # Try to get API key from args first, then from system config
         api_key = args.get("google_api_key") or args.get("api_key")
+        if not api_key:
+            api_key = get_api_key("google", args, strict=False)
         if api_key:
             kwargs["api_key"] = api_key
     

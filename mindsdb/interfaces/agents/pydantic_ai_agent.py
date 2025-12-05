@@ -75,18 +75,56 @@ class PydanticAIAgent:
     def _initialize_args(self, llm_params: dict = None) -> dict:
         """
         Initialize the arguments for agent execution.
+        Uses the same pattern as knowledge bases: get default config and merge with user params.
         
         Args:
-            llm_params: Parameters for agent execution (already merged with defaults)
+            llm_params: Parameters for agent execution (already merged with defaults from agents_controller)
             
         Returns:
             dict: Final parameters for agent execution
         """
-        args = self.agent.params.copy()
+        from mindsdb.utilities.config import config
+        import copy
+        
+        # Get default LLM config from system config (same pattern as knowledge bases)
+        default_llm_config = copy.deepcopy(config.get("default_llm", {}))
+        
+        # Start with agent params
+        args = self.agent.params.copy() if self.agent.params else {}
+        
+        # Get model params from agent params (same structure as knowledge bases)
+        if "model" in args:
+            model_params = args.get("model", {})
+        else:
+            # If no "model" key, use params directly (backward compatibility)
+            model_params = args
+        
+        # Merge default config with model params (same as knowledge bases get_model_params)
+        if model_params:
+            if not isinstance(model_params, dict):
+                raise ValueError("Model parameters must be passed as a JSON object")
+            
+            # If provider mismatches - don't use default values
+            if "provider" in model_params and model_params["provider"] != default_llm_config.get("provider"):
+                combined_model_params = model_params.copy()
+            else:
+                combined_model_params = copy.deepcopy(default_llm_config)
+                combined_model_params.update(model_params)
+        else:
+            # No model params provided - use defaults from config
+            combined_model_params = default_llm_config
+        
+        # Remove use_default_llm flag if present
+        combined_model_params.pop("use_default_llm", None)
+        
+        # Update args with combined model params
+        args.update(combined_model_params)
+        
+        # Apply llm_params if provided (from agents_controller.get_agent_llm_params)
         if llm_params:
             args.update(llm_params)
         
-        # Set model name and provider if given in create agent
+        # Set model name and provider if given in create agent (these take precedence)
         if self.agent.model_name is not None:
             args["model_name"] = self.agent.model_name
         if self.agent.provider is not None:
@@ -158,17 +196,60 @@ class PydanticAIAgent:
             # For now, raise an error - this needs custom implementation
             raise ValueError("MindsDB provider requires custom model wrapper - not yet implemented")
         
-        # Get model kwargs
+        # Get model kwargs (includes API keys from system config)
         model_kwargs = get_pydantic_ai_model_kwargs(self.args)
         
-        # Create agent with system prompt
-        system_prompt = self.args.get("prompt_template", "you are an assistant")
+        # Pydantic AI reads API keys from environment variables
+        # Set them temporarily if provided in model_kwargs
+        import os
+        env_vars_to_restore = {}
+        if model_kwargs:
+            provider = self.args.get("provider", "openai")
+            
+            # Set API key in environment if provided
+            if "api_key" in model_kwargs:
+                if provider == "openai" or provider == "vllm":
+                    if "OPENAI_API_KEY" not in os.environ:
+                        env_vars_to_restore["OPENAI_API_KEY"] = os.environ.get("OPENAI_API_KEY")
+                        os.environ["OPENAI_API_KEY"] = model_kwargs["api_key"]
+                elif provider == "anthropic":
+                    if "ANTHROPIC_API_KEY" not in os.environ:
+                        env_vars_to_restore["ANTHROPIC_API_KEY"] = os.environ.get("ANTHROPIC_API_KEY")
+                        os.environ["ANTHROPIC_API_KEY"] = model_kwargs["api_key"]
+                elif provider == "google":
+                    if "GOOGLE_API_KEY" not in os.environ:
+                        env_vars_to_restore["GOOGLE_API_KEY"] = os.environ.get("GOOGLE_API_KEY")
+                        os.environ["GOOGLE_API_KEY"] = model_kwargs["api_key"]
+            
+            # Set base_url if provided (some providers support this via env vars)
+            if "base_url" in model_kwargs:
+                if provider == "openai" or provider == "vllm":
+                    if "OPENAI_BASE_URL" not in os.environ:
+                        env_vars_to_restore["OPENAI_BASE_URL"] = os.environ.get("OPENAI_BASE_URL")
+                        os.environ["OPENAI_BASE_URL"] = model_kwargs["base_url"]
+                elif provider == "anthropic":
+                    if "ANTHROPIC_API_URL" not in os.environ:
+                        env_vars_to_restore["ANTHROPIC_API_URL"] = os.environ.get("ANTHROPIC_API_URL")
+                        os.environ["ANTHROPIC_API_URL"] = model_kwargs["base_url"]
         
-        # Create agent
-        agent = Agent(
-            model_string,
-            system_prompt=system_prompt,
-        )
+        try:
+            # Create agent with system prompt
+            # Pydantic AI Agent doesn't accept model kwargs directly - it reads from environment
+            # We've set the environment variables above, so they'll be picked up when the model is created
+            system_prompt = self.args.get("prompt_template", "you are an assistant")
+            
+            # Create agent - Pydantic AI will read API keys from environment variables
+            agent = Agent(
+                model_string,
+                system_prompt=system_prompt,
+            )
+        finally:
+            # Restore original environment variables
+            for key, value in env_vars_to_restore.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
         
         # Build and register tools
         command_executor = self._get_command_executor()

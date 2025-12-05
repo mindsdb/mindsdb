@@ -415,19 +415,39 @@ class AgentsController:
     def get_agent_llm_params(self, agent_params: dict):
         """
         Get agent LLM parameters by combining default config with user provided parameters.
-        Similar to how knowledge bases handle default parameters.
+        Uses the same pattern as knowledge bases get_model_params function.
         """
-        combined_model_params = copy.deepcopy(config.get("default_llm", {}))
-
+        # Import get_model_params pattern from knowledge_base (or implement inline for consistency)
+        from mindsdb.utilities.config import config
+        import copy
+        
+        # Get default LLM config from system config
+        default_llm_config = copy.deepcopy(config.get("default_llm", {}))
+        
+        # Get model params from agent params (same structure as knowledge bases)
         if "model" in agent_params:
-            model_params = agent_params["model"]
+            model_params = agent_params.get("model", {})
         else:
-            # params for LLM can be arbitrary
+            # params for LLM can be arbitrary (backward compatibility)
             model_params = agent_params
 
         if model_params:
-            combined_model_params.update(model_params)
-
+            if not isinstance(model_params, dict):
+                raise ValueError("Model parameters must be passed as a JSON object")
+            
+            # If provider mismatches - don't use default values (same as knowledge bases)
+            if "provider" in model_params and model_params["provider"] != default_llm_config.get("provider"):
+                combined_model_params = model_params.copy()
+            else:
+                combined_model_params = copy.deepcopy(default_llm_config)
+                combined_model_params.update(model_params)
+        else:
+            # No model params provided - use defaults from config
+            combined_model_params = default_llm_config
+        
+        # Remove use_default_llm flag if present
+        combined_model_params.pop("use_default_llm", None)
+        
         return combined_model_params
 
     def get_completion(

@@ -8,6 +8,7 @@ import logging
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.exceptions import UnexpectedModelBehavior, ModelRetry
+from pydantic_ai.messages import ModelRequest, ModelResponse, ModelMessage, TextPart
 
 from mindsdb.utilities import log
 from mindsdb.interfaces.storage import db
@@ -301,31 +302,121 @@ class PydanticAIAgent:
         self._pydantic_agent = agent
         return agent
     
-    def _convert_messages_to_history(self, df: pd.DataFrame) -> List[Dict[str, str]]:
+    def _convert_messages_to_history(self, df: pd.DataFrame) -> List[ModelMessage]:
         """
         Convert DataFrame messages to Pydantic AI message history format.
         
         Args:
-            df: DataFrame with user/assistant columns
+            df: DataFrame with user/assistant columns or role/content columns
             
         Returns:
-            List of message dictionaries for Pydantic AI
+            List of Pydantic AI Message objects
         """
-        user_column = self.args.get("user_column", USER_COLUMN)
-        assistant_column = self.args.get("assistant_column", ASSISTANT_COLUMN)
-        
         messages = []
-        for _, row in df.iterrows():
-            user_msg = row.get(user_column)
-            assistant_msg = row.get(assistant_column)
+        
+        # Check if DataFrame has 'role' and 'content' columns (API format)
+        if "role" in df.columns and "content" in df.columns:
+            for _, row in df.iterrows():
+                role = row.get("role")
+                content = row.get("content", "")
+                if pd.notna(role) and pd.notna(content):
+                    if role == "user":
+                        messages.append(ModelRequest.user_text_prompt(str(content)))
+                    elif role == "assistant":
+                        messages.append(ModelResponse(parts=[TextPart(content=str(content))]))
+        else:
+            # Legacy format with question/answer columns
+            user_column = self.args.get("user_column", USER_COLUMN)
+            assistant_column = self.args.get("assistant_column", ASSISTANT_COLUMN)
             
-            if pd.notna(user_msg) and str(user_msg).strip():
-                messages.append({"role": "user", "content": str(user_msg)})
-            
-            if pd.notna(assistant_msg) and str(assistant_msg).strip():
-                messages.append({"role": "assistant", "content": str(assistant_msg)})
+            for _, row in df.iterrows():
+                user_msg = row.get(user_column)
+                assistant_msg = row.get(assistant_column)
+                
+                if pd.notna(user_msg) and str(user_msg).strip():
+                    messages.append(ModelRequest.user_text_prompt(str(user_msg)))
+                
+                if pd.notna(assistant_msg) and str(assistant_msg).strip():
+                    messages.append(ModelResponse(parts=[TextPart(content=str(assistant_msg))]))
         
         return messages
+    
+    def _extract_current_prompt_and_history(self, messages: Any, args: Dict) -> tuple[str, List[ModelMessage]]:
+        """
+        Extract current prompt and message history from messages in various formats.
+        
+        Args:
+            messages: Can be:
+                - List of dicts with 'role' and 'content' (API format)
+                - DataFrame with 'role'/'content' columns (API format)
+                - DataFrame with 'question'/'answer' columns (legacy format)
+            args: Arguments dict
+            
+        Returns:
+            Tuple of (current_prompt: str, message_history: List[ModelMessage])
+        """
+        # Handle list of dicts with 'role' and 'content' (API format)
+        if isinstance(messages, list) and len(messages) > 0:
+            if isinstance(messages[0], dict) and "role" in messages[0]:
+                # Convert to Pydantic AI Message objects
+                pydantic_messages = []
+                for msg in messages:
+                    if msg.get("role") == "user":
+                        pydantic_messages.append(ModelRequest.user_text_prompt(msg.get("content", "")))
+                    elif msg.get("role") == "assistant":
+                        pydantic_messages.append(ModelResponse(parts=[TextPart(content=msg.get("content", ""))]))
+                
+                # Get current prompt (last user message)
+                current_prompt = ""
+                for msg in reversed(messages):
+                    if msg.get("role") == "user":
+                        current_prompt = msg.get("content", "")
+                        break
+                
+                # Get message history (all except last message)
+                message_history = pydantic_messages[:-1] if len(pydantic_messages) > 1 else []
+                return current_prompt, message_history
+        
+        # Handle DataFrame format
+        df = messages if isinstance(messages, pd.DataFrame) else pd.DataFrame(messages)
+        df = df.reset_index(drop=True)
+        
+        # Check if DataFrame has 'role' and 'content' columns (API format)
+        if "role" in df.columns and "content" in df.columns:
+            # Convert to Pydantic AI Message objects
+            pydantic_messages = []
+            for _, row in df.iterrows():
+                role = row.get("role")
+                content = row.get("content", "")
+                if pd.notna(role) and pd.notna(content):
+                    if role == "user":
+                        pydantic_messages.append(ModelRequest.user_text_prompt(str(content)))
+                    elif role == "assistant":
+                        pydantic_messages.append(ModelResponse(parts=[TextPart(content=str(content))]))
+            
+            # Get current prompt (last user message)
+            current_prompt = ""
+            for _, row in reversed(df.iterrows()):
+                if row.get("role") == "user":
+                    current_prompt = str(row.get("content", ""))
+                    break
+            
+            # Get message history (all except last message)
+            message_history = pydantic_messages[:-1] if len(pydantic_messages) > 1 else []
+            return current_prompt, message_history
+        
+        # Legacy DataFrame format with question/answer columns
+        user_column = args.get("user_column", USER_COLUMN)
+        current_prompt = ""
+        if len(df) > 0 and user_column in df.columns:
+            user_messages = df[user_column].dropna()
+            if len(user_messages) > 0:
+                current_prompt = str(user_messages.iloc[-1])
+        
+        # Convert history (all except last)
+        history_df = df[:-1] if len(df) > 1 else pd.DataFrame()
+        message_history = self._convert_messages_to_history(history_df)
+        return current_prompt, message_history
     
     def get_metadata(self) -> Dict:
         """Get metadata for observability"""
@@ -385,27 +476,10 @@ class PydanticAIAgent:
         args.update(self.args)
         args.update(params or {})
         
-        # Convert messages to DataFrame if needed
-        if isinstance(messages, list):
-            df = pd.DataFrame(messages)
-        else:
-            df = messages
-        
-        df = df.reset_index(drop=True)
-        logger.info(f"PydanticAIAgent.get_completion: Received {len(df)} messages")
-        
-        # Get current prompt (last user message)
-        user_column = args.get("user_column", USER_COLUMN)
-        current_prompt = ""
-        if len(df) > 0 and user_column in df.columns:
-            # Get last non-null user message
-            user_messages = df[user_column].dropna()
-            if len(user_messages) > 0:
-                current_prompt = str(user_messages.iloc[-1])
-        
-        # Convert history (all except last)
-        history_df = df[:-1] if len(df) > 1 else pd.DataFrame()
-        message_history = self._convert_messages_to_history(history_df)
+        # Extract current prompt and message history from messages
+        # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
+        current_prompt, message_history = self._extract_current_prompt_and_history(messages, args)
+        logger.info(f"PydanticAIAgent.get_completion: Extracted prompt and {len(message_history)} history messages")
         
         # Create agent
         agent = self._create_pydantic_agent()
@@ -475,26 +549,10 @@ class PydanticAIAgent:
         """
         args = self.args
         
-        # Convert messages to DataFrame if needed
-        if isinstance(messages, list):
-            df = pd.DataFrame(messages)
-        else:
-            df = messages
-        
-        df = df.reset_index(drop=True)
-        logger.info(f"PydanticAIAgent._get_completion_stream: Received {len(df)} messages")
-        
-        # Get current prompt
-        user_column = args.get("user_column", USER_COLUMN)
-        current_prompt = ""
-        if len(df) > 0 and user_column in df.columns:
-            user_messages = df[user_column].dropna()
-            if len(user_messages) > 0:
-                current_prompt = str(user_messages.iloc[-1])
-        
-        # Convert history
-        history_df = df[:-1] if len(df) > 1 else pd.DataFrame()
-        message_history = self._convert_messages_to_history(history_df)
+        # Extract current prompt and message history from messages
+        # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
+        current_prompt, message_history = self._extract_current_prompt_and_history(messages, args)
+        logger.info(f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages")
         
         # Create agent
         agent = self._create_pydantic_agent()

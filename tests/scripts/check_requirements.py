@@ -72,6 +72,7 @@ MAIN_RULE_IGNORES = {
         "lxml",
         "openpyxl",
         "onnxruntime",
+        "litellm"
     ],
 }
 

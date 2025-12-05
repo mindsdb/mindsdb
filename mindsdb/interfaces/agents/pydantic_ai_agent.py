@@ -145,9 +145,19 @@ class PydanticAIAgent:
         
         # Set default prompt template if not provided
         if args.get("prompt_template") is None:
-            default_prompt = "you are an assistant, answer using the tables connected"
+            default_prompt = """you are an assistant, answer using the tables connected.
+
+**IMPORTANT FORMATTING REQUIREMENTS:**
+- Always format your responses in Markdown
+- When presenting tabular data or query results, organize them as Markdown tables
+- Use proper Markdown table syntax with headers and aligned columns
+- For example:
+  | Column1 | Column2 | Column3 |
+  |---------|---------|---------|
+  | Value1  | Value2  | Value3  |
+- Use other Markdown formatting (headers, lists, code blocks) as appropriate to make responses clear and well-structured"""
             args["prompt_template"] = default_prompt
-            logger.info(f"Using default prompt template: {default_prompt}")
+            logger.info(f"Using default prompt template with markdown formatting")
         
         if "model_name" not in args:
             raise ValueError(
@@ -238,6 +248,22 @@ class PydanticAIAgent:
             # Pydantic AI Agent doesn't accept model kwargs directly - it reads from environment
             # We've set the environment variables above, so they'll be picked up when the model is created
             system_prompt = self.args.get("prompt_template", "you are an assistant")
+            
+            # Ensure markdown formatting instructions are included in the prompt
+            markdown_instructions = """
+**IMPORTANT FORMATTING REQUIREMENTS:**
+- Always format your responses in Markdown
+- When presenting tabular data or query results, organize them as Markdown tables
+- Use proper Markdown table syntax with headers and aligned columns
+- For example:
+  | Column1 | Column2 | Column3 |
+  |---------|---------|---------|
+  | Value1  | Value2  | Value3  |
+- Use other Markdown formatting (headers, lists, code blocks) as appropriate to make responses clear and well-structured"""
+            
+            # Append markdown instructions if not already present
+            if "markdown" not in system_prompt.lower() and "formatting" not in system_prompt.lower():
+                system_prompt = f"{system_prompt}\n\n{markdown_instructions}"
             
             # Create agent - Pydantic AI will read API keys from environment variables
             agent = Agent(

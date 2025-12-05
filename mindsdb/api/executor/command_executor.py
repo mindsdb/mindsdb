@@ -52,7 +52,6 @@ from mindsdb_sql_parser.ast.mindsdb import (
     AlterKnowledgeBase,
     CreateMLEngine,
     CreatePredictor,
-    CreateSkill,
     CreateTrigger,
     CreateView,
     CreateKnowledgeBaseIndex,
@@ -64,14 +63,12 @@ from mindsdb_sql_parser.ast.mindsdb import (
     DropKnowledgeBase,
     DropMLEngine,
     DropPredictor,
-    DropSkill,
     DropTrigger,
     Evaluate,
     FinetunePredictor,
     RetrainPredictor,
     UpdateAgent,
     UpdateChatBot,
-    UpdateSkill,
 )
 
 import mindsdb.utilities.profiler as profiler
@@ -517,6 +514,10 @@ class ExecuteCommands:
                 db_name = database_name
                 if statement.from_table is not None:
                     db_name = statement.from_table.parts[-1]
+                
+                # Ensure db_name is not None - default to session database or "mindsdb"
+                if db_name is None:
+                    db_name = self.session.database or "mindsdb"
 
                 where = BinaryOperation(op="=", args=[Identifier("project"), Constant(db_name)])
 
@@ -525,7 +526,8 @@ class ExecuteCommands:
                     from_table=Identifier(parts=["information_schema", sql_category]),
                     where=_get_show_where(statement, like_name="name", initial=where),
                 )
-                query = SQLQuery(select_statement, session=self.session)
+                # Pass database_name to SQLQuery to ensure it's set correctly
+                query = SQLQuery(select_statement, session=self.session, database=db_name)
                 return self.answer_select(query)
 
             elif sql_category == "projects":
@@ -662,12 +664,6 @@ class ExecuteCommands:
             return self.answer_alter_kb(statement, database_name)
         elif statement_type is DropKnowledgeBase:
             return self.answer_drop_kb(statement, database_name)
-        elif statement_type is CreateSkill:
-            return self.answer_create_skill(statement, database_name)
-        elif statement_type is DropSkill:
-            return self.answer_drop_skill(statement, database_name)
-        elif statement_type is UpdateSkill:
-            return self.answer_update_skill(statement, database_name)
         elif statement_type is CreateAgent:
             return self.answer_create_agent(statement, database_name)
         elif statement_type is DropAgent:
@@ -1457,42 +1453,6 @@ class ExecuteCommands:
             project_name=project_name,
             if_exists=statement.if_exists,
         )
-
-        return ExecuteAnswer()
-
-    def answer_create_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        try:
-            _ = self.session.skills_controller.add_skill(name, project_name, statement.type, statement.params)
-        except ValueError as e:
-            # Project does not exist or skill already exists.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
-    def answer_drop_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        try:
-            self.session.skills_controller.delete_skill(name, project_name, strict_case=True)
-        except ValueError as e:
-            # Project does not exist or skill does not exist.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
-    def answer_update_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        type = statement.params.pop("type", None)
-        try:
-            _ = self.session.skills_controller.update_skill(
-                name, project_name=project_name, type=type, params=statement.params
-            )
-        except ValueError as e:
-            # Project does not exist or skill does not exist.
-            raise ExecutorException(str(e))
 
         return ExecuteAnswer()
 

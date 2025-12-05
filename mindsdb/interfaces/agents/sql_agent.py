@@ -209,11 +209,6 @@ class SQLAgent:
 
         self._cache = cache
 
-        from mindsdb.interfaces.skills.skill_tool import SkillToolController
-
-        # Initialize the skill tool controller from MindsDB
-        self.skill_tool = SkillToolController()
-
     def _call_engine(self, query: str, database=None):
         # switch database
         ast_query = parse_sql(query.strip("`"))
@@ -668,3 +663,4 @@ class SQLAgent:
             if "does not exist" in msg and " relation " in msg:
                 msg += "\nAvailable tables: " + ", ".join(self.get_usable_table_names())
             return msg
+

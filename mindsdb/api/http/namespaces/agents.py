@@ -186,26 +186,7 @@ class AgentResource(Resource):
             if agent.get("prompt_template"):
                 params["prompt_template"] = agent["prompt_template"]
 
-            # Check if any of the skills to be added is of type 'retrieval'
-            session = SessionController()
-            skills_controller = session.skills_controller
-            retrieval_skill_added = False
-            if len(skills_to_add) > 0:
-                skills_names = [x["name"] if isinstance(x, dict) else x for x in skills_to_add]
-                retrieval_skill_added = any(
-                    skills_controller.get_skill(skill_name).type == "retrieval"
-                    for skill_name in skills_names
-                    if skills_controller.get_skill(skill_name) is not None
-                )
-            elif len(skills_to_rewrite) > 0:
-                retrieval_skill_added = any(
-                    skills_controller.get_skill(skill_meta["name"]).type == "retrieval"
-                    for skill_meta in skills_to_rewrite
-                    if skills_controller.get_skill(skill_meta["name"]) is not None
-                )
-
-            if retrieval_skill_added and "mode" not in params:
-                params["mode"] = "retrieval"
+            # Skills are no longer used - mode parameter handling removed
 
             updated_agent = agents_controller.update_agent(
                 agent_name,

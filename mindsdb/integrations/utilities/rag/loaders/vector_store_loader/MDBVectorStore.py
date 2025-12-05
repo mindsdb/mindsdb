@@ -3,9 +3,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import TableField
 
 from typing import Any, List, Optional
 
-from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
-from langchain_core.vectorstores import VectorStore
+from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.base_vector_store import VectorStore
+from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 
 
 class MDBVectorStore(VectorStore):
@@ -14,7 +13,7 @@ class MDBVectorStore(VectorStore):
         self.kb_table = kb_table
 
     @property
-    def embeddings(self) -> Optional[Embeddings]:
+    def embeddings(self) -> Optional[Any]:
         return None
 
     def similarity_search(
@@ -22,7 +21,7 @@ class MDBVectorStore(VectorStore):
         query: str,
         k: int = 4,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> List[SimpleDocument]:
 
         query = Select(
             targets=[Star()],
@@ -39,7 +38,7 @@ class MDBVectorStore(VectorStore):
             metadata = row[TableField.METADATA.value]
             if metadata is None:
                 metadata = {}
-            docs.append(Document(
+            docs.append(SimpleDocument(
                 page_content=row[TableField.CONTENT.value],
                 metadata=metadata
             ))

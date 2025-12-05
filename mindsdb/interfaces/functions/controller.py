@@ -135,15 +135,16 @@ class FunctionController(BYOMFunctionsController):
         chat_model_params = self._parse_chat_model_params()
 
         try:
-            from langchain_core.messages import HumanMessage
-            from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+            from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 
             llm = create_chat_model(chat_model_params)
         except Exception as e:
             raise RuntimeError(f"Unable to use LLM function, check ENV variables: {e}") from e
 
         def callback(question):
-            resp = llm([HumanMessage(question)])
+            # Use dict format for messages instead of HumanMessage
+            messages = [{"role": "user", "content": question}]
+            resp = llm.batch([question])[0]  # Use batch method which accepts strings
             return resp.content
 
         meta = {"name": name, "callback": callback, "input_types": ["str"], "output_type": "str"}

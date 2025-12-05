@@ -65,7 +65,7 @@ ENV UV_LINK_MODE=copy \
 # Installs everything into a venv in /mindsdb so that everything is isolated
 RUN --mount=type=cache,target=/root/.cache \
     uv venv /venv \
-    && uv pip install pip "."
+    && uv pip install pip ".[agents, kb]"
 
 
 

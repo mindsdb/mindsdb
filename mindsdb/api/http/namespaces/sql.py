@@ -1,8 +1,12 @@
 import time
 from http import HTTPStatus
+from collections import defaultdict
 
 from flask import request
 from flask_restx import Resource
+
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser import ast
 
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
@@ -13,6 +17,8 @@ from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProx
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
+
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
@@ -127,6 +133,105 @@ class Query(Resource):
         logger.debug(log_msg)
 
         return query_response, 200
+
+
+@ns_conf.route("/query/utils/parametrize_constants")
+class ParametrizeConstants(Resource):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @api_endpoint_metrics("POST", "/query/utils/parametrize_constants")
+    def post(self):
+        sql_query = request.json["query"]
+
+        # find constants in the query and replace them with parameters
+        query = parse_sql(sql_query)
+
+        parameters = []
+        param_counts = {}
+        databases = defaultdict(set)
+
+        def to_parameter(param_name, value):
+            if param_name is None:
+                param_name = default_param_name
+
+            num = param_counts.get(param_name, 1)
+            param_counts[param_name] = num + 1
+
+            if num > 1:
+                param_name = param_name + str(num)
+
+            parameters.append({"name": param_name, "value": value, "type": type(value).__name__})
+            return ast.Parameter(param_name)
+
+        def find_constants_f(node, is_table, is_target, callstack, **kwargs):
+            if is_table and isinstance(node, ast.Identifier):
+                if len(node.parts) > 1:
+                    databases[node.parts[0]].add(".".join(node.parts[1:]))
+
+            if not isinstance(node, ast.Constant):
+                return
+
+            # it is a target
+            if is_target and node.alias is not None:
+                return to_parameter(node.alias.parts[-1], node.value)
+
+            param_name = None
+
+            for item in callstack:
+                # try to find the name
+                if isinstance(item, (ast.BinaryOperation, ast.BetweenOperation)) and item.op.lower() not in (
+                    "and",
+                    "or",
+                ):
+                    # it is probably a condition
+                    for arg in item.args:
+                        if isinstance(arg, ast.Identifier):
+                            param_name = arg.parts[-1]
+                            break
+                    if param_name is not None:
+                        break
+
+                if item.alias is not None:
+                    # it is probably a query target
+                    param_name = item.alias.parts[-1]
+                    break
+
+            return to_parameter(param_name, node.value)
+
+        if isinstance(query, ast.Update):
+            for name, value in dict(query.update_columns).items():
+                if isinstance(value, ast.Constant):
+                    query.update_columns[name] = to_parameter(name, value.value)
+                else:
+                    default_param_name = name
+                    query_traversal(value, find_constants_f)
+
+        elif isinstance(query, ast.Insert):
+            # iterate over node.values and do some processing
+            if query.values:
+                values = []
+                for row in query.values:
+                    row2 = []
+                    for i, val in enumerate(row):
+                        if isinstance(val, ast.Constant):
+                            param_name = None
+                            if query.columns and i < len(query.columns):
+                                param_name = query.columns[i].name
+                            elif query.table:
+                                param_name = query.table.parts[-1]
+                            val = to_parameter(param_name, val.value)
+                        row2.append(val)
+                    values.append(row2)
+                query.values = values
+
+        default_param_name = "param"
+        query_traversal(query, find_constants_f)
+
+        # to lists:
+        databases = {k: list(v) for k, v in databases.items()}
+        response = {"query": query, "parameters": parameters, "databases": databases}
+        return response, 200
 
 
 @ns_conf.route("/list_databases")

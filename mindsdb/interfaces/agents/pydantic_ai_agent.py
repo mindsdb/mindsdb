@@ -562,17 +562,57 @@ class PydanticAIAgent:
         
         # Stream agent response
         try:
-            # Use run_stream for simpler streaming
-            # We need to run this in an async context
+            # Use run_stream to capture all text output and final result
             def run_stream_sync():
                 """Run async stream in sync context"""
                 async def stream_agent():
+                    collected_text = ""
                     async with agent.run_stream(
                         current_prompt, 
                         message_history=message_history if message_history else None
                     ) as run:
+                        # Stream text output as it comes
                         async for text in run.stream_text():
-                            yield self._add_chunk_metadata({"type": "text", "content": text})
+                            collected_text += text
+                            # Yield text chunks for a2a compatibility (expects 'text' or 'output' field)
+                            yield self._add_chunk_metadata({
+                                "type": "text",
+                                "content": text,
+                                "text": text,  # For a2a compatibility
+                                "output": text  # Alternative field name
+                            })
+                        
+                        # Get final output to ensure we have the complete response
+                        try:
+                            final_output = await run.get_output()
+                            final_output_str = str(final_output) if final_output else collected_text
+                            
+                            # If final output is different from collected text, yield it
+                            if final_output_str and final_output_str != collected_text:
+                                yield self._add_chunk_metadata({
+                                    "type": "text",
+                                    "content": final_output_str,
+                                    "text": final_output_str,
+                                    "output": final_output_str
+                                })
+                            elif final_output_str:
+                                # Ensure we yield the final output even if it matches
+                                yield self._add_chunk_metadata({
+                                    "type": "text",
+                                    "content": final_output_str,
+                                    "text": final_output_str,
+                                    "output": final_output_str
+                                })
+                        except Exception as e:
+                            logger.debug(f"Could not get final output, using collected text: {e}")
+                            # Fallback: yield collected text if we couldn't get final output
+                            if collected_text:
+                                yield self._add_chunk_metadata({
+                                    "type": "text",
+                                    "content": collected_text,
+                                    "text": collected_text,
+                                    "output": collected_text
+                                })
                 
                 # Get or create event loop
                 try:
@@ -591,13 +631,28 @@ class PydanticAIAgent:
                         break
             
             # Yield chunks from sync wrapper
+            final_output_received = False
             for chunk in run_stream_sync():
+                final_output_received = True
                 yield chunk
+            
+            # Ensure we have a final output chunk if nothing was streamed
+            if not final_output_received:
+                logger.warning("No output chunks received from agent stream")
+                yield self._add_chunk_metadata({
+                    "type": "text",
+                    "content": "",
+                    "text": "",
+                    "output": ""
+                })
             
             # Yield context if needed
             return_context = args.get("return_context", True)
             if return_context:
                 yield self._add_chunk_metadata({"type": "context", "content": []})
+            
+            # Yield end chunk
+            yield self._add_chunk_metadata({"type": "end"})
             
             # End span
             self.langfuse_client_wrapper.end_span_stream(span=self.run_completion_span)

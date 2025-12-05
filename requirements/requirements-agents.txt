@@ -24,3 +24,6 @@ transformers >= 4.42.4
 
 mcp~=1.10.1
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
+
+# Required for KB
+mindsdb-evaluator == 0.0.20

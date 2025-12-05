@@ -28,7 +28,7 @@ UTILITIES_REQS_PATHS = [
     "mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt",
 ]
 
-EXTRA_REQS_PATHS = ["requirements/requirements-agents.txt", "requirements/requirements-kb.txt"]
+EXTRA_REQS_PATHS = ["requirements/requirements-agents.txt", "requirements/requirements-kb.txt", "requirements/requirements-ml.txt"]
 
 
 HANDLER_REQS_PATHS = list(
@@ -224,6 +224,7 @@ PACKAGE_NAME_MAP = {
     "pydantic_core": ["pydantic"],
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
+    "sklearn": ["scikit-learn"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

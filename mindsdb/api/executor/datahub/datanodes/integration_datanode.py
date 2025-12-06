@@ -312,9 +312,9 @@ class IntegrationDataNode(DataNode):
             df = df.to_frame()
 
         try:
-            # replace python's Nan, np.NaN, np.nan and pd.NA to None
+            # replace python's Nan, np.nan and pd.NA to None
             # TODO keep all NAN to the end of processing, bacause replacing also changes dtypes
-            df.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
+            df.replace([np.nan, pd.NA, pd.NaT], None, inplace=True)
         except Exception:
             logger.exception("Issue with clearing DF from NaN values:")
         # endregion

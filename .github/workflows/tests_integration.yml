@@ -60,7 +60,7 @@ jobs:
       # TODO: remove integrations dependencies if we provide this in Docker image
       run: |
         uv pip install -r requirements/requirements-test.txt
-        uv pip install .[mysql]
+        uv pip install .[mysql, mariadb, postgres]
 
     - name: Run Integration Tests on Deploy
       run: |

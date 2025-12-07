@@ -154,9 +154,9 @@ class TablesCollection:
         return f"Tables({self.items})"
 
 
-class SQLAgent:
+class MindsDBSQLProxy:
     """
-    SQLAgent is a class that handles SQL queries for agents.
+    MindsDBSQLProxy is a class that handles SQL queries for agents.
     """
 
     def __init__(
@@ -173,7 +173,7 @@ class SQLAgent:
         cache: Optional[dict] = None,
     ):
         """
-        Initialize SQLAgent.
+        Initialize MindsDBSQLProxy.
 
         Args:
             command_executor: Executor for SQL commands

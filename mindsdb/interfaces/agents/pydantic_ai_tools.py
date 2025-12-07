@@ -2,7 +2,7 @@
 
 from typing import Dict, Any, List, Optional
 from mindsdb.utilities import log
-from mindsdb.interfaces.agents.sql_agent import SQLAgent
+from mindsdb.interfaces.agents.utils.sql_agent import MindsDBSQLProxy
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities.cache import get_cache
 
@@ -22,7 +22,7 @@ def create_text2sql_tool(
     Args:
         agent_params: Agent parameters containing data.tables configuration
         command_executor: Command executor for SQL queries
-        llm: LLM instance (not used directly, but needed for SQLAgent compatibility)
+        llm: LLM instance (not used directly, but needed for MindsDBSQLProxy compatibility)
         
     Returns:
         Async function that can be used as a Pydantic AI tool, or None if no tables configured
@@ -54,8 +54,8 @@ def create_text2sql_tool(
     all_databases = list(extracted_databases) if extracted_databases else ["mindsdb"]
     knowledge_base_database = "mindsdb"  # Default project for KBs
     
-    # Create SQLAgent
-    sql_agent = SQLAgent(
+    # Create MindsDBSQLProxy
+    sql_agent = MindsDBSQLProxy(
         command_executor=command_executor,
         databases=all_databases,
         databases_struct=databases_struct,
@@ -135,7 +135,7 @@ def create_text2sql_tool(
             # Clean query input
             query = extract_essential(query)
             
-            # Execute query directly using SQLAgent
+            # Execute query directly using MindsDBSQLProxy
             logger.info(f"Executing SQL query via tool: {query}")
             result = sql_agent.query(query)
             return result

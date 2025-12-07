@@ -19,9 +19,8 @@ from mindsdb.interfaces.agents.constants import (
     TRACE_ID_COLUMN,
     DEFAULT_AGENT_TIMEOUT_SECONDS,
 )
-from mindsdb.interfaces.agents.pydantic_ai_model_factory import (
-    create_pydantic_ai_model,
-    get_pydantic_ai_model_kwargs,
+from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import (
+    get_model_instance_from_kwargs
 )
 from mindsdb.interfaces.agents.pydantic_ai_tools import build_tools_from_agent_config
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
@@ -70,7 +69,7 @@ class PydanticAIAgent:
     
     def _get_llm_provider(self, args: Dict) -> str:
         """Get LLM provider from args"""
-        from mindsdb.interfaces.agents.pydantic_ai_model_factory import get_llm_provider
+        from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
         return get_llm_provider(args)
     
     def _initialize_args(self, llm_params: dict = None) -> dict:
@@ -143,21 +142,7 @@ class PydanticAIAgent:
             if prompt_template is not None:
                 args["prompt_template"] = prompt_template
         
-        # Set default prompt template if not provided
-        if args.get("prompt_template") is None:
-            default_prompt = """you are an assistant, answer using the tables connected.
-
-**IMPORTANT FORMATTING REQUIREMENTS:**
-- Always format your responses in Markdown
-- When presenting tabular data or query results, organize them as Markdown tables
-- Use proper Markdown table syntax with headers and aligned columns
-- For example:
-  | Column1 | Column2 | Column3 |
-  |---------|---------|---------|
-  | Value1  | Value2  | Value3  |
-- Use other Markdown formatting (headers, lists, code blocks) as appropriate to make responses clear and well-structured"""
-            args["prompt_template"] = default_prompt
-            logger.info(f"Using default prompt template with markdown formatting")
+        
         
         if "model_name" not in args:
             raise ValueError(
@@ -168,7 +153,7 @@ class PydanticAIAgent:
     
     def _get_embedding_model_provider(self, args: Dict) -> str:
         """Get embedding model provider from args"""
-        from mindsdb.interfaces.agents.pydantic_ai_model_factory import get_embedding_model_provider
+        from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_embedding_model_provider
         return get_embedding_model_provider(args)
     
     def _get_command_executor(self):
@@ -193,90 +178,36 @@ class PydanticAIAgent:
         if self._pydantic_agent is not None:
             return self._pydantic_agent
         
-        # Get model string
-        try:
-            model_string = create_pydantic_ai_model(self.args)
-        except Exception as e:
-            logger.error(f"Error creating Pydantic AI model: {e}", exc_info=True)
-            # Fallback: try to use OpenAI format
-            model_string = f"openai:{self.args.get('model_name', 'gpt-4')}"
+        model_instance = get_model_instance_from_kwargs(self.args)
         
-        # Handle MindsDB custom provider
-        if model_string == "mindsdb:custom":
-            # For MindsDB provider, we'll need a custom model wrapper
-            # For now, raise an error - this needs custom implementation
-            raise ValueError("MindsDB provider requires custom model wrapper - not yet implemented")
         
-        # Get model kwargs (includes API keys from system config)
-        model_kwargs = get_pydantic_ai_model_kwargs(self.args)
+        # Create agent with system prompt
+        # Pydantic AI Agent doesn't accept model kwargs directly - it reads from environment
+        # We've set the environment variables above, so they'll be picked up when the model is created
+        system_prompt = self.args.get("prompt_template", "you are an assistant")
         
-        # Pydantic AI reads API keys from environment variables
-        # Set them temporarily if provided in model_kwargs
-        import os
-        env_vars_to_restore = {}
-        if model_kwargs:
-            provider = self.args.get("provider", "openai")
-            
-            # Set API key in environment if provided
-            if "api_key" in model_kwargs:
-                if provider == "openai" or provider == "vllm":
-                    if "OPENAI_API_KEY" not in os.environ:
-                        env_vars_to_restore["OPENAI_API_KEY"] = os.environ.get("OPENAI_API_KEY")
-                        os.environ["OPENAI_API_KEY"] = model_kwargs["api_key"]
-                elif provider == "anthropic":
-                    if "ANTHROPIC_API_KEY" not in os.environ:
-                        env_vars_to_restore["ANTHROPIC_API_KEY"] = os.environ.get("ANTHROPIC_API_KEY")
-                        os.environ["ANTHROPIC_API_KEY"] = model_kwargs["api_key"]
-                elif provider == "google":
-                    if "GOOGLE_API_KEY" not in os.environ:
-                        env_vars_to_restore["GOOGLE_API_KEY"] = os.environ.get("GOOGLE_API_KEY")
-                        os.environ["GOOGLE_API_KEY"] = model_kwargs["api_key"]
-            
-            # Set base_url if provided (some providers support this via env vars)
-            if "base_url" in model_kwargs:
-                if provider == "openai" or provider == "vllm":
-                    if "OPENAI_BASE_URL" not in os.environ:
-                        env_vars_to_restore["OPENAI_BASE_URL"] = os.environ.get("OPENAI_BASE_URL")
-                        os.environ["OPENAI_BASE_URL"] = model_kwargs["base_url"]
-                elif provider == "anthropic":
-                    if "ANTHROPIC_API_URL" not in os.environ:
-                        env_vars_to_restore["ANTHROPIC_API_URL"] = os.environ.get("ANTHROPIC_API_URL")
-                        os.environ["ANTHROPIC_API_URL"] = model_kwargs["base_url"]
-        
-        try:
-            # Create agent with system prompt
-            # Pydantic AI Agent doesn't accept model kwargs directly - it reads from environment
-            # We've set the environment variables above, so they'll be picked up when the model is created
-            system_prompt = self.args.get("prompt_template", "you are an assistant")
-            
-            # Ensure markdown formatting instructions are included in the prompt
-            markdown_instructions = """
+        # Ensure markdown formatting instructions are included in the prompt
+        markdown_instructions = """
 **IMPORTANT FORMATTING REQUIREMENTS:**
 - Always format your responses in Markdown
 - When presenting tabular data or query results, organize them as Markdown tables
 - Use proper Markdown table syntax with headers and aligned columns
 - For example:
-  | Column1 | Column2 | Column3 |
-  |---------|---------|---------|
-  | Value1  | Value2  | Value3  |
+| Column1 | Column2 | Column3 |
+|---------|---------|---------|
+| Value1  | Value2  | Value3  |
 - Use other Markdown formatting (headers, lists, code blocks) as appropriate to make responses clear and well-structured"""
-            
-            # Append markdown instructions if not already present
-            if "markdown" not in system_prompt.lower() and "formatting" not in system_prompt.lower():
-                system_prompt = f"{system_prompt}\n\n{markdown_instructions}"
-            
-            # Create agent - Pydantic AI will read API keys from environment variables
-            agent = Agent(
-                model_string,
-                system_prompt=system_prompt,
-            )
-        finally:
-            # Restore original environment variables
-            for key, value in env_vars_to_restore.items():
-                if value is None:
-                    os.environ.pop(key, None)
-                else:
-                    os.environ[key] = value
+        
+        # Append markdown instructions if not already present
+        if "markdown" not in system_prompt.lower() and "formatting" not in system_prompt.lower():
+            system_prompt = f"{system_prompt}\n\n{markdown_instructions}"
+        
+        # Create agent - Pydantic AI will read API keys from environment variables
+        agent = Agent(
+            model_instance,
+            system_prompt=system_prompt,
+        )
+        
         
         # Build and register tools
         command_executor = self._get_command_executor()

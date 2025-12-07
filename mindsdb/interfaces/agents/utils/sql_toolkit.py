@@ -154,9 +154,9 @@ class TablesCollection:
         return f"Tables({self.items})"
 
 
-class MindsDBSQLProxy:
+class MindsDBToolKit:
     """
-    MindsDBSQLProxy is a class that handles SQL queries for agents.
+    MindsDBToolKit is a class that handles SQL queries for agents.
     """
 
     def __init__(
@@ -173,7 +173,7 @@ class MindsDBSQLProxy:
         cache: Optional[dict] = None,
     ):
         """
-        Initialize MindsDBSQLProxy.
+        Initialize MindsDBToolKit.
 
         Args:
             command_executor: Executor for SQL commands

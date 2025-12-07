@@ -2,9 +2,11 @@
 
 from typing import Dict, Any, List, Optional
 from mindsdb.utilities import log
-from mindsdb.interfaces.agents.utils.sql_agent import MindsDBSQLProxy
+from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBToolKit
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities.cache import get_cache
+from mindsdb.interfaces.agents.prompts import agent_prompts
+from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuilder
 
 logger = log.getLogger(__name__)
 
@@ -22,7 +24,7 @@ def create_text2sql_tool(
     Args:
         agent_params: Agent parameters containing data.tables configuration
         command_executor: Command executor for SQL queries
-        llm: LLM instance (not used directly, but needed for MindsDBSQLProxy compatibility)
+        llm: LLM instance (not used directly, but needed for MindsDBToolKit compatibility)
         
     Returns:
         Async function that can be used as a Pydantic AI tool, or None if no tables configured
@@ -54,8 +56,8 @@ def create_text2sql_tool(
     all_databases = list(extracted_databases) if extracted_databases else ["mindsdb"]
     knowledge_base_database = "mindsdb"  # Default project for KBs
     
-    # Create MindsDBSQLProxy
-    sql_agent = MindsDBSQLProxy(
+    # Create MindsDBToolKit
+    sql_toolkit = MindsDBToolKit(
         command_executor=command_executor,
         databases=all_databases,
         databases_struct=databases_struct,
@@ -69,51 +71,33 @@ def create_text2sql_tool(
     )
     
     # Get table info for tool description
-    table_info = ""
-    if tables_list:
-        try:
-            table_info = sql_agent.get_table_info(tables_list)
-        except Exception as e:
-            logger.warning(f"Error getting table info: {e}")
-            table_info = f"Available tables: {', '.join(tables_list)}"
+
+    data_catalog = DataCatalogBuilder(sql_toolkit).build_data_catalog(tables=tables_list, knowledge_bases=knowledge_bases_list)
+
     
-    kb_info = ""
-    if knowledge_bases_list:
-        try:
-            kb_info = sql_agent.get_knowledge_base_info(knowledge_bases_list)
-        except Exception as e:
-            logger.warning(f"Error getting KB info: {e}")
-            kb_info = f"Available knowledge bases: {', '.join(knowledge_bases_list)}"
-    
-    # Create tool description
-    description_parts = [
-        "Execute MindsDB SQL queries against database tables and knowledge bases.",
-        "Use this tool to answer questions about data in the database or query knowledge bases.",
-        "",
-        "**Knowledge Base Queries:**",
-        "Knowledge bases can be queried using semantic search and metadata filtering:",
-        "- Semantic search: SELECT * FROM kb_name WHERE content = 'your query'",
-        "- Metadata filtering: SELECT * FROM kb_name WHERE metadata_column = 'value'",
-        "- Combined: SELECT * FROM kb_name WHERE content = 'query' AND metadata_column = 'value' AND relevance >= 0.5",
-        "- Knowledge bases support standard SQL operations including JOINs",
-        "",
-        "**Important:**",
-        "- Always execute the SQL query using this tool.",
-        "- The SQL query string itself is NOT the final answer unless the user specifically asks for the query.",
-        "- All SQL commands must be valid MindsDB SQL syntax.",
-    ]
-    if table_info:
-        description_parts.append(f"\n**Available Tables:**\n{table_info}")
-    if kb_info:
-        description_parts.append(f"\n**Available Knowledge Bases:**\n{kb_info}")
+    description_text = agent_prompts.sql_tool_description
+    description_parts = [description_text]
+   
+    if data_catalog:
+        description_parts.append(data_catalog)
     
     tool_description = "\n".join(description_parts)
     
     # Helper function to clean query input (extracted from mindsdb_database_agent)
     def extract_essential(input: str) -> str:
-        """Sometimes LLM include to input unnecessary data. We can't control stochastic nature of LLM, so we need to
-        'clean' input somehow. LLM prompt contains instruction to enclose input between '$START$' and '$STOP$'.
         """
+        Clean input by extracting content between '$START$' and '$STOP$', 
+        and removing any content wrapping the input in triple backticks.
+        """
+        # If input contains any triple backtick blocks, extract what is between the first matching pair
+        if "```" in input:
+            # find all blocks of text between ```
+            import re
+            matches = re.findall(r"```(?:[\w+-]*)?\n?(.*?)```", input, flags=re.DOTALL)
+            if matches:
+                # Take the first found block
+                input = matches[0].strip()
+        # Extract content between $START$ and $STOP$
         if "$START$" in input:
             input = input.partition("$START$")[-1]
         if "$STOP$" in input:
@@ -135,15 +119,15 @@ def create_text2sql_tool(
             # Clean query input
             query = extract_essential(query)
             
-            # Execute query directly using MindsDBSQLProxy
+            # Execute query directly using MindsDBToolKit
             logger.info(f"Executing SQL query via tool: {query}")
-            result = sql_agent.query(query)
+            result = sql_toolkit.query(query)
             return result
         except Exception as e:
             logger.exception("Error executing SQL command:")
             # If this is a knowledge base query, provide a more helpful error message
             if "knowledge_base" in query.lower() or any(
-                kb in query for kb in sql_agent.get_usable_knowledge_base_names()
+                kb in query for kb in sql_toolkit.get_usable_knowledge_base_names()
             ):
                 return f"Error executing knowledge base query: {str(e)}. Please check that the knowledge base exists and your query syntax is correct."
             return f"Error: {str(e)}"

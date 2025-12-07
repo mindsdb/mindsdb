@@ -56,8 +56,11 @@ jobs:
         prune-cache: false
         python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
     - name: Install dependencies
+
+      # TODO: remove integrations dependencies if we provide this in Docker image
       run: |
         uv pip install -r requirements/requirements-test.txt
+        uv pip install .[mysql]
 
     - name: Run Integration Tests on Deploy
       run: |

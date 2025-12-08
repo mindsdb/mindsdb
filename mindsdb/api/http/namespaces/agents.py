@@ -3,10 +3,12 @@ import json
 from http import HTTPStatus
 from typing import Dict, Iterable, List
 
+import pandas as pd
 from flask import request, Response
 from flask_restx import Resource
 
 from mindsdb.interfaces.agents.agents_controller import AgentsController
+from mindsdb.interfaces.agents.utils.data_catalog_builder import dataframe_to_markdown
 from mindsdb.interfaces.storage import db
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
@@ -263,6 +265,12 @@ def _completion_event_generator(agent_name: str, messages: List[Dict], project_n
                 # The chunk is already formatted correctly, yield it as is
                 yield chunk
             elif isinstance(chunk, dict):
+                # Convert DataFrame content to JSON-serializable format
+                if chunk.get("type") == "data" and isinstance(chunk.get("content"), pd.DataFrame):
+                    df = chunk["content"]
+                    # Convert DataFrame to markdown format
+                    chunk["content"] = dataframe_to_markdown(df)
+                
                 if "error" in chunk:
                     # Handle error chunks
                     logger.error(f"Error in completion stream: {chunk['error']}")
@@ -273,6 +281,9 @@ def _completion_event_generator(agent_name: str, messages: List[Dict], project_n
                 elif chunk.get("type") == "sql":
                     # Handle SQL query message
                     yield json_serialize({"type": "sql", "content": chunk.get("content")})
+                elif chunk.get("type") == "status":
+                    # Handle status message
+                    yield json_serialize({"type": "context", "content": chunk.get("content")})
                 else:
                     # Chunk should already be formatted by agent stream.
                     yield json_serialize(chunk)

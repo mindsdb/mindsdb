@@ -1,8 +1,8 @@
 import os
-import json
 from typing import List
 
 import pandas as pd
+import orjson
 import duckdb
 from mindsdb_sql_parser.ast import (
     Select,
@@ -262,7 +262,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             sql = self.renderer.get_string(query, with_failback=True)
             cur.execute(sql)
             df = cur.fetchdf()
-            df["metadata"] = df["metadata"].apply(json.loads)
+            df["metadata"] = df["metadata"].apply(orjson.loads)
             return df
 
     def get_total_size(self):
@@ -274,7 +274,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
     def _select_with_vector(self, vector_filter: FilterCondition, meta_filters=None, limit=None) -> pd.DataFrame:
         embedding = vector_filter.value
         if isinstance(embedding, str):
-            embedding = json.loads(embedding)
+            embedding = orjson.loads(embedding)
 
         distances, faiss_ids = self.faiss_index.search(embedding, limit or 100)
 
@@ -336,7 +336,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             sql = self.renderer.get_string(query, with_failback=True)
             cur.execute(sql)
             df = cur.fetchdf()
-            df["metadata"] = df["metadata"].apply(json.loads)
+            df["metadata"] = df["metadata"].apply(orjson.loads)
             return df
 
     def _translate_filters(self, meta_filters):

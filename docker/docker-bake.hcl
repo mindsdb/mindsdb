@@ -105,12 +105,12 @@ target "images" {
     item = [
       {
         name = "bare"
-        extras = ".[mysql]"
+        extras = ""
         target = ""
       },
       {
         name = "devel"
-        extras = ".[mysql, lightwood]"  # Required for running integration tests
+        extras = ".[lightwood]"  # Required for running integration tests
         target = "dev"
       },
       {

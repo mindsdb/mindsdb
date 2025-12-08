@@ -524,7 +524,7 @@ class PydanticAIAgent:
                 select_targets_str = ", ".join(str(t) for t in select_targets)
             else:
                 select_targets_str = str(select_targets)
-            base_prompt += f"\n\nThe user expects to have a table such that this query is valid:SELECT {select_targets_str} FROM (<generated query>); when generating the SQL query make sure to include those columns"
+            base_prompt += f"\n\nFor the final query the user expects to have a table such that this query is valid:SELECT {select_targets_str} FROM (<generated query>); when generating the SQL query make sure to include those columns, do not fix grammar on columns. Keep them as the user wants them"
 
         # Initialize counters and accumulators
         exploratory_query_count = 0

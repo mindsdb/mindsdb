@@ -68,6 +68,9 @@ class TrunkProcessEnum(Enum):
         sys.exit(1)
 
 
+HTTP_OPTIONAL_APIS = {"a2a", "mcp"}
+
+
 @dataclass
 class TrunkProcessData:
     name: str
@@ -393,14 +396,44 @@ if __name__ == "__main__":
         except Exception:
             pass
 
-    apis = os.getenv("MINDSDB_APIS") or config.cmd_args.api
+    apis = os.getenv("MINDSDB_APIS")
+    if apis is None:
+        apis = config.cmd_args.api
 
     if apis is None:  # If "--api" option is not specified, start the default APIs
         api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
     elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
     else:  # The user has provided a list of APIs to start
-        api_arr = [TrunkProcessEnum(name) for name in apis.split(",")]
+        api_arr = []
+        optional_http_requested = False
+        http_explicitly_requested = False
+
+        for raw_name in apis.split(","):
+            name = raw_name.strip()
+            if not name:
+                continue
+            normalized = name.lower()
+
+            if normalized in HTTP_OPTIONAL_APIS:
+                optional_http_requested = True
+                continue
+
+            try:
+                process = TrunkProcessEnum(normalized)
+            except ValueError:
+                logger.warning(f'Unknown API "{name}" requested via --api; ignoring.')
+                continue
+
+            api_arr.append(process)
+            if process == TrunkProcessEnum.HTTP:
+                http_explicitly_requested = True
+
+        if optional_http_requested and not http_explicitly_requested:
+            logger.info(
+                "HTTP API enabled automatically because HTTP-only endpoints (e.g. a2a/mcp) were requested via --api."
+            )
+            api_arr.append(TrunkProcessEnum.HTTP)
 
     logger.info(f"Version: {mindsdb_version}")
     logger.info(f"Configuration file: {config.config_path or 'absent'}")

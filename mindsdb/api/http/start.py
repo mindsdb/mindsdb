@@ -1,4 +1,5 @@
 import gc
+import os
 from typing import Optional, Set
 
 gc.disable()
@@ -25,7 +26,7 @@ logger = log.getLogger(__name__)
 def _api_mode() -> Optional[Set[str]]:
     """Return the normalized set of requested APIs or None if not specified."""
 
-    apis = config.cmd_args.api
+    apis = os.getenv("MINDSDB_APIS") or config.cmd_args.api
 
     if apis is None:
         return None

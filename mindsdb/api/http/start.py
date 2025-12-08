@@ -1,4 +1,5 @@
 import gc
+from typing import Optional, Set
 
 gc.disable()
 
@@ -21,16 +22,16 @@ gc.enable()
 logger = log.getLogger(__name__)
 
 
-def _is_http_only_mode() -> bool:
-    """Return True when the user explicitly asked for only the HTTP API."""
+def _api_mode() -> Optional[Set[str]]:
+    """Return the normalized set of requested APIs or None if not specified."""
 
     apis = config.cmd_args.api
 
     if apis is None:
-        return False
+        return None
 
     enabled = {name.strip().lower() for name in apis.split(",") if name.strip()}
-    return enabled == {"http"}
+    return enabled or None
 
 
 def start(verbose, app: Flask = None, is_restart: bool = False):
@@ -45,20 +46,27 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
 
     process_cache.init()
 
-    http_only_mode = _is_http_only_mode()
+    requested_apis = _api_mode()
+    enable_by_default = requested_apis is None
+
+    need_a2a = enable_by_default or "a2a" in requested_apis
+    need_mcp = enable_by_default or "mcp" in requested_apis
 
     routes = []
-    if not http_only_mode:
+    if need_a2a or need_mcp:
         # Specific mounts FIRST so root app doesn't shadow them
         from mindsdb.api.a2a import get_a2a_app
         from mindsdb.api.mcp import get_mcp_app
 
-        a2a = get_a2a_app()
-        a2a.add_middleware(PATAuthMiddleware)
-        mcp = get_mcp_app()
-        mcp.add_middleware(PATAuthMiddleware)
-        routes.append(Mount("/a2a", app=a2a))
-        routes.append(Mount("/mcp", app=mcp))
+        if need_a2a:
+            a2a = get_a2a_app()
+            a2a.add_middleware(PATAuthMiddleware)
+            routes.append(Mount("/a2a", app=a2a))
+
+        if need_mcp:
+            mcp = get_mcp_app()
+            mcp.add_middleware(PATAuthMiddleware)
+            routes.append(Mount("/mcp", app=mcp))
 
     # Root app LAST so it won't shadow the others
     routes.append(

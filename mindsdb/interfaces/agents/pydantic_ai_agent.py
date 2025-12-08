@@ -426,6 +426,8 @@ class PydanticAIAgent:
             input=messages
         )
         
+        logger.info(f"PydanticAIAgent._get_completion_stream: Messages: {messages}")
+        
         # Extract current prompt and message history from messages
         # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
         current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
@@ -455,6 +457,7 @@ class PydanticAIAgent:
             current_prompt += f"\n\nThe user expects to have a table such that this query is valid:SELECT {select_targets_str} FROM (<generated query>); when generating the SQL query make sure to include those columns"
 
         logger.info(f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}")
+        logger.info(f"PydanticAIAgent._get_completion_stream: Message history: {message_history}")
 
         try:
             yield self._add_chunk_metadata({"type": "status", "content": "Generating SQL query..."})

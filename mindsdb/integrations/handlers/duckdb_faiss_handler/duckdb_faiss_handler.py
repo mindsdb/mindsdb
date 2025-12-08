@@ -74,14 +74,14 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         self.connect()
 
         # check keyword index
-        self.is_keyword_search_enabled = False
+        self.is_kw_index_enabled = False
         with self.connection.cursor() as cur:
             # check index exists
             df = cur.execute(
                 "SELECT * FROM information_schema.schemata WHERE schema_name = 'fts_main_meta_data'"
             ).fetchdf()
             if len(df) > 0:
-                self.is_keyword_search_enabled = True
+                self.is_kw_index_enabled = True
 
     def connect(self) -> duckdb.DuckDBPyConnection:
         """Connect to DuckDB database."""
@@ -131,6 +131,10 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
     def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into both DuckDB and Faiss."""
+
+        if self.is_kw_index_enabled:
+            # drop index, it will be created before a first keyword search
+            self.drop_kw_index()
 
         with self.connection.cursor() as cur:
             df_ids = cur.execute("""
@@ -207,6 +211,16 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         return df[:limit]
 
+    def create_kw_index(self):
+        with self.connection.cursor() as cur:
+            cur.execute("PRAGMA create_fts_index('meta_data', 'id', 'content')")
+            self.is_kw_index_enabled = True
+
+    def drop_kw_index(self):
+        with self.connection.cursor() as cur:
+            cur.execute("pragma drop_fts_index('meta_data')")
+            self.is_kw_index_enabled = False
+
     def keyword_select(
         self,
         table_name: str,
@@ -216,12 +230,11 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         limit: int = None,
         keyword_search_args: KeywordSearchArgs = None,
     ) -> pd.DataFrame:
-        with self.connection.cursor() as cur:
-            if not self.is_keyword_search_enabled:
-                # keyword search is used for first time: create index
-                cur.execute("PRAGMA create_fts_index('meta_data', 'id', 'content')")
-                self.is_keyword_search_enabled = True
+        if not self.is_kw_index_enabled:
+            # keyword search is used for first time: create index
+            self.create_kw_index()
 
+        with self.connection.cursor() as cur:
             where_clause = self._translate_filters(conditions)
 
             score = Function(

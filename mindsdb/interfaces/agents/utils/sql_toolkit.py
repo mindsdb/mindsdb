@@ -153,6 +153,84 @@ class TablesCollection:
     def __repr__(self):
         return f"Tables({self.items})"
 
+from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
+from mindsdb.utilities.exception import QueryError
+from mindsdb.utilities import log
+from pydantic import BaseModel, Field
+
+logger = log.getLogger(__name__)
+
+
+
+class SQLQuery(BaseModel):
+    sql_query: str = Field(..., description="The SQL query to run")
+    short_description: str = Field(..., description="A short summary or description of the SQL query's purpose")
+
+
+class MindsDBQuery:
+    def __init__(self, context=None):
+        self.context = context or {}
+
+    def execute(self, query: str):
+        mysql_proxy = FakeMysqlProxy()
+        mysql_proxy.set_context(self.context)
+        error_type = None
+        error_code = None
+        error_text = None
+        query_response = None
+        try:
+            result: SQLAnswer = mysql_proxy.process_query(query)
+            
+            # Check for errors
+            if result.type == SQL_RESPONSE_TYPE.ERROR:
+                error_type = "expected"
+                error_code = result.error_code or 0
+                error_text = result.error_message or "Unknown error"
+                logger.warning(f"Query failed with error: {error_text}")
+                raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+            
+            # Check if result has data (TABLE response)
+            if result.type != SQL_RESPONSE_TYPE.TABLE or result.result_set is None:
+                # Query executed successfully but returned no data (e.g., INSERT, UPDATE, DELETE)
+                return pd.DataFrame()
+            
+            query_response = result.result_set.to_df()
+            return query_response
+
+        except ExecutorException as e:
+            # classified error
+            error_type = "expected"
+            error_code = 0
+            error_text = str(e)
+            logger.warning(f"Error query processing: {e}")
+            raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+        except QueryError as e:
+            error_type = "expected" if e.is_expected else "unexpected"
+            error_code = 0
+            error_text = str(e)
+            if e.is_expected:
+                logger.warning(f"Query failed due to expected reason: {e}")
+            else:
+                logger.exception("Error query processing:")
+            raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+        except UnknownError as e:
+            # unclassified error
+            error_type = "unexpected"
+            error_code = 0
+            error_text = str(e)
+            logger.exception("Error query processing:")
+            raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+        except Exception as e:
+            error_type = "unexpected"
+            error_code = 0
+            error_text = str(e)
+            logger.exception("Error query processing:")
+            raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+
+
 
 class MindsDBToolKit:
     """

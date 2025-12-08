@@ -19,17 +19,20 @@ from mindsdb.interfaces.agents.constants import (
     TRACE_ID_COLUMN,
     DEFAULT_AGENT_TIMEOUT_SECONDS,
 )
+
+from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery, SQLQuery
 from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import (
     get_model_instance_from_kwargs
 )
-from mindsdb.interfaces.agents.pydantic_ai_tools import build_tools_from_agent_config
+
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.langfuse import LangfuseClientWrapper
-
+from mindsdb.interfaces.agents.prompts import agent_prompts
 logger = log.getLogger(__name__)
 
+from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuilder, dataframe_to_markdown
 
 class PydanticAIAgent:
     """Pydantic AI-based agent to replace LangchainAgent"""
@@ -57,20 +60,23 @@ class PydanticAIAgent:
         self.langfuse_client_wrapper = LangfuseClientWrapper()
         self.args = self._initialize_args(llm_params)
         
-        # Provider for compatibility
-        self.provider = self.args.get("provider", self._get_llm_provider(self.args))
+        # Provider model instance
+        self.model_instance = get_model_instance_from_kwargs(self.args)
         
-        # Pydantic AI agent instance (created lazily)
-        self._pydantic_agent: Optional[Agent] = None
+        # Command executor for queries
+        self.executor = MindsDBQuery()
         
-        # Command executor for tools
-        self._command_executor: Optional[Any] = None
-        self._kb_controller: Optional[KnowledgeBaseController] = None
+        self.system_prompt = self.args.get("prompt_template", "You are an expert MindsDB SQL data analyst")
+        
+        # Track current query state
+        self._current_prompt: Optional[str] = None
+        self._current_sql_query: Optional[str] = None
+        self._current_query_result: Optional[pd.DataFrame] = None
+        
+        # Track SQL query context (when called from SQL query)
+        self._sql_context: Optional[Dict] = None
     
-    def _get_llm_provider(self, args: Dict) -> str:
-        """Get LLM provider from args"""
-        from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
-        return get_llm_provider(args)
+    
     
     def _initialize_args(self, llm_params: dict = None) -> dict:
         """
@@ -130,10 +136,7 @@ class PydanticAIAgent:
         if self.agent.provider is not None:
             args["provider"] = self.agent.provider
         
-        args["embedding_model_provider"] = args.get(
-            "embedding_model", 
-            self._get_embedding_model_provider(args)
-        )
+        
         
         # Handle MindsDB provider
         if self.agent.provider == "mindsdb":
@@ -151,110 +154,23 @@ class PydanticAIAgent:
         
         return args
     
-    def _get_embedding_model_provider(self, args: Dict) -> str:
-        """Get embedding model provider from args"""
-        from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_embedding_model_provider
-        return get_embedding_model_provider(args)
-    
-    def _get_command_executor(self):
-        """Get or create command executor"""
-        if self._command_executor is None:
-            from mindsdb.api.executor.command_executor import ExecuteCommands
-            from mindsdb.api.executor.controllers import SessionController
-            session = SessionController()
-            self._command_executor = ExecuteCommands(session)
-        return self._command_executor
-    
-    def _get_kb_controller(self):
-        """Get or create knowledge base controller"""
-        if self._kb_controller is None:
-            from mindsdb.api.executor.controllers import SessionController
-            session = SessionController()
-            self._kb_controller = KnowledgeBaseController(session)
-        return self._kb_controller
     
     def _create_pydantic_agent(self) -> Agent:
         """Create and configure Pydantic AI agent"""
         if self._pydantic_agent is not None:
             return self._pydantic_agent
+
         
-        model_instance = get_model_instance_from_kwargs(self.args)
-        
-        
-        # Create agent with system prompt
-        # Pydantic AI Agent doesn't accept model kwargs directly - it reads from environment
-        # We've set the environment variables above, so they'll be picked up when the model is created
-        system_prompt = self.args.get("prompt_template", "you are an assistant")
-        
-        # Ensure markdown formatting instructions are included in the prompt
-        markdown_instructions = """
-**IMPORTANT FORMATTING REQUIREMENTS:**
-- Always format your responses in Markdown
-- When presenting tabular data or query results, organize them as Markdown tables
-- Use proper Markdown table syntax with headers and aligned columns
-- For example:
-| Column1 | Column2 | Column3 |
-|---------|---------|---------|
-| Value1  | Value2  | Value3  |
-- Use other Markdown formatting (headers, lists, code blocks) as appropriate to make responses clear and well-structured"""
-        
-        # Append markdown instructions if not already present
-        if "markdown" not in system_prompt.lower() and "formatting" not in system_prompt.lower():
-            system_prompt = f"{system_prompt}\n\n{markdown_instructions}"
+
         
         # Create agent - Pydantic AI will read API keys from environment variables
         agent = Agent(
             model_instance,
             system_prompt=system_prompt,
+            output_type=SQLQuery
         )
+
         
-        
-        # Build and register tools
-        command_executor = self._get_command_executor()
-        kb_controller = self._get_kb_controller()
-        project_id = self.agent.project_id
-        
-        # Get LLM for tools (we'll create a simple wrapper if needed)
-        # For now, tools will work without LLM in some cases
-        llm = None  # Tools may not need LLM directly
-        
-        # Get embedding model if needed
-        embedding_model = None
-        if self.args.get("embedding_model_provider"):
-            try:
-                from mindsdb.interfaces.knowledge_base.embedding_model_utils import construct_embedding_model_from_args
-                embedding_args = self.args.get("embedding_model", {})
-                if embedding_args:
-                    embedding_model = construct_embedding_model_from_args(embedding_args)
-            except Exception as e:
-                logger.warning(f"Could not create embedding model: {e}")
-        
-        # Build tools
-        tools = build_tools_from_agent_config(
-            agent_params=self.agent.params,
-            command_executor=command_executor,
-            llm=llm,
-            embedding_model=embedding_model,
-            kb_controller=kb_controller,
-            project_id=project_id,
-        )
-        
-        # Register tools with agent
-        # Pydantic AI tools are typically registered via decorators, but we can use tool_plain
-        # or register them by creating a new agent with tools
-        # For now, we'll register them using the tool registration API
-        for tool_func in tools:
-            # Register tool using tool_plain for plain functions
-            # This allows registering async functions without decorators
-            try:
-                agent.tool_plain(tool_func)
-            except Exception as e:
-                logger.warning(f"Could not register tool {tool_func.__name__}: {e}")
-                # Try alternative registration method
-                try:
-                    agent.tool(tool_func)
-                except Exception as e2:
-                    logger.error(f"Failed to register tool {tool_func.__name__}: {e2}")
         
         self._pydantic_agent = agent
         return agent
@@ -378,12 +294,8 @@ class PydanticAIAgent:
     def get_metadata(self) -> Dict:
         """Get metadata for observability"""
         return {
-            "provider": self.provider,
+            
             "model_name": self.args["model_name"],
-            "embedding_model_provider": self.args.get(
-                "embedding_model_provider", 
-                self._get_embedding_model_provider(self.args)
-            ),
             "user_id": ctx.user_id,
             "session_id": ctx.session_id,
             "company_id": ctx.company_id,
@@ -393,7 +305,42 @@ class PydanticAIAgent:
     
     def get_tags(self) -> List:
         """Get tags for observability"""
-        return [self.provider]
+        return ['AGENT', 'PYDANTIC_AI']
+    
+    def get_sql_context(self) -> Optional[Dict]:
+        """
+        Get the SQL query context if the agent was called from a SQL query.
+        
+        Returns:
+            Dict with keys:
+                - 'original_query': The original SQL query string
+                - 'where_conditions': Dict of WHERE clause values (e.g., {'question': '...'})
+                - 'select_targets': List of SELECT target columns
+            None if not called from SQL query
+        """
+        return self._sql_context
+    
+    def get_current_question_from_sql(self) -> Optional[str]:
+        """
+        Get the current question from SQL WHERE clause if available.
+        
+        Returns:
+            Question string from WHERE question = '...' if available, None otherwise
+        """
+        if self._sql_context and 'where_conditions' in self._sql_context:
+            return self._sql_context['where_conditions'].get('question')
+        return None
+    
+    def get_select_targets_from_sql(self) -> Optional[List[str]]:
+        """
+        Get the SELECT targets from the original SQL query if available.
+        
+        Returns:
+            List of SELECT target column names if available, None otherwise
+        """
+        if self._sql_context and 'select_targets' in self._sql_context:
+            return self._sql_context['select_targets']
+        return None
     
     def get_completion(self, messages, stream: bool = False, params: dict | None = None):
         """
@@ -407,82 +354,113 @@ class PydanticAIAgent:
         Returns:
             DataFrame with assistant response
         """
-        # Set up trace
-        metadata = self.get_metadata()
-        tags = self.get_tags()
-        
-        self.langfuse_client_wrapper.setup_trace(
-            name="api-completion",
-            input=messages,
-            tags=tags,
-            metadata=metadata,
-            user_id=ctx.user_id,
-            session_id=ctx.session_id,
-        )
-        
-        self.run_completion_span = self.langfuse_client_wrapper.start_span(
-            name="run-completion", 
-            input=messages
-        )
+        # Extract SQL context from params if present
+        if params and '_sql_context' in params:
+            self._sql_context = params.pop('_sql_context')
+        else:
+            self._sql_context = None
         
         if stream:
             return self._get_completion_stream(messages)
+        else:
+            for message in self._get_completion_stream(messages):
+                if message.get("type") == "end":
+                    break
+                elif message.get("type") == "error":
+                    error_message = f"Agent failed with model error: {message.get('content')}"
+                    return self._create_error_response(error_message, return_context=self.args.get("return_context", True))
+                
+                last_message = message
+            
+                if last_message.get("type") == "sql":
+                    sql_query = last_message.get("content")
+                    
+                if last_message.get("type") == "data":
+                    df = last_message.get("content")
+                    table_markdown = dataframe_to_markdown(df)
+
+            else:
+                error_message = f"Agent failed with model error: {last_message.get('content')}"
+                return self._create_error_response(error_message, return_context=self.args.get("return_context", True))
+            
+    
+            # Extract the current prompt and message history
+            current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
+
+            # If SQL and markdown available, construct the (question, answer) DataFrame
+            if sql_query and table_markdown:
+                question = current_prompt
+                answer = f"```sql\n{sql_query}\n```\n\n{table_markdown}"
+                result_df = pd.DataFrame([{"question": question, "answer": answer}])
+                return result_df
+            else:
+                # Fallback: return the last message content in a DataFrame
+                content = last_message.get("content", "")
+                result_df = pd.DataFrame([{"question": current_prompt, "answer": content}])
+                return result_df
         
-        # Merge params
-        args = {}
-        args.update(self.args)
-        args.update(params or {})
+        # # Merge params
+        # args = {}
+        # args.update(self.args)
+        # args.update(params or {})
         
-        # Extract current prompt and message history from messages
-        # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
-        current_prompt, message_history = self._extract_current_prompt_and_history(messages, args)
-        logger.info(f"PydanticAIAgent.get_completion: Extracted prompt and {len(message_history)} history messages")
+        # # Extract current prompt and message history from messages
+        # # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
+        # current_prompt, message_history = self._extract_current_prompt_and_history(messages, args)
+        # logger.info(f"PydanticAIAgent.get_completion: Extracted prompt and {len(message_history)} history messages")
         
-        # Create agent
-        agent = self._create_pydantic_agent()
+        # # Create agent
+        # agent = self._create_pydantic_agent()
         
-        # Run agent
-        try:
-            result = agent.run_sync(
-                current_prompt,
-                message_history=message_history if message_history else None,
-            )
+        # # Run agent
+        # try:
+        #     tables_list = self.agent.params.get("data", {}).get("tables", [])
+        #     knowledge_bases_list = self.agent.params.get("data", {}).get("knowledge_bases", [])
+        #     data_catalog = DataCatalogBuilder().build_data_catalog(tables=tables_list, knowledge_bases=knowledge_bases_list)
+        #     current_prompt = f"Data Catalog:\n{data_catalog}\n\n{current_prompt}"
             
-            # Extract output
-            output = result.output if hasattr(result, 'output') else str(result)
+        #     result = agent.run_sync(
+        #         current_prompt,
+        #         message_history=message_history if message_history else None,
+        #     )
             
-            # Create response DataFrame
-            return_context = args.get("return_context", True)
-            response_data = {
-                ASSISTANT_COLUMN: [output],
-                TRACE_ID_COLUMN: [self.langfuse_client_wrapper.get_trace_id()],
-            }
+        #     # Extract output
+        #     output = result.output 
             
-            if return_context:
-                # Extract context from result if available
-                context = []
-                if hasattr(result, 'data') and isinstance(result.data, dict):
-                    context = result.data.get('context', [])
-                response_data[CONTEXT_COLUMN] = [json.dumps(context)]
+        #     data = .execute(output.query)
+
+        #     # Create response DataFrame
+        #     return_context = args.get("return_context", True)
+        #     response_data = {
+        #         ASSISTANT_COLUMN: [data],
+        #         TRACE_ID_COLUMN: [self.langfuse_client_wrapper.get_trace_id()],
+        #     }
             
-            response_df = pd.DataFrame(response_data)
+        #     if return_context:
+        #         # Extract context from result if available
+        #         context = []
+        #         if hasattr(result, 'data') and isinstance(result.data, dict):
+        #             context = result.data.get('context', [])
+        #         response_data[CONTEXT_COLUMN] = [json.dumps(context)]
             
-            # End span
-            self.langfuse_client_wrapper.end_span(
-                span=self.run_completion_span, 
-                output=response_df.to_dict('records')
-            )
+        #     response_df = pd.DataFrame(response_data)
             
-            return response_df
+        #     # End span
+        #     self.langfuse_client_wrapper.end_span(
+        #         span=self.run_completion_span, 
+        #         output=response_df.to_dict('records')
+        #     )
             
-        except UnexpectedModelBehavior as e:
-            logger.error(f"Model error: {e}", exc_info=True)
-            error_message = f"Agent failed with model error: {str(e)}"
-            return self._create_error_response(error_message, return_context=args.get("return_context", True))
-        except Exception as e:
-            logger.error(f"Agent error: {e}", exc_info=True)
-            error_message = f"Agent failed with error: {str(e)}"
-            return self._create_error_response(error_message, return_context=args.get("return_context", True))
+        #     return response_df
+            
+        # except UnexpectedModelBehavior as e:
+        #     logger.error(f"Model error: {e}", exc_info=True)
+        #     error_message = f"Agent failed with model error: {str(e)}"
+        #     return self._create_error_response(error_message, return_context=args.get("return_context", True))
+        # except Exception as e:
+        #     logger.error(f"Agent error: {e}", exc_info=True)
+        #     error_message = f"Agent failed with error: {str(e)}"
+        #     return self._create_error_response(error_message, return_context=args.get("return_context", True))
     
     def _create_error_response(self, error_message: str, return_context: bool = True) -> pd.DataFrame:
         """Create error response DataFrame"""
@@ -504,116 +482,86 @@ class PydanticAIAgent:
         Returns:
             Iterator of chunk dictionaries
         """
-        args = self.args
+        
+        # Set up trace
+        metadata = self.get_metadata()
+        tags = self.get_tags()
+        
+        self.langfuse_client_wrapper.setup_trace(
+            name="api-completion",
+            input=messages,
+            tags=tags,
+            metadata=metadata,
+            user_id=ctx.user_id,
+            session_id=ctx.session_id,
+        )
+        
+        
+        self.run_completion_span = self.langfuse_client_wrapper.start_span(
+            name="run-completion", 
+            input=messages
+        )
         
         # Extract current prompt and message history from messages
         # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
-        current_prompt, message_history = self._extract_current_prompt_and_history(messages, args)
+        current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
         logger.info(f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages")
         
         # Create agent
-        agent = self._create_pydantic_agent()
+        agent = Agent(
+            self.model_instance,
+            system_prompt=self.system_prompt,
+            output_type=SQLQuery
+        )
         
-        # Yield start chunk
-        yield self._add_chunk_metadata({"type": "start", "prompt": current_prompt})
+        logger.info(f"PydanticAIAgent._get_completion_stream: SQL context: {self._sql_context}")
         
-        # Stream agent response
+        yield self._add_chunk_metadata({"type": "status", "content": "Generating Data Catalog..."})
+        tables_list = self.agent.params.get("data", {}).get("tables", [])
+        knowledge_bases_list = self.agent.params.get("data", {}).get("knowledge_bases", [])
+        data_catalog = DataCatalogBuilder().build_data_catalog(tables=tables_list, knowledge_bases=knowledge_bases_list)
+        current_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{agent_prompts.sql_description}\n\nPlease write a Mindsdb SQL query to answer the question:\n{current_prompt}"
+
+        logger.info(f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}")
+
         try:
-            # Use run_stream to capture all text output and final result
-            def run_stream_sync():
-                """Run async stream in sync context"""
-                async def stream_agent():
-                    collected_text = ""
-                    async with agent.run_stream(
-                        current_prompt, 
-                        message_history=message_history if message_history else None
-                    ) as run:
-                        # Stream text output as it comes
-                        async for text in run.stream_text():
-                            collected_text += text
-                            # Yield text chunks for a2a compatibility (expects 'text' or 'output' field)
-                            yield self._add_chunk_metadata({
-                                "type": "text",
-                                "content": text,
-                                "text": text,  # For a2a compatibility
-                                "output": text  # Alternative field name
-                            })
-                        
-                        # Get final output to ensure we have the complete response
-                        try:
-                            final_output = await run.get_output()
-                            final_output_str = str(final_output) if final_output else collected_text
-                            
-                            # If final output is different from collected text, yield it
-                            if final_output_str and final_output_str != collected_text:
-                                yield self._add_chunk_metadata({
-                                    "type": "text",
-                                    "content": final_output_str,
-                                    "text": final_output_str,
-                                    "output": final_output_str
-                                })
-                            elif final_output_str:
-                                # Ensure we yield the final output even if it matches
-                                yield self._add_chunk_metadata({
-                                    "type": "text",
-                                    "content": final_output_str,
-                                    "text": final_output_str,
-                                    "output": final_output_str
-                                })
-                        except Exception as e:
-                            logger.debug(f"Could not get final output, using collected text: {e}")
-                            # Fallback: yield collected text if we couldn't get final output
-                            if collected_text:
-                                yield self._add_chunk_metadata({
-                                    "type": "text",
-                                    "content": collected_text,
-                                    "text": collected_text,
-                                    "output": collected_text
-                                })
+            yield self._add_chunk_metadata({"type": "status", "content": "Generating SQL query..."})
+            result = agent.run_sync(
+                current_prompt,
+                message_history=message_history if message_history else None,
+            )
                 
-                # Get or create event loop
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                
-                # Run async generator
-                async_gen = stream_agent()
-                while True:
-                    try:
-                        chunk = loop.run_until_complete(async_gen.__anext__())
-                        yield chunk
-                    except StopAsyncIteration:
-                        break
-            
-            # Yield chunks from sync wrapper
-            final_output_received = False
-            for chunk in run_stream_sync():
-                final_output_received = True
-                yield chunk
-            
-            # Ensure we have a final output chunk if nothing was streamed
-            if not final_output_received:
-                logger.warning("No output chunks received from agent stream")
+            # Extract output
+            output = result.output 
+            yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
+
+            logger.info(f"PydanticAIAgent._get_completion_stream: Received LLM response: {output.sql_query}")
+
+            try:
+
+                yield self._add_chunk_metadata({"type": "status", "content": "Executing SQL query..."})
+
+                data = self.executor.execute(output.sql_query)
+                logger.info(f"PydanticAIAgent._get_completion_stream: Executed SQL query: {data}")
+
                 yield self._add_chunk_metadata({
-                    "type": "text",
-                    "content": "",
-                    "text": "",
-                    "output": ""
+                    "type": "data",
+                    "content": data
                 })
-            
-            # Yield context if needed
-            return_context = args.get("return_context", True)
-            if return_context:
-                yield self._add_chunk_metadata({"type": "context", "content": []})
-            
+            except Exception as e:
+                logger.error(f"Error executing SQL query: {e}", exc_info=True)
+                yield self._add_chunk_metadata({
+                    "type": "error",
+                    "content": f"Error executing SQL query: {str(e)}",
+                })
+
             # Yield end chunk
             yield self._add_chunk_metadata({"type": "end"})
             
-            # End span
             self.langfuse_client_wrapper.end_span_stream(span=self.run_completion_span)
+
             
+       
         except Exception as e:
             logger.error(f"Streaming error: {e}", exc_info=True)
             error_chunk = self._add_chunk_metadata({

@@ -32,11 +32,21 @@ def get_preditor_alias(step, mindsdb_database):
 
 
 class ApplyPredictorBaseCall(BaseStepCall):
-    def apply_predictor(self, project_name, predictor_name, df, version, params):
+    def apply_predictor(self, project_name, predictor_name, df, version, params, step=None):
         # is it an agent?
         agent = self.session.agents_controller.get_agent(predictor_name, project_name)
         if agent is not None:
             messages = df.to_dict("records")
+            
+            # Extract SQL query context if available (when called from SQL query)
+            sql_context = self._extract_sql_context(step)
+            
+            # Merge SQL context into params
+            if sql_context:
+                if params is None:
+                    params = {}
+                params['_sql_context'] = sql_context
+            
             predictions = self.session.agents_controller.get_completion(
                 agent, messages=messages, project_name=project_name, params=params
             )
@@ -45,6 +55,54 @@ class ApplyPredictorBaseCall(BaseStepCall):
             project_datanode = self.session.datahub.get(project_name)
             predictions = project_datanode.predict(model_name=predictor_name, df=df, version=version, params=params)
         return predictions
+    
+    def _extract_sql_context(self, step):
+        """
+        Extract SQL query context from the step and context.
+        
+        Returns:
+            Dict with SQL context information or None if not available
+        """
+        sql_context = {}
+        
+        # Get original query string from context
+        if 'query_str' in self.context:
+            sql_context['original_query'] = self.context['query_str']
+        
+        # Get WHERE clause values from step if available
+        if step is not None and hasattr(step, 'row_dict') and step.row_dict:
+            sql_context['where_conditions'] = step.row_dict.copy()
+        
+        # Try to extract SELECT targets from the original query
+        if 'original_query' in sql_context:
+            try:
+                from mindsdb_sql import parse_sql
+                from mindsdb_sql.parser import ast
+                
+                parsed = parse_sql(sql_context['original_query'])
+                if isinstance(parsed, ast.Select):
+                    # Extract SELECT targets
+                    select_targets = []
+                    for target in parsed.targets:
+                        if isinstance(target, ast.Identifier):
+                            select_targets.append('.'.join(target.parts))
+                        elif isinstance(target, ast.Star):
+                            select_targets.append('*')
+                        elif isinstance(target, ast.Function):
+                            # For functions, get the function name and args
+                            func_str = target.op
+                            if target.args:
+                                args_str = ', '.join(str(arg) for arg in target.args)
+                                func_str = f"{func_str}({args_str})"
+                            select_targets.append(func_str)
+                        else:
+                            select_targets.append(str(target))
+                    sql_context['select_targets'] = select_targets
+            except Exception:
+                # If parsing fails, just skip SELECT targets extraction
+                pass
+        
+        return sql_context if sql_context else None
 
 
 class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
@@ -73,7 +131,7 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
             version = int(step.predictor.parts[-1])
 
         df = pd.DataFrame([where_data])
-        predictions = self.apply_predictor(project_name, predictor_name, df, version, step.params)
+        predictions = self.apply_predictor(project_name, predictor_name, df, version, step.params, step=step)
 
         # update predictions with input data
         for k, v in where_data.items():
@@ -201,7 +259,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])
-                predictions = self.apply_predictor(project_name, predictor_name, table_df, version, params)
+                predictions = self.apply_predictor(project_name, predictor_name, table_df, version, params, step=step)
 
                 if self.session.predictor_cache is not False:
                     if predictions is not None and isinstance(predictions, pd.DataFrame):

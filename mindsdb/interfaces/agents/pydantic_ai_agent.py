@@ -201,6 +201,7 @@ class PydanticAIAgent:
         Args:
             messages: Can be:
                 - List of dicts with 'role' and 'content' (API format)
+                - List of dicts with 'question' and 'answer' (Q&A format from A2A)
                 - DataFrame with 'role'/'content' columns (API format)
                 - DataFrame with 'question'/'answer' columns (legacy format)
             args: Arguments dict
@@ -229,6 +230,42 @@ class PydanticAIAgent:
                 # Get message history (all except last message)
                 message_history = pydantic_messages[:-1] if len(pydantic_messages) > 1 else []
                 return current_prompt, message_history
+            
+            # Handle Q&A format (from A2A conversion): list of dicts with 'question' and 'answer' keys
+            elif isinstance(messages[0], dict) and "question" in messages[0]:
+                # Convert Q&A format to role/content format for processing
+                role_content_messages = []
+                for qa_msg in messages:
+                    question = qa_msg.get("question", "")
+                    answer = qa_msg.get("answer", "")
+                    
+                    # Add user message (question)
+                    if question:
+                        role_content_messages.append({"role": "user", "content": str(question)})
+                    
+                    # Add assistant message (answer) if present
+                    if answer:
+                        role_content_messages.append({"role": "assistant", "content": str(answer)})
+                
+                # Now process as role/content format
+                if len(role_content_messages) > 0:
+                    pydantic_messages = []
+                    for msg in role_content_messages:
+                        if msg.get("role") == "user":
+                            pydantic_messages.append(ModelRequest.user_text_prompt(msg.get("content", "")))
+                        elif msg.get("role") == "assistant":
+                            pydantic_messages.append(ModelResponse(parts=[TextPart(content=msg.get("content", ""))]))
+                    
+                    # Get current prompt (last user message)
+                    current_prompt = ""
+                    for msg in reversed(role_content_messages):
+                        if msg.get("role") == "user":
+                            current_prompt = msg.get("content", "")
+                            break
+                    
+                    # Get message history (all except last message)
+                    message_history = pydantic_messages[:-1] if len(pydantic_messages) > 1 else []
+                    return current_prompt, message_history
         
         # Handle DataFrame format
         df = messages if isinstance(messages, pd.DataFrame) else pd.DataFrame(messages)

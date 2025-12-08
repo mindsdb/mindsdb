@@ -489,12 +489,12 @@ class PydanticAIAgent:
             input=messages
         )
         
-        logger.info(f"PydanticAIAgent._get_completion_stream: Messages: {messages}")
+        logger.debug(f"PydanticAIAgent._get_completion_stream: Messages: {messages}")
         
         # Extract current prompt and message history from messages
         # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
         current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
-        logger.info(f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages")
+        logger.debug(f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages")
         
         # Create agent
         agent = Agent(
@@ -503,7 +503,7 @@ class PydanticAIAgent:
             output_type=SQLQuery
         )
         
-        logger.info(f"PydanticAIAgent._get_completion_stream: SQL context: {self._sql_context}")
+        logger.debug(f"PydanticAIAgent._get_completion_stream: SQL context: {self._sql_context}")
         
         yield self._add_chunk_metadata({"type": "status", "content": "Generating Data Catalog..."})
         tables_list = self.agent.params.get("data", {}).get("tables", [])
@@ -535,8 +535,8 @@ class PydanticAIAgent:
         
         current_prompt = base_prompt
 
-        logger.info(f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}")
-        logger.info(f"PydanticAIAgent._get_completion_stream: Message history: {message_history}")
+        logger.debug(f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}")
+        logger.debug(f"PydanticAIAgent._get_completion_stream: Message history: {message_history}")
 
         try:
             while True:
@@ -555,7 +555,7 @@ class PydanticAIAgent:
                 output = result.output 
                 yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
 
-                logger.info(f"PydanticAIAgent._get_completion_stream: Received LLM response: {output.sql_query}, query_type: {output.query_type}")
+                logger.debug(f"PydanticAIAgent._get_completion_stream: Received LLM response: {output.sql_query}, query_type: {output.query_type}")
 
                 # Initialize retry counter for this query
                 retry_count = 0
@@ -569,14 +569,14 @@ class PydanticAIAgent:
                         yield self._add_chunk_metadata({"type": "status", "content": "Executing SQL query..."})
 
                         query_data = self.executor.execute(output.sql_query)
-                        logger.info(f"PydanticAIAgent._get_completion_stream: Executed SQL query successfully: {query_data}")
+                        logger.debug(f"PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
                         query_succeeded = True
                         break  # Query succeeded, exit retry loop
                         
                     except QueryError as e:
-                        # Capture SQL query errors
+                        # Capture SQL query errors - only log essential error information
                         query_error = str(e)
-                        logger.error(f"SQL query error (retry {retry_count}/{MAX_RETRIES}): {query_error}", exc_info=True)
+                        logger.error(f"SQL query error (retry {retry_count}/{MAX_RETRIES}): Query: {output.sql_query[:100]}... Error: {query_error}")
                         
                         if retry_count < MAX_RETRIES:
                             # Add error to accumulated errors and update prompt for retry
@@ -602,15 +602,15 @@ class PydanticAIAgent:
                             )
                             output = result.output
                             yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
-                            logger.info(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
+                            logger.debug(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
                         else:
                             # Max retries reached
                             break
                             
                     except Exception as e:
-                        # Unexpected error
+                        # Unexpected error - only log essential error information
                         query_error = f"Error executing SQL query: {str(e)}"
-                        logger.error(f"Unexpected error executing SQL query: {e}", exc_info=True)
+                        logger.error(f"Unexpected error executing SQL query (retry {retry_count}/{MAX_RETRIES}): Query: {output.sql_query[:100]}... Error: {str(e)}")
                         
                         if retry_count < MAX_RETRIES:
                             accumulated_errors.append(f"Query: {output.sql_query}\nError: {query_error}")
@@ -633,7 +633,7 @@ class PydanticAIAgent:
                             )
                             output = result.output
                             yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
-                            logger.info(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
+                            logger.debug(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
                         else:
                             break
 
@@ -641,7 +641,7 @@ class PydanticAIAgent:
                 if not query_succeeded:
                     # Query failed after all retries
                     error_message = query_error or "Query failed after maximum retries"
-                    logger.error(f"Query failed after {MAX_RETRIES} retries: {error_message}")
+                    logger.error(f"Query failed after {MAX_RETRIES} retries. Query: {output.sql_query[:100]}... Error: {error_message}")
                     
                     # If we've exhausted retries and reached max exploratory queries, return "cannot solve" response
                     if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
@@ -701,7 +701,7 @@ class PydanticAIAgent:
                     
                     # This is an exploratory query
                     exploratory_query_count += 1
-                    logger.info(f"Exploratory query {exploratory_query_count}/{MAX_EXPLORATORY_QUERIES} succeeded")
+                    logger.debug(f"Exploratory query {exploratory_query_count}/{MAX_EXPLORATORY_QUERIES} succeeded")
                     
                     # Format query result for prompt
                     query_result_str = f"Query: {output.sql_query}\nDescription: {output.short_description}\nResult:\n{dataframe_to_markdown(query_data)}"
@@ -727,7 +727,7 @@ class PydanticAIAgent:
                     
                 elif output.query_type == QueryType.FINAL:
                     # This is a final query - return the result
-                    logger.info("Final query succeeded, returning result")
+                    logger.debug("Final query succeeded, returning result")
                     yield self._add_chunk_metadata({
                         "type": "data",
                         "content": query_data
@@ -747,7 +747,7 @@ class PydanticAIAgent:
                     return
        
         except Exception as e:
-            logger.error(f"Streaming error: {e}", exc_info=True)
+            logger.error(f"Agent streaming failed: {str(e)}")
             error_chunk = self._add_chunk_metadata({
                 "type": "error",
                 "content": f"Agent streaming failed: {str(e)}",

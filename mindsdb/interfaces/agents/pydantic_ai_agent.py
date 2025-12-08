@@ -581,6 +581,9 @@ class PydanticAIAgent:
         
         logger.debug(f"Generated plan with {plan.estimated_steps} estimated steps: {plan.plan}")
         
+        # Yield the plan as a status message
+        yield self._add_chunk_metadata({"type": "status", "content": f"Proposed Execution Plan:\n{plan.plan}\n\nEstimated steps: {plan.estimated_steps}\n\n"})
+        
         # Build base prompt with plan included
         base_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{sql_instructions}\n\nProposedExecution Plan:\n{plan.plan}\n\nEstimated steps: {plan.estimated_steps} (maximum allowed: {MAX_EXPLORATORY_QUERIES})\n\nPlease follow this plan and write Mindsdb SQL queries to answer the question:\n{current_prompt}"
         

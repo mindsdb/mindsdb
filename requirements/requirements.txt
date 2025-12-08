@@ -73,3 +73,4 @@ pydantic_core>=2.33.2
 transformers >= 4.42.4
 
 mind-castle >= 0.4.9
+urllib3>=2.6.0 # not directly required, pinned by Snyk to avoid a vulnerability

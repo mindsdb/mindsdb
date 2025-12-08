@@ -105,7 +105,7 @@ target "images" {
     item = [
       {
         name = "bare"
-        extras = ""
+        extras = ".[mysql,postgresql]"
         target = ""
       },
       {

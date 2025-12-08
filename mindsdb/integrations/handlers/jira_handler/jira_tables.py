@@ -353,6 +353,68 @@ class JiraProjectsTable(JiraTableBase):
             "uuid",
         ]
 
+    # META TABLES
+    @staticmethod
+    def meta_get_tables(table_name: str, *args: Any, **kwargs: Any) -> Dict:
+        if table_name == "projects":
+            return {
+                "table_name": "projects",
+                "table_schma": "jira",
+                "table_type": "BASE TABLE",
+                "table_description": "Jira projects available to the configured user.",
+            }
+
+    @staticmethod
+    def meta_get_columns(table_name: str, *args: Any, **kwargs: Any) -> List[Dict]:
+        if table_name == "projects":
+            return [
+                {
+                    "column_name": "id",
+                    "data_type": "TEXT",
+                    "description": "Project ID.",
+                },
+                {
+                    "column_name": "key",
+                    "data_type": "TEXT",
+                    "description": "Project key.",
+                },
+                {
+                    "column_name": "name",
+                    "data_type": "TEXT",
+                    "description": "Project name.",
+                },
+                {
+                    "column_name": "projectTypeKey",
+                    "data_type": "TEXT",
+                    "description": "Type of the project.",
+                },
+                {
+                    "column_name": "simplified",
+                    "data_type": "BOOLEAN",
+                    "description": "Whether the project is simplified.",
+                },
+                {
+                    "column_name": "style",
+                    "data_type": "TEXT",
+                    "description": "Style of the project.",
+                },
+                {
+                    "column_name": "isPrivate",
+                    "data_type": "BOOLEAN",
+                    "description": "Whether the project is private.",
+                },
+                {
+                    "column_name": "entityId",
+                    "data_type": "TEXT",
+                    "description": "Entity ID of the project.",
+                },
+                {
+                    "column_name": "uuid",
+                    "data_type": "TEXT",
+                    "description": "UUID of the project.",
+                },
+            ]
+
 
 class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
     """

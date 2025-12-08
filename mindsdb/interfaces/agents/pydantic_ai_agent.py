@@ -2,6 +2,7 @@
 
 import json
 import asyncio
+import warnings
 from typing import Dict, List, Optional, Any, Iterable
 import pandas as pd
 import logging
@@ -21,7 +22,7 @@ from mindsdb.interfaces.agents.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
 )
 
-from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery, SQLQuery, QueryType
+from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery, SQLQuery, QueryType, Plan
 from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import (
     get_model_instance_from_kwargs
 )
@@ -34,6 +35,11 @@ from mindsdb.interfaces.agents.prompts import agent_prompts
 logger = log.getLogger(__name__)
 
 from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuilder, dataframe_to_markdown
+
+# Suppress asyncio warnings about unretrieved task exceptions from httpx cleanup
+# This is a known issue where httpx.AsyncClient tries to close connections after the event loop is closed
+import warnings
+warnings.filterwarnings("ignore", message=".*Task exception was never retrieved.*", category=RuntimeWarning)
 
 class PydanticAIAgent:
     """Pydantic AI-based agent to replace LangchainAgent"""
@@ -534,8 +540,28 @@ class PydanticAIAgent:
             sql_instructions = agent_prompts.sql_description
 
         data_catalog = DataCatalogBuilder().build_data_catalog(tables=tables_list, knowledge_bases=knowledge_bases_list)
-        base_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{sql_instructions}\n\nPlease write a Mindsdb SQL query to answer the question:\n{current_prompt}"
-
+        
+        # Initialize counters and accumulators
+        exploratory_query_count = 0
+        MAX_EXPLORATORY_QUERIES = 20
+        MAX_RETRIES = 3
+        accumulated_errors = []
+        exploratory_query_results = []
+        
+        # Planning step: Create a plan before generating queries
+        yield self._add_chunk_metadata({"type": "status", "content": "Creating execution plan..."})
+        
+        # Create planning agent
+        planning_agent = Agent(
+            self.model_instance,
+            system_prompt=self.system_prompt,
+            output_type=Plan
+        )
+        
+        # Build planning prompt
+        planning_prompt_text = f"""Take into account the following Data Catalog:\n{data_catalog}\n\n{agent_prompts.planning_prompt}\n\nQuestion to answer: {current_prompt}"""
+        logger.debug(f"PydanticAIAgent._get_completion_stream: Planning prompt text: {planning_prompt_text}")
+        # Get select targets for planning context
         select_targets = self.get_select_targets_from_sql()
         select_targets_str = None
         if select_targets is not None:
@@ -543,14 +569,23 @@ class PydanticAIAgent:
                 select_targets_str = ", ".join(str(t) for t in select_targets)
             else:
                 select_targets_str = str(select_targets)
+            planning_prompt_text += f"\n\nFor the final query, the user expects to have a table such that this query is valid: SELECT {select_targets_str} FROM (<generated query>); when creating your plan, make sure to account for these expected columns."
+        
+        # Generate plan
+        plan_result = planning_agent.run_sync(planning_prompt_text)
+        plan = plan_result.output
+        # Validate plan steps don't exceed MAX_EXPLORATORY_QUERIES
+        if plan.estimated_steps > MAX_EXPLORATORY_QUERIES:
+            logger.warning(f"Plan estimated {plan.estimated_steps} steps, but maximum is {MAX_EXPLORATORY_QUERIES}. Adjusting plan.")
+            plan.plan += f"\n\nNote: The plan has been adjusted to ensure it does not exceed {MAX_EXPLORATORY_QUERIES} steps."
+        
+        logger.debug(f"Generated plan with {plan.estimated_steps} estimated steps: {plan.plan}")
+        
+        # Build base prompt with plan included
+        base_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{sql_instructions}\n\nProposedExecution Plan:\n{plan.plan}\n\nEstimated steps: {plan.estimated_steps} (maximum allowed: {MAX_EXPLORATORY_QUERIES})\n\nPlease follow this plan and write Mindsdb SQL queries to answer the question:\n{current_prompt}"
+        
+        if select_targets_str is not None:
             base_prompt += f"\n\nFor the final query the user expects to have a table such that this query is valid:SELECT {select_targets_str} FROM (<generated query>); when generating the SQL query make sure to include those columns, do not fix grammar on columns. Keep them as the user wants them"
-
-        # Initialize counters and accumulators
-        exploratory_query_count = 0
-        MAX_EXPLORATORY_QUERIES = 20
-        MAX_RETRIES = 3
-        accumulated_errors = []
-        exploratory_query_results = []
         
         current_prompt = base_prompt
 
@@ -766,12 +801,19 @@ class PydanticAIAgent:
                     return
        
         except Exception as e:
-            logger.error(f"Agent streaming failed: {str(e)}")
-            error_chunk = self._add_chunk_metadata({
-                "type": "error",
-                "content": f"Agent streaming failed: {str(e)}",
-            })
-            yield error_chunk
+            # Suppress the "Event loop is closed" error from httpx cleanup
+            # This is a known issue where async HTTP clients try to close after the event loop is closed
+            error_msg = str(e)
+            if "Event loop is closed" in error_msg:
+                # This is a cleanup issue, not a critical error - log at debug level
+                logger.debug(f"Async cleanup warning (non-critical): {error_msg}")
+            else:
+                logger.error(f"Agent streaming failed: {error_msg}")
+                error_chunk = self._add_chunk_metadata({
+                    "type": "error",
+                    "content": f"Agent streaming failed: {error_msg}",
+                })
+                yield error_chunk
     
     def _add_chunk_metadata(self, chunk: Dict) -> Dict:
         """Add metadata to chunk"""

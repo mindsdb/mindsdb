@@ -168,6 +168,10 @@ class QueryType:
     FINAL = "final_query"  # this is the final query
     EXPLORATORY = "exploratory_query"  # this is a query to explore and collect info to solve the challenge (e.g., distinct values of a categorical column, schema inference, etc.)
 
+class Plan(BaseModel):
+    plan: str = Field(..., description="A step-by-step plan for solving the question, identifying data sources and steps needed")
+    estimated_steps: int = Field(..., description="Estimated number of steps needed to solve the question")
+
 class SQLQuery(BaseModel):
     sql_query: str = Field(..., description="The SQL query to run")
     short_description: str = Field(..., description="A short summary or description of the SQL query's purpose")

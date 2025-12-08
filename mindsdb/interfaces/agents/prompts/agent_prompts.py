@@ -90,11 +90,14 @@ WHERE movie_id IN (
 )
 GROUP BY release_year;
 ```
-- NEVER IN KNOWLEDGE BASE QUERIES USE content  ILIKE  (ilike is not suppoerted)
 
-- AVOID: JOINS between tables and knowledge bases, instead use WHERE <IDCOLUMN> IN (SELECT DISTINCT id FROM knowledge_base) ...
+- NEVER use `ILIKE` in knowledge base `content` condition  (ILIKE is not supported in knowledge bases) only LIKE is supported.
 
-- ALWAYS: It is important to set an appropriate LIMIT on knowledge base queries to avoid missing results; the default limit is 10, so if you need more than 10, set it accordingly.
+- AVOID direct joins between tables and knowledge bases. Instead, use `WHERE <IDCOLUMN> IN (SELECT DISTINCT id FROM knowledge_base) ...`
+OR use the knowledge base as a subquery and join on that, for example:
+`SELECT * FROM <TABLE> JOIN (SELECT id, LIST(chunk_content) FROM knowledge_base WHERE content LIKE 'your semantic search query' AND metadata_col=something ... GROUP BY id LIMIT 10000 ) AS kb ON <TABLE>.<IDCOLUMN> = kb.id ...`
+
+- ALWAYS: It is important to set an appropriate LIMIT on knowledge base queries to avoid missing results; the default limit is 10, so if you need more than 10, set it accordingly. When unsure LIMIT 10000 is recommended.
 
 - When writing the SQL query, make sure the select renames the columns accordingly to the question.
 
@@ -110,5 +113,31 @@ markdown_instructions = """
 |---------|---------|---------|
 | Value1  | Value2  | Value3  |
 - Use other Markdown formatting (headers, lists, code blocks) as appropriate to make responses clear and well-structured
+"""
+
+planning_prompt = """
+Before writing any SQL queries, create a plan for how to solve the question.
+
+The plan should:
+1. Identify what data sources (tables or knowledge bases) are relevant to answer the question
+2. Outline the steps needed to solve the question, each step may correspond to some exploration query that you may need to do, describe the exploratory step, but do not write the query.
+2.1 If there is no need for exploratorys steps, describe how would you write the final query. and that you can solve this in one step.
+2.2 Note: exploratory steps, can be for example if we can see that we will filter by the value of one column that is categorical we may need to explore the distinct values of that column to understand the data.
+3. Specify what information might need to be explored or collected
+4. Keep the number of steps to a minimum (try to solve with as few steps as possible)
+5. Maximum number of steps should not exceed 
+
+Do NOT write any SQL queries in the plan. Just describe:
+- What data you will use
+- What steps you will take
+- What information you might need to explore first
+
+Example plan format:
+Step 1: Explore the schema of table X to understand available columns
+Step 2: Check distinct values in column Y to understand the data
+Step 3: Query table X with filters based on the question requirements
+Step 4: Aggregate results as needed
+
+Keep steps concise and focused on solving the question efficiently.
 """
       

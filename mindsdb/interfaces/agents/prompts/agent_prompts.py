@@ -5,9 +5,11 @@ When writing the SQL query, make sure the select renames the columns accordingly
 Example:
 SELECT * FROM somedb.movies WHERE whatever...;
 
-This is a valid SQL query, but its best to rename the columns to something more descriptive.
+This is a valid SQL query, but its best to rename the columns to something more descriptive;
 
 SELECT movie_id, movie_description, age, name FROM somedb.movies WHERE whatever...;
+
+ALWAYS: When writing queries that involve time, use the time functions in MindsDB SQL, or duckdb functions.
 """
 
 sql_with_kb_description = """

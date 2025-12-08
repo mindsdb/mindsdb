@@ -177,20 +177,20 @@ class MindsDBQuery:
     def execute(self, query: str):
         mysql_proxy = FakeMysqlProxy()
         mysql_proxy.set_context(self.context)
-        error_type = None
-        error_code = None
-        error_text = None
         query_response = None
         try:
             result: SQLAnswer = mysql_proxy.process_query(query)
             
             # Check for errors
             if result.type == SQL_RESPONSE_TYPE.ERROR:
-                error_type = "expected"
-                error_code = result.error_code or 0
                 error_text = result.error_message or "Unknown error"
                 logger.warning(f"Query failed with error: {error_text}")
-                raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+                raise QueryError(
+                    db_error_msg=error_text,
+                    failed_query=query,
+                    is_external=False,
+                    is_expected=True
+                )
             
             # Check if result has data (TABLE response)
             if result.type != SQL_RESPONSE_TYPE.TABLE or result.result_set is None:
@@ -202,33 +202,42 @@ class MindsDBQuery:
 
         except ExecutorException as e:
             # classified error
-            error_type = "expected"
-            error_code = 0
             error_text = str(e)
             logger.warning(f"Error query processing: {e}")
-            raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+            raise QueryError(
+                db_error_msg=error_text,
+                failed_query=query,
+                is_external=False,
+                is_expected=True
+            )
         except QueryError as e:
-            error_type = "expected" if e.is_expected else "unexpected"
-            error_code = 0
-            error_text = str(e)
+            # Preserve original QueryError attributes, just re-raise
             if e.is_expected:
                 logger.warning(f"Query failed due to expected reason: {e}")
             else:
                 logger.exception("Error query processing:")
-            raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+            # Re-raise the original error, preserving all its attributes
+            raise
         except UnknownError as e:
             # unclassified error
-            error_type = "unexpected"
-            error_code = 0
             error_text = str(e)
             logger.exception("Error query processing:")
-            raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+            raise QueryError(
+                db_error_msg=error_text,
+                failed_query=query,
+                is_external=False,
+                is_expected=False
+            )
         except Exception as e:
-            error_type = "unexpected"
-            error_code = 0
+            # unexpected error
             error_text = str(e)
             logger.exception("Error query processing:")
-            raise QueryError(error_type=error_type, error_code=error_code, error_message=error_text)
+            raise QueryError(
+                db_error_msg=error_text,
+                failed_query=query,
+                is_external=False,
+                is_expected=False
+            )
 
 
 

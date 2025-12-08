@@ -11,6 +11,7 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior, ModelRetry
 from pydantic_ai.messages import ModelRequest, ModelResponse, ModelMessage, TextPart
 
 from mindsdb.utilities import log
+from mindsdb.utilities.exception import QueryError
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.agents.constants import (
     USER_COLUMN,
@@ -482,8 +483,14 @@ class PydanticAIAgent:
         yield self._add_chunk_metadata({"type": "status", "content": "Generating Data Catalog..."})
         tables_list = self.agent.params.get("data", {}).get("tables", [])
         knowledge_bases_list = self.agent.params.get("data", {}).get("knowledge_bases", [])
+        sql_instructions = ''
+        if knowledge_bases_list:
+            sql_instructions = f"{agent_prompts.sql_description}\n\n{agent_prompts.sql_with_kb_description}"
+        else:
+            sql_instructions = agent_prompts.sql_description
+
         data_catalog = DataCatalogBuilder().build_data_catalog(tables=tables_list, knowledge_bases=knowledge_bases_list)
-        current_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{agent_prompts.sql_description}\n\nPlease write a Mindsdb SQL query to answer the question:\n{current_prompt}"
+        current_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{sql_instructions}\n\nPlease write a Mindsdb SQL query to answer the question:\n{current_prompt}"
 
         if self.get_select_targets_from_sql() is not None:
             select_targets = self.get_select_targets_from_sql()
@@ -519,6 +526,15 @@ class PydanticAIAgent:
                 yield self._add_chunk_metadata({
                     "type": "data",
                     "content": data
+                })
+            except QueryError as e:
+                # Capture SQL query errors and format them for user-friendly display
+                # QueryError's __str__ method already formats the error nicely with the failed query
+                error_message = str(e)
+                logger.error(f"SQL query error: {error_message}", exc_info=True)
+                yield self._add_chunk_metadata({
+                    "type": "error",
+                    "content": error_message,
                 })
             except Exception as e:
                 logger.error(f"Error executing SQL query: {e}", exc_info=True)

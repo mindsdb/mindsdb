@@ -17,6 +17,15 @@ from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities.config import config
 from mindsdb.interfaces.data_catalog.data_catalog_retriever import DataCatalogRetriever
+from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
+from mindsdb.utilities.exception import QueryError
+from mindsdb.utilities import log
+from pydantic import BaseModel, Field
+
+
 
 logger = log.getLogger(__name__)
 
@@ -153,22 +162,16 @@ class TablesCollection:
     def __repr__(self):
         return f"Tables({self.items})"
 
-from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
-from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
-from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
-from mindsdb.utilities.exception import QueryError
-from mindsdb.utilities import log
-from pydantic import BaseModel, Field
-
-logger = log.getLogger(__name__)
 
 
+class QueryType:
+    FINAL = "final_query"  # this is the final query
+    EXPLORATORY = "exploratory_query"  # this is a query to explore and collect info to solve the challenge (e.g., distinct values of a categorical column, schema inference, etc.)
 
 class SQLQuery(BaseModel):
     sql_query: str = Field(..., description="The SQL query to run")
     short_description: str = Field(..., description="A short summary or description of the SQL query's purpose")
-
+    query_type: str = Field(QueryType.FINAL, description="Type of query: 'final_query' for the main query if we can solve the question we were asked, 'exploratory_query' for queries used to explore or collect info to solve the question, if we need to interrogagte the database a bit more")
 
 class MindsDBQuery:
     def __init__(self, context=None):

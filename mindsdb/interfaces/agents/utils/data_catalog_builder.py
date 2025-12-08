@@ -9,7 +9,7 @@ import pandas as pd
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.cache import get_cache
-from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBToolKit, list_to_csv_str, MindsDBQuery
+from mindsdb.interfaces.agents.utils.sql_toolkit import list_to_csv_str, MindsDBQuery
 from mindsdb.utilities.exception import QueryError
 
 logger = log.getLogger(__name__)
@@ -175,7 +175,7 @@ class DataCatalogBuilder:
         """
         try:
             result = self.sql_toolkit.execute(metadata_query)
-            logger.info(f"result: {result}")
+            logger.debug(f"result: {result}")
             if isinstance(result, pd.DataFrame):
                 metadata_csv = self._dataframe_to_csv(result)
             else:
@@ -288,7 +288,7 @@ class DataCatalogBuilder:
         if use_cache:
             cached_catalog = self.cache.get(cache_key)
             if cached_catalog:
-                logger.info(f"Using cached data catalog for tables={tables}, knowledge_bases={knowledge_bases}")
+                logger.debug(f"Using cached data catalog for tables={tables}, knowledge_bases={knowledge_bases}")
                 return cached_catalog
 
         # Build catalog
@@ -335,7 +335,7 @@ class DataCatalogBuilder:
         # Cache the catalog
         if use_cache:
             self.cache.set(cache_key, catalog_str)
-            logger.info(f"Cached data catalog for tables={tables}, knowledge_bases={knowledge_bases}")
+            logger.debug(f"Cached data catalog for tables={tables}, knowledge_bases={knowledge_bases}")
 
         return catalog_str
 

@@ -19,6 +19,7 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .utils.pydantic_ai_model_factory import get_llm_provider
+import re
 
 logger = log.getLogger(__name__)
 
@@ -496,7 +497,19 @@ class AgentsController:
 
         pydantic_agent = PydanticAIAgent(agent, model, llm_params=llm_params)
         
-        # Pass SQL context to agent if available
+        # If SQL context is available, extract SELECT targets using regex (keep as string; use '*' if SELECT *)
+
+        if sql_context and isinstance(sql_context, dict) and "original_query" in sql_context:
+            query = sql_context["original_query"]
+            match = re.search(r"select\s+(.*?)\s+from\b", query, re.IGNORECASE | re.DOTALL)
+            if match:
+                select_part = match.group(1).strip()
+                if select_part == "*":
+                    sql_context["select_targets"] = "*"
+                else:
+                    sql_context["select_targets"] = select_part
+            else:
+                sql_context["select_targets"] = "*"
         if sql_context:
             if params is None:
                 params = {}

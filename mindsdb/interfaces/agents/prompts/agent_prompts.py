@@ -88,10 +88,13 @@ WHERE movie_id IN (
 )
 GROUP BY release_year;
 ```
+- NEVER IN KNOWLEDGE BASE QUERIES USE content  ILIKE  (ilike is not suppoerted)
 
-**Note:** It is important to set an appropriate LIMIT on knowledge base queries; otherwise, the default limit is 10.
+- AVOID: JOINS between tables and knowledge bases, instead use WHERE <IDCOLUMN> IN (SELECT DISTINCT id FROM knowledge_base) ...
 
-When writing the SQL query, make sure the select renames the columns accordingly to the question.
+- ALWAYS: It is important to set an appropriate LIMIT on knowledge base queries to avoid missing results; the default limit is 10, so if you need more than 10, set it accordingly.
+
+- When writing the SQL query, make sure the select renames the columns accordingly to the question.
 
 """
 

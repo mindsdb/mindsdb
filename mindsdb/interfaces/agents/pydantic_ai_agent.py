@@ -155,26 +155,6 @@ class PydanticAIAgent:
         return args
     
     
-    def _create_pydantic_agent(self) -> Agent:
-        """Create and configure Pydantic AI agent"""
-        if self._pydantic_agent is not None:
-            return self._pydantic_agent
-
-        
-
-        
-        # Create agent - Pydantic AI will read API keys from environment variables
-        agent = Agent(
-            model_instance,
-            system_prompt=system_prompt,
-            output_type=SQLQuery
-        )
-
-        
-        
-        self._pydantic_agent = agent
-        return agent
-    
     def _convert_messages_to_history(self, df: pd.DataFrame) -> List[ModelMessage]:
         """
         Convert DataFrame messages to Pydantic AI message history format.
@@ -307,39 +287,48 @@ class PydanticAIAgent:
         """Get tags for observability"""
         return ['AGENT', 'PYDANTIC_AI']
     
-    def get_sql_context(self) -> Optional[Dict]:
-        """
-        Get the SQL query context if the agent was called from a SQL query.
-        
-        Returns:
-            Dict with keys:
-                - 'original_query': The original SQL query string
-                - 'where_conditions': Dict of WHERE clause values (e.g., {'question': '...'})
-                - 'select_targets': List of SELECT target columns
-            None if not called from SQL query
-        """
-        return self._sql_context
-    
-    def get_current_question_from_sql(self) -> Optional[str]:
-        """
-        Get the current question from SQL WHERE clause if available.
-        
-        Returns:
-            Question string from WHERE question = '...' if available, None otherwise
-        """
-        if self._sql_context and 'where_conditions' in self._sql_context:
-            return self._sql_context['where_conditions'].get('question')
-        return None
     
     def get_select_targets_from_sql(self) -> Optional[List[str]]:
         """
         Get the SELECT targets from the original SQL query if available.
+        Extracts only the column names, ignoring aliases (e.g., "col1 as alias" -> "col1").
         
         Returns:
             List of SELECT target column names if available, None otherwise
         """
         if self._sql_context and 'select_targets' in self._sql_context:
-            return self._sql_context['select_targets']
+            select_targets = self._sql_context['select_targets']
+            
+            # Handle string format: split by commas
+            if isinstance(select_targets, str):
+                parts = select_targets.split(',')
+            elif isinstance(select_targets, list):
+                parts = select_targets
+            else:
+                return None
+            
+            # Extract only the first word from each part (before "as" or additional text)
+            cleaned_columns = []
+            for part in parts:
+                if isinstance(part, str):
+                    # Strip whitespace
+                    part = part.strip()
+                    # Split by "as" (case-insensitive) and take the first part
+                    if ' as ' in part.lower():
+                        part = part.split(' as ', 1)[0]
+                    elif ' AS ' in part:
+                        part = part.split(' AS ', 1)[0]
+                    # Take only the first word (in case of other patterns)
+                    first_word = part.split()[0] if part.split() else part
+                    cleaned_columns.append(first_word.strip())
+                else:
+                    # If not a string, convert to string and take first word
+                    part_str = str(part).strip()
+                    first_word = part_str.split()[0] if part_str.split() else part_str
+                    cleaned_columns.append(first_word.strip())
+            if cleaned_columns == ['*']:
+                return ['question', 'answer']
+            return cleaned_columns if cleaned_columns else None
         return None
     
     def get_completion(self, messages, stream: bool = False, params: dict | None = None):
@@ -376,8 +365,8 @@ class PydanticAIAgent:
                     sql_query = last_message.get("content")
                     
                 if last_message.get("type") == "data":
-                    df = last_message.get("content")
-                    table_markdown = dataframe_to_markdown(df)
+                    data = last_message.get("content")
+                    
 
             else:
                 error_message = f"Agent failed with model error: {last_message.get('content')}"
@@ -386,82 +375,18 @@ class PydanticAIAgent:
     
             # Extract the current prompt and message history
             current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
-
-            # If SQL and markdown available, construct the (question, answer) DataFrame
-            if sql_query and table_markdown:
-                question = current_prompt
-                answer = f"```sql\n{sql_query}\n```\n\n{table_markdown}"
-                result_df = pd.DataFrame([{"question": question, "answer": answer}])
-                return result_df
-            else:
-                # Fallback: return the last message content in a DataFrame
-                content = last_message.get("content", "")
-                result_df = pd.DataFrame([{"question": current_prompt, "answer": content}])
-                return result_df
+            table_markdown = dataframe_to_markdown(data)
+            
+            # Validate select targets if specified
+            select_targets = self.get_select_targets_from_sql()
+            if select_targets is not None:
+                # Skip validation if '*' is in the targets
+                if '*' not in select_targets:
+                    return data
+            return data        
+           
         
-        # # Merge params
-        # args = {}
-        # args.update(self.args)
-        # args.update(params or {})
         
-        # # Extract current prompt and message history from messages
-        # # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
-        # current_prompt, message_history = self._extract_current_prompt_and_history(messages, args)
-        # logger.info(f"PydanticAIAgent.get_completion: Extracted prompt and {len(message_history)} history messages")
-        
-        # # Create agent
-        # agent = self._create_pydantic_agent()
-        
-        # # Run agent
-        # try:
-        #     tables_list = self.agent.params.get("data", {}).get("tables", [])
-        #     knowledge_bases_list = self.agent.params.get("data", {}).get("knowledge_bases", [])
-        #     data_catalog = DataCatalogBuilder().build_data_catalog(tables=tables_list, knowledge_bases=knowledge_bases_list)
-        #     current_prompt = f"Data Catalog:\n{data_catalog}\n\n{current_prompt}"
-            
-        #     result = agent.run_sync(
-        #         current_prompt,
-        #         message_history=message_history if message_history else None,
-        #     )
-            
-        #     # Extract output
-        #     output = result.output 
-            
-        #     data = .execute(output.query)
-
-        #     # Create response DataFrame
-        #     return_context = args.get("return_context", True)
-        #     response_data = {
-        #         ASSISTANT_COLUMN: [data],
-        #         TRACE_ID_COLUMN: [self.langfuse_client_wrapper.get_trace_id()],
-        #     }
-            
-        #     if return_context:
-        #         # Extract context from result if available
-        #         context = []
-        #         if hasattr(result, 'data') and isinstance(result.data, dict):
-        #             context = result.data.get('context', [])
-        #         response_data[CONTEXT_COLUMN] = [json.dumps(context)]
-            
-        #     response_df = pd.DataFrame(response_data)
-            
-        #     # End span
-        #     self.langfuse_client_wrapper.end_span(
-        #         span=self.run_completion_span, 
-        #         output=response_df.to_dict('records')
-        #     )
-            
-        #     return response_df
-            
-        # except UnexpectedModelBehavior as e:
-        #     logger.error(f"Model error: {e}", exc_info=True)
-        #     error_message = f"Agent failed with model error: {str(e)}"
-        #     return self._create_error_response(error_message, return_context=args.get("return_context", True))
-        # except Exception as e:
-        #     logger.error(f"Agent error: {e}", exc_info=True)
-        #     error_message = f"Agent failed with error: {str(e)}"
-        #     return self._create_error_response(error_message, return_context=args.get("return_context", True))
-    
     def _create_error_response(self, error_message: str, return_context: bool = True) -> pd.DataFrame:
         """Create error response DataFrame"""
         response_data = {
@@ -521,6 +446,14 @@ class PydanticAIAgent:
         knowledge_bases_list = self.agent.params.get("data", {}).get("knowledge_bases", [])
         data_catalog = DataCatalogBuilder().build_data_catalog(tables=tables_list, knowledge_bases=knowledge_bases_list)
         current_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{agent_prompts.sql_description}\n\nPlease write a Mindsdb SQL query to answer the question:\n{current_prompt}"
+
+        if self.get_select_targets_from_sql() is not None:
+            select_targets = self.get_select_targets_from_sql()
+            if isinstance(select_targets, (list, tuple)):
+                select_targets_str = ", ".join(str(t) for t in select_targets)
+            else:
+                select_targets_str = str(select_targets)
+            current_prompt += f"\n\nThe user expects to have a table such that this query is valid:SELECT {select_targets_str} FROM (<generated query>); when generating the SQL query make sure to include those columns"
 
         logger.info(f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}")
 

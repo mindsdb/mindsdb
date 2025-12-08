@@ -419,7 +419,26 @@ class PydanticAIAgent:
             if select_targets is not None:
                 # Skip validation if '*' is in the targets
                 if '*' not in select_targets:
-                    return data
+                    # Ensure all expected columns are present
+                    if data is None or (isinstance(data, pd.DataFrame) and data.empty):
+                        # Create DataFrame with one row of nulls for all expected columns
+                        data = pd.DataFrame({col: [None] for col in select_targets})
+                    else:
+                        # Ensure all expected columns exist, add missing ones with null values
+                        for col in select_targets:
+                            if col not in data.columns:
+                                data[col] = None
+                        # Reorder columns to match select_targets order
+                        data = data[select_targets]
+            elif data is None or (isinstance(data, pd.DataFrame) and data.empty):
+                # No select_targets specified, but data is empty - create a simple row
+                if isinstance(data, pd.DataFrame) and len(data.columns) > 0:
+                    # Use existing columns from empty DataFrame
+                    data = pd.DataFrame({col: [None] for col in data.columns})
+                else:
+                    # Fallback: create a simple DataFrame with a single null row
+                    data = pd.DataFrame([None], columns=["result"])
+            
             return data        
            
         

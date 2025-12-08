@@ -357,8 +357,7 @@ class PydanticAIAgent:
                     break
                 elif message.get("type") == "error":
                     error_message = f"Agent failed with model error: {message.get('content')}"
-                    return self._create_error_response(error_message, return_context=self.args.get("return_context", True))
-                
+                    raise RuntimeError(error_message)
                 last_message = message
             
                 if last_message.get("type") == "sql":

@@ -54,7 +54,6 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
 
     routes = []
     if need_a2a or need_mcp:
-        # Specific mounts FIRST so root app doesn't shadow them
         from mindsdb.api.a2a import get_a2a_app
         from mindsdb.api.mcp import get_mcp_app
 

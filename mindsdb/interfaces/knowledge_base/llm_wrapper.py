@@ -49,14 +49,22 @@ class CustomLLMWrapper:
         Returns:
             List of LLMResponse objects with content attribute
         """
-        # Convert prompts to messages format expected by LLMClient
-        messages_list = [[{"role": "user", "content": prompt}] for prompt in prompts]
+        # Process each prompt separately since completion expects a single list of messages
+        responses = []
+        for prompt in prompts:
+            # Convert prompt to messages format expected by LLMClient
+            messages = [{"role": "user", "content": prompt}]
+            
+            # Call completion for this prompt's messages
+            result = self.llm_client.completion(messages)
+            
+            # completion returns a list, get the first (and only) response
+            if result:
+                responses.append(LLMResponse(content=result[0]))
+            else:
+                responses.append(LLMResponse(content=""))
         
-        # Call completion for all messages
-        responses = self.llm_client.completion(messages_list)
-        
-        # Convert to LLMResponse objects
-        return [LLMResponse(content=resp) for resp in responses]
+        return responses
 
     async def abatch(self, prompts: List[str]) -> List[LLMResponse]:
         """
@@ -68,19 +76,28 @@ class CustomLLMWrapper:
         Returns:
             List of LLMResponse objects with content attribute
         """
-        # Convert prompts to messages format
-        messages_list = [[{"role": "user", "content": prompt}] for prompt in prompts]
-        
-        # Run completion in executor for async compatibility
+        # Process each prompt separately since completion expects a single list of messages
         loop = asyncio.get_event_loop()
-        responses = await loop.run_in_executor(
-            None,
-            self.llm_client.completion,
-            messages_list
-        )
+        responses = []
         
-        # Convert to LLMResponse objects
-        return [LLMResponse(content=resp) for resp in responses]
+        for prompt in prompts:
+            # Convert prompt to messages format expected by LLMClient
+            messages = [{"role": "user", "content": prompt}]
+            
+            # Run completion in executor for async compatibility
+            result = await loop.run_in_executor(
+                None,
+                self.llm_client.completion,
+                messages
+            )
+            
+            # completion returns a list, get the first (and only) response
+            if result:
+                responses.append(LLMResponse(content=result[0]))
+            else:
+                responses.append(LLMResponse(content=""))
+        
+        return responses
 
 
 def create_chat_model(args: Dict[str, Any], session=None) -> CustomLLMWrapper:

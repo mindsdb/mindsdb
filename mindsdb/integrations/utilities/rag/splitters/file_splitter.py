@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, List, Union
+from typing import Callable, List
 
 from mindsdb.integrations.utilities.rag.splitters.custom_splitters import (
     RecursiveCharacterTextSplitter,

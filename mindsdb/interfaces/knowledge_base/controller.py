@@ -1051,12 +1051,13 @@ class KnowledgeBaseTable:
 
             # Build LLM if specified
             if "llm_model_name" in rag_config:
-                llm_args = {"model_name": rag_config.llm_model_name}
-                if not rag_config.llm_provider:
-                    llm_args["provider"] = get_llm_provider(llm_args)
-                else:
-                    llm_args["provider"] = rag_config.llm_provider
-                rag_config.llm = create_chat_model(llm_args)
+                raise NotImplementedError("this block shouldn't be used")
+                # llm_args = {"model_name": rag_config.llm_model_name}
+                # if not rag_config.llm_provider:
+                #     llm_args["provider"] = get_llm_provider(llm_args)
+                # else:
+                #     llm_args["provider"] = rag_config.llm_provider
+                # rag_config.llm = create_chat_model(llm_args)
 
             # Create RAG pipeline
             rag = RAG(rag_config)

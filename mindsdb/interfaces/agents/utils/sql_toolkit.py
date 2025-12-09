@@ -1,28 +1,18 @@
-import re
 import csv
-import inspect
 from io import StringIO
-from typing import Iterable, List, Optional, Any, Tuple
+from typing import List, Any, Tuple
 from collections import defaultdict
 import fnmatch
 
 import pandas as pd
-from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import Select, Show, Describe, Explain, Identifier
+from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.utilities import log
-from mindsdb.utilities.context import context as ctx
-from mindsdb.integrations.utilities.query_traversal import query_traversal
-from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
-from mindsdb.utilities.config import config
-from mindsdb.interfaces.data_catalog.data_catalog_retriever import DataCatalogRetriever
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
 from mindsdb.utilities.exception import QueryError
-from mindsdb.utilities import log
 from pydantic import BaseModel, Field
 
 

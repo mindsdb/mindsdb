@@ -4,7 +4,6 @@ from typing import List, Union, Any, Optional, Dict, OrderedDict
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter as TextSplitter
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.base_vector_store import VectorStore
-from mindsdb.integrations.utilities.rag.storage.in_memory_byte_store import InMemoryByteStore
 
 DEFAULT_COLLECTION_NAME = "default_collection"
 

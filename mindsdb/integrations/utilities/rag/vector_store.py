@@ -5,7 +5,6 @@ from typing import List, Any, Optional
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.base_vector_store import VectorStore
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.vector_store_loader import VectorStoreLoader
 from mindsdb.integrations.utilities.rag.settings import VectorStoreConfig, SearchKwargs
-from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 
 # gpt-3.5-turbo
 _DEFAULT_TPM_LIMIT = 60000

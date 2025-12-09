@@ -1,10 +1,6 @@
 """Custom document loaders to replace langchain document loaders"""
 
-import csv
-import pathlib
 from typing import Iterator
-from io import BytesIO, StringIO
-import html.parser
 
 import pandas as pd
 
@@ -44,7 +40,7 @@ class CSVDocumentLoader(BaseDocumentLoader):
                 }
                 
                 yield SimpleDocument(page_content=row_text, metadata=metadata)
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error loading CSV file {self.path}:")
             raise
 
@@ -72,7 +68,7 @@ class PDFDocumentLoader(BaseDocumentLoader):
                     yield SimpleDocument(page_content=page_text, metadata=metadata)
         except ImportError:
             raise ImportError("pymupdf (fitz) is required for PDF loading. Install it with: pip install pymupdf")
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error loading PDF file {self.path}:")
             raise
 
@@ -135,7 +131,7 @@ class TextDocumentLoader(BaseDocumentLoader):
                     "encoding": "utf-8 (with replacement)",
                 }
                 yield SimpleDocument(page_content=text, metadata=metadata)
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error loading text file {self.path}:")
             raise
 
@@ -201,10 +197,10 @@ class HTMLDocumentLoader(BaseDocumentLoader):
                 }
                 
                 yield SimpleDocument(page_content=text, metadata=metadata)
-            except Exception as e:
+            except Exception:
                 logger.exception(f"Error loading HTML file {self.path}:")
                 raise
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error loading HTML file {self.path}:")
             raise
 
@@ -267,7 +263,7 @@ class MarkdownDocumentLoader(BaseDocumentLoader):
                     "encoding": "utf-8 (with replacement)",
                 }
                 yield SimpleDocument(page_content=text, metadata=metadata)
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error loading markdown file {self.path}:")
             raise
 

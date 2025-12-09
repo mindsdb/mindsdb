@@ -3,7 +3,6 @@
 import re
 from typing import List, Callable, Optional, Tuple, Any
 from html.parser import HTMLParser
-from html import unescape
 
 from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 from mindsdb.utilities import log

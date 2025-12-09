@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Protocol, List, Any, Optional
-import asyncio
+from typing import Protocol, List, Any
 
 
 class RunnableRetriever(Protocol):

@@ -1,4 +1,4 @@
-from typing import List, Any, Optional
+from typing import List, Any
 import json
 import asyncio
 

@@ -1,14 +1,11 @@
 """Pydantic AI Agent wrapper to replace LangchainAgent"""
 
 import json
-import asyncio
 import warnings
 from typing import Dict, List, Optional, Any, Iterable
 import pandas as pd
-import logging
 
-from pydantic_ai import Agent, RunContext
-from pydantic_ai.exceptions import UnexpectedModelBehavior, ModelRetry
+from pydantic_ai import Agent
 from pydantic_ai.messages import ModelRequest, ModelResponse, ModelMessage, TextPart
 
 from mindsdb.utilities import log
@@ -25,9 +22,8 @@ from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery, SQLQuery, 
 from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import (
     get_model_instance_from_kwargs
 )
+from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuilder, dataframe_to_markdown
 
-from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
-from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.langfuse import LangfuseClientWrapper
 from mindsdb.interfaces.agents.prompts import agent_prompts
@@ -35,11 +31,9 @@ logger = log.getLogger(__name__)
 DEBUG_LOGGER = logger.info
 
 
-from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuilder, dataframe_to_markdown
 
 # Suppress asyncio warnings about unretrieved task exceptions from httpx cleanup
 # This is a known issue where httpx.AsyncClient tries to close connections after the event loop is closed
-import warnings
 warnings.filterwarnings("ignore", message=".*Task exception was never retrieved.*", category=RuntimeWarning)
 
 class PydanticAIAgent:

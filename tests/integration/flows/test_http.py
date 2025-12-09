@@ -47,7 +47,6 @@ class TestHTTP(HTTPHelperMixin):
         assert response.status_code == 200
 
     def test_auth(self):
-        STRIPPED_API_ROOT = HTTP_API_ROOT.replace("/api", "")
         session = requests.Session()
 
         response = session.get(f"{HTTP_API_ROOT}/status")

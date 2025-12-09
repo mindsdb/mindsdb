@@ -9,7 +9,6 @@ from mindsdb.integrations.utilities.rag.settings import (
 )
 from mindsdb.integrations.utilities.rag.retrievers.retriever_factory import create_retriever
 from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever, RunnableRetriever
-from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

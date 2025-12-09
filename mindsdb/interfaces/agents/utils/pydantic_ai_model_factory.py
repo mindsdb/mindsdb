@@ -1,6 +1,6 @@
 """Pydantic AI model factory to create models from MindsDB configuration"""
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm.utils import get_llm_config
@@ -333,7 +333,7 @@ def get_model_instance_from_kwargs(args: Dict[str, Any]) -> Any:
         
         elif provider == "writer":
             # Writer might need custom handling or OpenAI-compatible API
-            raise ValueError(f"Writer provider not yet supported for model instances")
+            raise ValueError("Writer provider not yet supported for model instances")
         
         elif provider == "litellm":
             # LiteLLM uses OpenAI-compatible API
@@ -359,7 +359,7 @@ def get_model_instance_from_kwargs(args: Dict[str, Any]) -> Any:
         
         elif provider == "bedrock":
             # AWS Bedrock might need custom wrapper
-            raise ValueError(f"Bedrock provider not yet supported for model instances")
+            raise ValueError("Bedrock provider not yet supported for model instances")
         
         elif provider == "mindsdb":
             # MindsDB custom provider - not yet supported for model instances

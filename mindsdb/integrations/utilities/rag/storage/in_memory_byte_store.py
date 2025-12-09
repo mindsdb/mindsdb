@@ -1,6 +1,6 @@
 """Custom in-memory byte store implementation to replace langchain's InMemoryByteStore"""
 
-from typing import List, Tuple, Any, Optional, Dict
+from typing import List, Tuple, Any, Dict
 
 
 class InMemoryByteStore:

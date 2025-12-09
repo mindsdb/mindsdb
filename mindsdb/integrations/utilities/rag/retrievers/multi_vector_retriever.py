@@ -1,4 +1,4 @@
-from typing import List, Tuple, Any, Optional
+from typing import List, Tuple, Any
 import uuid
 import asyncio
 

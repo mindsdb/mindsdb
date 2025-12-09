@@ -1,15 +1,14 @@
 """Data catalog builder for agents - constructs and caches data catalogs for tables and knowledge bases"""
 
-import csv
 import hashlib
 from io import StringIO
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 import pandas as pd
 
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.cache import get_cache
-from mindsdb.interfaces.agents.utils.sql_toolkit import list_to_csv_str, MindsDBQuery
+from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery
 from mindsdb.utilities.exception import QueryError
 
 logger = log.getLogger(__name__)
@@ -180,7 +179,7 @@ class DataCatalogBuilder:
             if isinstance(result, pd.DataFrame):
                 sample_data_csv = self._dataframe_to_csv(result)
             else:
-                sample_data_csv = f"Error retrieving sample data: Unexpected result type"
+                sample_data_csv = "Error retrieving sample data: Unexpected result type"
 
         except QueryError as e:
             logger.warning(f"Error getting sample data for table {schema}.{table_name}: {e}")
@@ -204,7 +203,7 @@ class DataCatalogBuilder:
             if isinstance(result, pd.DataFrame):
                 metadata_csv = self._dataframe_to_csv(result)
             else:
-                metadata_csv = f"Error retrieving metadata: Unexpected result type"
+                metadata_csv = "Error retrieving metadata: Unexpected result type"
         except QueryError as e:
             logger.warning(f"Error getting metadata for table {schema}.{table_name}: {e}")
             metadata_csv = f"Error retrieving metadata: {str(e)}"
@@ -243,7 +242,7 @@ class DataCatalogBuilder:
             if isinstance(result, pd.DataFrame):
                 sample_data_csv = self._dataframe_to_csv(result)
             else:
-                sample_data_csv = f"Error retrieving sample data: Unexpected result type"
+                sample_data_csv = "Error retrieving sample data: Unexpected result type"
         except QueryError as e:
             logger.warning(f"Error getting sample data for KB {project}.{kb_name}: {e}")
             sample_data_csv = f"Error retrieving sample data: {str(e)}"
@@ -274,7 +273,7 @@ class DataCatalogBuilder:
             if isinstance(result, pd.DataFrame):
                 metadata_csv = self._dataframe_to_csv(result)
             else:
-                metadata_csv = f"Error retrieving metadata: Unexpected result type"
+                metadata_csv = "Error retrieving metadata: Unexpected result type"
         except QueryError as e:
             logger.warning(f"Error getting metadata for KB {project}.{kb_name}: {e}")
             metadata_csv = f"Error retrieving metadata: {str(e)}"

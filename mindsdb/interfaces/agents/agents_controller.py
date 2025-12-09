@@ -420,7 +420,6 @@ class AgentsController:
         """
         # Import get_model_params pattern from knowledge_base (or implement inline for consistency)
         from mindsdb.utilities.config import config
-        import copy
         
         # Get default LLM config from system config
         default_llm_config = copy.deepcopy(config.get("default_llm", {}))

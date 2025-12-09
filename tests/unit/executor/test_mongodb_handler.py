@@ -91,6 +91,7 @@ class TestMongoDBConverters(unittest.TestCase):
         assert mql.to_string().replace(" ", "") == expected_mql.replace(" ", "")
 
         # TODO use in queries:  multiline, objectid, isodate
+        # covered in tests/unit/handlers/test_mongodb.py
 
     def test_mongo_parser(self):
         mql = """

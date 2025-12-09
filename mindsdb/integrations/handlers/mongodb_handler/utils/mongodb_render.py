@@ -201,15 +201,9 @@ class MongodbRender(NonRelationalRender):
                     parts = list(col.parts)
 
                     # Strip table alias/qualifier prefix if present
-                    # If first part matches a known table/alias, strip it
-                    # OR if there's only one table and parts has multiple elements,
-                    # assume first part is a table qualifier and strip it
                     if len(parts) > 1:
                         if parts[0] in table_aliases:
                             parts = parts[1:]
-                        # Handle implicit qualifiers in single-table queries
-                        # e.g., "SELECT a.b FROM tbl1" where 'a' isn't explicitly an alias
-                        # In this case, strip 'a' to get just 'b'
                         elif len(table_aliases) == 1:
                             parts = parts[1:]
 

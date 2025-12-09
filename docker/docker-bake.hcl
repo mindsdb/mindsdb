@@ -1,6 +1,6 @@
 # The default targets to be built if none are specified
 group "default" {
-  targets = ["bare", "devel", "cloud", "cloud-cpu", "lightwood", "huggingface", "huggingface-cpu"]
+  targets = ["bare", "devel", "cloud", "cloud-cpu", "lightwood"]
 }
 
 variable "PUSH_TO_DOCKERHUB" {
@@ -119,25 +119,14 @@ target "images" {
         target = ""
       },
       {
-        # If you make any changes here, make them to huggingface-cpu as well
-        name = "huggingface"
-        extras = ".[huggingface]"
-        target = ""
-      },
-      {
-        name = "huggingface-cpu"
-        extras = ".[huggingface_cpu]"
-        target = ""
-      },
-      {
         # If you make any changes here, make them to cloud-cpu as well
         name = "cloud"
-        extras = ".[lightwood,mysql,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
+        extras = ".[lightwood,mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
         target = ""
       },
       {
         name = "cloud-cpu"
-        extras = ".[lightwood,mysql,huggingface_cpu,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
+        extras = ".[lightwood,mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
         target = ""
       },
     ]

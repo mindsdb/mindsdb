@@ -61,15 +61,55 @@ jobs:
     - name: Reset MindsDB auto config
       shell: bash
       run: |
-        paths=()
-        if [[ -n "${MINDSDB_STORAGE_DIR:-}" ]]; then
-          paths+=("${MINDSDB_STORAGE_DIR}/config.auto.json")
-        fi
-        paths+=("$HOME/.local/share/mindsdb/mindsdb/var/config.auto.json")
-        paths+=("$GITHUB_WORKSPACE/var/config.auto.json")
-        for path in "${paths[@]}"; do
-          rm -f "$path" && echo "Removed $path" || true
-        done
+        python - <<'PY'
+        import os
+        import sys
+        from pathlib import Path
+        from mindsdb.utilities.config import Config
+
+        roots = []
+
+        env_root = os.environ.get("MINDSDB_STORAGE_DIR")
+        if env_root:
+            roots.append(env_root)
+
+        home_root = Path.home() / ".local" / "share" / "mindsdb" / "mindsdb" / "var"
+        roots.append(str(home_root))
+
+        workspace = os.environ.get("GITHUB_WORKSPACE")
+        if workspace:
+            roots.append(str(Path(workspace) / "var"))
+
+        normalized = []
+        seen = set()
+        for root in roots:
+            if not root:
+                continue
+            norm = str(Path(root).expanduser())
+            if norm in seen:
+                continue
+            seen.add(norm)
+            normalized.append(norm)
+
+        success = False
+
+        for root in normalized:
+            try:
+                # Ensure Config sees the new storage dir
+                Config._Config__instance = None
+                os.environ["MINDSDB_STORAGE_DIR"] = root
+
+                Config().update({"auth": {"http_auth_enabled": False}}, overwrite=True)
+                print(f"HTTP auth disabled for storage root: {root}")
+                success = True
+            except Exception as exc:
+                print(f"Failed to disable auth for {root}: {exc}")
+
+        if not success:
+            print("Could not disable HTTP auth for any candidate storage root")
+            sys.exit(1)
+        PY
+
 
     - name: Run Integration Tests on Deploy
       run: |

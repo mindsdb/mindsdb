@@ -101,23 +101,20 @@ def define_deps():
     for fn in os.listdir(handlers_dir_path):
         if os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith("_handler"):
             extra = []
+            base_extra_name = fn.replace("_handler", "")
+            extra_requirements[base_extra_name] = []
             for req_file_path in glob.glob(os.path.join(handlers_dir_path, fn, "requirements*.txt")):
-                extra_name = fn.replace("_handler", "")
+                extra_name = base_extra_name
                 file_name = os.path.basename(req_file_path)
                 if file_name != "requirements.txt":
                     extra_name += "-" + file_name.replace("requirements_", "").replace(".txt", "")
 
                 # If requirements.txt in our handler folder, import them as our extra's requirements
-                if os.path.exists(req_file_path):
-                    with open(req_file_path) as fp:
-                        extra = expand_requirements_links([req.strip() for req in fp.read().splitlines()])
+                with open(req_file_path) as fp:
+                    extra = expand_requirements_links([req.strip() for req in fp.read().splitlines()])
 
-                    extra_requirements[extra_name] = extra
-                    full_handlers_requirements += extra
-
-                # Even with no requirements in our handler, list the handler as an extra (with no reqs)
-                else:
-                    extra_requirements[extra_name] = []
+                extra_requirements[extra_name] = extra
+                full_handlers_requirements += extra
 
                 # If this is a default extra and if we want to install defaults (enabled by default)
                 #   then add it to the default requirements needing to install

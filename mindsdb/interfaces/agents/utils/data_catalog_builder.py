@@ -193,10 +193,9 @@ class DataCatalogBuilder:
         metadata_csv = None
         # Query information_schema.columns for table metadata
         metadata_query = f"""
-            SELECT 
-                table_schema, table_name, column_name, column_type, original_type
-            FROM information_schema.columns
-            WHERE table_schema = '{schema}' AND table_name = '{table_name}'
+
+            SHOW COLUMNS FROM {schema}.{table_name};
+
         """
         try:
             result = self.sql_toolkit.execute(metadata_query)

@@ -370,8 +370,7 @@ class PydanticAIAgent:
                     part_str = str(part).strip()
                     first_word = part_str.split()[0] if part_str.split() else part_str
                     cleaned_columns.append(first_word.strip())
-            if cleaned_columns == ['*'] or cleaned_columns == '*' or cleaned_columns is None:
-                logging.info("get_select_targets_from_sql: Returning default select targets")
+            if cleaned_columns == ['*']:
                 return ['question', 'answer']
             return cleaned_columns if cleaned_columns else None
         return None

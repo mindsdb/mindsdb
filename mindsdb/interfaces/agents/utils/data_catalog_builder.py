@@ -40,10 +40,35 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
         # Get column names
         columns = df.columns.tolist()
         
-        # Convert all values to strings and handle None/NaN
+        # Convert all values to strings and handle None/NaN/arrays
         def format_value(val):
-            if pd.isna(val):
-                return ""
+            # Handle arrays/lists first - pd.isna() fails on arrays
+            if isinstance(val, (list, tuple)):
+                return str(val)
+            # Handle pandas Series/Index - pd.isna() returns array for these
+            if isinstance(val, (pd.Series, pd.Index)):
+                return str(val.tolist())
+            # Handle numpy arrays
+            try:
+                import numpy as np
+                if isinstance(val, np.ndarray):
+                    return str(val.tolist())
+            except ImportError:
+                pass
+            # Handle scalar NaN/None values
+            # Use try-except to catch ValueError when pd.isna() returns array
+            try:
+                is_na_result = pd.isna(val)
+                # Check if result is array-like (would cause ambiguity error in if statement)
+                if hasattr(is_na_result, '__len__') and not isinstance(is_na_result, (str, bool)):
+                    # Result is array-like, treat as non-NA and convert to string
+                    return str(val)
+                # Only check boolean result if it's a scalar
+                if isinstance(is_na_result, bool) and is_na_result:
+                    return ""
+            except (ValueError, TypeError):
+                # pd.isna() can fail on some types (e.g., arrays), just convert to string
+                pass
             return str(val)
         
         # Calculate column widths

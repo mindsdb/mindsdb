@@ -147,10 +147,11 @@ Do NOT write any SQL queries in the plan. Just describe:
 - What information you might need to explore first
 
 Example plan format:
-Step 1: Explore the schema of table X to understand available columns
+Step 1: Sample table X to understand available columns and data
 Step 2: Check distinct values in column Y to understand the data
 Step 3: Query table X with filters based on the question requirements
-Step 4: Aggregate results as needed
+Step 4: Run a test query with a LIMIT 10 to make sure the query is working as expected
+Step 5: Aggregate results as needed
 
 Keep steps concise and focused on solving the question efficiently.
 """

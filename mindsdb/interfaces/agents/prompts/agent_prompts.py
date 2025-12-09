@@ -1,20 +1,26 @@
 sql_description = """
-MindsDB SQL is compatible with DuckDB syntax.
-When writing the SQL query, make sure the select renames the columns accordingly to the question.
+MindsDB SQL is compatible with MySQL syntax.
+
+- When writing the SQL query, make sure the select explicit names for the columns accordingly to the question.
 
 Example:
+SELECT movie_id, movie_description, age, name FROM someschema.movies WHERE whatever...;
+Instead of:
 SELECT * FROM somedb.movies WHERE whatever...;
 
-This is a valid SQL query, but its best to rename the columns to something more descriptive;
-
-SELECT movie_id, movie_description, age, name FROM somedb.movies WHERE whatever...;
-
-ALWAYS: When writing queries that involve time, use the time functions in MindsDB SQL, or duckdb functions.
+- If a MySQL function is not supported by MindsDB, try the DuckDB equivalent function.
+- If you are unsusre of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
+- If Metadata about a table is unknown, assume that all columns are of type varchar. 
+- When casting varchars to something else simply use the CAST function, for example: CAST(year AS INTEGER), or CAST(year AS FLOAT), or CAST(year AS DATE), or CAST(year AS BOOLEAN), etc.
+- When a column has been casted and renamed, the new name can and should be used in the query, for example, if you cast the column year CAST(year AS INTEGER) AS year_int, you can use year_int in the query such as WHERE year_int > 2000. 
+- ALWAYS: When writing queries that involve time, use the time functions in MindsDB SQL, or duckdb functions.
+- ALWAYS:Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE..`;
+- ALWAYS: When columns contain spaces, special characters or are reserved words, use double quotes `"` to quote the column name, for example, "column name" instead of [column name].
 """
 
 sql_with_kb_description = """
 
-MindsDB SQL is compatible with DuckDB syntax, with additional features for knowledge bases.
+MindsDB SQL is compatible with MySQL and DuckDB syntax, with additional features for knowledge bases.
 
 When the question requires to filter by something semantically, use the knowledge bases available when possible.
 You can determine what knowledge bases are relevant given teh data catalog.
@@ -120,9 +126,11 @@ Before writing any SQL queries, create a plan for how to solve the question.
 
 The plan should:
 1. Identify what data sources (tables or knowledge bases) are relevant to answer the question
+1.1 When referring to tables or knowledge bases in the plan. Always include the name of the schema/database in the plan along with the table name. For example: database_name.table_name or database_name.knowledge_base_name
 2. Outline the steps needed to solve the question, each step may correspond to some exploration query that you may need to do, describe the exploratory step, but do not write the query.
 2.1 If there is no need for exploratorys steps, describe how would you write the final query. and that you can solve this in one step.
-2.2 Note: exploratory steps, can be for example if we can see that we will filter by the value of one column that is categorical we may need to explore the distinct values of that column to understand the data.
+2.2 Note: exploratory steps, can be for example:
+- if we can see that we will filter by the value of one column that is categorical we may need to first explore the DISTINCT values of that column to understand what values to filter by in WHERE col=<something>
 3. Specify what information might need to be explored or collected
 4. Keep the number of steps to a minimum (try to solve with as few steps as possible)
 5. Maximum number of steps should not exceed 

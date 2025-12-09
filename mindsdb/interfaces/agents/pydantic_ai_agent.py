@@ -32,6 +32,8 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.langfuse import LangfuseClientWrapper
 from mindsdb.interfaces.agents.prompts import agent_prompts
 logger = log.getLogger(__name__)
+DEBUG_LOGGER = logger.info
+
 
 from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuilder, dataframe_to_markdown
 
@@ -513,12 +515,12 @@ class PydanticAIAgent:
             input=messages
         )
         
-        logger.debug(f"PydanticAIAgent._get_completion_stream: Messages: {messages}")
+        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Messages: {messages}")
         
         # Extract current prompt and message history from messages
         # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
         current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
-        logger.debug(f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages")
+        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages")
         
         # Create agent
         agent = Agent(
@@ -527,7 +529,7 @@ class PydanticAIAgent:
             output_type=SQLQuery
         )
         
-        logger.debug(f"PydanticAIAgent._get_completion_stream: SQL context: {self._sql_context}")
+        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: SQL context: {self._sql_context}")
         
         yield self._add_chunk_metadata({"type": "status", "content": "Generating Data Catalog..."})
         tables_list = self.agent.params.get("data", {}).get("tables", [])
@@ -559,7 +561,7 @@ class PydanticAIAgent:
         
         # Build planning prompt
         planning_prompt_text = f"""Take into account the following Data Catalog:\n{data_catalog}\n\n{agent_prompts.planning_prompt}\n\nQuestion to answer: {current_prompt}"""
-        logger.debug(f"PydanticAIAgent._get_completion_stream: Planning prompt text: {planning_prompt_text}")
+        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Planning prompt text: {planning_prompt_text}")
         # Get select targets for planning context
         select_targets = self.get_select_targets_from_sql()
         select_targets_str = None
@@ -578,7 +580,7 @@ class PydanticAIAgent:
             logger.warning(f"Plan estimated {plan.estimated_steps} steps, but maximum is {MAX_EXPLORATORY_QUERIES}. Adjusting plan.")
             plan.plan += f"\n\nNote: The plan has been adjusted to ensure it does not exceed {MAX_EXPLORATORY_QUERIES} steps."
         
-        logger.debug(f"Generated plan with {plan.estimated_steps} estimated steps: {plan.plan}")
+        DEBUG_LOGGER(f"Generated plan with {plan.estimated_steps} estimated steps: {plan.plan}")
         
         # Yield the plan as a status message
         yield self._add_chunk_metadata({"type": "status", "content": f"Proposed Execution Plan:\n{plan.plan}\n\nEstimated steps: {plan.estimated_steps}\n\n"})
@@ -591,8 +593,8 @@ class PydanticAIAgent:
         
         current_prompt = base_prompt
 
-        logger.debug(f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}")
-        logger.debug(f"PydanticAIAgent._get_completion_stream: Message history: {message_history}")
+        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}")
+        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Message history: {message_history}")
 
         try:
             while True:
@@ -611,7 +613,7 @@ class PydanticAIAgent:
                 output = result.output 
                 yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
 
-                logger.debug(f"PydanticAIAgent._get_completion_stream: Received LLM response: {output.sql_query}, query_type: {output.query_type}")
+                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: {output.sql_query}, query_type: {output.query_type}")
 
                 # Initialize retry counter for this query
                 retry_count = 0
@@ -625,7 +627,7 @@ class PydanticAIAgent:
                         yield self._add_chunk_metadata({"type": "status", "content": "Executing SQL query..."})
 
                         query_data = self.executor.execute(output.sql_query)
-                        logger.debug(f"PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
+                        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
                         query_succeeded = True
                         break  # Query succeeded, exit retry loop
                         
@@ -658,7 +660,7 @@ class PydanticAIAgent:
                             )
                             output = result.output
                             yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
-                            logger.debug(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
+                            DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
                         else:
                             # Max retries reached
                             break
@@ -689,7 +691,7 @@ class PydanticAIAgent:
                             )
                             output = result.output
                             yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
-                            logger.debug(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
+                            DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
                         else:
                             break
 
@@ -757,7 +759,7 @@ class PydanticAIAgent:
                     
                     # This is an exploratory query
                     exploratory_query_count += 1
-                    logger.debug(f"Exploratory query {exploratory_query_count}/{MAX_EXPLORATORY_QUERIES} succeeded")
+                    DEBUG_LOGGER(f"Exploratory query {exploratory_query_count}/{MAX_EXPLORATORY_QUERIES} succeeded")
                     
                     # Format query result for prompt
                     query_result_str = f"Query: {output.sql_query}\nDescription: {output.short_description}\nResult:\n{dataframe_to_markdown(query_data)}"
@@ -783,7 +785,7 @@ class PydanticAIAgent:
                     
                 elif output.query_type == QueryType.FINAL:
                     # This is a final query - return the result
-                    logger.debug("Final query succeeded, returning result")
+                    DEBUG_LOGGER("Final query succeeded, returning result")
                     yield self._add_chunk_metadata({
                         "type": "data",
                         "content": query_data
@@ -808,7 +810,7 @@ class PydanticAIAgent:
             error_msg = str(e)
             if "Event loop is closed" in error_msg:
                 # This is a cleanup issue, not a critical error - log at debug level
-                logger.debug(f"Async cleanup warning (non-critical): {error_msg}")
+                DEBUG_LOGGER(f"Async cleanup warning (non-critical): {error_msg}")
             else:
                 logger.error(f"Agent streaming failed: {error_msg}")
                 error_chunk = self._add_chunk_metadata({

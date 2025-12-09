@@ -1,5 +1,6 @@
 import gc
 from importlib import import_module
+
 gc.disable()
 
 from flask import Flask
@@ -25,7 +26,13 @@ def _mount_optional_api(name: str, mount_path: str, get_app_fn, routes):
     try:
         optional_app = get_app_fn()
     except ImportError as exc:
-        logger.warning("%s support is disabled (%s). To enable it, install the %s extra: pip install 'mindsdb[%s]'", name, exc, name, name.lower())
+        logger.warning(
+            "%s support is disabled (%s). To enable it, install the %s extra: pip install 'mindsdb[%s]'",
+            name,
+            exc,
+            name,
+            name.lower(),
+        )
         return
 
     optional_app.add_middleware(PATAuthMiddleware)

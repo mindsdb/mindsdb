@@ -134,9 +134,9 @@ class TestHTTP(HTTPHelperMixin):
                 json={"auth": original_auth_config},
             )
             if not test_failed:
-                assert (
-                    restore_response.status_code == 200
-                ), f"Failed to restore auth config, received {restore_response.status_code}"
+                assert restore_response.status_code == 200, (
+                    f"Failed to restore auth config, received {restore_response.status_code}"
+                )
 
     def test_gui_is_served(self):
         """

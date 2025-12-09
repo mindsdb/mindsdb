@@ -90,3 +90,4 @@ class SafeOutputParser:
     @property
     def _type(self) -> str:
         return 'conversational'
+

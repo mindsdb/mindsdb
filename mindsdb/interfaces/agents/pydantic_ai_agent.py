@@ -14,7 +14,7 @@ from pydantic_ai.messages import ModelRequest, ModelResponse, ModelMessage, Text
 from mindsdb.utilities import log
 from mindsdb.utilities.exception import QueryError
 from mindsdb.interfaces.storage import db
-from mindsdb.interfaces.agents.constants import (
+from mindsdb.interfaces.agents.utils.constants import (
     USER_COLUMN,
     ASSISTANT_COLUMN,
     CONTEXT_COLUMN,

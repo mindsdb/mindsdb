@@ -198,3 +198,4 @@ USER_COLUMN = "question"
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = "openai"
 # DEFAULT_EMBEDDINGS_MODEL_CLASS removed - use custom embedding model utils instead
 MAX_INSERT_BATCH_SIZE = int(os.getenv("KB_MAX_INSERT_BATCH_SIZE", 50_000))
+

@@ -8,9 +8,8 @@ from dspy.teleprompt import BootstrapFewShot
 
 from mindsdb.interfaces.llm.llm_controller import LLMDataController
 import pandas as pd
-from mindsdb.interfaces.agents.constants import (
-    DEFAULT_MODEL_NAME
-)
+# DEFAULT_MODEL_NAME removed from constants - using default value directly
+DEFAULT_MODEL_NAME = "gpt-4o"
 from mindsdb.interfaces.agents.langchain_agent import (
     get_llm_provider, get_embedding_model_provider
 )

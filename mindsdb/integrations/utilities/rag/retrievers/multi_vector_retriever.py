@@ -6,7 +6,7 @@ from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever, Ru
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, \
     MultiVectorRetrieverMode, RAGPipelineModel
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
-from mindsdb.interfaces.agents.safe_output_parser import SafeOutputParser
+from mindsdb.integrations.utilities.rag.retrievers.safe_output_parser import SafeOutputParser
 from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 from mindsdb.utilities import log
 

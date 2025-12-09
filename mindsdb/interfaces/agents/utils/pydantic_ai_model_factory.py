@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm.utils import get_llm_config
-from mindsdb.interfaces.agents.constants import (
+from mindsdb.interfaces.agents.utils.constants import (
     OPEN_AI_CHAT_MODELS,
     ANTHROPIC_CHAT_MODELS,
     GOOGLE_GEMINI_CHAT_MODELS,

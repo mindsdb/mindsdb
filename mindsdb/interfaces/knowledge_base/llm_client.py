@@ -1,4 +1,5 @@
 import os
+import asyncio
 from typing import List
 
 from openai import OpenAI, AzureOpenAI
@@ -142,3 +143,36 @@ class LLMClient:
             kwargs.pop("provider", None)
             response = self.client.completion(self.provider, model=model, messages=messages, args=kwargs)
             return [item.message.content for item in response.choices]
+
+    async def abatch(self, messages_list: List[List[dict]], json_output: bool = False) -> List[List[str]]:
+        """
+        Process multiple message lists asynchronously in parallel
+        
+        Args:
+            messages_list: List of message lists, where each message list is a List[dict]
+            json_output: Whether to request JSON output
+            
+        Returns:
+            List of results, where each result is a List[str] (same format as completion)
+        """
+        if not messages_list:
+            return []
+        
+        # Get the running event loop
+        loop = asyncio.get_running_loop()
+        
+        async def process_single_messages(messages: List[dict]) -> List[str]:
+            """Process a single messages list asynchronously"""
+            # Run completion in executor for async compatibility
+            result = await loop.run_in_executor(
+                None,
+                self.completion,
+                messages,
+                json_output
+            )
+            return result
+        
+        # Process all message lists in parallel
+        results = await asyncio.gather(*[process_single_messages(messages) for messages in messages_list])
+        
+        return results

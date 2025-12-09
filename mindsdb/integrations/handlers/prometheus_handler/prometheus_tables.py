@@ -7,6 +7,7 @@ import json
 from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn
 from mindsdb.utilities import log
+from mindsdb_sql_parser.ast import BinaryOperation, Function, Identifier, Constant, Select, BetweenOperation
 
 logger = log.getLogger(__name__)
 
@@ -344,6 +345,112 @@ class ScrapeTargetsTable(APIResource):
         return ["target_labels", "health", "scrape_url"]
 
 
+def _parse_json_path_expression(node: Any) -> Optional[Tuple[str, str]]:
+    """
+    Parse JSON path expression to extract label name.
+    
+    Supports:
+    - PostgreSQL style: labels_json->>'label_name'
+    - MySQL style: JSON_EXTRACT(labels_json, '$.label_name')
+    
+    Args:
+        node: AST node (BinaryOperation for ->>, Function for JSON_EXTRACT)
+        
+    Returns:
+        Tuple of (label_name, json_path_type) or None if not a JSON path expression
+    """
+    # PostgreSQL style: labels_json->>'label_name'
+    if isinstance(node, BinaryOperation) and node.op in ("->>", "->"):
+        left = node.args[0]
+        right = node.args[1]
+        
+        # Check if left side is labels_json column
+        if isinstance(left, Identifier) and left.parts[-1] == "labels_json":
+            if isinstance(right, Constant):
+                label_name = right.value
+                # Remove quotes if present
+                if isinstance(label_name, str):
+                    label_name = label_name.strip("'\"")
+                return (label_name, "postgres")
+    
+    # MySQL style: JSON_EXTRACT(labels_json, '$.label_name')
+    if isinstance(node, Function) and node.op.upper() == "JSON_EXTRACT":
+        if len(node.args) >= 2:
+            first_arg = node.args[0]
+            second_arg = node.args[1]
+            
+            # Check if first arg is labels_json
+            if isinstance(first_arg, Identifier) and first_arg.parts[-1] == "labels_json":
+                if isinstance(second_arg, Constant):
+                    json_path = second_arg.value
+                    # Extract label name from JSON path like '$.label_name'
+                    if isinstance(json_path, str) and json_path.startswith("$."):
+                        label_name = json_path[2:].strip("'\"")
+                        return (label_name, "mysql")
+    
+    return None
+
+
+def _extract_json_path_filters(raw_conditions: List[Any]) -> Tuple[Dict[str, Dict[str, Any]], List[Any]]:
+    """
+    Extract label filters from JSON path expressions in raw_conditions.
+    
+    Args:
+        raw_conditions: List of raw condition AST nodes
+        
+    Returns:
+        Tuple of (label_filters_dict, remaining_conditions)
+    """
+    label_filters = {}
+    remaining_conditions = []
+    
+    for condition in raw_conditions:
+        if isinstance(condition, BinaryOperation):
+            # Check if left side is a JSON path expression
+            left = condition.args[0]
+            right = condition.args[1]
+            op = condition.op.upper()
+            
+            json_path_info = _parse_json_path_expression(left)
+            if json_path_info:
+                label_name, _ = json_path_info
+                
+                # Extract value from right side
+                if isinstance(right, Constant):
+                    value = right.value
+                    label_filters[label_name] = {"op": op, "value": value}
+                else:
+                    # Complex right side, keep as remaining
+                    remaining_conditions.append(condition)
+            else:
+                # Not a JSON path expression, keep as remaining
+                remaining_conditions.append(condition)
+        elif isinstance(condition, BetweenOperation):
+            # Handle BETWEEN operation
+            left = condition.args[0]
+            lower = condition.args[1]
+            upper = condition.args[2]
+            
+            json_path_info = _parse_json_path_expression(left)
+            if json_path_info:
+                label_name, _ = json_path_info
+                
+                if isinstance(lower, Constant) and isinstance(upper, Constant):
+                    label_filters[label_name] = {
+                        "op": "BETWEEN",
+                        "value": (lower.value, upper.value)
+                    }
+                else:
+                    remaining_conditions.append(condition)
+            else:
+                remaining_conditions.append(condition)
+        else:
+            # Unknown condition type, keep as remaining
+            remaining_conditions.append(condition)
+    
+    return label_filters, remaining_conditions
+
+
 class MetricDataTable(APIResource):
     """Prometheus Metric Data table - query metric data with PromQL."""
 
@@ -402,12 +509,58 @@ class MetricDataTable(APIResource):
                 "IS_NULLABLE": True,
             },
         ]
-        # Note: Label columns are dynamic and will be added based on the query results
         return base_columns
+
+    def select(self, query: Select) -> pd.DataFrame:
+        """Override select to parse JSON path expressions from raw_conditions."""
+        from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+        
+        api_conditions, raw_conditions = self._extract_conditions(query.where, strict=False)
+        
+        # Extract JSON path filters from raw_conditions
+        json_path_filters, remaining_raw_conditions = _extract_json_path_filters(raw_conditions)
+        
+        limit = None
+        if query.limit:
+            limit = query.limit.value
+        
+        sort = None
+        if query.order_by and len(query.order_by) > 0:
+            from mindsdb.integrations.utilities.sql_utils import SortColumn
+            sort = []
+            for an_order in query.order_by:
+                if isinstance(an_order.field, Identifier):
+                    sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
+        
+        targets = []
+        for col in query.targets:
+            if isinstance(col, Identifier):
+                targets.append(col.parts[-1])
+        
+        # Call list with JSON path filters
+        result = self.list(
+            conditions=api_conditions,
+            json_path_filters=json_path_filters,
+            limit=limit,
+            sort=sort,
+            targets=targets
+        )
+        
+        # Apply remaining raw conditions using filter_dataframe
+        if remaining_raw_conditions:
+            from mindsdb.integrations.utilities.sql_utils import filter_dataframe
+            filters = []
+            result = filter_dataframe(result, filters, raw_conditions=remaining_raw_conditions)
+        
+        if limit is not None and len(result) > limit:
+            result = result[: int(limit)]
+        
+        return result
 
     def list(
         self,
         conditions: List[FilterCondition] = None,
+        json_path_filters: Dict[str, Dict[str, Any]] = None,
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
@@ -420,7 +573,7 @@ class MetricDataTable(APIResource):
             end_ts = None
             step = None
             timeout = None
-            label_filters = {}
+            label_filters = json_path_filters or {}
 
             if conditions:
                 for condition in conditions:
@@ -443,15 +596,14 @@ class MetricDataTable(APIResource):
                     elif col == "timeout":
                         if op == "=":
                             timeout = val
-                    else:
-                        # This is likely a label filter
-                        label_filters[col] = {"op": op, "value": val}
+                    # Note: Direct label column filtering is deprecated in favor of JSON path syntax
 
             if not pql_query:
                 raise ValueError("pql_query parameter is required")
 
             # Build the PromQL query with label filters
-            final_query = self._build_query_with_label_filters(pql_query, label_filters)
+            # Returns (final_query, filters_not_pushed_down)
+            final_query, filters_not_pushed = self._build_query_with_label_filters(pql_query, label_filters)
 
             # Prepare API parameters
             params = {"query": final_query}
@@ -466,20 +618,20 @@ class MetricDataTable(APIResource):
                 params["step"] = step
 
                 response = self.handler.call_prometheus_api("/api/v1/query_range", params=params)
-                return self._process_range_query_response(response, pql_query, start_ts, end_ts, step, timeout, label_filters)
+                return self._process_range_query_response(response, pql_query, start_ts, end_ts, step, timeout, filters_not_pushed)
             else:
                 # Instant query
                 if start_ts:
                     params["time"] = self._parse_timestamp(start_ts)
 
                 response = self.handler.call_prometheus_api("/api/v1/query", params=params)
-                return self._process_instant_query_response(response, pql_query, start_ts, end_ts, step, timeout, label_filters)
+                return self._process_instant_query_response(response, pql_query, start_ts, end_ts, step, timeout, filters_not_pushed)
 
         except Exception as e:
             logger.error(f"Error querying metric data: {str(e)}")
             raise
 
-    def _build_query_with_label_filters(self, base_query: str, label_filters: Dict[str, Dict[str, Any]]) -> str:
+    def _build_query_with_label_filters(self, base_query: str, label_filters: Dict[str, Dict[str, Any]]) -> Tuple[str, Dict[str, Dict[str, Any]]]:
         """Build PromQL query with label filters applied.
 
         Args:
@@ -487,50 +639,57 @@ class MetricDataTable(APIResource):
             label_filters: Dictionary of label filters {label_name: {op: operator, value: value}}
 
         Returns:
-            Modified PromQL query with label filters
+            Tuple of (modified PromQL query, filters_not_pushed_down)
         """
         if not label_filters:
-            return base_query
+            return base_query, {}
 
-        # Try to extract metric name and add label filters
-        # This is a simplified approach - for complex queries, we might need to parse the PromQL
-        # For now, we'll add label filters to the base query if it's a simple metric selector
-
+        filters_not_pushed = {}
+        label_parts = []
+        
         # Check if the query already has label selectors
-        if "{" in base_query and "}" in base_query:
-            # Query already has label selectors, try to merge
-            # This is complex, so for now we'll apply filters in memory after querying
-            return base_query
-        else:
-            # Simple metric name query, add label filters
-            label_parts = []
-            for label_name, filter_info in label_filters.items():
-                op = filter_info["op"]
-                val = filter_info["value"]
-
-                if op == "=":
-                    label_parts.append(f'{label_name}="{val}"')
-                elif op == "!=":
-                    label_parts.append(f'{label_name}!="{val}"')
-                elif op == ">":
-                    label_parts.append(f'{label_name}>{val}')
-                elif op == "<":
-                    label_parts.append(f'{label_name}<{val}')
-                elif op == ">=":
-                    label_parts.append(f'{label_name}>={val}')
-                elif op == "<=":
-                    label_parts.append(f'{label_name}<={val}')
-
-            if label_parts:
-                # Wrap the query in a label selector
-                if base_query.endswith("}"):
-                    # Already has braces, insert before closing
-                    base_query = base_query[:-1] + ", " + ", ".join(label_parts) + "}"
+        has_existing_selectors = "{" in base_query and "}" in base_query
+        
+        for label_name, filter_info in label_filters.items():
+            op = filter_info["op"]
+            val = filter_info["value"]
+            
+            # PromQL supports: =, !=, =~, !~
+            # For simple equality, we can push down
+            if op == "=":
+                label_parts.append(f'{label_name}="{val}"')
+            elif op == "!=":
+                label_parts.append(f'{label_name}!="{val}"')
+            elif op == "BETWEEN":
+                # BETWEEN: convert to >= AND <= for PromQL
+                if isinstance(val, tuple) and len(val) == 2:
+                    lower, upper = val
+                    label_parts.append(f'{label_name}>="{lower}"')
+                    label_parts.append(f'{label_name}<="{upper}"')
                 else:
-                    # Add braces with label filters
+                    filters_not_pushed[label_name] = filter_info
+            else:
+                # Complex operators (>, <, >=, <=) - PromQL doesn't support these in label selectors
+                # Keep for in-memory filtering
+                filters_not_pushed[label_name] = filter_info
+        
+        # Add label filters to query if we have any to push down
+        if label_parts:
+            if has_existing_selectors:
+                # Try to merge with existing selectors
+                # Find the closing brace and insert before it
+                last_brace = base_query.rfind("}")
+                if last_brace != -1:
+                    # Insert before closing brace
+                    base_query = base_query[:last_brace] + ", " + ", ".join(label_parts) + base_query[last_brace:]
+                else:
+                    # Fallback: wrap entire query
                     base_query = f"{base_query}{{{', '.join(label_parts)}}}"
-
-        return base_query
+            else:
+                # Add braces with label filters
+                base_query = f"{base_query}{{{', '.join(label_parts)}}}"
+        
+        return base_query, filters_not_pushed
 
     def _parse_timestamp(self, ts: Any) -> str:
         """Parse timestamp to Prometheus format (Unix timestamp or RFC3339).
@@ -558,6 +717,72 @@ class MetricDataTable(APIResource):
         else:
             raise ValueError(f"Invalid timestamp type: {type(ts)}")
 
+    def _apply_label_filters(self, labels_dict: Dict[str, Any], label_filters: Dict[str, Dict[str, Any]]) -> bool:
+        """Apply label filters to labels dictionary.
+
+        Args:
+            labels_dict: Dictionary of label key-value pairs
+            label_filters: Dictionary of filters {label_name: {op: operator, value: value}}
+
+        Returns:
+            True if row should be included, False otherwise
+        """
+        for label_name, filter_info in label_filters.items():
+            label_value = labels_dict.get(label_name)
+            if label_value is None:
+                return False
+
+            op = filter_info["op"]
+            val = filter_info["value"]
+
+            if op == "=":
+                if label_value != val:
+                    return False
+            elif op == "!=":
+                if label_value == val:
+                    return False
+            elif op == "BETWEEN":
+                if isinstance(val, tuple) and len(val) == 2:
+                    lower, upper = val
+                    try:
+                        label_num = float(label_value)
+                        lower_num = float(lower)
+                        upper_num = float(upper)
+                        if not (lower_num <= label_num <= upper_num):
+                            return False
+                    except (ValueError, TypeError):
+                        # String comparison for BETWEEN
+                        if not (str(lower) <= str(label_value) <= str(upper)):
+                            return False
+                else:
+                    return False
+            elif op in [">", "<", ">=", "<="]:
+                # Try numeric comparison
+                try:
+                    label_num = float(label_value)
+                    val_num = float(val)
+                    if op == ">" and not (label_num > val_num):
+                        return False
+                    elif op == "<" and not (label_num < val_num):
+                        return False
+                    elif op == ">=" and not (label_num >= val_num):
+                        return False
+                    elif op == "<=" and not (label_num <= val_num):
+                        return False
+                except (ValueError, TypeError):
+                    # String comparison fallback
+                    logger.warning(f"Label value '{label_value}' or filter value '{val}' is not numeric, using string comparison")
+                    if op == ">" and not (str(label_value) > str(val)):
+                        return False
+                    elif op == "<" and not (str(label_value) < str(val)):
+                        return False
+                    elif op == ">=" and not (str(label_value) >= str(val)):
+                        return False
+                    elif op == "<=" and not (str(label_value) <= str(val)):
+                        return False
+
+        return True
+
     def _process_instant_query_response(
         self, response: Dict[str, Any], pql_query: str, start_ts: Any, end_ts: Any, step: Any, timeout: Any, label_filters: Dict
     ) -> pd.DataFrame:
@@ -574,52 +799,15 @@ class MetricDataTable(APIResource):
             timestamp = value[0] if len(value) > 0 else None
             metric_value = value[1] if len(value) > 1 else None
 
-            # Apply label filters in memory if not applied in query
-            if label_filters:
-                should_include = True
-                for label_name, filter_info in label_filters.items():
-                    label_value = metric.get(label_name)
-                    if label_value is None:
-                        should_include = False
-                        break
-
-                    op = filter_info["op"]
-                    val = filter_info["value"]
-
-                    if op == "=" and label_value != val:
-                        should_include = False
-                        break
-                    elif op == "!=" and label_value == val:
-                        should_include = False
-                        break
-                    elif op in [">", "<", ">=", "<="]:
-                        # Try numeric comparison
-                        try:
-                            label_num = float(label_value)
-                            val_num = float(val)
-                            if op == ">" and not (label_num > val_num):
-                                should_include = False
-                                break
-                            elif op == "<" and not (label_num < val_num):
-                                should_include = False
-                                break
-                            elif op == ">=" and not (label_num >= val_num):
-                                should_include = False
-                                break
-                            elif op == "<=" and not (label_num <= val_num):
-                                should_include = False
-                                break
-                        except (ValueError, TypeError):
-                            # If not numeric, skip this filter (or could do string comparison)
-                            logger.warning(f"Label value '{label_value}' or filter value '{val}' is not numeric, skipping comparison")
-                            continue
-
-                if not should_include:
-                    continue
-
             # Build labels JSON (excluding __name__)
             labels_dict = {k: v for k, v in metric.items() if k != "__name__"}
             labels_json = json.dumps(labels_dict) if labels_dict else None
+
+            # Apply label filters in memory if not applied in query
+            if label_filters:
+                should_include = self._apply_label_filters(labels_dict, label_filters)
+                if not should_include:
+                    continue
 
             row = {
                 "pql_query": pql_query,
@@ -631,11 +819,6 @@ class MetricDataTable(APIResource):
                 "value": metric_value,
                 "labels_json": labels_json,
             }
-
-            # Add all label columns
-            for label_name, label_value in metric.items():
-                if label_name != "__name__":
-                    row[label_name] = label_value
 
             rows.append(row)
 
@@ -659,52 +842,15 @@ class MetricDataTable(APIResource):
             metric = result.get("metric", {})
             values = result.get("values", [])
 
-            # Apply label filters in memory if not applied in query
-            if label_filters:
-                should_include = True
-                for label_name, filter_info in label_filters.items():
-                    label_value = metric.get(label_name)
-                    if label_value is None:
-                        should_include = False
-                        break
-
-                    op = filter_info["op"]
-                    val = filter_info["value"]
-
-                    if op == "=" and label_value != val:
-                        should_include = False
-                        break
-                    elif op == "!=" and label_value == val:
-                        should_include = False
-                        break
-                    elif op in [">", "<", ">=", "<="]:
-                        # Try numeric comparison
-                        try:
-                            label_num = float(label_value)
-                            val_num = float(val)
-                            if op == ">" and not (label_num > val_num):
-                                should_include = False
-                                break
-                            elif op == "<" and not (label_num < val_num):
-                                should_include = False
-                                break
-                            elif op == ">=" and not (label_num >= val_num):
-                                should_include = False
-                                break
-                            elif op == "<=" and not (label_num <= val_num):
-                                should_include = False
-                                break
-                        except (ValueError, TypeError):
-                            # If not numeric, skip this filter (or could do string comparison)
-                            logger.warning(f"Label value '{label_value}' or filter value '{val}' is not numeric, skipping comparison")
-                            continue
-
-                if not should_include:
-                    continue
-
             # Build labels JSON (excluding __name__)
             labels_dict = {k: v for k, v in metric.items() if k != "__name__"}
             labels_json = json.dumps(labels_dict) if labels_dict else None
+
+            # Apply label filters in memory if not applied in query
+            if label_filters:
+                should_include = self._apply_label_filters(labels_dict, label_filters)
+                if not should_include:
+                    continue
 
             # Create a row for each timestamp-value pair
             for value_pair in values:
@@ -722,11 +868,6 @@ class MetricDataTable(APIResource):
                     "labels_json": labels_json,
                 }
 
-                # Add all label columns
-                for label_name, label_value in metric.items():
-                    if label_name != "__name__":
-                        row[label_name] = label_value
-
                 rows.append(row)
 
         if not rows:
@@ -736,8 +877,111 @@ class MetricDataTable(APIResource):
         return df
 
     def get_columns(self) -> List[Text]:
-        """Return base column names for the metric_data table.
-        Note: Label columns are dynamic and will be added based on query results.
-        """
+        """Return base column names for the metric_data table."""
         return ["pql_query", "start_ts", "end_ts", "step", "timeout", "timestamp", "value", "labels_json"]
+
+    def add(self, data: List[dict], **kwargs) -> None:
+        """Add metrics to Prometheus Pushgateway.
+
+        Args:
+            data: List of dictionaries containing metric data
+                Required fields: metric_name, value
+                Optional fields: labels_json (JSON string), timestamp (Unix timestamp), job (job name)
+        """
+        import time
+        
+        for row in data:
+            # Validate required fields
+            if "metric_name" not in row:
+                raise ValueError("metric_name is required for INSERT")
+            if "value" not in row:
+                raise ValueError("value is required for INSERT")
+            
+            metric_name = str(row["metric_name"])
+            value = row["value"]
+            
+            # Parse labels_json
+            labels = {}
+            if "labels_json" in row and row["labels_json"]:
+                try:
+                    if isinstance(row["labels_json"], str):
+                        labels = json.loads(row["labels_json"])
+                    elif isinstance(row["labels_json"], dict):
+                        labels = row["labels_json"]
+                    else:
+                        raise ValueError(f"labels_json must be a JSON string or dict, got {type(row['labels_json'])}")
+                except json.JSONDecodeError as e:
+                    raise ValueError(f"Invalid JSON in labels_json: {str(e)}")
+            
+            # Get timestamp (default to current time)
+            timestamp = row.get("timestamp")
+            if timestamp is None:
+                timestamp = int(time.time())
+            else:
+                # Convert to int if it's a float
+                timestamp = int(float(timestamp))
+            
+            # Get job name (default from handler config)
+            job = row.get("job", self.handler.pushgateway_job)
+            
+            # Push to Pushgateway
+            endpoint = f"/metrics/job/{job}"
+            # Add instance if provided in labels (extract before formatting)
+            instance = None
+            if "instance" in labels:
+                instance = labels["instance"]
+                endpoint = f"{endpoint}/instance/{instance}"
+                # Create a copy of labels without instance for formatting
+                labels_for_formatting = {k: v for k, v in labels.items() if k != "instance"}
+            else:
+                labels_for_formatting = labels
+            
+            # Format metric in Prometheus text format
+            metric_text = self._format_metric_for_pushgateway(metric_name, value, labels_for_formatting, timestamp)
+            
+            try:
+                self.handler.call_pushgateway_api(endpoint, metric_text)
+                logger.info(f"Successfully pushed metric {metric_name} to Pushgateway")
+            except Exception as e:
+                logger.error(f"Failed to push metric {metric_name} to Pushgateway: {str(e)}")
+                raise Exception(f"Failed to push metric to Pushgateway: {str(e)}")
+
+    def _format_metric_for_pushgateway(self, metric_name: str, value: Any, labels: Dict[str, Any], timestamp: int) -> str:
+        """Format a metric in Prometheus text format for Pushgateway.
+
+        Args:
+            metric_name: Name of the metric
+            value: Metric value (numeric)
+            labels: Dictionary of label key-value pairs
+            timestamp: Unix timestamp in milliseconds
+
+        Returns:
+            Formatted metric string in Prometheus text format
+        """
+        # Validate metric name (Prometheus naming rules)
+        if not metric_name or not metric_name[0].isalpha():
+            raise ValueError(f"Invalid metric name: {metric_name}. Must start with a letter.")
+        
+        # Format labels
+        label_parts = []
+        for key, val in sorted(labels.items()):
+            # Escape quotes in label values
+            val_str = str(val).replace('"', '\\"').replace('\n', '\\n').replace('\\', '\\\\')
+            label_parts.append(f'{key}="{val_str}"')
+        
+        label_str = ""
+        if label_parts:
+            label_str = "{" + ", ".join(label_parts) + "}"
+        
+        # Format value (ensure it's numeric)
+        try:
+            numeric_value = float(value)
+        except (ValueError, TypeError):
+            raise ValueError(f"Metric value must be numeric, got: {value}")
+        
+        # Prometheus text format: metric_name{labels} value timestamp
+        # Timestamp should be in milliseconds for Pushgateway
+        timestamp_ms = timestamp * 1000
+        
+        return f"{metric_name}{label_str} {numeric_value} {timestamp_ms}\n"
 

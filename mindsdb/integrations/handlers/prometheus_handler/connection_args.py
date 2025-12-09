@@ -35,6 +35,18 @@ connection_args = OrderedDict(
         "required": False,
         "label": "Timeout",
     },
+    pushgateway_url={
+        "type": ARG_TYPE.STR,
+        "description": "The base URL of the Prometheus Pushgateway (e.g., http://localhost:9091). If not provided, will attempt to derive from prometheus_url.",
+        "required": False,
+        "label": "Pushgateway URL",
+    },
+    pushgateway_job={
+        "type": ARG_TYPE.STR,
+        "description": "Default job name for Pushgateway metrics (default: 'default')",
+        "required": False,
+        "label": "Pushgateway Job",
+    },
 )
 
 connection_args_example = OrderedDict(
@@ -42,5 +54,7 @@ connection_args_example = OrderedDict(
     username="admin",
     password="secret",
     timeout=10,
+    pushgateway_url="http://localhost:9091",
+    pushgateway_job="default",
 )
 

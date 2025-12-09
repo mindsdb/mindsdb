@@ -91,6 +91,19 @@ class PrometheusHandler(MetaAPIHandler):
             raise ValueError("Password is required when username is provided")
         if self.bearer_token and (self.username or self.password):
             logger.warning("Both bearer_token and username/password provided. Bearer token will be used.")
+        
+        # Pushgateway configuration
+        pushgateway_url = connection_data.get("pushgateway_url")
+        if not pushgateway_url:
+            # Try to derive from prometheus_url (replace port 9090 with 9091)
+            if ":9090" in self.base_url:
+                pushgateway_url = self.base_url.replace(":9090", ":9091")
+            else:
+                # Default Pushgateway URL
+                pushgateway_url = "http://localhost:9091"
+        
+        self.pushgateway_url = pushgateway_url.rstrip("/")
+        self.pushgateway_job = connection_data.get("pushgateway_job", "default")
 
         self.is_connected: bool = False
 
@@ -335,4 +348,29 @@ class PrometheusHandler(MetaAPIHandler):
         response = requests.get(url, params=params, auth=auth, headers=headers, timeout=self.timeout)
         response.raise_for_status()
         return response.json()
+
+    def call_pushgateway_api(self, endpoint: str, data: str) -> None:
+        """Make a POST request to the Prometheus Pushgateway API.
+
+        Args:
+            endpoint (str): API endpoint (e.g., '/metrics/job/my_job')
+            data (str): Metrics data in Prometheus text format
+
+        Raises:
+            requests.exceptions.RequestException: If the request fails
+        """
+        url = f"{self.pushgateway_url}{endpoint}"
+        
+        # Prepare authentication
+        auth = None
+        headers = {"Content-Type": "text/plain; version=0.0.4"}
+        
+        if self.bearer_token:
+            headers["Authorization"] = f"Bearer {self.bearer_token}"
+        elif self.username and self.password:
+            from requests.auth import HTTPBasicAuth
+            auth = HTTPBasicAuth(self.username, self.password)
+        
+        response = requests.post(url, data=data, auth=auth, headers=headers, timeout=self.timeout)
+        response.raise_for_status()
 

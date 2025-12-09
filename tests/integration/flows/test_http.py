@@ -56,73 +56,87 @@ class TestHTTP(HTTPHelperMixin):
 
         response = session.get(f"{HTTP_API_ROOT}/config/")
         assert response.status_code == 200
-        assert response.json()["auth"]["http_auth_enabled"] is False
+        config_payload = response.json()
+        assert config_payload["auth"]["http_auth_enabled"] is False
+        original_auth_config = config_payload["auth"].copy()
 
-        response = session.get(f"{HTTP_API_ROOT}/tree/")
-        assert response.status_code == 200
-        response = session.get(f"{STRIPPED_API_ROOT}/a2a/status")
-        assert response.status_code == 200
-        response = session.get(f"{STRIPPED_API_ROOT}/mcp/status")
-        assert response.status_code == 200
+        test_failed = True
+        try:
+            response = session.get(f"{HTTP_API_ROOT}/tree/")
+            assert response.status_code == 200
+            response = session.get(f"{STRIPPED_API_ROOT}/a2a/status")
+            assert response.status_code == 200
+            response = session.get(f"{STRIPPED_API_ROOT}/mcp/status")
+            assert response.status_code == 200
 
-        response = session.put(
-            f"{HTTP_API_ROOT}/config/", json={"http_auth_enabled": True, "username": "", "password": ""}
-        )
-        assert response.status_code == 400
+            response = session.put(
+                f"{HTTP_API_ROOT}/config/", json={"http_auth_enabled": True, "username": "", "password": ""}
+            )
+            assert response.status_code == 400
 
-        response = session.put(
-            f"{HTTP_API_ROOT}/config/",
-            json={"auth": {"http_auth_enabled": True, "username": "mindsdb", "password": "mindsdb"}},
-        )
-        assert response.status_code == 200
+            response = session.put(
+                f"{HTTP_API_ROOT}/config/",
+                json={"auth": {"http_auth_enabled": True, "username": "mindsdb", "password": "mindsdb"}},
+            )
+            assert response.status_code == 200
 
-        response = session.get(f"{HTTP_API_ROOT}/status")
-        assert response.status_code == 200
-        assert response.json()["auth"]["http_auth_enabled"] is True
+            response = session.get(f"{HTTP_API_ROOT}/status")
+            assert response.status_code == 200
+            assert response.json()["auth"]["http_auth_enabled"] is True
 
-        response = session.get(f"{HTTP_API_ROOT}/tree/")
-        assert response.status_code == 401
+            response = session.get(f"{HTTP_API_ROOT}/tree/")
+            assert response.status_code == 401
 
-        response = session.post(f"{HTTP_API_ROOT}/login", json={"username": "mindsdb", "password": "mindsdb"})
-        assert response.status_code == 200
+            response = session.post(f"{HTTP_API_ROOT}/login", json={"username": "mindsdb", "password": "mindsdb"})
+            assert response.status_code == 200
 
-        token = response.json().get("token")
-        session.headers.update({"Authorization": f"Bearer {token}"})
+            token = response.json().get("token")
+            session.headers.update({"Authorization": f"Bearer {token}"})
 
-        response = session.get(f"{HTTP_API_ROOT}/tree/")
-        assert response.status_code == 200
+            response = session.get(f"{HTTP_API_ROOT}/tree/")
+            assert response.status_code == 200
 
-        response = session.get(f"{STRIPPED_API_ROOT}/a2a/status")
-        assert response.status_code == 200
+            response = session.get(f"{STRIPPED_API_ROOT}/a2a/status")
+            assert response.status_code == 200
 
-        response = session.get(f"{STRIPPED_API_ROOT}/mcp/status")
-        assert response.status_code == 200
+            response = session.get(f"{STRIPPED_API_ROOT}/mcp/status")
+            assert response.status_code == 200
 
-        response = session.post(f"{HTTP_API_ROOT}/logout")
-        assert response.status_code == 200
+            response = session.post(f"{HTTP_API_ROOT}/logout")
+            assert response.status_code == 200
 
-        response = session.get(f"{HTTP_API_ROOT}/tree/")
-        assert response.status_code == 401
+            response = session.get(f"{HTTP_API_ROOT}/tree/")
+            assert response.status_code == 401
 
-        response = session.get(f"{STRIPPED_API_ROOT}/a2a/status")
-        assert response.status_code == 401
+            response = session.get(f"{STRIPPED_API_ROOT}/a2a/status")
+            assert response.status_code == 401
 
-        response = session.get(f"{STRIPPED_API_ROOT}/mcp/status")
-        assert response.status_code == 401
+            response = session.get(f"{STRIPPED_API_ROOT}/mcp/status")
+            assert response.status_code == 401
 
-        response = session.post(f"{HTTP_API_ROOT}/login", json={"username": "mindsdb", "password": "mindsdb"})
-        assert response.status_code == 200
-        token = response.json().get("token")
-        session.headers.update({"Authorization": f"Bearer {token}"})
+            response = session.post(f"{HTTP_API_ROOT}/login", json={"username": "mindsdb", "password": "mindsdb"})
+            assert response.status_code == 200
+            token = response.json().get("token")
+            session.headers.update({"Authorization": f"Bearer {token}"})
 
-        response = session.put(
-            f"{HTTP_API_ROOT}/config/",
-            json={"auth": {"http_auth_enabled": False, "username": "mindsdb", "password": ""}},
-        )
+            response = session.put(
+                f"{HTTP_API_ROOT}/config/",
+                json={"auth": {"http_auth_enabled": False, "username": "mindsdb", "password": ""}},
+            )
 
-        response = session.get(f"{HTTP_API_ROOT}/status")
-        assert response.status_code == 200
-        assert response.json()["auth"]["http_auth_enabled"] is False
+            response = session.get(f"{HTTP_API_ROOT}/status")
+            assert response.status_code == 200
+            assert response.json()["auth"]["http_auth_enabled"] is False
+            test_failed = False
+        finally:
+            restore_response = session.put(
+                f"{HTTP_API_ROOT}/config/",
+                json={"auth": original_auth_config},
+            )
+            if not test_failed:
+                assert (
+                    restore_response.status_code == 200
+                ), f"Failed to restore auth config, received {restore_response.status_code}"
 
     def test_gui_is_served(self):
         """

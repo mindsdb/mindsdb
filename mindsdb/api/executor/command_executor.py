@@ -952,7 +952,7 @@ class ExecuteCommands:
 
     def answer_create_kb_index(self, statement, database_name):
         project_name, table_name = match_two_part_name(statement.name, default_db_name=database_name)
-        self.session.kb_controller.create_index(table_name=table_name, project_name=project_name)
+        self.session.kb_controller.create_index(table_name=table_name, project_name=project_name, params=statement.params)
         return ExecuteAnswer()
 
     def answer_evaluate_kb(self, statement: EvaluateKnowledgeBase, database_name):

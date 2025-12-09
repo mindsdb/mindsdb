@@ -129,6 +129,15 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         if self.faiss_index:
             self.faiss_index.drop()
 
+    def create_index(
+        self,
+        table_name: str,
+        type: str = "ivfflat",
+        nlist: int = 100,
+    ):
+        ...
+
+
     def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into both DuckDB and Faiss."""
 

@@ -58,6 +58,18 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install -r requirements/requirements-test.txt
+    - name: Reset MindsDB auto config
+      shell: bash
+      run: |
+        paths=()
+        if [[ -n "${MINDSDB_STORAGE_DIR:-}" ]]; then
+          paths+=("${MINDSDB_STORAGE_DIR}/config.auto.json")
+        fi
+        paths+=("$HOME/.local/share/mindsdb/mindsdb/var/config.auto.json")
+        paths+=("$GITHUB_WORKSPACE/var/config.auto.json")
+        for path in "${paths[@]}"; do
+          rm -f "$path" && echo "Removed $path" || true
+        done
 
     - name: Run Integration Tests on Deploy
       run: |

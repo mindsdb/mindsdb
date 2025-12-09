@@ -12,7 +12,13 @@ SELECT * FROM somedb.movies WHERE whatever...;
 - If you are unsusre of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
 - If Metadata about a table is unknown, assume that all columns are of type varchar. 
 - When casting varchars to something else simply use the CAST function, for example: CAST(year AS INTEGER), or CAST(year AS FLOAT), or CAST(year AS DATE), or CAST(year AS BOOLEAN), etc.
-- When a column has been casted and renamed, the new name can and should be used in the query, for example, if you cast the column year CAST(year AS INTEGER) AS year_int, you can use year_int in the query such as WHERE year_int > 2000. 
+- When a column has been casted and renamed, the new name can and should be used in the query, for example:
+do:
+SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE ndate >= something
+instead of:
+SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE CAST(datetime AS DATE) >= something
+
+ if you cast the column year CAST(year AS INTEGER) AS year_int, you can use year_int in the query such as WHERE year_int > 2000. 
 - ALWAYS: When writing queries that involve time, use the time functions in MindsDB SQL, or duckdb functions.
 - ALWAYS:Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE..`;
 - ALWAYS: When columns contain spaces, special characters or are reserved words, use double quotes `"` to quote the column name, for example, "column name" instead of [column name].

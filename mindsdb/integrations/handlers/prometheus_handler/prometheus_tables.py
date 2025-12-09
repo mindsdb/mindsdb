@@ -394,6 +394,13 @@ class MetricDataTable(APIResource):
                 "COLUMN_DESCRIPTION": "Query timeout (e.g., '10s')",
                 "IS_NULLABLE": True,
             },
+            {
+                "TABLE_NAME": "metric_data",
+                "COLUMN_NAME": "labels_json",
+                "DATA_TYPE": "JSON",
+                "COLUMN_DESCRIPTION": "JSON object of all labels and their values for this row",
+                "IS_NULLABLE": True,
+            },
         ]
         # Note: Label columns are dynamic and will be added based on the query results
         return base_columns
@@ -610,6 +617,10 @@ class MetricDataTable(APIResource):
                 if not should_include:
                     continue
 
+            # Build labels JSON (excluding __name__)
+            labels_dict = {k: v for k, v in metric.items() if k != "__name__"}
+            labels_json = json.dumps(labels_dict) if labels_dict else None
+
             row = {
                 "pql_query": pql_query,
                 "start_ts": start_ts,
@@ -618,6 +629,7 @@ class MetricDataTable(APIResource):
                 "timeout": timeout,
                 "timestamp": timestamp,
                 "value": metric_value,
+                "labels_json": labels_json,
             }
 
             # Add all label columns
@@ -690,6 +702,10 @@ class MetricDataTable(APIResource):
                 if not should_include:
                     continue
 
+            # Build labels JSON (excluding __name__)
+            labels_dict = {k: v for k, v in metric.items() if k != "__name__"}
+            labels_json = json.dumps(labels_dict) if labels_dict else None
+
             # Create a row for each timestamp-value pair
             for value_pair in values:
                 timestamp = value_pair[0] if len(value_pair) > 0 else None
@@ -703,6 +719,7 @@ class MetricDataTable(APIResource):
                     "timeout": timeout,
                     "timestamp": timestamp,
                     "value": metric_value,
+                    "labels_json": labels_json,
                 }
 
                 # Add all label columns
@@ -722,5 +739,5 @@ class MetricDataTable(APIResource):
         """Return base column names for the metric_data table.
         Note: Label columns are dynamic and will be added based on query results.
         """
-        return ["pql_query", "start_ts", "end_ts", "step", "timeout", "timestamp", "value"]
+        return ["pql_query", "start_ts", "end_ts", "step", "timeout", "timestamp", "value", "labels_json"]
 

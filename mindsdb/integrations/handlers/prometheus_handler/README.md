@@ -126,6 +126,7 @@ Query metric data using PromQL with label filtering support.
 - `timeout` (VARCHAR): Query timeout (e.g., '10s')
 - `timestamp` (TIMESTAMP): Timestamp of the data point
 - `value` (DOUBLE): Metric value
+- `labels_json` (JSON): JSON object of all labels and their values for this row (optional, only included when selected)
 
 **Dynamic Columns:**
 - One column for each label in the query results (e.g., `job`, `instance`, `method`, `status`, etc.)
@@ -164,6 +165,18 @@ WHERE pql_query = 'rate(metric[5m])'
   AND somelabel < 100
   AND someother_label = 100
   AND step = '10s';
+```
+
+**Example - Selecting labels_json:**
+```sql
+SELECT timestamp, value, labels_json FROM prometheus_db.metric_data
+WHERE pql_query = 'up'
+  AND start_ts = '2024-01-01T00:00:00Z';
+```
+
+The `labels_json` column contains a JSON object with all labels and their values for each row, excluding the `__name__` label. For example:
+```json
+{"job": "prometheus", "instance": "localhost:9090", "status": "up"}
 ```
 
 ## Label Filtering

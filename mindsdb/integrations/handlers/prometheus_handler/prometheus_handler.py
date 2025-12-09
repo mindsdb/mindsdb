@@ -50,6 +50,7 @@ def _map_type(data_type: str) -> MYSQL_DATA_TYPE:
         "BOOL": MYSQL_DATA_TYPE.BOOL,
         "TIMESTAMP": MYSQL_DATA_TYPE.DATETIME,
         "DATETIME": MYSQL_DATA_TYPE.DATETIME,
+        "JSON": MYSQL_DATA_TYPE.JSON,
         "ARRAY": MYSQL_DATA_TYPE.TEXT,
     }
 

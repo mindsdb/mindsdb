@@ -1,7 +1,5 @@
 import gc
-import os
-from typing import Optional, Set
-
+from importlib import import_module
 gc.disable()
 
 from flask import Flask
@@ -23,16 +21,15 @@ gc.enable()
 logger = log.getLogger(__name__)
 
 
-def _api_mode() -> Optional[Set[str]]:
-    """Return the normalized set of requested APIs or None if not specified."""
+def _mount_optional_api(name: str, mount_path: str, get_app_fn, routes):
+    try:
+        optional_app = get_app_fn()
+    except ImportError as exc:
+        logger.warning("%s support is disabled (%s). To enable it, install the %s extra: pip install 'mindsdb[%s]'", name, exc, name, name.lower())
+        return
 
-    apis = os.getenv("MINDSDB_APIS") or config.cmd_args.api
-
-    if apis is None:
-        return None
-
-    enabled = {name.strip().lower() for name in apis.split(",") if name.strip()}
-    return enabled or None
+    optional_app.add_middleware(PATAuthMiddleware)
+    routes.append(Mount(mount_path, app=optional_app))
 
 
 def start(verbose, app: Flask = None, is_restart: bool = False):
@@ -47,26 +44,19 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
 
     process_cache.init()
 
-    requested_apis = _api_mode()
-    enable_by_default = requested_apis is None
-
-    need_a2a = enable_by_default or "a2a" in requested_apis
-    need_mcp = enable_by_default or "mcp" in requested_apis
-
     routes = []
-    if need_a2a or need_mcp:
-        from mindsdb.api.a2a import get_a2a_app
-        from mindsdb.api.mcp import get_mcp_app
-
-        if need_a2a:
-            a2a = get_a2a_app()
-            a2a.add_middleware(PATAuthMiddleware)
-            routes.append(Mount("/a2a", app=a2a))
-
-        if need_mcp:
-            mcp = get_mcp_app()
-            mcp.add_middleware(PATAuthMiddleware)
-            routes.append(Mount("/mcp", app=mcp))
+    _mount_optional_api(
+        "A2A",
+        "/a2a",
+        lambda: import_module("mindsdb.api.a2a").get_a2a_app(),
+        routes,
+    )
+    _mount_optional_api(
+        "MCP",
+        "/mcp",
+        lambda: import_module("mindsdb.api.mcp").get_mcp_app(),
+        routes,
+    )
 
     # Root app LAST so it won't shadow the others
     routes.append(

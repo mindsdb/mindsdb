@@ -337,9 +337,6 @@ if __name__ == "__main__":
         )
         exit(1)
 
-    config.update({"auth": {"http_auth_enabled": False}}, overwrite=True)
-    sys.exit(1)
-
     if config.cmd_args.version:
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)

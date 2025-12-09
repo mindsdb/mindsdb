@@ -1,8 +1,6 @@
 **/*.pyc
 *__pycache__*
 var
-a
-b
 etc
 .idea
 mindsdb/logs

@@ -393,7 +393,7 @@ if __name__ == "__main__":
             logger.exception("Something went wrong during client register:")
     elif environment != "local":
         try:
-            aws_meta_data = get_aws_meta_data()MINDSDB_STORAGE_DIR
+            aws_meta_data = get_aws_meta_data()
             config.update({"aws_meta_data": aws_meta_data})
         except Exception:
             pass

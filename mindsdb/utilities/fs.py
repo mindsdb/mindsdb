@@ -1,9 +1,10 @@
 import os
+import json
 import time
 import tempfile
 import threading
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Generator
 
 import psutil
 
@@ -54,7 +55,7 @@ def set_process_mark(folder: str, mark: str) -> None:
     return mark
 
 
-def delete_process_mark(folder: str = "learn", mark: Optional[str] = None):
+def delete_process_mark(folder: str = "learn", mark: str | None = None):
     if mark is None:
         mark = _get_process_mark_id()
     p = get_tmp_dir().joinpath(f"processes/{folder}/").joinpath(mark)
@@ -75,11 +76,11 @@ def clean_process_marks():
             file.unlink()
 
 
-def get_processes_dir_files_generator() -> Tuple[Path, int, int]:
+def get_processes_dir_files_generator() -> Generator[tuple[Path, int, int], None, None]:
     """Get files from processes dir
 
     Yields:
-        Tuple[Path, int, int]: file object, process is and thread id
+        tuple(Path, int, int): file object, process id and thread id
     """
     p = get_tmp_dir().joinpath("processes/")
     if p.exists() is False:
@@ -94,11 +95,11 @@ def get_processes_dir_files_generator() -> Tuple[Path, int, int]:
             yield file, process_id, thread_id
 
 
-def clean_unlinked_process_marks() -> List[int]:
+def clean_unlinked_process_marks() -> list[int]:
     """delete marks that does not have corresponded processes/threads
 
     Returns:
-        List[int]: list with ids of unexisting processes
+        list[int]: list with ids of unexisting processes
     """
     deleted_pids = []
 
@@ -127,7 +128,7 @@ def clean_unlinked_process_marks() -> List[int]:
     return deleted_pids
 
 
-def create_pid_file():
+def create_pid_file(config):
     """
     Create mindsdb process pid file. Check if previous process exists and is running
     """
@@ -140,17 +141,38 @@ def create_pid_file():
     pid_file = p.joinpath("pid")
     if pid_file.exists():
         # if process exists raise exception
-        pid = pid_file.read_text().strip()
+        pid_file_data_str = pid_file.read_text().strip()
+        pid = None
         try:
-            psutil.Process(int(pid))
-            raise Exception(f"Found PID file with existing process: {pid} {pid_file}")
-        except (psutil.Error, ValueError):
-            ...
+            pid_file_data = json.loads(pid_file_data_str)
+            pid = pid_file_data.get("pid")
+        except json.JSONDecodeError:
+            # is it just pid number (old approach)?
+            try:
+                pid = int(pid_file_data_str)
+            except Exception:
+                pass
+            logger.warning(f"Found existing PID file {pid_file} but it is not a valid JSON, removing")
 
-        logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
+        if pid is not None:
+            try:
+                psutil.Process(int(pid))
+                raise Exception(f"Found PID file with existing process: {pid} {pid_file}")
+            except (psutil.Error, ValueError):
+                pass
+            logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
+
         pid_file.unlink()
 
-    pid_file.write_text(str(os.getpid()))
+    pid_file_data_str = json.dumps({
+        "pid": os.getpid(),
+        "http_host": config.get("api", {}).get("http", {}).get("host"),
+        "http_port": config.get("api", {}).get("http", {}).get("port"),
+        "http_auth_enabled": config.get("auth", {}).get("http_auth_enabled"),
+        "username": config.get("auth", {}).get("username"),
+        "password": config.get("auth", {}).get("password"),
+    })
+    pid_file.write_text(pid_file_data_str)
 
 
 def delete_pid_file():
@@ -166,10 +188,16 @@ def delete_pid_file():
     if not pid_file.exists():
         return
 
-    pid = pid_file.read_text().strip()
-    if pid != str(os.getpid()):
-        logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
-        return
+    pid_file_data_str = pid_file.read_text().strip()
+    try:
+        pid_file_data = json.loads(pid_file_data_str)
+        pid = pid_file_data.get("pid")
+    except json.JSONDecodeError:
+        logger.warning(f"Found existing PID file {pid_file} but it is not a valid JSON")
+    else:
+        if str(pid) != str(os.getpid()):
+            logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
+            return
 
     pid_file.unlink()
 

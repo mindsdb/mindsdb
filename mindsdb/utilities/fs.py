@@ -164,14 +164,16 @@ def create_pid_file(config):
 
         pid_file.unlink()
 
-    pid_file_data_str = json.dumps({
-        "pid": os.getpid(),
-        "http_host": config.get("api", {}).get("http", {}).get("host"),
-        "http_port": config.get("api", {}).get("http", {}).get("port"),
-        "http_auth_enabled": config.get("auth", {}).get("http_auth_enabled"),
-        "username": config.get("auth", {}).get("username"),
-        "password": config.get("auth", {}).get("password"),
-    })
+    pid_file_data_str = json.dumps(
+        {
+            "pid": os.getpid(),
+            "http_host": config.get("api", {}).get("http", {}).get("host"),
+            "http_port": config.get("api", {}).get("http", {}).get("port"),
+            "http_auth_enabled": config.get("auth", {}).get("http_auth_enabled"),
+            "username": config.get("auth", {}).get("username"),
+            "password": config.get("auth", {}).get("password"),
+        }
+    )
     pid_file.write_text(pid_file_data_str)
 
 

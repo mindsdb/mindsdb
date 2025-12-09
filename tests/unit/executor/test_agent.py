@@ -8,8 +8,8 @@ from unittest.mock import patch, MagicMock, AsyncMock
 import pandas as pd
 import pytest
 import sys
-
-from mindsdb.interfaces.agents.langchain_agent import SkillData
+from openai.types.chat import ChatCompletion
+# from mindsdb.interfaces.agents.langchain_agent import SkillData
 from tests.unit.executor_test_base import BaseExecutorDummyML
 from tests.unit.executor.test_knowledge_base import set_litellm_embedding
 
@@ -22,7 +22,7 @@ def set_openai_completion(mock_openai, response):
     calls = []
     responses = []
 
-    def resp_f(messages, *args, **kwargs):
+    async def resp_f(messages, *args, **kwargs):
         # return all responses in sequence, then yield only latest from list
         if len(response) == 1:
             resp = response[0]
@@ -46,9 +46,29 @@ def set_openai_completion(mock_openai, response):
         calls.append(messages[0]["content"])
         responses.append(resp)
 
-        return {"choices": [{"message": {"role": "assistant", "content": resp}}]}
+        data = {
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1234567890,
+            "model": "gpt-3.5-turbo",
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": resp
+                },
+                "finish_reason": "stop"
+            }],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 2,
+                "total_tokens": 12
+            }
+        }
 
-    mock_openai().chat.completions.create.side_effect = resp_f
+        return ChatCompletion(**data)
+
+    mock_openai().chat.completions.create = AsyncMock(side_effect=resp_f)
 
 
 def get_dataset_planets():
@@ -799,7 +819,7 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("select * from my_agent where question = 'test'")
         assert "files" not in mock_openai.agent_calls[1]
 
-    @patch("openai.OpenAI")
+    @patch("openai.AsyncOpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_agent_new_syntax(self, mock_litellm_embedding, mock_openai):
         set_litellm_embedding(mock_litellm_embedding)

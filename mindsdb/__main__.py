@@ -403,7 +403,7 @@ if __name__ == "__main__":
     elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
     else:  # The user has provided a list of APIs to start
-       api_arr = [TrunkProcessEnum(name) for name in apis.split(",")]
+        api_arr = [TrunkProcessEnum(name) for name in apis.split(",")]
 
     logger.info(f"Version: {mindsdb_version}")
     logger.info(f"Configuration file: {config.config_path or 'absent'}")

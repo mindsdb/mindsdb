@@ -54,7 +54,6 @@ Before installing MindsDB from source, ensure that you use one of the following 
    ```bash
    cd mindsdb
    pip install -e .
-   pip install -r requirements/requirements-dev.txt
    ```
    
 6. Start MindsDB:
@@ -103,13 +102,22 @@ You can access the MindsDB Editor at `localhost:47334`.
 
 ## Install dependencies
 
+The core installation includes everything needed to run the Federated Query Engine and essential database capabilities.
 The dependencies for many of the data or ML integrations are not installed by default.
 
-If you want to use a data or AI/ML integration whose dependencies are not available by default, install it by running this command:
+If you need additional features — such as Agents, the Knowledge Base, MCP or A2A protocol — you can enable them through extras, rather than installing everything by default.
 
-```
-pip install .[handler_name]
-```
+### Install Features via Extras
+
+Optional integrations and features can be installed as needed using extras.
+
+| Feature | Install command |
+|---------|----------------|
+| Agents / LLMs | `pip install ".[agents]"` |
+| Knowledge Base | `pip install ".[kb]"` |
+| MCP or A2A protocol support | `pip install ".[mcp,a2a]"` |
+| Multiple features at once | `pip install ".[agents,knowledgebase]"` |
+| Integrations | `pip install .[integration_name]` |
 
 <Tip>
 You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers).

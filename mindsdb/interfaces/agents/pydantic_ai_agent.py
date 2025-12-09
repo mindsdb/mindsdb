@@ -19,7 +19,6 @@ from mindsdb.interfaces.agents.constants import (
     ASSISTANT_COLUMN,
     CONTEXT_COLUMN,
     TRACE_ID_COLUMN,
-    DEFAULT_AGENT_TIMEOUT_SECONDS,
 )
 
 from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery, SQLQuery, QueryType, Plan

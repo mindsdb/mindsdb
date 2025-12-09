@@ -12,17 +12,9 @@ langchain-google-genai>=2.0.0
 langchain_writer==0.3.2 # Required for Writer agent
 
 
-# A2A server
-httpx==0.28.1
-typing-extensions==4.13.2
-jwcrypto==1.5.6
-pyjwt==2.10.1
-pydantic_core>=2.33.2
-
 # When using agents, some LLMs may require the 'transformers' library (like Ollama):
 transformers >= 4.42.4
 
-mcp~=1.10.1
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
 
 # Required for KB

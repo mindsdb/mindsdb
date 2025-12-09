@@ -34,6 +34,8 @@ uvicorn>=0.30.0, <1.0.0   # For all HTTP-based APIs
 a2wsgi ~= 1.10.10  # WSGI wrapper for flask+starlette
 starlette>=0.27
 sse-starlette==2.3.3
+pydantic_core>=2.33.2
+pyjwt==2.10.1
 # files reading
 pymupdf==1.25.2
 filetype

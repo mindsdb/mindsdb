@@ -212,7 +212,7 @@ class DataCatalogBuilder:
 
         # Get sample data
         sample_data_csv = ""
-        sample_data_query = f"SELECT * FROM {project}.{kb_name} LIMIT 5"
+        sample_data_query = f"SELECT * FROM {project}.{kb_name} LIMIT 3"
         try:
             result = self.sql_toolkit.execute(sample_data_query)
             if isinstance(result, pd.DataFrame):

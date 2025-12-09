@@ -337,6 +337,11 @@ if __name__ == "__main__":
         )
         exit(1)
 
+    config.update({
+        "auth": {"http_auth_enabled": False}
+    }, overwrite=True)
+    sys.exit(1)
+
     if config.cmd_args.version:
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)
@@ -388,7 +393,7 @@ if __name__ == "__main__":
             logger.exception("Something went wrong during client register:")
     elif environment != "local":
         try:
-            aws_meta_data = get_aws_meta_data()
+            aws_meta_data = get_aws_meta_data()MINDSDB_STORAGE_DIR
             config.update({"aws_meta_data": aws_meta_data})
         except Exception:
             pass

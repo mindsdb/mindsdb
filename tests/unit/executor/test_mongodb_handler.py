@@ -68,7 +68,27 @@ class TestMongoDBConverters(unittest.TestCase):
         # test ast to mongo
         assert mql.to_string().replace(" ", "") == expected_mql.replace(" ", "")
 
-        # TODO test group
+        sql = """
+            select a as name, sum(b) as total, count(c) as cnt
+            from tbl1
+            where x>=5
+            group by a
+            order by cnt desc
+        """
+
+        query = parse_sql(sql)
+        mql = MongodbRender().to_mongo_query(query)
+
+        expected_mql = """
+            db.tbl1.aggregate([
+                {"$match": {"x": {"$gte": 5}}},
+                {"$group": {"_id": {"a": "$a"}, "total": {"$sum": "$b"}, "cnt": {"$sum": {"$cond": [{"$ne": ["$c", null]}, 1, 0]}}}},
+                {"$project": {"_id": 0, "name": "$a", "total": "$total", "cnt": "$cnt"}},
+                {"$sort": {"cnt": -1}}
+            ])
+        """.replace("\n", "")
+
+        assert mql.to_string().replace(" ", "") == expected_mql.replace(" ", "")
 
         # TODO use in queries:  multiline, objectid, isodate
 

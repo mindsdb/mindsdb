@@ -171,9 +171,13 @@ class MongodbRender(NonRelationalRender):
         Returns:
             MongoQuery: The converted MongoQuery instance.
         """
-        # if not isinstance(node.from_table, Identifier):
-        #     raise NotImplementedError(f"Not supported from {node.from_table}")
         collection, pre_match, pre_project = self._parse_select(node.from_table)
+
+        # check for table aliases
+        table_aliases = {collection}
+
+        if isinstance(node.from_table, Identifier) and node.from_table.alias is not None:
+            table_aliases.add(node.from_table.alias.parts[-1])
 
         filters: Dict[str, Any] = {}
         agg_group: Dict[str, Any] = {}
@@ -182,7 +186,7 @@ class MongodbRender(NonRelationalRender):
             filters = self.handle_where(node.where)
 
         group: Dict[str, Any] = {}
-        project = {"_id": 0}
+        project: Dict[str, Any] = {"_id": 0}
         if node.distinct:
             # Group by distinct fields.
             group = {"_id": {}}
@@ -194,7 +198,24 @@ class MongodbRender(NonRelationalRender):
                     project = {}
                     break
                 if isinstance(col, Identifier):
-                    name = ".".join(col.parts)
+                    parts = list(col.parts)
+
+                    # Strip table alias/qualifier prefix if present
+                    # If first part matches a known table/alias, strip it
+                    # OR if there's only one table and parts has multiple elements,
+                    # assume first part is a table qualifier and strip it
+                    if len(parts) > 1:
+                        if parts[0] in table_aliases:
+                            parts = parts[1:]
+                        # Handle implicit qualifiers in single-table queries
+                        # e.g., "SELECT a.b FROM tbl1" where 'a' isn't explicitly an alias
+                        # In this case, strip 'a' to get just 'b'
+                        elif len(table_aliases) == 1:
+                            parts = parts[1:]
+
+                    # Convert parts to strings and join
+                    name = ".".join(str(p) for p in parts) if len(parts) > 0 else str(parts[0])
+
                     if col.alias is None:
                         alias = name
                     else:
@@ -219,7 +240,18 @@ class MongodbRender(NonRelationalRender):
                     if func_name == "count" and isinstance(arg0, Star):
                         agg_group[alias] = {"$sum": 1}
                     elif isinstance(arg0, Identifier):
-                        field_name = ".".join(arg0.parts)
+                        args_parts = list(arg0.parts)
+
+                        # Strip table alias/qualifier prefix if present
+                        if len(args_parts) > 1:
+                            if args_parts[0] in table_aliases:
+                                args_parts = args_parts[1:]
+                            # Handle implicit qualifiers in single-table queries
+                            elif len(table_aliases) == 1:
+                                args_parts = args_parts[1:]
+
+                        # Convert parts to strings and join
+                        field_name = ".".join(str(p) for p in args_parts) if len(args_parts) > 0 else str(args_parts[0])
 
                         if func_name == "avg":
                             agg_group[alias] = {"$avg": f"${field_name}"}
@@ -244,8 +276,18 @@ class MongodbRender(NonRelationalRender):
             for group_col in node.group_by:
                 if not isinstance(group_col, Identifier):
                     raise NotImplementedError(f"Unsupported GROUP BY column {group_col}")
+                group_parts = list(group_col.parts)
 
-                field_name = ".".join(group_col.parts)
+                # Strip table alias/qualifier prefix if present
+                if len(group_parts) > 1:
+                    if group_parts[0] in table_aliases:
+                        group_parts = group_parts[1:]
+                    # Handle implicit qualifiers in single-table queries
+                    elif len(table_aliases) == 1:
+                        group_parts = group_parts[1:]
+
+                # Convert parts to strings and join
+                field_name = ".".join(str(p) for p in group_parts)
                 alias = group_col.alias.parts[-1] if group_col.alias is not None else field_name
 
                 group["_id"][alias] = f"${field_name}"

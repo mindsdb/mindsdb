@@ -748,7 +748,7 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
                     "table_name": "issues",
                     "column_name": "components",
                     "data_type": "TEXT",
-                    "description": "Comma-separated component names associated with the issue.,
+                    "description": "Comma-separated component names associated with the issue",
                     "is_nullable": False
                 },
                 {

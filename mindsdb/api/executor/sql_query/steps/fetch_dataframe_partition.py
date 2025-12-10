@@ -1,7 +1,8 @@
+import copy
 import pandas as pd
 from typing import List
 
-from mindsdb_sql_parser import ASTNode
+from mindsdb_sql_parser import ASTNode, Constant
 from mindsdb.api.executor.planner.steps import FetchDataframeStepPartition
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
@@ -12,6 +13,8 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.partitioning import get_max_thread_count, split_data_frame
 from mindsdb.api.executor.sql_query.steps.fetch_dataframe import get_table_alias, get_fill_param_fnc
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
+
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 
 from .base import BaseStepCall
@@ -54,14 +57,19 @@ class FetchDataframePartitionCall(BaseStepCall):
         fill_params = get_fill_param_fnc(self.steps_data)
         query_traversal(query, fill_params)
 
+        self.table_alias = get_table_alias(step.query.from_table, self.context.get("database"))
+        self.current_step_num = step.step_num
+
+        if step.condition is not None:
+            if "limit" in step.condition:
+                return self.repeat_till_reach_limit(step, step.condition["limit"])
+
         # get query record
         run_query = self.sql_query.run_query
         if run_query is None:
             raise RuntimeError("Error with partitioning of the query")
         run_query.set_params(step.params)
 
-        self.table_alias = get_table_alias(step.query.from_table, self.context.get("database"))
-        self.current_step_num = step.step_num
         self.substeps = step.steps
 
         # ml task queue enabled?
@@ -86,6 +94,56 @@ class FetchDataframePartitionCall(BaseStepCall):
             return self.fetch_threads(run_query, query, thread_count=thread_count, on_error=on_error)
         else:
             return self.fetch_iterate(run_query, query, on_error=on_error)
+
+    def repeat_till_reach_limit(self, step, limit):
+        first_table_limit = limit * 2
+        dn = self.session.datahub.get(step.integration)
+
+        query = step.query
+
+        # fill params
+        query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
+
+        try_num = 1
+        while True:
+            self.substeps = copy.deepcopy(step.steps)
+            query2 = copy.deepcopy(query)
+
+            if first_table_limit is not None:
+                query2.limit = Constant(first_table_limit)
+            else:
+                query2.limit = None
+
+            response = dn.query(query=query2, session=self.session)
+            df = response.data_frame
+
+            result = self.exec_sub_steps(df)
+
+            if len(result) >= limit or first_table_limit is None or len(df) < first_table_limit:
+                # we have enough results
+                #  OR first table doesn't return requested count of rows
+                #  OR it is a flag to stop
+                result = result[:limit]
+                break
+
+            if try_num > 3:
+                # the last try without the limit
+                first_table_limit = None
+                continue
+
+            # no enough results
+            if len(result) > 0:
+                # forecast the required limit (depending on how much row we don't have)
+                first_table_limit = int(first_table_limit * limit / len(result) * try_num + 10**try_num)
+            else:
+                first_table_limit = first_table_limit * 10
+
+            try_num += 1
+
+        if context_callback:
+            context_callback(df, response.columns)
+
+        return result
 
     def fetch_iterate(self, run_query: RunningQuery, query: ASTNode, on_error: str = None) -> ResultSet:
         """

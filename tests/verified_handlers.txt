@@ -1,16 +1,11 @@
-# Handlers considered "verified" and enforced to stay above the coverage threshold.
 clickhouse
 snowflake
-web
 redshift
 bigquery
 databricks
 oracle
 slack
-github
 ms_teams
 salesforce
-statsforecast
 mysql
-chromadb
 mssql

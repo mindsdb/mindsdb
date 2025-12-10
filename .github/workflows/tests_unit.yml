@@ -116,6 +116,7 @@ jobs:
           # TODO: for now some tests rely on lightwood
           VERIFIED_HANDLERS=()
           while IFS= read -r handler; do
+            handler=${handler//$'\r'/}
             [[ -z "${handler}" || "${handler}" =~ ^[[:space:]]*# ]] && continue
             VERIFIED_HANDLERS+=("${handler}")
           done < tests/verified_handlers.txt
@@ -150,6 +151,7 @@ jobs:
           uv pip install . -r requirements/requirements-test.txt
           VERIFIED_HANDLERS=()
           while IFS= read -r handler; do
+            handler=${handler//$'\r'/}
             [[ -z "${handler}" || "${handler}" =~ ^[[:space:]]*# ]] && continue
             VERIFIED_HANDLERS+=("${handler}")
           done < tests/verified_handlers.txt
@@ -165,6 +167,7 @@ jobs:
         run: |
           VERIFIED_HANDLERS=()
           while IFS= read -r handler; do
+            handler=${handler//$'\r'/}
             [[ -z "${handler}" || "${handler}" =~ ^[[:space:]]*# ]] && continue
             VERIFIED_HANDLERS+=("${handler}")
           done < tests/verified_handlers.txt

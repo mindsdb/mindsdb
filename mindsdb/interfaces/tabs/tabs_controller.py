@@ -86,10 +86,7 @@ class TabsController:
     def _load_tab_data(self, tab_id: int, raw_data) -> Dict:
         """Load tab JSON while handling trailing garbage."""
         if isinstance(raw_data, bytes):
-            try:
-                raw_data_str = raw_data.decode("utf-8")
-            except UnicodeDecodeError as e:
-                raise e
+            raw_data_str = raw_data.decode("utf-8")
         else:
             raw_data_str = raw_data
 

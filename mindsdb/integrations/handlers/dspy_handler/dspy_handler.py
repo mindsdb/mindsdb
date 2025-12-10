@@ -9,13 +9,15 @@ from dspy.teleprompt import BootstrapFewShot
 from mindsdb.interfaces.llm.llm_controller import LLMDataController
 import pandas as pd
 # DEFAULT_MODEL_NAME removed from constants - using default value directly
-DEFAULT_MODEL_NAME = "gpt-4o"
+
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.utilities import log
 
+
+DEFAULT_MODEL_NAME = "gpt-4o"
 
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 

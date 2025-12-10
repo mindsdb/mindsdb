@@ -207,7 +207,7 @@ class MindsDBQuery:
                 is_external=False,
                 is_expected=True
             )
-        except QueryError as e:
+        except QueryError:
             raise
         except UnknownError as e:
             # unclassified error

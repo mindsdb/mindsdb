@@ -9,7 +9,6 @@ from pydantic_ai import Agent
 from pydantic_ai.messages import ModelRequest, ModelResponse, ModelMessage, TextPart
 
 from mindsdb.utilities import log
-from mindsdb.utilities.exception import QueryError
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.agents.utils.constants import (
     USER_COLUMN,
@@ -621,7 +620,7 @@ class PydanticAIAgent:
                         yield self._add_chunk_metadata({"type": "status", "content": "Executing SQL query..."})
 
                         query_data = self.executor.execute(output.sql_query)
-                        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
+                        DEBUG_LOGGER("PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
                         query_succeeded = True
                         break  # Query succeeded, exit retry loop
 

@@ -1,6 +1,5 @@
 """Custom LLM wrapper to replace langchain create_chat_model"""
 
-import asyncio
 from typing import List, Any, Dict
 from dataclasses import dataclass
 

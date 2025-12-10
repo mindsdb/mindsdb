@@ -624,41 +624,7 @@ class PydanticAIAgent:
                         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
                         query_succeeded = True
                         break  # Query succeeded, exit retry loop
-                        
-                    except QueryError as e:
-                        # Capture SQL query errors - only log essential error information
-                        query_error = str(e)
-                        logger.error(f"SQL query error (retry {retry_count}/{MAX_RETRIES}): Query: {output.sql_query[:100]}... Error: {query_error}")
-                        
-                        if retry_count < MAX_RETRIES:
-                            # Add error to accumulated errors and update prompt for retry
-                            accumulated_errors.append(f"Query: {output.sql_query}\nError: {query_error}")
-                            retry_count += 1
-                            
-                            # Update prompt with accumulated errors
-                            error_context = "\n\nPrevious query errors:\n" + "\n---\n".join(accumulated_errors[-3:])  # Show last 3 errors
-                            current_prompt = base_prompt
-                            if exploratory_query_results:
-                                current_prompt += "\n\nPrevious exploratory query results:\n" + "\n---\n".join(exploratory_query_results)
-                            current_prompt += error_context
-                            current_prompt += f"\n\nPlease fix the query and try again. This is retry attempt {retry_count} of {MAX_RETRIES}."
-                            
-                            if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
-                                current_prompt += f"\n\nIMPORTANT: You have reached the maximum number of exploratory queries ({MAX_EXPLORATORY_QUERIES}). The next query you generate MUST be a final_query."
-                            
-                            # Regenerate query with error context
-                            yield self._add_chunk_metadata({"type": "status", "content": f"Retrying query (attempt {retry_count}/{MAX_RETRIES})..."})
-                            result = agent.run_sync(
-                                current_prompt,
-                                message_history=message_history if message_history else None,
-                            )
-                            output = result.output
-                            yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
-                            DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
-                        else:
-                            # Max retries reached
-                            break
-                            
+
                     except Exception as e:
                         # Unexpected error - only log essential error information
                         query_error = f"Error executing SQL query: {str(e)}"

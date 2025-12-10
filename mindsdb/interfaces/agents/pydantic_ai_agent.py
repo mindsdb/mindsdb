@@ -399,8 +399,8 @@ class PydanticAIAgent:
                     raise RuntimeError(error_message)
                 last_message = message
             
-                if last_message.get("type") == "sql":
-                    sql_query = last_message.get("content")
+                # if last_message.get("type") == "sql":
+                #     sql_query = last_message.get("content")
                     
                 if last_message.get("type") == "data":
                     data = last_message.get("content")
@@ -412,8 +412,8 @@ class PydanticAIAgent:
             
     
             # Extract the current prompt and message history
-            current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
-            table_markdown = dataframe_to_markdown(data)
+            # current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
+            # table_markdown = dataframe_to_markdown(data)
             
             # Validate select targets if specified
             select_targets = self.get_select_targets_from_sql()
@@ -720,10 +720,7 @@ class PydanticAIAgent:
                     if exploratory_query_results:
                         current_prompt += "\n\nPrevious exploratory query results:\n" + "\n---\n".join(exploratory_query_results)
                     current_prompt += error_context
-                    
-                    if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
-                        current_prompt += f"\n\nIMPORTANT: You have reached the maximum number of exploratory queries ({MAX_EXPLORATORY_QUERIES}). The next query you generate MUST be a final_query."
-                    
+
                     continue  # Continue to next iteration to generate new query
 
                 # Query succeeded

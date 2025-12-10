@@ -181,7 +181,7 @@ class MindsDBQuery:
             # Check for errors
             if result.type == SQL_RESPONSE_TYPE.ERROR:
                 error_text = result.error_message or "Unknown error"
-                logger.warning(f"Query failed with error: {error_text}")
+                
                 raise QueryError(
                     db_error_msg=error_text,
                     failed_query=query,
@@ -200,7 +200,7 @@ class MindsDBQuery:
         except ExecutorException as e:
             # classified error
             error_text = str(e)
-            logger.warning(f"Error query processing: {e}")
+            
             raise QueryError(
                 db_error_msg=error_text,
                 failed_query=query,
@@ -208,17 +208,11 @@ class MindsDBQuery:
                 is_expected=True
             )
         except QueryError as e:
-            # Preserve original QueryError attributes, just re-raise
-            if e.is_expected:
-                logger.warning(f"Query failed due to expected reason: {e}")
-            else:
-                logger.exception("Error query processing:")
-            # Re-raise the original error, preserving all its attributes
             raise
         except UnknownError as e:
             # unclassified error
             error_text = str(e)
-            logger.exception("Error query processing:")
+            
             raise QueryError(
                 db_error_msg=error_text,
                 failed_query=query,
@@ -228,7 +222,7 @@ class MindsDBQuery:
         except Exception as e:
             # unexpected error
             error_text = str(e)
-            logger.exception("Error query processing:")
+            
             raise QueryError(
                 db_error_msg=error_text,
                 failed_query=query,

@@ -1459,14 +1459,12 @@ class ExecuteCommands:
     def answer_create_agent(self, statement, database_name):
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        skills = statement.params.pop("skills", [])
         provider = statement.params.pop("provider", None)
         try:
             _ = self.session.agents_controller.add_agent(
                 name=name,
                 project_name=project_name,
                 model_name=statement.model,
-                skills=skills,
                 provider=provider,
                 params=statement.params,
             )
@@ -1494,15 +1492,11 @@ class ExecuteCommands:
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         model = statement.params.pop("model", None)
-        skills_to_add = statement.params.pop("skills_to_add", [])
-        skills_to_remove = statement.params.pop("skills_to_remove", [])
         try:
             _ = self.session.agents_controller.update_agent(
                 name,
                 project_name=project_name,
                 model_name=model,
-                skills_to_add=skills_to_add,
-                skills_to_remove=skills_to_remove,
                 params=statement.params,
             )
         except (EntityExistsError, EntityNotExistsError, ValueError) as e:

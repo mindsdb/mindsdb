@@ -2,7 +2,7 @@
 
 import hashlib
 from io import StringIO
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from mindsdb.utilities import log
@@ -99,15 +99,16 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
 class DataCatalogBuilder:
     """Builds and caches data catalogs for agent data sources"""
 
-    def __init__(self):
+    def __init__(self, disable_cache: bool = True):
         """
         Initialize data catalog builder.
 
         Args:
-            sql_toolkit: MindsDBToolKit instance for executing queries
+            disable_cache: If True, disable caching for all catalog operations (default: False)
         """
         self.sql_toolkit =  MindsDBQuery()
         self.cache = get_cache("agent", max_size=_MAX_CACHE_SIZE)
+        self.disable_cache = disable_cache
 
     def _get_cache_key(
         self, 
@@ -153,7 +154,7 @@ class DataCatalogBuilder:
         df.to_csv(output, index=False, lineterminator='\n')
         return output.getvalue()
 
-    def build_table_catalog_entry(self, table_name: str, schema: Optional[str] = None) -> Dict[str, str]:
+    def build_table_catalog_entry(self, table_name: str, schema: Optional[str] = None) -> Dict[str, Any]:
         """
         Build catalog entry for a single table.
 
@@ -189,13 +190,12 @@ class DataCatalogBuilder:
             sample_data_csv = f"Error retrieving sample data: {str(e)}"
 
         # Get metadata
-        metadata_csv = ""
+        metadata_csv = None
         # Query information_schema.columns for table metadata
         metadata_query = f"""
-            SELECT 
-                table_schema, table_name, column_name, column_type, original_type
-            FROM information_schema.columns
-            WHERE table_schema = '{schema}' AND table_name = '{table_name}'
+
+            SHOW COLUMNS FROM {schema}.{table_name};
+
         """
         try:
             result = self.sql_toolkit.execute(metadata_query)
@@ -203,13 +203,13 @@ class DataCatalogBuilder:
             if isinstance(result, pd.DataFrame):
                 metadata_csv = self._dataframe_to_csv(result)
             else:
-                metadata_csv = "Error retrieving metadata: Unexpected result type"
+                metadata_csv = None
         except QueryError as e:
             logger.warning(f"Error getting metadata for table {schema}.{table_name}: {e}")
-            metadata_csv = f"Error retrieving metadata: {str(e)}"
+            metadata_csv = None
         except Exception as e:
             logger.warning(f"Error getting metadata for table {schema}.{table_name}: {e}")
-            metadata_csv = f"Error retrieving metadata: {str(e)}"
+            metadata_csv = None
 
         return {
             "sample_data": sample_data_csv,
@@ -308,6 +308,10 @@ class DataCatalogBuilder:
         """
         cache_key = self._get_cache_key(tables=tables, knowledge_bases=knowledge_bases, suffix="data_catalog")
         
+        # Disable cache if instance flag is set
+        if self.disable_cache:
+            use_cache = False
+        
         # Check cache first
         if use_cache:
             cached_catalog = self.cache.get(cache_key)
@@ -334,7 +338,8 @@ class DataCatalogBuilder:
                 catalog_parts.append(f"\n--- Table: {entry['table_name']} ---")
                 catalog_parts.append(f"Sample Data Query:\n{entry['sample_data_query']}")
                 catalog_parts.append(f"Sample Data (csv):\n{entry['sample_data']}")
-                catalog_parts.append(f"Metadata (csv):\n{entry['metadata']}")
+                if entry['metadata'] is not None:
+                    catalog_parts.append(f"Metadata (csv):\n{entry['metadata']}")
 
         # Process knowledge bases
         if knowledge_bases:

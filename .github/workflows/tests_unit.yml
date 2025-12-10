@@ -113,7 +113,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          # TODO: for now some tests rely on lightwood
           VERIFIED_HANDLERS=()
           while IFS= read -r handler; do
             handler=${handler//$'\r'/}
@@ -125,6 +124,8 @@ jobs:
             HANDLER_EXTRAS+=(".[${handler}]")
           done
           uv pip install . -r requirements/requirements-test.txt "${HANDLER_EXTRAS[@]}"
+          # Force Windows runners to use the stable ONNX runtime version required by chromadb
+          uv pip install --force-reinstall onnxruntime==1.20.1
           git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
           
       - name: Run unit tests
@@ -162,6 +163,7 @@ jobs:
           if [[ ${#HANDLER_EXTRAS[@]} -gt 0 ]]; then
             uv pip install "${HANDLER_EXTRAS[@]}"
           fi
+          uv pip install --force-reinstall onnxruntime==1.20.1
 
       - name: Build coverage file
         run: |

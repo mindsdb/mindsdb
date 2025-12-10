@@ -130,8 +130,6 @@ jobs:
   coverage:
     needs: unit_tests
     runs-on: mdb-dev
-    permissions:
-      pull-requests: write
     env:
       COVERAGE_FAIL_UNDER: "80"
     steps:

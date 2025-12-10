@@ -10,3 +10,4 @@ ms_teams
 salesforce
 mysql
 mssql
+chromadb

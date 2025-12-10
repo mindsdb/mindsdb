@@ -1073,6 +1073,35 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             check_dtype=False,
         )
 
+        # different case
+        sqls = ["""
+            WITH Ta as (
+                select 1 as x
+            )
+            select * from ta
+        """, """
+            WITH ta as (
+                select 1 as x
+            )
+            select * from Ta
+        """]
+        for sql in sqls:
+            resp = self.execute(sql)
+            pdt.assert_frame_equal(
+                resp.data.to_df(),
+                pd.DataFrame([[1]], columns=["x"]),
+                check_dtype=False,
+            )
+
+        sql = """
+            WITH `Ta` as (
+                select 1 as x
+            )
+            select * from ta
+        """
+        with pytest.raises(Exception):
+            resp = self.execute(sql)
+
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):
     #     self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})

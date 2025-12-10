@@ -14,15 +14,15 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql-parser ~= 0.13.1
+mindsdb-sql-parser ~= 0.13.2
 pydantic == 2.11.4
-mindsdb-evaluator == 0.0.20
+mindsdb-evaluator == 0.0.21
 duckdb == 1.3.0; sys_platform == "win32"
 duckdb ~= 1.3.2; sys_platform != "win32"
 requests == 2.32.4
 dateparser==1.2.0
 dill == 0.3.6
-numpy
+numpy ~= 2.0
 pytz
 botocore
 boto3 >= 1.34.131

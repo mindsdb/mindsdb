@@ -222,7 +222,6 @@ jobs:
           if failed:
               sys.exit(1)
           PY
-
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main
         with:

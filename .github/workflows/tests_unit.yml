@@ -10,19 +10,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  VERIFIED_HANDLER_LIST: |
-    clickhouse
-    snowflake
-    redshift
-    bigquery
-    databricks
-    oracle
-    salesforce
-    mysql
-    mssql
-  COVERAGE_FAIL_UNDER: "80"
-
 jobs:
   # Run all of our static code checks here
   code_checking:
@@ -127,7 +114,7 @@ jobs:
       - name: Install dependencies
         run: |
           # TODO: for now some tests rely on lightwood
-          readarray -t VERIFIED_HANDLERS <<< "${VERIFIED_HANDLER_LIST}"
+          mapfile -t VERIFIED_HANDLERS < <(grep -vE '^[[:space:]]*(#|$)' tests/verified_handlers.txt)
           HANDLER_EXTRAS=()
           for handler in "${VERIFIED_HANDLERS[@]}"; do
             [[ -z "${handler}" ]] && continue
@@ -142,34 +129,37 @@ jobs:
 
   coverage:
     needs: unit_tests
-    runs-on: ubuntu-latest
+    runs-on: mdb-dev
     permissions:
       pull-requests: write
+    env:
+      COVERAGE_FAIL_UNDER: "80"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v5.6.0
         with:
-          python-version: 3.9
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest pytest-cov coverage
-          python -m pip install -r requirements/requirements-test.txt
-          readarray -t VERIFIED_HANDLERS <<< "${VERIFIED_HANDLER_LIST}"
+          uv pip install . -r requirements/requirements-test.txt
+          mapfile -t VERIFIED_HANDLERS < <(grep -vE '^[[:space:]]*(#|$)' tests/verified_handlers.txt)
           HANDLER_EXTRAS=()
           for handler in "${VERIFIED_HANDLERS[@]}"; do
             [[ -z "${handler}" ]] && continue
             HANDLER_EXTRAS+=(".[${handler}]")
           done
           if [[ ${#HANDLER_EXTRAS[@]} -gt 0 ]]; then
-            python -m pip install "${HANDLER_EXTRAS[@]}"
+            uv pip install "${HANDLER_EXTRAS[@]}"
           fi
 
       - name: Build coverage file
         run: |
-          readarray -t VERIFIED_HANDLERS <<< "${VERIFIED_HANDLER_LIST}"
+          mapfile -t VERIFIED_HANDLERS < <(grep -vE '^[[:space:]]*(#|$)' tests/verified_handlers.txt)
           COV_ARGS=()
           for handler in "${VERIFIED_HANDLERS[@]}"; do
             [[ -z "${handler}" ]] && continue
@@ -179,12 +169,59 @@ jobs:
             echo "No verified handlers configured; skipping."
             exit 1
           fi
-          pytest --junitxml=pytest.xml --cov-report=term-missing:skip-covered --cov-fail-under=${COVERAGE_FAIL_UNDER} "${COV_ARGS[@]}" tests/unit/handlers | tee pytest-coverage.txt
+          pytest --junitxml=pytest.xml \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml \
+            --cov-fail-under=${COVERAGE_FAIL_UNDER} \
+            "${COV_ARGS[@]}" \
+            tests/unit/handlers | tee pytest-coverage.txt
 
       - name: Enforce per-handler coverage threshold
         run: |
-          coverage xml -i
-          python tests/scripts/check_verified_handler_coverage.py
+          python - <<'PY'
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+
+          handlers = []
+          with open("tests/verified_handlers.txt", "r", encoding="utf-8") as fh:
+              for line in fh:
+                  stripped = line.strip()
+                  if not stripped or stripped.startswith("#"):
+                      continue
+                  handlers.append(stripped)
+
+          if not handlers:
+              print("[coverage] No handlers configured; nothing to check.")
+              sys.exit(1)
+
+          threshold = float(os.environ.get("COVERAGE_FAIL_UNDER", "80"))
+          tree = ET.parse("coverage.xml")
+          coverage_by_file = {}
+          for cls in tree.findall(".//class"):
+              filename = cls.get("filename")
+              rate = cls.get("line-rate")
+              if not filename or rate is None:
+                  continue
+              coverage_by_file[filename] = float(rate) * 100
+
+          failed = False
+          for handler in handlers:
+              filename = f"mindsdb/integrations/handlers/{handler}_handler.py"
+              rate = coverage_by_file.get(filename)
+              if rate is None:
+                  print(f"[coverage] Missing data for {filename}")
+                  failed = True
+                  continue
+              if rate < threshold:
+                  print(f"[coverage] {filename} {rate:.2f}% < {threshold}%")
+                  failed = True
+              else:
+                  print(f"[coverage] {filename} {rate:.2f}% >= {threshold}%")
+
+          if failed:
+              sys.exit(1)
+          PY
 
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main

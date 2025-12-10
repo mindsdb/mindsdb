@@ -9,16 +9,15 @@ from dspy.teleprompt import BootstrapFewShot
 from mindsdb.interfaces.llm.llm_controller import LLMDataController
 import pandas as pd
 # DEFAULT_MODEL_NAME removed from constants - using default value directly
-DEFAULT_MODEL_NAME = "gpt-4o"
-from mindsdb.interfaces.agents.langchain_agent import (
-    get_llm_provider, get_embedding_model_provider
-)
+
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.utilities import log
 
+
+DEFAULT_MODEL_NAME = "gpt-4o"
 
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
@@ -79,8 +78,8 @@ class DSPyHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
-        args['provider'] = args.get('provider', get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
+        args['provider'] = args.get('provider', "openai")
+        # args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
         if args.get('mode') == 'retrieval':
             # use default prompt template for retrieval i.e. RAG if not provided
             if "prompt_template" not in args:
@@ -111,8 +110,8 @@ class DSPyHandler(BaseMLEngine):
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
             raise ValueError("This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
-        args['provider'] = args.get('provider', get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
+        args['provider'] = args.get('provider', "openai")
+        # args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
 
         # retrieves llm and pass it around as context
         model = args.get('model_name')

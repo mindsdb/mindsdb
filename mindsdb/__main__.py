@@ -341,7 +341,7 @@ if __name__ == "__main__":
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)
 
-    if config.cmd_args.update_gui or config.cmd_args.load_tokenizer:
+    if config.cmd_args.update_gui:
         if config.cmd_args.update_gui:
             from mindsdb.api.http.initialize import initialize_static
 

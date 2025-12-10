@@ -104,9 +104,7 @@ class JiraIssueFetcherMixin:
                     issues.append(issue)
                 condition.applied = True
             elif condition.column in self.PROJECT_FIELDS:
-                project_ids = self._resolve_project_ids(
-                    client, condition.column, condition.value
-                )
+                project_ids = self._resolve_project_ids(client, condition.column, condition.value)
                 if len(project_ids) > 0:
                     self._fetch_by_projects(client, project_ids, limit, issues)
                     condition.applied = True
@@ -122,9 +120,7 @@ class JiraIssueFetcherMixin:
 
         return issues
 
-    def _fetch_by_identifier(
-        self, client: Jira, condition: FilterCondition
-    ) -> List[dict]:
+    def _fetch_by_identifier(self, client: Jira, condition: FilterCondition) -> List[dict]:
         """
         Fetch issues by id or key. For IN, we still call get_issue for each identifier.
         """
@@ -147,9 +143,7 @@ class JiraIssueFetcherMixin:
                         type(issue).__name__,
                     )
             else:
-                raise ValueError(
-                    f"Unsupported operator {condition.op} for column {condition.column}."
-                )
+                raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
 
         return issues
 
@@ -334,9 +328,7 @@ class JiraProjectsTable(JiraTableBase):
                         project = client.get_project(project_id)
                         projects.append(project)
                 else:
-                    raise ValueError(
-                        f"Unsupported operator {condition.op} for column {condition.column}."
-                    )
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
                 condition.applied = True
 
         if not projects:
@@ -506,9 +498,7 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
         if "labels" in issues_df.columns:
             issues_df["labels"] = issues_df["labels"].apply(self._join_simple_list)
         if "components" in issues_df.columns:
-            issues_df["components"] = issues_df["components"].apply(
-                self._join_component_names
-            )
+            issues_df["components"] = issues_df["components"].apply(self._join_component_names)
 
         issues_df = issues_df.reindex(columns=self.get_columns(), fill_value=None)
 
@@ -609,147 +599,147 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
                     "column_name": "id",
                     "data_type": "TEXT",
                     "description": "Issue ID",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "key",
                     "data_type": "TEXT",
                     "description": "Issue key",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "project_id",
                     "data_type": "TEXT",
                     "description": "ID of the project the issue belongs to",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "project_key",
                     "data_type": "TEXT",
                     "description": "Key of the project the issue belongs to",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "project_name",
                     "data_type": "TEXT",
                     "description": "Name of the project the issue belongs to",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "project",
                     "data_type": "TEXT",
                     "description": "Project information as a JSON string",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "issue_type",
                     "data_type": "TEXT",
                     "description": "Type of the issue",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "summary",
                     "data_type": "TEXT",
                     "description": "Summary of the issue",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "description",
                     "data_type": "TEXT",
                     "description": "Description of the issue",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "priority",
                     "data_type": "TEXT",
                     "description": "Priority of the issue",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "creator",
                     "data_type": "TEXT",
                     "description": "Display name of the issue creator",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "creator_account_id",
                     "data_type": "TEXT",
                     "description": "Account ID of the issue creator",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "reporter",
                     "data_type": "TEXT",
                     "description": "Display name of the issue reporter",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "reporter_account_id",
                     "data_type": "TEXT",
                     "description": "Account ID of the issue reporter",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "assignee",
                     "data_type": "TEXT",
                     "description": "Display name of the issue assignee",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "assignee_account_id",
                     "data_type": "TEXT",
                     "description": "Account ID of the issue assignee",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "status",
                     "data_type": "TEXT",
                     "description": "Current status of the issue",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "status_category",
                     "data_type": "TEXT",
                     "description": "Category of the current status",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "status_category_change_date",
                     "data_type": "TIMESTAMP",
                     "description": "Date when the status category last changed",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "labels",
                     "data_type": "TEXT",
                     "description": "Comma-separated labels associated with the issue",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "components",
                     "data_type": "TEXT",
                     "description": "Comma-separated component names associated with the issue",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
@@ -762,14 +752,14 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
                     "column_name": "created",
                     "data_type": "TIMESTAMP",
                     "description": "Creation date of the issue",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "issues",
                     "column_name": "updated",
                     "data_type": "TIMESTAMP",
                     "description": "Last updated date of the issue",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
             ]
         return []
@@ -824,9 +814,7 @@ class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
                     "thumbnail_url": attachment.get("thumbnail"),
                     "created": attachment.get("created"),
                     "author": (attachment.get("author") or {}).get("displayName"),
-                    "author_account_id": (attachment.get("author") or {}).get(
-                        "accountId"
-                    ),
+                    "author_account_id": (attachment.get("author") or {}).get("accountId"),
                 }
                 attachments.append(row)
 
@@ -861,7 +849,7 @@ class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
                 "table_description": "Jira issue attachments across all projects accessible to the configured user.",
             }
         return {}
-    
+
     @staticmethod
     def meta_get_columns(table_name: str) -> List[Dict]:
         if table_name == "attachments":
@@ -871,80 +859,81 @@ class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
                     "column_name": "issue_id",
                     "data_type": "TEXT",
                     "description": "ID of the issue the attachment belongs to",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "issue_key",
                     "data_type": "TEXT",
                     "description": "Key of the issue the attachment belongs to",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "attachment_id",
                     "data_type": "TEXT",
                     "description": "ID of the attachment",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "filename",
                     "data_type": "TEXT",
                     "description": "Filename of the attachment",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "mime_type",
                     "data_type": "TEXT",
                     "description": "MIME type of the attachment",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "size",
                     "data_type": "INTEGER",
                     "description": "Size of the attachment in bytes",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "content_url",
                     "data_type": "TEXT",
                     "description": "URL to access the content of the attachment",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "thumbnail_url",
                     "data_type": "TEXT",
                     "description": "URL to access the thumbnail of the attachment",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "created",
                     "data_type": "TIMESTAMP",
-                    "description":  "Creation date of the attachment",
-                    "is_nullable": False
+                    "description": "Creation date of the attachment",
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "author",
                     "data_type": "TEXT",
                     "description": "Display name of the attachment author",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "attachments",
                     "column_name": "author_account_id",
                     "data_type": "TEXT",
                     "description": "Account ID of the attachment author",
-                    "is_nullable": False
-                }
+                    "is_nullable": False,
+                },
             ]
         return []
+
 
 class JiraCommentsTable(JiraIssueFetcherMixin, JiraTableBase):
     """
@@ -1018,7 +1007,7 @@ class JiraCommentsTable(JiraIssueFetcherMixin, JiraTableBase):
             "visibility_type",
             "visibility_value",
         ]
-    
+
     # META TABLES
     @staticmethod
     def meta_get_tables(table_name: str) -> Dict[str, str]:
@@ -1030,7 +1019,7 @@ class JiraCommentsTable(JiraIssueFetcherMixin, JiraTableBase):
                 "table_description": "Jira issue comments across all projects accessible to the configured user.",
             }
         return {}
-    
+
     @staticmethod
     def meta_get_columns(table_name: str) -> List[Dict]:
         if table_name == "comments":
@@ -1040,71 +1029,71 @@ class JiraCommentsTable(JiraIssueFetcherMixin, JiraTableBase):
                     "column_name": "issue_id",
                     "data_type": "TEXT",
                     "description": "ID of the issue the comment belongs to",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "comments",
                     "column_name": "issue_key",
                     "data_type": "TEXT",
                     "description": "Key of the issue the comment belongs to",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "comments",
                     "column_name": "comment_id",
                     "data_type": "TEXT",
                     "description": "ID of the comment",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "comments",
                     "column_name": "body",
                     "data_type": "TEXT",
                     "description": "Body of the comment",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "comments",
                     "column_name": "created",
                     "data_type": "TIMESTAMP",
                     "description": "Creation date of the comment",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "comments",
                     "column_name": "updated",
                     "data_type": "TIMESTAMP",
-                    "description":  "Last updated date of the comment",
-                    "is_nullable": False
+                    "description": "Last updated date of the comment",
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "comments",
                     "column_name": "author",
                     "data_type": "TEXT",
                     "description": "Display name of the comment author",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "comments",
                     "column_name": "author_account_id",
                     "data_type": "TEXT",
                     "description": "Account ID of the comment author",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "comments",
                     "column_name": "visibility_type",
                     "data_type": "TEXT",
                     "description": "Type of visibility for the comment",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "comments",
                     "column_name": "visibility_value",
                     "data_type": "TEXT",
                     "description": "Value of visibility for the comment",
-                    "is_nullable": False
-                }
+                    "is_nullable": False,
+                },
             ]
         return []
 
@@ -1139,9 +1128,8 @@ class JiraGroupsTable(JiraTableBase):
             "name",
             "html",
         ]
-    
 
-    #META TABLES
+    # META TABLES
     @staticmethod
     def meta_get_tables(table_name: str) -> Dict[str, str]:
         if table_name == "groups":
@@ -1152,7 +1140,7 @@ class JiraGroupsTable(JiraTableBase):
                 "table_description": "Jira user groups available to the configured user.",
             }
         return {}
-    
+
     @staticmethod
     def meta_get_columns(table_name: str) -> List[Dict]:
         if table_name == "groups":
@@ -1162,21 +1150,21 @@ class JiraGroupsTable(JiraTableBase):
                     "column_name": "groupId",
                     "data_type": "TEXT",
                     "description": "Group ID",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "groups",
                     "column_name": "name",
                     "data_type": "TEXT",
                     "description": "Group name",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
                 {
                     "table_name": "groups",
                     "column_name": "html",
                     "data_type": "TEXT",
                     "description": "HTML representation of the group",
-                    "is_nullable": False
+                    "is_nullable": False,
                 },
             ]
         return []
@@ -1240,9 +1228,7 @@ class JiraUsersTable(JiraTableBase):
                                 type(user).__name__,
                             )
                 else:
-                    raise ValueError(
-                        f"Unsupported operator {condition.op} for column {condition.column}."
-                    )
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
                 condition.applied = True
 
         if not users:
@@ -1262,24 +1248,16 @@ class JiraUsersTable(JiraTableBase):
         for condition in conditions:
             if condition.column in ("username", "name", "accountId"):
                 if condition.op == FilterOperator.IN:
-                    values = (
-                        condition.value
-                        if isinstance(condition.value, (list, tuple, set))
-                        else [condition.value]
-                    )
+                    values = condition.value if isinstance(condition.value, (list, tuple, set)) else [condition.value]
                 elif condition.op == FilterOperator.EQUAL:
                     values = [condition.value]
                 else:
-                    raise ValueError(
-                        f"Unsupported operator {condition.op} for column {condition.column}."
-                    )
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
                 for value in values:
                     try:
                         user = client.user(username=value)
                     except HTTPError as user_error:
-                        logger.debug(
-                            "Failed to fetch server user '%s': %s", value, user_error
-                        )
+                        logger.debug("Failed to fetch server user '%s': %s", value, user_error)
                         continue
                     if isinstance(user, dict):
                         users.append(user)
@@ -1291,9 +1269,7 @@ class JiraUsersTable(JiraTableBase):
                 if isinstance(user, dict):
                     users.append(user)
             except HTTPError as user_error:
-                logger.debug(
-                    "Failed to fetch default server user '%s': %s", ".", user_error
-                )
+                logger.debug("Failed to fetch default server user '%s': %s", ".", user_error)
         if not users:
             users = self._fetch_all_users(client, limit)
 
@@ -1322,9 +1298,7 @@ class JiraUsersTable(JiraTableBase):
                     page_size,
                     exc,
                 )
-                resp, page_users = self._fallback_user_search(
-                    client, start, page_size, exc
-                )
+                resp, page_users = self._fallback_user_search(client, start, page_size, exc)
 
             users.extend(page_users)
 
@@ -1348,15 +1322,11 @@ class JiraUsersTable(JiraTableBase):
         search_variants: List[Dict[str, Any]] = []
 
         if is_cloud is False:
-            search_variants.append(
-                {"username": ".", "start": start, "limit": page_size}
-            )
+            search_variants.append({"username": ".", "start": start, "limit": page_size})
             search_variants.append({"query": ".", "start": start, "limit": page_size})
         else:
             search_variants.append({"query": ".", "start": start, "limit": page_size})
-            search_variants.append(
-                {"username": ".", "start": start, "limit": page_size}
-            )
+            search_variants.append({"username": ".", "start": start, "limit": page_size})
 
         for params in search_variants:
             try:
@@ -1402,13 +1372,12 @@ class JiraUsersTable(JiraTableBase):
         if column_mode == "server":
             return SERVER_COLUMNS
         return CLOUD_COLUMNS
-    
+
     # META TABLES
     @staticmethod
     def meta_get_tables(table_name: str) -> Dict[str, str]:
         raise NotImplementedError("Meta tables not implemented for JiraUsersTable.")
-    
+
     @staticmethod
     def meta_get_columns(table_name: str) -> List[Dict]:
         raise NotImplementedError("Meta tables not implemented for JiraUsersTable.")
-    

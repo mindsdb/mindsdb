@@ -1074,17 +1074,20 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         )
 
         # different case
-        sqls = ["""
+        sqls = [
+            """
             WITH Ta as (
                 select 1 as x
             )
             select * from ta
-        """, """
+        """,
+            """
             WITH ta as (
                 select 1 as x
             )
             select * from Ta
-        """]
+        """,
+        ]
         for sql in sqls:
             resp = self.execute(sql)
             pdt.assert_frame_equal(

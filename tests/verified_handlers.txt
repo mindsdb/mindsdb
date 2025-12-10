@@ -4,6 +4,7 @@ redshift
 bigquery
 databricks
 oracle
+github
 slack
 ms_teams
 salesforce

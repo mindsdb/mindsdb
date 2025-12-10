@@ -114,10 +114,13 @@ jobs:
       - name: Install dependencies
         run: |
           # TODO: for now some tests rely on lightwood
-          mapfile -t VERIFIED_HANDLERS < <(grep -vE '^[[:space:]]*(#|$)' tests/verified_handlers.txt)
+          VERIFIED_HANDLERS=()
+          while IFS= read -r handler; do
+            [[ -z "${handler}" || "${handler}" =~ ^[[:space:]]*# ]] && continue
+            VERIFIED_HANDLERS+=("${handler}")
+          done < tests/verified_handlers.txt
           HANDLER_EXTRAS=()
           for handler in "${VERIFIED_HANDLERS[@]}"; do
-            [[ -z "${handler}" ]] && continue
             HANDLER_EXTRAS+=(".[${handler}]")
           done
           uv pip install . -r requirements/requirements-test.txt "${HANDLER_EXTRAS[@]}"
@@ -145,10 +148,13 @@ jobs:
       - name: Install dependencies
         run: |
           uv pip install . -r requirements/requirements-test.txt
-          mapfile -t VERIFIED_HANDLERS < <(grep -vE '^[[:space:]]*(#|$)' tests/verified_handlers.txt)
+          VERIFIED_HANDLERS=()
+          while IFS= read -r handler; do
+            [[ -z "${handler}" || "${handler}" =~ ^[[:space:]]*# ]] && continue
+            VERIFIED_HANDLERS+=("${handler}")
+          done < tests/verified_handlers.txt
           HANDLER_EXTRAS=()
           for handler in "${VERIFIED_HANDLERS[@]}"; do
-            [[ -z "${handler}" ]] && continue
             HANDLER_EXTRAS+=(".[${handler}]")
           done
           if [[ ${#HANDLER_EXTRAS[@]} -gt 0 ]]; then
@@ -157,7 +163,11 @@ jobs:
 
       - name: Build coverage file
         run: |
-          mapfile -t VERIFIED_HANDLERS < <(grep -vE '^[[:space:]]*(#|$)' tests/verified_handlers.txt)
+          VERIFIED_HANDLERS=()
+          while IFS= read -r handler; do
+            [[ -z "${handler}" || "${handler}" =~ ^[[:space:]]*# ]] && continue
+            VERIFIED_HANDLERS+=("${handler}")
+          done < tests/verified_handlers.txt
           COV_ARGS=()
           for handler in "${VERIFIED_HANDLERS[@]}"; do
             [[ -z "${handler}" ]] && continue

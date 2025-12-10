@@ -1,5 +1,4 @@
 # Handlers considered "verified" and enforced to stay above the coverage threshold.
-lightwood
 clickhouse
 snowflake
 web

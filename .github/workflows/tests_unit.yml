@@ -10,6 +10,19 @@ defaults:
   run:
     shell: bash
 
+env:
+  VERIFIED_HANDLER_LIST: |
+    clickhouse
+    snowflake
+    redshift
+    bigquery
+    databricks
+    oracle
+    salesforce
+    mysql
+    mssql
+  COVERAGE_FAIL_UNDER: "80"
+
 jobs:
   # Run all of our static code checks here
   code_checking:
@@ -114,27 +127,67 @@ jobs:
       - name: Install dependencies
         run: |
           # TODO: for now some tests rely on lightwood
-          uv pip install . \
-            -r requirements/requirements-test.txt \
-            .[lightwood] \
-            .[clickhouse] \
-            .[snowflake] \
-            .[web] \
-            .[redshift] \
-            .[bigquery] \
-            .[databricks] \
-            .[oracle] \
-            .[slack] \
-            .[github] \
-            .[ms_teams] \
-            .[salesforce] \
-            .[statsforecast] \
-            .[mysql] \
-            .[chromadb] \
-            .[mssql]
-          uv pip freeze
+          readarray -t VERIFIED_HANDLERS <<< "${VERIFIED_HANDLER_LIST}"
+          HANDLER_EXTRAS=()
+          for handler in "${VERIFIED_HANDLERS[@]}"; do
+            [[ -z "${handler}" ]] && continue
+            HANDLER_EXTRAS+=(".[${handler}]")
+          done
+          uv pip install . -r requirements/requirements-test.txt "${HANDLER_EXTRAS[@]}"
           git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
           
       - name: Run unit tests
         run: |
           make unit_tests_slow
+
+  coverage:
+    needs: unit_tests
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest pytest-cov coverage
+          python -m pip install -r requirements/requirements-test.txt
+          readarray -t VERIFIED_HANDLERS <<< "${VERIFIED_HANDLER_LIST}"
+          HANDLER_EXTRAS=()
+          for handler in "${VERIFIED_HANDLERS[@]}"; do
+            [[ -z "${handler}" ]] && continue
+            HANDLER_EXTRAS+=(".[${handler}]")
+          done
+          if [[ ${#HANDLER_EXTRAS[@]} -gt 0 ]]; then
+            python -m pip install "${HANDLER_EXTRAS[@]}"
+          fi
+
+      - name: Build coverage file
+        run: |
+          readarray -t VERIFIED_HANDLERS <<< "${VERIFIED_HANDLER_LIST}"
+          COV_ARGS=()
+          for handler in "${VERIFIED_HANDLERS[@]}"; do
+            [[ -z "${handler}" ]] && continue
+            COV_ARGS+=("--cov=mindsdb/integrations/handlers/${handler}_handler")
+          done
+          if [[ ${#COV_ARGS[@]} -eq 0 ]]; then
+            echo "No verified handlers configured; skipping."
+            exit 1
+          fi
+          pytest --junitxml=pytest.xml --cov-report=term-missing:skip-covered --cov-fail-under=${COVERAGE_FAIL_UNDER} "${COV_ARGS[@]}" tests/unit/handlers | tee pytest-coverage.txt
+
+      - name: Enforce per-handler coverage threshold
+        run: |
+          coverage xml -i
+          python tests/scripts/check_verified_handler_coverage.py
+
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: ./pytest-coverage.txt
+          junitxml-path: ./pytest.xml

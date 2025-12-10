@@ -92,13 +92,10 @@ class TabsController:
 
         try:
             return json.loads(raw_data_str)
-        except JSONDecodeError as exc:
+        except JSONDecodeError:
             decoder = json.JSONDecoder()
             stripped = raw_data_str.lstrip()
-            try:
-                data, idx = decoder.raw_decode(stripped)
-            except JSONDecodeError:
-                raise exc
+            data, idx = decoder.raw_decode(stripped)
 
             trailing = stripped[idx:].strip()
             if trailing:

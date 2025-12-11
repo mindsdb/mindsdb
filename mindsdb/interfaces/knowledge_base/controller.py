@@ -1203,7 +1203,7 @@ class KnowledgeBaseController:
         params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
-        self._check_embedding_model(
+        embed_info = self._check_embedding_model(
             project.name,
             params=embedding_params,
             kb_name=name,
@@ -1258,6 +1258,8 @@ class KnowledgeBaseController:
             )
         # create table in vectordb before creating KB
         vector_store_handler.create_table(vector_table_name)
+        self._check_vector_table(embed_info, vector_store_handler, vector_table_name)
+
         if keyword_search_enabled:
             vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)
         vector_database_id = self.session.integration_controller.get(vector_db_name)["id"]
@@ -1281,6 +1283,22 @@ class KnowledgeBaseController:
         db.session.add(kb)
         db.session.commit()
         return kb
+
+    def _check_vector_table(self, embed_info, vector_store_handler, vector_table_name):
+        query = Select(
+            targets=[Identifier(TableField.EMBEDDINGS.value)],
+            from_table=Identifier(parts=[vector_table_name]),
+            limit=Constant(1),
+        )
+        df = vector_store_handler.dispatch_select(query, [])
+        if len(df) > 0:
+            value = df[TableField.EMBEDDINGS.value][0]
+            if isinstance(value, str):
+                value = json.loads(value)
+            if len(value) != embed_info["dimension"]:
+                raise ValueError(
+                    f"Dimension of embedding model doesn't match to dimension of vector table: {embed_info['dimension']} != {len(value)}"
+                )
 
     def update(
         self,
@@ -1410,8 +1428,8 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _check_embedding_model(self, project_name, params: dict = None, kb_name=""):
-        """check embedding model for knowledge base"""
+    def _check_embedding_model(self, project_name, params: dict = None, kb_name="") -> dict:
+        """check embedding model for knowledge base, return embedding model info"""
 
         # if mindsdb model from old KB exists - drop it
         model_name = f"kb_embedding_{kb_name}"
@@ -1435,7 +1453,8 @@ class KnowledgeBaseController:
         llm_client = LLMClient(params, session=self.session)
 
         try:
-            llm_client.embeddings(["test"])
+            resp = llm_client.embeddings(["test"])
+            return {"dimension": len(resp[0])}
         except Exception as e:
             raise RuntimeError(f"Problem with embedding model config: {e}") from e
 

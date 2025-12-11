@@ -1,5 +1,7 @@
 import time
 import json
+import tempfile
+import shutil
 
 from unittest.mock import patch, MagicMock
 import threading
@@ -13,6 +15,13 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import (
     ListwiseLLMReranker,
 )
+
+
+@pytest.fixture(scope="function")
+def temp_dir():
+    temp_dir = tempfile.mkdtemp()
+    yield temp_dir
+    shutil.rmtree(temp_dir)
 
 
 @contextmanager
@@ -31,10 +40,11 @@ def task_monitor():
     worker.join()
 
 
-def dummy_embeddings(string):
+def dummy_embeddings(string, dimension=None):
     # Imitates embedding generation: create vectors which are similar for similar words in inputs
-
-    embeds = [0] * 25**2
+    if dimension is None:
+        dimension = 25**2
+    embeds = [0] * dimension
     base = 25
 
     string = string.lower().replace(",", " ").replace(".", " ")
@@ -58,10 +68,10 @@ def dummy_embeddings(string):
     return embeds
 
 
-def set_litellm_embedding(mock_litellm_embedding):
+def set_litellm_embedding(mock_litellm_embedding, dimension=None):
     def resp_f(input, *args, **kwargs):
         mock_response = MagicMock()
-        mock_response.data = [{"embedding": dummy_embeddings(s)} for s in input]
+        mock_response.data = [{"embedding": dummy_embeddings(s, dimension)} for s in input]
         return mock_response
 
     mock_litellm_embedding.side_effect = resp_f
@@ -76,6 +86,7 @@ class TestKB(BaseExecutorDummyML):
         content_columns=None,
         id_column=None,
         metadata_columns=None,
+        storage=None,
     ):
         self.run_sql(f"drop knowledge base if exists {name}")
 
@@ -97,6 +108,8 @@ class TestKB(BaseExecutorDummyML):
             kb_params["id_column"] = id_column
         if metadata_columns is not None:
             kb_params["metadata_columns"] = metadata_columns
+        if storage is not None:
+            kb_params["storage"] = storage
 
         param_str = ""
         if kb_params:
@@ -1057,3 +1070,25 @@ class TestKB(BaseExecutorDummyML):
         ret = self.run_sql("select * from kb_oracle_mixedcase")
         assert isinstance(ret, pd.DataFrame)
         assert len(ret) == 2
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_dimension_mismatch(self, mock_litellm_embedding, temp_dir):
+        self.run_sql(f"""
+        create database my_chroma 
+          with 
+           engine='chromadb',
+           PARAMETERS = {{
+               'persist_directory': '{temp_dir}'
+           }}
+        """)
+
+        set_litellm_embedding(mock_litellm_embedding, dimension=1000)
+        self._create_kb("kb1", storage="my_chroma.table1")
+
+        self.run_sql("insert into kb1 (content) values ('review')")
+
+        # change dimension
+        set_litellm_embedding(mock_litellm_embedding, dimension=1500)
+
+        with pytest.raises(ValueError):
+            self._create_kb("kb2", storage="my_chroma.table1")

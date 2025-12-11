@@ -1,7 +1,6 @@
 import time
 import json
 import tempfile
-import shutil
 
 from unittest.mock import patch, MagicMock
 import threading
@@ -15,13 +14,6 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import (
     ListwiseLLMReranker,
 )
-
-
-@pytest.fixture(scope="function")
-def temp_dir():
-    temp_dir = tempfile.mkdtemp()
-    yield temp_dir
-    shutil.rmtree(temp_dir)
 
 
 @contextmanager
@@ -1073,7 +1065,9 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 2
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_dimension_mismatch(self, mock_litellm_embedding, temp_dir):
+    def test_dimension_mismatch(self, mock_litellm_embedding):
+        temp_dir = tempfile.mkdtemp()
+
         self.run_sql(f"""
         create database my_chroma 
           with 

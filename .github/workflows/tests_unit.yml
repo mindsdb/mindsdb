@@ -107,7 +107,7 @@ jobs:
           uv pip install *.tar.gz
 
   unit_tests:
-    name: Run Unit Tests + Coverage
+    name: Run Unit Tests
     needs: [matrix_prep, code_checking]
     strategy:
       matrix: ${{ fromJson(needs.matrix_prep.outputs.matrix) }}
@@ -145,12 +145,12 @@ jobs:
           make unit_tests_slow
 
       - name: Run handler coverage
-        if: ${{ matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11') }}
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
         run: |
           uv run tests/scripts/check_handler_coverage.py
 
       - name: Pytest coverage comment
-        if: ${{ matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11') }}
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
         uses: MishaKav/pytest-coverage-comment@main
         with:
           pytest-coverage-path: ./pytest-coverage.txt

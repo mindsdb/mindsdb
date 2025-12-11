@@ -31,7 +31,7 @@ UTILITIES_REQS_PATHS = [
 EXTRA_REQS_PATHS = [
     "requirements/requirements-agents.txt",
     "requirements/requirements-kb.txt",
-    "requirements/requirements-ml.txt"
+    "requirements/requirements-ml.txt",
 ]
 
 

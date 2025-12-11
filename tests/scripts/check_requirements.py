@@ -53,6 +53,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # langchain_aws is used to create agent with bedrock provider;
 #   if is not installed - error message will be shown, but it is possible to use other providers with agent
 # pyodbc is used in mssql but as optional dependency
+# litellm is used in KB but as optional dependency in case of using : snowflake,  bedrock, gemini llm providers
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
     "DEP001": [

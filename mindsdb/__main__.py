@@ -68,8 +68,6 @@ class TrunkProcessEnum(Enum):
         sys.exit(1)
 
 
-HTTP_OPTIONAL_APIS = {"a2a", "mcp"}
-
 
 @dataclass
 class TrunkProcessData:

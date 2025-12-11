@@ -26,6 +26,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import QueryError
 from mindsdb.utilities.functions import mark_process
+from mindsdb.interfaces.agents.chart_agent import ChartAgent
 
 logger = log.getLogger(__name__)
 
@@ -133,6 +134,168 @@ class Query(Resource):
         logger.debug(log_msg)
 
         return query_response, 200
+
+
+@ns_conf.route("/charter")
+@ns_conf.param("charter", "Generate Chart.js configuration from SQL query")
+class Charter(Resource):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @ns_conf.doc("charter")
+    @api_endpoint_metrics("POST", "/sql/charter")
+    @mark_process(name="http_charter")
+    def post(self):
+        start_time = time.time()
+        
+        # Validate request
+        if not request.json:
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide JSON body with "query".')
+        
+        query = request.json.get("query")
+        prompt = request.json.get("prompt")
+        context = request.json.get("context", {})
+        params = request.json.get("params", {})
+
+        if not isinstance(query, str):
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" as a string.')
+        
+        if not isinstance(context, dict):
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "context" as a dictionary.')
+        
+        logger.debug(f"Incoming charter request: query={query[:100]}..., prompt={prompt}")
+
+        try:
+            # Create chart agent
+            chart_agent = ChartAgent()
+            
+            # Generate chart configuration
+            logger.debug("Generating chart configuration...")
+            chart_config = chart_agent.generate_chart_config(query, prompt)
+            
+            # Execute the data query
+            logger.debug(f"Executing data query: {chart_config.data_query_string[:100]}...")
+            mysql_proxy = FakeMysqlProxy()
+            mysql_proxy.set_context(context)
+            
+            try:
+                result: SQLAnswer = mysql_proxy.process_query(chart_config.data_query_string, params=params)
+                
+                if result.type == SQL_RESPONSE_TYPE.ERROR:
+                    error_message = result.error_message or "Unknown error executing data query"
+                    logger.warning(f"Error executing data query: {error_message}")
+                    return http_error(
+                        HTTPStatus.BAD_REQUEST,
+                        "Data query execution failed",
+                        error_message
+                    )
+                
+                if result.type != SQL_RESPONSE_TYPE.TABLE or result.result_set is None:
+                    return http_error(
+                        HTTPStatus.BAD_REQUEST,
+                        "Invalid query result",
+                        "Data query did not return tabular data"
+                    )
+                
+                # Convert result to DataFrame
+                import pandas as pd
+                df = result.result_set.to_df()
+                
+                if df.empty:
+                    return http_error(
+                        HTTPStatus.BAD_REQUEST,
+                        "Empty result",
+                        "Data query returned no rows"
+                    )
+                
+                # Populate Chart.js config with data
+                chartjs_config = chart_config.chartjs_config.copy()
+                
+                # First column is labels
+                labels = df.iloc[:, 0].tolist()
+                chartjs_config["labels"] = labels
+                
+                # Remaining columns are datasets
+                existing_datasets = chartjs_config.get("datasets", [])
+                num_data_columns = len(df.columns) - 1  # Excluding labels column
+                
+                # If datasets is empty or doesn't match column count, create datasets from columns
+                if not existing_datasets or len(existing_datasets) != num_data_columns:
+                    datasets = []
+                    for col_idx in range(1, len(df.columns)):
+                        col_name = df.columns[col_idx]
+                        dataset = {
+                            "label": str(col_name),
+                            "data": []
+                        }
+                        # Try to preserve properties from existing dataset if available
+                        dataset_idx = col_idx - 1
+                        if dataset_idx < len(existing_datasets):
+                            existing_dataset = existing_datasets[dataset_idx]
+                            # Copy properties like backgroundColor, borderColor, etc.
+                            for key in ["backgroundColor", "borderColor", "borderWidth", "fill"]:
+                                if key in existing_dataset:
+                                    dataset[key] = existing_dataset[key]
+                        datasets.append(dataset)
+                else:
+                    # Use existing datasets structure, just populate data
+                    datasets = existing_datasets
+                
+                # Populate data arrays
+                for dataset_idx, dataset in enumerate(datasets):
+                    col_idx = dataset_idx + 1
+                    if col_idx < len(df.columns):
+                        dataset["data"] = df.iloc[:, col_idx].tolist()
+                
+                chartjs_config["datasets"] = datasets
+                
+                # Build response
+                response = {
+                    "data_query_string": chart_config.data_query_string,
+                    "chartjs_config": chartjs_config
+                }
+                
+                end_time = time.time()
+                logger.debug(f"Charter processed in {(end_time - start_time):.2f}s")
+                
+                return response, 200
+                
+            except ExecutorException as e:
+                logger.warning(f"Error executing data query: {e}")
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    "Data query execution failed",
+                    str(e)
+                )
+            except QueryError as e:
+                logger.warning(f"Query error: {e}")
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    "Query error",
+                    str(e)
+                )
+            except Exception as e:
+                logger.exception("Unexpected error executing data query")
+                return http_error(
+                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    "Internal server error",
+                    str(e)
+                )
+                
+        except ValueError as e:
+            logger.warning(f"Value error in chart generation: {e}")
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                "Configuration error",
+                str(e)
+            )
+        except Exception as e:
+            logger.exception("Error generating chart configuration")
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                "Chart generation failed",
+                str(e)
+            )
 
 
 @ns_conf.route("/query/utils/parametrize_constants")

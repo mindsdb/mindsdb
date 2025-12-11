@@ -267,9 +267,13 @@ def run_deptry(reqs, rule_ignores, path, extra_args=""):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
         )
-        if result.returncode != 0 and not os.path.exists("deptry.json"):
-            # There was some issue with running deptry
-            errors.append(f"Error running deptry: {result.stderr.decode('utf-8')}")
+        if not os.path.exists("deptry.json"):
+            if result.returncode != 0:
+                # There was some issue with running deptry
+                errors.append(f"Error running deptry: {result.stderr.decode('utf-8')}")
+            else:
+                errors.append("Error running deptry: deptry.json was not generated.")
+            return errors
 
         with open("deptry.json", "r") as f:
             deptry_results = json.loads(f.read())

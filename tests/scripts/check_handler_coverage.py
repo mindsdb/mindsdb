@@ -30,9 +30,7 @@ def run(cmd: list[str], capture: bool = False) -> subprocess.CompletedProcess:
 
 def run_pytest_with_coverage(handlers: list[str]) -> None:
     """Run pytest with coverage only for the selected handlers."""
-    cov_args: list[str] = [
-        f"--cov=mindsdb/integrations/handlers/{h}_handler" for h in handlers
-    ]
+    cov_args: list[str] = [f"--cov=mindsdb/integrations/handlers/{h}_handler" for h in handlers]
 
     pytest_cmd = [
         "pytest",
@@ -83,9 +81,7 @@ def enforce_per_handler_threshold(handlers: list[str], threshold: float) -> None
 
 def main() -> int:
     # Prefer HANDLERS_TO_VERIFY, fallback to HANDLERS_TO_INSTALL
-    handlers_env = os.environ.get("HANDLERS_TO_VERIFY") or os.environ.get(
-        "HANDLERS_TO_INSTALL", ""
-    )
+    handlers_env = os.environ.get("HANDLERS_TO_VERIFY") or os.environ.get("HANDLERS_TO_INSTALL", "")
     handlers = parse_handlers_env(handlers_env)
 
     if not handlers:

@@ -1,13 +1,3 @@
-clickhouse
-snowflake
-redshift
-bigquery
-databricks
-oracle
-github
-slack
-ms_teams
 salesforce
 mysql
-mssql
-chromadb
+snowflake

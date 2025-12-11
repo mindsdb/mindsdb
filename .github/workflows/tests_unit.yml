@@ -10,6 +10,30 @@ defaults:
   run:
     shell: bash
 
+env:
+  HANDLERS_TO_INSTALL: |
+    lightwood
+    clickhouse
+    snowflake
+    web
+    redshift
+    bigquery
+    databricks
+    oracle
+    slack
+    github
+    ms_teams
+    salesforce
+    statsforecast
+    mysql
+    chromadb
+    mssql
+  # We measure 80% on this handlers, as they are the verified
+  HANDLERS_TO_VERIFY: |
+    mysql
+    salesforce
+  COVERAGE_FAIL_UNDER: "80"
+
 jobs:
   # Run all of our static code checks here
   code_checking:
@@ -24,15 +48,12 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
         with:
-          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"  # Place cache in the tool dir because we mount this in our runnners
-          prune-cache: false                                           # We want to save all cache because it's in the mount^
-          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}      # Default to 3.11 where vars aren't available (PRs from forks)
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
 
-      # Checks the codebase for print() statements and fails if any are found
-      # We should be using loggers instead
       - name: Check for print statements
         run: |
-          # The pyproject file confuses uv: https://github.com/astral-sh/uv/issues/6838
           rm pyproject.toml
           uv run tests/scripts/check_print_statements.py
       
@@ -40,19 +61,14 @@ jobs:
         run: |
           uv pip install -r requirements/requirements-dev.txt
 
-      # Run pre-commit on all changed files
-      # See .pre-commit-config.yaml for the list of checks
       - name: Run pre-commit
         run: |
           pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha || 'HEAD~1' }} --to-ref ${{ github.event.pull_request.head.sha || 'HEAD' }}
 
-      # Runs a few different checks against our many requirements files
-      # to make sure they're in order
       - name: Check requirements files
         run: |
           uv run tests/scripts/check_requirements.py
 
-  # Creates a matrix of environments to test against using matrix_includes.json
   matrix_prep:
     name: Prepare matrix
     runs-on: mdb-dev
@@ -67,12 +83,11 @@ jobs:
         with:
           filter: "[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]"
 
-  # Check that our pip package is able to be installed in all of our supported environments
   check_install:
     name: Check pip installation
     needs: [matrix_prep, code_checking]
     strategy:
-      matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
+      matrix: ${{ fromJson(needs.matrix_prep.outputs.matrix) }}
     runs-on: ${{ matrix.runs_on }}
     steps:
       - name: Checkout
@@ -86,45 +101,42 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Check pip package builds and installs
         run: |
-          # Install dev requirements and build our pip package
           uv pip install -r requirements/requirements-dev.txt
           python setup.py sdist
-
-          # Install from the pip package
-          # If we install from source, we don't know if the pip package is installable.
           cd dist
           uv pip install *.tar.gz
 
   unit_tests:
-    name: Run Unit Tests
+    name: Run Unit Tests + Coverage
     needs: [matrix_prep, code_checking]
     strategy:
-      matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
+      matrix: ${{ fromJson(needs.matrix_prep.outputs.matrix) }}
     runs-on: ${{ matrix.runs_on }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
         run: |
-          VERIFIED_HANDLERS=()
+          INSTALL_HANDLERS=()
           while IFS= read -r handler; do
             handler=${handler//$'\r'/}
             [[ -z "${handler}" || "${handler}" =~ ^[[:space:]]*# ]] && continue
-            VERIFIED_HANDLERS+=("${handler}")
-          done < tests/verified_handlers.txt
+            INSTALL_HANDLERS+=("${handler}")
+          done <<< "${HANDLERS_TO_INSTALL}"
           HANDLER_EXTRAS=()
-          for handler in "${VERIFIED_HANDLERS[@]}"; do
+          for handler in "${INSTALL_HANDLERS[@]}"; do
             HANDLER_EXTRAS+=(".[${handler}]")
           done
           uv pip install . -r requirements/requirements-test.txt "${HANDLER_EXTRAS[@]}"
-          # Force Windows runners to use the stable ONNX runtime version required by chromadb
           uv pip install --force-reinstall onnxruntime==1.20.1
           git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
           
@@ -132,110 +144,13 @@ jobs:
         run: |
           make unit_tests_slow
 
-  coverage:
-    needs: unit_tests
-    runs-on: mdb-dev
-    env:
-      COVERAGE_FAIL_UNDER: "80"
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
-
-      - name: Install dependencies
+      - name: Run handler coverage
+        if: matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11')
         run: |
-          uv pip install . -r requirements/requirements-test.txt
-          VERIFIED_HANDLERS=()
-          while IFS= read -r handler; do
-            handler=${handler//$'\r'/}
-            [[ -z "${handler}" || "${handler}" =~ ^[[:space:]]*# ]] && continue
-            VERIFIED_HANDLERS+=("${handler}")
-          done < tests/verified_handlers.txt
-          HANDLER_EXTRAS=()
-          for handler in "${VERIFIED_HANDLERS[@]}"; do
-            HANDLER_EXTRAS+=(".[${handler}]")
-          done
-          if [[ ${#HANDLER_EXTRAS[@]} -gt 0 ]]; then
-            uv pip install "${HANDLER_EXTRAS[@]}"
-          fi
-          uv pip install --force-reinstall onnxruntime==1.20.1
+          uv run tests/scripts/handler_coverage.py
 
-      - name: Build coverage file
-        run: |
-          VERIFIED_HANDLERS=()
-          while IFS= read -r handler; do
-            handler=${handler//$'\r'/}
-            [[ -z "${handler}" || "${handler}" =~ ^[[:space:]]*# ]] && continue
-            VERIFIED_HANDLERS+=("${handler}")
-          done < tests/verified_handlers.txt
-          COV_ARGS=()
-          for handler in "${VERIFIED_HANDLERS[@]}"; do
-            [[ -z "${handler}" ]] && continue
-            COV_ARGS+=("--cov=mindsdb/integrations/handlers/${handler}_handler")
-          done
-          if [[ ${#COV_ARGS[@]} -eq 0 ]]; then
-            echo "No verified handlers configured; skipping."
-            exit 1
-          fi
-          pytest --junitxml=pytest.xml \
-            --cov-report=term-missing:skip-covered \
-            --cov-report=xml \
-            --cov-fail-under=${COVERAGE_FAIL_UNDER} \
-            "${COV_ARGS[@]}" \
-            tests/unit/handlers | tee pytest-coverage.txt
-
-      - name: Enforce per-handler coverage threshold
-        run: |
-          python - <<'PY'
-          import os
-          import sys
-          import xml.etree.ElementTree as ET
-
-          handlers = []
-          with open("tests/verified_handlers.txt", "r", encoding="utf-8") as fh:
-              for line in fh:
-                  stripped = line.strip()
-                  if not stripped or stripped.startswith("#"):
-                      continue
-                  handlers.append(stripped)
-
-          if not handlers:
-              print("[coverage] No handlers configured; nothing to check.")
-              sys.exit(1)
-
-          threshold = float(os.environ.get("COVERAGE_FAIL_UNDER", "80"))
-          tree = ET.parse("coverage.xml")
-          coverage_by_file = {}
-          for cls in tree.findall(".//class"):
-              filename = cls.get("filename")
-              rate = cls.get("line-rate")
-              if not filename or rate is None:
-                  continue
-              coverage_by_file[filename] = float(rate) * 100
-
-          failed = False
-          for handler in handlers:
-              filename = f"mindsdb/integrations/handlers/{handler}_handler.py"
-              rate = coverage_by_file.get(filename)
-              if rate is None:
-                  print(f"[coverage] Missing data for {filename}")
-                  failed = True
-                  continue
-              if rate < threshold:
-                  print(f"[coverage] {filename} {rate:.2f}% < {threshold}%")
-                  failed = True
-              else:
-                  print(f"[coverage] {filename} {rate:.2f}% >= {threshold}%")
-
-          if failed:
-              sys.exit(1)
-          PY
       - name: Pytest coverage comment
+        if: matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11')
         uses: MishaKav/pytest-coverage-comment@main
         with:
           pytest-coverage-path: ./pytest-coverage.txt

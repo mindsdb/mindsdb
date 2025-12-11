@@ -141,6 +141,67 @@ class Query(Resource):
 class Charter(Resource):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+    
+    def _extract_error_message(self, error: Exception, context: str) -> str:
+        """
+        Extract a user-friendly error message from an exception.
+        
+        Args:
+            error: The exception to extract message from
+            context: Context string for the error (e.g., "chart generation", "query execution")
+            
+        Returns:
+            str: User-friendly error message
+        """
+        error_str = str(error)
+        
+        # Handle Pydantic validation errors
+        if "validation" in error_str.lower() or "pydantic" in error_str.lower():
+            # Try to extract validation details
+            if hasattr(error, 'errors'):
+                # Pydantic validation errors
+                try:
+                    errors = error.errors()
+                    if errors:
+                        error_details = []
+                        for err in errors[:3]:  # Limit to first 3 errors
+                            loc = " -> ".join(str(l) for l in err.get('loc', []))
+                            msg = err.get('msg', 'Validation error')
+                            error_details.append(f"{loc}: {msg}")
+                        if error_details:
+                            return f"Chart configuration validation failed: {'; '.join(error_details)}"
+                except Exception:
+                    pass
+            
+            # Check for retry errors from Pydantic AI
+            if "retries" in error_str.lower() or "retry" in error_str.lower():
+                return "Failed to generate valid chart configuration after multiple attempts. The AI model may have generated an invalid format. Please try again or check your query."
+        
+        # Handle QueryError with db_error_msg
+        if isinstance(error, QueryError):
+            if hasattr(error, 'db_error_msg') and error.db_error_msg:
+                msg = error.db_error_msg
+                if hasattr(error, 'failed_query') and error.failed_query:
+                    msg += f"\n\nFailed query: {error.failed_query[:200]}..."
+                return msg
+            if hasattr(error, 'failed_query') and error.failed_query:
+                return f"Query execution failed: {error_str}\n\nFailed query: {error.failed_query[:200]}..."
+        
+        # Handle ExecutorException
+        if isinstance(error, ExecutorException):
+            return f"Query execution error: {error_str}"
+        
+        # For other exceptions, try to extract the main message
+        # Remove traceback-like content
+        lines = error_str.split('\n')
+        # Take the first line which usually contains the main error message
+        main_message = lines[0] if lines else error_str
+        
+        # If it's a generic exception, add context
+        if len(main_message) < 50 and context:
+            return f"Error during {context}: {main_message}"
+        
+        return main_message
 
     @ns_conf.doc("charter")
     @api_endpoint_metrics("POST", "/sql/charter")
@@ -171,7 +232,17 @@ class Charter(Resource):
             
             # Generate chart configuration
             logger.debug("Generating chart configuration...")
-            chart_config = chart_agent.generate_chart_config(query, prompt)
+            try:
+                chart_config = chart_agent.generate_chart_config(query, prompt)
+            except Exception as e:
+                # Extract meaningful error message from chart generation
+                error_msg = self._extract_error_message(e, "chart generation")
+                logger.warning(f"Error generating chart configuration: {error_msg}")
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    "Chart generation failed",
+                    error_msg
+                )
             
             # Execute the data query
             logger.debug(f"Executing data query: {chart_config.data_query_string[:100]}...")
@@ -194,7 +265,7 @@ class Charter(Resource):
                     return http_error(
                         HTTPStatus.BAD_REQUEST,
                         "Invalid query result",
-                        "Data query did not return tabular data"
+                        "Data query did not return tabular data. The query may have executed successfully but returned no data rows."
                     )
                 
                 # Convert result to DataFrame
@@ -205,7 +276,15 @@ class Charter(Resource):
                     return http_error(
                         HTTPStatus.BAD_REQUEST,
                         "Empty result",
-                        "Data query returned no rows"
+                        "Data query returned no rows. Please check your query filters or data availability."
+                    )
+                
+                # Validate DataFrame structure
+                if len(df.columns) < 2:
+                    return http_error(
+                        HTTPStatus.BAD_REQUEST,
+                        "Invalid data structure",
+                        f"Data query must return at least 2 columns (labels and at least one dataset). Got {len(df.columns)} column(s)."
                     )
                 
                 # Populate Chart.js config with data
@@ -261,40 +340,46 @@ class Charter(Resource):
                 return response, 200
                 
             except ExecutorException as e:
-                logger.warning(f"Error executing data query: {e}")
+                error_msg = self._extract_error_message(e, "query execution")
+                logger.warning(f"Error executing data query: {error_msg}")
                 return http_error(
                     HTTPStatus.BAD_REQUEST,
                     "Data query execution failed",
-                    str(e)
+                    error_msg
                 )
             except QueryError as e:
-                logger.warning(f"Query error: {e}")
+                # QueryError has db_error_msg attribute that's more descriptive
+                error_msg = self._extract_error_message(e, "query execution")
+                logger.warning(f"Query error: {error_msg}")
                 return http_error(
                     HTTPStatus.BAD_REQUEST,
                     "Query error",
-                    str(e)
+                    error_msg
                 )
             except Exception as e:
+                error_msg = self._extract_error_message(e, "data query execution")
                 logger.exception("Unexpected error executing data query")
                 return http_error(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
                     "Internal server error",
-                    str(e)
+                    error_msg
                 )
                 
         except ValueError as e:
-            logger.warning(f"Value error in chart generation: {e}")
+            error_msg = self._extract_error_message(e, "configuration")
+            logger.warning(f"Value error in chart generation: {error_msg}")
             return http_error(
                 HTTPStatus.BAD_REQUEST,
                 "Configuration error",
-                str(e)
+                error_msg
             )
         except Exception as e:
+            error_msg = self._extract_error_message(e, "chart generation")
             logger.exception("Error generating chart configuration")
             return http_error(
                 HTTPStatus.INTERNAL_SERVER_ERROR,
                 "Chart generation failed",
-                str(e)
+                error_msg
             )
 
 

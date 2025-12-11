@@ -1093,3 +1093,5 @@ class TestKB(BaseExecutorDummyML):
 
         with pytest.raises(ValueError):
             self._create_kb("kb2", storage="my_chroma.table1")
+
+        self.run_sql("drop knowledge base kb1")

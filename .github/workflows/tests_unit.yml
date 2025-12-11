@@ -145,12 +145,12 @@ jobs:
           make unit_tests_slow
 
       - name: Run handler coverage
-        if: matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11')
+        if: ${{ matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11') }}
         run: |
           uv run tests/scripts/handler_coverage.py
 
       - name: Pytest coverage comment
-        if: matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11')
+        if: ${{ matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11') }}
         uses: MishaKav/pytest-coverage-comment@main
         with:
           pytest-coverage-path: ./pytest-coverage.txt

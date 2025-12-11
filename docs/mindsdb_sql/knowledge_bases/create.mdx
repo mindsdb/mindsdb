@@ -30,6 +30,12 @@ USING
 
 Upon execution, it registers `my_kb` and associates the specified models and storage. `my_kb` is a unique identifier of the knowledge base within MindsDB.
 
+Here is how to list all knowledge bases:
+
+```sql
+SHOW KNOWLEDGE_BASES;
+```
+
 <Tip>
 Users can use the variables and the [`from_env()` function](/mindsdb_sql/functions/from_env) to pass parameters when creating knowledge bases.
 </Tip>
@@ -82,6 +88,10 @@ When choosing `openai_azure` as the model provider, users should define the foll
 * `base_url` stores the base URL of the Azure instance.
 * `api_version` stores the version of the Azure instance.
 
+<Tip>
+Users need to log in to their Azure OpenAI instance to retrieve all relevant parameter values. Next, click on `Explore Azure AI Foundry portal` and go to `Models + endpoints`. Select the model and copy the parameter values.
+</Tip>
+
 #### `provider = 'google'`
 
 This provider is supported for both `embedding_model` and `reranking_model`.
@@ -107,11 +117,11 @@ When choosing `bedrock` as the model provider, users should define the following
 * `aws_access_key_id` stores a unique identifier associated with your AWS account, used to identify the user or application making requests to AWS.
 * `aws_region_name` stores the name of the AWS region you want to send your requests to (e.g., `"us-west-2"`).
 * `aws_secret_access_key` stores the secret key associated with your AWS access key ID. It is used to sign your requests securely.
-* `aws_session_token` stores a temporary token used for short-term security credentials when using AWS Identity and Access Management (IAM) roles or temporary credentials.
+* `aws_session_token` is an optional parameter that stores a temporary token used for short-term security credentials when using AWS Identity and Access Management (IAM) roles or temporary credentials.
 
 #### `provider = 'snowflake'`
 
-This provider is supported for `reranking_model`. Note that Snowflake Cortex AI does not offer embedding models as of now.
+This provider is supported for both `embedding_model` and `reranking_model`.
 
 When choosing `snowflake` as the model provider, users should choose one of the available models from [Snowflake Cortex AI](https://www.snowflake.com/en/product/features/cortex/) and define the following model parameters.
 
@@ -166,6 +176,19 @@ Follow the below steps to generate the API key.
 
 </Accordion>
 
+#### `provider = 'ollama'`
+
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+<Note>
+Users can define the default embedding and reranking models from Ollama in Settings of the MindsDB GUI.
+</Note>
+
+When choosing `ollama` as the model provider, users should define the following model parameters.
+
+* `model_name` stores the name of the model to be used.
+* `base_url` stores the base URL of the Ollama instance.
+
 ### `embedding_model`
 
 The embedding model is a required component of the knowledge base. It stores specifications of the embedding model to be used.
@@ -197,7 +220,9 @@ You can define the default models in the Settings of the MindsDB Editor GUI.
 </Tip>
 
 <Note>
-Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
+Note that if you define [`default_embedding_model` in the configuration file](/setup/custom-config#default_embedding_model), you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
+
+When using `default_embedding_model` from the configuration file, the knowledge base saves this model internally. Therefore, when changing `default_embedding_model` in the configuration file to a different one after the knowledge base is created, it does not affect the already created knowledge bases.
 </Note>
 
 ```bash
@@ -272,6 +297,8 @@ You can define the default models in the Settings of the MindsDB Editor GUI.
 
 <Note>
 Note that if you define [`default_reranking_model` in the configuration file](/setup/custom-config#default-reranking-model), you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
+
+When using `default_reranking_model` from the configuration file, the knowledge base saves this model internally. Therefore, when changing `default_reranking_model` in the configuration file to a different one after the knowledge base is created, it does not affect the already created knowledge bases.
 </Note>
 
 ```bash

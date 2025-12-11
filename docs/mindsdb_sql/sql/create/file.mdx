@@ -29,6 +29,14 @@ Note that the trailing whitespaces on column names are erased upon uploading a f
    SELECT * FROM files.file_name;
    ```
 
+Here is how to list all files:
+
+```sql
+SHOW TABLES FROM files;
+```
+
+This command is the same as the command for listing tables because files uploaded to MindsDB become tables within the MindsDB ecosystem and are stored in the `files` database.
+
 ### Configuring URL File Upload for Specific Domains
 
 The File Uploader can be configured to interact only with specific domains by using the [`url_file_upload` key in `config.json` file](/setup/custom-config#url-file-upload). 

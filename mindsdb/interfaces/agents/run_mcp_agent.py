@@ -37,8 +37,8 @@ async def run_conversation(agent_wrapper, messages: List[Dict[str, str]], stream
             # We still need to display the response to the user
             sys.stdout.write(f"{content}\n")
             sys.stdout.flush()
-    except Exception as e:
-        logger.error(f"Error during agent conversation: {str(e)}")
+    except Exception:
+        logger.exception("Error during agent conversation:")
 
 
 async def execute_direct_query(query):
@@ -48,11 +48,7 @@ async def execute_direct_query(query):
     # Set up MCP client to connect to the running server
     async with AsyncExitStack() as stack:
         # Connect to MCP server
-        server_params = StdioServerParameters(
-            command="python",
-            args=["-m", "mindsdb", "--api=mcp"],
-            env=None
-        )
+        server_params = StdioServerParameters(command="python", args=["-m", "mindsdb", "--api=mcp"], env=None)
 
         try:
             stdio_transport = await stack.enter_async_context(stdio_client(server_params))
@@ -80,9 +76,9 @@ async def execute_direct_query(query):
             # Execute query
             result = await session.call_tool("query", {"query": query})
             logger.info(f"Query result: {result.content}")
-        except Exception as e:
-            logger.error(f"Error executing query: {str(e)}")
-            logger.info("Make sure the MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
+        except Exception:
+            logger.exception("Error executing query:")
+            logger.info("Make sure the MindsDB server is running with HTTP enabled: python -m mindsdb --api=http")
 
 
 async def main():
@@ -100,6 +96,7 @@ async def main():
     try:
         # Initialize database connection
         from mindsdb.interfaces.storage import db
+
         db.init()
 
         # Direct SQL execution mode (for testing MCP connection)
@@ -117,10 +114,7 @@ async def main():
         logger.info("Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
 
         agent_wrapper = create_mcp_agent(
-            agent_name=args.agent,
-            project_name=args.project,
-            mcp_host=args.host,
-            mcp_port=args.port
+            agent_name=args.agent, project_name=args.project, mcp_host=args.host, mcp_port=args.port
         )
 
         # Run an example query if provided
@@ -173,7 +167,7 @@ async def main():
                             sys.stdout.write("Error: No active MCP session\n")
                             sys.stdout.flush()
                     except Exception as e:
-                        logger.error(f"SQL Error: {str(e)}")
+                        logger.exception("SQL Error:")
                         sys.stdout.write(f"SQL Error: {str(e)}\n")
                         sys.stdout.flush()
                     continue
@@ -184,17 +178,14 @@ async def main():
                 # Add assistant's response to the conversation history
                 if not args.stream:
                     response = await agent_wrapper.acompletion(messages)
-                    messages.append({
-                        "role": "assistant",
-                        "content": response["choices"][0]["message"]["content"]
-                    })
+                    messages.append({"role": "assistant", "content": response["choices"][0]["message"]["content"]})
 
         # Clean up resources
         logger.info("Cleaning up resources")
         await agent_wrapper.cleanup()
 
-    except Exception as e:
-        logger.error(f"Error running MCP agent: {str(e)}")
+    except Exception:
+        logger.exception("Error running MCP agent:")
         logger.info("Make sure the MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
         return 1
 

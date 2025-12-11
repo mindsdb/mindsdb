@@ -1,4 +1,8 @@
-from typing import AsyncIterable
+import time
+import logging
+import asyncio
+from typing import AsyncIterable, Dict, Union
+
 from mindsdb.api.a2a.common.types import (
     SendTaskRequest,
     TaskSendParams,
@@ -15,15 +19,14 @@ from mindsdb.api.a2a.common.types import (
     SendTaskStreamingRequest,
     SendTaskStreamingResponse,
     InvalidRequestError,
+    MessageStreamRequest,
+    SendStreamingMessageSuccessResponse,
 )
 from mindsdb.api.a2a.common.server.task_manager import InMemoryTaskManager
 from mindsdb.api.a2a.agent import MindsDBAgent
-from mindsdb.api.a2a.utils import to_serializable
+from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 
-from typing import Union
-import logging
-import asyncio
-import time
 
 logger = logging.getLogger(__name__)
 
@@ -46,19 +49,15 @@ class AgentTaskManager(InMemoryTaskManager):
     def __init__(
         self,
         project_name: str,
-        mindsdb_host: str,
-        mindsdb_port: int,
         agent_name: str = None,
     ):
         super().__init__()
         self.project_name = project_name
-        self.mindsdb_host = mindsdb_host
-        self.mindsdb_port = mindsdb_port
         self.agent_name = agent_name
         self.tasks = {}  # Task storage
         self.lock = asyncio.Lock()  # Lock for task operations
 
-    def _create_agent(self, agent_name: str = None) -> MindsDBAgent:
+    def _create_agent(self, user_info: Dict, agent_name: str = None) -> MindsDBAgent:
         """Create a new MindsDBAgent instance for the given agent name."""
         if not agent_name:
             raise ValueError("Agent name is required but was not provided in the request")
@@ -66,11 +65,12 @@ class AgentTaskManager(InMemoryTaskManager):
         return MindsDBAgent(
             agent_name=agent_name,
             project_name=self.project_name,
-            host=self.mindsdb_host,
-            port=self.mindsdb_port,
+            user_info=user_info,
         )
 
-    async def _stream_generator(self, request: SendTaskStreamingRequest) -> AsyncIterable[SendTaskStreamingResponse]:
+    async def _stream_generator(
+        self, request: SendTaskStreamingRequest, user_info: Dict
+    ) -> AsyncIterable[SendTaskStreamingResponse]:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
         params = self._get_task_params(task_send_params)
@@ -82,34 +82,20 @@ class AgentTaskManager(InMemoryTaskManager):
             task = await self.upsert_task(task_send_params)
             logger.info(f"Task created/updated with history length: {len(task.history) if task.history else 0}")
         except Exception as e:
-            logger.error(f"Error creating task: {str(e)}")
+            logger.exception("Error creating task:")
             error_result = to_serializable(
                 {
                     "id": request.id,
-                    "error": to_serializable(InternalError(message=f"Error creating task: {str(e)}")),
+                    "error": to_serializable(InternalError(message=f"Error creating task: {e}")),
                 }
             )
             yield error_result
             return  # Early return from generator
 
-        agent = self._create_agent(agent_name)
+        agent = self._create_agent(user_info, agent_name)
 
-        # Get the history from the task
+        # Get the history from the task object (where it was properly extracted and stored)
         history = task.history if task and task.history else []
-        logger.info(f"Using history with length {len(history)} for request")
-
-        # Log the history for debugging
-        logger.info(f"Conversation history for task {task_send_params.id}:")
-        for idx, msg in enumerate(history):
-            # Convert Message object to dict if needed
-            msg_dict = msg.dict() if hasattr(msg, "dict") else msg
-            role = msg_dict.get("role", "unknown")
-            text = ""
-            for part in msg_dict.get("parts", []):
-                if part.get("type") == "text":
-                    text = part.get("text", "")
-                    break
-            logger.info(f"Message {idx + 1} ({role}): {text[:100]}...")
 
         if not streaming:
             # If streaming is disabled, use invoke and return a single response
@@ -165,14 +151,14 @@ class AgentTaskManager(InMemoryTaskManager):
                 return
 
             except Exception as e:
-                logger.error(f"Error invoking agent: {e}")
+                logger.exception("Error invoking agent:")
                 error_result = to_serializable(
                     {
                         "id": request.id,
                         "error": to_serializable(
                             JSONRPCResponse(
                                 id=request.id,
-                                error=to_serializable(InternalError(message=f"Error invoking agent: {str(e)}")),
+                                error=to_serializable(InternalError(message=f"Error invoking agent: {e}")),
                             )
                         ),
                     }
@@ -182,25 +168,75 @@ class AgentTaskManager(InMemoryTaskManager):
 
         # If streaming is enabled (default), use the streaming implementation
         try:
-            logger.debug(f"[TaskManager] Entering agent.stream() at {time.time()}")
-            # Transform to agent-compatible format
-            agent_messages = to_question_format(
-                [
-                    {
-                        "role": task_send_params.message.role,
-                        "parts": task_send_params.message.parts,
-                        "metadata": task_send_params.message.metadata,
-                    }
-                ]
-            )
-            async for item in agent.streaming_invoke(agent_messages, timeout=60):
+            logger.debug(f"Entering agent.stream() at {time.time()}")
+            # Create A2A message structure and convert using centralized utility
+            a2a_message = task_send_params.message.model_dump()
+            logger.debug(f"History: {history}")
+            if history:
+                a2a_message["history"] = [msg.model_dump() if hasattr(msg, "model_dump") else msg for msg in history]
+
+            # Convert to Q&A format using centralized utility function
+            all_messages = convert_a2a_message_to_qa_format(a2a_message)
+
+            async for item in agent.streaming_invoke(all_messages, timeout=60):
                 # Clean up: Remove verbose debug logs, keep only errors and essential info
                 if isinstance(item, dict) and "artifact" in item and "parts" in item["artifact"]:
                     item["artifact"]["parts"] = [to_serializable(p) for p in item["artifact"]["parts"]]
                 yield to_serializable(item)
+        except TimeoutError as e:
+            logger.error(f"Timeout error while streaming the response: {e}")
+            error_text = "The request timed out. The agent is taking longer than expected to respond. Please try again or increase the timeout."
+            parts = [{"type": "text", "text": error_text}]
+            parts = [to_serializable(part) for part in parts]
+            artifact = {
+                "parts": parts,
+                "index": 0,
+                "append": False,
+            }
+            error_result = {
+                "id": request.id,
+                "error": {
+                    "id": task_send_params.id,
+                    "artifact": artifact,
+                    "error_type": "timeout",
+                },
+            }
+            yield error_result
+        except ConnectionError as e:
+            logger.error(f"Connection error while streaming the response: {e}")
+            error_text = "Failed to connect to the agent. Please check if the agent is running and accessible."
+            parts = [{"type": "text", "text": error_text}]
+            parts = [to_serializable(part) for part in parts]
+            artifact = {
+                "parts": parts,
+                "index": 0,
+                "append": False,
+            }
+            error_result = {
+                "id": request.id,
+                "error": {
+                    "id": task_send_params.id,
+                    "artifact": artifact,
+                    "error_type": "connection",
+                },
+            }
+            yield error_result
         except Exception as e:
-            logger.error(f"An error occurred while streaming the response: {e}")
-            error_text = f"An error occurred while streaming the response: {str(e)}"
+            logger.exception("An error occurred while streaming the response:")
+            # Provide more specific error messages based on error type
+            if "API key" in str(e) or "authentication" in str(e).lower():
+                error_text = f"Authentication error: {str(e)}"
+                error_category = "authentication"
+            elif "404" in str(e) or "not found" in str(e).lower():
+                error_text = f"Resource not found: {str(e)}"
+                error_category = "not_found"
+            elif "rate limit" in str(e).lower() or "429" in str(e):
+                error_text = f"Rate limit exceeded: {str(e)}"
+                error_category = "rate_limit"
+            else:
+                error_text = f"An error occurred while streaming the response: {str(e)}"
+                error_category = "general"
+
             # Ensure all parts are plain dicts
             parts = [{"type": "text", "text": error_text}]
             parts = [to_serializable(part) for part in parts]
@@ -214,6 +250,7 @@ class AgentTaskManager(InMemoryTaskManager):
                 "error": {
                     "id": task_send_params.id,
                     "artifact": artifact,
+                    "error_type": error_category,
                 },
             }
             yield error_result
@@ -235,19 +272,23 @@ class AgentTaskManager(InMemoryTaskManager):
                 message = task_send_params.message
                 message_dict = message.dict() if hasattr(message, "dict") else message
 
-                # Get history from request if available
+                # Get history from request if available - check both locations
                 history = []
+
+                # First check if history is at top level (task_send_params.history)
                 if hasattr(task_send_params, "history") and task_send_params.history:
-                    # Convert each history item to dict if needed and ensure proper role
+                    # Convert each history item to dict if needed
                     for item in task_send_params.history:
-                        item_dict = item.dict() if hasattr(item, "dict") else item
-                        # Ensure the role is properly set
-                        if "role" not in item_dict:
-                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
+                        item_dict = item.model_dump() if hasattr(item, "model_dump") else item
+                        history.append(item_dict)
+                # Also check if history is nested under message (message.history)
+                elif hasattr(task_send_params.message, "history") and task_send_params.message.history:
+                    for item in task_send_params.message.history:
+                        item_dict = item.model_dump() if hasattr(item, "model_dump") else item
                         history.append(item_dict)
 
-                # Add current message to history
-                history.append(message_dict)
+                # DO NOT add current message to history - it should be processed separately
+                # The current message will be extracted during streaming from task_send_params.message
 
                 # Create a new task
                 task = Task(
@@ -321,35 +362,35 @@ class AgentTaskManager(InMemoryTaskManager):
 
         return None
 
-    async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:
+    async def on_send_task(self, request: SendTaskRequest, user_info: Dict) -> SendTaskResponse:
         error = self._validate_request(request)
         if error:
             return error
 
-        return await self._invoke(request)
+        return await self._invoke(request, user_info=user_info)
 
     async def on_send_task_subscribe(
-        self, request: SendTaskStreamingRequest
+        self, request: SendTaskStreamingRequest, user_info: Dict
     ) -> AsyncIterable[SendTaskStreamingResponse]:
         error = self._validate_request(request)
         if error:
-            logger.info(f"[TaskManager] Yielding error at {time.time()} for invalid request: {error}")
+            logger.info(f"Yielding error at {time.time()} for invalid request: {error}")
             yield to_serializable(SendTaskStreamingResponse(id=request.id, error=to_serializable(error.error)))
             return
 
         # We can't await an async generator directly, so we need to use it as is
         try:
-            logger.debug(f"[TaskManager] Entering streaming path at {time.time()}")
-            async for response in self._stream_generator(request):
-                logger.debug(f"[TaskManager] Yielding streaming response at {time.time()} with: {str(response)[:120]}")
+            logger.debug(f"Entering streaming path at {time.time()}")
+            async for response in self._stream_generator(request, user_info):
+                logger.debug(f"Yielding streaming response at {time.time()} with: {str(response)[:120]}")
                 yield response
         except Exception as e:
             # If an error occurs, yield an error response
-            logger.error(f"Error in on_send_task_subscribe: {str(e)}")
+            logger.exception(f"Error in on_send_task_subscribe: {e}")
             error_result = to_serializable(
                 {
                     "id": request.id,
-                    "error": to_serializable(InternalError(message=f"Error processing streaming request: {str(e)}")),
+                    "error": to_serializable(InternalError(message=f"Error processing streaming request: {e}")),
                 }
             )
             yield error_result
@@ -420,13 +461,13 @@ class AgentTaskManager(InMemoryTaskManager):
             "session_id": task_send_params.sessionId,
         }
 
-    async def _invoke(self, request: SendTaskRequest) -> SendTaskResponse:
+    async def _invoke(self, request: SendTaskRequest, user_info: Dict) -> SendTaskResponse:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
         params = self._get_task_params(task_send_params)
         agent_name = params["agent_name"]
         streaming = params["streaming"]
-        agent = self._create_agent(agent_name)
+        agent = self._create_agent(user_info, agent_name)
 
         try:
             # Get the history from the task
@@ -475,7 +516,7 @@ class AgentTaskManager(InMemoryTaskManager):
                 )
                 return to_serializable(SendTaskResponse(id=request.id, result=task))
         except Exception as e:
-            logger.error(f"Error invoking agent: {e}")
+            logger.exception("Error invoking agent:")
             result_text = f"Error invoking agent: {e}"
             parts = [{"type": "text", "text": result_text}]
 
@@ -486,3 +527,50 @@ class AgentTaskManager(InMemoryTaskManager):
                 [Artifact(parts=parts)],
             )
             return to_serializable(SendTaskResponse(id=request.id, result=task))
+
+    async def on_message_stream(
+        self, request: MessageStreamRequest, user_info: Dict
+    ) -> Union[AsyncIterable[SendStreamingMessageSuccessResponse], JSONRPCResponse]:
+        """
+        Handle message streaming requests.
+        """
+        logger.info(f"Processing message stream request for session {request.params.sessionId}")
+
+        query = self._get_user_query(request.params)
+        params = self._get_task_params(request.params)
+
+        try:
+            task_id = f"msg_stream_{request.params.sessionId}_{request.id}"
+            context_id = f"ctx_{request.params.sessionId}"
+            message_id = f"msg_{request.id}"
+
+            agents_controller = AgentsController()
+            existing_agent = agents_controller.get_agent(params["agent_name"])
+            resp = agents_controller.get_completion(existing_agent, [{"question": query}])
+            response_message = resp["answer"][0]
+
+            response_message = Message(
+                role="agent", parts=[{"type": "text", "text": response_message}], metadata={}, messageId=message_id
+            )
+
+            task_status = TaskStatus(state=TaskState.COMPLETED, message=response_message)
+
+            task_status_update = TaskStatusUpdateEvent(
+                id=task_id,
+                status=task_status,
+                final=True,
+                metadata={"message_stream": True},
+                contextId=context_id,
+                taskId=task_id,
+            )
+
+            async def message_stream_generator():
+                yield to_serializable(SendStreamingMessageSuccessResponse(id=request.id, result=task_status_update))
+
+            return message_stream_generator()
+
+        except Exception as e:
+            logger.error(f"Error processing message stream: {e}")
+            return SendStreamingMessageSuccessResponse(
+                id=request.id, error=InternalError(message=f"Error processing message stream: {str(e)}")
+            )

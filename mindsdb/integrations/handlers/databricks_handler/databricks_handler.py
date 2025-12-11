@@ -1,19 +1,20 @@
 from typing import Text, Dict, Any, Optional, List
 
+import pandas as pd
 from databricks.sql import connect, RequestError, ServerOperationError
 from databricks.sql.client import Connection
 from databricks.sqlalchemy import DatabricksDialect
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-import pandas as pd
 
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
 )
 from mindsdb.utilities import log
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 logger = log.getLogger(__name__)
@@ -26,7 +27,9 @@ class DatabricksHandler(MetaDatabaseHandler):
 
     name = "databricks"
 
-    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs: Any) -> None:
+    def __init__(
+        self, name: Text, connection_data: Optional[Dict], **kwargs: Any
+    ) -> None:
         """
         Initializes the handler.
 
@@ -64,8 +67,13 @@ class DatabricksHandler(MetaDatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters.
-        if not all(key in self.connection_data for key in ["server_hostname", "http_path", "access_token"]):
-            raise ValueError("Required parameters (server_hostname, http_path, access_token) must be provided.")
+        if not all(
+            key in self.connection_data
+            for key in ["server_hostname", "http_path", "access_token"]
+        ):
+            raise ValueError(
+                "Required parameters (server_hostname, http_path, access_token) must be provided."
+            )
 
         config = {
             "server_hostname": self.connection_data["server_hostname"],
@@ -89,13 +97,19 @@ class DatabricksHandler(MetaDatabaseHandler):
             self.is_connected = True
             return self.connection
         except RequestError as request_error:
-            logger.error(f"Request error when connecting to Databricks: {request_error}")
+            logger.error(
+                f"Request error when connecting to Databricks: {request_error}"
+            )
             raise
         except RuntimeError as runtime_error:
-            logger.error(f"Runtime error when connecting to Databricks: {runtime_error}")
+            logger.error(
+                f"Runtime error when connecting to Databricks: {runtime_error}"
+            )
             raise
         except Exception as unknown_error:
-            logger.error(f"Unknown error when connecting to Databricks: {unknown_error}")
+            logger.error(
+                f"Unknown error when connecting to Databricks: {unknown_error}"
+            )
             raise
 
     def disconnect(self):
@@ -133,14 +147,23 @@ class DatabricksHandler(MetaDatabaseHandler):
 
             # If the query does not return a result, the schema does not exist.
             if not result:
-                raise ValueError(f"The schema {self.connection_data['schema']} does not exist!")
+                raise ValueError(
+                    f"The schema {self.connection_data['schema']} does not exist!"
+                )
 
             response.success = True
-        except (ValueError, RequestError, RuntimeError, ServerOperationError) as known_error:
+        except (
+            ValueError,
+            RequestError,
+            RuntimeError,
+            ServerOperationError,
+        ) as known_error:
             logger.error(f"Connection check to Databricks failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f"Connection check to Databricks failed due to an unknown error, {unknown_error}!")
+            logger.error(
+                f"Connection check to Databricks failed due to an unknown error, {unknown_error}!"
+            )
             response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
@@ -171,18 +194,28 @@ class DatabricksHandler(MetaDatabaseHandler):
                 if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description]),
+                        data_frame=pd.DataFrame(
+                            result, columns=[x[0] for x in cursor.description]
+                        ),
                     )
 
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except ServerOperationError as server_error:
-                logger.error(f"Server error running query: {query} on Databricks, {server_error}!")
-                response = Response(RESPONSE_TYPE.ERROR, error_message=str(server_error))
+                logger.error(
+                    f"Server error running query: {query} on Databricks, {server_error}!"
+                )
+                response = Response(
+                    RESPONSE_TYPE.ERROR, error_message=str(server_error)
+                )
             except Exception as unknown_error:
-                logger.error(f"Unknown error running query: {query} on Databricks, {unknown_error}!")
-                response = Response(RESPONSE_TYPE.ERROR, error_message=str(unknown_error))
+                logger.error(
+                    f"Unknown error running query: {query} on Databricks, {unknown_error}!"
+                )
+                response = Response(
+                    RESPONSE_TYPE.ERROR, error_message=str(unknown_error)
+                )
 
         if need_to_close is True:
             self.disconnect()
@@ -203,29 +236,45 @@ class DatabricksHandler(MetaDatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self) -> Response:
+    def get_tables(self, all: bool = False) -> Response:
         """
         Retrieves a list of all non-system tables in the connected schema of the Databricks workspace.
+
+        Args:
+            all (bool): If True - return tables from all schemas.
 
         Returns:
             Response: A response object containing a list of tables in the connected schema.
         """
-        query = """
-            SHOW TABLES;
+        all_filter = "and table_schema = current_schema()"
+        if all is True:
+            all_filter = ""
+        query = f"""
+            SELECT
+                table_schema,
+                table_name,
+                table_type
+            FROM
+                information_schema.tables
+            WHERE
+                table_schema != 'information_schema'
+                {all_filter}
         """
         result = self.native_query(query)
-
-        df = result.data_frame
-        if df is not None:
-            result.data_frame = df.rename(columns={"tableName": "table_name", "database": "schema_name"})
+        if result.resp_type == RESPONSE_TYPE.OK:
+            result = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET)),
+            )
         return result
 
-    def get_columns(self, table_name: Text) -> Response:
+    def get_columns(self, table_name: str, schema_name: str | None = None) -> Response:
         """
         Retrieves column details for a specified table in the Databricks workspace.
 
         Args:
-            table_name (Text): The name of the table for which to retrieve column information.
+            table_name (str): The name of the table for which to retrieve column information.
+            schema_name (str|None): The name of the schema in which the table is located.
 
         Raises:
             ValueError: If the 'table_name' is not a valid string.
@@ -236,11 +285,40 @@ class DatabricksHandler(MetaDatabaseHandler):
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
 
-        query = f"DESCRIBE TABLE {table_name};"
-        result = self.native_query(query)
+        if isinstance(schema_name, str):
+            schema_name = f"'{schema_name}'"
+        else:
+            schema_name = "current_schema()"
+        query = f"""
+            SELECT
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                null as CHARACTER_SET_NAME,
+                null as COLLATION_NAME
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{table_name}'
+            AND
+                table_schema = {schema_name}
+        """
 
-        df = result.data_frame
-        result.data_frame = df.rename(columns={"col_name": "column_name"})
+        result = self.native_query(query)
+        if result.resp_type == RESPONSE_TYPE.OK:
+            result = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET)),
+            )
+        result.to_columns_table_response(map_type_fn=_map_type)
+
         return result
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
@@ -277,7 +355,11 @@ class DatabricksHandler(MetaDatabaseHandler):
 
         result = self.native_query(query)
 
-        if result.type == RESPONSE_TYPE.TABLE and result.data_frame is not None and not result.data_frame.empty:
+        if (
+            result.type == RESPONSE_TYPE.TABLE
+            and result.data_frame is not None
+            and not result.data_frame.empty
+        ):
             result.data_frame["TABLE_SCHEMA"] = self.name
 
         return result
@@ -323,7 +405,9 @@ class DatabricksHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_column_statistics(
+        self, table_names: Optional[List[str]] = None
+    ) -> Response:
         """
         Retrieves basic column statistics: null %, distinct count.
 
@@ -378,7 +462,11 @@ class DatabricksHandler(MetaDatabaseHandler):
 
             try:
                 stats_res = self.native_query(stats_query)
-                if stats_res.type != RESPONSE_TYPE.TABLE or stats_res.data_frame is None or stats_res.data_frame.empty:
+                if (
+                    stats_res.type != RESPONSE_TYPE.TABLE
+                    or stats_res.data_frame is None
+                    or stats_res.data_frame.empty
+                ):
                     logger.warning(f"Could not retrieve stats for table {table_name}")
                     # Add placeholder stats if query fails
                     for _, row in group.iterrows():
@@ -420,7 +508,9 @@ class DatabricksHandler(MetaDatabaseHandler):
                         }
                     )
             except Exception as e:
-                logger.error(f"Exception while fetching statistics for table {table_name}: {e}")
+                logger.error(
+                    f"Exception while fetching statistics for table {table_name}: {e}"
+                )
                 for _, row in group.iterrows():
                     all_stats.append(
                         {
@@ -439,7 +529,9 @@ class DatabricksHandler(MetaDatabaseHandler):
 
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(all_stats))
 
-    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_primary_keys(
+        self, table_names: Optional[List[str]] = None
+    ) -> Response:
         """
         Databricks doesn't have primary key constraints in data warehouses.
         Return empty result like Snowflake does when no keys exist.
@@ -455,7 +547,9 @@ class DatabricksHandler(MetaDatabaseHandler):
 
         return Response(RESPONSE_TYPE.TABLE, data_frame=empty_df)
 
-    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_foreign_keys(
+        self, table_names: Optional[List[str]] = None
+    ) -> Response:
         """
         Databricks doesn't have foreign key constraints in data warehouses.
         Return empty result like Snowflake does when no keys exist.

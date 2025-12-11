@@ -1,6 +1,5 @@
 import os
 import json
-import traceback
 from http import HTTPStatus
 from typing import Dict, Iterable, List
 
@@ -26,9 +25,6 @@ AGENT_QUICK_RESPONSE = "I understand your request. I'm working on a detailed res
 def create_agent(project_name, name, agent):
     if name is None:
         return http_error(HTTPStatus.BAD_REQUEST, "Missing field", 'Missing "name" field for agent')
-
-    if not name.islower():
-        return http_error(HTTPStatus.BAD_REQUEST, "Wrong name", f"The name must be in lower case: {name}")
 
     model_name = agent.get("model_name")
     provider = agent.get("provider")
@@ -307,10 +303,10 @@ def _completion_event_generator(agent_name: str, messages: List[Dict], project_n
 
         logger.info("Completion stream finished")
 
-    except Exception as e:
-        logger.error(f"Error in completion event generator: {e}")
-        logger.error(traceback.format_exc())
-        yield json_serialize({"error": "error in completion event generator"})
+    except Exception:
+        error_message = "Error in completion event generator"
+        logger.exception(error_message)
+        yield json_serialize({"error": error_message})
 
     finally:
         yield json_serialize({"type": "end"})
@@ -323,40 +319,38 @@ class AgentCompletionsStream(Resource):
     @ns_conf.doc("agent_completions_stream")
     @api_endpoint_metrics("POST", "/agents/agent/completions/stream")
     def post(self, project_name, agent_name):
-        logger.info(f"Received streaming request for agent {agent_name} in project {project_name}")
-
-        # Check for required parameters.
+        # Extract messages from request (HTTP format only)
         if "messages" not in request.json:
-            logger.error("Missing 'messages' parameter in request body")
             return http_error(
-                HTTPStatus.BAD_REQUEST, "Missing parameter", 'Must provide "messages" parameter in POST body'
+                HTTPStatus.BAD_REQUEST,
+                "Missing parameter",
+                'Must provide "messages" parameter in POST body',
             )
+
+        messages = request.json["messages"]
 
         session = SessionController()
         try:
             existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
-                logger.error(f"Agent {agent_name} not found in project {project_name}")
+                logger.warning(f"Agent {agent_name} not found in project {project_name}")
                 return http_error(
                     HTTPStatus.NOT_FOUND, "Agent not found", f"Agent with name {agent_name} does not exist"
                 )
         except ValueError as e:
-            logger.error(f"Project {project_name} not found: {str(e)}")
+            logger.warning(f"Project {project_name} not found: {e}")
             return http_error(
                 HTTPStatus.NOT_FOUND, "Project not found", f"Project with name {project_name} does not exist"
             )
-
-        messages = request.json["messages"]
 
         try:
             gen = _completion_event_generator(agent_name, messages, project_name)
             logger.info(f"Starting streaming response for agent {agent_name}")
             return Response(gen, mimetype="text/event-stream")
         except Exception as e:
-            logger.error(f"Error during streaming for agent {agent_name}: {str(e)}")
-            logger.error(traceback.format_exc())
+            logger.exception(f"Error during streaming for agent {agent_name}:")
             return http_error(
-                HTTPStatus.INTERNAL_SERVER_ERROR, "Streaming error", f"An error occurred during streaming: {str(e)}"
+                HTTPStatus.INTERNAL_SERVER_ERROR, "Streaming error", f"An error occurred during streaming: {e}"
             )
 
 
@@ -417,8 +411,8 @@ class AgentCompletions(Resource):
                     last_context = completion.iloc[-1]["context"]
                     if last_context:
                         context = json.loads(last_context)
-                except (json.JSONDecodeError, IndexError) as e:
-                    logger.error(f"Error decoding context: {e}")
+                except (json.JSONDecodeError, IndexError):
+                    logger.warning("Error decoding context:", exc_info=True)
                     pass  # Keeping context as an empty list in case of error
 
             response["message"]["context"] = context

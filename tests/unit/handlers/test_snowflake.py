@@ -1,4 +1,5 @@
 import pytest
+import tempfile
 
 try:
     import snowflake
@@ -15,6 +16,7 @@ import datetime
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
+
 
 from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
@@ -35,6 +37,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             user="example_user",
             password="example_pass",
             database="example_db",
+            auth_type="password",
         )
 
     @property
@@ -77,6 +80,39 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def create_patcher(self):
         return patch("snowflake.connector.connect")
 
+    def create_temp_key_file(self, content):
+        """
+        Helper to create a temporary key file and ensure it gets cleaned up.
+        """
+        import tempfile
+        import os
+
+        # Create a temporary file
+        temp_key_file = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".pem")
+        temp_key_file.write(content)
+        temp_key_file.close()
+        temp_key_path = temp_key_file.name
+
+        # Register cleanup
+        self.addCleanup(lambda: os.unlink(temp_key_path) if os.path.exists(temp_key_path) else None)
+
+        return temp_key_path
+
+    def get_key_pair_connection_data(self, private_key_path, passphrase=None):
+        """
+        Helper to create connection data for key pair authentication.
+        """
+        data = OrderedDict(
+            account="tvuibdy-vm85921",
+            user="example_user",
+            database="example_db",
+            private_key_path=private_key_path,
+            auth_type="key_pair",
+        )
+        if passphrase:
+            data["private_key_passphrase"] = passphrase
+        return data
+
     def test_connect_validation(self):
         """
         Tests that connect method raises ValueError when required connection parameters are missing
@@ -95,12 +131,13 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         with self.assertRaises(ValueError):
             handler.connect()
 
-        # Test missing 'password'
+        # Test missing both 'password' and 'private_key_path'
         invalid_connection_args = self.dummy_connection_data.copy()
         del invalid_connection_args["password"]
         handler = SnowflakeHandler("snowflake", connection_data=invalid_connection_args)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             handler.connect()
+        self.assertIn("Password must be provided", str(context.exception))
 
         # Test missing 'database'
         invalid_connection_args = self.dummy_connection_data.copy()
@@ -108,6 +145,14 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         handler = SnowflakeHandler("snowflake", connection_data=invalid_connection_args)
         with self.assertRaises(ValueError):
             handler.connect()
+
+        # Test missing 'auth_type'
+        invalid_connection_args = self.dummy_connection_data.copy()
+        del invalid_connection_args["auth_type"]
+        handler = SnowflakeHandler("snowflake", connection_data=invalid_connection_args)
+        with self.assertRaises(ValueError) as context:
+            handler.connect()
+        self.assertIn("auth_type is required", str(context.exception))
 
     def test_disconnect(self):
         """
@@ -266,6 +311,162 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         mock_conn.rollback.assert_not_called()
         mock_conn.commit.assert_not_called()
+
+    def test_key_pair_authentication_success(self):
+        """
+        Tests successful connection using key pair authentication
+        """
+        temp_key_path = self.create_temp_key_file("DUMMY PRIVATE KEY CONTENT")
+
+        try:
+            key_pair_connection_data = self.get_key_pair_connection_data(temp_key_path)
+
+            handler = SnowflakeHandler("snowflake", connection_data=key_pair_connection_data)
+
+            with patch("snowflake.connector.connect") as mock_connect:
+                mock_conn = MagicMock()
+                mock_connect.return_value = mock_conn
+
+                connection = handler.connect()
+
+                mock_connect.assert_called_once()
+                call_kwargs = mock_connect.call_args[1]
+
+                self.assertIn("private_key_file", call_kwargs)
+                self.assertEqual(call_kwargs["private_key_file"], temp_key_path)
+                self.assertEqual(call_kwargs["authenticator"], "SNOWFLAKE_JWT")
+                self.assertNotIn("password", call_kwargs)
+                self.assertEqual(call_kwargs["account"], "tvuibdy-vm85921")
+                self.assertEqual(call_kwargs["user"], "example_user")
+                self.assertEqual(call_kwargs["database"], "example_db")
+
+                self.assertTrue(handler.is_connected)
+                self.assertEqual(connection, mock_conn)
+        finally:
+            import os
+
+            if os.path.exists(temp_key_path):
+                os.unlink(temp_key_path)
+
+    def test_key_pair_authentication_with_passphrase(self):
+        """
+        Tests successful connection using key pair authentication with passphrase
+        """
+        temp_key_path = self.create_temp_key_file("DUMMY ENCRYPTED PRIVATE KEY CONTENT")
+
+        try:
+            key_pair_connection_data = self.get_key_pair_connection_data(temp_key_path, "test_passphrase")
+
+            handler = SnowflakeHandler("snowflake", connection_data=key_pair_connection_data)
+
+            with patch("snowflake.connector.connect") as mock_connect:
+                mock_conn = MagicMock()
+                mock_connect.return_value = mock_conn
+
+                connection = handler.connect()
+
+                mock_connect.assert_called_once()
+                call_kwargs = mock_connect.call_args[1]
+
+                self.assertIn("private_key_file", call_kwargs)
+                self.assertEqual(call_kwargs["private_key_file"], temp_key_path)
+                self.assertEqual(call_kwargs["authenticator"], "SNOWFLAKE_JWT")
+                self.assertIn("private_key_file_pwd", call_kwargs)
+                self.assertEqual(call_kwargs["private_key_file_pwd"], "test_passphrase")
+                self.assertNotIn("password", call_kwargs)
+
+                self.assertTrue(handler.is_connected)
+                self.assertEqual(connection, mock_conn)
+        finally:
+            import os
+
+            if os.path.exists(temp_key_path):
+                os.unlink(temp_key_path)
+
+    def test_key_pair_authentication_file_not_found(self):
+        """
+        Tests that ValueError is raised when private key file doesn't exist
+        """
+        key_pair_connection_data = OrderedDict(
+            account="tvuibdy-vm85921",
+            user="example_user",
+            database="example_db",
+            private_key_path="/nonexistent/path/to/key.pem",
+            auth_type="key_pair",
+        )
+
+        handler = SnowflakeHandler("snowflake", connection_data=key_pair_connection_data)
+
+        with self.assertRaises(ValueError) as context:
+            handler.connect()
+        self.assertIn("Private key file not found", str(context.exception))
+
+    def test_key_pair_authentication_invalid_key(self):
+        """
+        Tests that Snowflake connector raises an error when private key is invalid
+        """
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".pem") as temp_key_file:
+            temp_key_file.write("INVALID KEY CONTENT")
+            temp_key_path = temp_key_file.name
+
+        try:
+            key_pair_connection_data = OrderedDict(
+                account="tvuibdy-vm85921",
+                user="example_user",
+                database="example_db",
+                private_key_path=temp_key_path,
+                auth_type="key_pair",
+            )
+
+            handler = SnowflakeHandler("snowflake", connection_data=key_pair_connection_data)
+
+            with patch("snowflake.connector.connect") as mock_connect:
+                mock_connect.side_effect = snowflake.connector.errors.ProgrammingError(
+                    msg="Failed to parse private key"
+                )
+
+                with self.assertRaises(snowflake.connector.errors.ProgrammingError):
+                    handler.connect()
+        finally:
+            import os
+
+            if os.path.exists(temp_key_path):
+                os.unlink(temp_key_path)
+
+    def test_password_authentication_works(self):
+        """
+        Tests that password authentication still works (backward compatibility)
+        """
+        handler = SnowflakeHandler("snowflake", connection_data=self.dummy_connection_data)
+
+        with patch("snowflake.connector.connect") as mock_connect:
+            mock_conn = MagicMock()
+            mock_connect.return_value = mock_conn
+
+            connection = handler.connect()
+
+            mock_connect.assert_called_once()
+            call_kwargs = mock_connect.call_args[1]
+
+            self.assertIn("password", call_kwargs)
+            self.assertNotIn("private_key", call_kwargs)
+            self.assertEqual(call_kwargs["password"], "example_pass")
+
+            self.assertTrue(handler.is_connected)
+            self.assertEqual(connection, mock_conn)
+
+    def test_invalid_auth_type_fails(self):
+        """
+        Tests that providing an unknown auth_type raises a ValueError.
+        """
+        connection_data = self.dummy_connection_data.copy()
+        connection_data["auth_type"] = "invalid"
+
+        handler = SnowflakeHandler("snowflake", connection_data=connection_data)
+
+        with self.assertRaises(ValueError) as context:
+            handler.connect()
+        self.assertIn("Invalid auth_type", str(context.exception))
 
     def test_query_method(self):
         """
@@ -679,7 +880,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -830,7 +1031,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -864,7 +1065,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOLEAN]
 
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -1100,7 +1301,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             }
         )
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 
@@ -1163,7 +1364,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             }
         )
         response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 

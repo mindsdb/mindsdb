@@ -1,0 +1,67 @@
+name: Test on Deploy
+
+permissions:
+    contents: read
+
+on:
+  workflow_call:
+    inputs:
+      git-sha:
+        required: false
+        type: string
+        default: ""
+      deploy-env:
+        required: true
+        type: string
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      git-sha:
+        required: false
+        type: string
+        default: ""
+      deploy-env:
+        required: true
+        type: string
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  UV_LINK_MODE: "symlink"
+
+jobs:
+  # Run our integration tests
+  test:
+    environment:
+      name: ${{ inputs.deploy-env }}
+      url: ${{ vars.MDB_ENV_URL }}
+    name: Run integration tests on deploy
+    runs-on: mdb-dev
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.git-sha }}
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        # Place cache in the tool dir because we mount this in our runnners
+        cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+        prune-cache: false
+        python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
+    - name: Install dependencies
+      run: |
+        uv pip install -r requirements/requirements-test.txt
+
+    - name: Run Integration Tests on Deploy
+      run: |
+          make integration_tests_slow
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        INTERNAL_URL: ${{ vars.MINDSDB_INTERNAL_URL }}

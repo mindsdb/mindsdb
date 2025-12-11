@@ -19,13 +19,11 @@ def parse_handlers_env(value: str | None) -> List[str]:
 
 def run(cmd: list[str], capture: bool = False) -> subprocess.CompletedProcess:
     print("[coverage]", " ".join(cmd))
-    return subprocess.run(
-        cmd,
-        text=True,
-        capture_output=capture,
-        stdout=subprocess.PIPE if capture else None,
-        stderr=subprocess.STDOUT if capture else None,
-    )
+    kwargs: dict = {"text": True}
+    if capture:
+        kwargs["stdout"] = subprocess.PIPE
+        kwargs["stderr"] = subprocess.STDOUT
+    return subprocess.run(cmd, **kwargs)
 
 
 def run_pytest_with_coverage(handlers: list[str]) -> None:

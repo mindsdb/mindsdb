@@ -86,7 +86,6 @@ def define_deps():
     extra_requirements = {}
     full_requirements = []
     for fn in os.listdir(os.path.normpath("./requirements")):
-        extra = []
         if fn.startswith("requirements-") and fn.endswith(".txt"):
             extra_name = fn.replace("requirements-", "").replace(".txt", "")
             with open(os.path.normpath(f"./requirements/{fn}")) as fp:
@@ -100,7 +99,6 @@ def define_deps():
     handlers_dir_path = os.path.normpath("./mindsdb/integrations/handlers")
     for fn in os.listdir(handlers_dir_path):
         if os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith("_handler"):
-            extra = []
             base_extra_name = fn.replace("_handler", "")
             extra_requirements[base_extra_name] = []
             for req_file_path in glob.glob(os.path.join(handlers_dir_path, fn, "requirements*.txt")):

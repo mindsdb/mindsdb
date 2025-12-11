@@ -1257,6 +1257,12 @@ class KnowledgeBaseController:
                 f"Unable to find database named {vector_db_name}, please make sure {vector_db_name} is defined"
             )
         # create table in vectordb before creating KB
+        if "default_vector_storage" in params:
+            # if vector db is a default - drop previous table, if exists
+            try:
+                vector_store_handler.drop_table(vector_table_name)
+            except Exception:
+                ...
         vector_store_handler.create_table(vector_table_name)
         self._check_vector_table(embed_info, vector_store_handler, vector_table_name)
 

@@ -128,9 +128,10 @@ class TestKB(BaseExecutorDummyML):
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         self._create_kb("kb_review")
 
-        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("insert into kb_review (content) values ('review')")
 
         # selectable
@@ -147,6 +148,8 @@ class TestKB(BaseExecutorDummyML):
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb_metadata(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         record = {
             "review": "all is good, haven't used yet",
             "url": "https://laptops.com/123",
@@ -159,8 +162,6 @@ class TestKB(BaseExecutorDummyML):
 
         # ---  case 1: kb with default columns settings ---
         self._create_kb("kb_review")
-
-        set_litellm_embedding(mock_litellm_embedding)
 
         self.run_sql(
             """
@@ -215,7 +216,6 @@ class TestKB(BaseExecutorDummyML):
             metadata_columns=["specs", "id"],
         )
 
-        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql(
             """
             insert into kb_review
@@ -241,7 +241,6 @@ class TestKB(BaseExecutorDummyML):
         # ---  case 3: content is defined, id is id, the rest goes to metadata ---
         self._create_kb("kb_review", content_columns=["review"])
 
-        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql(
             """
             insert into kb_review
@@ -372,12 +371,13 @@ class TestKB(BaseExecutorDummyML):
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_join_kb_table(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         df = self._get_ral_table()
         self.save_file("ral", df)
 
         self._create_kb("kb_ral")
 
-        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql(
             """
             insert into kb_ral
@@ -441,6 +441,8 @@ class TestKB(BaseExecutorDummyML):
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_kb_partitions(self, mock_handler, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         df = self._get_ral_table()
         self.save_file("ral", df)
 
@@ -454,7 +456,6 @@ class TestKB(BaseExecutorDummyML):
             self._create_kb("kb_part", content_columns=["english"])
 
             # load kb
-            set_litellm_embedding(mock_litellm_embedding)
             ret = self.run_sql(insert_sql)
             # inserts returns query
             query_id = ret["ID"][0]

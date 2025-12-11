@@ -1095,3 +1095,4 @@ class TestKB(BaseExecutorDummyML):
             self._create_kb("kb2", storage="my_chroma.table1")
 
         self.run_sql("drop knowledge base kb1")
+        self.run_sql("drop database my_chroma")

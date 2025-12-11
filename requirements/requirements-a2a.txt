@@ -1,3 +1,0 @@
-httpx==0.28.1
-jwcrypto==1.5.6
-typing-extensions==4.13.2

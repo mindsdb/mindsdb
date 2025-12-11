@@ -35,6 +35,35 @@ def _quote_identifier(identifier: str) -> str:
     return f"`{identifier.replace('`', '``')}`"
 
 
+def _get_mysql_types_from_description(
+    description,
+) -> list[MYSQL_DATA_TYPE] | None:
+    """Best-effort extraction of column MySQL types from Databricks cursor description."""
+    if not description:
+        return None
+
+    try:
+        description_list = list(description)
+    except TypeError:
+        return None
+
+    if len(description_list) == 0:
+        return None
+
+    mysql_types: list[MYSQL_DATA_TYPE] = []
+    for col in description_list:
+        type_name = None
+        if hasattr(col, "type_name"):
+            type_name = getattr(col, "type_name", None)
+        elif hasattr(col, "type_code"):
+            type_name = getattr(col, "type_code", None)
+        elif isinstance(col, (list, tuple)) and len(col) > 1:
+            type_name = col[1]
+        mysql_types.append(_map_type(type_name))
+
+    return mysql_types if len(mysql_types) > 0 else None
+
+
 def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     """Map MyDatabricks SQL text types names to MySQL types as enum.
 
@@ -231,18 +260,39 @@ class DatabricksHandler(MetaDatabaseHandler):
         connection = self.connect()
         with connection.cursor() as cursor:
             try:
+                logger.debug("Executing query on Databricks: %s", query)
                 cursor.execute(query)
-                result = cursor.fetchall()
-                if result:
+                description = cursor.description
+                try:
+                    description_list = (
+                        list(description) if description is not None else []
+                    )
+                except TypeError:
+                    description_list = []
+                mysql_types = _get_mysql_types_from_description(description_list)
+                has_result_set = len(description_list) > 0
+                if has_result_set:
+                    result = cursor.fetchall()
+                    columns = []
+                    for desc in description_list:
+                        if hasattr(desc, "name"):
+                            columns.append(desc.name)
+                        elif isinstance(desc, (list, tuple)) and len(desc) > 0:
+                            columns.append(desc[0])
+                        else:
+                            columns.append(None)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result, columns=[x[0] for x in cursor.description]
-                        ),
+                        data_frame=pd.DataFrame(result, columns=columns),
+                        affected_rows=getattr(cursor, "rowcount", None),
+                        mysql_types=mysql_types,
                     )
 
                 else:
-                    response = Response(RESPONSE_TYPE.OK)
+                    response = Response(
+                        RESPONSE_TYPE.OK,
+                        affected_rows=getattr(cursor, "rowcount", None),
+                    )
                     connection.commit()
             except ServerOperationError as server_error:
                 try:
@@ -253,7 +303,9 @@ class DatabricksHandler(MetaDatabaseHandler):
                     f"Server error running query: {query} on Databricks, {server_error}!"
                 )
                 response = Response(
-                    RESPONSE_TYPE.ERROR, error_message=str(server_error)
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(server_error),
+                    is_expected_error=True,
                 )
             except Exception as unknown_error:
                 try:
@@ -414,7 +466,7 @@ class DatabricksHandler(MetaDatabaseHandler):
             and result.data_frame is not None
             and not result.data_frame.empty
         ):
-            result.data_frame["TABLE_SCHEMA"] = self.name
+            result.data_frame["TABLE_SCHEMA"] = schema_name
 
         return result
 

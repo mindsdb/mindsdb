@@ -94,6 +94,7 @@ class TestDatabricksHandler(unittest.TestCase):
 
         mock_cursor.execute.return_value = None
         mock_cursor.fetchall.return_value = None
+        mock_cursor.description = None
 
         query_str = "SELECT * FROM table"
         data = self.handler.native_query(query_str)

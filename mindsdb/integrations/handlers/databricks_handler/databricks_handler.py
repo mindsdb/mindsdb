@@ -35,33 +35,33 @@ def _quote_identifier(identifier: str) -> str:
     return f"`{identifier.replace('`', '``')}`"
 
 
-def _get_mysql_types_from_description(
-    description,
-) -> list[MYSQL_DATA_TYPE] | None:
-    """Best-effort extraction of column MySQL types from Databricks cursor description."""
-    if not description:
-        return None
+# def _get_mysql_types_from_description(
+#     description,
+# ) -> list[MYSQL_DATA_TYPE] | None:
+#     """Best-effort extraction of column MySQL types from Databricks cursor description."""
+#     if not description:
+#         return None
 
-    try:
-        description_list = list(description)
-    except TypeError:
-        return None
+#     try:
+#         description_list = list(description)
+#     except TypeError:
+#         return None
 
-    if len(description_list) == 0:
-        return None
+#     if len(description_list) == 0:
+#         return None
 
-    mysql_types: list[MYSQL_DATA_TYPE] = []
-    for col in description_list:
-        type_name = None
-        if hasattr(col, "type_name"):
-            type_name = getattr(col, "type_name", None)
-        elif hasattr(col, "type_code"):
-            type_name = getattr(col, "type_code", None)
-        elif isinstance(col, (list, tuple)) and len(col) > 1:
-            type_name = col[1]
-        mysql_types.append(_map_type(type_name))
+#     mysql_types: list[MYSQL_DATA_TYPE] = []
+#     for col in description_list:
+#         type_name = None
+#         if hasattr(col, "type_name"):
+#             type_name = getattr(col, "type_name", None)
+#         elif hasattr(col, "type_code"):
+#             type_name = getattr(col, "type_code", None)
+#         elif isinstance(col, (list, tuple)) and len(col) > 1:
+#             type_name = col[1]
+#         mysql_types.append(_map_type(type_name))
 
-    return mysql_types if len(mysql_types) > 0 else None
+#     return mysql_types if len(mysql_types) > 0 else None
 
 
 def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
@@ -73,8 +73,8 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     Returns:
         MYSQL_DATA_TYPE: The MySQL type enum that corresponds to the MySQL text type name.
     """
-    if not instance(internal_type_name, str):
-        return
+    if not isinstance(internal_type_name, str):
+        return MYSQL_DATA_TYPE.TEXT
 
     type_upper = internal_type_name.upper()
 
@@ -277,63 +277,32 @@ class DatabricksHandler(MetaDatabaseHandler):
         connection = self.connect()
         with connection.cursor() as cursor:
             try:
-                logger.debug("Executing query on Databricks: %s", query)
                 cursor.execute(query)
-                description = cursor.description
-                try:
-                    description_list = (
-                        list(description) if description is not None else []
-                    )
-                except TypeError:
-                    description_list = []
-                mysql_types = _get_mysql_types_from_description(description_list)
-                has_result_set = len(description_list) > 0
-                if has_result_set:
-                    result = cursor.fetchall()
-                    columns = []
-                    for desc in description_list:
-                        if hasattr(desc, "name"):
-                            columns.append(desc.name)
-                        elif isinstance(desc, (list, tuple)) and len(desc) > 0:
-                            columns.append(desc[0])
-                        else:
-                            columns.append(None)
+                result = cursor.fetchall()
+                if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(result, columns=columns),
-                        affected_rows=getattr(cursor, "rowcount", None),
-                        mysql_types=mysql_types,
+                        data_frame=pd.DataFrame(
+                            result, columns=[x[0] for x in cursor.description]
+                        ),
                     )
-
                 else:
-                    response = Response(
-                        RESPONSE_TYPE.OK,
-                        affected_rows=getattr(cursor, "rowcount", None),
-                    )
-                    connection.commit()
+                    response = Response(RESPONSE_TYPE.OK)
+                # Always commit after successful execution
+                connection.commit()
             except ServerOperationError as server_error:
-                try:
-                    connection.rollback()
-                except Exception:
-                    pass
                 logger.error(
                     f"Server error running query: {query} on Databricks, {server_error}!"
                 )
                 response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(server_error),
-                    is_expected_error=True,
+                    RESPONSE_TYPE.ERROR, error_message=str(server_error), error_code=0
                 )
             except Exception as unknown_error:
-                try:
-                    connection.rollback()
-                except Exception:
-                    pass
                 logger.error(
                     f"Unknown error running query: {query} on Databricks, {unknown_error}!"
                 )
                 response = Response(
-                    RESPONSE_TYPE.ERROR, error_message=str(unknown_error)
+                    RESPONSE_TYPE.ERROR, error_message=str(unknown_error), error_code=0
                 )
 
         if need_to_close is True:
@@ -430,7 +399,7 @@ class DatabricksHandler(MetaDatabaseHandler):
             AND
                 table_schema = {schema_name}
         """
-
+        
         result = self.native_query(query)
         if result.resp_type == RESPONSE_TYPE.OK:
             result = Response(

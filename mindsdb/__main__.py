@@ -68,7 +68,6 @@ class TrunkProcessEnum(Enum):
         sys.exit(1)
 
 
-
 @dataclass
 class TrunkProcessData:
     name: str

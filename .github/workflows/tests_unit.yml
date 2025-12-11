@@ -147,7 +147,7 @@ jobs:
       - name: Run handler coverage
         if: ${{ matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11') }}
         run: |
-          uv run tests/scripts/handler_coverage.py
+          uv run tests/scripts/check_handler_coverage.py
 
       - name: Pytest coverage comment
         if: ${{ matrix.python-version == (vars.CI_PYTHON_VERSION || '3.11') }}

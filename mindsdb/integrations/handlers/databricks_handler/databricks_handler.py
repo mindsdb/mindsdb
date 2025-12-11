@@ -21,6 +21,20 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 logger = log.getLogger(__name__)
 
 
+def _escape_literal(value: str) -> str:
+    """Escape a literal string to be safely embedded into SQL single quotes."""
+    if not isinstance(value, str):
+        raise ValueError("Invalid literal value")
+    return value.replace("'", "''")
+
+
+def _quote_identifier(identifier: str) -> str:
+    """Quote identifiers (table/column) for Databricks SQL to avoid injection or syntax errors."""
+    if not isinstance(identifier, str) or identifier == "":
+        raise ValueError("Invalid identifier value")
+    return f"`{identifier.replace('`', '``')}`"
+
+
 def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     """Map MyDatabricks SQL text types names to MySQL types as enum.
 
@@ -165,8 +179,9 @@ class DatabricksHandler(MetaDatabaseHandler):
 
             # Execute a simple query to check the connection.
             query = "SELECT 1 FROM information_schema.schemata"
-            if "schema" in self.connection_data:
-                query += f" WHERE schema_name = '{self.connection_data['schema']}'"
+            schema_value = self.connection_data.get("schema")
+            if isinstance(schema_value, str) and schema_value != "":
+                query += f" WHERE schema_name = '{_escape_literal(schema_value)}'"
 
             with connection.cursor() as cursor:
                 cursor.execute(query)
@@ -230,6 +245,10 @@ class DatabricksHandler(MetaDatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except ServerOperationError as server_error:
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 logger.error(
                     f"Server error running query: {query} on Databricks, {server_error}!"
                 )
@@ -237,6 +256,10 @@ class DatabricksHandler(MetaDatabaseHandler):
                     RESPONSE_TYPE.ERROR, error_message=str(server_error)
                 )
             except Exception as unknown_error:
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 logger.error(
                     f"Unknown error running query: {query} on Databricks, {unknown_error}!"
                 )
@@ -313,9 +336,10 @@ class DatabricksHandler(MetaDatabaseHandler):
             raise ValueError("Invalid table name provided.")
 
         if isinstance(schema_name, str):
-            schema_name = f"'{schema_name}'"
+            schema_name = f"'{_escape_literal(schema_name)}'"
         else:
             schema_name = "current_schema()"
+        table_literal = _escape_literal(table_name)
         query = f"""
             SELECT
                 COLUMN_NAME,
@@ -333,7 +357,7 @@ class DatabricksHandler(MetaDatabaseHandler):
             FROM
                 information_schema.columns
             WHERE
-                table_name = '{table_name}'
+                table_name = '{table_literal}'
             AND
                 table_schema = {schema_name}
         """
@@ -359,7 +383,8 @@ class DatabricksHandler(MetaDatabaseHandler):
             Response: A response object containing the metadata information, formatted as per the `Response` class.
         """
 
-        schema_name = self.connection_data.get("schema", "default")
+        schema_name = self.connection_data.get("schema") or "default"
+        schema_literal = _escape_literal(schema_name)
 
         query = f"""
             SELECT
@@ -372,12 +397,14 @@ class DatabricksHandler(MetaDatabaseHandler):
                 created AS CREATED,
                 last_altered AS LAST_ALTERED
             FROM information_schema.tables
-            WHERE table_schema = '{schema_name}'
+            WHERE table_schema = '{schema_literal}'
             AND table_type IN ('BASE TABLE', 'VIEW', 'MANAGED')
         """
 
         if table_names is not None and len(table_names) > 0:
-            table_names_str = ", ".join([f"'{t}'" for t in table_names])
+            table_names_str = ", ".join(
+                [f"'{_escape_literal(t)}'" for t in table_names]
+            )
             query += f" AND table_name IN ({table_names_str})"
 
         result = self.native_query(query)
@@ -403,7 +430,8 @@ class DatabricksHandler(MetaDatabaseHandler):
         """
 
         # Get the schema from connection data or use 'default'
-        schema_name = self.connection_data.get("schema", "default")
+        schema_name = self.connection_data.get("schema") or "default"
+        schema_literal = _escape_literal(schema_name)
 
         # Use only columns that exist in Databricks information_schema.columns
         query = f"""
@@ -422,11 +450,13 @@ class DatabricksHandler(MetaDatabaseHandler):
                 NULL AS CHARACTER_SET_NAME,
                 NULL AS COLLATION_NAME
             FROM information_schema.columns
-            WHERE table_schema = '{schema_name}'
+            WHERE table_schema = '{schema_literal}'
         """
 
         if table_names is not None and len(table_names) > 0:
-            table_names_str = ", ".join([f"'{t.lower()}'" for t in table_names])
+            table_names_str = ", ".join(
+                [f"'{_escape_literal(t.lower())}'" for t in table_names]
+            )
             query += f" AND LOWER(table_name) IN ({table_names_str})"
 
         result = self.native_query(query)
@@ -445,15 +475,18 @@ class DatabricksHandler(MetaDatabaseHandler):
             Response: A response object containing the column statistics metadata.
         """
         # Get the schema from connection data or use 'default'
-        schema_name = self.connection_data.get("schema", "default")
+        schema_name = self.connection_data.get("schema") or "default"
+        schema_literal = _escape_literal(schema_name)
 
         columns_query = f"""
             SELECT table_name AS TABLE_NAME, column_name AS COLUMN_NAME
             FROM information_schema.columns
-            WHERE table_schema = '{schema_name}'
+            WHERE table_schema = '{schema_literal}'
         """
         if table_names:
-            table_names_str = ", ".join([f"'{t}'" for t in table_names])
+            table_names_str = ", ".join(
+                [f"'{_escape_literal(t)}'" for t in table_names]
+            )
             columns_query += f" AND table_name IN ({table_names_str})"
 
         columns_result = self.native_query(columns_query)
@@ -471,17 +504,18 @@ class DatabricksHandler(MetaDatabaseHandler):
             select_parts = []
             for _, row in group.iterrows():
                 col = row["COLUMN_NAME"]
-                quoted_col = f"`{col}`"
+                quoted_col = _quote_identifier(col)
+                safe_suffix = col.replace("`", "``")
                 select_parts.extend(
                     [
-                        f"SUM(CASE WHEN {quoted_col} IS NULL THEN 1 ELSE 0 END) AS `nulls_{col}`",
-                        f"APPROX_COUNT_DISTINCT({quoted_col}) AS `distincts_{col}`",
-                        f"MIN({quoted_col}) AS `min_{col}`",
-                        f"MAX({quoted_col}) AS `max_{col}`",
+                        f"SUM(CASE WHEN {quoted_col} IS NULL THEN 1 ELSE 0 END) AS {_quote_identifier(f'nulls_{safe_suffix}')}",
+                        f"APPROX_COUNT_DISTINCT({quoted_col}) AS {_quote_identifier(f'distincts_{safe_suffix}')}",
+                        f"MIN({quoted_col}) AS {_quote_identifier(f'min_{safe_suffix}')}",
+                        f"MAX({quoted_col}) AS {_quote_identifier(f'max_{safe_suffix}')}",
                     ]
                 )
 
-            quoted_table_name = f"`{table_name}`"
+            quoted_table_name = _quote_identifier(table_name)
             stats_query = f"""
             SELECT COUNT(*) AS `total_rows`, {", ".join(select_parts)}
             FROM {quoted_table_name}
@@ -516,10 +550,11 @@ class DatabricksHandler(MetaDatabaseHandler):
 
                 for _, row in group.iterrows():
                     col = row["COLUMN_NAME"]
-                    nulls = stats_data.get(f"nulls_{col}", 0)
-                    distincts = stats_data.get(f"distincts_{col}", None)
-                    min_val = stats_data.get(f"min_{col}", None)
-                    max_val = stats_data.get(f"max_{col}", None)
+                    safe_suffix = col.replace("`", "``")
+                    nulls = stats_data.get(f"nulls_{safe_suffix}", 0)
+                    distincts = stats_data.get(f"distincts_{safe_suffix}", None)
+                    min_val = stats_data.get(f"min_{safe_suffix}", None)
+                    max_val = stats_data.get(f"max_{safe_suffix}", None)
                     null_pct = (nulls / total_rows) * 100 if total_rows > 0 else None
 
                     all_stats.append(
@@ -552,7 +587,7 @@ class DatabricksHandler(MetaDatabaseHandler):
                         }
                     )
         if not all_stats:
-            return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame())
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(all_stats))
 

@@ -73,16 +73,33 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     Returns:
         MYSQL_DATA_TYPE: The MySQL type enum that corresponds to the MySQL text type name.
     """
-    if not isinstance(internal_type_name, str):
-        return MYSQL_DATA_TYPE.TEXT
-    if internal_type_name.upper() == "STRING":
-        return MYSQL_DATA_TYPE.TEXT
-    if internal_type_name.upper() == "LONG":
-        return MYSQL_DATA_TYPE.BIGINT
-    if internal_type_name.upper() == "SHORT":
-        return MYSQL_DATA_TYPE.SMALLINT
+    if not instance(internal_type_name, str):
+        return
+
+    type_upper = internal_type_name.upper()
+
+    type_mappings = {
+        "STRING": MYSQL_DATA_TYPE.TEXT,
+        "LONG": MYSQL_DATA_TYPE.BIGINT,
+        "SHORT": MYSQL_DATA_TYPE.SMALLINT,
+        "INT": MYSQL_DATA_TYPE.INT,
+        "INTEGER": MYSQL_DATA_TYPE.INT,
+        "BIGINT": MYSQL_DATA_TYPE.BIGINT,
+        "SMALLINT": MYSQL_DATA_TYPE.SMALLINT,
+        "TINYINT": MYSQL_DATA_TYPE.TINYINT,
+        "FLOAT": MYSQL_DATA_TYPE.FLOAT,
+        "DOUBLE": MYSQL_DATA_TYPE.DOUBLE,
+        "DECIMAL": MYSQL_DATA_TYPE.DECIMAL,
+        "BOOLEAN": MYSQL_DATA_TYPE.BOOL,
+        "DATE": MYSQL_DATA_TYPE.DATE,
+        "TIMESTAMP": MYSQL_DATA_TYPE.DATETIME,
+        "BINARY": MYSQL_DATA_TYPE.BINARY,
+    }
+    if type_upper in type_mappings:
+        return type_mappings[type_upper]
+
     try:
-        return MYSQL_DATA_TYPE(internal_type_name.upper())
+        return MYSQL_DATA_TYPE(type_upper)
     except Exception:
         logger.info(
             f"Databricks handler: unknown type: {internal_type_name}, use TEXT as fallback."

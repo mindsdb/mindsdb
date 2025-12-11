@@ -604,9 +604,20 @@ class PydanticAIAgent:
             
                 # Extract output
                 output = result.output 
-                yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
+                
+                # Yield description before SQL query
+                if output.short_description:
+                    yield self._add_chunk_metadata({
+                        "type": "context",
+                        "content": output.short_description
+                    })
+                
+                yield self._add_chunk_metadata({
+                    "type": "sql", 
+                    "content": output.sql_query
+                })
 
-                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: {output.sql_query}, query_type: {output.query_type}")
+                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: {output.sql_query}, query_type: {output.query_type}, description: {output.short_description}")
 
                 # Initialize retry counter for this query
                 retry_count = 0
@@ -625,9 +636,23 @@ class PydanticAIAgent:
                         break  # Query succeeded, exit retry loop
 
                     except Exception as e:
-                        # Unexpected error - only log essential error information
-                        query_error = f"Error executing SQL query: {str(e)}"
-                        logger.error(f"Unexpected error executing SQL query (retry {retry_count}/{MAX_RETRIES}): Query: {output.sql_query[:100]}... Error: {str(e)}")
+                        # Extract error message - prefer db_error_msg for QueryError, otherwise use str(e)
+                        from mindsdb.utilities.exception import QueryError
+                        if isinstance(e, QueryError):
+                            query_error = e.db_error_msg or str(e)
+                        else:
+                            query_error = str(e)
+                        
+                        # Yield descriptive error message
+                        error_message = f"Error executing SQL query: {query_error}"
+                        if retry_count < MAX_RETRIES:
+                            error_message += f" (retry {retry_count + 1}/{MAX_RETRIES})"
+                        yield self._add_chunk_metadata({
+                            "type": "error",
+                            "content": error_message
+                        })
+                        
+                        logger.error(f"Error executing SQL query (retry {retry_count}/{MAX_RETRIES}): Error: {query_error}")
                         
                         if retry_count < MAX_RETRIES:
                             accumulated_errors.append(f"Query: {output.sql_query}\nError: {query_error}")
@@ -649,8 +674,20 @@ class PydanticAIAgent:
                                 message_history=message_history if message_history else None,
                             )
                             output = result.output
-                            yield self._add_chunk_metadata({"type": "sql", "content": output.sql_query})
-                            DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}")
+                            
+                            # Yield description before SQL query
+                            if output.short_description:
+                                yield self._add_chunk_metadata({
+                                    "type": "context",
+                                    "content": output.short_description
+                                })
+                            
+                            yield self._add_chunk_metadata({
+                                "type": "sql", 
+                                "content": output.sql_query
+                            })
+                            
+                            DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}, description: {output.short_description}")
                         else:
                             break
 
@@ -658,7 +695,12 @@ class PydanticAIAgent:
                 if not query_succeeded:
                     # Query failed after all retries
                     error_message = query_error or "Query failed after maximum retries"
-                    logger.error(f"Query failed after {MAX_RETRIES} retries. Query: {output.sql_query[:100]}... Error: {error_message}")
+                    # Create descriptive error message
+                    descriptive_error = f"Query execution failed after {MAX_RETRIES} retries. {error_message}"
+                    if output and output.sql_query:
+                        descriptive_error += f"\n\nFailed query: {output.sql_query}"
+                    
+                    logger.error(f"Query failed after {MAX_RETRIES} retries. Query: {output.sql_query[:100] if output and output.sql_query else 'N/A'}... Error: {error_message}")
                     
                     # If we've exhausted retries and reached max exploratory queries, return "cannot solve" response
                     if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
@@ -672,10 +714,10 @@ class PydanticAIAgent:
                         self.langfuse_client_wrapper.end_span_stream(span=self.run_completion_span)
                         return
                     
-                    # Otherwise, yield error and continue (might generate new query)
+                    # Otherwise, yield descriptive error and continue (might generate new query)
                     yield self._add_chunk_metadata({
                         "type": "error",
-                        "content": error_message,
+                        "content": descriptive_error,
                     })
                     # Add error to accumulated errors for next iteration
                     accumulated_errors.append(f"Query: {output.sql_query}\nError: {error_message}")
@@ -768,10 +810,21 @@ class PydanticAIAgent:
                 # This is a cleanup issue, not a critical error - log at debug level
                 DEBUG_LOGGER(f"Async cleanup warning (non-critical): {error_msg}")
             else:
-                logger.error(f"Agent streaming failed: {error_msg}")
+                # Extract error message - prefer db_error_msg for QueryError, otherwise use str(e)
+                from mindsdb.utilities.exception import QueryError
+                if isinstance(e, QueryError):
+                    error_content = e.db_error_msg or str(e)
+                    descriptive_error = f"Database query error: {error_content}"
+                    if e.failed_query:
+                        descriptive_error += f"\n\nFailed query: {e.failed_query}"
+                else:
+                    error_content = error_msg
+                    descriptive_error = f"Agent streaming failed: {error_content}"
+                
+                logger.error(f"Agent streaming failed: {error_content}")
                 error_chunk = self._add_chunk_metadata({
                     "type": "error",
-                    "content": f"Agent streaming failed: {error_msg}",
+                    "content": descriptive_error,
                 })
                 yield error_chunk
     

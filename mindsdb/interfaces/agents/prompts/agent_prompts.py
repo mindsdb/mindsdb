@@ -1,5 +1,5 @@
 sql_description = """
-MindsDB SQL is compatible with MySQL syntax.
+MindsDB SQL is mostly compatible with DuckDB syntax.
 
 - When writing the SQL query, make sure the select explicit names for the columns accordingly to the question.
 
@@ -8,6 +8,59 @@ SELECT movie_id, movie_description, age, name FROM someschema.movies WHERE whate
 Instead of:
 SELECT * FROM somedb.movies WHERE whatever...;
 
+
+- Date math & windows
+
+Prefer simple interval arithmetic over dialect-specific functions.
+
+To subtract months:
+max_ts - INTERVAL 8 MONTH
+
+To subtract days:
+max_ts - INTERVAL 30 DAY
+
+Use DATE_TRUNC('month', timestamp_expression) for month bucketing.
+
+Avoid using DATEADD, DATE_ADD, or other guessed function names unless they already appear in a working example for this connection.
+
+- Monthly aggregation pattern
+
+When asked for “last N months from the most recent date in column X”, follow this structure:
+
+SELECT
+    DATE_TRUNC('month', CAST(X AS TIMESTAMP)) AS month,
+    COUNT(*) AS total
+FROM <schema>.<table>
+WHERE CAST(X AS TIMESTAMP) >= (
+    SELECT DATE_TRUNC(
+        'month',
+        MAX(CAST(X AS TIMESTAMP)) - INTERVAL <N-1> MONTH
+    )
+    FROM <schema>.<table>
+)
+GROUP BY month
+ORDER BY month;
+
+
+Replace <N-1> with the number of months to go back excluding the current one (for “past 9 months including current”, use 8).
+
+- COUNT and aggregates
+
+Use COUNT(*) or COUNT(column). Never use COUNT() with empty parentheses.
+
+If you change the SELECT list, update GROUP BY accordingly (or use GROUP BY 1, 2, ...).
+
+- Error handling behavior
+
+When you see an error like “function X does not exist”, do not try random alternative names (e.g., dateadd → DATE_ADD → DATE_ADDD).
+
+Instead, rewrite the logic using:
+
+Intervals (ts - INTERVAL 8 MONTH), or
+
+Simpler built-ins that you know are valid (e.g., just DATE_TRUNC with interval arithmetic).
+
+- If an error says “requires 2 positional arguments, but 3 were provided”, remove the extra argument rather than reshuffling parameter order.
 - If a MySQL function is not supported by MindsDB, try the DuckDB equivalent function.
 - If you are unsusre of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
 - If Metadata about a table is unknown, assume that all columns are of type varchar. 

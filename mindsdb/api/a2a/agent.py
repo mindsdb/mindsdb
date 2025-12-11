@@ -125,12 +125,13 @@ class MindsDBAgent:
                                         if chunk_type == "data":
                                             transformed_chunk["output"] = str(content)
                                         elif chunk_type in ("sql", "status", "context"):
-                                            transformed_chunk["type"] = "thought"
+                                            
                                             # These are informational chunks, map to text
                                             transformed_chunk["text"] = str(content)
                                         elif chunk_type == "error":
+                                            transformed_chunk["type"] = "context"
                                             # Error chunks should have error field
-                                            transformed_chunk["error"] = str(content)
+                                            transformed_chunk["text"] = str(content)
                                         
                                         yield transformed_chunk
                                     else:

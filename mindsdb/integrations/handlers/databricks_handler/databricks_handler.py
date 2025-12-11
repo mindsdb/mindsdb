@@ -20,6 +20,32 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 logger = log.getLogger(__name__)
 
 
+def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
+    """Map MyDatabricks SQL text types names to MySQL types as enum.
+
+    Args:
+        internal_type_name (str): The name of the Databricks type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type enum that corresponds to the MySQL text type name.
+    """
+    if not isinstance(internal_type_name, str):
+        return MYSQL_DATA_TYPE.TEXT
+    if internal_type_name.upper() == "STRING":
+        return MYSQL_DATA_TYPE.TEXT
+    if internal_type_name.upper() == "LONG":
+        return MYSQL_DATA_TYPE.BIGINT
+    if internal_type_name.upper() == "SHORT":
+        return MYSQL_DATA_TYPE.SMALLINT
+    try:
+        return MYSQL_DATA_TYPE(internal_type_name.upper())
+    except Exception:
+        logger.info(
+            f"Databricks handler: unknown type: {internal_type_name}, use TEXT as fallback."
+        )
+        return MYSQL_DATA_TYPE.TEXT
+
+
 class DatabricksHandler(MetaDatabaseHandler):
     """
     This handler handles the connection and execution of SQL statements on Databricks.

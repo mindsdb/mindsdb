@@ -1,4 +1,5 @@
 import json
+from json import JSONDecodeError
 from typing import Dict, List
 from pathlib import Path
 
@@ -82,6 +83,30 @@ class TabsController:
             del tab["content"]
         return all_tabs
 
+    def _load_tab_data(self, tab_id: int, raw_data) -> Dict:
+        """Load tab JSON while handling trailing garbage."""
+        if isinstance(raw_data, bytes):
+            raw_data_str = raw_data.decode("utf-8")
+        else:
+            raw_data_str = raw_data
+
+        try:
+            return json.loads(raw_data_str)
+        except JSONDecodeError:
+            decoder = json.JSONDecoder()
+            stripped = raw_data_str.lstrip()
+            data, idx = decoder.raw_decode(stripped)
+
+            trailing = stripped[idx:].strip()
+            if trailing:
+                logger.warning("Detected trailing data in tab %s/%s, attempting to sanitize", ctx.company_id, tab_id)
+                try:
+                    sanitized_bytes = json.dumps(data).encode("utf-8")
+                    self._get_file_storage().file_set(f"tab_{tab_id}", sanitized_bytes)
+                except Exception as rewrite_error:
+                    logger.warning("Failed to rewrite sanitized tab %s/%s: %s", ctx.company_id, tab_id, rewrite_error)
+            return data
+
     def _migrate_legacy(self) -> None:
         """Convert old single-file tabs storage to multiple files"""
         file_storage = self._get_file_storage()
@@ -136,7 +161,7 @@ class TabsController:
         tabs_list = []
         for tab_id, tab_path in tabs_files.items():
             try:
-                data = json.loads(tab_path.read_text())
+                data = self._load_tab_data(tab_id, tab_path.read_text())
             except Exception as e:
                 logger.error(f"Can't read data of tab {ctx.company_id}/{tab_id}: {e}")
                 continue
@@ -163,7 +188,7 @@ class TabsController:
             raise EntityNotExistsError(f"tab {tab_id}") from e
 
         try:
-            data = json.loads(raw_tab_data)
+            data = self._load_tab_data(tab_id, raw_tab_data)
         except Exception as e:
             logger.error(f"Can't read data of tab {ctx.company_id}/{tab_id}: {e}")
             raise Exception(f"Can't read data of tab: {e}") from e

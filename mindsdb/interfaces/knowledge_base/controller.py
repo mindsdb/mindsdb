@@ -1257,7 +1257,7 @@ class KnowledgeBaseController:
                     if vector_size is not None:
                         vector_db_params["vector_size"] = vector_size
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
-
+                params["default_vector_storage"] = vector_db_name
             else:
                 # create chroma db with same name
                 vector_table_name = "default_collection"
@@ -1485,9 +1485,10 @@ class KnowledgeBaseController:
         # drop objects if they were created automatically
         if "default_vector_storage" in kb.params:
             try:
-                handler = self.session.datahub.get(kb.params["default_vector_storage"]).integration_handler
-                handler.drop_table(kb.vector_database_table)
-                self.session.integration_controller.delete(kb.params["default_vector_storage"])
+                dn = self.session.datahub.get(kb.params["default_vector_storage"])
+                dn.integration_handler.drop_table(kb.vector_database_table)
+                if dn.ds_type != "pgvector":
+                    self.session.integration_controller.delete(kb.params["default_vector_storage"])
             except EntityNotExistsError:
                 pass
         if "created_embedding_model" in kb.params:

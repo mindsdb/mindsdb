@@ -4,6 +4,7 @@ import pandas as pd
 from databricks.sql import connect, RequestError, ServerOperationError
 from databricks.sql.client import Connection
 from databricks.sqlalchemy import DatabricksDialect
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import MetaDatabaseHandler

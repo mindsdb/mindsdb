@@ -4,9 +4,9 @@ import pandas as pd
 import duckdb
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb.integrations.libs.base import DatabaseHandler
-
 from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -39,6 +39,7 @@ class SheetsHandler(DatabaseHandler):
         self.dialect = 'sheets'
         self.connection_data = connection_data
         self.kwargs = kwargs
+        self.renderer = SqlalchemyRender('duckdb')
 
         self.connection = None
         self.is_connected = False
@@ -137,7 +138,8 @@ class SheetsHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        return self.native_query(query.to_string())
+        query_str = self.renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:
         """

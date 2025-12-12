@@ -51,8 +51,8 @@ class TestCreatePidFile:
                 "http_host": "api.http.host",
                 "http_port": "api.http.port",
                 "username": "auth.username",
-                "password": "auth.password"
-            }
+                "password": "auth.password",
+            },
         }
 
         with patch.dict(os.environ, {"USE_PIDFILE": "1"}, clear=False):
@@ -71,7 +71,7 @@ class TestCreatePidFile:
     def test_creates_pid_file_with_empty_config(self, mock_tmp_dir):
         """Test that PID file is created with only PID number when pid_file_content is None"""
         config = {"pid_file_content": None}
-        
+
         with patch.dict(os.environ, {"USE_PIDFILE": "1"}, clear=False):
             create_pid_file(config)
 
@@ -105,10 +105,7 @@ class TestCreatePidFile:
 
         config = {
             "api": {"http": {"host": "new_host", "port": 54321}},
-            "pid_file_content": {
-                "http_host": "api.http.host",
-                "http_port": "api.http.port"
-            }
+            "pid_file_content": {"http_host": "api.http.host", "http_port": "api.http.port"},
         }
 
         with patch.dict(os.environ, {"USE_PIDFILE": "1"}, clear=False):
@@ -153,7 +150,7 @@ class TestCreatePidFile:
             "pid_file_content": {
                 "http_host": "api.http.host",
                 "http_port": "api.http.port",
-            }
+            },
         }
 
         with patch.dict(os.environ, {"USE_PIDFILE": "1"}, clear=False):
@@ -173,10 +170,10 @@ class TestCreatePidFile:
         config = {
             "pid_file_content": {
                 "http_host": "api.http.host",
-                "missing_value": "path.to.missing.value"
+                "missing_value": "path.to.missing.value",
             }
         }
-        
+
         with patch.dict(os.environ, {"USE_PIDFILE": "1"}, clear=False):
             create_pid_file(config)
 
@@ -196,7 +193,7 @@ class TestCreatePidFile:
         pid_file.write_text(str(os.getpid()))
 
         config = {"pid_file_content": None}
-        
+
         with patch.dict(os.environ, {"USE_PIDFILE": "1"}, clear=False):
             with pytest.raises(Exception, match="Found PID file with existing process"):
                 create_pid_file(config)

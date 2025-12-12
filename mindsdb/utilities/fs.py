@@ -173,11 +173,9 @@ def create_pid_file(config):
     if pid_file_content is None or len(pid_file_content) == 0:
         pid_file_data_str = str(os.getpid())
     else:
-        pid_file_data = {
-            "pid": os.getpid()
-        }
+        pid_file_data = {"pid": os.getpid()}
         for key, value in pid_file_content.items():
-            value_path = value.split('.')
+            value_path = value.split(".")
             value_obj = config
             for path_part in value_path:
                 value_obj = value_obj.get(path_part) if value_obj else None

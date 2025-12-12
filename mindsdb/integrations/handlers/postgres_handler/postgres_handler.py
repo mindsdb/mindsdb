@@ -1,7 +1,7 @@
 import time
 import json
 import logging
-from typing import Optional, Any
+from typing import Optional, Any, Generator
 
 import pandas as pd
 from pandas import DataFrame
@@ -11,17 +11,22 @@ from psycopg.postgres import TypeInfo, types as pg_types
 from psycopg.pq import ExecStatus
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.base import MetaDatabaseHandler
+import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.types.column import Column
 from mindsdb.utilities import log
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
+    TableResponse,
+    OkResponse,
+    ErrorResponse,
+    DataHandlerResponse,
 )
-import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 logger = log.getLogger(__name__)
@@ -69,16 +74,14 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     logger.debug(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
     return fallback_type
 
-
-def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
-    """Build response from result and cursor.
+def _get_colums(cursor: Cursor) -> list[Column]:
+    """Get columns from cursor.
 
     Args:
-        result (list[tuple[Any]]): result of the query.
         cursor (psycopg.Cursor): cursor object.
 
     Returns:
-        Response: response object.
+        List of columns
     """
     description: list[PGColumn] = cursor.description
     mysql_types: list[MYSQL_DATA_TYPE] = []
@@ -108,11 +111,9 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
         mysql_type = _map_type(regtype)
         mysql_types.append(mysql_type)
 
-    # region cast int and bool to nullable types
-    serieses = []
-    for i, mysql_type in enumerate(mysql_types):
-        expected_dtype = None
-        if mysql_type in (
+    result = []
+    for i, column in enumerate(cursor.description):
+        if mysql_types[i] in (
             MYSQL_DATA_TYPE.SMALLINT,
             MYSQL_DATA_TYPE.INT,
             MYSQL_DATA_TYPE.MEDIUMINT,
@@ -120,13 +121,24 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             MYSQL_DATA_TYPE.TINYINT,
         ):
             expected_dtype = "Int64"
-        elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
+        elif mysql_types[i] in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
             expected_dtype = "boolean"
-        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i].name))
-    df = pd.concat(serieses, axis=1, copy=False)
-    # endregion
+        else:
+            expected_dtype = None
+        result.append(Column(
+            name=column.name,
+            type=mysql_types[i],
+            original_type=column.type_display,
+            dtype=expected_dtype
+        ))
+    return result
 
-    return Response(RESPONSE_TYPE.TABLE, data_frame=df, affected_rows=cursor.rowcount, mysql_types=mysql_types)
+
+def _make_df(result: list[tuple[Any]], columns: list[Column]) -> pd.DataFrame:
+    serieses = []
+    for i, column in enumerate(columns):
+        serieses.append(pd.Series([row[i] for row in result], dtype=column.dtype, name=column.name))
+    return pd.concat(serieses, axis=1, copy=False)
 
 
 class PostgresHandler(MetaDatabaseHandler):
@@ -279,8 +291,18 @@ class PostgresHandler(MetaDatabaseHandler):
                         logger.error(f"Error casting column {col.name} to {types_map[pg_type_info.name]}: {e}")
         df.columns = columns
 
-    @profiler.profile()
-    def native_query(self, query: str, params=None, **kwargs) -> Response:
+    def native_query(self, query: str, params=None, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
+        generator = self._execute(query, params, **kwargs)
+        try:
+            response: TableResponse = next(generator)
+            response.data_generator = generator
+        except StopIteration as e:
+            response = e.value
+            if isinstance(response, DataHandlerResponse) is False:
+                raise
+        return response
+
+    def _execute(self, query: str, params=None, **kwargs) -> Generator[pd.DataFrame, None, OkResponse | ErrorResponse]:
         """
         Executes a SQL query on the PostgreSQL database and returns the result.
 
@@ -293,17 +315,21 @@ class PostgresHandler(MetaDatabaseHandler):
         need_to_close = not self.is_connected
 
         connection = self.connect()
-        with connection.cursor() as cur:
+        with connection.cursor(name=f"mindsdb_{id(self)}") as cursor:
             try:
                 if params is not None:
-                    cur.executemany(query, params)
+                    cursor.executemany(query, params)
                 else:
-                    cur.execute(query)
-                if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
-                else:
-                    result = cur.fetchall()
-                    response = _make_table_response(result, cur)
+                    cursor.execute(query)
+
+                if cursor.description is None:
+                    connection.commit()
+                    return OkResponse(affected_rows=cursor.rowcount)
+
+                columns: list[Column] = _get_colums(cursor)
+                yield TableResponse(affected_rows=cursor.rowcount, columns=columns)
+                while result := cursor.fetchmany(1000):  # TODO make configurable
+                    yield _make_df(result, columns)
                 connection.commit()
             except (psycopg.ProgrammingError, psycopg.DataError) as e:
                 # These is 'expected' exceptions, they should not be treated as mindsdb's errors
@@ -314,17 +340,15 @@ class PostgresHandler(MetaDatabaseHandler):
                 if logger.isEnabledFor(logging.DEBUG):
                     log_message += f". Executed query:\n{query}"
                 logger.info(log_message)
-                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_expected_error=True)
                 connection.rollback()
+                return Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_expected_error=True)
             except Exception as e:
                 logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
-                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                 connection.rollback()
-
-        if need_to_close:
-            self.disconnect()
-
-        return response
+                return Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
+            finally:
+                if need_to_close:
+                    self.disconnect()
 
     def query_stream(self, query: ASTNode, fetch_size: int = 1000):
         """

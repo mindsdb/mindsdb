@@ -8,7 +8,7 @@ from psycopg.pq import ExecStatus
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.timescaledb_handler.timescaledb_handler import TimeScaleDBHandler
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response
+    DataHandlerResponse as Response
 )
 
 

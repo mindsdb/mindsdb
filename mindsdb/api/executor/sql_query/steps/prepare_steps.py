@@ -9,7 +9,8 @@ from mindsdb.api.executor.planner.steps import (
     GetTableColumns,
 )
 
-from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
+from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.utilities.types.column import Column
 from mindsdb.utilities.config import config
 
 from .base import BaseStepCall

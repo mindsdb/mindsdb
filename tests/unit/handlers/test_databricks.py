@@ -11,7 +11,7 @@ except ImportError:
     pytestmark = pytest.mark.skip("Databricks handler not installed")
 
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
+    DataHandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
 )
 

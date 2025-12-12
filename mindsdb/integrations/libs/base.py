@@ -1,15 +1,22 @@
 import ast
 import concurrent.futures
+import functools
 import inspect
 import textwrap
 from _ast import AnnAssign, AugAssign
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, get_type_hints, get_args, Union, get_origin
 
 import pandas as pd
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities import log
 
-from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    HandlerResponse,
+    HandlerStatusResponse,
+    RESPONSE_TYPE,
+    DataHandlerResponse,
+    normalize_response,
+)
 
 logger = log.getLogger(__name__)
 
@@ -20,6 +27,46 @@ class BaseHandler:
     Base class for handlers that associate a source of information with the
     broader MindsDB ecosystem via SQL commands.
     """
+
+    def __init_subclass__(cls, **kwargs):
+        """Automatically wrap handler methods to normalize their responses.
+
+        When a subclass is defined, this method checks if any of the methods
+        in _methods_to_normalize are overridden and wraps them to convert
+        legacy HandlerResponse to new response types (TableResponse, OkResponse,
+        ErrorResponse).
+        """
+        super().__init_subclass__(**kwargs)
+
+        # Methods whose return values should be normalized to new response types
+        _methods_to_normalize = ('native_query', 'query')
+        for method_name in _methods_to_normalize:
+            # Only wrap if method is defined directly in this class (not inherited)
+            if method_name not in cls.__dict__:
+                continue
+
+            original_method = cls.__dict__[method_name]
+
+            return_type = get_type_hints(original_method).get('return')
+            if (
+                return_type is DataHandlerResponse
+                or (get_origin(return_type) is Union and issubclass(get_args(return_type)[0], DataHandlerResponse))
+            ):
+                # this is already new style response
+                continue
+
+            # Skip if already wrapped
+            if getattr(original_method, '_response_normalized', False):
+                continue
+
+            # Create wrapper that normalizes response
+            @functools.wraps(original_method)
+            def wrapper(self, *args, _orig=original_method, **kwargs):
+                result = _orig(self, *args, **kwargs)
+                return normalize_response(result)
+
+            wrapper._response_normalized = True
+            setattr(cls, method_name, wrapper)
 
     def __init__(self, name: str):
         """constructor

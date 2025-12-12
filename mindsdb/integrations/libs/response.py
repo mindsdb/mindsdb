@@ -1,5 +1,6 @@
 import sys
-from typing import Callable
+from abc import ABC
+from typing import Callable, Generator, ClassVar
 from dataclasses import dataclass, fields
 
 import numpy
@@ -9,6 +10,7 @@ from mindsdb.utilities import log
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb_sql_parser.ast import ASTNode
+from mindsdb.utilities.types.column import Column
 
 
 logger = log.getLogger(__name__)
@@ -40,7 +42,284 @@ INF_SCHEMA_COLUMNS_NAMES = _INFORMATION_SCHEMA_COLUMNS_NAMES()
 INF_SCHEMA_COLUMNS_NAMES_SET = set(f.name for f in fields(INF_SCHEMA_COLUMNS_NAMES))
 
 
+class HandlerStatusResponse:
+    def __init__(
+        self,
+        success: bool = True,
+        error_message: str = None,
+        redirect_url: str = None,
+        copy_storage: str = None,
+    ) -> None:
+        self.success = success
+        self.error_message = error_message
+        self.redirect_url = redirect_url
+        self.copy_storage = copy_storage
+
+    def to_json(self):
+        data = {"success": self.success, "error": self.error_message}
+        if self.redirect_url is not None:
+            data["redirect_url"] = self.redirect_url
+        return data
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}: success={self.success},\
+              error={self.error_message},\
+              redirect_url={self.redirect_url}"
+
+
+class DataHandlerResponse(ABC):
+    """Base class for all data handler responses."""
+    type: ClassVar[str]
+
+
+class ErrorResponse(DataHandlerResponse):
+    """Response for error cases.
+
+    Attributes:
+        type: RESPONSE_TYPE.ERROR
+        error_code: int
+        error_message: str | None
+        is_expected_error: bool
+        exception: Exception | None
+    """
+    type: ClassVar[str] = RESPONSE_TYPE.ERROR
+    error_code: int
+    error_message: str | None
+    is_expected_error: bool
+    exception: Exception | None
+
+    def __init__(self, error_code: int = 0, error_message: str | None = None, is_expected_error: bool = False):
+        self.error_code = error_code
+        self.error_message = error_message
+        self.is_expected_error = is_expected_error
+        self.exception = None
+        current_exception = sys.exc_info()
+        if current_exception[0] is not None:
+            self.exception = current_exception[1]
+
+
+class OkResponse(DataHandlerResponse):
+    """Response for successful cases without data (e.g. CREATE TABLE, DROP TABLE, etc.).
+
+    Attributes:
+        type: RESPONSE_TYPE.OK
+        affected_rows: int - how many rows were affected by the query
+    """
+    type: ClassVar[str] = RESPONSE_TYPE.OK
+    affected_rows: int
+
+    def __init__(self, affected_rows: int):
+        self.affected_rows = affected_rows
+
+
+class TableResponse(DataHandlerResponse):
+    """Response for successful cases with data (e.g. SELECT, SHOW, etc.).
+    
+    Attributes:
+        type: RESPONSE_TYPE.TABLE
+        affected_rows: int | None - how many rows were affected by the query
+        data_generator: Generator[pandas.DataFrame, None, None] | None - generator of data for lazy loading
+        _columns: list[Column] | None - list of columns
+        _data: pandas.DataFrame | None - loaded data
+        _fetched: bool | None - if data was already fetched (data_generator is consumed)
+    """
+    type: ClassVar[str] = RESPONSE_TYPE.TABLE
+    affected_rows: int | None
+    data_generator: Generator[pandas.DataFrame, None, None] | None
+    _columns: list[Column] | None
+    _data: pandas.DataFrame | None
+    _fetched: bool | None
+
+    def __init__(
+        self,
+        data: pandas.DataFrame | None = None,
+        data_generator: Generator[pandas.DataFrame, None, None] | None = None,
+        affected_rows: int | None = None,
+        columns: list[Column] = None
+    ):
+        """
+        Either data or data_generator must be provided.
+        Args:
+            data_generator
+            data (list[Any]): initial data
+            affected_rows (int): total data rowcount - может быть None в зависимости от хендлера
+            NOTE: имя affected_rows для совместимости с OKResponse
+            columns (list[Column])
+
+        """
+        self.data_generator = data_generator
+        self._columns = columns
+        self.affected_rows = affected_rows
+        self._data = data
+        self._fetched = True if data_generator else None
+
+    def fetchall(self) -> pandas.DataFrame:
+        """Fetch all data from the generator and store it in the _data attribute."""
+        if self.data_generator is None or self._fetched:
+            return self._data
+
+        for el in self.data_generator:
+            if self._data is None:
+                self._data = el
+            else:
+                self._data = pandas.concat([self._data, el])
+
+        self._fetched = True
+        self.data_generator = None
+
+        return self._data
+
+    def fetchmany(self) -> pandas.DataFrame | None:
+        """Fetch one piece of data"""
+        try:
+            piece = next(self.data_generator)
+            self._data = pandas.concat([self._data, piece])
+        except StopIteration:
+            self._fetched = True
+            self.data_generator = None
+            return None
+        return piece
+
+    def iterate_no_save(self) -> Generator[pandas.DataFrame, None, None]:
+        """Iterate over the data and yield each piece of data. Do not save the data to the _data attribute.
+        
+        NOTE: do it only once, before return result to the user
+        """
+        if self._data:
+            yield self._data
+        for el in self.data_generator:
+            yield el
+
+    @property
+    def data_frame(self) -> pandas.DataFrame:
+        self.fetchall()
+        return self._data
+
+    @property
+    def columns(self) -> list[Column]:
+        self._resolve_columns()
+        return self._columns
+
+    def _resolve_columns(self):
+        if self._columns is not None:
+            return
+        self.fetchall()
+        self._columns = [Column(name=c) for c in self._data.columns]
+
+    def set_columns_attrs(self, table_name: str | None, table_alias: str | None, database: str | None):
+        self._resolve_columns()
+        for column in self._columns:
+            if table_name:
+                column.table_name = table_name
+            if table_alias:
+                column.table_alias = table_alias
+            if database:
+                column.database = database
+
+    def to_columns_table_response(self, map_type_fn: Callable) -> None:
+        """Transform the response to a `columns table` response.
+        NOTE: original dataframe will be mutated
+        """
+        if self.type == RESPONSE_TYPE.COLUMNS_TABLE:
+            return
+        if self.type != RESPONSE_TYPE.TABLE:
+            if self.type == RESPONSE_TYPE.ERROR:
+                raise ValueError(
+                    f"Cannot convert {self.type} to {RESPONSE_TYPE.COLUMNS_TABLE}, "
+                    f"the error is: {self.error_message}"
+                )
+            raise ValueError(f"Cannot convert {self.resp} to {RESPONSE_TYPE.COLUMNS_TABLE}")
+
+        self.fetchall()
+
+        self._data.columns = [name.upper() for name in self._data.columns]
+        self._data[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self._data[
+            INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE
+        ].apply(map_type_fn)
+
+        # region validate df
+        current_columns_set = set(self._data.columns)
+        if INF_SCHEMA_COLUMNS_NAMES_SET != current_columns_set:
+            raise ValueError(f"Columns set for INFORMATION_SCHEMA.COLUMNS is wrong: {list(current_columns_set)}")
+        # endregion
+
+        self._data = self._data.astype(
+            {
+                INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME: "string",
+                INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE: "string",
+                INF_SCHEMA_COLUMNS_NAMES.ORDINAL_POSITION: "Int32",
+                INF_SCHEMA_COLUMNS_NAMES.COLUMN_DEFAULT: "string",
+                INF_SCHEMA_COLUMNS_NAMES.IS_NULLABLE: "string",
+                INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH: "Int32",
+                INF_SCHEMA_COLUMNS_NAMES.CHARACTER_OCTET_LENGTH: "Int32",
+                INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION: "Int32",
+                INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE: "Int32",
+                INF_SCHEMA_COLUMNS_NAMES.DATETIME_PRECISION: "Int32",
+                INF_SCHEMA_COLUMNS_NAMES.CHARACTER_SET_NAME: "string",
+                INF_SCHEMA_COLUMNS_NAMES.COLLATION_NAME: "string",
+            }
+        )
+        self._data.replace([numpy.NaN, pandas.NA], None, inplace=True)
+
+        self.type = RESPONSE_TYPE.COLUMNS_TABLE
+
+
+def normalize_response(response) -> TableResponse | OkResponse | ErrorResponse:
+    """Convert legacy HandlerResponse to new response types.
+
+    If response is already a new type (TableResponse, OkResponse, ErrorResponse),
+    return it as-is. If response is a legacy HandlerResponse, convert it based
+    on its resp_type.
+
+    Args:
+        response: Either a new response type or legacy HandlerResponse
+
+    Returns:
+        TableResponse | OkResponse | ErrorResponse: Normalized response
+    """
+    # Already new format - return as-is
+    if isinstance(response, (TableResponse, OkResponse, ErrorResponse)):
+        return response
+
+    # Legacy HandlerResponse - convert based on type
+    if isinstance(response, HandlerResponse):
+        if response.resp_type == RESPONSE_TYPE.ERROR:
+            err = ErrorResponse(
+                error_code=response.error_code,
+                error_message=response.error_message,
+                is_expected_error=response.is_expected_error,
+            )
+            err.exception = response.exception
+            return err
+
+        if response.resp_type == RESPONSE_TYPE.OK:
+            return OkResponse(affected_rows=response.affected_rows)
+
+        # TABLE or COLUMNS_TABLE
+        if response.data_frame is not None:
+            columns = list(response.data_frame.columns)
+        else:
+            columns = []
+
+        mysql_types = response.mysql_types
+        if mysql_types is None:
+            mysql_types = [None] * len(columns)
+
+        return TableResponse(
+            data=response.data_frame,
+            columns=[Column(name=column_name, type=mysql_type) for column_name, mysql_type in zip(columns, mysql_types)],
+            data_generator=iter([]),  # empty generator for legacy responses
+        )
+
+    # Unknown type - return as-is (shouldn't happen normally)
+    return response
+
+
+# ! deprecated
 class HandlerResponse:
+    """Legacy response class for compatibility with old code.
+    NOTE: do not use this class directly, use DataHandlerResponse instead
+    """
     def __init__(
         self,
         resp_type: RESPONSE_TYPE,
@@ -142,28 +421,3 @@ class HandlerResponse:
             self.error_message,
             self.affected_rows,
         )
-
-
-class HandlerStatusResponse:
-    def __init__(
-        self,
-        success: bool = True,
-        error_message: str = None,
-        redirect_url: str = None,
-        copy_storage: str = None,
-    ) -> None:
-        self.success = success
-        self.error_message = error_message
-        self.redirect_url = redirect_url
-        self.copy_storage = copy_storage
-
-    def to_json(self):
-        data = {"success": self.success, "error": self.error_message}
-        if self.redirect_url is not None:
-            data["redirect_url"] = self.redirect_url
-        return data
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}: success={self.success},\
-              error={self.error_message},\
-              redirect_url={self.redirect_url}"

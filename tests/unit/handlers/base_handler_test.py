@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from unittest.mock import MagicMock, Mock
 
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
+    DataHandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
 )
 

@@ -305,11 +305,10 @@ class BaseExecutorTest(BaseUnitTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        from mindsdb.integrations.libs.response import RESPONSE_TYPE
-        from mindsdb.integrations.libs.response import HandlerResponse as Response
+        from mindsdb.integrations.libs.response import TableResponse
 
         def handler_response(df, affected_rows: None | int = None):
-            response = Response(RESPONSE_TYPE.TABLE, df, affected_rows=affected_rows)
+            response = TableResponse(data=df, affected_rows=affected_rows)
             return response
 
         def get_tables_f():

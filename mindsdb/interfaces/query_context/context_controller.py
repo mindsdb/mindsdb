@@ -416,7 +416,7 @@ class QueryContextController:
 
                 idx = None
                 for i, col in enumerate(columns_info):
-                    if col["name"].upper() == info["column_name"].upper():
+                    if col.name.upper() == info["column_name"].upper():
                         idx = i
                         break
 

@@ -11,7 +11,7 @@ class ChartConfig(BaseModel):
     
     chartjs_config: Dict[str, Any] = Field(
         ...,
-        description="Chart.js configuration dictionary. Must include: 'type' (one of 'line', 'bar', 'pie', 'doughnut'), 'options' (object with chart options), 'labels' (empty array []), 'datasets' (array of objects, each with 'label' and empty 'data' array []). Example: {'type': 'line', 'options': {'responsive': True, 'plugins': {'title': {'display': True, 'text': 'Chart Title'}}}, 'labels': [], 'datasets': [{'label': 'Dataset 1', 'data': []}]}"
+        description="Chart.js configuration dictionary. REQUIRED fields: 'type' (MANDATORY - must be one of 'line', 'bar', 'pie', 'doughnut' - this field is REQUIRED and must always be included), 'options' (object with chart options), 'labels' (empty array []), 'datasets' (array of objects, each with 'label' and empty 'data' array []). The 'type' field is REQUIRED and must never be omitted. Example: {'type': 'line', 'options': {'responsive': True, 'plugins': {'title': {'display': True, 'text': 'Chart Title'}}}, 'labels': [], 'datasets': [{'label': 'Dataset 1', 'data': []}]}"
     )
     
     data_query_string: str = Field(

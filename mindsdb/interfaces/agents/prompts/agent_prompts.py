@@ -212,18 +212,33 @@ Keep steps concise and focused on solving the question efficiently.
 chart_generation_prompt = """
 You are an expert at generating Chart.js configurations from SQL queries. Your task is to:
 
+IMPORTANT CONTEXT - HOW THE CHART WILL BE USED:
+The chart configuration you generate will be used directly in the frontend with Chart.js. The frontend code will be:
+```javascript
+const ctx = document.getElementById('myChart');
+const chart = new Chart(ctx, chartConfig);
+```
+Where `chartConfig` is the exact dictionary you generate in the `chartjs_config` field. 
+
+This means:
+- Your configuration must be a complete, valid Chart.js configuration object
+- It must be compatible with Chart.js v3+ API
+- It will be passed directly to `new Chart(ctx, chartConfig)` without any modifications
+- The configuration must include all required fields (especially 'type') and be ready for immediate use
+
 1. Analyze the provided SQL query to understand the data structure and relationships
 2. Determine the most appropriate chart type from: 'line', 'bar', 'pie', or 'doughnut'
-3. Generate a Chart.js configuration dictionary with the following structure:
-   - `type`: One of 'line', 'bar', 'pie', or 'doughnut'
+3. Generate a Chart.js configuration dictionary with the following REQUIRED structure:
+   - `type`: REQUIRED - MUST always be included. One of 'line', 'bar', 'pie', or 'doughnut'. This field is MANDATORY and must never be omitted.
    - `options`: Chart.js options object (e.g., responsive, plugins.title, scales for line/bar charts)
    - `labels`: Empty array [] (will be populated from the first column of query results)
    - `datasets`: Array of dataset objects, each with:
      - `label`: The column name (from the data query, excluding the first column)
      - `data`: Empty array [] (will be populated programmatically from query results)
      - Additional dataset-specific properties (e.g., `backgroundColor`, `borderColor` for line/bar charts)
-     - Make sure you pick the most appropriate chart type for the data unless the user explicitly asks for a different chart type.
-     - Make sure you specify if needed the axis scales and types
+   
+   IMPORTANT: The 'type' field is REQUIRED and MUST always be present in the chartjs_config. You MUST include it in every response. Choose the most appropriate chart type for the data unless the user explicitly asks for a different chart type.
+   - Make sure you specify if needed the axis scales and types
 
 4. Generate a data transformation SQL query string with the following format:
    SELECT labels, <dataset_col1>, <dataset_col2>, ... 
@@ -251,8 +266,10 @@ The data query might be:
 SELECT category AS labels, COUNT(*) AS value FROM (SELECT category, COUNT(*) FROM db.products GROUP BY category)
 
 Remember:
+- Chart.js config MUST ALWAYS include the 'type' field - this is REQUIRED and cannot be omitted
 - Chart.js config should have empty arrays for labels and datasets[].data
 - The data_query_string should be a complete, executable SQL query
 - Choose chart types appropriately: line/bar for time series or comparisons, pie/doughnut for proportions
+- The 'type' field must be one of: 'line', 'bar', 'pie', or 'doughnut' - always include it in your response
 """
        

@@ -1,7 +1,5 @@
 name: Unit Tests
 
-permissions: inherit
-
 on:
   workflow_call:
 

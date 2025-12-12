@@ -214,6 +214,7 @@ class Config:
             "data_catalog": {
                 "enabled": False,
             },
+            "pid_file_content": None,
         }
         # endregion
 
@@ -391,6 +392,12 @@ class Config:
             self._env_config["gui"]["autoupdate"] = True
         elif mindsdb_gui_autoupdate != "":
             raise ValueError(f"Wrong value of env var MINDSDB_GUI_AUTOUPDATE={mindsdb_gui_autoupdate}")
+
+        if os.environ.get("MINDSDB_PID_FILE_CONTENT", "") != "":
+            try:
+                self._env_config["pid_file_content"] = json.loads(os.environ["MINDSDB_PID_FILE_CONTENT"])
+            except json.JSONDecodeError as e:
+                raise ValueError(f"MINDSDB_PID_FILE_CONTENT contains invalid JSON: {e}")
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.

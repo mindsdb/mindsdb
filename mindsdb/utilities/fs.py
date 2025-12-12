@@ -131,6 +131,8 @@ def clean_unlinked_process_marks() -> list[int]:
 def create_pid_file(config):
     """
     Create mindsdb process pid file. Check if previous process exists and is running
+    If pid_file_content is provided, it will be used to create the pid file with the content as key-value pairs.
+    If pid_file_content is not provided, the pid file will be created with the pid number only.
     """
 
     if os.environ.get("USE_PIDFILE") != "1":
@@ -145,7 +147,10 @@ def create_pid_file(config):
         pid = None
         try:
             pid_file_data = json.loads(pid_file_data_str)
-            pid = pid_file_data.get("pid")
+            if isinstance(pid_file_data, dict):
+                pid = pid_file_data.get("pid")
+            else:
+                pid = pid_file_data
         except json.JSONDecodeError:
             # is it just pid number (old approach)?
             try:
@@ -164,16 +169,21 @@ def create_pid_file(config):
 
         pid_file.unlink()
 
-    pid_file_data_str = json.dumps(
-        {
-            "pid": os.getpid(),
-            "http_host": config.get("api", {}).get("http", {}).get("host"),
-            "http_port": config.get("api", {}).get("http", {}).get("port"),
-            "http_auth_enabled": config.get("auth", {}).get("http_auth_enabled"),
-            "username": config.get("auth", {}).get("username"),
-            "password": config.get("auth", {}).get("password"),
+    pid_file_content = config["pid_file_content"]
+    if pid_file_content is None or len(pid_file_content) == 0:
+        pid_file_data_str = str(os.getpid())
+    else:
+        pid_file_data = {
+            "pid": os.getpid()
         }
-    )
+        for key, value in pid_file_content.items():
+            value_path = value.split('.')
+            value_obj = config
+            for path_part in value_path:
+                value_obj = value_obj.get(path_part) if value_obj else None
+            pid_file_data[key] = value_obj
+
+        pid_file_data_str = json.dumps(pid_file_data)
     pid_file.write_text(pid_file_data_str)
 
 
@@ -191,15 +201,20 @@ def delete_pid_file():
         return
 
     pid_file_data_str = pid_file.read_text().strip()
+    pid = None
     try:
         pid_file_data = json.loads(pid_file_data_str)
-        pid = pid_file_data.get("pid")
+        if isinstance(pid_file_data, dict):
+            pid = pid_file_data.get("pid")
+        else:
+            # It's a simple number (old format or pid_file_content=None format)
+            pid = pid_file_data
     except json.JSONDecodeError:
         logger.warning(f"Found existing PID file {pid_file} but it is not a valid JSON")
-    else:
-        if str(pid) != str(os.getpid()):
-            logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
-            return
+
+    if pid is not None and str(pid) != str(os.getpid()):
+        logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
+        return
 
     pid_file.unlink()
 

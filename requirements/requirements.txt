@@ -21,7 +21,7 @@ duckdb ~= 1.3.2; sys_platform != "win32"
 requests == 2.32.4
 dateparser==1.2.0
 dill == 0.3.6
-numpy >= 2.1, < 2.3  # Keep within Numba-compatible range; 2.3+ breaks numba, <2.1 breaks lightwood/sktime
+numpy ~= 2.0
 pytz
 botocore
 boto3 >= 1.34.131

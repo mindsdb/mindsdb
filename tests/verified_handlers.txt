@@ -1,3 +1,0 @@
-salesforce
-mysql
-snowflake

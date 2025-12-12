@@ -1,8 +1,6 @@
 name: Unit Tests
 
-permissions:
-    contents: read
-    pull-requests: write
+permissions: inherit
 
 on:
   workflow_call:

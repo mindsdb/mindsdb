@@ -227,126 +227,20 @@ class Charter(Resource):
         logger.debug(f"Incoming charter request: query={query[:100]}..., prompt={prompt}")
 
         try:
-            # Create chart agent
-            chart_agent = ChartAgent()
-            
-            # Generate chart configuration
-            logger.debug("Generating chart configuration...")
-            try:
-                chart_config = chart_agent.generate_chart_config(query, prompt)
-            except Exception as e:
-                # Extract meaningful error message from chart generation
-                error_msg = self._extract_error_message(e, "chart generation")
-                logger.warning(f"Error generating chart configuration: {error_msg}")
-                return http_error(
-                    HTTPStatus.BAD_REQUEST,
-                    "Chart generation failed",
-                    error_msg
-                )
-            
-            # Execute the data query
-            logger.debug(f"Executing data query: {chart_config.data_query_string[:100]}...")
+            # Create executor and chart agent
             mysql_proxy = FakeMysqlProxy()
-            mysql_proxy.set_context(context)
+            chart_agent = ChartAgent(executor=mysql_proxy)
             
+            # Generate chart configuration, execute query, and populate datasets
+            logger.debug("Generating chart with data...")
             try:
-                result: SQLAnswer = mysql_proxy.process_query(chart_config.data_query_string, params=params)
-                
-                if result.type == SQL_RESPONSE_TYPE.ERROR:
-                    error_message = result.error_message or "Unknown error executing data query"
-                    logger.warning(f"Error executing data query: {error_message}")
-                    return http_error(
-                        HTTPStatus.BAD_REQUEST,
-                        "Data query execution failed",
-                        error_message
-                    )
-                
-                if result.type != SQL_RESPONSE_TYPE.TABLE or result.result_set is None:
-                    return http_error(
-                        HTTPStatus.BAD_REQUEST,
-                        "Invalid query result",
-                        "Data query did not return tabular data. The query may have executed successfully but returned no data rows."
-                    )
-                
-                # Convert result to DataFrame
-                import pandas as pd
-                df = result.result_set.to_df()
-                
-                if df.empty:
-                    return http_error(
-                        HTTPStatus.BAD_REQUEST,
-                        "Empty result",
-                        "Data query returned no rows. Please check your query filters or data availability."
-                    )
-                
-                # Validate DataFrame structure
-                if len(df.columns) < 2:
-                    return http_error(
-                        HTTPStatus.BAD_REQUEST,
-                        "Invalid data structure",
-                        f"Data query must return at least 2 columns (labels and at least one dataset). Got {len(df.columns)} column(s)."
-                    )
-                
-                # Populate Chart.js config with data
-                chartjs_config = chart_config.chartjs_config.copy()
-                
-                # First column is labels
-                labels = df.iloc[:, 0].tolist()
-                chartjs_config["labels"] = labels
-                
-                # Remaining columns are datasets
-                existing_datasets = chartjs_config.get("datasets", [])
-                num_data_columns = len(df.columns) - 1  # Excluding labels column
-                
-                # If datasets is empty or doesn't match column count, create datasets from columns
-                if not existing_datasets or len(existing_datasets) != num_data_columns:
-                    datasets = []
-                    for col_idx in range(1, len(df.columns)):
-                        col_name = df.columns[col_idx]
-                        dataset = {
-                            "label": str(col_name),
-                            "data": []
-                        }
-                        # Try to preserve properties from existing dataset if available
-                        dataset_idx = col_idx - 1
-                        if dataset_idx < len(existing_datasets):
-                            existing_dataset = existing_datasets[dataset_idx]
-                            # Copy properties like backgroundColor, borderColor, etc.
-                            for key in ["backgroundColor", "borderColor", "borderWidth", "fill"]:
-                                if key in existing_dataset:
-                                    dataset[key] = existing_dataset[key]
-                        datasets.append(dataset)
-                else:
-                    # Use existing datasets structure, just populate data
-                    datasets = existing_datasets
-                
-                # Populate data arrays
-                for dataset_idx, dataset in enumerate(datasets):
-                    col_idx = dataset_idx + 1
-                    if col_idx < len(df.columns):
-                        dataset["data"] = df.iloc[:, col_idx].tolist()
-                
-                chartjs_config["datasets"] = datasets
-                
-                # Build response
-                response = {
-                    "data_query_string": chart_config.data_query_string,
-                    "chartjs_config": chartjs_config
-                }
+                response = chart_agent.generate_chart_with_data(query, prompt, context, params)
                 
                 end_time = time.time()
                 logger.debug(f"Charter processed in {(end_time - start_time):.2f}s")
                 
                 return response, 200
                 
-            except ExecutorException as e:
-                error_msg = self._extract_error_message(e, "query execution")
-                logger.warning(f"Error executing data query: {error_msg}")
-                return http_error(
-                    HTTPStatus.BAD_REQUEST,
-                    "Data query execution failed",
-                    error_msg
-                )
             except QueryError as e:
                 # QueryError has db_error_msg attribute that's more descriptive
                 error_msg = self._extract_error_message(e, "query execution")
@@ -356,12 +250,21 @@ class Charter(Resource):
                     "Query error",
                     error_msg
                 )
-            except Exception as e:
-                error_msg = self._extract_error_message(e, "data query execution")
-                logger.exception("Unexpected error executing data query")
+            except ValueError as e:
+                error_msg = self._extract_error_message(e, "data validation")
+                logger.warning(f"Data validation error: {error_msg}")
                 return http_error(
-                    HTTPStatus.INTERNAL_SERVER_ERROR,
-                    "Internal server error",
+                    HTTPStatus.BAD_REQUEST,
+                    "Data validation error",
+                    error_msg
+                )
+            except Exception as e:
+                # Extract meaningful error message from chart generation or execution
+                error_msg = self._extract_error_message(e, "chart generation or execution")
+                logger.warning(f"Error in chart generation or execution: {error_msg}")
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    "Chart generation failed",
                     error_msg
                 )
                 

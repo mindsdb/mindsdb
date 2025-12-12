@@ -48,10 +48,7 @@ class CursorContextManager:
         self.fetchone = MagicMock(return_value=results[0] if results else None)
 
 
-# The correct patch path - patch where 'connect' is looked up, not where it's defined
-CONNECT_PATCH_PATH = (
-    "mindsdb.integrations.handlers.databricks_handler.databricks_handler.connect"
-)
+CONNECT_PATCH_PATH = "mindsdb.integrations.handlers.databricks_handler.databricks_handler.connect"
 
 
 @pytest.mark.skipif(not DATABRICKS_AVAILABLE, reason="Databricks not installed")
@@ -91,9 +88,7 @@ class TestDatabricksHandler(unittest.TestCase):
         # Patch where connect is used, not where it's defined
         self.patcher = patch(CONNECT_PATCH_PATH)
         self.mock_connect = self.patcher.start()
-        self.handler = DatabricksHandler(
-            "databricks", connection_data=self.dummy_connection_data
-        )
+        self.handler = DatabricksHandler("databricks", connection_data=self.dummy_connection_data)
 
     def tearDown(self):
         self.patcher.stop()
@@ -162,16 +157,13 @@ class TestTableOperations(unittest.TestCase):
     )
 
     def setUp(self):
-        # Patch where connect is used, not where it's defined
         self.patcher = patch(CONNECT_PATCH_PATH)
         self.mock_connect = self.patcher.start()
         self.mock_conn = MagicMock()
         self.mock_cursor = CursorContextManager()
         self.mock_conn.cursor.return_value = self.mock_cursor
         self.mock_connect.return_value = self.mock_conn
-        self.handler = DatabricksHandler(
-            "databricks", connection_data=self.dummy_connection_data
-        )
+        self.handler = DatabricksHandler("databricks", connection_data=self.dummy_connection_data)
 
     def tearDown(self):
         self.patcher.stop()
@@ -245,9 +237,7 @@ class TestTableOperations(unittest.TestCase):
 
     def test_native_query_server_error(self):
         """Test query execution with server error."""
-        self.mock_cursor.execute = MagicMock(
-            side_effect=ServerOperationError("Server error")
-        )
+        self.mock_cursor.execute = MagicMock(side_effect=ServerOperationError("Server error"))
 
         result = self.handler.native_query("SELECT * FROM test_table")
 
@@ -257,9 +247,7 @@ class TestTableOperations(unittest.TestCase):
     def test_get_tables_all_schemas(self):
         """Test get_tables with all=True."""
         self.handler.native_query = MagicMock(
-            return_value=Response(
-                RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([{"table_name": "t1"}])
-            )
+            return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([{"table_name": "t1"}]))
         )
 
         self.handler.get_tables(all=True)
@@ -288,14 +276,85 @@ class TestTableOperations(unittest.TestCase):
             ]
         )
 
-        self.handler.native_query = MagicMock(
-            return_value=Response(RESPONSE_TYPE.TABLE, data_frame=mock_df)
-        )
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=mock_df))
 
         self.handler.get_columns("test_table", schema_name="my_schema")
 
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("'my_schema'", query)
+
+
+@pytest.mark.skipif(not DATABRICKS_AVAILABLE, reason="Databricks not installed")
+class TestAdvancedQueries(unittest.TestCase):
+    dummy_connection_data = OrderedDict(
+        server_hostname="test.azuredatabricks.net",
+        http_path="sql/test",
+        access_token="test_token",
+        schema="default",
+    )
+
+    def setUp(self):
+        self.patcher = patch(CONNECT_PATCH_PATH)
+        self.mock_connect = self.patcher.start()
+        self.mock_conn = MagicMock()
+        self.mock_cursor = CursorContextManager()
+        self.mock_conn.cursor.return_value = self.mock_cursor
+        self.mock_connect.return_value = self.mock_conn
+        self.handler = DatabricksHandler("databricks", connection_data=self.dummy_connection_data)
+
+    def tearDown(self):
+        self.patcher.stop()
+
+    def test_aggregation_count(self):
+        """Test COUNT(*) aggregation."""
+        self.mock_cursor.set_results([(100,)], ["count"])
+
+        result = self.handler.native_query("SELECT COUNT(*) as count FROM orders")
+
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(result.data_frame.iloc[0]["count"], 100)
+
+    def test_aggregation_sum_group_by(self):
+        """Test SUM with GROUP BY."""
+        self.mock_cursor.set_results(
+            [("Electronics", 50000.0), ("Clothing", 25000.0)],
+            ["category", "total_sales"],
+        )
+
+        result = self.handler.native_query("SELECT category, SUM(amount) as total_sales FROM sales GROUP BY category")
+
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(len(result.data_frame), 2)
+
+    def test_cte_query(self):
+        """Test SELECT with CTE."""
+        self.mock_cursor.set_results([(1, "Product A", 100)], ["id", "name", "quantity"])
+
+        query = """
+        WITH cte AS (
+            SELECT * FROM products WHERE quantity > 50
+        )
+        SELECT * FROM cte WHERE id = 1
+        """
+
+        result = self.handler.native_query(query)
+
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+        self.mock_cursor.execute.assert_called()
+
+    def test_join_query(self):
+        """Test JOIN query."""
+        self.mock_cursor.set_results([(1, "Order 1", "Customer A")], ["order_id", "order_name", "customer_name"])
+
+        query = """
+        SELECT o.id as order_id, o.name as order_name, c.name as customer_name
+        FROM orders o
+        JOIN customers c ON o.customer_id = c.id
+        """
+
+        result = self.handler.native_query(query)
+
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
 
 
 if __name__ == "__main__":

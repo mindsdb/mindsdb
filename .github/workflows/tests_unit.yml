@@ -138,6 +138,7 @@ jobs:
           done
           uv pip install . -r requirements/requirements-test.txt "${HANDLER_EXTRAS[@]}"
           uv pip install -r requirements/requirements-agents.txt
+          uv pip install -r requirements/requirements-kb.txt
           uv pip install --force-reinstall onnxruntime==1.20.1
           git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
           

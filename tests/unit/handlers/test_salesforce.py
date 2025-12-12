@@ -7,11 +7,13 @@ try:
     from salesforce_api.exceptions import AuthenticationError
     from mindsdb.integrations.handlers.salesforce_handler.salesforce_handler import SalesforceHandler
     from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
+    from mindsdb.integrations.handlers.salesforce_handler.constants import get_soql_instructions
 except ImportError:
     pytestmark = pytest.mark.skip("Salesforce handler not installed")
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Star
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -35,6 +37,16 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def create_patcher(self):
         return patch("salesforce_api.Salesforce")
+
+    def test_salesforce_init_success(self):
+        import mindsdb.integrations.handlers.salesforce_handler as m
+
+        assert m.import_error is None
+        assert m.Handler is not None
+        # Check metadata
+        assert m.name == "salesforce"
+        assert m.title == "Salesforce"
+        assert m.type is not None
 
     def test_connect(self):
         """
@@ -345,16 +357,42 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
         """
         Set up common test fixtures.
         """
-        self.table_name = "Contact"
+        self.table_name = "contact"
         self.mock_columns = ["Id", "Name", "Email"]
         self.mock_record = {column: f"{column}_value" for column in self.mock_columns}
 
         super().setUp()
 
-        self.mock_connect.return_value = MagicMock(
-            sobjects=MagicMock(query=lambda query: [{"attributes": {"type": self.table_name}, **self.mock_record}]),
-            Contact=MagicMock(describe=lambda: {"fields": [{"name": column} for column in self.mock_columns]}),
-        )
+        table_api = MagicMock()
+        table_api.describe.return_value = {
+            "fields": [
+                {
+                    "name": column,
+                    "type": "string",
+                    "nillable": True,
+                    "defaultValue": "",
+                    "inlineHelpText": "",
+                }
+                for column in self.mock_columns
+            ]
+        }
+        table_api.insert = MagicMock()
+        table_api.update = MagicMock()
+        table_api.delete = MagicMock()
+
+        self._row_count = 5
+
+        def fake_query(query_str):
+            if query_str.startswith("SELECT COUNT"):
+                return [{"expr0": self._row_count}]
+            return [{"attributes": {"type": self.table_name}, **self.mock_record}]
+
+        sobjects = MagicMock()
+        sobjects.query.side_effect = fake_query
+        setattr(sobjects, self.table_name, table_api)
+
+        self.mock_client = MagicMock(sobjects=sobjects)
+        self.mock_connect.return_value = self.mock_client
 
     def test_select_all(self):
         """
@@ -449,7 +487,85 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
         self.assertEqual(list(df.columns), self.mock_columns)
         self.assertEqual(list(df.iloc[0]), list(self.mock_record.values()))
 
-    # TODO: Add tests for `add`, `modify`, and `remove` methods.
+    def tests_constants_in_soql_instructions(self):
+        """
+        Test that the SOQL instructions contain the expected constants.
+        """
+        instructions = get_soql_instructions("DummyIntegration")
+        # Prompt may chage but these keywords must be present related to SOQL syntax
+        required_syntax = [
+            "SOQL",
+            "SELECT",
+            "FROM",
+            "WHERE",
+            "LIMIT",
+            "INCLUDES",
+            "EXCLUDES",
+            "OPERATORS",
+            "FROM DummyIntegration(",  # native query examples
+        ]
+        for term in required_syntax:
+            self.assertIn(term, instructions, f"Missing syntax in instructions: {term}")
+
+    def test_add_uses_salesforce_insert(self):
+        payload = {"Name": "Abc"}
+        table_api = getattr(self.mock_client.sobjects, self.table_name)
+        self.resource.add(payload)
+        table_api.insert.assert_called_once_with(payload)
+
+    def test_modify_updates_ids_from_conditions(self):
+        table_api = getattr(self.mock_client.sobjects, self.table_name)
+        self.resource.modify(
+            [FilterCondition(column="Id", op=FilterOperator.EQUAL, value="123")],
+            {"Name": "Updated"},
+        )
+        table_api.update.assert_called_once_with("123", {"Name": "Updated"})
+
+    def test_remove_deletes_ids_from_conditions(self):
+        table_api = getattr(self.mock_client.sobjects, self.table_name)
+        self.resource.remove([FilterCondition(column="Id", op=FilterOperator.IN, value=["1", "2"])])
+        table_api.delete.assert_any_call("1")
+        table_api.delete.assert_any_call("2")
+        self.assertEqual(table_api.delete.call_count, 2)
+
+    def test_validate_conditions_only_allows_id(self):
+        with self.assertRaises(ValueError):
+            self.resource._validate_conditions([FilterCondition(column="Name", op=FilterOperator.EQUAL, value="A")])
+
+    def test_validate_conditions_requires_supported_operator(self):
+        with self.assertRaises(ValueError):
+            self.resource._validate_conditions([FilterCondition(column="Id", op=FilterOperator.NOT_EQUAL, value="1")])
+
+    def test_meta_get_tables_returns_metadata_with_rowcount(self):
+        result = self.resource.meta_get_tables(
+            self.table_name,
+            [{"name": self.table_name, "fields": [{"name": "Id"}], "label": "Contacts"}],
+        )
+        self.assertEqual(result["table_name"], self.table_name)
+        self.assertEqual(result["table_type"], "BASE TABLE")
+        self.assertEqual(result["row_count"], self._row_count)
+
+    def test_meta_get_tables_handles_missing_resource(self):
+        result = self.resource.meta_get_tables(self.table_name, [])
+        self.assertIsNone(result["row_count"])
+        self.assertEqual(result["table_name"], self.table_name)
+
+    def test_meta_get_columns_builds_schema(self):
+        metadata = {
+            "fields": [
+                {
+                    "name": "Id",
+                    "type": "string",
+                    "nillable": False,
+                    "defaultValue": "foo",
+                    "inlineHelpText": "Identifier",
+                }
+            ]
+        }
+        self.resource._get_resource_metadata = MagicMock(return_value=metadata)
+        columns = self.resource.meta_get_columns(self.table_name)
+        self.assertEqual(columns[0]["column_name"], "Id")
+        self.assertEqual(columns[0]["data_type"], "string")
 
 
 if __name__ == "__main__":

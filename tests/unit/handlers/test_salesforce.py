@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 try:
-    from salesforce_api.exceptions import AuthenticationError
+    from salesforce_api.exceptions import AuthenticationError, RestRequestCouldNotBeUnderstoodError
     from mindsdb.integrations.handlers.salesforce_handler.salesforce_handler import SalesforceHandler
     from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
     from mindsdb.integrations.handlers.salesforce_handler.constants import get_soql_instructions
@@ -59,6 +59,80 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
         self.mock_connect.assert_called_once()
+
+    def test_connect_missing_required_params_raises(self):
+        handler = SalesforceHandler("salesforce", connection_data={"username": "demo"})
+        with self.assertRaises(ValueError):
+            handler.connect()
+
+    def test_connect_reuses_existing_connection(self):
+        existing = MagicMock()
+        self.handler.connection = existing
+        self.handler.is_connected = True
+
+        connection = self.handler.connect()
+
+        self.assertIs(connection, existing)
+        self.mock_connect.assert_not_called()
+
+    def test_connect_authentication_error_is_raised(self):
+        self.mock_connect.side_effect = AuthenticationError("invalid")
+        with self.assertRaises(AuthenticationError):
+            self.handler.connect()
+
+    def test_connect_unknown_error_is_raised(self):
+        self.mock_connect.side_effect = RuntimeError("boom")
+        with self.assertRaises(RuntimeError):
+            self.handler.connect()
+
+    def test_native_query_flattens_nested_resources(self):
+        connection = MagicMock()
+        connection.sobjects.query.return_value = [
+            {
+                "attributes": {"type": "Opportunity"},
+                "Id": "1",
+                "Name": "Opp",
+                "Account": {
+                    "attributes": {"type": "Account"},
+                    "Name": "Acme",
+                    "Industry": "Tech",
+                },
+            }
+        ]
+        self.handler.connection = connection
+        self.handler.is_connected = True
+        self.handler.resource_names = ["Account"]
+
+        response = self.handler.native_query("SELECT Id FROM Opportunity")
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        df = response.data_frame
+        self.assertIn("Account_Name", df.columns)
+        self.assertIn("Account_Industry", df.columns)
+        self.assertEqual(df.iloc[0]["Account_Name"], "Acme")
+
+    def test_native_query_handles_rest_error(self):
+        connection = MagicMock()
+        rest_error = RestRequestCouldNotBeUnderstoodError("bad query")
+        connection.sobjects.query.side_effect = rest_error
+        self.handler.connection = connection
+        self.handler.is_connected = True
+
+        response = self.handler.native_query("SELECT Id FROM Bad")
+
+        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+        self.assertEqual(response.error_message, str(rest_error))
+
+    def test_native_query_handles_generic_error(self):
+        connection = MagicMock()
+        connection.sobjects.query.side_effect = RuntimeError("boom")
+        self.handler.connection = connection
+        self.handler.is_connected = True
+
+        response = self.handler.native_query("SELECT Id FROM Bad")
+
+        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+        self.assertIn("boom", response.error_message)
 
     def test_check_connection_success(self):
         """
@@ -333,6 +407,44 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         mock_connection.sobjects.Contact.describe.assert_called_once()
         mock_connection.sobjects.NonExistentTable.describe.assert_called_once()
 
+    def test_validate_specified_tables_skips_non_queryable(self):
+        handler = self.create_handler()
+        handler.connection = MagicMock()
+        handler.is_connected = True
+        handler.connection.sobjects.Account = MagicMock()
+        handler.connection.sobjects.Account.describe.return_value = {"queryable": False}
+
+        validated = handler._validate_specified_tables(["Account"], [])
+
+        self.assertEqual(validated, [])
+        handler.connection.sobjects.Account.describe.assert_called_once()
+
+    def test_meta_get_handler_info_returns_prompt(self):
+        info = self.handler.meta_get_handler_info()
+        self.assertIn("SOQL", info)
+
+    def test_meta_get_tables_filters_requested_tables(self):
+        mock_connection = MagicMock()
+        mock_connection.sobjects.describe.return_value = {
+            "sobjects": [
+                {"name": "Account", "queryable": True},
+                {"name": "Contact", "queryable": True},
+            ]
+        }
+        self.mock_connect.return_value = mock_connection
+
+        with patch(
+            "mindsdb.integrations.handlers.salesforce_handler.salesforce_handler.MetaAPIHandler.meta_get_tables",
+            return_value=Response(RESPONSE_TYPE.TABLE, None),
+        ) as mock_meta:
+            response = self.handler.meta_get_tables(table_names=["contact"])
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        mock_meta.assert_called_once()
+        kwargs = mock_meta.call_args.kwargs
+        self.assertEqual(len(kwargs["main_metadata"]), 1)
+        self.assertEqual(kwargs["main_metadata"][0]["name"], "Contact")
+
 
 class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
     @property
@@ -487,7 +599,7 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
         self.assertEqual(list(df.columns), self.mock_columns)
         self.assertEqual(list(df.iloc[0]), list(self.mock_record.values()))
 
-    def tests_constants_in_soql_instructions(self):
+    def test_constants_in_soql_instructions(self):
         """
         Test that the SOQL instructions contain the expected constants.
         """

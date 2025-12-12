@@ -2,7 +2,6 @@ import datetime
 from typing import Dict, Iterator, List, Union, Tuple, Optional, Any
 import copy
 
-from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
 import pandas as pd
@@ -20,7 +19,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
-from .langchain_agent import get_llm_provider
+from .provider_utils import get_llm_provider
 
 logger = log.getLogger(__name__)
 
@@ -575,7 +574,7 @@ class AgentsController:
         agent: db.Agents,
         messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: list[BaseTool] = None,
+        tools: list = None,
         stream: bool = False,
         params: dict | None = None,
     ) -> Union[Iterator[object], pd.DataFrame]:
@@ -617,7 +616,7 @@ class AgentsController:
         agent: db.Agents,
         messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: list[BaseTool] = None,
+        tools: list = None,
         params: dict | None = None,
     ) -> Iterator[object]:
         """

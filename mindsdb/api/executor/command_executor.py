@@ -833,7 +833,10 @@ class ExecuteCommands:
 
     def answer_evaluate_metric(self, statement, database_name):
         # heavy import, so we do it here on-demand
-        from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+        try:
+            from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+        except ImportError:
+            logger.error("mindsdb-evaluator is not installed. Please install it with `pip install mindsdb-evaluator]`.")
 
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)

@@ -1,7 +1,8 @@
+import json
 import os
 import sys
 import subprocess
-from typing import List
+from typing import Dict, List
 
 
 def parse_handlers_env(value: str | None) -> List[str]:
@@ -52,22 +53,70 @@ def run_pytest_with_coverage(handlers: list[str]) -> None:
         sys.exit(proc.returncode)
 
 
-def enforce_per_handler_threshold(handlers: list[str], threshold: float) -> None:
-    """Run `coverage report` per handler file and fail if any is below the threshold."""
+def build_handler_metrics(handlers: list[str]) -> Dict[str, Dict[str, float]]:
+    """Generate coverage metrics per handler directory."""
+    # `coverage json` reads the latest .coverage data created by pytest
+    result = run(["coverage", "json", "-o", "coverage.json"])
+    if result.returncode != 0:
+        print("[coverage] Failed to produce coverage.json", file=sys.stderr)
+        sys.exit(result.returncode)
+
+    try:
+        with open("coverage.json", "r", encoding="utf-8") as fh:
+            coverage_data = json.load(fh)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"[coverage] Unable to read coverage.json: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    files: Dict[str, dict] = coverage_data.get("files", {})
+    metrics: Dict[str, Dict[str, float]] = {}
+
+    for handler in handlers:
+        prefix = f"mindsdb/integrations/handlers/{handler}_handler"
+        statements = 0
+        missing = 0
+
+        for path, info in files.items():
+            if not (path == f"{prefix}.py" or path.startswith(f"{prefix}/")):
+                continue
+            summary = info.get("summary", {})
+            statements += summary.get("num_statements", 0)
+            missing += summary.get("missing_lines", 0)
+
+        metrics[handler] = {
+            "statements": statements,
+            "missing": missing,
+            "coverage": 0.0 if statements == 0 else (1 - missing / statements) * 100,
+        }
+
+    return metrics
+
+
+def enforce_per_handler_directory_threshold(metrics: Dict[str, Dict[str, float]], threshold: float) -> None:
+    """Ensure each handler directory meets the threshold when all its files are considered together."""
     failed = False
 
-    for h in handlers:
-        target = f"mindsdb/integrations/handlers/{h}_handler.py"
-        print(f"[coverage] Checking {target} >= {threshold:.2f}%")
+    for handler, info in metrics.items():
+        statements = info["statements"]
+        coverage_pct = info["coverage"]
+        if statements == 0:
+            print(
+                f"[coverage] No executable statements detected for handler '{handler}'. "
+                "Ensure tests import the handler package.",
+                file=sys.stderr,
+            )
+            failed = True
+            continue
 
-        cmd = [
-            "coverage",
-            "report",
-            f"--fail-under={threshold}",
-            target,
-        ]
-        result = run(cmd)
-        if result.returncode != 0:
+        print(
+            f"[coverage] Handler '{handler}' coverage: {coverage_pct:.2f}% "
+            f"({statements - info['missing']}/{statements} statements)"
+        )
+        if coverage_pct < threshold:
+            print(
+                f"[coverage] Handler '{handler}' coverage below threshold {threshold:.2f}%.",
+                file=sys.stderr,
+            )
             failed = True
 
     if failed:
@@ -97,7 +146,8 @@ def main() -> int:
         return 1
 
     run_pytest_with_coverage(handlers)
-    enforce_per_handler_threshold(handlers, threshold)
+    metrics = build_handler_metrics(handlers)
+    enforce_per_handler_directory_threshold(metrics, threshold)
     return 0
 
 

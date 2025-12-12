@@ -2,6 +2,7 @@ name: Unit Tests
 
 permissions:
     contents: read
+    pull-requests: write
 
 on:
   workflow_call:
@@ -112,8 +113,6 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.matrix_prep.outputs.matrix) }}
     runs-on: ${{ matrix.runs_on }}
-    permissions:
-      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4

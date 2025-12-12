@@ -28,7 +28,7 @@ def run(cmd: list[str], capture: bool = False) -> subprocess.CompletedProcess:
 
 def run_pytest_with_coverage(handlers: list[str]) -> None:
     """Run pytest with coverage only for the selected handlers."""
-    cov_args: list[str] = [f"--cov=mindsdb/integrations/handlers/{h}_handler" for h in handlers]
+    cov_args: list[str] = [f"--cov=mindsdb/integrations/handlers/{h}_handler.py" for h in handlers]
 
     pytest_cmd = [
         "pytest",

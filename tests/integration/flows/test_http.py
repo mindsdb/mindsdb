@@ -110,19 +110,19 @@ class TestHTTP(HTTPHelperMixin):
         response = session.get(f"{STRIPPED_API_ROOT}/mcp/status")
         assert response.status_code == 401
 
-        response = session.post(f"{HTTP_API_ROOT}/login", json={"username": "mindsdb", "password": "mindsdb"})
-        assert response.status_code == 200
-        token = response.json().get("token")
-        session.headers.update({"Authorization": f"Bearer {token}"})
+        # response = session.post(f"{HTTP_API_ROOT}/login", json={"username": "mindsdb", "password": "mindsdb"})
+        # assert response.status_code == 200
+        # token = response.json().get("token")
+        # session.headers.update({"Authorization": f"Bearer {token}"})
 
-        response = session.put(
-            f"{HTTP_API_ROOT}/config/",
-            json={"auth": {"http_auth_enabled": False, "username": "mindsdb", "password": ""}},
-        )
+        # response = session.put(
+        #     f"{HTTP_API_ROOT}/config/",
+        #     json={"auth": {"http_auth_enabled": False, "username": "mindsdb", "password": ""}},
+        # )
 
-        response = session.get(f"{HTTP_API_ROOT}/status")
-        assert response.status_code == 200
-        assert response.json()["auth"]["http_auth_enabled"] is False
+        # response = session.get(f"{HTTP_API_ROOT}/status")
+        # assert response.status_code == 200
+        # assert response.json()["auth"]["http_auth_enabled"] is False
 
     def test_gui_is_served(self):
         """

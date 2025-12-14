@@ -124,7 +124,6 @@ class TestHTTP(HTTPHelperMixin):
         # assert response.status_code == 200
         # assert response.json()["auth"]["http_auth_enabled"] is False
 
-
     def test_gui_is_served(self):
         """
         GUI downloaded and available

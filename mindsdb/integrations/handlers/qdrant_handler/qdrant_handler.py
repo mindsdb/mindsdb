@@ -66,9 +66,9 @@ class QdrantHandler(VectorStoreHandler):
         need_to_close = not self.is_connected
 
         try:
-            # Using a trivial operation to get the connection status
-            # As there isn't a universal ping method for the REST, GRPC and in-memory interface
-            self._client.get_locks()
+            # Using get_collections() as a lightweight operation to verify the connection
+            # This works across REST, GRPC and in-memory interfaces
+            self._client.get_collections()
             response_code = StatusResponse(True)
         except Exception as e:
             logger.error(f"Error connecting to a Qdrant instance: {e}")
@@ -318,8 +318,14 @@ class QdrantHandler(VectorStoreHandler):
             results = self._client.retrieve(table_name, ids=id_filters)
         # Followed by the search_vector value
         elif vector_filter:
-            # Perform a similarity search with the first vector filter
-            results = self._client.search(table_name, query_vector=vector_filter[0], query_filter=query_filters or None, limit=limit, offset=offset)
+            # Perform a similarity search with the first vector filter using the new query_points API
+            results = self._client.query_points(
+                collection_name=table_name,
+                query=vector_filter[0],
+                query_filter=query_filters,
+                limit=limit,
+                offset=offset
+            ).points
         elif query_filters:
             results = self._client.scroll(table_name, scroll_filter=query_filters, limit=limit, offset=offset)[0]
 

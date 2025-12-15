@@ -124,9 +124,7 @@ class TestBigQueryHandler(unittest.TestCase):
         self.handler.native_query.assert_called_once_with(expected_query)
 
     def test_meta_get_tables_filters(self):
-        self.handler.native_query = MagicMock(
-            return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
-        )
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
 
         self.handler.meta_get_tables(table_names=["orders"])
 
@@ -134,9 +132,7 @@ class TestBigQueryHandler(unittest.TestCase):
         self.assertIn("AND t.table_name IN ('orders')", query)
 
     def test_meta_get_columns_filters(self):
-        self.handler.native_query = MagicMock(
-            return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
-        )
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
 
         self.handler.meta_get_columns(table_names=["orders"])
 
@@ -171,26 +167,20 @@ class TestBigQueryHandler(unittest.TestCase):
         self.assertEqual(self.handler.native_query.call_count, 2)
 
     def test_meta_get_column_statistics_returns_error_when_empty(self):
-        self.handler.native_query = MagicMock(
-            return_value=Response(RESPONSE_TYPE.ERROR, error_message="boom")
-        )
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.ERROR, error_message="boom"))
 
         response = self.handler.meta_get_column_statistics_for_table("table", ["col"])
         self.assertEqual(response.resp_type, RESPONSE_TYPE.ERROR)
 
     def test_meta_get_primary_keys_filters(self):
-        self.handler.native_query = MagicMock(
-            return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
-        )
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
         self.handler.meta_get_primary_keys(table_names=["orders"])
 
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)
 
     def test_meta_get_foreign_keys_filters(self):
-        self.handler.native_query = MagicMock(
-            return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
-        )
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
         self.handler.meta_get_foreign_keys(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)

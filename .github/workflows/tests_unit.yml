@@ -13,6 +13,7 @@ env:
     mysql
     salesforce
     snowflake
+    timescaledb
     clickhouse
     web
     redshift
@@ -31,6 +32,7 @@ env:
     salesforce
     postgres
     snowflake
+    timescaledb
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

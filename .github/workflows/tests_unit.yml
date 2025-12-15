@@ -45,10 +45,11 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
         with:
-          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
-          prune-cache: false
-          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
-
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache" # Place cache in the tool dir because we mount this in our runnners
+          prune-cache: false # We want to save all cache because it's in the mount^
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }} # Default to 3.11 where vars aren't available (PRs from forks)
+      # Checks the codebase for print() statements and fails if any are found
+      # We should be using loggers instead
       - name: Check for print statements
         run: |
           rm pyproject.toml
@@ -58,14 +59,18 @@ jobs:
         run: |
           uv pip install -r requirements/requirements-dev.txt
 
+      # Run pre-commit on all changed files
+      # See .pre-commit-config.yaml for the list of checks
       - name: Run pre-commit
         run: |
           pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha || 'HEAD~1' }} --to-ref ${{ github.event.pull_request.head.sha || 'HEAD' }}
 
+      # Runs a few different checks against our many requirements files
+      # to make sure they're in order
       - name: Check requirements files
         run: |
           uv run tests/scripts/check_requirements.py
-
+  # Creates a matrix of environments to test against using matrix_includes.json
   matrix_prep:
     name: Prepare matrix
     runs-on: mdb-dev
@@ -99,6 +104,8 @@ jobs:
       - name: Check pip package builds and installs
         run: |
           uv pip install -r requirements/requirements-dev.txt
+          # Install from the pip package
+          # If we install from source, we don't know if the pip package is installable.
           python setup.py sdist
           cd dist
           uv pip install *.tar.gz

@@ -105,9 +105,13 @@ class File(Resource):
                     try:
                         file_object.flush()
                     except (AttributeError, ValueError, OSError):
-                        logger.debug("Failed to flush file_object before closing.", exc_info=True)
+                        logger.debug(
+                            "Failed to flush file_object before closing.", exc_info=True
+                        )
                     file_object.close()
-                Path(file_object.name).rename(Path(file_object.name).parent / data["file"])
+                Path(file_object.name).rename(
+                    Path(file_object.name).parent / data["file"]
+                )
                 file_object = None
         else:
             data = request.json
@@ -131,7 +135,9 @@ class File(Resource):
         if source_type == "url":
             url_file_upload_enabled = config["url_file_upload"]["enabled"]
             if url_file_upload_enabled is False:
-                return http_error(400, "URL file upload is disabled.", "URL file upload is disabled.")
+                return http_error(
+                    400, "URL file upload is disabled.", "URL file upload is disabled."
+                )
 
             if "file" in data:
                 return http_error(
@@ -196,7 +202,9 @@ class File(Resource):
                         )
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:
-                    return http_error(400, "Error getting file", f"Got status code: {r.status_code}")
+                    return http_error(
+                        400, "Error getting file", f"Got status code: {r.status_code}"
+                    )
                 file_path = os.path.join(temp_dir_path, data["file"])
                 with open(file_path, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
@@ -214,27 +222,37 @@ class File(Resource):
         file_path = os.path.join(temp_dir_path, data["file"])
         lp = file_path.lower()
         if lp.endswith((".zip", ".tar.gz")):
-            if lp.endswith(".zip"):
-                with zipfile.ZipFile(file_path) as f:
-                    f.extractall(temp_dir_path)
-            elif lp.endswith(".tar.gz"):
-                with tarfile.open(file_path) as f:
-                    safe_extract(f, temp_dir_path)
+            try:
+                if lp.endswith(".zip"):
+                    with zipfile.ZipFile(file_path) as f:
+                        safe_extract(f, temp_dir_path)
+                elif lp.endswith(".tar.gz"):
+                    with tarfile.open(file_path) as f:
+                        safe_extract(f, temp_dir_path)
+            except Exception as e:
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
+                return http_error(500, "Error", str(e))
             os.remove(file_path)
             files = os.listdir(temp_dir_path)
             if len(files) != 1:
-                os.rmdir(temp_dir_path)
-                return http_error(400, "Wrong content.", "Archive must contain only one data file.")
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
+                return http_error(
+                    400, "Wrong content.", "Archive must contain only one data file."
+                )
             file_path = os.path.join(temp_dir_path, files[0])
             mindsdb_file_name = files[0]
             if not os.path.isfile(file_path):
-                os.rmdir(temp_dir_path)
-                return http_error(400, "Wrong content.", "Archive must contain data file in root.")
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
+                return http_error(
+                    400, "Wrong content.", "Archive must contain data file in root."
+                )
 
         try:
             if not Path(mindsdb_file_name).suffix == "":
                 return http_error(400, "Error", "File name cannot contain extension.")
-            ca.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
+            ca.file_controller.save_file(
+                mindsdb_file_name, file_path, file_name=original_file_name
+            )
         except FileProcessingError as e:
             return http_error(400, "Error", str(e))
         except Exception as e:

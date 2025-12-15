@@ -15,12 +15,12 @@ env:
     snowflake
     timescaledb
     mssql
+    oracle
     clickhouse
     web
     redshift
     bigquery
     databricks
-    oracle
     slack
     github
     ms_teams
@@ -34,6 +34,7 @@ env:
     snowflake
     timescaledb
     mssql
+    oracle
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

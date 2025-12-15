@@ -267,6 +267,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.disconnect.assert_called_once()
 
     def test_insert_respects_existing_column_case(self):
+        if getattr(self.handler, "name", None) != "postgres":
+            self.skipTest("Only applicable to Postgres COPY-based insert.")
         mock_conn = MagicMock()
         mock_cursor = MockCursorContextManager()
         copy_cm = MagicMock()

@@ -36,6 +36,7 @@ env:
     mssql
     oracle
     slack
+    file
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

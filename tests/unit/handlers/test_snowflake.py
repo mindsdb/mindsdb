@@ -368,9 +368,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor = MagicMock()
         mock_cursor.__enter__.return_value = mock_cursor
         mock_cursor.__exit__.return_value = None
-        mock_cursor.fetch_pandas_batches.return_value = iter(
-            [DataFrame([[1, "foo"]], columns=["ID", "NAME"])]
-        )
+        mock_cursor.fetch_pandas_batches.return_value = iter([DataFrame([[1, "foo"]], columns=["ID", "NAME"])])
         mock_cursor.description = [
             ColumnDescription(name="ID", type_code=0, scale=0),
             ColumnDescription(name="NAME", type_code=2),
@@ -380,9 +378,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch(
-            "mindsdb.integrations.handlers.snowflake_handler.snowflake_handler.memory_pool"
-        ) as mock_pool:
+        with patch("mindsdb.integrations.handlers.snowflake_handler.snowflake_handler.memory_pool") as mock_pool:
             mock_pool.backend_name = "jemalloc"
             mock_pool.release_unused = MagicMock()
 
@@ -851,7 +847,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         info = self.handler.meta_get_handler_info()
         self.assertIn("ticks", info)
         self.assertIn("double quotes", info)
-
 
     def test_types_casting(self):
         """Test that types are casted correctly"""

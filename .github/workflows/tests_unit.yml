@@ -16,12 +16,12 @@ env:
     timescaledb
     mssql
     oracle
+    slack
     clickhouse
     web
     redshift
     bigquery
     databricks
-    slack
     github
     ms_teams
     statsforecast
@@ -35,6 +35,7 @@ env:
     timescaledb
     mssql
     oracle
+    slack
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

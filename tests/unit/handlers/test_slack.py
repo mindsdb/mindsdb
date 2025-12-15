@@ -1,6 +1,9 @@
 from collections import OrderedDict
 from copy import deepcopy
 import datetime as dt
+import os
+import threading
+from types import SimpleNamespace
 import pytest
 import unittest
 from unittest.mock import MagicMock, patch
@@ -22,6 +25,7 @@ try:
         SlackThreadsTable,
         SlackUsersTable,
     )
+    from mindsdb.integrations.handlers.slack_handler.connection_args import connection_args, connection_args_example
 
     # Mock response for the first call to the `conversations.info` method.
     MOCK_RESPONSE_CONV_INFO_1 = {
@@ -451,12 +455,110 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         expected_df = pd.DataFrame(MOCK_RESPONSE_CONV_LIST_1["channels"] + MOCK_RESPONSE_CONV_LIST_2["channels"])
         pd.testing.assert_frame_equal(response.data_frame, expected_df)
 
-    def test_subscribe(self):
-        """
-        Tests the `subscribe` method to ensure it processes Slack events correctly.
-        """
-        pass
+    @patch.dict(os.environ, {}, clear=True)
+    @patch("mindsdb.integrations.handlers.slack_handler.slack_handler.Config")
+    def test_connect_requires_token(self, mock_config):
+        mock_config.return_value.get.return_value = {}
+        handler = SlackHandler("slack", connection_data={})
+        with self.assertRaises(ValueError):
+            handler.connect()
 
+    def test_connect_reuses_existing_connection(self):
+        cached = MagicMock()
+        self.handler.web_connection = cached
+        self.handler.is_connected = True
+        connection = self.handler.connect()
+        self.assertIs(connection, cached)
+        self.mock_connect.assert_not_called()
+
+    def test_check_connection_failure_resets_flag(self):
+        self.handler.is_connected = True
+        error = SlackApiError(message="boom", response=MagicMock(data={"error": "boom"}))
+        self.handler.connect = MagicMock(side_effect=error)
+
+        response = self.handler.check_connection()
+        self.assertFalse(response.success)
+        self.assertFalse(self.handler.is_connected)
+        self.assertIn("boom", response.error_message)
+
+    def test_call_slack_api_raises_slack_error(self):
+        slack_error = SlackApiError(message="bad", response={"error": "bad"})
+        method = MagicMock(side_effect=slack_error)
+        self.handler.connect = MagicMock(return_value=MagicMock(conversations_list=method))
+
+        with self.assertRaises(SlackApiError):
+            self.handler._call_slack_api("conversations_list", {})
+
+    def test_extract_data_single_list(self):
+        response_data = {"ok": True, "channels": [{"id": "C1"}]}
+        rows = self.handler._extract_data_from_response(response_data)
+        self.assertEqual(rows, [{"id": "C1"}])
+
+    def test_extract_data_single_object(self):
+        response_data = {"ok": True, "channel": {"id": "C1"}}
+        rows = self.handler._extract_data_from_response(response_data)
+        self.assertEqual(rows, [{"id": "C1"}])
+
+    def test_extract_data_invalid_response(self):
+        with self.assertRaises(ValueError):
+            self.handler._extract_data_from_response({"ok": True, "foo": {"id": 1}, "bar": []})
+
+    def test_subscribe_unsupported_table(self):
+        stop_event = threading.Event()
+        with self.assertRaises(RuntimeError):
+            self.handler.subscribe(stop_event, lambda *_: None, table_name="users")
+
+    def test_subscribe_rejects_columns(self):
+        stop_event = threading.Event()
+        with self.assertRaises(RuntimeError):
+            self.handler.subscribe(stop_event, lambda *_: None, columns=["text"])
+
+    @patch("mindsdb.integrations.handlers.slack_handler.slack_handler.SocketModeResponse")
+    @patch("mindsdb.integrations.handlers.slack_handler.slack_handler.SocketModeClient")
+    def test_subscribe_processes_message(self, mock_socket_cls, mock_response_cls):
+        class FakeClient:
+            def __init__(self):
+                self.socket_mode_request_listeners = []
+
+            def send_socket_mode_response(self, response):
+                self.sent = response
+
+            def connect(self):
+                request = SimpleNamespace(
+                    envelope_id="123",
+                    type="events_api",
+                    retry_attempt=None,
+                    payload={
+                        "event": {
+                            "type": "message",
+                            "channel": "C1",
+                            "user": "U1",
+                            "text": "Hello",
+                            "ts": "1717000000.0",
+                        }
+                    },
+                )
+                for listener in list(self.socket_mode_request_listeners):
+                    listener(self, request)
+
+            def close(self):
+                self.closed = True
+
+        fake_client = FakeClient()
+        mock_socket_cls.return_value = fake_client
+        mock_response_cls.side_effect = lambda envelope_id: SimpleNamespace(envelope_id=envelope_id)
+
+        rows = []
+
+        stop_event = threading.Event()
+        stop_event.set()
+        self.handler.subscribe(stop_event, lambda row, key: rows.append((row, key)))
+
+        self.assertEqual(len(rows), 1)
+        row, key = rows[0]
+        self.assertEqual(key, {"channel_id": "C1"})
+        self.assertEqual(row["user"], "U1")
+        self.assertEqual(row["text"], "Hello")
 
 class SlackAPIResourceTestSetup(BaseAPIResourceTestSetup):
     @property
@@ -1215,6 +1317,19 @@ class TestSlackUsersTable(SlackAPIResourceTestSetup, unittest.TestCase):
         assert isinstance(response, pd.DataFrame)
         expected_df = self._get_expected_df_for_users_list_2()
         pd.testing.assert_frame_equal(response, expected_df)
+
+
+class TestSlackConnectionArgs(unittest.TestCase):
+    def test_connection_args_metadata(self):
+        self.assertIn("token", connection_args)
+        self.assertTrue(connection_args["token"]["required"])
+        self.assertEqual(connection_args["token"]["label"], "Token")
+        self.assertFalse(connection_args["app_token"]["required"])
+        self.assertTrue(connection_args["app_token"]["secret"])
+
+    def test_connection_args_example(self):
+        self.assertIn("token", connection_args_example)
+        self.assertTrue(connection_args_example["token"].startswith("xapp-"))
 
 
 if __name__ == "__main__":

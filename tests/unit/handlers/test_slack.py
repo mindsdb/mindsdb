@@ -560,6 +560,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         self.assertEqual(row["user"], "U1")
         self.assertEqual(row["text"], "Hello")
 
+
 class SlackAPIResourceTestSetup(BaseAPIResourceTestSetup):
     @property
     def dummy_connection_data(self):

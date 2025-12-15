@@ -9,7 +9,9 @@ defaults:
 
 env:
   HANDLERS_TO_INSTALL: |
-    lightwood
+    postgres
+    mysql
+    salesforce
     clickhouse
     snowflake
     web
@@ -20,15 +22,14 @@ env:
     slack
     github
     ms_teams
-    salesforce
     statsforecast
-    mysql
     chromadb
     mssql
   # We measure 80% on this handlers, as they are the verified
   HANDLERS_TO_VERIFY: |
     mysql
     salesforce
+    postgres
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

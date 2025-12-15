@@ -18,9 +18,9 @@ env:
     oracle
     slack
     redshift
+    bigquery
     clickhouse
     web
-    bigquery
     databricks
     github
     ms_teams
@@ -38,6 +38,7 @@ env:
     slack
     file
     redshift
+    bigquery
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

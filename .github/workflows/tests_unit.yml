@@ -12,8 +12,8 @@ env:
     postgres
     mysql
     salesforce
-    clickhouse
     snowflake
+    clickhouse
     web
     redshift
     bigquery
@@ -30,6 +30,7 @@ env:
     mysql
     salesforce
     postgres
+    snowflake
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

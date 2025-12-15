@@ -14,6 +14,7 @@ env:
     salesforce
     snowflake
     timescaledb
+    mssql
     clickhouse
     web
     redshift
@@ -25,7 +26,6 @@ env:
     ms_teams
     statsforecast
     chromadb
-    mssql
   # We measure 80% on this handlers, as they are the verified
   HANDLERS_TO_VERIFY: |
     mysql
@@ -33,6 +33,7 @@ env:
     postgres
     snowflake
     timescaledb
+    mssql
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

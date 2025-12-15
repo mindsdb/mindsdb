@@ -1,3 +1,6 @@
+import json
+
+
 class TestParameters:
     def test_query_parameters(self, client):
         # test filter, target
@@ -22,6 +25,42 @@ class TestParameters:
         data = response.json["data"]
         assert data[0] == ["mindsdb", None]
         print(response)
+
+    def test_absent_param(self, client):
+        # absent
+        response = client.post(
+            "/api/sql/query",
+            json={
+                "query": "select NAME, :x from information_schema.databases where NAME = :db_name",
+                "params": {},
+            },
+        )
+        assert "Parameter is not set" in response.json["error_message"]
+
+    def test_json_param(self, client):
+        # absent
+        response = client.post(
+            "/api/sql/query",
+            json={
+                "query": """
+                    create database my_db
+                    with ENGINE = "dummy_data"
+                    PARAMETERS = {{
+                       "username": @my_user
+                    }}
+                """,
+                "params": {"my_user": "test"},
+            },
+        )
+        assert response.json["type"] == "ok"
+
+        # check
+        response = client.post(
+            "/api/sql/query",
+            json={"query": "SELECT CONNECTION_DATA FROM information_schema.DATABASES where name='my_db'"},
+        )
+        connection_args = response.json["data"][0][0]
+        assert json.loads(connection_args)["username"] == "test"
 
     def test_parameter_extract(self, client):
         def req(query):

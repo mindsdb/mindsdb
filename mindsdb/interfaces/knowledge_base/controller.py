@@ -29,7 +29,6 @@ from mindsdb.integrations.utilities.rag.settings import RerankerMode
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
@@ -1171,9 +1170,6 @@ class KnowledgeBaseController:
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
 
-        # fill variables
-        params = variables_controller.fill_parameters(params)
-
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
@@ -1296,9 +1292,6 @@ class KnowledgeBaseController:
         :param params: The parameters to update
         :param preprocessing_config: Optional preprocessing configuration to validate and store
         """
-
-        # fill variables
-        params = variables_controller.fill_parameters(params)
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:

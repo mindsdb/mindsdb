@@ -4,6 +4,7 @@ from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Constant, Parameter, Tuple, NullConstant
 
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.context import context as ctx
 from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.sql_query.result_set import Column
 from mindsdb.api.executor.planner import utils as planner_utils
@@ -77,22 +78,22 @@ class Executor:
         self.do_execute()
 
     @profiler.profile()
-    def query_execute(self, sql, params=None):
+    def query_execute(self, sql):
         self.parse(sql)
-        if params:
-            self.apply_parameters(params)
+        self.apply_parameters()
         self.do_execute()
 
-    def apply_parameters(self, params):
+    def apply_parameters(self):
         def fill_parameters(node, **kwargs):
             if isinstance(node, Parameter):
-                if node.value in params:
-                    value = params[node.value]
+                if node.value in ctx.params:
+                    value = ctx.params[node.value]
                     if value is None:
                         return NullConstant()
                     if isinstance(value, list):
                         return Tuple([Constant(i) for i in value])
                     return Constant(value)
+                raise ValueError(f"Parameter is not set: {node.value}")
 
         query_traversal(self.query, fill_parameters)
 

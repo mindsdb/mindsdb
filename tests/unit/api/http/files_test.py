@@ -2,8 +2,6 @@ import io
 import os.path
 import os
 from http import HTTPStatus
-from unittest.mock import patch
-import tempfile
 
 
 def test_get_files_list(client):

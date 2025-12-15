@@ -20,7 +20,8 @@ logger = log.getLogger(__name__)
 
 class SheetsHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Airtable statements.
+    This handler handles connection and execution of queries against the Excel Sheet.
+    TODO: add authentication for private sheets
     """
 
     name = 'sheets'
@@ -35,7 +36,6 @@ class SheetsHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'sheets'
         self.renderer = SqlalchemyRender('postgresql')
         self.connection_data = connection_data
         self.kwargs = kwargs

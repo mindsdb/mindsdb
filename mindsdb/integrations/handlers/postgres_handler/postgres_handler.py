@@ -339,11 +339,11 @@ class PostgresHandler(MetaDatabaseHandler):
                     log_message += f". Executed query:\n{query}"
                 logger.info(log_message)
                 connection.rollback()
-                return Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_expected_error=True)
+                return ErrorResponse(error_code=0, error_message=str(e), is_expected_error=True)
             except Exception as e:
                 logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
                 connection.rollback()
-                return Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
+                return ErrorResponse(error_code=0, error_message=str(e))
             finally:
                 if need_to_close:
                     self.disconnect()

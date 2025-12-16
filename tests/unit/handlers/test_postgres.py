@@ -333,13 +333,16 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_pgresult.status = ExecStatus.TUPLES_OK
         mock_cursor.pgresult = mock_pgresult
         mock_cursor.rowcount = 1
-        mock_cursor.fetchall = MagicMock(
-            return_value=[
-                ["a", "int", 1, None, "YES", None, None, None, None, None, None, None],
-                ["b", "int", 2, None, "YES", None, None, None, None, None, None, None],
-                ["c", "int", 3, None, "YES", None, None, None, None, None, None, None],
-            ]
-        )
+
+        get_columns_result = [
+            ["id", "int", 1, None, "YES", None, None, None, None, None, None, None],
+            ["name", "text", 2, None, "YES", None, None, None, None, None, None, None],
+        ]
+        mock_cursor.fetchmany = MagicMock(side_effect=[
+            get_columns_result,
+            []
+        ])
+
         information_schema_description = [
             ColumnDescription(name="COLUMN_NAME", type_code=regtype_to_oid["text"]),
             ColumnDescription(name="DATA_TYPE", type_code=regtype_to_oid["text"]),
@@ -362,19 +365,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # Ensure copy.__enter__ returns the copy object to mimic context manager
         copy_obj.__enter__ = MagicMock(return_value=copy_obj)
         copy_obj.__exit__ = MagicMock(return_value=None)
-
-        # region add result for 'get_columns' call
-        mock_pgresult = MagicMock()
-        mock_pgresult.status = ExecStatus.TUPLES_OK
-        mock_cursor.pgresult = mock_pgresult
-        mock_cursor.fetchall = MagicMock(
-            return_value=[
-                ["id", "int", 1, None, "YES", None, None, None, None, None, None, None],
-                ["name", "text", 2, None, "YES", None, None, None, None, None, None, None],
-            ]
-        )
-        mock_cursor.description = information_schema_description
-        # endregino
 
         df = pd.DataFrame({"id": [1, 2, 3], "name": ["a", "b", "c"]})
 

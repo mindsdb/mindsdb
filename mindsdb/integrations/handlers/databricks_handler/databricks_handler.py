@@ -35,6 +35,17 @@ def _quote_identifier(identifier: str) -> str:
     return f"`{identifier.replace('`', '``')}`"
 
 
+def _validate_identifier(identifier: str) -> str:
+    """Validate and sanitize an identifier (table/column name)."""
+    import re
+
+    if not isinstance(identifier, str) or not identifier:
+        raise ValueError("Identifier must be a non-empty string")
+    if not re.match(r"^[\w\s\-]+$", identifier):
+        raise ValueError(f"Identifier contains invalid characters: {identifier}")
+    return identifier
+
+
 def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     """Map MyDatabricks SQL text types names to MySQL types as enum.
 
@@ -120,7 +131,6 @@ class DatabricksHandler(MetaDatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ["server_hostname", "http_path", "access_token"]):
             raise ValueError("Required parameters (server_hostname, http_path, access_token) must be provided.")
 
@@ -130,7 +140,6 @@ class DatabricksHandler(MetaDatabaseHandler):
             "access_token": self.connection_data["access_token"],
         }
 
-        # Optional connection parameters.
         optional_parameters = [
             "session_configuration",
             "http_headers",
@@ -179,22 +188,32 @@ class DatabricksHandler(MetaDatabaseHandler):
         try:
             connection = self.connect()
 
-            # Execute a simple query to check the connection.
             query = "SELECT 1 FROM information_schema.schemata"
             schema_value = self.connection_data.get("schema")
             if isinstance(schema_value, str) and schema_value != "":
-                query += f" WHERE schema_name = '{_escape_literal(schema_value)}'"
+                try:
+                    _validate_identifier(schema_value)
+                    escaped_schema = _escape_literal(schema_value)
+                    query += f" WHERE schema_name = '{escaped_schema}'"
+                except ValueError as e:
+                    logger.error(f"Invalid schema name: {e}")
+                    response.error_message = str(e)
+                    return response
 
             with connection.cursor() as cursor:
                 cursor.execute(query)
                 result = cursor.fetchall()
 
-            # If the query does not return a result, the schema does not exist.
             if not result:
                 raise ValueError(f"The schema {self.connection_data['schema']} does not exist!")
 
             response.success = True
-        except (ValueError, RequestError, RuntimeError, ServerOperationError) as known_error:
+        except (
+            ValueError,
+            RequestError,
+            RuntimeError,
+            ServerOperationError,
+        ) as known_error:
             logger.error(f"Connection check to Databricks failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
@@ -233,7 +252,6 @@ class DatabricksHandler(MetaDatabaseHandler):
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
-                # Always commit after successful execution
                 connection.commit()
             except ServerOperationError as server_error:
                 logger.error(f"Server error running query: {query} on Databricks, {server_error}!")
@@ -286,10 +304,8 @@ class DatabricksHandler(MetaDatabaseHandler):
                 {all_filter}
         """
         result = self.native_query(query)
-        if result.resp_type == RESPONSE_TYPE.OK:
-            result = Response(
-                RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
-            )
+        df = result.data_frame
+        result.data_frame = df.rename(columns={col: col.upper() for col in df.columns})
         return result
 
     def get_columns(self, table_name: str, schema_name: str | None = None) -> Response:
@@ -309,11 +325,23 @@ class DatabricksHandler(MetaDatabaseHandler):
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
 
+        try:
+            _validate_identifier(table_name)
+            table_literal = _escape_literal(table_name)
+        except ValueError as e:
+            logger.error(f"Invalid table name: {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+
         if isinstance(schema_name, str):
-            schema_name = f"'{_escape_literal(schema_name)}'"
+            try:
+                _validate_identifier(schema_name)
+                schema_name_sql = f"'{_escape_literal(schema_name)}'"
+            except ValueError as e:
+                logger.error(f"Invalid schema name: {e}")
+                return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
         else:
-            schema_name = "current_schema()"
-        table_literal = _escape_literal(table_name)
+            schema_name_sql = "current_schema()"
+
         query = f"""
             SELECT
                 COLUMN_NAME,
@@ -333,13 +361,14 @@ class DatabricksHandler(MetaDatabaseHandler):
             WHERE
                 table_name = '{table_literal}'
             AND
-                table_schema = {schema_name}
+                table_schema = {schema_name_sql}
         """
 
         result = self.native_query(query)
         if result.resp_type == RESPONSE_TYPE.OK:
             result = Response(
-                RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
+                RESPONSE_TYPE.TABLE,
+                data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET)),
             )
         result.to_columns_table_response(map_type_fn=_map_type)
 
@@ -357,7 +386,13 @@ class DatabricksHandler(MetaDatabaseHandler):
         """
 
         schema_name = self.connection_data.get("schema") or "default"
-        schema_literal = _escape_literal(schema_name)
+
+        try:
+            _validate_identifier(schema_name)
+            schema_literal = _escape_literal(schema_name)
+        except ValueError as e:
+            logger.error(f"Invalid schema name: {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         query = f"""
             SELECT
@@ -375,8 +410,16 @@ class DatabricksHandler(MetaDatabaseHandler):
         """
 
         if table_names is not None and len(table_names) > 0:
-            table_names_str = ", ".join([f"'{_escape_literal(t)}'" for t in table_names])
-            query += f" AND table_name IN ({table_names_str})"
+            try:
+                escaped_names = []
+                for t in table_names:
+                    _validate_identifier(t)
+                    escaped_names.append(f"'{_escape_literal(t)}'")
+                table_names_str = ", ".join(escaped_names)
+                query += f" AND table_name IN ({table_names_str})"
+            except ValueError as e:
+                logger.error(f"Invalid table name in list: {e}")
+                return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         result = self.native_query(query)
 
@@ -396,11 +439,15 @@ class DatabricksHandler(MetaDatabaseHandler):
             Response: A response object containing the column metadata.
         """
 
-        # Get the schema from connection data or use 'default'
         schema_name = self.connection_data.get("schema") or "default"
-        schema_literal = _escape_literal(schema_name)
 
-        # Use only columns that exist in Databricks information_schema.columns
+        try:
+            _validate_identifier(schema_name)
+            schema_literal = _escape_literal(schema_name)
+        except ValueError as e:
+            logger.error(f"Invalid schema name: {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+
         query = f"""
             SELECT
                 table_name AS TABLE_NAME,
@@ -421,8 +468,16 @@ class DatabricksHandler(MetaDatabaseHandler):
         """
 
         if table_names is not None and len(table_names) > 0:
-            table_names_str = ", ".join([f"'{_escape_literal(t.lower())}'" for t in table_names])
-            query += f" AND LOWER(table_name) IN ({table_names_str})"
+            try:
+                escaped_names = []
+                for t in table_names:
+                    _validate_identifier(t)
+                    escaped_names.append(f"'{_escape_literal(t.lower())}'")
+                table_names_str = ", ".join(escaped_names)
+                query += f" AND LOWER(table_name) IN ({table_names_str})"
+            except ValueError as e:
+                logger.error(f"Invalid table name in list: {e}")
+                return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         result = self.native_query(query)
         return result
@@ -437,18 +492,32 @@ class DatabricksHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the column statistics metadata.
         """
-        # Get the schema from connection data or use 'default'
         schema_name = self.connection_data.get("schema") or "default"
-        schema_literal = _escape_literal(schema_name)
+
+        try:
+            _validate_identifier(schema_name)
+            schema_literal = _escape_literal(schema_name)
+        except ValueError as e:
+            logger.error(f"Invalid schema name: {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         columns_query = f"""
             SELECT table_name AS TABLE_NAME, column_name AS COLUMN_NAME
             FROM information_schema.columns
             WHERE table_schema = '{schema_literal}'
         """
+
         if table_names:
-            table_names_str = ", ".join([f"'{_escape_literal(t)}'" for t in table_names])
-            columns_query += f" AND table_name IN ({table_names_str})"
+            try:
+                escaped_names = []
+                for t in table_names:
+                    _validate_identifier(t)
+                    escaped_names.append(f"'{_escape_literal(t)}'")
+                table_names_str = ", ".join(escaped_names)
+                columns_query += f" AND table_name IN ({table_names_str})"
+            except ValueError as e:
+                logger.error(f"Invalid table name in list: {e}")
+                return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         columns_result = self.native_query(columns_query)
         if (
@@ -462,9 +531,21 @@ class DatabricksHandler(MetaDatabaseHandler):
         all_stats = []
 
         for table_name, group in grouped:
+            try:
+                _validate_identifier(table_name)
+            except ValueError as e:
+                logger.warning(f"Skipping invalid table name: {e}")
+                continue
+
             select_parts = []
             for _, row in group.iterrows():
                 col = row["COLUMN_NAME"]
+                try:
+                    _validate_identifier(col)
+                except ValueError as e:
+                    logger.warning(f"Skipping invalid column name: {e}")
+                    continue
+
                 quoted_col = _quote_identifier(col)
                 safe_suffix = col.replace("`", "``")
                 select_parts.extend(
@@ -476,6 +557,9 @@ class DatabricksHandler(MetaDatabaseHandler):
                     ]
                 )
 
+            if not select_parts:
+                continue
+
             quoted_table_name = _quote_identifier(table_name)
             stats_query = f"""
             SELECT COUNT(*) AS `total_rows`, {", ".join(select_parts)}
@@ -486,7 +570,6 @@ class DatabricksHandler(MetaDatabaseHandler):
                 stats_res = self.native_query(stats_query)
                 if stats_res.type != RESPONSE_TYPE.TABLE or stats_res.data_frame is None or stats_res.data_frame.empty:
                     logger.warning(f"Could not retrieve stats for table {table_name}")
-                    # Add placeholder stats if query fails
                     for _, row in group.iterrows():
                         all_stats.append(
                             {

@@ -188,7 +188,6 @@ class TestTableOperations(unittest.TestCase):
         self.handler.native_query = MagicMock()
 
         self.handler.get_tables()
-
         expected_query = """
             SELECT
                 table_schema,

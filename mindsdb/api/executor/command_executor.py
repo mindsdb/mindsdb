@@ -38,6 +38,8 @@ from mindsdb_sql_parser.ast import (
     Variable,
     Intersect,
     Except,
+    Parameter,
+    NullConstant,
 )
 
 # typed models
@@ -98,6 +100,7 @@ from mindsdb.integrations.libs.const import (
     HANDLER_CONNECTION_ARG_TYPE,
     PREDICTOR_STATUS,
 )
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.database.projects import ProjectController
@@ -215,6 +218,20 @@ def match_two_part_name(
     return db_name, name
 
 
+def apply_parameters(statement, params):
+    def fill_parameters(node, **kwargs):
+        if isinstance(node, Parameter):
+            if node.value in params:
+                value = params[node.value]
+                if value is None:
+                    return NullConstant()
+                if isinstance(value, list):
+                    return Tuple([Constant(i) for i in value])
+                return Constant(value)
+
+    query_traversal(statement, fill_parameters)
+
+
 class ExecuteCommands:
     def __init__(self, session, context=None):
         if context is None:
@@ -233,6 +250,9 @@ class ExecuteCommands:
 
         if database_name is None:
             database_name = self.session.database
+
+        if ctx.params:
+            apply_parameters(statement, ctx.params)
 
         statement_type = type(statement)
         if statement_type is CreateDatabase:

@@ -1,10 +1,7 @@
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.exceptions import ParsingException
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb_sql_parser.ast import Constant, Parameter, Tuple, NullConstant
-
 import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.context import context as ctx
 from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.sql_query.result_set import Column
 from mindsdb.api.executor.planner import utils as planner_utils
@@ -13,7 +10,6 @@ from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.exceptions import SqlSyntaxError
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 logger = log.getLogger(__name__)
 
@@ -80,22 +76,7 @@ class Executor:
     @profiler.profile()
     def query_execute(self, sql):
         self.parse(sql)
-        self.apply_parameters()
         self.do_execute()
-
-    def apply_parameters(self):
-        def fill_parameters(node, **kwargs):
-            if isinstance(node, Parameter):
-                if node.value in ctx.params:
-                    value = ctx.params[node.value]
-                    if value is None:
-                        return NullConstant()
-                    if isinstance(value, list):
-                        return Tuple([Constant(i) for i in value])
-                    return Constant(value)
-                raise ValueError(f"Parameter is not set: {node.value}")
-
-        query_traversal(self.query, fill_parameters)
 
     @profiler.profile()
     def parse(self, sql):

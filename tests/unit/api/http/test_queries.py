@@ -45,9 +45,9 @@ class TestParameters:
                 "query": """
                     create database my_db
                     with ENGINE = "dummy_data"
-                    PARAMETERS = {{
+                    PARAMETERS = {
                        "username": @my_user
-                    }}
+                    }
                 """,
                 "params": {"my_user": "test"},
             },

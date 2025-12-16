@@ -108,7 +108,7 @@ class OkResponse(DataHandlerResponse):
     type: ClassVar[str] = RESPONSE_TYPE.OK
     affected_rows: int
 
-    def __init__(self, affected_rows: int):
+    def __init__(self, affected_rows: int = None):
         self.affected_rows = affected_rows
 
 

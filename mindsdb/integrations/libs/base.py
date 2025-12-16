@@ -11,11 +11,12 @@ from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.response import (
-    HandlerResponse,
     HandlerStatusResponse,
     RESPONSE_TYPE,
     DataHandlerResponse,
     normalize_response,
+    ErrorResponse,
+    TableResponse,
 )
 
 logger = log.getLogger(__name__)
@@ -39,7 +40,12 @@ class BaseHandler:
         super().__init_subclass__(**kwargs)
 
         # Methods whose return values should be normalized to new response types
-        _methods_to_normalize = ('native_query', 'query')
+        _methods_to_normalize = (
+            'native_query', 'query', 'insert', 'get_tables', 'get_columns',
+            'meta_get_tables', 'meta_get_columns', 'meta_get_column_statistics',
+            'meta_get_column_statistics_for_table', 'meta_get_primary_keys',
+            'meta_get_foreign_keys'
+        )
         for method_name in _methods_to_normalize:
             # Only wrap if method is defined directly in this class (not inherited)
             if method_name not in cls.__dict__:
@@ -100,7 +106,7 @@ class BaseHandler:
         """
         raise NotImplementedError()
 
-    def native_query(self, query: Any) -> HandlerResponse:
+    def native_query(self, query: Any) -> DataHandlerResponse:
         """Receive raw query and act upon it somehow.
 
         Args:
@@ -108,11 +114,11 @@ class BaseHandler:
                 etc)
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def query(self, query: ASTNode) -> HandlerResponse:
+    def query(self, query: ASTNode) -> DataHandlerResponse:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
 
         Args:
@@ -120,30 +126,30 @@ class BaseHandler:
                 of query: SELECT, INSERT, DELETE, etc
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def get_tables(self) -> HandlerResponse:
+    def get_tables(self) -> DataHandlerResponse:
         """Return list of entities
 
         Return list of entities that will be accesible as tables.
 
         Returns:
-            HandlerResponse: shoud have same columns as information_schema.tables
+            DataHandlerResponse: shoud have same columns as information_schema.tables
                 (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
                 Column 'TABLE_NAME' is mandatory, other is optional.
         """
         raise NotImplementedError()
 
-    def get_columns(self, table_name: str) -> HandlerResponse:
+    def get_columns(self, table_name: str) -> DataHandlerResponse:
         """Returns a list of entity columns
 
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
 
         Returns:
-            HandlerResponse: shoud have same columns as information_schema.columns
+            DataHandlerResponse: shoud have same columns as information_schema.columns
                 (https://dev.mysql.com/doc/refman/8.0/en/information-schema-columns-table.html)
                 Column 'COLUMN_NAME' is mandatory, other is optional. Hightly
                 recomended to define also 'DATA_TYPE': it should be one of
@@ -172,12 +178,12 @@ class MetaDatabaseHandler(DatabaseHandler):
     def __init__(self, name: str):
         super().__init__(name)
 
-    def meta_get_tables(self, table_names: Optional[List[str]]) -> HandlerResponse:
+    def meta_get_tables(self, table_names: Optional[List[str]]) -> DataHandlerResponse:
         """
         Returns metadata information about the tables to be stored in the data catalog.
 
         Returns:
-            HandlerResponse: The response should consist of the following columns:
+            DataHandlerResponse: The response should consist of the following columns:
             - TABLE_NAME (str): Name of the table.
             - TABLE_TYPE (str): Type of the table, e.g. 'BASE TABLE', 'VIEW', etc. (optional).
             - TABLE_SCHEMA (str): Schema of the table (optional).
@@ -186,12 +192,12 @@ class MetaDatabaseHandler(DatabaseHandler):
         """
         raise NotImplementedError()
 
-    def meta_get_columns(self, table_names: Optional[List[str]]) -> HandlerResponse:
+    def meta_get_columns(self, table_names: Optional[List[str]]) -> DataHandlerResponse:
         """
         Returns metadata information about the columns in the tables to be stored in the data catalog.
 
         Returns:
-            HandlerResponse: The response should consist of the following columns:
+            DataHandlerResponse: The response should consist of the following columns:
             - TABLE_NAME (str): Name of the table.
             - COLUMN_NAME (str): Name of the column.
             - DATA_TYPE (str): Data type of the column, e.g. 'VARCHAR', 'INT', etc.
@@ -201,13 +207,13 @@ class MetaDatabaseHandler(DatabaseHandler):
         """
         raise NotImplementedError()
 
-    def meta_get_column_statistics(self, table_names: Optional[List[str]]) -> HandlerResponse:
+    def meta_get_column_statistics(self, table_names: Optional[List[str]]) -> DataHandlerResponse:
         """
         Returns metadata statisical information about the columns in the tables to be stored in the data catalog.
         Either this method should be overridden in the handler or `meta_get_column_statistics_for_table` should be implemented.
 
         Returns:
-            HandlerResponse: The response should consist of the following columns:
+            DataHandlerResponse: The response should consist of the following columns:
             - TABLE_NAME (str): Name of the table.
             - COLUMN_NAME (str): Name of the column.
             - MOST_COMMON_VALUES (List[str]): Most common values in the column (optional).
@@ -254,17 +260,16 @@ class MetaDatabaseHandler(DatabaseHandler):
 
             if not results:
                 logger.warning("No column statistics could be retrieved for the specified tables.")
-                return HandlerResponse(RESPONSE_TYPE.ERROR, error_message="No column statistics could be retrieved.")
-            return HandlerResponse(
-                RESPONSE_TYPE.TABLE, pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+                return ErrorResponse(error_message="No column statistics could be retrieved.")
+            return TableResponse(
+                data=pd.concat(results, ignore_index=True) if results else pd.DataFrame()
             )
-
         else:
             raise NotImplementedError()
 
     def meta_get_column_statistics_for_table(
         self, table_name: str, column_names: Optional[List[str]] = None
-    ) -> HandlerResponse:
+    ) -> DataHandlerResponse:
         """
         Returns metadata statistical information about the columns in a specific table to be stored in the data catalog.
         Either this method should be implemented in the handler or `meta_get_column_statistics` should be overridden.
@@ -274,7 +279,7 @@ class MetaDatabaseHandler(DatabaseHandler):
             column_names (Optional[List[str]]): List of column names to retrieve statistics for. If None, statistics for all columns will be returned.
 
         Returns:
-            HandlerResponse: The response should consist of the following columns:
+            DataHandlerResponse: The response should consist of the following columns:
             - TABLE_NAME (str): Name of the table.
             - COLUMN_NAME (str): Name of the column.
             - MOST_COMMON_VALUES (List[str]): Most common values in the column (optional).
@@ -286,12 +291,12 @@ class MetaDatabaseHandler(DatabaseHandler):
         """
         pass
 
-    def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
+    def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> DataHandlerResponse:
         """
         Returns metadata information about the primary keys in the tables to be stored in the data catalog.
 
         Returns:
-            HandlerResponse: The response should consist of the following columns:
+            DataHandlerResponse: The response should consist of the following columns:
             - TABLE_NAME (str): Name of the table.
             - COLUMN_NAME (str): Name of the column that is part of the primary key.
             - ORDINAL_POSITION (int): Position of the column in the primary key (optional).
@@ -299,12 +304,12 @@ class MetaDatabaseHandler(DatabaseHandler):
         """
         raise NotImplementedError()
 
-    def meta_get_foreign_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]]) -> DataHandlerResponse:
         """
         Returns metadata information about the foreign keys in the tables to be stored in the data catalog.
 
         Returns:
-            HandlerResponse: The response should consist of the following columns:
+            DataHandlerResponse: The response should consist of the following columns:
             - PARENT_TABLE_NAME (str): Name of the parent table.
             - PARENT_COLUMN_NAME (str): Name of the parent column that is part of the foreign key.
             - CHILD_TABLE_NAME (str): Name of the child table.

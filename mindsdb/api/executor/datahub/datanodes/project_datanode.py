@@ -13,12 +13,12 @@ from mindsdb_sql_parser.ast import (
     Delete,
 )
 
-from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
-from mindsdb.api.executor.datahub.classes.response import DataHubResponse
+from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.utilities.types.column import Column
 from mindsdb.utilities.partitioning import process_dataframe_in_partitions
-from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES, DataHandlerResponse, OkResponse, TableResponse
 
 
 class ProjectDataNode(DataNode):
@@ -100,7 +100,7 @@ class ProjectDataNode(DataNode):
 
         return ml_handler.predict(model_name, df, project_name=self.project.name, version=version, params=params)
 
-    def query(self, query: ASTNode | str = None, session=None) -> DataHubResponse:
+    def query(self, query: ASTNode | str = None, session=None) -> DataHandlerResponse:
         if isinstance(query, str):
             query = parse_sql(query)
 
@@ -110,7 +110,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.update_query(query)
-                return DataHubResponse()
+                return OkResponse()
 
             raise NotImplementedError(f"Can't update object: {query_table}")
 
@@ -120,7 +120,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.delete_query(query)
-                return DataHubResponse()
+                return OkResponse()
 
             raise NotImplementedError(f"Can't delete object: {query_table}")
 
@@ -157,17 +157,19 @@ class ProjectDataNode(DataNode):
                 # this is the view
                 df = self.project.query_view(query, session)
 
-                columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
-
-                return DataHubResponse(data_frame=df, columns=columns_info)
+                columns = [
+                    Column(name=k, dtype=v) for k, v in df.dtypes.items()
+                ]
+                return TableResponse(data=df, columns=columns)
 
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
                 # this is the knowledge db
                 df = kb_table.select_query(query)
-                columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
-
-                return DataHubResponse(data_frame=df, columns=columns_info)
+                columns = [
+                    Column(name=k, dtype=v) for k, v in df.dtypes.items()
+                ]
+                return TableResponse(data=df, columns=columns)
 
             raise EntityNotExistsError(f"Table '{query_table}' not found in database", self.project.name)
         else:
@@ -175,7 +177,7 @@ class ProjectDataNode(DataNode):
 
     def create_table(
         self, table_name: Identifier, result_set=None, is_replace=False, params=None, **kwargs
-    ) -> DataHubResponse:
+    ) -> OkResponse:
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
@@ -193,5 +195,5 @@ class ProjectDataNode(DataNode):
 
             df = result_set.to_df()
             kb_table.insert(df, params=params)
-            return DataHubResponse()
+            return OkResponse()
         raise NotImplementedError(f"Can't create table {table_name}")

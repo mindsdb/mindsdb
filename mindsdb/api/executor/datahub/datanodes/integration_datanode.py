@@ -4,25 +4,23 @@ import functools
 from dataclasses import astuple
 from typing import Iterable, List
 
-import numpy as np
 import pandas as pd
 from sqlalchemy.types import Integer, Float
 
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
 
-from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
+from mindsdb.api.executor.datahub.datanodes.system_tables import infer_mysql_type
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.executor.sql_query.result_set import ResultSet
-from mindsdb.integrations.libs.response import HandlerResponse, INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES, DataHandlerResponse, ErrorResponse, OkResponse
 from mindsdb.integrations.utilities.utils import get_class_name
 from mindsdb.metrics import metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 from mindsdb.utilities.exception import QueryError
-from mindsdb.api.executor.datahub.datanodes.system_tables import infer_mysql_type
 
 logger = log.getLogger(__name__)
 
@@ -57,9 +55,9 @@ def collect_metrics(func):
             query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(handler_class_name, result.type)
             query_time_with_labels.observe(elapsed_seconds)
 
-            num_rows = 0
-            if result.data_frame is not None:
-                num_rows = len(result.data_frame.index)
+            num_rows = getattr(result, 'affected_rows', None)
+            if num_rows is None:
+                num_rows = -1
             response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
                 handler_class_name, result.type
             )
@@ -169,7 +167,7 @@ class IntegrationDataNode(DataNode):
         is_create: bool = False,
         raise_if_exists: bool = True,
         **kwargs,
-    ) -> DataHubResponse:
+    ) -> OkResponse:
         # is_create - create table
         #   if !raise_if_exists: error will be skipped
         # is_replace - drop table if exists
@@ -197,18 +195,18 @@ class IntegrationDataNode(DataNode):
 
         if result_set is None:
             # it is just a 'create table'
-            return DataHubResponse()
+            return OkResponse()
 
         # native insert
         if hasattr(self.integration_handler, "insert"):
             df = result_set.to_df()
 
-            result: HandlerResponse = self.integration_handler.insert(table_name.parts[-1], df)
+            result: DataHandlerResponse = self.integration_handler.insert(table_name.parts[-1], df)
             if result is not None:
                 affected_rows = result.affected_rows
             else:
                 affected_rows = None
-            return DataHubResponse(affected_rows=affected_rows)
+            return OkResponse(affected_rows=affected_rows)
 
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
 
@@ -232,17 +230,17 @@ class IntegrationDataNode(DataNode):
 
         if len(values) == 0:
             # not need to insert
-            return DataHubResponse()
+            return OkResponse()
 
         insert_ast = Insert(table=table_name, columns=insert_columns, values=values, is_plain=True)
 
         try:
-            result: DataHubResponse = self.query(insert_ast)
+            result: DataHandlerResponse = self.query(insert_ast)
         except Exception as e:
             msg = f"[{self.ds_type}/{self.integration_name}]: {str(e)}"
             raise DBHandlerException(msg) from e
 
-        return DataHubResponse(affected_rows=result.affected_rows)
+        return OkResponse(affected_rows=result.affected_rows)
 
     def has_support_stream(self) -> bool:
         # checks if data handler has query_stream method
@@ -254,7 +252,7 @@ class IntegrationDataNode(DataNode):
         return self.integration_handler.query_stream(query, fetch_size=fetch_size)
 
     @profiler.profile()
-    def query(self, query: ASTNode | str = None, session=None) -> DataHubResponse:
+    def query(self, query: ASTNode | str = None, session=None) -> DataHandlerResponse:
         """Execute a query against the integration data source.
 
         This method processes SQL queries either as ASTNode objects or raw SQL strings
@@ -266,20 +264,20 @@ class IntegrationDataNode(DataNode):
             session: Session object (currently unused but kept for compatibility)
 
         Returns:
-            DataHubResponse: Response object
+            DataHandlerResponse: Response object
 
         Raises:
             NotImplementedError: If query is not ASTNode or str type
             Exception: If the query execution fails with an error response
         """
         if isinstance(query, ASTNode):
-            result: HandlerResponse = self.query_integration_handler(query=query)
+            result: DataHandlerResponse = self.query_integration_handler(query=query)
         elif isinstance(query, str):
-            result: HandlerResponse = self.native_query_integration(query=query)
+            result: DataHandlerResponse = self.native_query_integration(query=query)
         else:
             raise NotImplementedError("Thew query argument must be ASTNode or string type")
 
-        if result.type == RESPONSE_TYPE.ERROR:
+        if type(result) is ErrorResponse:
             if isinstance(query, ASTNode):
                 try:
                     query_str = query.to_string()
@@ -302,33 +300,12 @@ class IntegrationDataNode(DataNode):
             else:
                 raise exception from result.exception
 
-        if result.type == RESPONSE_TYPE.OK:
-            return DataHubResponse(affected_rows=result.affected_rows)
-
-        df = result.data_frame
-        # region clearing df from NaN values
-        # recursion error appears in pandas 1.5.3 https://github.com/pandas-dev/pandas/pull/45749
-        if isinstance(df, pd.Series):
-            df = df.to_frame()
-
-        try:
-            # replace python's Nan, np.NaN, np.nan and pd.NA to None
-            # TODO keep all NAN to the end of processing, bacause replacing also changes dtypes
-            df.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
-        except Exception:
-            logger.exception("Issue with clearing DF from NaN values:")
-        # endregion
-
-        columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
-
-        return DataHubResponse(
-            data_frame=df, columns=columns_info, affected_rows=result.affected_rows, mysql_types=result.mysql_types
-        )
+        return result
 
     @collect_metrics
-    def query_integration_handler(self, query: ASTNode) -> HandlerResponse:
+    def query_integration_handler(self, query: ASTNode) -> DataHandlerResponse:
         return self.integration_handler.query(query)
 
     @collect_metrics
-    def native_query_integration(self, query: str) -> HandlerResponse:
+    def native_query_integration(self, query: str) -> DataHandlerResponse:
         return self.integration_handler.native_query(query)

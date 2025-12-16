@@ -1,7 +1,6 @@
 import copy
 from array import array
 from typing import Any
-from dataclasses import dataclass, field, MISSING
 
 import numpy as np
 import pandas as pd
@@ -11,8 +10,10 @@ import sqlalchemy.types as sqlalchemy_types
 from mindsdb_sql_parser.ast import TableColumn
 
 from mindsdb.utilities import log
+from mindsdb.utilities.types.column import Column
 from mindsdb.api.executor.exceptions import WrongArgumentError
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+from mindsdb.integrations.libs.response import TableResponse
 
 
 logger = log.getLogger(__name__)
@@ -57,31 +58,6 @@ def _dump_vector(value: Any) -> Any:
     return value
 
 
-@dataclass(kw_only=True, slots=True)
-class Column:
-    name: str = field(default=MISSING)
-    alias: str | None = None
-    table_name: str | None = None
-    table_alias: str | None = None
-    type: MYSQL_DATA_TYPE | None = None
-    database: str | None = None
-    flags: dict = None
-    charset: str | None = None
-
-    def __post_init__(self):
-        if self.alias is None:
-            self.alias = self.name
-        if self.table_alias is None:
-            self.table_alias = self.table_name
-
-    def get_hash_name(self, prefix):
-        table_name = self.table_name if self.table_alias is None else self.table_alias
-        name = self.name if self.alias is None else self.alias
-
-        name = f"{prefix}_{table_name}_{name}"
-        return name
-
-
 def rename_df_columns(df: pd.DataFrame, names: list | None = None) -> None:
     """Inplace rename of dataframe columns
 
@@ -104,6 +80,7 @@ class ResultSet:
         affected_rows: int | None = None,
         is_prediction: bool = False,
         mysql_types: list[MYSQL_DATA_TYPE] | None = None,
+        table_response: TableResponse = None
     ):
         """
         Args:
@@ -112,9 +89,13 @@ class ResultSet:
             df (pd.DataFrame): injected dataframe, have to have enumerated columns and length equal to columns
             affected_rows (int): number of affected rows
         """
-        if columns is None:
-            columns = []
-        self._columns = columns
+        self._table_response: TableResponse = table_response
+        if table_response:
+            self._columns = table_response.columns
+        elif columns is None:
+            self._columns = []
+        else:
+            self._columns = columns
 
         if df is None:
             if values is None:
@@ -135,12 +116,14 @@ class ResultSet:
         return f"{self.__class__.__name__}({self.length()} rows, cols: {col_names})"
 
     def __len__(self) -> int:
+        self._resolve_table_response()
         if self._df is None:
             return 0
         return len(self._df)
 
     def __getitem__(self, slice_val):
         # return resultSet with sliced dataframe
+        self._resolve_table_response()
         df = self._df[slice_val]
         return ResultSet(columns=self.columns, df=df)
 
@@ -169,6 +152,10 @@ class ResultSet:
 
         rename_df_columns(df)
         return cls(df=df, columns=columns, is_prediction=is_prediction, mysql_types=mysql_types)
+
+    @classmethod
+    def from_table_response(cls, table_response):
+        return cls(table_response=table_response)
 
     @classmethod
     def from_df_cols(cls, df: pd.DataFrame, columns_dict: dict[str, Column], strict: bool = True) -> "ResultSet":
@@ -251,6 +238,7 @@ class ResultSet:
         return col_idx
 
     def add_column(self, col, values=None):
+        self._resolve_table_response()
         self._columns.append(col)
 
         col_idx = len(self._columns) - 1
@@ -259,6 +247,7 @@ class ResultSet:
         return col_idx
 
     def del_column(self, col):
+        self._resolve_table_response()
         idx = self.get_col_index(col)
         self._columns.pop(idx)
 
@@ -296,13 +285,32 @@ class ResultSet:
         return col2
 
     def set_col_type(self, col_idx, type_name):
+        self._resolve_table_response()
         self.columns[col_idx].type = type_name
         if self._df is not None:
             self._df[col_idx] = self._df[col_idx].astype(type_name)
 
     # --- records ---
 
+    def _resolve_table_response(self):
+        if self._table_response is not None:
+            self._table_response.fetchall()
+            # names = range(len(self._columns))
+            if self._df is None:
+                self._df = self._table_response._data  # pd.DataFrame(self._table_response._data, columns=names)
+            else:
+                self._df = pd.concat([self._df, self._table_response._data])
+            self._table_response = None
+
+    def stream_data(self):
+        if self._df is not None:
+            yield self._df
+        else:
+            for el in self._table_response.iterate_no_save():
+                yield el
+
     def get_raw_df(self):
+        self._resolve_table_response()
         if self._df is None:
             names = range(len(self._columns))
             return pd.DataFrame([], columns=names)
@@ -311,12 +319,14 @@ class ResultSet:
     def add_raw_df(self, df):
         if len(df.columns) != len(self._columns):
             raise WrongArgumentError(f"Record length mismatch columns length: {len(df.columns)} != {len(self.columns)}")
+        self._resolve_table_response()
 
         rename_df_columns(df)
 
         if self._df is None:
             self._df = df
         else:
+            rename_df_columns(self._df)
             self._df = pd.concat([self._df, df], ignore_index=True)
 
     def add_raw_values(self, values):
@@ -341,6 +351,7 @@ class ResultSet:
             list[TableColumn]: A list of TableColumn objects with properly mapped SQLAlchemy types
         """
         columns: list[TableColumn] = []
+        self._resolve_table_response()
 
         type_mapping = {
             MYSQL_DATA_TYPE.TINYINT: sqlalchemy_types.INTEGER,
@@ -382,6 +393,7 @@ class ResultSet:
             array->list, datetime64->str
         :return: list of lists
         """
+        self._resolve_table_response()
 
         if len(self.get_raw_df()) == 0:
             return []
@@ -408,6 +420,7 @@ class ResultSet:
 
     def set_column_values(self, col_name, values):
         # values is one value or list of values
+        self._resolve_table_response()
         cols = self.find_columns(col_name)
         if len(cols) == 0:
             col_idx = self.add_column(Column(name=col_name))
@@ -417,6 +430,13 @@ class ResultSet:
         if self._df is not None:
             self._df[col_idx] = values
 
+    def __add__(self, rs: "ResultSet"):
+        df1 = self.get_raw_df()
+        df2 = rs.get_raw_df()
+        df1.columns = list(range(len(df1.columns)))
+        df2.columns = list(range(len(df2.columns)))
+        return self
+
     def add_from_result_set(self, rs):
         source_names = rs.get_column_names()
 
@@ -424,7 +444,7 @@ class ResultSet:
         for name in self.get_column_names():
             col_sequence.append(source_names.index(name))
 
-        raw_df = rs.get_raw_df()[col_sequence]
+        raw_df = rs.get_raw_df().iloc[:, col_sequence]
 
         self.add_raw_df(raw_df)
 

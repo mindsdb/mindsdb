@@ -16,6 +16,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.interfaces.database.log import LogDBController
+from mindsdb.integrations.libs.response import TableResponse
 
 from mindsdb.utilities import log
 
@@ -331,9 +332,9 @@ class JobsController:
                 ],
             ),
         )
-        response = logs_db_controller.query(query)
+        response: TableResponse = logs_db_controller.query(query)
 
-        names = [i["name"] for i in response.columns]
+        names = [i.name for i in response.columns]
         return response.data_frame[names].to_dict(orient="records")
 
 

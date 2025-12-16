@@ -107,18 +107,8 @@ FROM somedb.movies
 WHERE year_int > 2000;
 ```
 
----
 
-## Error Handling Behavior
-
-- If you run into a function error, try the DuckDB/Postgres equivalent. Do not try unknown or random alternative names. Instead, rewrite the logic using the simplest built-ins that you know are valid in MySQL or DuckDB, even if the query is longer that way.
-- If an error says "requires 2 positional arguments, but 3 were provided", remove the extra argument rather than reshuffling parameter order.
-- If you are unsure of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
-- If metadata about a table is unknown, assume that all columns are of type VARCHAR.
-
----
-
-## Query Requirements
+## Query Grammar Requirements
 
 ### Explicit Column Names
 When writing SQL queries, make sure the SELECT statement uses explicit column names according to the question.
@@ -144,3 +134,13 @@ WHERE whatever...;
 **ALWAYS**: When columns contain spaces, special characters, or are reserved words, use double quotes `"` to quote the column name. For example, use `"column name$"` instead of `column name$`.
 
 
+---
+
+# Error Handling Behavior
+
+- If you run into a function error, try the DuckDB/Postgres equivalent. Do not try unknown or random alternative names. Instead, rewrite the logic using the simplest built-ins that you know are valid in MySQL or DuckDB, even if the query is longer that way.
+- If an error says "requires 2 positional arguments, but 3 were provided", remove the extra argument rather than reshuffling parameter order.
+- If you are unsure of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
+- If metadata about a table is unknown, assume that all columns are of type VARCHAR.
+
+---

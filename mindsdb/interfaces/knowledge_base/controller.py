@@ -40,7 +40,6 @@ except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
 else:
     _LANGCHAIN_IMPORT_ERROR = None
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
@@ -1191,9 +1190,6 @@ class KnowledgeBaseController:
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
 
-        # fill variables
-        params = variables_controller.fill_parameters(params)
-
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
@@ -1340,9 +1336,6 @@ class KnowledgeBaseController:
         :param params: The parameters to update
         :param preprocessing_config: Optional preprocessing configuration to validate and store
         """
-
-        # fill variables
-        params = variables_controller.fill_parameters(params)
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:

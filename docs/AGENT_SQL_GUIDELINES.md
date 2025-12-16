@@ -1,35 +1,50 @@
-Always Use MindsDB SQL Dialect to write queries.
+# MindsDB SQL Guidelines
 
-Most MySQL queries will work in MindsDB.
+Always use the MindsDB SQL dialect to write queries.
 
-# Some Important exceptions, or not supported statements:
-
-- ROLLUP statements: When doing aggregates, MindsDB does not currently support ROLLUP statements, find an alternative way to group.
-- Common Table Expressions (CTE)
+Most MySQL queries will work in MindsDB, however there are some constraints and preferences, that you must follow.
 
 
-# MindsDB SQL guidelines for specific question types:
 
-- Date math & windows
+## Not Supported Statements in MindsDB SQL
 
-MindsDB, prefers simple interval arithmetic over dialect-specific functions.
+- **ROLLUP statements**: When doing aggregates, MindsDB does not currently support ROLLUP statements. Find an alternative way to group.
+- **Common Table Expressions (CTE)**: CTEs are not supported.
 
-To subtract months:
+---
+
+# Preferred MindsDB SQL grammar
+
+MindsDB queries for certain types of operations preffers certain syntax and SQL grammar and constraints.
+
+## Date Math and Windows
+
+MindsDB prefers simple interval arithmetic over dialect-specific functions.
+
+### Subtracting Months
+```sql
 max_ts - INTERVAL 8 MONTH
+```
 
-To subtract days:
+### Subtracting Days
+```sql
 max_ts - INTERVAL 30 DAY
+```
 
-- Date aggregations: 
-  - Always use DATE_TRUNC for Monthly, daily, .. etc, 
-  - Avoid using DATEADD, DATE_ADD, or other guessed function names unless they already appear in a working example.
+---
 
+## Date Aggregations
 
-Examples: 
-Use DATE_TRUNC('month', timestamp_expression) for month bucketing.
+- Always use `DATE_TRUNC` for monthly, daily, etc. aggregations.
+- Avoid using `DATEADD`, `DATE_ADD`, or other guessed function names unless they already appear in a working example.
+
+### Examples
+
+Use `DATE_TRUNC('month', timestamp_expression)` for month bucketing.
 
 When asked for "last N months from the most recent date in column X", follow this structure:
 
+```sql
 SELECT
     DATE_TRUNC('month', CAST(X AS TIMESTAMP)) AS month,
     COUNT(*) AS total
@@ -43,51 +58,89 @@ WHERE CAST(X AS TIMESTAMP) >= (
 )
 GROUP BY month
 ORDER BY month;
+```
 
+**Note**: Replace `<N-1>` with the number of months to go back, excluding the current one. For example, for "past 9 months including current", use 8.
 
-Replace <N-1> with the number of months to go back excluding the current one (for "past 9 months including current", use 8).
+---
 
-- COUNT and aggregates
+## COUNT and Aggregates
 
-Use COUNT(*) or COUNT(column). Never use COUNT() with empty parentheses.
+- Use `COUNT(*)` or `COUNT(column)`. Never use `COUNT()` with empty parentheses.
+- If you change the SELECT list, update GROUP BY accordingly (or use `GROUP BY 1, 2, ...`).
 
-If you change the SELECT list, update GROUP BY accordingly (or use GROUP BY 1, 2, ...).
+---
 
-- CASTING:
+## Casting
 
-    - When casting varchars to something else simply use the CAST function, for example: CAST(year AS INTEGER), or CAST(year AS FLOAT), or CAST(year AS DATE), or CAST(year AS BOOLEAN), etc.
-    - When a column has been casted and renamed, the new name can and should be used in the query, for example:
-    do:
-SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE ndate >= something
-    instead of:
-SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE CAST(datetime AS DATE) >= something
+### Basic Casting
+When casting VARCHARs to other types, use the `CAST` function:
 
-    - if you cast the column year CAST(year AS INTEGER) AS year_int, you can use year_int in the query such as:
-    
-SELECT CAST(year AS INTEGER) AS year_int FROM somedb.movies WHERE year_int > 2000. 
+- `CAST(year AS INTEGER)`
+- `CAST(year AS FLOAT)`
+- `CAST(year AS DATE)`
+- `CAST(year AS BOOLEAN)`
 
+### Using Casted Column Names
+When a column has been cast and renamed, use the new name in the query.
 
+**Do:**
+```sql
+SELECT CAST(datetime AS DATE) AS ndate 
+FROM somedb.movies 
+WHERE ndate >= something;
+```
 
-# Error handling behavior:
+**Instead of:**
+```sql
+SELECT CAST(datetime AS DATE) AS ndate 
+FROM somedb.movies 
+WHERE CAST(datetime AS DATE) >= something;
+```
 
-    - If you run into a funciton error, try the DuckDB/Postgres equivalent. Do not try unknown/random alternative names. Instead, rewrite the logic the Simplest built-ins that you know are valid in Mysql or DuckDB. even if the query is longer that way.
-    - If an error says "requires 2 positional arguments, but 3 were provided", remove the extra argument rather than reshuffling parameter order.
-    - If you are unsusre of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
-    - If Metadata about a table is unknown, assume that all columns are of type varchar. 
+### Example with Renamed Cast
+If you cast a column as `CAST(year AS INTEGER) AS year_int`, you can use `year_int` in the query:
 
+```sql
+SELECT CAST(year AS INTEGER) AS year_int 
+FROM somedb.movies 
+WHERE year_int > 2000;
+```
 
+---
 
-# Query requirements
+## Error Handling Behavior
 
-- When writing the SQL query, make sure the select explicit names for the columns accordingly to the question.
+- If you run into a function error, try the DuckDB/Postgres equivalent. Do not try unknown or random alternative names. Instead, rewrite the logic using the simplest built-ins that you know are valid in MySQL or DuckDB, even if the query is longer that way.
+- If an error says "requires 2 positional arguments, but 3 were provided", remove the extra argument rather than reshuffling parameter order.
+- If you are unsure of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
+- If metadata about a table is unknown, assume that all columns are of type VARCHAR.
 
-Example:
-SELECT movie_id, movie_description, age, name FROM someschema.movies WHERE whatever...;
-Instead of:
-SELECT * FROM somedb.movies WHERE whatever...;
+---
 
+## Query Requirements
 
-- ALWAYS:Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE..`;
-- ALWAYS: When columns contain spaces, special characters or are reserved words, use double quotes `"` to quote the column name, for example, "column name$" instead of simply: column name$.
+### Explicit Column Names
+When writing SQL queries, make sure the SELECT statement uses explicit column names according to the question.
+
+**Example:**
+```sql
+SELECT movie_id, movie_description, age, name 
+FROM someschema.movies 
+WHERE whatever...;
+```
+
+**Instead of:**
+```sql
+SELECT * 
+FROM somedb.movies 
+WHERE whatever...;
+```
+
+### Schema/Database Names
+**ALWAYS**: Include the name of the schema/database in queries. For example, instead of `SELECT * FROM movies WHERE ...`, write `SELECT * FROM somedb.movies WHERE ...`.
+
+### Column Names with Special Characters
+**ALWAYS**: When columns contain spaces, special characters, or are reserved words, use double quotes `"` to quote the column name. For example, use `"column name$"` instead of `column name$`.
 
 

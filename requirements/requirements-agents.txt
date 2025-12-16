@@ -19,7 +19,7 @@ fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
 
 # Required for KB
 mindsdb-evaluator == 0.0.21
-
+litellm==1.63.14
 mcp~=1.10.1 # Required for MCP server
 
 # A2A requirements

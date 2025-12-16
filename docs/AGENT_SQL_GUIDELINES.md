@@ -8,7 +8,7 @@ Most MySQL queries will work in MindsDB, however there are some constraints and 
 
 ## Not Supported Statements in MindsDB SQL
 
-- **ROLLUP statements**: When doing aggregates, MindsDB does not currently support ROLLUP statements. Find an alternative way to group.
+- **ROLLUP statements**: For aggregates, MindsDB supports standard GROUP BY statements, however,  MindsDB does not currently support statements with ROLLUP. Find an alternative way to do those using standard GROUP BY operations.
 - **Common Table Expressions (CTE)**: CTEs are not supported.
 
 ---

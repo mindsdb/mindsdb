@@ -35,35 +35,6 @@ def _quote_identifier(identifier: str) -> str:
     return f"`{identifier.replace('`', '``')}`"
 
 
-# def _get_mysql_types_from_description(
-#     description,
-# ) -> list[MYSQL_DATA_TYPE] | None:
-#     """Best-effort extraction of column MySQL types from Databricks cursor description."""
-#     if not description:
-#         return None
-
-#     try:
-#         description_list = list(description)
-#     except TypeError:
-#         return None
-
-#     if len(description_list) == 0:
-#         return None
-
-#     mysql_types: list[MYSQL_DATA_TYPE] = []
-#     for col in description_list:
-#         type_name = None
-#         if hasattr(col, "type_name"):
-#             type_name = getattr(col, "type_name", None)
-#         elif hasattr(col, "type_code"):
-#             type_name = getattr(col, "type_code", None)
-#         elif isinstance(col, (list, tuple)) and len(col) > 1:
-#             type_name = col[1]
-#         mysql_types.append(_map_type(type_name))
-
-#     return mysql_types if len(mysql_types) > 0 else None
-
-
 def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     """Map MyDatabricks SQL text types names to MySQL types as enum.
 
@@ -101,9 +72,7 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     try:
         return MYSQL_DATA_TYPE(type_upper)
     except Exception:
-        logger.info(
-            f"Databricks handler: unknown type: {internal_type_name}, use TEXT as fallback."
-        )
+        logger.info(f"Databricks handler: unknown type: {internal_type_name}, use TEXT as fallback.")
         return MYSQL_DATA_TYPE.TEXT
 
 
@@ -260,28 +229,18 @@ class DatabricksHandler(MetaDatabaseHandler):
                 if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result, columns=[x[0] for x in cursor.description]
-                        ),
+                        data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description]),
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 # Always commit after successful execution
                 connection.commit()
             except ServerOperationError as server_error:
-                logger.error(
-                    f"Server error running query: {query} on Databricks, {server_error}!"
-                )
-                response = Response(
-                    RESPONSE_TYPE.ERROR, error_message=str(server_error), error_code=0
-                )
+                logger.error(f"Server error running query: {query} on Databricks, {server_error}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(server_error), error_code=0)
             except Exception as unknown_error:
-                logger.error(
-                    f"Unknown error running query: {query} on Databricks, {unknown_error}!"
-                )
-                response = Response(
-                    RESPONSE_TYPE.ERROR, error_message=str(unknown_error), error_code=0
-                )
+                logger.error(f"Unknown error running query: {query} on Databricks, {unknown_error}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(unknown_error), error_code=0)
 
         if need_to_close is True:
             self.disconnect()
@@ -376,7 +335,7 @@ class DatabricksHandler(MetaDatabaseHandler):
             AND
                 table_schema = {schema_name}
         """
-        
+
         result = self.native_query(query)
         if result.resp_type == RESPONSE_TYPE.OK:
             result = Response(
@@ -416,9 +375,7 @@ class DatabricksHandler(MetaDatabaseHandler):
         """
 
         if table_names is not None and len(table_names) > 0:
-            table_names_str = ", ".join(
-                [f"'{_escape_literal(t)}'" for t in table_names]
-            )
+            table_names_str = ", ".join([f"'{_escape_literal(t)}'" for t in table_names])
             query += f" AND table_name IN ({table_names_str})"
 
         result = self.native_query(query)
@@ -464,9 +421,7 @@ class DatabricksHandler(MetaDatabaseHandler):
         """
 
         if table_names is not None and len(table_names) > 0:
-            table_names_str = ", ".join(
-                [f"'{_escape_literal(t.lower())}'" for t in table_names]
-            )
+            table_names_str = ", ".join([f"'{_escape_literal(t.lower())}'" for t in table_names])
             query += f" AND LOWER(table_name) IN ({table_names_str})"
 
         result = self.native_query(query)
@@ -492,9 +447,7 @@ class DatabricksHandler(MetaDatabaseHandler):
             WHERE table_schema = '{schema_literal}'
         """
         if table_names:
-            table_names_str = ", ".join(
-                [f"'{_escape_literal(t)}'" for t in table_names]
-            )
+            table_names_str = ", ".join([f"'{_escape_literal(t)}'" for t in table_names])
             columns_query += f" AND table_name IN ({table_names_str})"
 
         columns_result = self.native_query(columns_query)

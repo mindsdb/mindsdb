@@ -106,6 +106,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloa
 # Install system dependencies, with caching for faster builds
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    export DEBIAN_FRONTEND=noninteractive ACCEPT_EULA=Y && \
     apt update -qy \
     && apt-get upgrade -qy \
     && apt-get install -qy \

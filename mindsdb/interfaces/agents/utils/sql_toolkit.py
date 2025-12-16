@@ -165,26 +165,20 @@ class TablesCollection:
         return f"Tables({self.items})"
 
 
+class QueryType:
+    FINAL = "final_query"  # this is the final query
+    EXPLORATORY = "exploratory_query"  # this is a query to explore and collect info to solve the challenge (e.g., distinct values of a categorical column, schema inference, etc.)
+
+
 class Plan(BaseModel):
     plan: str = Field(..., description="A step-by-step plan for solving the question, identifying data sources and steps needed")
     estimated_steps: int = Field(..., description="Estimated number of steps needed to solve the question")
 
 
-class ResponseType:
-    EXPLORATORY = "exploratory_query"
-    FINAL = "final_query" # this is a query to explore and collect info to solve the challenge (e.g., distinct values of a categorical column, schema inference, etc.)
-    RESPONSE = "final_text"  # this is the final query
-
-
-class SqlOrText(BaseModel):
-    # sql_query: str = Field(..., description="")
-    response: str = Field(..., description="The SQL query to run or response to the user")
+class SQLQuery(BaseModel):
+    sql_query: str = Field(..., description="The SQL query to run")
     short_description: str = Field(..., description="A short summary or description of the SQL query's purpose")
-    response_type: str = Field(..., description="Type of query: "
-                                                "'exploratory_query' for queries used to explore or collect info to solve the question, if we need to interrogagte the database a bit more, "
-                                                "'final_query' for the main sql query if we can solve the question we were asked by returning result of this query, "           
-                                                "'final_text' to return text response to user if we can answer without executing query"
-   )
+    query_type: str = Field(QueryType.FINAL, description="Type of query: 'final_query' for the main query if we can solve the question we were asked, 'exploratory_query' for queries used to explore or collect info to solve the question, if we need to interrogagte the database a bit more")
 
 
 class MindsDBQuery:

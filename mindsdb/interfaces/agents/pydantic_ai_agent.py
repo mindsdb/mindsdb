@@ -17,7 +17,7 @@ from mindsdb.interfaces.agents.utils.constants import (
     TRACE_ID_COLUMN,
 )
 
-from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery, SqlOrText, ResponseType, Plan
+from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery, SQLQuery, QueryType, Plan
 from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import (
     get_model_instance_from_kwargs
 )
@@ -583,7 +583,7 @@ class PydanticAIAgent:
         agent = Agent(
             self.model_instance,
             system_prompt=self.system_prompt,
-            output_type=SqlOrText
+            output_type=SQLQuery
         )
 
         error_context = None
@@ -619,26 +619,18 @@ class PydanticAIAgent:
                         "type": "context",
                         "content": output.short_description
                     })
-
-                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: response: {output.response}, query_type: {output.response_type}, description: {output.short_description}")
+                sql_query = output.sql_query
+                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: sql: {sql_query}, query_type: {output.query_type}, description: {output.short_description}")
 
                 # Initialize retry counter for this query
 
                 # Retry loop for this query (up to MAX_RETRIES)
-                if output.response_type == ResponseType.RESPONSE:
-                    # return text to user and exit
-                    yield self._add_chunk_metadata({
-                        "type": "data",
-                        "content": pd.DataFrame([{'answer': output.response}])
-                    })
-                    yield self._add_chunk_metadata({"type": "end"})
-                    return
 
                 error_context = None
 
                 try:
                     yield self._add_chunk_metadata({"type": "status", "content": "Executing SQL query..."})
-                    query_data = self.sql_toolkit.execute_sql(output.response)
+                    query_data = self.sql_toolkit.execute_sql(sql_query)
 
                 except Exception as e:
                     # Extract error message - prefer db_error_msg for QueryError, otherwise use str(e)
@@ -652,12 +644,12 @@ class PydanticAIAgent:
                         "content": error_message
                     })
 
-                    accumulated_errors.append(f"Query: {output.response}\nError: {query_error}")
+                    accumulated_errors.append(f"Query: {sql_query}\nError: {query_error}")
                     retry_count += 1
                     if retry_count <= MAX_RETRIES:
                         error_context = "\n\nPrevious query errors:\n" + "\n---\n".join(accumulated_errors[-3:])
                     else:
-                        query_result_str = f"Query: {output.response}\nError: {query_error}"
+                        query_result_str = f"Query: {sql_query}\nError: {query_error}"
                         exploratory_query_results.append(query_result_str)
 
                     continue
@@ -665,7 +657,7 @@ class PydanticAIAgent:
                 DEBUG_LOGGER("PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
                 retry_count = 0
 
-                if output.response_type == ResponseType.FINAL:
+                if output.query_type == QueryType.FINAL:
                     # return response to user
                     yield self._add_chunk_metadata({
                         "type": "data",
@@ -679,7 +671,7 @@ class PydanticAIAgent:
                 DEBUG_LOGGER(f"Exploratory query {exploratory_query_count}/{MAX_EXPLORATORY_QUERIES} succeeded")
 
                 # Format query result for prompt
-                query_result_str = f"Query: {output.response}\nDescription: {output.short_description}\nResult:\n{dataframe_to_markdown(query_data)}"
+                query_result_str = f"Query: {sql_query}\nDescription: {output.short_description}\nResult:\n{dataframe_to_markdown(query_data)}"
                 exploratory_query_results.append(query_result_str)
 
         except Exception as e:

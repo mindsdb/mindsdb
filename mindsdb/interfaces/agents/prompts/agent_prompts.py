@@ -187,7 +187,7 @@ The plan should:
 1. Identify what data sources (tables or knowledge bases) are relevant to answer the question
 1.1 When referring to tables or knowledge bases in the plan. Always include the name of the schema/database in the plan along with the table name. For example: database_name.table_name or database_name.knowledge_base_name
 2. Outline the steps needed to solve the question, each step may correspond to some exploration query that you may need to do, describe the exploratory step, but do not write the query.
-2.1 If there is no need for exploratorys steps, describe how would you write the final query (or final text response to the user). and that you can solve this in one step.
+2.1 If there is no need for exploratorys steps, describe how would you write the final query. and that you can solve this in one step.
 2.2 Note: exploratory steps, can be for example:
 - if we can see that we will filter by the value of one column that is categorical we may need to first explore the DISTINCT values of that column to understand what values to filter by in WHERE col=<something>
 3. Specify what information might need to be explored or collected

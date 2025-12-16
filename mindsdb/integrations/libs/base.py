@@ -41,10 +41,17 @@ class BaseHandler:
 
         # Methods whose return values should be normalized to new response types
         _methods_to_normalize = (
-            'native_query', 'query', 'insert', 'get_tables', 'get_columns',
-            'meta_get_tables', 'meta_get_columns', 'meta_get_column_statistics',
-            'meta_get_column_statistics_for_table', 'meta_get_primary_keys',
-            'meta_get_foreign_keys'
+            "native_query",
+            "query",
+            "insert",
+            "get_tables",
+            "get_columns",
+            "meta_get_tables",
+            "meta_get_columns",
+            "meta_get_column_statistics",
+            "meta_get_column_statistics_for_table",
+            "meta_get_primary_keys",
+            "meta_get_foreign_keys",
         )
         for method_name in _methods_to_normalize:
             # Only wrap if method is defined directly in this class (not inherited)
@@ -53,16 +60,15 @@ class BaseHandler:
 
             original_method = cls.__dict__[method_name]
 
-            return_type = get_type_hints(original_method).get('return')
-            if (
-                return_type is DataHandlerResponse
-                or (get_origin(return_type) is Union and issubclass(get_args(return_type)[0], DataHandlerResponse))
+            return_type = get_type_hints(original_method).get("return")
+            if return_type is DataHandlerResponse or (
+                get_origin(return_type) is Union and issubclass(get_args(return_type)[0], DataHandlerResponse)
             ):
                 # this is already new style response
                 continue
 
             # Skip if already wrapped
-            if getattr(original_method, '_response_normalized', False):
+            if getattr(original_method, "_response_normalized", False):
                 continue
 
             # Create wrapper that normalizes response
@@ -261,9 +267,7 @@ class MetaDatabaseHandler(DatabaseHandler):
             if not results:
                 logger.warning("No column statistics could be retrieved for the specified tables.")
                 return ErrorResponse(error_message="No column statistics could be retrieved.")
-            return TableResponse(
-                data=pd.concat(results, ignore_index=True) if results else pd.DataFrame()
-            )
+            return TableResponse(data=pd.concat(results, ignore_index=True) if results else pd.DataFrame())
         else:
             raise NotImplementedError()
 

@@ -69,6 +69,7 @@ class HandlerStatusResponse:
 
 class DataHandlerResponse(ABC):
     """Base class for all data handler responses."""
+
     type: ClassVar[str]
 
 
@@ -82,6 +83,7 @@ class ErrorResponse(DataHandlerResponse):
         is_expected_error: bool
         exception: Exception | None
     """
+
     type: ClassVar[str] = RESPONSE_TYPE.ERROR
     error_code: int
     error_message: str | None
@@ -105,6 +107,7 @@ class OkResponse(DataHandlerResponse):
         type: RESPONSE_TYPE.OK
         affected_rows: int - how many rows were affected by the query
     """
+
     type: ClassVar[str] = RESPONSE_TYPE.OK
     affected_rows: int
 
@@ -114,7 +117,7 @@ class OkResponse(DataHandlerResponse):
 
 class TableResponse(DataHandlerResponse):
     """Response for successful cases with data (e.g. SELECT, SHOW, etc.).
-    
+
     Attributes:
         type: RESPONSE_TYPE.TABLE
         affected_rows: int | None - how many rows were affected by the query
@@ -123,6 +126,7 @@ class TableResponse(DataHandlerResponse):
         _data: pandas.DataFrame | None - loaded data
         _fetched: bool | None - if data was already fetched (data_generator is consumed)
     """
+
     type: ClassVar[str] = RESPONSE_TYPE.TABLE
     affected_rows: int | None
     data_generator: Generator[pandas.DataFrame, None, None] | None
@@ -135,7 +139,7 @@ class TableResponse(DataHandlerResponse):
         data: pandas.DataFrame | None = None,
         data_generator: Generator[pandas.DataFrame, None, None] | None = None,
         affected_rows: int | None = None,
-        columns: list[Column] = None
+        columns: list[Column] = None,
     ):
         """
         Either data or data_generator must be provided.
@@ -182,7 +186,7 @@ class TableResponse(DataHandlerResponse):
 
     def iterate_no_save(self) -> Generator[pandas.DataFrame, None, None]:
         """Iterate over the data and yield each piece of data. Do not save the data to the _data attribute.
-        
+
         NOTE: do it only once, before return result to the user
         """
         if self._data:
@@ -225,17 +229,16 @@ class TableResponse(DataHandlerResponse):
         if self.type != RESPONSE_TYPE.TABLE:
             if self.type == RESPONSE_TYPE.ERROR:
                 raise ValueError(
-                    f"Cannot convert {self.type} to {RESPONSE_TYPE.COLUMNS_TABLE}, "
-                    f"the error is: {self.error_message}"
+                    f"Cannot convert {self.type} to {RESPONSE_TYPE.COLUMNS_TABLE}, the error is: {self.error_message}"
                 )
             raise ValueError(f"Cannot convert {self.resp} to {RESPONSE_TYPE.COLUMNS_TABLE}")
 
         self.fetchall()
 
         self._data.columns = [name.upper() for name in self._data.columns]
-        self._data[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self._data[
-            INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE
-        ].apply(map_type_fn)
+        self._data[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self._data[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE].apply(
+            map_type_fn
+        )
 
         # region validate df
         current_columns_set = set(self._data.columns)
@@ -307,7 +310,9 @@ def normalize_response(response) -> TableResponse | OkResponse | ErrorResponse:
 
         return TableResponse(
             data=response.data_frame,
-            columns=[Column(name=column_name, type=mysql_type) for column_name, mysql_type in zip(columns, mysql_types)],
+            columns=[
+                Column(name=column_name, type=mysql_type) for column_name, mysql_type in zip(columns, mysql_types)
+            ],
             data_generator=iter([]),  # empty generator for legacy responses
         )
 
@@ -320,6 +325,7 @@ class HandlerResponse:
     """Legacy response class for compatibility with old code.
     NOTE: do not use this class directly, use DataHandlerResponse instead
     """
+
     def __init__(
         self,
         resp_type: RESPONSE_TYPE,

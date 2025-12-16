@@ -74,6 +74,7 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     logger.debug(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
     return fallback_type
 
+
 def _get_colums(cursor: Cursor) -> list[Column]:
     """Get columns from cursor.
 
@@ -125,12 +126,9 @@ def _get_colums(cursor: Cursor) -> list[Column]:
             expected_dtype = "boolean"
         else:
             expected_dtype = None
-        result.append(Column(
-            name=column.name,
-            type=mysql_types[i],
-            original_type=column.type_display,
-            dtype=expected_dtype
-        ))
+        result.append(
+            Column(name=column.name, type=mysql_types[i], original_type=column.type_display, dtype=expected_dtype)
+        )
     return result
 
 

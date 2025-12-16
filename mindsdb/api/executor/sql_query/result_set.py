@@ -80,7 +80,7 @@ class ResultSet:
         affected_rows: int | None = None,
         is_prediction: bool = False,
         mysql_types: list[MYSQL_DATA_TYPE] | None = None,
-        table_response: TableResponse = None
+        table_response: TableResponse = None,
     ):
         """
         Args:

@@ -55,7 +55,7 @@ def collect_metrics(func):
             query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(handler_class_name, result.type)
             query_time_with_labels.observe(elapsed_seconds)
 
-            num_rows = getattr(result, 'affected_rows', None)
+            num_rows = getattr(result, "affected_rows", None)
             if num_rows is None:
                 num_rows = -1
             response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(

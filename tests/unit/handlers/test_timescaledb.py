@@ -7,22 +7,19 @@ from psycopg.pq import ExecStatus
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.timescaledb_handler.timescaledb_handler import TimeScaleDBHandler
-from mindsdb.integrations.libs.response import (
-    DataHandlerResponse as Response
-)
+from mindsdb.integrations.libs.response import DataHandlerResponse as Response
 
 
 class TestTimescaleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
-
     @property
     def dummy_connection_data(self):
         return OrderedDict(
-            host='127.0.0.1',
+            host="127.0.0.1",
             port=5432,
-            user='example_user',
-            schema='public',
-            password='example_pass',
-            database='example_db'
+            user="example_user",
+            schema="public",
+            password="example_pass",
+            database="example_db",
         )
 
     @property
@@ -69,10 +66,10 @@ class TestTimescaleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
 
     def create_handler(self):
-        return TimeScaleDBHandler('timescaledb', connection_data=self.dummy_connection_data)
+        return TimeScaleDBHandler("timescaledb", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch('psycopg.connect')
+        return patch("psycopg.connect")
 
     def test_native_query(self):
         """
@@ -99,5 +96,5 @@ class TestTimescaleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertFalse(data.error_code)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -226,9 +226,7 @@ class InformationSchemaDataNode(DataNode):
             dataframe = self._get_empty_table(tbl)
         data = query_df(dataframe, query, session=self.session)
 
-        columns = [
-            Column(name=k, dtype=v) for k, v in data.dtypes.items()
-        ]
+        columns = [Column(name=k, dtype=v) for k, v in data.dtypes.items()]
         return TableResponse(data=data, columns=columns, affected_rows=0)
 
     def _get_empty_table(self, table):

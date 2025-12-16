@@ -5,7 +5,7 @@ import duckdb
 from typing import Any
 
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse, HandlerStatusResponse
+from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse, HandlerStatusResponse, TableResponse
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
@@ -84,7 +84,7 @@ class DummyHandler(DatabaseHandler):
         q = "SHOW TABLES;"
         result = self.native_query(q)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
+        result._data = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name: str) -> HandlerResponse:

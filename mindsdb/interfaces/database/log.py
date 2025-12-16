@@ -260,7 +260,5 @@ class LogDBController:
                     df[df_column_name] = df[df_column_name].astype(column_type)
         # endregion
 
-        columns = [
-            Column(name=k, dtype=v) for k, v in df.dtypes.items()
-        ]
+        columns = [Column(name=k, dtype=v) for k, v in df.dtypes.items()]
         return TableResponse(data=df, columns=columns, affected_rows=0)

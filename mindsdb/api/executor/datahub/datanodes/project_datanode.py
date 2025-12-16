@@ -157,18 +157,14 @@ class ProjectDataNode(DataNode):
                 # this is the view
                 df = self.project.query_view(query, session)
 
-                columns = [
-                    Column(name=k, dtype=v) for k, v in df.dtypes.items()
-                ]
+                columns = [Column(name=k, dtype=v) for k, v in df.dtypes.items()]
                 return TableResponse(data=df, columns=columns)
 
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
                 # this is the knowledge db
                 df = kb_table.select_query(query)
-                columns = [
-                    Column(name=k, dtype=v) for k, v in df.dtypes.items()
-                ]
+                columns = [Column(name=k, dtype=v) for k, v in df.dtypes.items()]
                 return TableResponse(data=df, columns=columns)
 
             raise EntityNotExistsError(f"Table '{query_table}' not found in database", self.project.name)

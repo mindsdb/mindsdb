@@ -9,13 +9,13 @@ Most MySQL queries will work in MindsDB, however there are some constraints and 
 ## Not Supported Statements in MindsDB SQL
 
 - **ROLLUP statements**: For aggregates, MindsDB supports standard GROUP BY statements, however,  MindsDB does not currently support statements with ROLLUP. Find an alternative way to do those using standard GROUP BY operations.
-- **Common Table Expressions (CTE)**: CTEs are not supported.
+- **Common Table Expressions (CTE)**: CTEs are not supported. WITH <namedcte> AS () ...
 
 ---
 
 # Preferred MindsDB SQL grammar
 
-MindsDB queries for certain types of operations preffers certain syntax and SQL grammar and constraints.
+MindsDB queries for certain types of operations preffers certain syntax and SQL grammar.
 
 ## Date Math and Windows
 

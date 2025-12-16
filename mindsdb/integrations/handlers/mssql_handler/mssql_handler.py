@@ -304,6 +304,7 @@ class SqlServerHandler(MetaDatabaseHandler):
             try:
                 self.connection.close()
             except Exception:
+                logger.exception("Failed to close connection:")
                 pass
         self.connection = None
         self.is_connected = False

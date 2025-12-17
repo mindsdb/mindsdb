@@ -124,8 +124,6 @@ class FaissIndex:
         if len(vectors) == 0:
             return
 
-        self.check_ram_usage(len(vectors), "flat")
-
         vectors = np.array(vectors)
         ids = np.array(ids)
 
@@ -134,6 +132,8 @@ class FaissIndex:
             self.dim = vectors.shape[1]
 
             self._build_index()
+
+        self.check_ram_usage(len(vectors), "flat")
 
         if vectors.shape[1] != self.dim:
             raise ValueError(f"Dimension mismatch: expected {self.dim}, got {vectors.shape[1]}")

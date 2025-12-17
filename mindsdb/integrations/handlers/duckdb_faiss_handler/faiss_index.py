@@ -62,11 +62,12 @@ class FaissIndex:
             to_free_gb = round((required_ram - available_ram) / 1024**3, 2)
             raise ValueError(f"Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb")
 
-        self.index_fd = open(self.path, "rb")
-        try:
-            portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
-        except portalocker.exceptions.AlreadyLocked:
-            raise ValueError(f"Index is already used: {self.path}")
+        if os.name != 'nt':
+            self.index_fd = open(self.path, "rb")
+            try:
+                portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
+            except portalocker.exceptions.AlreadyLocked:
+                raise ValueError(f"Index is already used: {self.path}")
 
         self.index = faiss.read_index(self.path)
         self.dim = self.index.d

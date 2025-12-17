@@ -8,7 +8,6 @@ from unittest.mock import patch
 def test_update_kb_embeddings(mock_embedding, chroma, client):
     # for test of embeddings
     mock_embedding().data = [{"embedding": [0.1, 0.2]}]
-    breakpoint()
     create_response = client.post(
         "/api/projects/mindsdb/knowledge_bases",
         follow_redirects=True,

@@ -2,7 +2,7 @@ openai==2.9.0
 
 langchain==0.3.27
 langchain-community==0.3.27
-langchain-core==0.3.76
+langchain-core==0.3.77
 langchain-experimental==0.3.4
 langchain-nvidia-ai-endpoints==0.3.3
 langchain-openai==0.3.34

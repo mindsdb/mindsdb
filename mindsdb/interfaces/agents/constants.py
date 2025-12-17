@@ -25,6 +25,7 @@ OPEN_AI_CHAT_MODELS = (
 
 SUPPORTED_PROVIDERS = {
     "openai",
+    "azure_openai",
     "anthropic",
     "litellm",
     "ollama",

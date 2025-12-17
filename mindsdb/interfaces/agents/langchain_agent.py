@@ -158,7 +158,7 @@ def create_chat_model(args: Dict):
 
     if args["provider"] == "anthropic":
         return ChatAnthropic(**model_kwargs)
-    if args["provider"] == "openai" or args["provider"] == "vllm":
+    if args["provider"] in ["openai", "vllm", "azure_openai"]:
         chat_open_ai = ChatOpenAI(**model_kwargs)
         # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
         # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.

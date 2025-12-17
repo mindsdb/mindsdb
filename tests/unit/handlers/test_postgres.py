@@ -16,7 +16,7 @@ from pandas.api import types as pd_types
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
-from mindsdb.integrations.libs.response import DataHandlerResponse as Response, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import DataHandlerResponse as Response, RESPONSE_TYPE, TableResponse
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
@@ -134,7 +134,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.fetchall = MagicMock(return_value=[[1, "name1"], [2, "name2"]])
+        mock_cursor.fetchmany = MagicMock(side_effect=[
+            [[1, "name1"], [2, "name2"]], []
+        ])
 
         # Create proper description objects with necessary type_code for _cast_dtypes
         mock_cursor.description = [
@@ -150,8 +152,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = "SELECT * FROM table"
         data = self.handler.native_query(query_str)
         mock_cursor.execute.assert_called_once_with(query_str)
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
+        assert isinstance(data, TableResponse)
+        assert getattr(data, 'error_code', None) is None
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
         self.assertEqual(list(data.data_frame.columns), ["id", "name"])
@@ -527,9 +529,11 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.VARCHAR,
             MYSQL_DATA_TYPE.VARCHAR,
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, server_side=False)
 
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
+
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
             self.assertEqual(type(result_value), type(input_value), f"type mismatch: {result_value} != {input_value}")
@@ -541,8 +545,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.fetchall.return_value = input_rows
         mock_cursor.description = [ColumnDescription(name="t_boolean", type_code=16)]
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOL]
-        response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        response: Response = self.handler.native_query(query_str, server_side=False)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         self.assertTrue(pd_types.is_bool_dtype(response.data_frame["t_boolean"][0]))
         self.assertTrue(bool(response.data_frame["t_boolean"][0]) is True)
         self.assertTrue(bool(response.data_frame["t_boolean"][1]) is False)
@@ -658,8 +663,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.FLOAT,  # n_float4
             MYSQL_DATA_TYPE.DOUBLE,  # n_float8
         ]
-        response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        response: Response = self.handler.native_query(query_str, server_side=False)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
             self.assertEqual(result_value, input_value, f"value mismatch: {result_value} != {input_value}")
@@ -734,8 +740,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.TIME,  # TIMETZ
         ]
 
-        response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        response: Response = self.handler.native_query(query_str, server_side=False)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
             self.assertEqual(result_value, input_value, f"value mismatch: {result_value} != {input_value}")
@@ -750,7 +757,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ColumnDescription(name="t_boolean", type_code=16),
         ]
         mock_cursor.description = description
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, server_side=False)
         self.assertEqual(response.data_frame.dtypes[0], "Int64")
         self.assertEqual(response.data_frame.dtypes[1], "boolean")
         self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
@@ -805,8 +812,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.VECTOR,
         ]
 
-        response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        response: Response = self.handler.native_query(query_str, server_side=False)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
             self.assertEqual(type(result_value), type(input_value), f"type mismatch: {result_value} != {input_value}")

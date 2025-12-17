@@ -10,7 +10,7 @@ from psycopg import Column as PGColumn, Cursor
 from psycopg.postgres import TypeInfo, types as pg_types
 from psycopg.pq import ExecStatus
 
-from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser import parse_sql, Select
 from mindsdb_sql_parser.ast.base import ASTNode
 
 import mindsdb.utilities.profiler as profiler
@@ -289,36 +289,95 @@ class PostgresHandler(MetaDatabaseHandler):
                         logger.error(f"Error casting column {col.name} to {types_map[pg_type_info.name]}: {e}")
         df.columns = columns
 
-    def native_query(self, query: str, params=None, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
-        generator = self._execute(query, params, **kwargs)
-        try:
-            response: TableResponse = next(generator)
-            response.data_generator = generator
-        except StopIteration as e:
-            response = e.value
-            if isinstance(response, DataHandlerResponse) is False:
-                raise
-        return response
-
-    def _execute(self, query: str, params=None, **kwargs) -> Generator[pd.DataFrame, None, OkResponse | ErrorResponse]:
-        """
-        Executes a SQL query on the PostgreSQL database and returns the result.
+    def native_query(self, query: str, params=None, server_side: bool = True, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
+        """Executes a SQL query on the PostgreSQL database and returns the result.
+        NOTE: 'INSERT' (and may be some else) queries can not be executed on the server side,
+        but there are fallbackto client side execution.
 
         Args:
             query (str): The SQL query to be executed.
+            params (list): The parameters to be passed to the query.
+            server_side (bool): Whether to execute the query on the server side.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
+        """
+        need_to_close = not self.is_connected
+        try:
+            if server_side is False:
+                response = self._execute_client_side(query, params, **kwargs)
+            else:
+                generator = self._execute_server_side(query, params, **kwargs)
+                try:
+                    response: TableResponse = next(generator)
+                    response.data_generator = generator
+                except StopIteration as e:
+                    response = e.value
+                    if isinstance(response, DataHandlerResponse) is False:
+                        raise
+        finally:
+            if need_to_close:
+                self.disconnect()
+        return response
+
+    def _execute_client_side(self, query: str, params=None, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
+        """Executes a SQL query on the PostgreSQL database and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+            params (list): The parameters to be passed to the query.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
+        """
+        connection = self.connect()
+        with connection.cursor() as cur:
+            try:
+                if params is not None:
+                    cur.executemany(query, params)
+                else:
+                    cur.execute(query)
+                if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
+                    response = OkResponse(affected_rows=cur.rowcount)
+                else:
+                    result = cur.fetchall()
+                    columns: list[Column] = _get_colums(cur)
+                    response = TableResponse(affected_rows=cur.rowcount, columns=columns, data=_make_df(result, columns))
+                connection.commit()
+            except Exception as e:
+                response = self._handle_query_exception(e, query, connection)
+
+        return response
+
+    def _execute_server_side(self, query: str, params=None, **kwargs) -> Generator[pd.DataFrame, None, OkResponse | ErrorResponse]:
+        """Executes a SQL query on the PostgreSQL database and returns the result.
+           This method is used to execute queries on the server side.
+
+        Args:
+            query (str): The SQL query to be executed.
+            params (list): The parameters to be passed to the query.
+            **kwargs: Additional keyword arguments.
 
         Returns:
             Response: A response object containing the result of the query or an error message.
         """
-        need_to_close = not self.is_connected
-
         connection = self.connect()
         with connection.cursor(name=f"mindsdb_{id(self)}") as cursor:
             try:
                 if params is not None:
                     cursor.executemany(query, params)
                 else:
-                    cursor.execute(query)
+                    try:
+                        cursor.execute(query)
+                    except psycopg.errors.SyntaxError as e:
+                        # NOTE: INSERT queries cannot be executed server-side. When they fail, they produce a syntax error
+                        # that always starts with the text below, regardless of the INSERT query format.
+                        if not str(e).startswith('syntax error at or near "insert"'):
+                            raise
+                        connection.rollback()
+                        return self._execute_client_side(query=query)
 
                 if cursor.description is None:
                     connection.commit()
@@ -329,24 +388,35 @@ class PostgresHandler(MetaDatabaseHandler):
                 while result := cursor.fetchmany(1000):  # TODO make configurable
                     yield _make_df(result, columns)
                 connection.commit()
-            except (psycopg.ProgrammingError, psycopg.DataError) as e:
-                # These is 'expected' exceptions, they should not be treated as mindsdb's errors
-                # ProgrammingError: table not found or already exists, syntax error, etc
-                # DataError: division by zero, numeric value out of range, etc.
-                # https://www.psycopg.org/psycopg3/docs/api/errors.html
-                log_message = "Database query failed with error, likely due to invalid SQL query"
-                if logger.isEnabledFor(logging.DEBUG):
-                    log_message += f". Executed query:\n{query}"
-                logger.info(log_message)
-                connection.rollback()
-                return ErrorResponse(error_code=0, error_message=str(e), is_expected_error=True)
             except Exception as e:
-                logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
-                connection.rollback()
-                return ErrorResponse(error_code=0, error_message=str(e))
-            finally:
-                if need_to_close:
-                    self.disconnect()
+                return self._handle_query_exception(e, query, connection)
+
+    def _handle_query_exception(self, e: Exception, query: str, connection) -> ErrorResponse:
+        """Handle query execution errors with appropriate logging and rollback.
+        
+        Args:
+            e: The exception that was raised
+            query: The SQL query that failed
+            connection: The database connection to rollback
+            
+        Returns:
+            ErrorResponse with appropriate error details
+        """
+        if isinstance(e, (psycopg.ProgrammingError, psycopg.DataError)):
+            # These are 'expected' exceptions, they should not be treated as mindsdb's errors
+            # ProgrammingError: table not found or already exists, syntax error, etc
+            # DataError: division by zero, numeric value out of range, etc.
+            # https://www.psycopg.org/psycopg3/docs/api/errors.html
+            log_message = "Database query failed with error, likely due to invalid SQL query"
+            if logger.isEnabledFor(logging.DEBUG):
+                log_message += f". Executed query:\n{query}"
+            logger.info(log_message)
+            connection.rollback()
+            return ErrorResponse(error_code=0, error_message=str(e), is_expected_error=True)
+        else:
+            logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
+            connection.rollback()
+            return ErrorResponse(error_code=0, error_message=str(e))
 
     def query_stream(self, query: ASTNode, fetch_size: int = 1000):
         """
@@ -432,7 +502,8 @@ class PostgresHandler(MetaDatabaseHandler):
         """
         query_str, params = self.renderer.get_exec_params(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str, params)
+        server_side = isinstance(query, Select)
+        return self.native_query(query_str, params, server_side=server_side)
 
     def get_tables(self, all: bool = False) -> Response:
         """

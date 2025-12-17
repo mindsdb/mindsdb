@@ -99,6 +99,10 @@ class ErrorResponse(DataHandlerResponse):
         if current_exception[0] is not None:
             self.exception = current_exception[1]
 
+    def to_columns_table_response(self, map_type_fn: Callable) -> None:
+        raise ValueError(
+            f"Cannot convert {self.type} to {RESPONSE_TYPE.COLUMNS_TABLE}, the error is: {self.error_message}"
+        )
 
 class OkResponse(DataHandlerResponse):
     """Response for successful cases without data (e.g. CREATE TABLE, DROP TABLE, etc.).
@@ -227,14 +231,14 @@ class TableResponse(DataHandlerResponse):
         if self.type == RESPONSE_TYPE.COLUMNS_TABLE:
             return
         if self.type != RESPONSE_TYPE.TABLE:
-            if self.type == RESPONSE_TYPE.ERROR:
-                raise ValueError(
-                    f"Cannot convert {self.type} to {RESPONSE_TYPE.COLUMNS_TABLE}, the error is: {self.error_message}"
-                )
             raise ValueError(f"Cannot convert {self.resp} to {RESPONSE_TYPE.COLUMNS_TABLE}")
 
         self.fetchall()
+        self._resolve_columns()
+        self.type = RESPONSE_TYPE.COLUMNS_TABLE
 
+        if self._data is None:
+            return
         self._data.columns = [name.upper() for name in self._data.columns]
         self._data[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self._data[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE].apply(
             map_type_fn
@@ -263,8 +267,6 @@ class TableResponse(DataHandlerResponse):
             }
         )
         self._data.replace([numpy.NaN, pandas.NA], None, inplace=True)
-
-        self.type = RESPONSE_TYPE.COLUMNS_TABLE
 
 
 def normalize_response(response) -> TableResponse | OkResponse | ErrorResponse:

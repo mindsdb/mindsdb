@@ -95,11 +95,21 @@ class MindsdbConfig(BaseLLMConfig):
 # See https://python.langchain.com/api_reference/google_genai/chat_models/langchain_google_genai.chat_models.ChatGoogleGenerativeAI.html
 class GoogleConfig(BaseLLMConfig):
     model: str = Field(description="Gemini model name to use (e.g., 'gemini-1.5-pro')")
-    temperature: Optional[float] = Field(default=None, description="Controls randomness in responses")
-    top_p: Optional[float] = Field(default=None, description="Nucleus sampling parameter")
-    top_k: Optional[int] = Field(default=None, description="Number of highest probability tokens to consider")
-    max_output_tokens: Optional[int] = Field(default=None, description="Maximum number of tokens to generate")
-    google_api_key: Optional[str] = Field(default=None, description="API key for Google Generative AI")
+    temperature: Optional[float] = Field(
+        default=None, description="Controls randomness in responses"
+    )
+    top_p: Optional[float] = Field(
+        default=None, description="Nucleus sampling parameter"
+    )
+    top_k: Optional[int] = Field(
+        default=None, description="Number of highest probability tokens to consider"
+    )
+    max_output_tokens: Optional[int] = Field(
+        default=None, description="Maximum number of tokens to generate"
+    )
+    google_api_key: Optional[str] = Field(
+        default=None, description="API key for Google Generative AI"
+    )
 
 
 # See https://api.python.langchain.com/en/latest/llms/langchain_community.llms.writer.Writer.html
@@ -128,3 +138,16 @@ class BedrockConfig(BaseLLMConfig):
     temperature: Optional[float] = Field(default=0.7)
     max_tokens: Optional[int] = Field(default=None)
     model_kwargs: Optional[Dict[str, Any]] = Field(default=None)
+
+
+# https://reference.langchain.com/python/integrations/langchain_openai/AzureChatOpenAI/?h=azure#langchain_openai.AzureChatOpenAI
+class AzureOpenAIConfig(BaseLLMConfig):
+    azure_endpoint: Optional[str] = Field(default=None)
+    azure_deployment: Optional[str] = Field(default=None)
+    api_version: Optional[str] = Field(default=None)
+    api_key: Optional[str] = Field(default=None)
+    model_name: Optional[str] = Field(default=None)
+    temperature: Optional[float] = Field(default=None)
+    max_tokens: Optional[int] = Field(default=None)
+    max_retries: Optional[int] = Field(default=None)
+    timeout: Optional[float] = Field(default=None)

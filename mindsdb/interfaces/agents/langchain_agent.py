@@ -67,7 +67,7 @@ from mindsdb.interfaces.agents.constants import (
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
-
+from langchain_openai import AzureChatOpenAI
 from mindsdb.utilities.langfuse import LangfuseClientWrapper
 
 _PARSING_ERROR_PREFIXES = [
@@ -158,7 +158,7 @@ def create_chat_model(args: Dict):
 
     if args["provider"] == "anthropic":
         return ChatAnthropic(**model_kwargs)
-    if args["provider"] in ["openai", "vllm", "azure_openai"]:
+    if args["provider"] == "openai" or args["provider"] == "vllm":
         chat_open_ai = ChatOpenAI(**model_kwargs)
         # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
         # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.
@@ -167,6 +167,8 @@ def create_chat_model(args: Dict):
         except NotImplementedError:
             chat_open_ai.tiktoken_model_name = DEFAULT_TIKTOKEN_MODEL_NAME
         return chat_open_ai
+    if args["provider"] == "azure_openai":
+        return AzureChatOpenAI(**model_kwargs)
     if args["provider"] == "litellm":
         return ChatLiteLLM(**model_kwargs)
     if args["provider"] == "ollama":

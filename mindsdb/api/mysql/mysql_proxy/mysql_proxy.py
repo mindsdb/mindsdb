@@ -70,7 +70,8 @@ from mindsdb.api.executor import exceptions as executor_exceptions
 
 from mindsdb.api.common.middleware import check_auth
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
-from mindsdb.api.executor.sql_query.result_set import Column, ResultSet
+from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.utilities.types.column import Column
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
@@ -107,6 +108,27 @@ class SQLAnswer:
     @property
     def type(self):
         return self.resp_type
+
+    def stream_http_response(self):
+        import orjson
+        import pandas as pd
+        import numpy as np
+        from mindsdb.utilities.json_encoder import CustomJSONEncoder
+        _default_json = CustomJSONEncoder().default
+
+        yield orjson.dumps({
+            "type": RESPONSE_TYPE.TABLE,
+            "column_names": [column.alias or column.name for column in self.result_set.columns]
+        }).decode() + '\n'
+        # import pandas as pd
+        for el in self.result_set.stream_data():
+            el.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
+            yield orjson.dumps(
+                el.to_dict("split")["data"],
+                default=_default_json,
+                option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
+            ).decode() + '\n'
+            # yield el.to_dict(orient='records')
 
     def dump_http_response(self) -> dict:
         if self.resp_type == RESPONSE_TYPE.OK:

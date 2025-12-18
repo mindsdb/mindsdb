@@ -13,6 +13,8 @@ from pandas.api import types as pd_types
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.libs.response import (
+    OkResponse,
+    TableResponse,
     DataHandlerResponse as Response,
     INF_SCHEMA_COLUMNS_NAMES_SET,
     RESPONSE_TYPE,
@@ -93,8 +95,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = f"SELECT * FROM {self.mock_table}"
         data = self.handler.native_query(query_str)
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, TableResponse)
 
     def test_native_query_with_results(self):
         """
@@ -126,9 +127,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor.assert_called_once_with(dictionary=True, buffered=True)
         mock_cursor.execute.assert_called_once_with(query_str)
 
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
-        self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
+        assert isinstance(data, TableResponse)
         self.assertIsInstance(data.data_frame, DataFrame)
 
         expected_columns = ["id", "name"]
@@ -157,9 +156,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor.assert_called_once_with(dictionary=True, buffered=True)
         mock_cursor.execute.assert_called_once_with(query_str)
 
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
-        self.assertEqual(data.type, RESPONSE_TYPE.OK)
+        assert isinstance(data, OkResponse)
         self.assertEqual(data.affected_rows, 1)
 
     def test_native_query_error(self):
@@ -381,7 +378,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             mock_renderer_class.return_value = mock_renderer
 
             self.handler.native_query = MagicMock()
-            self.handler.native_query.return_value = Response(RESPONSE_TYPE.OK)
+            self.handler.native_query.return_value = OkResponse()
 
             mock_ast = MagicMock()
 
@@ -410,7 +407,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_tables calls native_query with the correct SQL
         """
-        expected_response = Response(RESPONSE_TYPE.OK)
+        expected_response = OkResponse()
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         response = self.handler.get_tables()
@@ -429,8 +426,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_columns calls native_query with the correct SQL
         """
-        expected_response = Response(
-            RESPONSE_TYPE.TABLE, data_frame=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
+        expected_response = TableResponse(
+            data=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
         )
         self.handler.native_query = MagicMock(return_value=expected_response)
 
@@ -517,7 +514,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.BLOB,
             MYSQL_DATA_TYPE.JSON,
         ]
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(type(result_value), type(input_value))
@@ -535,7 +533,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         response: Response = self.handler.native_query(query_str)
         excepted_mysql_types = [MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT]
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             # without None values in result columns types will be one of pandas types
@@ -583,7 +582,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DECIMAL,
         ]
 
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(result_value, input_value)
@@ -615,7 +615,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DATETIME,
             MYSQL_DATA_TYPE.TIMESTAMP,
         ]
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(result_value, input_value)
@@ -649,7 +650,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         response: Response = self.handler.native_query(query_str)
         excepted_mysql_types = [MYSQL_DATA_TYPE.VECTOR]
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         self.assertEqual(input_row["t_vector"], response.data_frame["t_vector"][0])
         # endregion
 
@@ -665,7 +667,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         # Test without filter
         df = DataFrame(sample_data)
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        expected_response = TableResponse(data=df)
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         response = method()
@@ -675,7 +677,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # Test with filter
         self.handler.native_query.reset_mock()
         filtered_df = df[df[filter_column].isin(filter_values)].reset_index(drop=True)
-        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        filtered_response = TableResponse(data=filtered_df)
         self.handler.native_query = MagicMock(return_value=filtered_response)
 
         response = method(table_names=filter_values)

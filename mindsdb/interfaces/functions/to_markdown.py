@@ -4,7 +4,7 @@ from typing import Union
 from urllib.parse import urlparse
 import xml.etree.ElementTree as ET
 
-# from aipdf import ocr
+from aipdf import ocr
 import mimetypes
 import requests
 
@@ -78,9 +78,8 @@ class ToMarkdown:
         """
         Converts a PDF file to markdown.
         """
-        pass
-        # markdown_pages = ocr(file_content, **kwargs)
-        # return "\n\n---\n\n".join(markdown_pages)
+        markdown_pages = ocr(file_content, **kwargs)
+        return "\n\n---\n\n".join(markdown_pages)
 
     def _xml_to_markdown(self, file_content: Union[requests.Response, BytesIO], **kwargs) -> str:
         """

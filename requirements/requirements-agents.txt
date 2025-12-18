@@ -1,4 +1,5 @@
 openai==2.9.0
+openai<3.0.0,>=2.9.0
 
 langchain==0.3.27
 langchain-community==0.3.27

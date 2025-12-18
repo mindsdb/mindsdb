@@ -104,6 +104,7 @@ class ErrorResponse(DataHandlerResponse):
             f"Cannot convert {self.type} to {RESPONSE_TYPE.COLUMNS_TABLE}, the error is: {self.error_message}"
         )
 
+
 class OkResponse(DataHandlerResponse):
     """Response for successful cases without data (e.g. CREATE TABLE, DROP TABLE, etc.).
 

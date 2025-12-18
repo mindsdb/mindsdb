@@ -289,7 +289,9 @@ class PostgresHandler(MetaDatabaseHandler):
                         logger.error(f"Error casting column {col.name} to {types_map[pg_type_info.name]}: {e}")
         df.columns = columns
 
-    def native_query(self, query: str, params=None, server_side: bool = True, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
+    def native_query(
+        self, query: str, params=None, server_side: bool = True, **kwargs
+    ) -> TableResponse | OkResponse | ErrorResponse:
         """Executes a SQL query on the PostgreSQL database and returns the result.
         NOTE: 'INSERT' (and may be some else) queries can not be executed on the server side,
         but there are fallbackto client side execution.
@@ -344,14 +346,18 @@ class PostgresHandler(MetaDatabaseHandler):
                 else:
                     result = cur.fetchall()
                     columns: list[Column] = _get_colums(cur)
-                    response = TableResponse(affected_rows=cur.rowcount, columns=columns, data=_make_df(result, columns))
+                    response = TableResponse(
+                        affected_rows=cur.rowcount, columns=columns, data=_make_df(result, columns)
+                    )
                 connection.commit()
             except Exception as e:
                 response = self._handle_query_exception(e, query, connection)
 
         return response
 
-    def _execute_server_side(self, query: str, params=None, **kwargs) -> Generator[pd.DataFrame, None, OkResponse | ErrorResponse]:
+    def _execute_server_side(
+        self, query: str, params=None, **kwargs
+    ) -> Generator[pd.DataFrame, None, OkResponse | ErrorResponse]:
         """Executes a SQL query on the PostgreSQL database and returns the result.
            This method is used to execute queries on the server side.
 
@@ -393,12 +399,12 @@ class PostgresHandler(MetaDatabaseHandler):
 
     def _handle_query_exception(self, e: Exception, query: str, connection) -> ErrorResponse:
         """Handle query execution errors with appropriate logging and rollback.
-        
+
         Args:
             e: The exception that was raised
             query: The SQL query that failed
             connection: The database connection to rollback
-            
+
         Returns:
             ErrorResponse with appropriate error details
         """

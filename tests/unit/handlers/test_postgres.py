@@ -136,9 +136,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.fetchmany = MagicMock(side_effect=[
-            [[1, "name1"], [2, "name2"]], []
-        ])
+        mock_cursor.fetchmany = MagicMock(side_effect=[[[1, "name1"], [2, "name2"]], []])
 
         # Create proper description objects with necessary type_code for _cast_dtypes
         mock_cursor.description = [
@@ -155,7 +153,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         data = self.handler.native_query(query_str)
         mock_cursor.execute.assert_called_once_with(query_str)
         assert isinstance(data, TableResponse)
-        assert getattr(data, 'error_code', None) is None
+        assert getattr(data, "error_code", None) is None
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
         self.assertEqual(list(data.data_frame.columns), ["id", "name"])
@@ -342,10 +340,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ["id", "int", 1, None, "YES", None, None, None, None, None, None, None],
             ["name", "text", 2, None, "YES", None, None, None, None, None, None, None],
         ]
-        mock_cursor.fetchmany = MagicMock(side_effect=[
-            get_columns_result,
-            []
-        ])
+        mock_cursor.fetchmany = MagicMock(side_effect=[get_columns_result, []])
 
         information_schema_description = [
             ColumnDescription(name="COLUMN_NAME", type_code=regtype_to_oid["text"]),

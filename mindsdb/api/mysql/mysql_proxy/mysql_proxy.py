@@ -114,20 +114,29 @@ class SQLAnswer:
         import pandas as pd
         import numpy as np
         from mindsdb.utilities.json_encoder import CustomJSONEncoder
+
         _default_json = CustomJSONEncoder().default
 
-        yield orjson.dumps({
-            "type": RESPONSE_TYPE.TABLE,
-            "column_names": [column.alias or column.name for column in self.result_set.columns]
-        }).decode() + '\n'
+        yield (
+            orjson.dumps(
+                {
+                    "type": RESPONSE_TYPE.TABLE,
+                    "column_names": [column.alias or column.name for column in self.result_set.columns],
+                }
+            ).decode()
+            + "\n"
+        )
         # import pandas as pd
         for el in self.result_set.stream_data():
             el.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
-            yield orjson.dumps(
-                el.to_dict("split")["data"],
-                default=_default_json,
-                option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
-            ).decode() + '\n'
+            yield (
+                orjson.dumps(
+                    el.to_dict("split")["data"],
+                    default=_default_json,
+                    option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
+                ).decode()
+                + "\n"
+            )
             # yield el.to_dict(orient='records')
 
     def dump_http_response(self) -> dict:

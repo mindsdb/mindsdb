@@ -74,4 +74,6 @@ class KeyPairAuthType(SnowflakeAuthType):
         try:
             return serialization.load_pem_private_key(private_key, password=password, backend=default_backend())
         except Exception as exc:
-            raise ValueError("Failed to load private_key. Ensure it is a valid PEM-encoded key and the passphrase is correct.") from exc
+            raise ValueError(
+                "Failed to load private_key. Ensure it is a valid PEM-encoded key and the passphrase is correct."
+            ) from exc

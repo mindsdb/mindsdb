@@ -397,10 +397,13 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         handler = SnowflakeHandler("snowflake", connection_data=connection_data)
 
-        with patch(
-            "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
-            return_value="parsed_key",
-        ) as mock_loader, patch("snowflake.connector.connect") as mock_connect:
+        with (
+            patch(
+                "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
+                return_value="parsed_key",
+            ) as mock_loader,
+            patch("snowflake.connector.connect") as mock_connect,
+        ):
             mock_conn = MagicMock()
             mock_connect.return_value = mock_conn
 
@@ -433,10 +436,13 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         handler = SnowflakeHandler("snowflake", connection_data=connection_data)
 
-        with patch(
-            "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
-            return_value="parsed_key",
-        ) as mock_loader, patch("snowflake.connector.connect") as mock_connect:
+        with (
+            patch(
+                "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
+                return_value="parsed_key",
+            ) as mock_loader,
+            patch("snowflake.connector.connect") as mock_connect,
+        ):
             mock_conn = MagicMock()
             mock_connect.return_value = mock_conn
 
@@ -449,6 +455,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertIn("private_key", call_kwargs)
             self.assertEqual(call_kwargs["private_key"], "parsed_key")
             self.assertNotIn("private_key_file", call_kwargs)
+
     def test_key_pair_authentication_file_not_found(self):
         """
         Tests that ValueError is raised when private key file doesn't exist

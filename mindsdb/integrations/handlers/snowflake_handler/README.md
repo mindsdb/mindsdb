@@ -87,7 +87,7 @@ WITH
     };
 ```
 
-If the private key cannot be stored on disk (for example when running MindsDB Cloud), provide the PEM content directly:
+If the private key cannot be accesed from disk (for example when running MindsDB on Cloud), provide the PEM content directly:
 
 ```sql
 CREATE DATABASE snowflake_datasource

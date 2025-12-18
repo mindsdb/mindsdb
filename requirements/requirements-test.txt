@@ -1,6 +1,6 @@
 scipy==1.15.3   # MacOS has issue with higher versions
 docker >= 5.0.3
-openai==2.9.0
+openai<3.0.0,>=2.9.0
 pytest >= 8.3.5, < 9.0.0
 pytest-subtests
 pytest-xdist

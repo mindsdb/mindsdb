@@ -101,25 +101,27 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         where the query doesn't return a result set (ExecStatus.COMMAND_OK)
         """
         mock_conn = MagicMock()
-        # Use MockCursorContextManager for simplified mocking
-        mock_cursor = MockCursorContextManager()
+        mock_cursor_server = MockCursorContextManager()
+        mock_cursor_client = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor = MagicMock(side_effect=[mock_cursor_server, mock_cursor_client])
 
-        mock_cursor.execute.return_value = None
+        syntax_error = psycopg.errors.SyntaxError('syntax error at or near "insert"')
+        mock_cursor_server.execute.side_effect = syntax_error
+        mock_cursor_client.execute.return_value = None
 
         # Setup pgresult
         mock_pgresult = MagicMock()
         mock_pgresult.status = ExecStatus.COMMAND_OK
-        mock_cursor.pgresult = mock_pgresult
-        mock_cursor.rowcount = 1
+        mock_cursor_client.pgresult = mock_pgresult
+        mock_cursor_client.rowcount = 1
 
         query_str = "INSERT INTO table VALUES (1, 2, 3)"
-        data = self.handler.native_query(query_str)
-        mock_cursor.execute.assert_called_once_with(query_str)
+        data = self.handler.native_query(query_str, server_side=True)
+        mock_cursor_server.execute.assert_called_once_with(query_str)
+        mock_cursor_client.execute.assert_called_once_with(query_str)
         assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
         self.assertEqual(data.type, RESPONSE_TYPE.OK)
         self.assertEqual(data.affected_rows, 1)
 

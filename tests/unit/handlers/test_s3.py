@@ -11,7 +11,9 @@ import pandas as pd
 from base_handler_test import BaseHandlerTestSetup
 from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
+    OkResponse,
+    TableResponse,
+    DataHandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
@@ -124,8 +126,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
             f"SELECT * FROM 's3://{self.dummy_connection_data['bucket']}/{object_name.replace('`', '')}'"
         )
 
-        assert isinstance(response, Response)
-        self.assertFalse(response.error_code)
+        assert isinstance(response, TableResponse)
 
     @patch('boto3.client')
     def test_query_insert(self, mock_boto3_client):
@@ -164,8 +165,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
 
         assert sqls[2] == f"COPY tmp_table TO 's3://{self.dummy_connection_data['bucket']}/{self.object_name}'"
 
-        assert isinstance(response, Response)
-        self.assertFalse(response.error_code)
+        assert isinstance(response, OkResponse)
 
     @patch('boto3.client')
     def test_get_tables(self, mock_boto3_client):
@@ -199,9 +199,8 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Test that the `get_columns` method correctly constructs the SQL query and calls `native_query` with the correct query.
         """
-        mock_query.return_value = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
+        mock_query.return_value = TableResponse(
+            data=pd.DataFrame(
                 data={
                     'col_1': ['row_1', 'row_2', 'row_3'],
                     'col_2': [1, 2, 3],

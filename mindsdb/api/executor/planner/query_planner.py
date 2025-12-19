@@ -61,6 +61,23 @@ default_project = config.get("default_project")
 MINDSDB_SQL_FUNCTIONS = {"llm", "to_markdown", "hash"}
 
 
+def _resolve_identifier_part(identifier: Identifier, part: int = -1) -> str:
+    """Resolve a part of an identifier.
+
+    Args:
+        identifier (Identifier): The identifier to resolve the part of.
+        part (int): The part number to resolve.
+
+    Returns:
+        str: part of the identifier in lowercase if not quoted, otherwise the part itself.
+    """
+    name = identifier.parts[part]
+    is_quoted = identifier.is_quoted[part]
+    if not is_quoted:
+        name = name.lower()
+    return name
+
+
 class QueryPlanner:
     def __init__(
         self,
@@ -212,9 +229,9 @@ class QueryPlanner:
             integration_name, table = self.resolve_database_table(select.from_table)
 
             # is it CTE?
-            table_name = table_alias = table.parts[-1]
+            table_name = table_alias = _resolve_identifier_part(table)
             if table.alias is not None:
-                table_alias = table.alias.parts[-1]
+                table_alias = _resolve_identifier_part(table.alias)
 
             if integration_name == self.default_namespace and table_name in self.cte_results:
                 select.from_table = None
@@ -754,7 +771,7 @@ class QueryPlanner:
     def plan_cte(self, query):
         for cte in query.cte:
             step = self.plan_select(cte.query)
-            name = cte.name.parts[-1]
+            name = _resolve_identifier_part(cte.name)
             self.cte_results[name] = step.result
 
     def check_single_integration(self, query):

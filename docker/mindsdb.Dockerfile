@@ -94,7 +94,7 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 
 # Pre-load tokenizer from Huggingface, and UI
-RUN python -m mindsdb --config=/root/mindsdb_config.json --load-tokenizer --update-gui
+#RUN python -m mindsdb --config=/root/mindsdb_config.json --load-tokenizer --update-gui
 
 # Same as extras image, but with dev dependencies installed.
 # This image is used in our docker-compose
@@ -106,6 +106,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloa
 # Install system dependencies, with caching for faster builds
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    export DEBIAN_FRONTEND=noninteractive ACCEPT_EULA=Y && \
     apt update -qy \
     && apt-get upgrade -qy \
     && apt-get install -qy \

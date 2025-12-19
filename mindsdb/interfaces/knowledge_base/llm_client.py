@@ -9,15 +9,21 @@ try:
     from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
 except ImportError:
 
-    def retry_with_exponential_backoff(func):
+    def retry_with_exponential_backoff(func=None, **_kwargs):
         """
-        An empty decorator
+        No-op decorator used when the optional handler dependency is missing.
+        Accepts optional decorator arguments to mirror the real implementation.
         """
 
-        def wrapper(*args, **kwargs):
-            return func(*args, **kwargs)
+        def decorator(wrapped):
+            def wrapper(*args, **kwargs):
+                return wrapped(*args, **kwargs)
 
-        return wrapper
+            return wrapper
+
+        if func is None:
+            return decorator
+        return decorator(func)
 
 
 def run_in_batches(batch_size):

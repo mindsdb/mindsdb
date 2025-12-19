@@ -29,6 +29,13 @@ connection_args = OrderedDict(
         "required": False,
         "label": "Private Key Path",
     },
+    private_key={
+        "type": ARG_TYPE.PWD,
+        "description": "PEM-formatted private key content for key pair authentication. Use when the key cannot be stored on disk.",
+        "required": False,
+        "label": "Private Key",
+        "secret": True,
+    },
     private_key_passphrase={
         "type": ARG_TYPE.PWD,
         "description": "Optional passphrase for the encrypted private key.",

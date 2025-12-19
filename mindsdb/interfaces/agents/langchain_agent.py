@@ -45,7 +45,7 @@ from .providers import get_bedrock_chat_model
 from mindsdb.interfaces.agents.constants import (
     OPEN_AI_CHAT_MODELS,
     DEFAULT_AGENT_TIMEOUT_SECONDS,
-    DEFAULT_AGENT_TYPE,
+    get_default_agent_type,
     DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
@@ -468,8 +468,8 @@ class LangchainAgent:
 
         # Store memory for agent use
         self._conversation_memory = memory
-
-        agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)
+        default_agent = get_default_agent_type()
+        agent_type = args.get("agent_type", default_agent)
         agent_executor = initialize_agent(
             tools,
             llm,

@@ -22,7 +22,6 @@ from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import (
     get_model_instance_from_kwargs
 )
 from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuilder, dataframe_to_markdown
-
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.langfuse import LangfuseClientWrapper
 from mindsdb.interfaces.agents.prompts import agent_prompts
@@ -65,7 +64,9 @@ class PydanticAIAgent:
         self.model_instance = get_model_instance_from_kwargs(self.args)
         
         # Command executor for queries
-        self.executor = MindsDBQuery()
+        tables_list = self.agent.params.get("data", {}).get("tables", [])
+        knowledge_bases_list = self.agent.params.get("data", {}).get("knowledge_bases", [])
+        self.sql_toolkit = MindsDBQuery(tables_list, knowledge_bases_list)
         
         self.system_prompt = self.args.get("prompt_template", "You are an expert MindsDB SQL data analyst")
         
@@ -515,25 +516,16 @@ class PydanticAIAgent:
         current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages")
         
-        # Create agent
-        agent = Agent(
-            self.model_instance,
-            system_prompt=self.system_prompt,
-            output_type=SQLQuery
-        )
-        
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: SQL context: {self._sql_context}")
         
         yield self._add_chunk_metadata({"type": "status", "content": "Generating Data Catalog..."})
-        tables_list = self.agent.params.get("data", {}).get("tables", [])
-        knowledge_bases_list = self.agent.params.get("data", {}).get("knowledge_bases", [])
-        sql_instructions = ''
-        if knowledge_bases_list:
+
+        if self.sql_toolkit.knowledge_bases:
             sql_instructions = f"{agent_prompts.sql_description}\n\n{agent_prompts.sql_with_kb_description}"
         else:
             sql_instructions = agent_prompts.sql_description
 
-        data_catalog = DataCatalogBuilder().build_data_catalog(tables=tables_list, knowledge_bases=knowledge_bases_list)
+        data_catalog = DataCatalogBuilder(sql_toolkit=self.sql_toolkit).build_data_catalog()
         
         # Initialize counters and accumulators
         exploratory_query_count = 0
@@ -583,225 +575,105 @@ class PydanticAIAgent:
         
         if select_targets_str is not None:
             base_prompt += f"\n\nFor the final query the user expects to have a table such that this query is valid:SELECT {select_targets_str} FROM (<generated query>); when generating the SQL query make sure to include those columns, do not fix grammar on columns. Keep them as the user wants them"
-        
-        current_prompt = base_prompt
 
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}")
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Message history: {message_history}")
 
+        # Create agent
+        agent = Agent(
+            self.model_instance,
+            system_prompt=self.system_prompt,
+            output_type=SQLQuery
+        )
+
+        error_context = None
+        retry_count = 0
+
         try:
             while True:
-                # Check if we've reached max exploratory queries
-                if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
-                    # Add warning that next query must be final
-                    current_prompt += f"\n\nIMPORTANT: You have reached the maximum number of exploratory queries ({MAX_EXPLORATORY_QUERIES}). The next query you generate MUST be a final_query (not exploratory_query). If you cannot solve the problem with the data available, respond with a final_query that returns a table with the expected columns plus a 'thoughts' column containing: 'cannot solve this problem with the data we have, provide more context'."
-
                 yield self._add_chunk_metadata({"type": "status", "content": "Generating SQL query..."})
+
+                current_prompt = base_prompt
+                if exploratory_query_results:
+                    current_prompt += "\n\nPrevious exploratory query results:\n" + "\n---\n".join(
+                        exploratory_query_results)
+
+                if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
+                    current_prompt += f"\n\nIMPORTANT: You have reached the maximum number of exploratory queries ({MAX_EXPLORATORY_QUERIES}). The next query you generate MUST be a final_query or final_text."
+
+                if error_context:
+                    current_prompt += error_context
+                    current_prompt += f"\n\nPlease fix the query and try again. This is retry attempt {retry_count} of {MAX_RETRIES}."
+
                 result = agent.run_sync(
                     current_prompt,
                     message_history=message_history if message_history else None,
                 )
-            
+
                 # Extract output
-                output = result.output 
-                
+                output = result.output
+
                 # Yield description before SQL query
                 if output.short_description:
                     yield self._add_chunk_metadata({
                         "type": "context",
                         "content": output.short_description
                     })
-                
-                yield self._add_chunk_metadata({
-                    "type": "sql", 
-                    "content": output.sql_query
-                })
-
-                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: {output.sql_query}, query_type: {output.query_type}, description: {output.short_description}")
+                sql_query = output.sql_query
+                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: sql: {sql_query}, query_type: {output.query_type}, description: {output.short_description}")
 
                 # Initialize retry counter for this query
-                retry_count = 0
-                query_succeeded = False
-                query_data = None
-                query_error = None
 
                 # Retry loop for this query (up to MAX_RETRIES)
-                while retry_count <= MAX_RETRIES:
-                    try:
-                        yield self._add_chunk_metadata({"type": "status", "content": "Executing SQL query..."})
 
-                        query_data = self.executor.execute(output.sql_query)
-                        DEBUG_LOGGER("PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
-                        query_succeeded = True
-                        break  # Query succeeded, exit retry loop
+                error_context = None
 
-                    except Exception as e:
-                        # Extract error message - prefer db_error_msg for QueryError, otherwise use str(e)
-                        from mindsdb.utilities.exception import QueryError
-                        if isinstance(e, QueryError):
-                            query_error = e.db_error_msg or str(e)
-                        else:
-                            query_error = str(e)
-                        
-                        # Yield descriptive error message
-                        error_message = f"Error executing SQL query: {query_error}"
-                        if retry_count < MAX_RETRIES:
-                            error_message += f" (retry {retry_count + 1}/{MAX_RETRIES})"
-                        yield self._add_chunk_metadata({
-                            "type": "error",
-                            "content": error_message
-                        })
-                        
-                        logger.error(f"Error executing SQL query (retry {retry_count}/{MAX_RETRIES}): Error: {query_error}")
-                        
-                        if retry_count < MAX_RETRIES:
-                            accumulated_errors.append(f"Query: {output.sql_query}\nError: {query_error}")
-                            retry_count += 1
-                            
-                            error_context = "\n\nPrevious query errors:\n" + "\n---\n".join(accumulated_errors[-3:])
-                            current_prompt = base_prompt
-                            if exploratory_query_results:
-                                current_prompt += "\n\nPrevious exploratory query results:\n" + "\n---\n".join(exploratory_query_results)
-                            current_prompt += error_context
-                            current_prompt += f"\n\nPlease fix the query and try again. This is retry attempt {retry_count} of {MAX_RETRIES}."
-                            
-                            if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
-                                current_prompt += f"\n\nIMPORTANT: You have reached the maximum number of exploratory queries ({MAX_EXPLORATORY_QUERIES}). The next query you generate MUST be a final_query."
-                            
-                            yield self._add_chunk_metadata({"type": "status", "content": f"Retrying query (attempt {retry_count}/{MAX_RETRIES})..."})
-                            result = agent.run_sync(
-                                current_prompt,
-                                message_history=message_history if message_history else None,
-                            )
-                            output = result.output
-                            
-                            # Yield description before SQL query
-                            if output.short_description:
-                                yield self._add_chunk_metadata({
-                                    "type": "context",
-                                    "content": output.short_description
-                                })
-                            
-                            yield self._add_chunk_metadata({
-                                "type": "sql", 
-                                "content": output.sql_query
-                            })
-                            
-                            DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Retry {retry_count} - Received LLM response: {output.sql_query}, description: {output.short_description}")
-                        else:
-                            break
+                try:
+                    yield self._add_chunk_metadata({"type": "status", "content": "Executing SQL query..."})
+                    query_data = self.sql_toolkit.execute_sql(sql_query)
 
-                # Handle query result
-                if not query_succeeded:
-                    # Query failed after all retries
-                    error_message = query_error or "Query failed after maximum retries"
-                    # Create descriptive error message
-                    descriptive_error = f"Query execution failed after {MAX_RETRIES} retries. {error_message}"
-                    if output and output.sql_query:
-                        descriptive_error += f"\n\nFailed query: {output.sql_query}"
-                    
-                    logger.error(f"Query failed after {MAX_RETRIES} retries. Query: {output.sql_query[:100] if output and output.sql_query else 'N/A'}... Error: {error_message}")
-                    
-                    # If we've exhausted retries and reached max exploratory queries, return "cannot solve" response
-                    if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
-                        # Create "cannot solve" response DataFrame
-                        cannot_solve_df = self._create_cannot_solve_response(select_targets_str)
-                        yield self._add_chunk_metadata({
-                            "type": "data",
-                            "content": cannot_solve_df
-                        })
-                        yield self._add_chunk_metadata({"type": "end"})
-                        self.langfuse_client_wrapper.end_span_stream(span=self.run_completion_span)
-                        return
-                    
-                    # Otherwise, yield descriptive error and continue (might generate new query)
+                except Exception as e:
+                    # Extract error message - prefer db_error_msg for QueryError, otherwise use str(e)
+                    query_error = str(e)
+
+                    # Yield descriptive error message
+                    error_message = f"Error executing SQL query: {query_error}"
+
                     yield self._add_chunk_metadata({
-                        "type": "error",
-                        "content": descriptive_error,
+                        "type": "status",
+                        "content": error_message
                     })
-                    # Add error to accumulated errors for next iteration
-                    accumulated_errors.append(f"Query: {output.sql_query}\nError: {error_message}")
-                    # Update prompt with errors for next query
-                    error_context = "\n\nPrevious query errors:\n" + "\n---\n".join(accumulated_errors[-3:])
-                    current_prompt = base_prompt
-                    if exploratory_query_results:
-                        current_prompt += "\n\nPrevious exploratory query results:\n" + "\n---\n".join(exploratory_query_results)
-                    current_prompt += error_context
 
-                    continue  # Continue to next iteration to generate new query
+                    accumulated_errors.append(f"Query: {sql_query}\nError: {query_error}")
+                    retry_count += 1
+                    if retry_count <= MAX_RETRIES:
+                        error_context = "\n\nPrevious query errors:\n" + "\n---\n".join(accumulated_errors[-3:])
+                    else:
+                        query_result_str = f"Query: {sql_query}\nError: {query_error}"
+                        exploratory_query_results.append(query_result_str)
 
-                # Query succeeded
-                if not query_succeeded or query_data is None:
-                    # This shouldn't happen, but handle it gracefully
-                    logger.error("Query marked as succeeded but query_data is None")
-                    yield self._add_chunk_metadata({
-                        "type": "error",
-                        "content": "Query execution succeeded but no data was returned",
-                    })
                     continue
-                
-                if output.query_type == QueryType.EXPLORATORY:
-                    # Check if we've already exceeded max exploratory queries
-                    if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
-                        # We've already reached max, but agent generated another exploratory query
-                        # Convert to "cannot solve" response
-                        logger.warning(f"Agent generated exploratory query after reaching maximum ({MAX_EXPLORATORY_QUERIES}), returning cannot solve response")
-                        cannot_solve_df = self._create_cannot_solve_response(select_targets_str)
-                        yield self._add_chunk_metadata({
-                            "type": "data",
-                            "content": cannot_solve_df
-                        })
-                        yield self._add_chunk_metadata({"type": "end"})
-                        self.langfuse_client_wrapper.end_span_stream(span=self.run_completion_span)
-                        return
-                    
-                    # This is an exploratory query
-                    exploratory_query_count += 1
-                    DEBUG_LOGGER(f"Exploratory query {exploratory_query_count}/{MAX_EXPLORATORY_QUERIES} succeeded")
-                    
-                    # Format query result for prompt
-                    query_result_str = f"Query: {output.sql_query}\nDescription: {output.short_description}\nResult:\n{dataframe_to_markdown(query_data)}"
-                    exploratory_query_results.append(query_result_str)
-                    
-                    # Update prompt with exploratory results for next iteration
-                    current_prompt = base_prompt
-                    current_prompt += "\n\nPrevious exploratory query results:\n" + "\n---\n".join(exploratory_query_results[-5:])  # Show last 5 results
-                    
-                    if accumulated_errors:
-                        error_context = "\n\nPrevious query errors (now resolved):\n" + "\n---\n".join(accumulated_errors[-3:])
-                        current_prompt += error_context
-                    
-                    if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
-                        current_prompt += f"\n\nIMPORTANT: You have reached the maximum number of exploratory queries ({MAX_EXPLORATORY_QUERIES}). The next query you generate MUST be a final_query (not exploratory_query). If you cannot solve the problem with the data available, respond with a final_query that returns a table with the expected columns plus a 'thoughts' column containing: 'cannot solve this problem with the data we have, provide more context'."
-                    
-                    # Reset retry counter for next query
-                    retry_count = 0
-                    accumulated_errors = []  # Clear errors after successful query
-                    
-                    # Continue loop to generate next query
-                    continue
-                    
-                elif output.query_type == QueryType.FINAL:
-                    # This is a final query - return the result
-                    DEBUG_LOGGER("Final query succeeded, returning result")
+
+                DEBUG_LOGGER("PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
+                retry_count = 0
+
+                if output.query_type == QueryType.FINAL:
+                    # return response to user
                     yield self._add_chunk_metadata({
                         "type": "data",
                         "content": query_data
                     })
                     yield self._add_chunk_metadata({"type": "end"})
-                    self.langfuse_client_wrapper.end_span_stream(span=self.run_completion_span)
                     return
-                else:
-                    # Unknown query type - treat as final
-                    logger.warning(f"Unknown query type: {output.query_type}, treating as final")
-                    yield self._add_chunk_metadata({
-                        "type": "data",
-                        "content": query_data
-                    })
-                    yield self._add_chunk_metadata({"type": "end"})
-                    self.langfuse_client_wrapper.end_span_stream(span=self.run_completion_span)
-                    return
-       
+
+                # is exploratory
+                exploratory_query_count += 1
+                DEBUG_LOGGER(f"Exploratory query {exploratory_query_count}/{MAX_EXPLORATORY_QUERIES} succeeded")
+
+                # Format query result for prompt
+                query_result_str = f"Query: {sql_query}\nDescription: {output.short_description}\nResult:\n{dataframe_to_markdown(query_data)}"
+                exploratory_query_results.append(query_result_str)
+
         except Exception as e:
             # Suppress the "Event loop is closed" error from httpx cleanup
             # This is a known issue where async HTTP clients try to close after the event loop is closed
@@ -820,14 +692,14 @@ class PydanticAIAgent:
                 else:
                     error_content = error_msg
                     descriptive_error = f"Agent streaming failed: {error_content}"
-                
+
                 logger.error(f"Agent streaming failed: {error_content}")
                 error_chunk = self._add_chunk_metadata({
                     "type": "error",
                     "content": descriptive_error,
                 })
                 yield error_chunk
-    
+
     def _add_chunk_metadata(self, chunk: Dict) -> Dict:
         """Add metadata to chunk"""
         chunk["trace_id"] = self.langfuse_client_wrapper.get_trace_id()

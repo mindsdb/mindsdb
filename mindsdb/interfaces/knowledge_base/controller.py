@@ -699,7 +699,15 @@ class KnowledgeBaseTable:
             return
 
         if len(df) > MAX_INSERT_BATCH_SIZE:
-            raise ValueError("Input data is too large, please load data in batches")
+            # auto-batching
+            batch_size = MAX_INSERT_BATCH_SIZE
+
+            chunk_num = 0
+            while chunk_num * batch_size < len(df):
+                df2 = df[chunk_num * batch_size : (chunk_num + 1) * batch_size]
+                self.insert(df2, params=params)
+                chunk_num += 1
+            return
 
         try:
             run_query_id = ctx.run_query_id

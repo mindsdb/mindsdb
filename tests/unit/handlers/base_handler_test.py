@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, Mock
 from mindsdb.integrations.libs.response import (
     DataHandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
+    TableResponse,
+    OkResponse,
 )
 
 
@@ -180,8 +182,7 @@ class BaseDatabaseHandlerTest(BaseHandlerTest):
         query_str = f"SELECT * FROM {self.mock_table}"
         data = self.handler.native_query(query_str)
 
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
+        assert isinstance(data, (TableResponse, OkResponse))
 
     def test_get_columns(self):
         """

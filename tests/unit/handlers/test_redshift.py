@@ -5,19 +5,14 @@ import numpy as np
 import pandas as pd
 import psycopg
 
-from mindsdb.integrations.libs.response import (
-    OkResponse,
-    ErrorResponse,
-    RESPONSE_TYPE
-)
+from mindsdb.integrations.libs.response import OkResponse, ErrorResponse, RESPONSE_TYPE
 from mindsdb.integrations.handlers.redshift_handler.redshift_handler import RedshiftHandler
 from test_postgres import TestPostgresHandler
 
 
 class TestRedshiftHandler(TestPostgresHandler):
-
     def create_handler(self):
-        return RedshiftHandler('redshift', connection_data=self.dummy_connection_data)
+        return RedshiftHandler("redshift", connection_data=self.dummy_connection_data)
 
     def test_native_query(self):
         """
@@ -40,17 +35,14 @@ class TestRedshiftHandler(TestPostgresHandler):
 
         mock_cursor.executemany.return_value = None
 
-        df = pd.DataFrame({
-            'column1': [1, 2, 3, np.nan],
-            'column2': ['a', 'b', 'c', None]
-        })
+        df = pd.DataFrame({"column1": [1, 2, 3, np.nan], "column2": ["a", "b", "c", None]})
 
-        table_name = 'mock_table'
+        table_name = "mock_table"
         response = self.handler.insert(table_name, df)
 
-        columns = ', '.join([f'"{col}"' if ' ' in col else col for col in df.columns])
-        values = ', '.join(['%s' for _ in range(len(df.columns))])
-        expected_query = f'INSERT INTO {table_name} ({columns}) VALUES ({values})'
+        columns = ", ".join([f'"{col}"' if " " in col else col for col in df.columns])
+        values = ", ".join(["%s" for _ in range(len(df.columns))])
+        expected_query = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
 
         mock_cursor.executemany.assert_called_once_with(expected_query, df.replace({np.nan: None}).values.tolist())
         assert isinstance(response, OkResponse)
@@ -73,12 +65,9 @@ class TestRedshiftHandler(TestPostgresHandler):
         error = psycopg.Error(error_msg)
         mock_cursor.executemany.side_effect = error
 
-        df = pd.DataFrame({
-            'column1': [1, 2, 3, np.nan],
-            'column2': ['a', 'b', 'c', None]
-        })
+        df = pd.DataFrame({"column1": [1, 2, 3, np.nan], "column2": ["a", "b", "c", None]})
 
-        response = self.handler.insert('nonexistent_table', df)
+        response = self.handler.insert("nonexistent_table", df)
 
         mock_cursor.executemany.assert_called_once()
         mock_conn.rollback.assert_called_once()
@@ -99,14 +88,14 @@ class TestRedshiftHandler(TestPostgresHandler):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        df = pd.DataFrame(columns=['column1', 'column2'])
+        df = pd.DataFrame(columns=["column1", "column2"])
 
-        table_name = 'mock_table'
+        table_name = "mock_table"
         response = self.handler.insert(table_name, df)
 
-        columns = ', '.join([f'"{col}"' if ' ' in col else col for col in df.columns])
-        values = ', '.join(['%s' for _ in range(len(df.columns))])
-        expected_query = f'INSERT INTO {table_name} ({columns}) VALUES ({values})'
+        columns = ", ".join([f'"{col}"' if " " in col else col for col in df.columns])
+        values = ", ".join(["%s" for _ in range(len(df.columns))])
+        expected_query = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
 
         mock_cursor.executemany.assert_called_once()
         call_args, call_kwargs = mock_cursor.executemany.call_args
@@ -131,20 +120,22 @@ class TestRedshiftHandler(TestPostgresHandler):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        df = pd.DataFrame({
-            'normal_column': [1, 2],
-            'column with spaces': ['a', 'b'],
-            'column-with-hyphens': [True, False],
-            'mixed@column#123': [3.14, 2.71]
-        })
+        df = pd.DataFrame(
+            {
+                "normal_column": [1, 2],
+                "column with spaces": ["a", "b"],
+                "column-with-hyphens": [True, False],
+                "mixed@column#123": [3.14, 2.71],
+            }
+        )
 
-        table_name = 'mock_table'
+        table_name = "mock_table"
         response = self.handler.insert(table_name, df)
 
         call_args = mock_cursor.executemany.call_args[0][0]
 
         for col in df.columns:
-            if ' ' in col:
+            if " " in col:
                 self.assertIn(f'"{col}"', call_args)
             else:
                 self.assertTrue(col in call_args or f'"{col}"' in call_args)
@@ -167,15 +158,15 @@ class TestRedshiftHandler(TestPostgresHandler):
         self.handler.disconnect = MagicMock()
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        df = pd.DataFrame({'column1': [1, 2, 3]})
-        self.handler.insert('mock_table', df)
+        df = pd.DataFrame({"column1": [1, 2, 3]})
+        self.handler.insert("mock_table", df)
         self.handler.disconnect.assert_called_once()
         self.handler.connect.reset_mock()
         self.handler.disconnect.reset_mock()
         self.handler.is_connected = True
-        self.handler.insert('mock_table', df)
+        self.handler.insert("mock_table", df)
         self.handler.disconnect.assert_not_called()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

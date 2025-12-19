@@ -95,13 +95,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def create_patcher(self):
         return patch("psycopg.connect")
 
-    def test_native_query(self):
-        """
-        This test is overridden to avoid issues with the generic MockCursorContextManager not being compatible with Postgres cursor behavior.
-        More specific tests (test_native_query_with_results, test_native_query_command_ok, test_native_query_error) cover this functionality.
-        """
-        pass
-
     def test_native_query_command_ok(self):
         """
         Tests the `native_query` method to ensure it executes a SQL query and handles the case

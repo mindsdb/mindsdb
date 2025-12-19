@@ -4,8 +4,6 @@ from unittest.mock import MagicMock, Mock
 from mindsdb.integrations.libs.response import (
     DataHandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
-    TableResponse,
-    OkResponse,
 )
 
 
@@ -168,21 +166,6 @@ class BaseDatabaseHandlerTest(BaseHandlerTest):
         This attribute should be overridden in subclasses to provide the specific query.
         """
         pass
-
-    def test_native_query(self):
-        """
-        Tests the `native_query` method to ensure it executes a SQL query using a mock cursor and returns a Response object.
-        """
-        mock_conn = MagicMock()
-        mock_cursor = MockCursorContextManager()
-
-        self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor = MagicMock(return_value=mock_cursor)
-
-        query_str = f"SELECT * FROM {self.mock_table}"
-        data = self.handler.native_query(query_str)
-
-        assert isinstance(data, (TableResponse, OkResponse))
 
     def test_get_columns(self):
         """

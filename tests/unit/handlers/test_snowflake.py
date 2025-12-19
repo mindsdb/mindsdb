@@ -24,7 +24,7 @@ from mindsdb.integrations.libs.response import (
     TableResponse,
     ErrorResponse,
     INF_SCHEMA_COLUMNS_NAMES_SET,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
@@ -204,13 +204,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.assertFalse(response.success)
         self.assertEqual(response.error_message, str(connect_error))
-
-    def test_native_query(self):
-        """
-        Skip the base class test_native_query as Snowflake uses a different cursor implementation.
-        Use test_native_query_with_results and test_native_query_no_results instead.
-        """
-        pass
 
     def test_native_query_with_results(self):
         """
@@ -517,9 +510,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         Tests that get_tables calls native_query with the correct SQL for Snowflake
         """
         expected_response = TableResponse(
-            data=DataFrame(
-                [("table1", "SCHEMA1", "BASE TABLE")], columns=["TABLE_NAME", "TABLE_SCHEMA", "TABLE_TYPE"]
-            )
+            data=DataFrame([("table1", "SCHEMA1", "BASE TABLE")], columns=["TABLE_NAME", "TABLE_SCHEMA", "TABLE_TYPE"])
         )
         self.handler.native_query = MagicMock(return_value=expected_response)
 

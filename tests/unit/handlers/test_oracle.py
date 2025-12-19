@@ -73,13 +73,6 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def create_patcher(self):
         return patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.connect")
 
-    def test_native_query(self):
-        """
-        This test is overridden to avoid issues with the generic MockCursorContextManager not being compatible with Oracle's cursor behavior.
-        More specific tests (test_native_query_with_results, test_native_query_no_results, test_native_query_error) cover this functionality.
-        """
-        pass
-
     def test_connect_validation(self):
         """
         Tests that connect method raises ValueError when required connection parameters are missing

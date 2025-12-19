@@ -71,13 +71,6 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def create_patcher(self):
         return patch("pymssql.connect")
 
-    def test_native_query(self):
-        """
-        This test is overridden to avoid issues with the generic MockCursorContextManager not being compatible with MSSQL's cursor behavior.
-        More specific tests (test_native_query_with_results, test_native_query_no_results, test_native_query_error) cover this functionality.
-        """
-        pass
-
     def test_native_query_with_results(self):
         """
         Tests the `native_query` method to ensure it executes a SQL query and handles the case
@@ -210,9 +203,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_columns calls native_query with the correct SQL
         """
-        expected_response = TableResponse(
-            data=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
-        )
+        expected_response = TableResponse(data=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET)))
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"

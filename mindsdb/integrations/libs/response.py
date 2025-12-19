@@ -72,6 +72,11 @@ class DataHandlerResponse(ABC):
 
     type: ClassVar[str]
 
+    @property
+    def resp_type(self):
+        # For back compatibility with old code, use the type attribute instead of resp_type
+        return self.type
+
 
 class ErrorResponse(DataHandlerResponse):
     """Response for error cases.

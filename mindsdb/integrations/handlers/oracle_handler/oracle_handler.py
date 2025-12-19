@@ -485,7 +485,7 @@ class OracleHandler(MetaDatabaseHandler):
             ORDER BY TABLE_NAME, COLUMN_ID
         """
         result = self.native_query(query)
-        if result.resp_type is RESPONSE_TYPE.TABLE:
+        if result.type is RESPONSE_TYPE.TABLE:
             result.to_columns_table_response(map_type_fn=_map_type)
         return result
 
@@ -607,7 +607,7 @@ class OracleHandler(MetaDatabaseHandler):
 
         result = self.native_query(query)
 
-        if result.resp_type is RESPONSE_TYPE.TABLE and result.data_frame is not None:
+        if result.type is RESPONSE_TYPE.TABLE and result.data_frame is not None:
             df = result.data_frame
 
             def extract_min_max(

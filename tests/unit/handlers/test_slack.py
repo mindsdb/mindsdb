@@ -9,7 +9,7 @@ from mindsdb_sql_parser.ast import BinaryOperation, Constant, Delete, Identifier
 import pandas as pd
 
 from base_handler_test import BaseAPIChatHandlerTest, BaseAPIResourceTestSetup
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, HandlerResponse as Response
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, TableResponse
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 try:
@@ -427,7 +427,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         response = self.handler.native_query(query)
 
         self.mock_connect.return_value.conversations_info.assert_called_once_with(channel="C1234567890")
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         expected_df = pd.DataFrame([MOCK_RESPONSE_CONV_INFO_1["channel"]])
         pd.testing.assert_frame_equal(response.data_frame, expected_df)
 
@@ -447,7 +447,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         self.mock_connect.return_value.conversations_list.assert_any_call()
         self.mock_connect.return_value.conversations_list.assert_any_call(cursor="dGVhbTpDMDYxRkE1UEI=")
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         expected_df = pd.DataFrame(MOCK_RESPONSE_CONV_LIST_1["channels"] + MOCK_RESPONSE_CONV_LIST_2["channels"])
         pd.testing.assert_frame_equal(response.data_frame, expected_df)
 

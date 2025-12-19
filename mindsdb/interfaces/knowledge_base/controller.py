@@ -26,10 +26,20 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get
 
 from mindsdb.integrations.utilities.rag.settings import RerankerMode
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
-from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
+from mindsdb.interfaces.agents.constants import get_default_embeddings_model_class, MAX_INSERT_BATCH_SIZE
+from mindsdb.interfaces.agents.provider_utils import get_llm_provider
+
+try:
+    from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+    if getattr(exc, "name", "") and "langchain" in exc.name:
+        create_chat_model = None
+        _LANGCHAIN_IMPORT_ERROR = exc
+    else:  # Unknown import error, surface it
+        raise
+else:
+    _LANGCHAIN_IMPORT_ERROR = None
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
@@ -47,6 +57,13 @@ from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMRe
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
+
+
+def _require_agent_extra(feature: str):
+    if create_chat_model is None:
+        raise ImportError(
+            f"{feature} requires the optional agent dependencies. Install them via `pip install mindsdb[kb]`."
+        ) from _LANGCHAIN_IMPORT_ERROR
 
 
 class KnowledgeBaseInputParams(BaseModel):
@@ -1034,7 +1051,8 @@ class KnowledgeBaseTable:
             embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
-            embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+            embeddings_model_class = get_default_embeddings_model_class()
+            embeddings_model = embeddings_model_class()
             logger.debug("Using default embedding model as knowledge base has no embedding model")
 
         # Update retrieval config with knowledge base parameters
@@ -1051,6 +1069,7 @@ class KnowledgeBaseTable:
                     llm_args["provider"] = get_llm_provider(llm_args)
                 else:
                     llm_args["provider"] = rag_config.llm_provider
+                _require_agent_extra("Building knowledge base retrieval pipelines")
                 rag_config.llm = create_chat_model(llm_args)
 
             # Create RAG pipeline
@@ -1171,9 +1190,6 @@ class KnowledgeBaseController:
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
 
-        # fill variables
-        params = variables_controller.fill_parameters(params)
-
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
@@ -1203,7 +1219,7 @@ class KnowledgeBaseController:
         params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
-        self._check_embedding_model(
+        embed_info = self._check_embedding_model(
             project.name,
             params=embedding_params,
             kb_name=name,
@@ -1237,7 +1253,7 @@ class KnowledgeBaseController:
                     if vector_size is not None:
                         vector_db_params["vector_size"] = vector_size
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
-
+                params["default_vector_storage"] = vector_db_name
             else:
                 # create chroma db with same name
                 vector_table_name = "default_collection"
@@ -1257,7 +1273,15 @@ class KnowledgeBaseController:
                 f"Unable to find database named {vector_db_name}, please make sure {vector_db_name} is defined"
             )
         # create table in vectordb before creating KB
+        if "default_vector_storage" in params:
+            # if vector db is a default - drop previous table, if exists
+            try:
+                vector_store_handler.drop_table(vector_table_name)
+            except Exception:
+                ...
         vector_store_handler.create_table(vector_table_name)
+        self._check_vector_table(embed_info, vector_store_handler, vector_table_name)
+
         if keyword_search_enabled:
             vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)
         vector_database_id = self.session.integration_controller.get(vector_db_name)["id"]
@@ -1282,6 +1306,22 @@ class KnowledgeBaseController:
         db.session.commit()
         return kb
 
+    def _check_vector_table(self, embed_info, vector_store_handler, vector_table_name):
+        query = Select(
+            targets=[Identifier(TableField.EMBEDDINGS.value)],
+            from_table=Identifier(parts=[vector_table_name]),
+            limit=Constant(1),
+        )
+        df = vector_store_handler.dispatch_select(query, [])
+        if len(df) > 0:
+            value = df[TableField.EMBEDDINGS.value][0]
+            if isinstance(value, str):
+                value = json.loads(value)
+            if len(value) != embed_info["dimension"]:
+                raise ValueError(
+                    f"Dimension of embedding model doesn't match to dimension of vector table: {embed_info['dimension']} != {len(value)}"
+                )
+
     def update(
         self,
         name: str,
@@ -1296,9 +1336,6 @@ class KnowledgeBaseController:
         :param params: The parameters to update
         :param preprocessing_config: Optional preprocessing configuration to validate and store
         """
-
-        # fill variables
-        params = variables_controller.fill_parameters(params)
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
@@ -1410,8 +1447,8 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _check_embedding_model(self, project_name, params: dict = None, kb_name=""):
-        """check embedding model for knowledge base"""
+    def _check_embedding_model(self, project_name, params: dict = None, kb_name="") -> dict:
+        """check embedding model for knowledge base, return embedding model info"""
 
         # if mindsdb model from old KB exists - drop it
         model_name = f"kb_embedding_{kb_name}"
@@ -1435,7 +1472,8 @@ class KnowledgeBaseController:
         llm_client = LLMClient(params, session=self.session)
 
         try:
-            llm_client.embeddings(["test"])
+            resp = llm_client.embeddings(["test"])
+            return {"dimension": len(resp[0])}
         except Exception as e:
             raise RuntimeError(f"Problem with embedding model config: {e}") from e
 
@@ -1465,9 +1503,10 @@ class KnowledgeBaseController:
         # drop objects if they were created automatically
         if "default_vector_storage" in kb.params:
             try:
-                handler = self.session.datahub.get(kb.params["default_vector_storage"]).integration_handler
-                handler.drop_table(kb.vector_database_table)
-                self.session.integration_controller.delete(kb.params["default_vector_storage"])
+                dn = self.session.datahub.get(kb.params["default_vector_storage"])
+                dn.integration_handler.drop_table(kb.vector_database_table)
+                if dn.ds_type != "pgvector":
+                    self.session.integration_controller.delete(kb.params["default_vector_storage"])
             except EntityNotExistsError:
                 pass
         if "created_embedding_model" in kb.params:

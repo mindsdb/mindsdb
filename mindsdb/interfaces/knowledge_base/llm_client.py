@@ -9,15 +9,21 @@ try:
     from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
 except ImportError:
 
-    def retry_with_exponential_backoff(func):
+    def retry_with_exponential_backoff(func=None, **_kwargs):
         """
-        An empty decorator
+        No-op decorator used when the optional handler dependency is missing.
+        Accepts optional decorator arguments to mirror the real implementation.
         """
 
-        def wrapper(*args, **kwargs):
-            return func(*args, **kwargs)
+        def decorator(wrapped):
+            def wrapper(*args, **kwargs):
+                return wrapped(*args, **kwargs)
 
-        return wrapper
+            return wrapper
+
+        if func is None:
+            return decorator
+        return decorator(func)
 
 
 def run_in_batches(batch_size):
@@ -57,7 +63,9 @@ class LLMClient:
         self.provider = params.get("provider", "openai")
 
         if "api_key" not in params:
-            params["api_key"] = get_api_key(self.provider, params, strict=False)
+            api_key = get_api_key(self.provider, params, strict=False)
+            if api_key is not None:
+                params["api_key"] = api_key
 
         self.engine = "openai"
 
@@ -79,7 +87,7 @@ class LLMClient:
             kwargs = params.copy()
             kwargs.pop("model_name")
             kwargs.pop("provider", None)
-            if kwargs["api_key"] is None:
+            if kwargs.get("api_key") is None:
                 kwargs["api_key"] = "n/a"
             self.client = OpenAI(**kwargs)
         else:

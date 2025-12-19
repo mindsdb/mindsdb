@@ -93,7 +93,8 @@ class TestDatabricksHandler(unittest.TestCase):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
         mock_cursor.execute.return_value = None
-        mock_cursor.fetchall.return_value = None
+        mock_cursor.fetchall.return_value = [("value1", "value2")]
+        mock_cursor.description = [("column1",), ("column2",)]
 
         query_str = "SELECT * FROM table"
         data = self.handler.native_query(query_str)

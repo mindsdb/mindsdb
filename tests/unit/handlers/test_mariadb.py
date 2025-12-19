@@ -6,7 +6,7 @@ from mysql.connector import Error as MySQLError
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
-from mindsdb.integrations.libs.response import HandlerResponse as Response
+from mindsdb.integrations.libs.response import TableResponse
 
 
 class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
@@ -70,7 +70,7 @@ class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         return patch('mysql.connector.connect')
 
     def test_native_query(self):
-        """Test that native_query returns a Response object with no error
+        """Test that native_query returns a TableResponse object with no error
         """
         mock_conn = MagicMock()
         mock_cursor = MockCursorContextManager(
@@ -84,8 +84,7 @@ class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = f"SELECT * FROM {self.mock_table}"
         data = self.handler.native_query(query_str)
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, TableResponse)
 
 
 if __name__ == '__main__':

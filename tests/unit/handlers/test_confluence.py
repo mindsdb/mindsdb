@@ -15,7 +15,7 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
     ConfluenceTasksTable,
 )
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
+    TableResponse,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
@@ -111,21 +111,21 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_get_tables(self):
         """
-        Test that the `get_tables` method returns a list of table names.
+        Test that the `get_tables` method returns a TableResponse with a list of table names.
         """
         response = self.handler.get_tables()
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertEqual(response.data_frame.columns.tolist(), ['table_name', 'table_type'])
 
     def test_get_columns(self):
         """
-        Test that the `get_columns` method returns a list of columns for a table.
+        Test that the `get_columns` method returns a TableResponse with a list of columns for a table.
         """
         response = self.handler.get_columns('spaces')
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertEqual(response.data_frame.columns.tolist(), ['Field', 'Type'])
 

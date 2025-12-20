@@ -58,13 +58,16 @@ def _map_type(data_type: str) -> MYSQL_DATA_TYPE:
 
 
 class PrometheusHandler(MetaAPIHandler):
-    """Prometheus API handler implementation"""
+    """Prometheus API handler implementation.
+    
+    This handler allows querying Prometheus metrics, labels, scrape targets,
+    and metric data using SQL. It also supports pushing metrics to Pushgateway.
+    """
 
     name = "prometheus"
 
     def __init__(self, name: str, **kwargs: Any) -> None:
-        """
-        Initialize the handler.
+        """Initialize the handler.
 
         Args:
             name (str): name of particular handler instance
@@ -311,12 +314,19 @@ class PrometheusHandler(MetaAPIHandler):
             )
 
     def _get_default_columns(self, table_name: str) -> List[str]:
-        """Get default column names for a table."""
+        """Get default column names for a table.
+        
+        Args:
+            table_name (str): Name of the table
+            
+        Returns:
+            List[str]: List of column names
+        """
         defaults = {
             "metrics": ["metric_name", "type", "help", "unit"],
             "labels": ["metric_name", "label", "job", "instance", "method", "status", "custom_labels"],
             "scrape_targets": ["target_labels", "health", "scrape_url"],
-            "metric_data": ["pql_query", "start_ts", "end_ts", "step", "timeout"],
+            "metric_data": ["pql_query", "start_ts", "end_ts", "step", "timeout", "timestamp", "value", "labels_json"],
         }
         return defaults.get(table_name, [])
 
@@ -329,6 +339,9 @@ class PrometheusHandler(MetaAPIHandler):
 
         Returns:
             dict: API response JSON
+            
+        Raises:
+            requests.exceptions.RequestException: If the request fails
         """
         if not self.is_connected:
             self.connect()
@@ -373,4 +386,3 @@ class PrometheusHandler(MetaAPIHandler):
         
         response = requests.post(url, data=data, auth=auth, headers=headers, timeout=self.timeout)
         response.raise_for_status()
-

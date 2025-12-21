@@ -25,7 +25,7 @@ Let's briefly go over the files that need to be uploaded:
 
     ```py
     class CustomPredictor():
-    ​
+    
         def train(self, df, target_col, args=None):
                 <implementation goes here>
                 return ''
@@ -39,38 +39,41 @@ Let's briefly go over the files that need to be uploaded:
     ```py
     import os
     import pandas as pd
-    ​
+    
     from sklearn.cross_decomposition import PLSRegression
     from sklearn import preprocessing
-    ​
+    
     class CustomPredictor():
-    ​
+    
         def train(self, df, target_col, args=None):
             print(args, '1111')
-    ​
+    
             self.target_col = target_col
             y = df[self.target_col]
             x = df.drop(columns=self.target_col)
             x_cols = list(x.columns)
-    ​
+    
             x_scaler = preprocessing.StandardScaler().fit(x)
             y_scaler = preprocessing.StandardScaler().fit(y.values.reshape(-1, 1))
-    ​
+    
             xs = x_scaler.transform(x)
             ys = y_scaler.transform(y.values.reshape(-1, 1))
-    ​
+    
             pls = PLSRegression(n_components=1)
             pls.fit(xs, ys)
-    ​
+
+            self.pls = pls
+            self.y_scaler = y_scaler
+
             T = pls.x_scores_
             W = pls.x_weights_
             P = pls.x_loadings_
             R = pls.x_rotations_
-    ​
+    
             self.x_cols = x_cols
             self.x_scaler = x_scaler
             self.P = P
-    ​
+    
             def calc_limit(df):
                 res = None
                 for column in df.columns:
@@ -89,32 +92,32 @@ Let's briefly go over the files that need to be uploaded:
                     except:
                         res = tbl
                 return res
-    ​
+    
             trdf = pd.DataFrame()
             trdf[self.target_col] = y.values
             trdf['T1'] = T.squeeze()
             limit = calc_limit(trdf).reset_index()
-    ​
+    
             self.limit = limit
-    ​
+    
             return "Trained predictor ready to be stored"
-    ​
+    
         def predict(self, df):
-    ​
-            yt = df[self.target_col].values
+    
+
             xt = df[self.x_cols]
-    ​
+    
             xt = self.x_scaler.transform(xt)
-    ​
+    
             excess_cols = list(set(df.columns) - set(self.x_cols))
-    ​
+    
             pred_df = df[excess_cols].copy()
-    ​
-            pred_df[self.target_col] = yt
+        
+            ys_pred = self.pls.predict(xt)
+            y_pred = self.y_scaler.inverse_transform(ys_pred).ravel()
+            pred_df[self.target_col] = y_pred
+
             pred_df['T1'] = (xt @ self.P).squeeze()
-    ​
-            pred_df = pd.merge(pred_df, self.limit[[self.target_col, 'lower', 'upper']], how='left', on=self.target_col)
-    ​
             return pred_df
     ```
 </Accordion>
@@ -186,12 +189,14 @@ USING
     ENGINE = 'custom_model_engine';
 ```
 
-Let's query for predictions by joining the custom model with the data table.
+Let's query for predictions by joining the custom model with the data table. Please note that when querying for predictions, do not include the target column in the `input` data selection.
 
 ```sql
-SELECT input.feature_column, model_target_column
-FROM my_integration.my_table as input
-JOIN custom_model as model;
+SELECT
+  input.feature_column,
+  model.target AS predicted_target
+FROM my_integration.my_table AS input
+JOIN custom_model AS model;
 ```
 
 <Info>

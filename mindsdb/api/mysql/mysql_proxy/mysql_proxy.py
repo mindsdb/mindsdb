@@ -25,6 +25,11 @@ from functools import partial
 from typing import List
 from dataclasses import dataclass
 
+import orjson
+import pandas as pd
+import numpy as np
+
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.sql import clear_sql
@@ -109,13 +114,13 @@ class SQLAnswer:
     def type(self):
         return self.resp_type
 
-    def stream_http_response(self):
-        import orjson
-        import pandas as pd
-        import numpy as np
-        from mindsdb.utilities.json_encoder import CustomJSONEncoder
-
+    def stream_http_response(self, context: dict | None):
         _default_json = CustomJSONEncoder().default
+
+        if self.resp_type in (RESPONSE_TYPE.OK, RESPONSE_TYPE.ERROR):
+            response = self.dump_http_response(context=context)
+            yield orjson.dumps(response) + "\n"
+            return
 
         yield (
             orjson.dumps(
@@ -137,13 +142,15 @@ class SQLAnswer:
                 ).decode()
                 + "\n"
             )
-            # yield el.to_dict(orient='records')
 
-    def dump_http_response(self) -> dict:
+    def dump_http_response(self, context: dict | None = None) -> dict:
+        if context is None:
+            context = {}
         if self.resp_type == RESPONSE_TYPE.OK:
             return {
                 "type": self.resp_type,
                 "affected_rows": self.affected_rows,
+                "context": context,
             }
         elif self.resp_type in (RESPONSE_TYPE.TABLE, RESPONSE_TYPE.COLUMNS_TABLE):
             data = self.result_set.to_lists(json_types=True)
@@ -151,12 +158,14 @@ class SQLAnswer:
                 "type": RESPONSE_TYPE.TABLE,
                 "data": data,
                 "column_names": [column.alias or column.name for column in self.result_set.columns],
+                "context": context,
             }
         elif self.resp_type == RESPONSE_TYPE.ERROR:
             return {
                 "type": RESPONSE_TYPE.ERROR,
                 "error_code": self.error_code or 0,
                 "error_message": self.error_message,
+                "context": context,
             }
         else:
             raise ValueError(f"Unsupported response type for dump HTTP response: {self.resp_type}")

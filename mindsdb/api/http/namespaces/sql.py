@@ -1,7 +1,8 @@
 import time
 from http import HTTPStatus
+from enum import Enum
 
-from flask import request
+from flask import request, Response
 from flask_restx import Resource
 
 import mindsdb.utilities.hooks as hooks
@@ -24,6 +25,12 @@ from mindsdb.utilities.functions import mark_process
 logger = log.getLogger(__name__)
 
 
+class ReponseFormat(Enum):
+    DEFAULT = None
+    SSE = "sse"
+    JSONLINES = "jsonlines"
+
+
 @ns_conf.route("/query")
 @ns_conf.param("query", "Execute query")
 class Query(Resource):
@@ -38,6 +45,10 @@ class Query(Resource):
         query = request.json["query"]
         context = request.json.get("context", {})
         params = request.json.get("params", {})
+        try:
+            response_format = ReponseFormat(request.json.get('response_format', None))
+        except ValueError:
+            return http_error(HTTPStatus.BAD_REQUEST, "Invalid stream format", 'Please provide a valid stream format.')
 
         if isinstance(query, str) is False or isinstance(context, dict) is False:
             return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" with the request.')
@@ -47,8 +58,6 @@ class Query(Resource):
             profiler.enable()
 
         error_type = None
-        error_code = None
-        error_text = None
         error_traceback = None
 
         profiler.set_meta(query=query, api="http", environment=Config().get("environment"))
@@ -57,54 +66,45 @@ class Query(Resource):
             mysql_proxy.set_context(context)
             try:
                 result: SQLAnswer = mysql_proxy.process_query(query, params=params)
-                query_response: dict = result.dump_http_response()
             except ExecutorException as e:
                 # classified error
                 error_type = "expected"
-                query_response = {
-                    "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": 0,
-                    "error_message": str(e),
-                }
+                result = SQLAnswer(
+                    resp_type=SQL_RESPONSE_TYPE.ERROR,
+                    error_code=0,
+                    error_message=str(e)
+                )
                 logger.warning(f"Error query processing: {e}")
             except QueryError as e:
                 error_type = "expected" if e.is_expected else "unexpected"
-                query_response = {
-                    "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": 0,
-                    "error_message": str(e),
-                }
+                result = SQLAnswer(
+                    resp_type=SQL_RESPONSE_TYPE.ERROR,
+                    error_code=0,
+                    error_message=str(e)
+                )
                 if e.is_expected:
                     logger.warning(f"Query failed due to expected reason: {e}")
                 else:
                     logger.exception("Error query processing:")
-            except UnknownError as e:
-                # unclassified
+            except (UnknownError, Exception) as e:
                 error_type = "unexpected"
-                query_response = {
-                    "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": 0,
-                    "error_message": str(e),
-                }
+                result = SQLAnswer(
+                    resp_type=SQL_RESPONSE_TYPE.ERROR,
+                    error_code=0,
+                    error_message=str(e)
+                )
                 logger.exception("Error query processing:")
-
-            except Exception as e:
-                error_type = "unexpected"
-                query_response = {
-                    "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": 0,
-                    "error_message": str(e),
-                }
-                logger.exception("Error query processing:")
-
-            if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
-                error_type = "expected"
-                error_code = query_response.get("error_code")
-                error_text = query_response.get("error_message")
 
             context = mysql_proxy.get_context()
 
-            query_response["context"] = context
+            if response_format == ReponseFormat.JSONLINES:
+                query_response = result.stream_http_response(context=context)
+                query_response = Response(query_response, mimetype='application/jsonlines')
+            elif response_format == ReponseFormat.SSE:
+                query_response = result.stream_http_response(context=context)
+                query_response = Response(query_response, mimetype='text/event-stream')
+            else:
+                query_response = result.dump_http_response(context=context)
 
         hooks.after_api_query(
             company_id=ctx.company_id,
@@ -112,19 +112,20 @@ class Query(Resource):
             command=None,
             payload=query,
             error_type=error_type,
-            error_code=error_code,
-            error_text=error_text,
+            error_code=result.error_code,
+            error_text=result.error_message,
             traceback=error_traceback,
         )
 
-        end_time = time.time()
-        log_msg = f"SQL processed in {(end_time - start_time):.2f}s ({end_time:.2f}-{start_time:.2f}), result is {query_response['type']}"
-        if query_response["type"] is SQL_RESPONSE_TYPE.TABLE:
-            log_msg += f" ({len(query_response['data'])} rows), "
-        elif query_response["type"] is SQL_RESPONSE_TYPE.ERROR:
-            log_msg += f" ({query_response['error_message']}), "
-        log_msg += f"used handlers {ctx.used_handlers}"
-        logger.debug(log_msg)
+        # # TODO
+        # end_time = time.time()
+        # log_msg = f"SQL processed in {(end_time - start_time):.2f}s ({end_time:.2f}-{start_time:.2f}), result is {query_response['type']}"
+        # if query_response["type"] is SQL_RESPONSE_TYPE.TABLE:
+        #     log_msg += f" ({len(query_response['data'])} rows), "
+        # elif query_response["type"] is SQL_RESPONSE_TYPE.ERROR:
+        #     log_msg += f" ({query_response['error_message']}), "
+        # log_msg += f"used handlers {ctx.used_handlers}"
+        # logger.debug(log_msg)
 
         return query_response, 200
 

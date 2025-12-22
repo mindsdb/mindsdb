@@ -4,7 +4,7 @@ import pytest
 
 import pandas as pd
 
-from tests.unit.executor_test_base import BaseExecutorDummyML
+from tests.unit.executor_test_base import BaseExecutorDummyML, BaseExecutorTest
 
 
 class TestSelect(BaseExecutorDummyML):
@@ -334,6 +334,83 @@ class TestSelect(BaseExecutorDummyML):
 
         # must be 2 rows
         assert len(ret) == 2
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_federated_query(self, data_handler):
+        statuses = pd.DataFrame(
+            [
+                [1, "new"],
+                [2, "progress"],
+                [3, "done"],
+                [4, "cancel"],
+                [5, "duplicate"],
+                [6, "docs"],
+                [7, "backlog"],
+            ],
+            columns=["id", "name"],
+        )
+
+        tasks = pd.DataFrame(
+            [
+                [1, 1, "new1"],
+                [2, 7, "backlog2"],
+                [3, 7, "backlog3"],
+                [4, 7, "backlog4"],
+                [5, 7, "backlog5"],
+                [6, 7, "backlog6"],
+            ],
+            columns=["id", "status", "name"],
+        )
+
+        self.set_handler(data_handler, name="db", tables={"statuses": statuses})
+        self.save_file("tasks", tasks)
+
+        # test inner join
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          JOIN files.tasks as t2 on t1.id=t2.status
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        assert len(tries) == 2
+        query1 = tries[0][0][0]
+        # not all record were fetched in first query
+        assert query1.limit.value < 6
+
+        # test with order by 2nd table
+        data_handler.reset_mock()
+
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          JOIN files.tasks as t2 on t1.id=t2.status
+          order by t2.id
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        # the first table was used once without the limit
+        assert len(tries) == 1
+        query1 = tries[0][0][0]
+        assert query1.limit is None
+
+        # test left join
+        data_handler.reset_mock()
+
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          left join files.tasks as t2 on t1.id=t2.status
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        # the first table was used once with the limit
+        assert len(tries) == 1
+        query1 = tries[0][0][0]
+        assert query1.limit.value == 2
 
     def test_complex_queries(self):
         # -- set up data --
@@ -778,6 +855,18 @@ class TestSelect(BaseExecutorDummyML):
         """)
         assert res["NAME"][0] == "test_db"
         assert res["CONNECTION_DATA"][0] == '{"key": 2}'
+
+
+class TestSet(BaseExecutorTest):
+    @pytest.mark.parametrize("var", ["var", "@@var", "@@session.var", "session var"])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "on", "off"])
+    def test_set(self, var, value):
+        query = f"set {var} = {value}"
+        self.run_sql(query)
+
+    def test_multy_set(self):
+        query = "set @@var = ON, session var = 0"
+        self.run_sql(query)
 
 
 class TestDML(BaseExecutorDummyML):

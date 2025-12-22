@@ -413,6 +413,10 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
             self._sync()
 
+    def get_dimension(self, table_name: str) -> int:
+        if self.faiss_index:
+            return self.faiss_index.dim
+
     def _sync(self):
         """Sync the database to disk if using persistent storage"""
         self.faiss_index.dump()

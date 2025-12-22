@@ -1320,15 +1320,20 @@ class KnowledgeBaseController:
             from_table=Identifier(parts=[vector_table_name]),
             limit=Constant(1),
         )
-        df = vector_store_handler.dispatch_select(query, [])
-        if len(df) > 0:
-            value = df[TableField.EMBEDDINGS.value][0]
-            if isinstance(value, str):
-                value = json.loads(value)
-            if len(value) != embed_info["dimension"]:
-                raise ValueError(
-                    f"Dimension of embedding model doesn't match to dimension of vector table: {embed_info['dimension']} != {len(value)}"
-                )
+        dimension = None
+        if hasattr(vector_store_handler, "get_dimension"):
+            dimension = vector_store_handler.get_dimension(vector_table_name)
+        else:
+            df = vector_store_handler.dispatch_select(query, [])
+            if len(df) > 0:
+                value = df[TableField.EMBEDDINGS.value][0]
+                if isinstance(value, str):
+                    value = json.loads(value)
+                dimension = len(value)
+        if dimension is not None and dimension != embed_info["dimension"]:
+            raise ValueError(
+                f"Dimension of embedding model doesn't match to dimension of vector table: {embed_info['dimension']} != {dimension}"
+            )
 
     def update(
         self,

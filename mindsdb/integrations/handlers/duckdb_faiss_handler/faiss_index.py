@@ -47,6 +47,7 @@ class FaissIndex:
         self._since_ram_checked = 0
 
         self.index = None
+        self.dim = None
         self.index_fd = None
         if os.path.exists(self.path):
             self.load_index()

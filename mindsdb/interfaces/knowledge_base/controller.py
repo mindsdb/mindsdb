@@ -1,6 +1,6 @@
 import os
 import copy
-from typing import Dict, List, Optional, Any, Text
+from typing import Dict, List, Optional, Any, Text, Tuple, Union
 import json
 import decimal
 
@@ -58,7 +58,7 @@ class KnowledgeBaseInputParams(BaseModel):
     embedding_model: Dict[Text, Any] | None = None
     is_sparse: bool = False
     vector_size: int | None = None
-    reranking_model: Dict[Text, Any] | None = None
+    reranking_model: Union[Dict[Text, Any], bool] | None = None
     preprocessing: Dict[Text, Any] | None = None
 
     class Config:
@@ -586,8 +586,6 @@ class KnowledgeBaseTable:
         """Process and insert raw data rows"""
         if not rows:
             return
-        if len(rows) > MAX_INSERT_BATCH_SIZE:
-            raise ValueError("Input data is too large, please load data in batches")
 
         df = pd.DataFrame(rows)
 
@@ -700,6 +698,9 @@ class KnowledgeBaseTable:
         if df.empty:
             return
 
+        if len(df) > MAX_INSERT_BATCH_SIZE:
+            raise ValueError("Input data is too large, please load data in batches")
+
         try:
             run_query_id = ctx.run_query_id
             # Link current KB to running query (where KB is used to insert data)
@@ -711,8 +712,8 @@ class KnowledgeBaseTable:
             ...
 
         # First adapt column names to identify content and metadata columns
-        adapted_df = self._adapt_column_names(df)
-        content_columns = self._kb.params.get("content_columns", [TableField.CONTENT.value])
+        adapted_df, normalized_columns = self._adapt_column_names(df)
+        content_columns = normalized_columns["content_columns"]
 
         # Convert DataFrame rows to documents, creating separate documents for each content column
         raw_documents = []
@@ -788,7 +789,7 @@ class KnowledgeBaseTable:
         else:
             db_handler.do_upsert(self._kb.vector_database_table, df)
 
-    def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _adapt_column_names(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, List[str]]]:
         """
         Convert input columns for vector db input
         - id, content and metadata
@@ -897,7 +898,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Output DataFrame columns: {df_out.columns}")
         logger.debug(f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}")
 
-        return df_out
+        return df_out, {"content_columns": content_columns, "metadata_columns": metadata_columns}
 
     def _replace_query_content(self, node, **kwargs):
         if isinstance(node, BinaryOperation):
@@ -1213,8 +1214,9 @@ class KnowledgeBaseController:
 
         if isinstance(reranking_model_params, bool) and not reranking_model_params:
             params["reranking_model"] = {}
+        else:
+            reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
 
-        reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
         params["reranking_model"] = reranking_model_params
         if reranking_model_params:
             # Get reranking model from params.

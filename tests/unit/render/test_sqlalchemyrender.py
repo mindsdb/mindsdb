@@ -199,11 +199,11 @@ class TestRender:
 
         rendered = SqlalchemyRender("postgres").get_string(ast, with_failback=False)
         expected = "SELECT * FROM tbl1 GROUP BY ROLLUP(a, b)"
-        assert rendered.replace('\n', '').replace('  ', ' ').upper() == expected.upper()
+        assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()
 
-        rendered = SqlalchemyRender('mysql').get_string(ast, with_failback=False)
+        rendered = SqlalchemyRender("mysql").get_string(ast, with_failback=False)
         expected = "SELECT * FROM tbl1 GROUP BY a, b WITH ROLLUP"
-        assert rendered.replace('\n', '').replace('  ', ' ').upper() == expected.upper()
+        assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()
 
         with pytest.raises(NotImplementedError):
             rendered = SqlalchemyRender("oracle").get_string(ast, with_failback=False)
@@ -216,4 +216,4 @@ class TestRender:
 
         rendered = SqlalchemyRender("postgres").get_string(ast, with_failback=False)
         expected = "SELECT * FROM tbl1 GROUP BY ROLLUP(a, b) LIMIT 100"
-        assert rendered.replace('\n', '').replace('  ', ' ').upper() == expected.upper()
+        assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()

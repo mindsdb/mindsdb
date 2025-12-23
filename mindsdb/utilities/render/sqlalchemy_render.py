@@ -60,22 +60,27 @@ def _compile_interval(element, compiler, **kw):
 
 # region definitions of custom clauses for GROUP BY ROLLUP
 # This will work also in DuckDB, as it use postgres dialect
-ROLLUP_ALLOWED_DIALECTS = ['mysql', 'postgres', 'postgresql']
+ROLLUP_ALLOWED_DIALECTS = ["mysql", "postgres", "postgresql"]
+
 
 class group_by_rollup(ClauseElement):
     def __init__(self, *columns):
         self.columns = columns
 
-@compiles(group_by_rollup)  # required for str(statemetn)
-@compiles(group_by_rollup, 'mysql')
-def visit_group_by_rollup_mysql(element, compiler, **kw):
-    return ', '.join([compiler.process(col, **kw) for col in element.columns]) + ' WITH ROLLUP'
 
-@compiles(group_by_rollup, 'postgresql')
-@compiles(group_by_rollup, 'postgres')
+@compiles(group_by_rollup)  # required for str(statemetn)
+@compiles(group_by_rollup, "mysql")
+def visit_group_by_rollup_mysql(element, compiler, **kw):
+    return ", ".join([compiler.process(col, **kw) for col in element.columns]) + " WITH ROLLUP"
+
+
+@compiles(group_by_rollup, "postgresql")
+@compiles(group_by_rollup, "postgres")
 def visit_group_by_rollup_postgresql(element, compiler, **kw):
-    cols = ', '.join([compiler.process(col, **kw) for col in element.columns])
-    return f'ROLLUP({cols})'
+    cols = ", ".join([compiler.process(col, **kw) for col in element.columns])
+    return f"ROLLUP({cols})"
+
+
 # endregion
 
 
@@ -641,9 +646,11 @@ class SqlalchemyRender:
 
         if node.group_by is not None:
             cols = [self.to_expression(i) for i in node.group_by]
-            if getattr(node.group_by[-1], 'with_rollup', False):
+            if getattr(node.group_by[-1], "with_rollup", False):
                 if self.dialect.name not in ROLLUP_ALLOWED_DIALECTS:
-                    raise NotImplementedError(f"Statement 'WITH ROLLUP' not implemented for dialect {self.dialect.name}")
+                    raise NotImplementedError(
+                        f"Statement 'WITH ROLLUP' not implemented for dialect {self.dialect.name}"
+                    )
                 query = query.group_by(group_by_rollup(*cols))
             else:
                 query = query.group_by(*cols)

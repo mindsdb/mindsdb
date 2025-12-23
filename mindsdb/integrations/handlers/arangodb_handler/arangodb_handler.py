@@ -47,8 +47,11 @@ class ArangoDBHandler(APIHandler):
             # Verify connection by fetching version
             self.db.version()
             self.is_connected = True
-        except Exception as e:
+        except ArangoError as e:
             logger.error(f'Error connecting to ArangoDB: {e}')
+            raise e
+        except Exception as e:
+            logger.error(f'Unexpected error connecting to ArangoDB: {e}')
             raise e
 
         return self.db
@@ -59,8 +62,11 @@ class ArangoDBHandler(APIHandler):
         try:
             self.connect()
             response.success = True
-        except Exception as e:
+        except ArangoError as e:
             logger.error(f'Error connecting to ArangoDB: {e}')
+            response.error_message = str(e)
+        except Exception as e:
+            logger.error(f'Unexpected error connecting to ArangoDB: {e}')
             response.error_message = str(e)
 
         return response
@@ -76,8 +82,11 @@ class ArangoDBHandler(APIHandler):
             data = list(cursor)
             df = pd.DataFrame(data)
             return Response(RESPONSE_TYPE.TABLE, data_frame=df)
-        except Exception as e:
+        except ArangoError as e:
             logger.error(f'Error executing query: {query}, {e}')
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+        except Exception as e:
+            logger.error(f'Unexpected error executing query: {query}, {e}')
             return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
     def get_tables(self) -> Response:
@@ -91,8 +100,11 @@ class ArangoDBHandler(APIHandler):
             tables = [c['name'] for c in collections if not c['system']]
             df = pd.DataFrame(tables, columns=['table_name'])
             return Response(RESPONSE_TYPE.TABLE, data_frame=df)
-        except Exception as e:
+        except ArangoError as e:
             logger.error(f'Error listing tables: {e}')
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+        except Exception as e:
+            logger.error(f'Unexpected error listing tables: {e}')
             return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
             
     def get_columns(self, table_name: str) -> Response:
@@ -120,7 +132,10 @@ class ArangoDBHandler(APIHandler):
             })
             return Response(RESPONSE_TYPE.TABLE, data_frame=df_cols)
 
-        except Exception as e:
+        except ArangoError as e:
             logger.error(f'Error getting columns for {table_name}: {e}')
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+        except Exception as e:
+            logger.error(f'Unexpected error getting columns for {table_name}: {e}')
             return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 

@@ -321,7 +321,8 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
                         break
                     if len(df) > 0:
                         dfs.append(df)
-
+                if len(dfs) == 0:
+                    return pd.DataFrame([], columns=["faiss_id", "id", "content", "metadata"])
                 return pd.concat(dfs)
 
             if where_clause is None:

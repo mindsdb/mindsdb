@@ -10,23 +10,15 @@ try:
     from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
 except ImportError:
 
-    def retry_with_exponential_backoff(
-        initial_delay: float = 1,
-        hour_budget: float = 0.3,
-        jitter: bool = False,
-        exponential_base: int = 2,
-        wait_errors: tuple = (),
-        status_errors: tuple = (),
-    ):
+    def retry_with_exponential_backoff(func):
         """
-        Fallback decorator factory for retry_with_exponential_backoff.
-        Returns a simple pass-through decorator when the actual implementation is not available.
+        An empty decorator
         """
-        def _retry_with_exponential_backoff(func):
-            def wrapper(*args, **kwargs):
-                return func(*args, **kwargs)
-            return wrapper
-        return _retry_with_exponential_backoff
+
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        return wrapper
 
 
 def run_in_batches(batch_size):
@@ -143,36 +135,3 @@ class LLMClient:
             kwargs.pop("provider", None)
             response = self.client.completion(self.provider, model=model, messages=messages, args=kwargs)
             return [item.message.content for item in response.choices]
-
-    async def abatch(self, messages_list: List[List[dict]], json_output: bool = False) -> List[List[str]]:
-        """
-        Process multiple message lists asynchronously in parallel
-        
-        Args:
-            messages_list: List of message lists, where each message list is a List[dict]
-            json_output: Whether to request JSON output
-            
-        Returns:
-            List of results, where each result is a List[str] (same format as completion)
-        """
-        if not messages_list:
-            return []
-        
-        # Get the running event loop
-        loop = asyncio.get_running_loop()
-        
-        async def process_single_messages(messages: List[dict]) -> List[str]:
-            """Process a single messages list asynchronously"""
-            # Run completion in executor for async compatibility
-            result = await loop.run_in_executor(
-                None,
-                self.completion,
-                messages,
-                json_output
-            )
-            return result
-        
-        # Process all message lists in parallel
-        results = await asyncio.gather(*[process_single_messages(messages) for messages in messages_list])
-        
-        return results

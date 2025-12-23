@@ -159,6 +159,7 @@ class S3Handler(APIHandler):
             client = self.connect()
             location = client.get_bucket_location(Bucket=bucket)["LocationConstraint"]
             if location is None:
+                # AWS returns None for the default region (us-east-1)
                 location = "us-east-1"
             self._regions[bucket] = location
 

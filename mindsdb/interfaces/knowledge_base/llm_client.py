@@ -1,5 +1,4 @@
 import os
-import asyncio
 from typing import List
 
 from openai import OpenAI, AzureOpenAI

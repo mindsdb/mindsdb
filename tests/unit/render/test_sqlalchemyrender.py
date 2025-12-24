@@ -1,7 +1,6 @@
 import datetime as dt
 from textwrap import dedent
 
-import pytest
 from mindsdb_sql_parser.ast import (
     Identifier,
     Select,

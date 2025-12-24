@@ -38,6 +38,8 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
+from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
@@ -1051,13 +1053,12 @@ class KnowledgeBaseTable:
 
             # Build LLM if specified
             if "llm_model_name" in rag_config:
-                raise NotImplementedError("this block shouldn't be used")
-                # llm_args = {"model_name": rag_config.llm_model_name}
-                # if not rag_config.llm_provider:
-                #     llm_args["provider"] = get_llm_provider(llm_args)
-                # else:
-                #     llm_args["provider"] = rag_config.llm_provider
-                # rag_config.llm = create_chat_model(llm_args)
+                llm_args = {"model_name": rag_config.llm_model_name}
+                if not rag_config.llm_provider:
+                    llm_args["provider"] = get_llm_provider(llm_args)
+                else:
+                    llm_args["provider"] = rag_config.llm_provider
+                rag_config.llm = create_chat_model(llm_args)
 
             # Create RAG pipeline
             rag = RAG(rag_config)

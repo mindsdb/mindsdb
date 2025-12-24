@@ -114,7 +114,11 @@ class SQLAnswer:
     def type(self):
         return self.resp_type
 
-    def stream_http_response(self, context: dict | None):
+    def stream_http_response_sse(self, context: dict | None):
+        for piece in self.stream_http_response_jsonlines(context=context):
+            yield f"data: {piece}\n"
+
+    def stream_http_response_jsonlines(self, context: dict | None):
         _default_json = CustomJSONEncoder().default
 
         if self.resp_type in (RESPONSE_TYPE.OK, RESPONSE_TYPE.ERROR):

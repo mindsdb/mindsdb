@@ -98,10 +98,10 @@ class Query(Resource):
             context = mysql_proxy.get_context()
 
             if response_format == ReponseFormat.JSONLINES:
-                query_response = result.stream_http_response(context=context)
+                query_response = result.stream_http_response_jsonlines(context=context)
                 query_response = Response(query_response, mimetype='application/jsonlines')
             elif response_format == ReponseFormat.SSE:
-                query_response = result.stream_http_response(context=context)
+                query_response = result.stream_http_response_sse(context=context)
                 query_response = Response(query_response, mimetype='text/event-stream')
             else:
                 query_response = result.dump_http_response(context=context), 200

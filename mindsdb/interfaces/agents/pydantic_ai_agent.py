@@ -78,7 +78,6 @@ class PydanticAIAgent:
         self._current_sql_query: Optional[str] = None
         self._current_query_result: Optional[pd.DataFrame] = None
 
-        # Track SQL query context (when called from SQL query)
         self.select_targets = None
     
 
@@ -252,7 +251,6 @@ class PydanticAIAgent:
         """Get tags for observability"""
         return ['AGENT', 'PYDANTIC_AI']
     
-    
     def get_select_targets_from_sql(self, sql) -> Optional[List[str]]:
         """
         Get the SELECT targets from the original SQL query if available.
@@ -306,6 +304,7 @@ class PydanticAIAgent:
 
             self.select_targets = self.get_select_targets_from_sql(original_query)
 
+        data = None
         if stream:
             return self._get_completion_stream(messages)
         else:
@@ -328,11 +327,7 @@ class PydanticAIAgent:
                 error_message = f"Agent failed with model error: {last_message.get('content')}"
                 return self._create_error_response(error_message, return_context=self.args.get("return_context", True))
             
-    
-            # Extract the current prompt and message history
-            # current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
-            # table_markdown = dataframe_to_markdown(data)
-            
+
             # Validate select targets if specified
 
             if self.select_targets is not None:
@@ -350,8 +345,7 @@ class PydanticAIAgent:
                     data = data[self.select_targets]
 
             return data        
-           
-        
+
         
     def _create_error_response(self, error_message: str, return_context: bool = True) -> pd.DataFrame:
         """Create error response DataFrame"""
@@ -362,31 +356,7 @@ class PydanticAIAgent:
         if return_context:
             response_data[CONTEXT_COLUMN] = [json.dumps([])]
         return pd.DataFrame(response_data)
-    
-    def _create_cannot_solve_response(self, select_targets_str: Optional[str] = None) -> pd.DataFrame:
-        """
-        Create a DataFrame indicating the problem cannot be solved.
-        
-        Args:
-            select_targets_str: Comma-separated string of expected column names, or None
-            
-        Returns:
-            DataFrame with select_targets columns (if provided) plus 'thoughts' column
-        """
-        thoughts_message = "cannot solve this problem with the data we have, provide more context"
-        
-        if select_targets_str is None:
-            # No specific columns expected - return simple DataFrame with just thoughts
-            return pd.DataFrame({"thoughts": [thoughts_message]})
-        
-        # Parse select_targets_str to get column names
-        column_names = [col.strip() for col in select_targets_str.split(",")]
-        
-        # Create DataFrame with expected columns (all None) plus thoughts column
-        response_data = {col: [None] for col in column_names}
-        response_data["thoughts"] = [thoughts_message]
-        
-        return pd.DataFrame(response_data)
+
     
     def _get_completion_stream(self, messages: List[dict]) -> Iterable[Dict]:
         """

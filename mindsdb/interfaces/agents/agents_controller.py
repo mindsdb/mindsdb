@@ -420,8 +420,6 @@ class AgentsController:
         """
         # Extract SQL context from params if present
 
-        if stream:
-            return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools, params=params)
         from .pydantic_ai_agent import PydanticAIAgent
 
         model, provider = self.check_model_provider(agent.model_name, agent.provider)
@@ -435,46 +433,7 @@ class AgentsController:
 
         pydantic_agent = PydanticAIAgent(agent, model, llm_params=llm_params)
 
-        return pydantic_agent.get_completion(messages, params=params)
-
-    def _get_completion_stream(
-        self,
-        agent: db.Agents,
-        messages: list[Dict[str, str]],
-        project_name: str = default_project,
-        tools: list[Any] = None,
-        params: dict | None = None,
-    ) -> Iterator[object]:
-        """
-        Queries an agent to get a stream of completion chunks.
-
-        Parameters:
-            agent (db.Agents): Existing agent to get completion from
-            messages (list[Dict[str, str]]): Chat history to send to the agent
-            trace_id (str): ID of Langfuse trace to use
-            observation_id (str): ID of parent Langfuse observation to use
-            project_name (str): Project the agent belongs to (default mindsdb)
-            tools (list[BaseTool]): Tools to use while getting the completion
-            params (dict | None): params to redefine agent params
-
-        Returns:
-            chunks (Iterator[object]): Completion chunks as an iterator
-
-        Raises:
-            ValueError: Agent's model does not exist.
-        """
-        # For circular dependency.
-        from .pydantic_ai_agent import PydanticAIAgent
-
-        model, provider = self.check_model_provider(agent.model_name, agent.provider)
-
-        # update old agents
-        if agent.provider is None and provider is not None:
-            agent.provider = provider
-            db.session.commit()
-
-        # Get agent parameters and combine with default LLM parameters at runtime
-        llm_params = self.get_agent_llm_params(agent.params)
-
-        pydantic_agent = PydanticAIAgent(agent, model=model, llm_params=llm_params)
-        return pydantic_agent.get_completion(messages, stream=True, params=params)
+        if stream:
+            return pydantic_agent.get_completion(messages, stream=True, params=params)
+        else:
+            return pydantic_agent.get_completion(messages, params=params)

@@ -43,7 +43,7 @@ class AgentsController:
         self.project_controller = project_controller
         self.model_controller = model_controller
 
-    def check_model_provider(self, model_name: str, provider: str = None) -> Tuple[dict, str]:
+    def check_model_provider(self, model_name: str, provider: str = None) -> Tuple[Optional[str], str]:
         """
         Checks if a model exists, and gets the provider of the model.
 
@@ -419,10 +419,7 @@ class AgentsController:
             ValueError: Agent's model does not exist.
         """
         # Extract SQL context from params if present
-        sql_context = None
-        if params and '_sql_context' in params:
-            sql_context = params.pop('_sql_context')
-        
+
         if stream:
             return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools, params=params)
         from .pydantic_ai_agent import PydanticAIAgent
@@ -437,25 +434,7 @@ class AgentsController:
         llm_params = self.get_agent_llm_params(agent.params)
 
         pydantic_agent = PydanticAIAgent(agent, model, llm_params=llm_params)
-        
-        # If SQL context is available, extract SELECT targets using regex (keep as string; use '*' if SELECT *)
 
-        if sql_context and isinstance(sql_context, dict) and "original_query" in sql_context:
-            query = sql_context["original_query"]
-            match = re.search(r"select\s+(.*?)\s+from\b", query, re.IGNORECASE | re.DOTALL)
-            if match:
-                select_part = match.group(1).strip()
-                if select_part == "*":
-                    sql_context["select_targets"] = "*"
-                else:
-                    sql_context["select_targets"] = select_part
-            else:
-                sql_context["select_targets"] = "*"
-        if sql_context:
-            if params is None:
-                params = {}
-            params['_sql_context'] = sql_context
-        
         return pydantic_agent.get_completion(messages, params=params)
 
     def _get_completion_stream(

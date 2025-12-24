@@ -5,6 +5,9 @@ import warnings
 from typing import Dict, List, Optional, Any, Iterable
 import pandas as pd
 
+
+from mindsdb_sql_parser import parse_sql, ast
+
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelRequest, ModelResponse, ModelMessage, TextPart
 
@@ -37,7 +40,7 @@ warnings.filterwarnings("ignore", message=".*Task exception was never retrieved.
 class PydanticAIAgent:
     """Pydantic AI-based agent to replace LangchainAgent"""
     
-    def __init__(self, agent: db.Agents, model: dict = None, llm_params: dict = None):
+    def __init__(self, agent: db.Agents, model: dict = None, llm_params: dict = None, ):
         """
         Initialize Pydantic AI agent.
         
@@ -58,7 +61,7 @@ class PydanticAIAgent:
         self.mdb_langfuse_callback_handler: Optional[object] = None
         
         self.langfuse_client_wrapper = LangfuseClientWrapper()
-        self.args = self._initialize_args(llm_params)
+        self.args = llm_params
         
         # Provider model instance
         self.model_instance = get_model_instance_from_kwargs(self.args)
@@ -74,89 +77,12 @@ class PydanticAIAgent:
         self._current_prompt: Optional[str] = None
         self._current_sql_query: Optional[str] = None
         self._current_query_result: Optional[pd.DataFrame] = None
-        
+
         # Track SQL query context (when called from SQL query)
-        self._sql_context: Optional[Dict] = None
+        self.select_targets = None
     
-    
-    
-    def _initialize_args(self, llm_params: dict = None) -> dict:
-        """
-        Initialize the arguments for agent execution.
-        Uses the same pattern as knowledge bases: get default config and merge with user params.
-        
-        Args:
-            llm_params: Parameters for agent execution (already merged with defaults from agents_controller)
-            
-        Returns:
-            dict: Final parameters for agent execution
-        """
-        from mindsdb.utilities.config import config
-        import copy
-        
-        # Get default LLM config from system config (same pattern as knowledge bases)
-        default_llm_config = copy.deepcopy(config.get("default_llm", {}))
-        
-        # Start with agent params
-        args = self.agent.params.copy() if self.agent.params else {}
-        
-        # Get model params from agent params (same structure as knowledge bases)
-        if "model" in args:
-            model_params = args.get("model", {})
-        else:
-            # If no "model" key, use params directly (backward compatibility)
-            model_params = args
-        
-        # Merge default config with model params (same as knowledge bases get_model_params)
-        if model_params:
-            if not isinstance(model_params, dict):
-                raise ValueError("Model parameters must be passed as a JSON object")
-            
-            # If provider mismatches - don't use default values
-            if "provider" in model_params and model_params["provider"] != default_llm_config.get("provider"):
-                combined_model_params = model_params.copy()
-            else:
-                combined_model_params = copy.deepcopy(default_llm_config)
-                combined_model_params.update(model_params)
-        else:
-            # No model params provided - use defaults from config
-            combined_model_params = default_llm_config
-        
-        # Remove use_default_llm flag if present
-        combined_model_params.pop("use_default_llm", None)
-        
-        # Update args with combined model params
-        args.update(combined_model_params)
-        
-        # Apply llm_params if provided (from agents_controller.get_agent_llm_params)
-        if llm_params:
-            args.update(llm_params)
-        
-        # Set model name and provider if given in create agent (these take precedence)
-        if self.agent.model_name is not None:
-            args["model_name"] = self.agent.model_name
-        if self.agent.provider is not None:
-            args["provider"] = self.agent.provider
-        
-        
-        
-        # Handle MindsDB provider
-        if self.agent.provider == "mindsdb":
-            args["model_name"] = self.agent.model_name
-            prompt_template = self.model.get("problem_definition", {}).get("using", {}).get("prompt_template")
-            if prompt_template is not None:
-                args["prompt_template"] = prompt_template
-        
-        
-        
-        if "model_name" not in args:
-            raise ValueError(
-                "No model name provided for agent. Provide it in the model parameter or in the default model setup."
-            )
-        
-        return args
-    
-    
+
+
     def _convert_messages_to_history(self, df: pd.DataFrame) -> List[ModelMessage]:
         """
         Convert DataFrame messages to Pydantic AI message history format.
@@ -327,7 +253,7 @@ class PydanticAIAgent:
         return ['AGENT', 'PYDANTIC_AI']
     
     
-    def get_select_targets_from_sql(self) -> Optional[List[str]]:
+    def get_select_targets_from_sql(self, sql) -> Optional[List[str]]:
         """
         Get the SELECT targets from the original SQL query if available.
         Extracts only the column names, ignoring aliases (e.g., "col1 as alias" -> "col1").
@@ -335,41 +261,33 @@ class PydanticAIAgent:
         Returns:
             List of SELECT target column names if available, None otherwise
         """
-        if self._sql_context and 'select_targets' in self._sql_context:
-            select_targets = self._sql_context['select_targets']
-            
-            # Handle string format: split by commas
-            if isinstance(select_targets, str):
-                parts = select_targets.split(',')
-            elif isinstance(select_targets, list):
-                parts = select_targets
-            else:
-                return None
-            
-            # Extract only the first word from each part (before "as" or additional text)
-            cleaned_columns = []
-            for part in parts:
-                if isinstance(part, str):
-                    # Strip whitespace
-                    part = part.strip()
-                    # Split by "as" (case-insensitive) and take the first part
-                    if ' as ' in part.lower():
-                        part = part.split(' as ', 1)[0]
-                    elif ' AS ' in part:
-                        part = part.split(' AS ', 1)[0]
-                    # Take only the first word (in case of other patterns)
-                    first_word = part.split()[0] if part.split() else part
-                    cleaned_columns.append(first_word.strip())
-                else:
-                    # If not a string, convert to string and take first word
-                    part_str = str(part).strip()
-                    first_word = part_str.split()[0] if part_str.split() else part_str
-                    cleaned_columns.append(first_word.strip())
-            if cleaned_columns == ['*']:
-                return ['question', 'answer']
-            return cleaned_columns if cleaned_columns else None
-        return None
-    
+
+        try:
+            parsed = parse_sql(sql)
+        except Exception:
+            return
+
+        if not isinstance(parsed, ast.Select):
+            return
+
+        targets = []
+        for target in parsed.targets:
+            if isinstance(target, ast.Identifier):
+                targets.append(target.parts[-1])
+
+            elif isinstance(target, ast.Star):
+                return  #['question', 'answer']
+
+            elif isinstance(target, ast.Function):
+                # For functions, get the function name and args
+                func_str = target.op
+                if target.args:
+                    for arg in target.args:
+                        if isinstance(arg, ast.Identifier):
+                            targets.append(arg.parts[-1])
+
+        return targets
+
     def get_completion(self, messages, stream: bool = False, params: dict | None = None):
         """
         Get completion from agent.
@@ -383,11 +301,11 @@ class PydanticAIAgent:
             DataFrame with assistant response
         """
         # Extract SQL context from params if present
-        if params and '_sql_context' in params:
-            self._sql_context = params.pop('_sql_context')
-        else:
-            self._sql_context = None
-        
+        if params and 'original_query' in params:
+            original_query = params.pop('original_query')
+
+            self.select_targets = self.get_select_targets_from_sql(original_query)
+
         if stream:
             return self._get_completion_stream(messages)
         else:
@@ -416,30 +334,21 @@ class PydanticAIAgent:
             # table_markdown = dataframe_to_markdown(data)
             
             # Validate select targets if specified
-            select_targets = self.get_select_targets_from_sql()
-            if select_targets is not None:
-                # Skip validation if '*' is in the targets
-                if '*' not in select_targets:
-                    # Ensure all expected columns are present
-                    if data is None or (isinstance(data, pd.DataFrame) and data.empty):
-                        # Create DataFrame with one row of nulls for all expected columns
-                        data = pd.DataFrame({col: [None] for col in select_targets})
-                    else:
-                        # Ensure all expected columns exist, add missing ones with null values
-                        for col in select_targets:
-                            if col not in data.columns:
-                                data[col] = None
-                        # Reorder columns to match select_targets order
-                        data = data[select_targets]
-            elif data is None or (isinstance(data, pd.DataFrame) and data.empty):
-                # No select_targets specified, but data is empty - create a simple row
-                if isinstance(data, pd.DataFrame) and len(data.columns) > 0:
-                    # Use existing columns from empty DataFrame
-                    data = pd.DataFrame({col: [None] for col in data.columns})
+
+            if self.select_targets is not None:
+
+                # Ensure all expected columns are present
+                if data is None or (isinstance(data, pd.DataFrame) and data.empty):
+                    # Create DataFrame with one row of nulls for all expected columns
+                    data = pd.DataFrame({col: [None] for col in self.select_targets})
                 else:
-                    # Fallback: create a simple DataFrame with a single null row
-                    data = pd.DataFrame([None], columns=["result"])
-            
+                    # Ensure all expected columns exist, add missing ones with null values
+                    for col in self.select_targets:
+                        if col not in data.columns:
+                            data[col] = None
+                    # Reorder columns to match select_targets order
+                    data = data[self.select_targets]
+
             return data        
            
         
@@ -515,9 +424,7 @@ class PydanticAIAgent:
         # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
         current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages")
-        
-        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: SQL context: {self._sql_context}")
-        
+
         yield self._add_chunk_metadata({"type": "status", "content": "Generating Data Catalog..."})
 
         if self.sql_toolkit.knowledge_bases:
@@ -548,13 +455,10 @@ class PydanticAIAgent:
         planning_prompt_text = f"""Take into account the following Data Catalog:\n{data_catalog}\n\n{agent_prompts.planning_prompt}\n\nQuestion to answer: {current_prompt}"""
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Planning prompt text: {planning_prompt_text}")
         # Get select targets for planning context
-        select_targets = self.get_select_targets_from_sql()
+
         select_targets_str = None
-        if select_targets is not None:
-            if isinstance(select_targets, (list, tuple)):
-                select_targets_str = ", ".join(str(t) for t in select_targets)
-            else:
-                select_targets_str = str(select_targets)
+        if self.select_targets is not None:
+            select_targets_str = ", ".join(str(t) for t in self.select_targets)
             planning_prompt_text += f"\n\nFor the final query, the user expects to have a table such that this query is valid: SELECT {select_targets_str} FROM (<generated query>); when creating your plan, make sure to account for these expected columns."
         
         # Generate plan

@@ -9,11 +9,9 @@ import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
+from mindsdb.api.executor.data_types.sql_answer import SQLAnswer
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-from mindsdb.api.executor.data_types.response_type import (
-    RESPONSE_TYPE as SQL_RESPONSE_TYPE,
-)
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log

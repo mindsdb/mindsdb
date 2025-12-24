@@ -69,12 +69,13 @@ class group_by_rollup(ClauseElement):
 @compiles(group_by_rollup, "mysql")
 @compiles(group_by_rollup, "mindsdb")
 def visit_group_by_rollup_mysql(element, compiler, **kw):
-    print(f"visit_group_by_rollup_mysql={compiler.dialect.name}")
     columns = ", ".join([compiler.process(col, **kw) for col in element.columns])
     if compiler.dialect.name in ("default", "mysql", "mindsdb"):
         return f"{columns} WITH ROLLUP"
     else:
         return f"ROLLUP({columns})"
+
+
 # endregion
 
 

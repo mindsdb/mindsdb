@@ -32,7 +32,7 @@ def get_preditor_alias(step, mindsdb_database):
 
 
 class ApplyPredictorBaseCall(BaseStepCall):
-    def apply_predictor(self, project_name, predictor_name, df, version, params, step=None):
+    def apply_predictor(self, project_name, predictor_name, df, version, params):
         # is it an agent?
         agent = self.session.agents_controller.get_agent(predictor_name, project_name)
         if agent is not None:
@@ -78,7 +78,7 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
             version = int(step.predictor.parts[-1])
 
         df = pd.DataFrame([where_data])
-        predictions = self.apply_predictor(project_name, predictor_name, df, version, step.params, step=step)
+        predictions = self.apply_predictor(project_name, predictor_name, df, version, step.params)
 
         # update predictions with input data
         for k, v in where_data.items():
@@ -206,7 +206,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])
-                predictions = self.apply_predictor(project_name, predictor_name, table_df, version, params, step=step)
+                predictions = self.apply_predictor(project_name, predictor_name, table_df, version, params)
 
                 if self.session.predictor_cache is not False:
                     if predictions is not None and isinstance(predictions, pd.DataFrame):

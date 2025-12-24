@@ -113,6 +113,8 @@ class ResultSet:
     def __repr__(self):
         col_names = ", ".join([col.name for col in self._columns])
 
+        if self._table_response is not None:
+            return f"{self.__class__.__name__}(stream data, cols: {col_names})"
         return f"{self.__class__.__name__}({self.length()} rows, cols: {col_names})"
 
     def __len__(self) -> int:

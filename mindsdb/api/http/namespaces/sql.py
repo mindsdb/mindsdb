@@ -104,7 +104,7 @@ class Query(Resource):
                 query_response = result.stream_http_response(context=context)
                 query_response = Response(query_response, mimetype='text/event-stream')
             else:
-                query_response = result.dump_http_response(context=context)
+                query_response = result.dump_http_response(context=context), 200
 
         hooks.after_api_query(
             company_id=ctx.company_id,
@@ -117,17 +117,18 @@ class Query(Resource):
             traceback=error_traceback,
         )
 
-        # # TODO
-        # end_time = time.time()
-        # log_msg = f"SQL processed in {(end_time - start_time):.2f}s ({end_time:.2f}-{start_time:.2f}), result is {query_response['type']}"
-        # if query_response["type"] is SQL_RESPONSE_TYPE.TABLE:
-        #     log_msg += f" ({len(query_response['data'])} rows), "
-        # elif query_response["type"] is SQL_RESPONSE_TYPE.ERROR:
-        #     log_msg += f" ({query_response['error_message']}), "
-        # log_msg += f"used handlers {ctx.used_handlers}"
-        # logger.debug(log_msg)
+        end_time = time.time()
+        log_msg = f"SQL processed in {(end_time - start_time):.2f}s ({end_time:.2f}-{start_time:.2f}), result is {result.type}, "
+        if result.type is SQL_RESPONSE_TYPE.TABLE and response_format is ReponseFormat.DEFAULT:
+            log_msg += f" one-piece result ({len(query_response[0]['data'])} rows), "
+        elif result.type is SQL_RESPONSE_TYPE.TABLE:
+            log_msg += f" {response_format} result, "
+        elif result.type is SQL_RESPONSE_TYPE.ERROR:
+            log_msg += f" ({result.error_message}), "
+        log_msg += f"used handlers: {ctx.used_handlers}"
+        logger.debug(log_msg)
 
-        return query_response, 200
+        return query_response
 
 
 @ns_conf.route("/list_databases")

@@ -199,7 +199,7 @@ class TableResponse(DataHandlerResponse):
 
         NOTE: do it only once, before return result to the user
         """
-        if self._data:
+        if self._data is not None:
             yield self._data
         for el in self.data_generator:
             yield el

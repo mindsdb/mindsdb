@@ -205,8 +205,10 @@ class TestRender:
         expected = "SELECT * FROM tbl1 GROUP BY a, b WITH ROLLUP"
         assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()
 
-        with pytest.raises(NotImplementedError):
-            rendered = SqlalchemyRender("oracle").get_string(ast, with_failback=False)
+        # renderer for 'oracle' is not explicetly specified - should be rollup() in result
+        rendered = SqlalchemyRender("oracle").get_string(ast, with_failback=False)
+        expected = "SELECT * FROM tbl1 GROUP BY ROLLUP(a, b)"
+        assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()
 
         # try query with differ ending
         sql = "SELECT * FROM tbl1 GROUP BY a, b WITH ROLLUP LIMIT 100"

@@ -425,8 +425,8 @@
                       "group": "Connect",
                       "icon": "link",
                       "pages": [
-                        "rest/usage",
                         "rest/authentication",
+                        "rest/usage",
                         {
                           "group": "Data Sources",
                           "pages": [

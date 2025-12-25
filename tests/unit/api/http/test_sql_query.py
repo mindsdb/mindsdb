@@ -25,11 +25,13 @@ def create_mock_sql_answer():
         Column(name="value", alias="value"),
     ]
 
-    df = pd.DataFrame([
-        [1, "test1", 100],
-        [2, "test2", 200],
-        [3, "test3", 300],
-    ])
+    df = pd.DataFrame(
+        [
+            [1, "test1", 100],
+            [2, "test2", 200],
+            [3, "test3", 300],
+        ]
+    )
 
     result_set = ResultSet(columns=columns, df=df)
 
@@ -66,8 +68,7 @@ def setup_mock_proxy(mock_proxy_class):
 class TestSQLQueryResponseFormat:
     @patch("mindsdb.api.http.namespaces.sql.FakeMysqlProxy")
     def test_query_default_format(self, mock_proxy_class, client):
-        """Test POST /sql/query with default response format (no response_format parameter).
-        """
+        """Test POST /sql/query with default response format (no response_format parameter)."""
         setup_mock_proxy(mock_proxy_class)
 
         response = client.post(
@@ -81,8 +82,7 @@ class TestSQLQueryResponseFormat:
 
     @patch("mindsdb.api.http.namespaces.sql.FakeMysqlProxy")
     def test_query_sse_format(self, mock_proxy_class, client):
-        """Test POST /sql/query with SSE response format (response_format="sse").
-        """
+        """Test POST /sql/query with SSE response format (response_format="sse")."""
         setup_mock_proxy(mock_proxy_class)
 
         response = client.post(
@@ -114,8 +114,7 @@ class TestSQLQueryResponseFormat:
 
     @patch("mindsdb.api.http.namespaces.sql.FakeMysqlProxy")
     def test_query_jsonlines_format(self, mock_proxy_class, client):
-        """Test POST /sql/query with JSONLINES response format (response_format="jsonlines").
-        """
+        """Test POST /sql/query with JSONLINES response format (response_format="jsonlines")."""
         setup_mock_proxy(mock_proxy_class)
 
         response = client.post(

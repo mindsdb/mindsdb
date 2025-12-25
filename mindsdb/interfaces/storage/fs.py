@@ -179,7 +179,7 @@ class LocalFSStore(BaseFSStore):
         path = Path(self.storage).joinpath(remote_name)
         try:
             if path.is_file():
-                path.unlink()
+                path.unlink(missing_ok=True)
             else:
                 shutil.rmtree(path)
         except FileNotFoundError:
@@ -587,7 +587,7 @@ class FileStorage:
                 raise Exception("Path does not exists")
 
             if path.is_file():
-                path.unlink()
+                path.unlink(missing_ok=True)
             else:
                 path.rmdir()
 

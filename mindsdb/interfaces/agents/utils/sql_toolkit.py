@@ -165,22 +165,6 @@ class TablesCollection:
         return f"Tables({self.items})"
 
 
-class QueryType:
-    FINAL = "final_query"  # this is the final query
-    EXPLORATORY = "exploratory_query"  # this is a query to explore and collect info to solve the challenge (e.g., distinct values of a categorical column, schema inference, etc.)
-
-
-class Plan(BaseModel):
-    plan: str = Field(..., description="A step-by-step plan for solving the question, identifying data sources and steps needed")
-    estimated_steps: int = Field(..., description="Estimated number of steps needed to solve the question")
-
-
-class SQLQuery(BaseModel):
-    sql_query: str = Field(..., description="The SQL query to run")
-    short_description: str = Field(..., description="A short summary or description of the SQL query's purpose")
-    query_type: str = Field(QueryType.FINAL, description="Type of query: 'final_query' for the main query if we can solve the question we were asked, 'exploratory_query' for queries used to explore or collect info to solve the question, if we need to interrogagte the database a bit more")
-
-
 class MindsDBQuery:
     def __init__(self, tables=None, knowledge_bases=None):
         self.tables = TablesCollection(tables or [])

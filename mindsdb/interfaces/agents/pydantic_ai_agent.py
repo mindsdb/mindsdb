@@ -20,14 +20,15 @@ from mindsdb.interfaces.agents.utils.constants import (
     TRACE_ID_COLUMN,
 )
 
-from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery, SQLQuery, QueryType, Plan
+from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery
 from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import (
     get_model_instance_from_kwargs
 )
 from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuilder, dataframe_to_markdown
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.langfuse import LangfuseClientWrapper
-from mindsdb.interfaces.agents.prompts import agent_prompts
+from mindsdb.interfaces.agents.modes import sql as sql_mode, text_sql as text_sql_mode
+from mindsdb.interfaces.agents.modes.base import ResponseType, PlanResponse
 logger = log.getLogger(__name__)
 DEBUG_LOGGER = logger.info
 
@@ -79,6 +80,8 @@ class PydanticAIAgent:
         self._current_query_result: Optional[pd.DataFrame] = None
 
         self.select_targets = None
+
+        self.agent_mode = self.args.pop('mode', 'sql')
     
 
 
@@ -397,6 +400,13 @@ class PydanticAIAgent:
 
         yield self._add_chunk_metadata({"type": "status", "content": "Generating Data Catalog..."})
 
+        if self.agent_mode == 'text':
+            agent_prompts = text_sql_mode
+            AgentResponse = text_sql_mode.AgentResponse
+        else:
+            agent_prompts = sql_mode
+            AgentResponse = sql_mode.AgentResponse
+
         if self.sql_toolkit.knowledge_bases:
             sql_instructions = f"{agent_prompts.sql_description}\n\n{agent_prompts.sql_with_kb_description}"
         else:
@@ -418,7 +428,7 @@ class PydanticAIAgent:
         planning_agent = Agent(
             self.model_instance,
             system_prompt=self.system_prompt,
-            output_type=Plan
+            output_type=PlanResponse
         )
         
         # Build planning prompt
@@ -457,7 +467,7 @@ class PydanticAIAgent:
         agent = Agent(
             self.model_instance,
             system_prompt=self.system_prompt,
-            output_type=SQLQuery
+            output_type=AgentResponse
         )
 
         error_context = None
@@ -493,8 +503,18 @@ class PydanticAIAgent:
                         "type": "context",
                         "content": output.short_description
                     })
+
+                if output.type == ResponseType.FINAL_TEXT:
+                    # return text to user and exit
+                    yield self._add_chunk_metadata({
+                        "type": "data",
+                        "content": pd.DataFrame([{'answer': output.text}])
+                    })
+                    yield self._add_chunk_metadata({"type": "end"})
+                    return
+
                 sql_query = output.sql_query
-                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: sql: {sql_query}, query_type: {output.query_type}, description: {output.short_description}")
+                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: sql: {sql_query}, query_type: {output.type}, description: {output.short_description}")
 
                 # Initialize retry counter for this query
 
@@ -531,7 +551,7 @@ class PydanticAIAgent:
                 DEBUG_LOGGER("PydanticAIAgent._get_completion_stream: Executed SQL query successfully")
                 retry_count = 0
 
-                if output.query_type == QueryType.FINAL:
+                if output.type == ResponseType.FINAL_QUERY:
                     # return response to user
                     yield self._add_chunk_metadata({
                         "type": "data",

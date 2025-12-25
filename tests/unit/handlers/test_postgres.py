@@ -95,7 +95,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def create_patcher(self):
         return patch("psycopg.connect")
 
-    def test_native_query_command_ok(self):
+    def test_native_query_command_ok_server_side(self):
         """
         Tests the `native_query` method to ensure it executes a SQL query and handles the case
         where the query doesn't return a result set (ExecStatus.COMMAND_OK)
@@ -125,7 +125,36 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(data.type, RESPONSE_TYPE.OK)
         self.assertEqual(data.affected_rows, 1)
 
-    def test_native_query_with_results(self):
+    def test_native_query_command_ok_client_side(self):
+        """
+        Tests the `native_query` at client side execution
+        """
+        mock_conn = MagicMock()
+        # mock_cursor_server = MockCursorContextManager()
+        mock_cursor_client = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(side_effect=[mock_cursor_client])
+
+        # syntax_error = psycopg.errors.SyntaxError('syntax error at or near "insert"')
+        # mock_cursor_server.execute.side_effect = syntax_error
+        mock_cursor_client.execute.return_value = None
+
+        # Setup pgresult
+        mock_pgresult = MagicMock()
+        mock_pgresult.status = ExecStatus.COMMAND_OK
+        mock_cursor_client.pgresult = mock_pgresult
+        mock_cursor_client.rowcount = 1
+
+        query_str = "INSERT INTO table VALUES (1, 2, 3)"
+        data = self.handler.native_query(query_str, server_side=False)
+        # mock_cursor_server.execute.assert_called_once_with(query_str)
+        mock_cursor_client.execute.assert_called_once_with(query_str)
+        assert isinstance(data, Response)
+        self.assertEqual(data.type, RESPONSE_TYPE.OK)
+        self.assertEqual(data.affected_rows, 1)
+
+    def test_native_query_with_results_client_side(self):
         """
         Tests the `native_query` method to ensure it executes a SQL query and handles the case
         where the query returns a result set
@@ -136,7 +165,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.fetchmany = MagicMock(side_effect=[[[1, "name1"], [2, "name2"]], []])
+        mock_cursor.fetchall = MagicMock(side_effect=[[[1, "name1"], [2, "name2"]], []])
 
         # Create proper description objects with necessary type_code for _cast_dtypes
         mock_cursor.description = [
@@ -150,13 +179,50 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.pgresult = mock_pgresult
 
         query_str = "SELECT * FROM table"
-        data = self.handler.native_query(query_str)
+        data = self.handler.native_query(query_str, server_side=False)
         mock_cursor.execute.assert_called_once_with(query_str)
         assert isinstance(data, TableResponse)
         assert getattr(data, "error_code", None) is None
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
         self.assertEqual(list(data.data_frame.columns), ["id", "name"])
+
+    def test_native_query_with_results_server_side(self):
+        """
+        Tests the `native_query` method to ensure it executes a SQL query and handles the case
+        where the query returns a result set at server side execution
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        # Server-side execution uses fetchmany, not fetchall
+        mock_cursor.fetchmany = MagicMock(side_effect=[[[1, "name1"], [2, "name2"]], []])
+
+        mock_cursor.description = [
+            ColumnDescription(name="id", type_code=regtype_to_oid["integer"]),  # int4 type code
+            ColumnDescription(name="name", type_code=regtype_to_oid["text"]),  # text type code
+        ]
+
+        query_str = "SELECT * FROM table"
+        data = self.handler.native_query(query_str, server_side=True)
+        mock_cursor.execute.assert_called_once_with(query_str)
+        
+        # Verify the response
+        assert isinstance(data, TableResponse)
+        assert getattr(data, "error_code", None) is None
+        self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
+        self.assertIsNone(data._data)
+        data.fetchall()
+        self.assertIsInstance(data._data, DataFrame)
+        self.assertEqual(list(data.data_frame.columns), ["id", "name"])
+        
+        # Verify DataFrame contains all expected rows
+        self.assertEqual(len(data.data_frame), 2)
+        self.assertEqual(data.data_frame["id"].tolist(), [1, 2])
+        self.assertEqual(data.data_frame["name"].tolist(), ["name1", "name2"])
 
     def test_native_query_with_params(self):
         """

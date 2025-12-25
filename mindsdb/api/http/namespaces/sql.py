@@ -49,9 +49,9 @@ class Query(Resource):
         context = request.json.get("context", {})
         params = request.json.get("params", {})
         try:
-            response_format = ReponseFormat(request.json.get('response_format', None))
+            response_format = ReponseFormat(request.json.get("response_format", None))
         except ValueError:
-            return http_error(HTTPStatus.BAD_REQUEST, "Invalid stream format", 'Please provide a valid stream format.')
+            return http_error(HTTPStatus.BAD_REQUEST, "Invalid stream format", "Please provide a valid stream format.")
 
         if isinstance(query, str) is False or isinstance(context, dict) is False:
             return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" with the request.')
@@ -75,7 +75,7 @@ class Query(Resource):
                 result = SQLAnswer(
                     resp_type=SQL_RESPONSE_TYPE.ERROR,
                     error_code=0,
-                    error_message=str(e)
+                    error_message=str(e),
                 )
                 logger.warning(f"Error query processing: {e}")
             except QueryError as e:
@@ -83,7 +83,7 @@ class Query(Resource):
                 result = SQLAnswer(
                     resp_type=SQL_RESPONSE_TYPE.ERROR,
                     error_code=0,
-                    error_message=str(e)
+                    error_message=str(e),
                 )
                 if e.is_expected:
                     logger.warning(f"Query failed due to expected reason: {e}")
@@ -94,7 +94,7 @@ class Query(Resource):
                 result = SQLAnswer(
                     resp_type=SQL_RESPONSE_TYPE.ERROR,
                     error_code=0,
-                    error_message=str(e)
+                    error_message=str(e),
                 )
                 logger.exception("Error query processing:")
 
@@ -102,10 +102,10 @@ class Query(Resource):
 
             if response_format == ReponseFormat.JSONLINES:
                 query_response = result.stream_http_response_jsonlines(context=context)
-                query_response = Response(query_response, mimetype='application/jsonlines')
+                query_response = Response(query_response, mimetype="application/jsonlines")
             elif response_format == ReponseFormat.SSE:
                 query_response = result.stream_http_response_sse(context=context)
-                query_response = Response(query_response, mimetype='text/event-stream')
+                query_response = Response(query_response, mimetype="text/event-stream")
             else:
                 query_response = result.dump_http_response(context=context), 200
 

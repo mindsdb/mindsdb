@@ -215,7 +215,7 @@ class Config:
                 "enabled": False,
             },
             "data_stream": {
-                "fetch_size": 1000
+                "fetch_size": 1000,
             },
         }
         # endregion

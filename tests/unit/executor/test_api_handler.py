@@ -11,7 +11,6 @@ import pandas as pd
 from tests.unit.executor_test_base import BaseExecutorDummyML
 
 
-
 # import modules virtually if it is not installed
 try:
     import github  # noqa

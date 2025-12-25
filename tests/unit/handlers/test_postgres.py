@@ -209,7 +209,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = "SELECT * FROM table"
         data = self.handler.native_query(query_str, server_side=True)
         mock_cursor.execute.assert_called_once_with(query_str)
-        
+
         # Verify the response
         assert isinstance(data, TableResponse)
         assert getattr(data, "error_code", None) is None
@@ -218,7 +218,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         data.fetchall()
         self.assertIsInstance(data._data, DataFrame)
         self.assertEqual(list(data.data_frame.columns), ["id", "name"])
-        
+
         # Verify DataFrame contains all expected rows
         self.assertEqual(len(data.data_frame), 2)
         self.assertEqual(data.data_frame["id"].tolist(), [1, 2])

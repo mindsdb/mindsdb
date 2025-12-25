@@ -28,6 +28,7 @@ from mindsdb.integrations.libs.response import (
     DataHandlerResponse,
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+from mindsdb.utilities.config import config as mindsdb_config
 
 logger = log.getLogger(__name__)
 
@@ -391,7 +392,7 @@ class PostgresHandler(MetaDatabaseHandler):
 
                 columns: list[Column] = _get_colums(cursor)
                 yield TableResponse(affected_rows=cursor.rowcount, columns=columns)
-                while result := cursor.fetchmany(1000):  # TODO make configurable
+                while result := cursor.fetchmany(mindsdb_config["data_stream"]["fetch_size"]):
                     yield _make_df(result, columns)
                 connection.commit()
             except Exception as e:

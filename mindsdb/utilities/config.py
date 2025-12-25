@@ -214,6 +214,9 @@ class Config:
             "data_catalog": {
                 "enabled": False,
             },
+            "data_stream": {
+                "fetch_size": 1000
+            },
         }
         # endregion
 

@@ -32,7 +32,7 @@ class TestHandlerStatusResponse:
         redirect_url = "https://example.com/auth"
         copy_storage = "s3://bucket/path"
         response = HandlerStatusResponse(success=True, redirect_url=redirect_url, copy_storage=copy_storage)
-        
+
         assert response.success is True
         assert response.error_message is None
         assert response.redirect_url == redirect_url
@@ -40,7 +40,7 @@ class TestHandlerStatusResponse:
 
         json_data = response.to_json()
         assert json_data["success"] is True
-        assert json_data['error'] is None
+        assert json_data["error"] is None
         assert json_data["redirect_url"] == redirect_url
         assert json_data["copy_storage"] == copy_storage
 
@@ -48,7 +48,7 @@ class TestHandlerStatusResponse:
         """Test initialization with failure status."""
         error_msg = "Connection failed"
         response = HandlerStatusResponse(success=False, error_message=error_msg)
-        
+
         assert response.success is False
         assert response.error_message == error_msg
         assert response.redirect_url is None
@@ -56,7 +56,7 @@ class TestHandlerStatusResponse:
 
         json_data = response.to_json()
         assert json_data["success"] is False
-        assert json_data['error'] == error_msg
+        assert json_data["error"] == error_msg
         assert "redirect_url" not in json_data
         assert "copy_storage" not in json_data
 
@@ -67,7 +67,7 @@ class TestErrorResponse:
     def test_init_basic(self):
         """Test basic initialization."""
         response = ErrorResponse(error_code=1, error_message="Test error", is_expected_error=True)
-        
+
         assert response.type == RESPONSE_TYPE.ERROR
         assert response.resp_type == RESPONSE_TYPE.ERROR
         assert response.error_code == 1
@@ -92,7 +92,7 @@ class TestOkResponse:
     def test_init(self):
         """Test initialization with affected rows count."""
         response = OkResponse(affected_rows=5)
-        
+
         assert response.type == RESPONSE_TYPE.OK
         assert response.resp_type == RESPONSE_TYPE.OK
         assert response.affected_rows == 5
@@ -101,7 +101,7 @@ class TestOkResponse:
     def test_init_without_affected_rows(self):
         """Test initialization without affected rows."""
         response = OkResponse()
-        
+
         assert response.affected_rows is None
 
 
@@ -118,7 +118,7 @@ class TestTableResponse:
         assert response._fetched is True
         pd.testing.assert_frame_equal(response._data, df)
         # 'columns' was not provided as attr, so should be as in df
-        assert [c.name for c in response.columns] == ['id', 'name']
+        assert [c.name for c in response.columns] == ["id", "name"]
 
     def test_complex_init_with_generator(self):
         """Test initialization with data generator."""
@@ -151,10 +151,7 @@ class TestTableResponse:
 
     def test_data_frame_property(self):
         """Test initialization with explicit columns."""
-        columns = [
-            Column(name="id", type=MYSQL_DATA_TYPE.INT),
-            Column(name="name", type=MYSQL_DATA_TYPE.VARCHAR)
-        ]
+        columns = [Column(name="id", type=MYSQL_DATA_TYPE.INT), Column(name="name", type=MYSQL_DATA_TYPE.VARCHAR)]
         df = pd.DataFrame({"id": [0, 1], "name": ["a", "b"]})
         df1 = pd.DataFrame({"id": [2, 3], "name": ["d", "e"]})
         df2 = pd.DataFrame({"id": [4, 5], "name": ["f", "g"]})
@@ -177,7 +174,7 @@ class TestTableResponse:
         """Test initialization with affected_rows."""
         df = pd.DataFrame({"id": [1, 2, 3]})
         response = TableResponse(data=df, affected_rows=100)
-        
+
         assert response.affected_rows == 100
 
     def test_iterate_no_save_no_generator(self):
@@ -185,9 +182,9 @@ class TestTableResponse:
         df = pd.DataFrame({"id": [1, 2, 3]})
         # Need to provide a generator (even empty) to avoid TypeError
         response = TableResponse(data=df, data_generator=iter([]))
-        
+
         chunks = list(response.iterate_no_save())
-        
+
         assert len(chunks) == 1
         pd.testing.assert_frame_equal(chunks[0], df)
         pd.testing.assert_frame_equal(response.data_frame, df)
@@ -196,13 +193,15 @@ class TestTableResponse:
         """Test iterate_no_save yields all chunks without saving."""
         df1 = pd.DataFrame({"id": [4, 5]})
         df2 = pd.DataFrame({"id": [6, 7]})
+
         def data_gen():
             yield df1
             yield df2
+
         df = pd.DataFrame({"id": [1, 2, 3]})
         response = TableResponse(data=df, data_generator=data_gen())
         chunks = list(response.iterate_no_save())
-        
+
         assert len(chunks) == 3
         pd.testing.assert_frame_equal(chunks[0], df)
         pd.testing.assert_frame_equal(chunks[1], df1)
@@ -217,56 +216,46 @@ class TestNormalizeResponse:
         """Test that TableResponse is returned as-is."""
         original = TableResponse(data=pd.DataFrame({"id": [1, 2]}))
         result = normalize_response(original)
-        
+
         assert result is original
 
     def test_normalize_ok_response(self):
         """Test that OkResponse is returned as-is."""
         original = OkResponse(affected_rows=5)
         result = normalize_response(original)
-        
+
         assert result is original
 
     def test_normalize_error_response(self):
         """Test that ErrorResponse is returned as-is."""
         original = ErrorResponse(error_message="Test error")
         result = normalize_response(original)
-        
+
         assert result is original
 
     def test_normalize_legacy_error_response(self):
         """Test conversion of legacy HandlerResponse with ERROR type."""
-        legacy = HandlerResponse(
-            resp_type=RESPONSE_TYPE.ERROR,
-            error_code=1,
-            error_message="Legacy error"
-        )
+        legacy = HandlerResponse(resp_type=RESPONSE_TYPE.ERROR, error_code=1, error_message="Legacy error")
         result = normalize_response(legacy)
-        
+
         assert isinstance(result, ErrorResponse)
         assert result.error_code == 1
         assert result.error_message == "Legacy error"
 
     def test_normalize_legacy_ok_response(self):
         """Test conversion of legacy HandlerResponse with OK type."""
-        legacy = HandlerResponse(
-            resp_type=RESPONSE_TYPE.OK,
-            affected_rows=10
-        )
+        legacy = HandlerResponse(resp_type=RESPONSE_TYPE.OK, affected_rows=10)
         result = normalize_response(legacy)
-        
+
         assert isinstance(result, OkResponse)
         assert result.affected_rows == 10
 
     def test_normalize_legacy_table_response(self):
         """Test conversion of legacy HandlerResponse with TABLE type."""
         df = pd.DataFrame({"id": [1, 2], "name": ["a", "b"]})
-        legacy = HandlerResponse(
-            resp_type=RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
+        legacy = HandlerResponse(resp_type=RESPONSE_TYPE.TABLE, data_frame=df)
         result = normalize_response(legacy)
-        
+
         assert isinstance(result, TableResponse)
         pd.testing.assert_frame_equal(result.data_frame, df)
 
@@ -274,13 +263,9 @@ class TestNormalizeResponse:
         """Test conversion preserves mysql_types as column types."""
         df = pd.DataFrame({"id": [1, 2], "name": ["a", "b"]})
         mysql_types = [MYSQL_DATA_TYPE.INT, MYSQL_DATA_TYPE.VARCHAR]
-        legacy = HandlerResponse(
-            resp_type=RESPONSE_TYPE.TABLE,
-            data_frame=df,
-            mysql_types=mysql_types
-        )
+        legacy = HandlerResponse(resp_type=RESPONSE_TYPE.TABLE, data_frame=df, mysql_types=mysql_types)
         result = normalize_response(legacy)
-        
+
         assert isinstance(result, TableResponse)
         assert len(result.columns) == 2
         assert result.columns[0].type == MYSQL_DATA_TYPE.INT
@@ -289,11 +274,8 @@ class TestNormalizeResponse:
     def test_normalize_legacy_table_response_empty_dataframe(self):
         """Test conversion with empty DataFrame."""
         df = pd.DataFrame()
-        legacy = HandlerResponse(
-            resp_type=RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
+        legacy = HandlerResponse(resp_type=RESPONSE_TYPE.TABLE, data_frame=df)
         result = normalize_response(legacy)
-        
+
         assert isinstance(result, TableResponse)
         assert len(result.columns) == 0

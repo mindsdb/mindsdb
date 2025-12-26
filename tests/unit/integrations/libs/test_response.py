@@ -8,10 +8,7 @@ This module tests all response types used by handlers:
 - normalize_response: for converting legacy HandlerResponse to new types
 """
 
-import pytest
-from unittest.mock import MagicMock
 import pandas as pd
-import numpy as np
 
 from mindsdb.integrations.libs.response import (
     TableResponse,

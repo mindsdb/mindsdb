@@ -59,12 +59,18 @@ class HandlerStatusResponse:
         data = {"success": self.success, "error": self.error_message}
         if self.redirect_url is not None:
             data["redirect_url"] = self.redirect_url
+        if self.copy_storage is not None:
+            data["copy_storage"] = self.copy_storage
         return data
 
     def __repr__(self):
-        return f"{self.__class__.__name__}: success={self.success},\
-              error={self.error_message},\
-              redirect_url={self.redirect_url}"
+        return (
+            f"{self.__class__.__name__}("
+            f"success={self.success}, "
+            f"error={self.error_message}, "
+            f"redirect_url={self.redirect_url}, "
+            f"copy_storage={self.copy_storage})"
+        )
 
 
 class DataHandlerResponse(ABC):
@@ -165,7 +171,7 @@ class TableResponse(DataHandlerResponse):
         self._columns = columns
         self.affected_rows = affected_rows
         self._data = data
-        self._fetched = True if data_generator else None
+        self._fetched = False if data_generator else True
 
     def fetchall(self) -> pandas.DataFrame:
         """Fetch all data from the generator and store it in the _data attribute."""

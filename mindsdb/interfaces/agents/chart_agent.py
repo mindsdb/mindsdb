@@ -23,6 +23,8 @@ logger = log.getLogger(__name__)
 class ChartAgent:
     """Lightweight agent for generating Chart.js configurations"""
     
+    MAX_RETRIES = 3
+    
     def __init__(self, executor=None):
         """
         Initialize Chart Agent using system default LLM configuration.
@@ -180,7 +182,9 @@ class ChartAgent:
         query: str, 
         prompt: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None
+        params: Optional[Dict[str, Any]] = None,
+        error_context: Optional[str] = None,
+        retry_count: Optional[int] = None
     ) -> ChartConfig:
         """
         Generate Chart.js configuration and data query from SQL query.
@@ -190,6 +194,8 @@ class ChartAgent:
             prompt: Optional prompt describing chart intent
             context: Optional context dict for query execution
             params: Optional params dict for query execution
+            error_context: Optional error context from previous failed attempts
+            retry_count: Optional retry attempt number for error messages
             
         Returns:
             ChartConfig: Pydantic model with chartjs_config and data_query_string
@@ -215,6 +221,12 @@ SQL Query:
             chart_prompt += f"\nChart Intent: {prompt}\n"
         
         chart_prompt += f"\nSample Data Catalog:\n{data_catalog}\nInstructions:\n{agent_prompts.sql_description}\n\n{agent_prompts.chart_generation_prompt}"
+        
+        # Add error context if provided (for retry attempts)
+        if error_context:
+            chart_prompt += f"\n\nPrevious query errors:\n{error_context}"
+            if retry_count is not None:
+                chart_prompt += f"\n\nPlease fix the query and try again. This is retry attempt {retry_count} of {self.MAX_RETRIES}."
         
         logger.debug(f"ChartAgent.generate_chart_config: Sending prompt to LLM")
         
@@ -261,11 +273,9 @@ SQL Query:
         if params is None:
             params = {}
         
-        # Generate chart configuration (with data catalog)
-        chart_config = self.generate_chart_config(query, prompt, context, params)
-        
-        # Execute the data query
-        logger.debug(f"ChartAgent.generate_chart_with_data: Executing data query: {chart_config.data_query_string[:100]}...")
+        # Initialize retry tracking
+        retry_count = 0
+        accumulated_errors = []
         
         # Use provided executor or create a new one
         if self.executor is None:
@@ -276,111 +286,167 @@ SQL Query:
         
         executor.set_context(context)
         
-        try:
-            result: SQLAnswer = executor.process_query(chart_config.data_query_string, params=params)
-            
-            if result.type == SQL_RESPONSE_TYPE.ERROR:
-                error_message = result.error_message or "Unknown error executing data query"
-                raise QueryError(
-                    db_error_msg=error_message,
-                    failed_query=chart_config.data_query_string,
-                    is_external=False,
-                    is_expected=True
+        # Retry loop for query execution
+        while retry_count <= self.MAX_RETRIES:
+            try:
+                # Generate chart configuration (with data catalog and error context if retrying)
+                error_context = None
+                if accumulated_errors:
+                    # Format error context from accumulated errors (keep last 3)
+                    error_context = "\n---\n".join(accumulated_errors[-3:])
+                    logger.debug(f"ChartAgent.generate_chart_with_data: Regenerating chart config with error context (attempt {retry_count}/{self.MAX_RETRIES})")
+                
+                chart_config = self.generate_chart_config(
+                    query, 
+                    prompt, 
+                    context, 
+                    params,
+                    error_context=error_context,
+                    retry_count=retry_count if retry_count > 0 else None
                 )
-            
-            if result.type != SQL_RESPONSE_TYPE.TABLE or result.result_set is None:
-                raise ValueError(
-                    "Data query did not return tabular data. The query may have executed successfully but returned no data rows."
-                )
-            
-            # Convert result to DataFrame
-            df = result.result_set.to_df()
-            
-            if df.empty:
-                raise ValueError(
-                    "Data query returned no rows. Please check your query filters or data availability."
-                )
-            
-            # Validate DataFrame structure
-            if len(df.columns) < 2:
-                raise ValueError(
-                    f"Data query must return at least 2 columns (labels and at least one dataset). Got {len(df.columns)} column(s)."
-                )
-            
-            # Populate Chart.js config with data
-            chartjs_config = chart_config.chartjs_config.copy()
-            
-            # First column is labels
-            labels = df.iloc[:, 0].tolist()
-            chartjs_config["labels"] = labels
-            
-            # Remaining columns are datasets
-            existing_datasets = chartjs_config.get("datasets", [])
-            num_data_columns = len(df.columns) - 1  # Excluding labels column
-            
-            # If datasets is empty or doesn't match column count, create datasets from columns
-            if not existing_datasets or len(existing_datasets) != num_data_columns:
-                datasets = []
-                for col_idx in range(1, len(df.columns)):
-                    col_name = df.columns[col_idx]
-                    dataset = {
-                        "label": str(col_name),
-                        "data": []
-                    }
-                    # Try to preserve properties from existing dataset if available
-                    dataset_idx = col_idx - 1
-                    if dataset_idx < len(existing_datasets):
-                        existing_dataset = existing_datasets[dataset_idx]
-                        # Copy properties like backgroundColor, borderColor, etc.
-                        for key in ["backgroundColor", "borderColor", "borderWidth", "fill"]:
-                            if key in existing_dataset:
-                                dataset[key] = existing_dataset[key]
-                    datasets.append(dataset)
-            else:
-                # Use existing datasets structure, just populate data
-                datasets = existing_datasets
-            
-            # Populate data arrays
-            for dataset_idx, dataset in enumerate(datasets):
-                col_idx = dataset_idx + 1
-                if col_idx < len(df.columns):
-                    dataset["data"] = df.iloc[:, col_idx].tolist()
-            
-            chartjs_config["datasets"] = datasets
-            
-            # Return response
-            return {
-                "data_query_string": chart_config.data_query_string,
-                "chartjs_config": chartjs_config
-            }
-            
-        except ExecutorException as e:
-            error_text = str(e)
-            raise QueryError(
-                db_error_msg=error_text,
-                failed_query=chart_config.data_query_string,
-                is_external=False,
-                is_expected=True
-            )
-        except QueryError:
-            raise
-        except UnknownError as e:
-            error_text = str(e)
-            raise QueryError(
-                db_error_msg=error_text,
-                failed_query=chart_config.data_query_string,
-                is_external=False,
-                is_expected=False
-            )
-        except Exception as e:
-            # Re-raise ValueError and QueryError as-is, wrap others
-            if isinstance(e, (ValueError, QueryError)):
-                raise
-            error_text = str(e)
-            raise QueryError(
-                db_error_msg=error_text,
-                failed_query=chart_config.data_query_string if hasattr(chart_config, 'data_query_string') else query,
-                is_external=False,
-                is_expected=False
-            )
+                
+                # Execute the data query
+                logger.debug(f"ChartAgent.generate_chart_with_data: Executing data query: {chart_config.data_query_string[:100]}...")
+                
+                result: SQLAnswer = executor.process_query(chart_config.data_query_string, params=params)
+                
+                if result.type == SQL_RESPONSE_TYPE.ERROR:
+                    error_message = result.error_message or "Unknown error executing data query"
+                    raise QueryError(
+                        db_error_msg=error_message,
+                        failed_query=chart_config.data_query_string,
+                        is_external=False,
+                        is_expected=True
+                    )
+                
+                if result.type != SQL_RESPONSE_TYPE.TABLE or result.result_set is None:
+                    raise ValueError(
+                        "Data query did not return tabular data. The query may have executed successfully but returned no data rows."
+                    )
+                
+                # Convert result to DataFrame
+                df = result.result_set.to_df()
+                
+                if df.empty:
+                    raise ValueError(
+                        "Data query returned no rows. Please check your query filters or data availability."
+                    )
+                
+                # Validate DataFrame structure
+                if len(df.columns) < 2:
+                    raise ValueError(
+                        f"Data query must return at least 2 columns (labels and at least one dataset). Got {len(df.columns)} column(s)."
+                    )
+                
+                # Populate Chart.js config with data
+                chartjs_config = chart_config.chartjs_config.copy()
+                
+                # First column is labels
+                labels = df.iloc[:, 0].tolist()
+                chartjs_config["labels"] = labels
+                
+                # Remaining columns are datasets
+                existing_datasets = chartjs_config.get("datasets", [])
+                num_data_columns = len(df.columns) - 1  # Excluding labels column
+                
+                # If datasets is empty or doesn't match column count, create datasets from columns
+                if not existing_datasets or len(existing_datasets) != num_data_columns:
+                    datasets = []
+                    for col_idx in range(1, len(df.columns)):
+                        col_name = df.columns[col_idx]
+                        dataset = {
+                            "label": str(col_name),
+                            "data": []
+                        }
+                        # Try to preserve properties from existing dataset if available
+                        dataset_idx = col_idx - 1
+                        if dataset_idx < len(existing_datasets):
+                            existing_dataset = existing_datasets[dataset_idx]
+                            # Copy properties like backgroundColor, borderColor, etc.
+                            for key in ["backgroundColor", "borderColor", "borderWidth", "fill"]:
+                                if key in existing_dataset:
+                                    dataset[key] = existing_dataset[key]
+                        datasets.append(dataset)
+                else:
+                    # Use existing datasets structure, just populate data
+                    datasets = existing_datasets
+                
+                # Populate data arrays
+                for dataset_idx, dataset in enumerate(datasets):
+                    col_idx = dataset_idx + 1
+                    if col_idx < len(df.columns):
+                        dataset["data"] = df.iloc[:, col_idx].tolist()
+                
+                chartjs_config["datasets"] = datasets
+                
+                # Return response
+                return {
+                    "data_query_string": chart_config.data_query_string,
+                    "chartjs_config": chartjs_config
+                }
+                
+            except (QueryError, ExecutorException, UnknownError, ValueError) as e:
+                # Extract error message
+                if isinstance(e, QueryError):
+                    error_message = e.db_error_msg or str(e)
+                    failed_query = e.failed_query if hasattr(e, 'failed_query') else (chart_config.data_query_string if 'chart_config' in locals() else query)
+                else:
+                    error_message = str(e)
+                    failed_query = chart_config.data_query_string if 'chart_config' in locals() else query
+                
+                # Accumulate error for context
+                accumulated_errors.append(f"Query: {failed_query}\nError: {error_message}")
+                
+                # Check if we should retry
+                if retry_count < self.MAX_RETRIES:
+                    logger.warning(f"ChartAgent.generate_chart_with_data: Query execution failed (retry {retry_count + 1}/{self.MAX_RETRIES}): {error_message}")
+                    retry_count += 1
+                    # Continue loop to retry with new chart config
+                    continue
+                else:
+                    # All retries exhausted, raise the error
+                    logger.error(f"ChartAgent.generate_chart_with_data: Query execution failed after {self.MAX_RETRIES} retries. Last error: {error_message}")
+                    # Re-raise the original exception
+                    if isinstance(e, QueryError):
+                        raise
+                    elif isinstance(e, ExecutorException):
+                        raise QueryError(
+                            db_error_msg=error_message,
+                            failed_query=failed_query,
+                            is_external=False,
+                            is_expected=True
+                        )
+                    elif isinstance(e, UnknownError):
+                        raise QueryError(
+                            db_error_msg=error_message,
+                            failed_query=failed_query,
+                            is_external=False,
+                            is_expected=False
+                        )
+                    else:
+                        raise
+                        
+            except Exception as e:
+                # Handle unexpected exceptions
+                error_message = str(e)
+                failed_query = chart_config.data_query_string if 'chart_config' in locals() else query
+                
+                # Accumulate error for context
+                accumulated_errors.append(f"Query: {failed_query}\nError: {error_message}")
+                
+                # Check if we should retry
+                if retry_count < self.MAX_RETRIES:
+                    logger.warning(f"ChartAgent.generate_chart_with_data: Unexpected error (retry {retry_count + 1}/{self.MAX_RETRIES}): {error_message}")
+                    retry_count += 1
+                    # Continue loop to retry
+                    continue
+                else:
+                    # All retries exhausted, raise the error
+                    logger.error(f"ChartAgent.generate_chart_with_data: Unexpected error after {self.MAX_RETRIES} retries: {error_message}")
+                    raise QueryError(
+                        db_error_msg=error_message,
+                        failed_query=failed_query,
+                        is_external=False,
+                        is_expected=False
+                    )
 

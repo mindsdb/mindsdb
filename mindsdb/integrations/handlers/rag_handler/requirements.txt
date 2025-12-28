@@ -3,3 +3,4 @@ faiss-cpu
 html2text
 writerai~=1.1.0
 sentence-transformers # needed for HuggingFaceEmbeddings from langchain-community
+transformers>=5.0.0rc1 # not directly required, pinned by Snyk to avoid a vulnerability

@@ -11,12 +11,6 @@ import pandas as pd
 from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.utilities import log
-from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
-from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
-from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
-from mindsdb.utilities.exception import QueryError
-from pydantic import BaseModel, Field
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.cache import get_cache
@@ -28,6 +22,7 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 logger = log.getLogger(__name__)
 
 _MAX_CACHE_SIZE = 100
+
 
 def list_to_csv_str(array: List[List[Any]]) -> str:
     """Convert a 2D array into a CSV string.
@@ -94,7 +89,6 @@ class TablesCollection:
     """
 
     def __init__(self, items: List[Identifier | str] = None, default_db=None):
-
         self._dbs = defaultdict(set)
         self._schemas = defaultdict(dict)
         self._no_db_tables = set()
@@ -168,7 +162,7 @@ class TablesCollection:
 class MindsDBQuery:
     def __init__(self, tables=None, knowledge_bases=None):
         self.tables = TablesCollection(tables or [])
-        self.knowledge_bases = TablesCollection(knowledge_bases  or [], default_db=config.get("default_project"))
+        self.knowledge_bases = TablesCollection(knowledge_bases or [], default_db=config.get("default_project"))
         self.command_executor = self.get_command_executor()
         self._cache = get_cache("agent", max_size=_MAX_CACHE_SIZE)
 
@@ -182,7 +176,6 @@ class MindsDBQuery:
         sql_session.database = config.get("default_project")
 
         return ExecuteCommands(sql_session)
-
 
     def _clean_query(self, query: str) -> str:
         # Sometimes LLM can input markdown into query tools.
@@ -214,18 +207,6 @@ class MindsDBQuery:
 
         return pd.DataFrame([])
 
-    def check_knowledge_base_permission(self, node):
-        if self.knowledge_bases and not self.knowledge_bases.match(node):
-            raise ValueError(
-                f"Knowledge base {str(node)} not found. Available knowledge bases: {self.knowledge_bases.items}"
-            )
-
-    def has_table_permission(self, node):
-        if self.tables.match(node):
-            raise ValueError(
-                f"Table {str(node)} not found. Available tables: {self.tables.items}"
-            )
-
     def _check_permissions(self, ast_query):
         # check type of query
         if not isinstance(ast_query, (Select, Show, Describe, Explain, Union, Intersect, Except)):
@@ -252,7 +233,10 @@ class MindsDBQuery:
                 node2 = Identifier(parts=parts)
 
                 if self.tables.match(node2):
-                    return
+                    return node2
+
+                if self.knowledge_bases.match(node2):
+                    return node2
 
             # no success: show exception
             error = f"{str(node)} not found."
@@ -264,14 +248,13 @@ class MindsDBQuery:
 
             elif not self.tables:
                 # no KBs and not tables
-                error += f"You don't have access to any tables or knowledge bases."
+                error += "You don't have access to any tables or knowledge bases."
 
             raise ValueError(error)
 
         query_traversal(ast_query, _check_f)
 
     def get_usable_table_names(self):
-
         if not self.tables:
             # no tables allowed
             return []
@@ -303,31 +286,29 @@ class MindsDBQuery:
                     # get first column if not found
                     col_name = df.columns[0]
                 for _, row in df.iterrows():
-                    list_tables.append({'schema': row.get('table_schema'), 'name': row[col_name]})
+                    list_tables.append({"schema": row.get("table_schema"), "name": row[col_name]})
 
                 if self._cache:
                     self._cache.set(cache_key, list_tables)
 
             result_tables = []
             for row in list_tables:
-                if row.get('schema') is not None:
-                    parts = [db_name, row["schema"], row['name']]
+                if row.get("schema") is not None:
+                    parts = [db_name, row["schema"], row["name"]]
                 else:
-                    parts = [db_name, row['name']]
+                    parts = [db_name, row["name"]]
 
                 if self.tables.match(Identifier(parts=parts)):
                     result_tables.append(Identifier(parts=parts))
 
         return result_tables
 
-    def get_usable_knowledge_base_names(self) :
-
+    def get_usable_knowledge_base_names(self):
         if not self.knowledge_bases:
             # no tables allowed
             return []
         if not self.knowledge_bases.has_wildcard:
             return self.knowledge_bases.items
-
 
         try:
             # Query to get all knowledge bases
@@ -347,5 +328,3 @@ class MindsDBQuery:
             # If there's an error, log it and return an empty list
             logger.exception("Error in get_usable_knowledge_base_names")
             return []
-
-

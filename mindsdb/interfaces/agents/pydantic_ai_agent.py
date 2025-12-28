@@ -21,59 +21,63 @@ from mindsdb.interfaces.agents.utils.constants import (
 )
 
 from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery
-from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import (
-    get_model_instance_from_kwargs
-)
+from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_model_instance_from_kwargs
 from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuilder, dataframe_to_markdown
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.langfuse import LangfuseClientWrapper
 from mindsdb.interfaces.agents.modes import sql as sql_mode, text_sql as text_sql_mode
 from mindsdb.interfaces.agents.modes.base import ResponseType, PlanResponse
+
 logger = log.getLogger(__name__)
 DEBUG_LOGGER = logger.info
-
 
 
 # Suppress asyncio warnings about unretrieved task exceptions from httpx cleanup
 # This is a known issue where httpx.AsyncClient tries to close connections after the event loop is closed
 warnings.filterwarnings("ignore", message=".*Task exception was never retrieved.*", category=RuntimeWarning)
 
+
 class PydanticAIAgent:
     """Pydantic AI-based agent to replace LangchainAgent"""
-    
-    def __init__(self, agent: db.Agents, model: dict = None, llm_params: dict = None, ):
+
+    def __init__(
+        self,
+        agent: db.Agents,
+        llm_params: dict = None,
+    ):
         """
         Initialize Pydantic AI agent.
-        
+
         Args:
             agent: Agent database record
-            model: Model information (optional)
+            args: Agent parameters (optional)
             llm_params: LLM parameters (optional)
         """
         self.agent = agent
-        self.model = model
-        
+
         self.run_completion_span: Optional[object] = None
         self.llm: Optional[object] = None
         self.embedding_model: Optional[object] = None
-        
+
         self.log_callback_handler: Optional[object] = None
         self.langfuse_callback_handler: Optional[object] = None
         self.mdb_langfuse_callback_handler: Optional[object] = None
-        
+
         self.langfuse_client_wrapper = LangfuseClientWrapper()
-        self.args = llm_params
-        
+        self.agent_mode = self.agent.params.get("mode", "sql")
+
+        self.llm_params = llm_params
+
         # Provider model instance
-        self.model_instance = get_model_instance_from_kwargs(self.args)
-        
+        self.model_instance = get_model_instance_from_kwargs(self.llm_params)
+
         # Command executor for queries
         tables_list = self.agent.params.get("data", {}).get("tables", [])
         knowledge_bases_list = self.agent.params.get("data", {}).get("knowledge_bases", [])
         self.sql_toolkit = MindsDBQuery(tables_list, knowledge_bases_list)
-        
-        self.system_prompt = self.args.get("prompt_template", "You are an expert MindsDB SQL data analyst")
-        
+
+        self.system_prompt = self.agent.params.get("prompt_template", "You are an expert MindsDB SQL data analyst")
+
         # Track current query state
         self._current_prompt: Optional[str] = None
         self._current_sql_query: Optional[str] = None
@@ -81,22 +85,18 @@ class PydanticAIAgent:
 
         self.select_targets = None
 
-        self.agent_mode = self.args.pop('mode', 'sql')
-    
-
-
-    def _convert_messages_to_history(self, df: pd.DataFrame) -> List[ModelMessage]:
+    def _convert_messages_to_history(self, df: pd.DataFrame, args: dict) -> List[ModelMessage]:
         """
         Convert DataFrame messages to Pydantic AI message history format.
-        
+
         Args:
             df: DataFrame with user/assistant columns or role/content columns
-            
+
         Returns:
             List of Pydantic AI Message objects
         """
         messages = []
-        
+
         # Check if DataFrame has 'role' and 'content' columns (API format)
         if "role" in df.columns and "content" in df.columns:
             for _, row in df.iterrows():
@@ -109,25 +109,25 @@ class PydanticAIAgent:
                         messages.append(ModelResponse(parts=[TextPart(content=str(content))]))
         else:
             # Legacy format with question/answer columns
-            user_column = self.args.get("user_column", USER_COLUMN)
-            assistant_column = self.args.get("assistant_column", ASSISTANT_COLUMN)
-            
+            user_column = args.get("user_column", USER_COLUMN)
+            assistant_column = args.get("assistant_column", ASSISTANT_COLUMN)
+
             for _, row in df.iterrows():
                 user_msg = row.get(user_column)
                 assistant_msg = row.get(assistant_column)
-                
+
                 if pd.notna(user_msg) and str(user_msg).strip():
                     messages.append(ModelRequest.user_text_prompt(str(user_msg)))
-                
+
                 if pd.notna(assistant_msg) and str(assistant_msg).strip():
                     messages.append(ModelResponse(parts=[TextPart(content=str(assistant_msg))]))
-        
+
         return messages
-    
+
     def _extract_current_prompt_and_history(self, messages: Any, args: Dict) -> tuple[str, List[ModelMessage]]:
         """
         Extract current prompt and message history from messages in various formats.
-        
+
         Args:
             messages: Can be:
                 - List of dicts with 'role' and 'content' (API format)
@@ -135,7 +135,7 @@ class PydanticAIAgent:
                 - DataFrame with 'role'/'content' columns (API format)
                 - DataFrame with 'question'/'answer' columns (legacy format)
             args: Arguments dict
-            
+
         Returns:
             Tuple of (current_prompt: str, message_history: List[ModelMessage])
         """
@@ -149,18 +149,18 @@ class PydanticAIAgent:
                         pydantic_messages.append(ModelRequest.user_text_prompt(msg.get("content", "")))
                     elif msg.get("role") == "assistant":
                         pydantic_messages.append(ModelResponse(parts=[TextPart(content=msg.get("content", ""))]))
-                
+
                 # Get current prompt (last user message)
                 current_prompt = ""
                 for msg in reversed(messages):
                     if msg.get("role") == "user":
                         current_prompt = msg.get("content", "")
                         break
-                
+
                 # Get message history (all except last message)
                 message_history = pydantic_messages[:-1] if len(pydantic_messages) > 1 else []
                 return current_prompt, message_history
-            
+
             # Handle Q&A format (from A2A conversion): list of dicts with 'question' and 'answer' keys
             elif isinstance(messages[0], dict) and "question" in messages[0]:
                 # Convert Q&A format to role/content format for processing
@@ -168,15 +168,15 @@ class PydanticAIAgent:
                 for qa_msg in messages:
                     question = qa_msg.get("question", "")
                     answer = qa_msg.get("answer", "")
-                    
+
                     # Add user message (question)
                     if question:
                         role_content_messages.append({"role": "user", "content": str(question)})
-                    
+
                     # Add assistant message (answer) if present
                     if answer:
                         role_content_messages.append({"role": "assistant", "content": str(answer)})
-                
+
                 # Now process as role/content format
                 if len(role_content_messages) > 0:
                     pydantic_messages = []
@@ -185,22 +185,22 @@ class PydanticAIAgent:
                             pydantic_messages.append(ModelRequest.user_text_prompt(msg.get("content", "")))
                         elif msg.get("role") == "assistant":
                             pydantic_messages.append(ModelResponse(parts=[TextPart(content=msg.get("content", ""))]))
-                    
+
                     # Get current prompt (last user message)
                     current_prompt = ""
                     for msg in reversed(role_content_messages):
                         if msg.get("role") == "user":
                             current_prompt = msg.get("content", "")
                             break
-                    
+
                     # Get message history (all except last message)
                     message_history = pydantic_messages[:-1] if len(pydantic_messages) > 1 else []
                     return current_prompt, message_history
-        
+
         # Handle DataFrame format
         df = messages if isinstance(messages, pd.DataFrame) else pd.DataFrame(messages)
         df = df.reset_index(drop=True)
-        
+
         # Check if DataFrame has 'role' and 'content' columns (API format)
         if "role" in df.columns and "content" in df.columns:
             # Convert to Pydantic AI Message objects
@@ -213,18 +213,18 @@ class PydanticAIAgent:
                         pydantic_messages.append(ModelRequest.user_text_prompt(str(content)))
                     elif role == "assistant":
                         pydantic_messages.append(ModelResponse(parts=[TextPart(content=str(content))]))
-            
+
             # Get current prompt (last user message)
             current_prompt = ""
             for _, row in reversed(df.iterrows()):
                 if row.get("role") == "user":
                     current_prompt = str(row.get("content", ""))
                     break
-            
+
             # Get message history (all except last message)
             message_history = pydantic_messages[:-1] if len(pydantic_messages) > 1 else []
             return current_prompt, message_history
-        
+
         # Legacy DataFrame format with question/answer columns
         user_column = args.get("user_column", USER_COLUMN)
         current_prompt = ""
@@ -232,33 +232,32 @@ class PydanticAIAgent:
             user_messages = df[user_column].dropna()
             if len(user_messages) > 0:
                 current_prompt = str(user_messages.iloc[-1])
-        
+
         # Convert history (all except last)
         history_df = df[:-1] if len(df) > 1 else pd.DataFrame()
-        message_history = self._convert_messages_to_history(history_df)
+        message_history = self._convert_messages_to_history(history_df, args)
         return current_prompt, message_history
-    
+
     def get_metadata(self) -> Dict:
         """Get metadata for observability"""
         return {
-            
-            "model_name": self.args["model_name"],
+            "model_name": self.llm_params["model_name"],
             "user_id": ctx.user_id,
             "session_id": ctx.session_id,
             "company_id": ctx.company_id,
             "user_class": ctx.user_class,
             "email_confirmed": ctx.email_confirmed,
         }
-    
+
     def get_tags(self) -> List:
         """Get tags for observability"""
-        return ['AGENT', 'PYDANTIC_AI']
-    
+        return ["AGENT", "PYDANTIC_AI"]
+
     def get_select_targets_from_sql(self, sql) -> Optional[List[str]]:
         """
         Get the SELECT targets from the original SQL query if available.
         Extracts only the column names, ignoring aliases (e.g., "col1 as alias" -> "col1").
-        
+
         Returns:
             List of SELECT target column names if available, None otherwise
         """
@@ -277,11 +276,12 @@ class PydanticAIAgent:
                 targets.append(target.parts[-1])
 
             elif isinstance(target, ast.Star):
-                return  #['question', 'answer']
+                return  # ['question', 'answer']
 
             elif isinstance(target, ast.Function):
                 # For functions, get the function name and args
                 func_str = target.op
+                targets.append(func_str)
                 if target.args:
                     for arg in target.args:
                         if isinstance(arg, ast.Identifier):
@@ -292,49 +292,50 @@ class PydanticAIAgent:
     def get_completion(self, messages, stream: bool = False, params: dict | None = None):
         """
         Get completion from agent.
-        
+
         Args:
             messages: List of message dictionaries or DataFrame
             stream: Whether to stream the response
             params: Additional parameters
-            
+
         Returns:
             DataFrame with assistant response
         """
         # Extract SQL context from params if present
-        if params and 'original_query' in params:
-            original_query = params.pop('original_query')
+        if params and "original_query" in params:
+            original_query = params.pop("original_query")
 
             self.select_targets = self.get_select_targets_from_sql(original_query)
 
+        args = {}
+        args.update(self.agent.params or {})
+        args.update(params or {})
+
         data = None
         if stream:
-            return self._get_completion_stream(messages)
+            return self._get_completion_stream(messages, args)
         else:
-            for message in self._get_completion_stream(messages):
+            for message in self._get_completion_stream(messages, args):
                 if message.get("type") == "end":
                     break
                 elif message.get("type") == "error":
                     error_message = f"Agent failed with model error: {message.get('content')}"
                     raise RuntimeError(error_message)
                 last_message = message
-            
+
                 # if last_message.get("type") == "sql":
                 #     sql_query = last_message.get("content")
-                    
+
                 if last_message.get("type") == "data":
                     data = last_message.get("content")
-                    
 
             else:
                 error_message = f"Agent failed with model error: {last_message.get('content')}"
-                return self._create_error_response(error_message, return_context=self.args.get("return_context", True))
-            
+                return self._create_error_response(error_message, return_context=params.get("return_context", True))
 
             # Validate select targets if specified
 
             if self.select_targets is not None:
-
                 # Ensure all expected columns are present
                 if data is None or (isinstance(data, pd.DataFrame) and data.empty):
                     # Create DataFrame with one row of nulls for all expected columns
@@ -347,9 +348,8 @@ class PydanticAIAgent:
                     # Reorder columns to match select_targets order
                     data = data[self.select_targets]
 
-            return data        
+            return data
 
-        
     def _create_error_response(self, error_message: str, return_context: bool = True) -> pd.DataFrame:
         """Create error response DataFrame"""
         response_data = {
@@ -360,22 +360,21 @@ class PydanticAIAgent:
             response_data[CONTEXT_COLUMN] = [json.dumps([])]
         return pd.DataFrame(response_data)
 
-    
-    def _get_completion_stream(self, messages: List[dict]) -> Iterable[Dict]:
+    def _get_completion_stream(self, messages: List[dict], params) -> Iterable[Dict]:
         """
         Get completion as a stream of chunks.
-        
+
         Args:
             messages: List of message dictionaries or DataFrame
-            
+
         Returns:
             Iterator of chunk dictionaries
         """
-        
+
         # Set up trace
         metadata = self.get_metadata()
         tags = self.get_tags()
-        
+
         self.langfuse_client_wrapper.setup_trace(
             name="api-completion",
             input=messages,
@@ -384,23 +383,21 @@ class PydanticAIAgent:
             user_id=ctx.user_id,
             session_id=ctx.session_id,
         )
-        
-        
-        self.run_completion_span = self.langfuse_client_wrapper.start_span(
-            name="run-completion", 
-            input=messages
-        )
-        
+
+        self.run_completion_span = self.langfuse_client_wrapper.start_span(name="run-completion", input=messages)
+
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Messages: {messages}")
-        
+
         # Extract current prompt and message history from messages
         # This handles multiple formats: list of dicts, DataFrame with role/content, or legacy DataFrame
-        current_prompt, message_history = self._extract_current_prompt_and_history(messages, self.args)
-        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages")
+        current_prompt, message_history = self._extract_current_prompt_and_history(messages, params)
+        DEBUG_LOGGER(
+            f"PydanticAIAgent._get_completion_stream: Extracted prompt and {len(message_history)} history messages"
+        )
 
         yield self._add_chunk_metadata({"type": "status", "content": "Generating Data Catalog..."})
 
-        if self.agent_mode == 'text':
+        if self.agent_mode == "text":
             agent_prompts = text_sql_mode
             AgentResponse = text_sql_mode.AgentResponse
         else:
@@ -413,24 +410,20 @@ class PydanticAIAgent:
             sql_instructions = agent_prompts.sql_description
 
         data_catalog = DataCatalogBuilder(sql_toolkit=self.sql_toolkit).build_data_catalog()
-        
+
         # Initialize counters and accumulators
         exploratory_query_count = 0
         MAX_EXPLORATORY_QUERIES = 20
         MAX_RETRIES = 3
         accumulated_errors = []
         exploratory_query_results = []
-        
+
         # Planning step: Create a plan before generating queries
         yield self._add_chunk_metadata({"type": "status", "content": "Creating execution plan..."})
-        
+
         # Create planning agent
-        planning_agent = Agent(
-            self.model_instance,
-            system_prompt=self.system_prompt,
-            output_type=PlanResponse
-        )
-        
+        planning_agent = Agent(self.model_instance, system_prompt=self.system_prompt, output_type=PlanResponse)
+
         # Build planning prompt
         planning_prompt_text = f"""Take into account the following Data Catalog:\n{data_catalog}\n\n{agent_prompts.planning_prompt}\n\nQuestion to answer: {current_prompt}"""
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Planning prompt text: {planning_prompt_text}")
@@ -440,35 +433,42 @@ class PydanticAIAgent:
         if self.select_targets is not None:
             select_targets_str = ", ".join(str(t) for t in self.select_targets)
             planning_prompt_text += f"\n\nFor the final query, the user expects to have a table such that this query is valid: SELECT {select_targets_str} FROM (<generated query>); when creating your plan, make sure to account for these expected columns."
-        
+
         # Generate plan
         plan_result = planning_agent.run_sync(planning_prompt_text)
         plan = plan_result.output
         # Validate plan steps don't exceed MAX_EXPLORATORY_QUERIES
         if plan.estimated_steps > MAX_EXPLORATORY_QUERIES:
-            logger.warning(f"Plan estimated {plan.estimated_steps} steps, but maximum is {MAX_EXPLORATORY_QUERIES}. Adjusting plan.")
-            plan.plan += f"\n\nNote: The plan has been adjusted to ensure it does not exceed {MAX_EXPLORATORY_QUERIES} steps."
-        
+            logger.warning(
+                f"Plan estimated {plan.estimated_steps} steps, but maximum is {MAX_EXPLORATORY_QUERIES}. Adjusting plan."
+            )
+            plan.plan += (
+                f"\n\nNote: The plan has been adjusted to ensure it does not exceed {MAX_EXPLORATORY_QUERIES} steps."
+            )
+
         DEBUG_LOGGER(f"Generated plan with {plan.estimated_steps} estimated steps: {plan.plan}")
-        
+
         # Yield the plan as a status message
-        yield self._add_chunk_metadata({"type": "status", "content": f"Proposed Execution Plan:\n{plan.plan}\n\nEstimated steps: {plan.estimated_steps}\n\n"})
-        
+        yield self._add_chunk_metadata(
+            {
+                "type": "status",
+                "content": f"Proposed Execution Plan:\n{plan.plan}\n\nEstimated steps: {plan.estimated_steps}\n\n",
+            }
+        )
+
         # Build base prompt with plan included
         base_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{sql_instructions}\n\nProposedExecution Plan:\n{plan.plan}\n\nEstimated steps: {plan.estimated_steps} (maximum allowed: {MAX_EXPLORATORY_QUERIES})\n\nPlease follow this plan and write Mindsdb SQL queries to answer the question:\n{current_prompt}"
-        
+
         if select_targets_str is not None:
             base_prompt += f"\n\nFor the final query the user expects to have a table such that this query is valid:SELECT {select_targets_str} FROM (<generated query>); when generating the SQL query make sure to include those columns, do not fix grammar on columns. Keep them as the user wants them"
 
-        DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}")
+        DEBUG_LOGGER(
+            f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}"
+        )
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Message history: {message_history}")
 
         # Create agent
-        agent = Agent(
-            self.model_instance,
-            system_prompt=self.system_prompt,
-            output_type=AgentResponse
-        )
+        agent = Agent(self.model_instance, system_prompt=self.system_prompt, output_type=AgentResponse)
 
         error_context = None
         retry_count = 0
@@ -480,14 +480,17 @@ class PydanticAIAgent:
                 current_prompt = base_prompt
                 if exploratory_query_results:
                     current_prompt += "\n\nPrevious exploratory query results:\n" + "\n---\n".join(
-                        exploratory_query_results)
+                        exploratory_query_results
+                    )
 
                 if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
                     current_prompt += f"\n\nIMPORTANT: You have reached the maximum number of exploratory queries ({MAX_EXPLORATORY_QUERIES}). The next query you generate MUST be a final_query or final_text."
 
                 if error_context:
                     current_prompt += error_context
-                    current_prompt += f"\n\nPlease fix the query and try again. This is retry attempt {retry_count} of {MAX_RETRIES}."
+                    current_prompt += (
+                        f"\n\nPlease fix the query and try again. This is retry attempt {retry_count} of {MAX_RETRIES}."
+                    )
 
                 result = agent.run_sync(
                     current_prompt,
@@ -499,22 +502,18 @@ class PydanticAIAgent:
 
                 # Yield description before SQL query
                 if output.short_description:
-                    yield self._add_chunk_metadata({
-                        "type": "context",
-                        "content": output.short_description
-                    })
+                    yield self._add_chunk_metadata({"type": "context", "content": output.short_description})
 
                 if output.type == ResponseType.FINAL_TEXT:
                     # return text to user and exit
-                    yield self._add_chunk_metadata({
-                        "type": "data",
-                        "content": pd.DataFrame([{'answer': output.text}])
-                    })
+                    yield self._add_chunk_metadata({"type": "data", "content": pd.DataFrame([{"answer": output.text}])})
                     yield self._add_chunk_metadata({"type": "end"})
                     return
 
                 sql_query = output.sql_query
-                DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Received LLM response: sql: {sql_query}, query_type: {output.type}, description: {output.short_description}")
+                DEBUG_LOGGER(
+                    f"PydanticAIAgent._get_completion_stream: Received LLM response: sql: {sql_query}, query_type: {output.type}, description: {output.short_description}"
+                )
 
                 # Initialize retry counter for this query
 
@@ -533,15 +532,14 @@ class PydanticAIAgent:
                     # Yield descriptive error message
                     error_message = f"Error executing SQL query: {query_error}"
 
-                    yield self._add_chunk_metadata({
-                        "type": "status",
-                        "content": error_message
-                    })
+                    yield self._add_chunk_metadata({"type": "status", "content": error_message})
 
                     accumulated_errors.append(f"Query: {sql_query}\nError: {query_error}")
                     retry_count += 1
                     if retry_count <= MAX_RETRIES:
                         error_context = "\n\nPrevious query errors:\n" + "\n---\n".join(accumulated_errors[-3:])
+                        if output.type == ResponseType.FINAL_QUERY:
+                            raise RuntimeError(f"Problem with final query: {query_error}")
                     else:
                         query_result_str = f"Query: {sql_query}\nError: {query_error}"
                         exploratory_query_results.append(query_result_str)
@@ -553,10 +551,7 @@ class PydanticAIAgent:
 
                 if output.type == ResponseType.FINAL_QUERY:
                     # return response to user
-                    yield self._add_chunk_metadata({
-                        "type": "data",
-                        "content": query_data
-                    })
+                    yield self._add_chunk_metadata({"type": "data", "content": query_data})
                     yield self._add_chunk_metadata({"type": "end"})
                     return
 
@@ -578,6 +573,7 @@ class PydanticAIAgent:
             else:
                 # Extract error message - prefer db_error_msg for QueryError, otherwise use str(e)
                 from mindsdb.utilities.exception import QueryError
+
                 if isinstance(e, QueryError):
                     error_content = e.db_error_msg or str(e)
                     descriptive_error = f"Database query error: {error_content}"
@@ -588,14 +584,15 @@ class PydanticAIAgent:
                     descriptive_error = f"Agent streaming failed: {error_content}"
 
                 logger.error(f"Agent streaming failed: {error_content}")
-                error_chunk = self._add_chunk_metadata({
-                    "type": "error",
-                    "content": descriptive_error,
-                })
+                error_chunk = self._add_chunk_metadata(
+                    {
+                        "type": "error",
+                        "content": descriptive_error,
+                    }
+                )
                 yield error_chunk
 
     def _add_chunk_metadata(self, chunk: Dict) -> Dict:
         """Add metadata to chunk"""
         chunk["trace_id"] = self.langfuse_client_wrapper.get_trace_id()
         return chunk
-

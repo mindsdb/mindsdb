@@ -408,36 +408,6 @@ class OracleHandler(MetaDatabaseHandler):
         connection.rollback()
         return ErrorResponse(error_code=0, error_message=str(e))
 
-    def query_stream(self, query: ASTNode, fetch_size: int = 1000):
-        """
-        Executes a SQL query represented by an ASTNode and retrieves the data in a streaming fashion.
-
-        Args:
-            query (ASTNode): An ASTNode representing the SQL query to be executed.
-            fetch_size (int): The number of rows to fetch in each batch.
-        Yields:
-            pd.DataFrame: A DataFrame containing a batch of rows from the query result.
-            Response: In case of an error, yields a Response object with the error details.
-        """
-        query_str = SqlalchemyRender("oracle").get_string(query, with_failback=True)
-        need_to_close = self.is_connected is False
-
-        connection = self.connect()
-        with connection.cursor() as cur:
-            try:
-                cur.execute(query_str)
-                while True:
-                    result = cur.fetchmany(fetch_size)
-                    if not result:
-                        break
-                    df = pd.DataFrame(result, columns=[col[0] for col in cur.description])
-                    yield df
-                connection.commit()
-            finally:
-                connect
-        if need_to_close is True:
-            self.disconnect()
-
     def insert(self, table_name: str, df: pd.DataFrame) -> Response:
         """
         Inserts data from a DataFrame into a specified table in the Oracle database.

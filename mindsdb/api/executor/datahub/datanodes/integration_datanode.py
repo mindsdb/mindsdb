@@ -246,11 +246,6 @@ class IntegrationDataNode(DataNode):
         return getattr(self.integration_handler, "stream_response", False)
 
     @profiler.profile()
-    def query_stream(self, query: ASTNode, fetch_size: int = None) -> Iterable:
-        # returns generator of results from handler (split by chunks)
-        return self.integration_handler.query_stream(query, fetch_size=fetch_size)
-
-    @profiler.profile()
     def query(self, query: ASTNode | str = None, session=None) -> DataHandlerResponse:
         """Execute a query against the integration data source.
 

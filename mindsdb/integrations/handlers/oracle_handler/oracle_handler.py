@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Text
+from typing import Any, Generator
 
 import oracledb
 import pandas as pd
@@ -10,9 +10,15 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
+    TableResponse,
+    OkResponse,
+    ErrorResponse,
+    DataHandlerResponse,
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.config import config as mindsdb_config
+from mindsdb.utilities.types.column import Column
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
@@ -80,43 +86,43 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     return MYSQL_DATA_TYPE.VARCHAR
 
 
-def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
-    """Build response from result and cursor.
+def _get_colums(cursor: Cursor) -> list[Column]:
+    """Get columns from cursor.
 
     Args:
-        result (list[tuple[Any]]): result of the query.
-        cursor (oracledb.Cursor): cursor object.
+        cursor (psycopg.Cursor): cursor object.
 
     Returns:
-        Response: response object.
+        List of columns
     """
-    description: list[tuple[Any]] = cursor.description
-    mysql_types: list[MYSQL_DATA_TYPE] = []
-    for column in description:
+    columns = []
+    for column in cursor.description:
+        column_name = column[0]
         db_type = column[1]
         precision = column[4]
         scale = column[5]
+        mysql_type = None
         if db_type is oracledb.DB_TYPE_JSON:
-            mysql_types.append(MYSQL_DATA_TYPE.JSON)
+            mysql_type = MYSQL_DATA_TYPE.JSON
         elif db_type is oracledb.DB_TYPE_VECTOR:
-            mysql_types.append(MYSQL_DATA_TYPE.VECTOR)
+            mysql_type = MYSQL_DATA_TYPE.VECTOR
         elif db_type is oracledb.DB_TYPE_NUMBER:
             if scale != 0:
-                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+                mysql_type = MYSQL_DATA_TYPE.FLOAT
             else:
                 # python max int is 19 digits, oracle can return more
                 if precision > 18:
-                    mysql_types.append(MYSQL_DATA_TYPE.DECIMAL)
+                    mysql_type = MYSQL_DATA_TYPE.DECIMAL
                 else:
-                    mysql_types.append(MYSQL_DATA_TYPE.INT)
+                    mysql_type = MYSQL_DATA_TYPE.INT
         elif db_type is oracledb.DB_TYPE_BINARY_FLOAT:
-            mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+            mysql_type = MYSQL_DATA_TYPE.FLOAT
         elif db_type is oracledb.DB_TYPE_BINARY_DOUBLE:
-            mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+            mysql_type = MYSQL_DATA_TYPE.FLOAT
         elif db_type is oracledb.DB_TYPE_BINARY_INTEGER:
-            mysql_types.append(MYSQL_DATA_TYPE.INT)
+            mysql_type = MYSQL_DATA_TYPE.INT
         elif db_type is oracledb.DB_TYPE_BOOLEAN:
-            mysql_types.append(MYSQL_DATA_TYPE.BOOLEAN)
+            mysql_type = MYSQL_DATA_TYPE.BOOLEAN
         elif db_type in (
             oracledb.DB_TYPE_CHAR,
             oracledb.DB_TYPE_NCHAR,
@@ -125,22 +131,26 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             oracledb.DB_TYPE_VARCHAR,
             oracledb.DB_TYPE_LONG_NVARCHAR,
         ):
-            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            mysql_type = MYSQL_DATA_TYPE.TEXT
         elif db_type in (oracledb.DB_TYPE_RAW, oracledb.DB_TYPE_LONG_RAW):
-            mysql_types.append(MYSQL_DATA_TYPE.BINARY)
+            mysql_type = MYSQL_DATA_TYPE.BINARY
         elif db_type is oracledb.DB_TYPE_DATE:
-            mysql_types.append(MYSQL_DATA_TYPE.DATE)
+            mysql_type = MYSQL_DATA_TYPE.DATE
         elif db_type is oracledb.DB_TYPE_TIMESTAMP:
-            mysql_types.append(MYSQL_DATA_TYPE.TIMESTAMP)
+            mysql_type = MYSQL_DATA_TYPE.TIMESTAMP
         else:
             # fallback
-            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            mysql_type = MYSQL_DATA_TYPE.TEXT
 
-    # region cast int and bool to nullable types
+        columns.append(Column(name=column_name, type=mysql_type))
+    return columns
+
+
+def _make_df(result: list[tuple[Any]], columns: list[Column]) -> pd.DataFrame:
     serieses = []
-    for i, mysql_type in enumerate(mysql_types):
+    for i, column in enumerate(columns):
         expected_dtype = None
-        if mysql_type in (
+        if column.type in (
             MYSQL_DATA_TYPE.SMALLINT,
             MYSQL_DATA_TYPE.INT,
             MYSQL_DATA_TYPE.MEDIUMINT,
@@ -148,13 +158,11 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             MYSQL_DATA_TYPE.TINYINT,
         ):
             expected_dtype = "Int64"
-        elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
+        elif column.type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
             expected_dtype = "boolean"
-        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i][0]))
+        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=column.name))
     df = pd.concat(serieses, axis=1, copy=False)
-    # endregion
-
-    return Response(RESPONSE_TYPE.TABLE, data_frame=df, mysql_types=mysql_types)
+    return df
 
 
 class OracleHandler(MetaDatabaseHandler):
@@ -164,13 +172,13 @@ class OracleHandler(MetaDatabaseHandler):
 
     name = "oracle"
 
-    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs) -> None:
+    def __init__(self, name: str, connection_data: dict | None, **kwargs) -> None:
         """
         Initializes the handler.
 
         Args:
-            name (Text): The name of the handler instance.
-            connection_data (Dict): The connection data required to connect to OracleDB.
+            name (str): The name of the handler instance.
+            connection_data (dict | None): The connection data required to connect to OracleDB.
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
@@ -304,48 +312,100 @@ class OracleHandler(MetaDatabaseHandler):
 
         return response
 
-    @profiler.profile()
-    def native_query(self, query: Text) -> Response:
+    def native_query(
+        self, query: str, server_side: bool = True, **kwargs
+    ) -> TableResponse | OkResponse | ErrorResponse:
+        """Executes a SQL query on the Oracle database and returns the result.
+        
+        Args:
+            query (str): The SQL query to be executed.
+            server_side (bool): Whether to execute the query on the server side (streaming).
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
         """
-        Executes a SQL query on the Oracle database and returns the result.
+        if server_side is False:
+            response = self._execute_client_side(query, **kwargs)
+        else:
+            generator = self._execute_server_side(query, **kwargs)
+            try:
+                response: TableResponse = next(generator)
+                response.data_generator = generator
+            except StopIteration as e:
+                response = e.value
+                if isinstance(response, DataHandlerResponse) is False:
+                    raise
+        return response
+
+    def _execute_server_side(self, query: str) -> Generator[pd.DataFrame, None, OkResponse | ErrorResponse]:
+        connection = self.connect()
+        with connection.cursor() as cursor:
+            try:
+                # Configure cursor for optimal server-side streaming
+                fetch_size = mindsdb_config["data_stream"]["fetch_size"]
+                cursor.arraysize = fetch_size
+
+                cursor.execute(query)
+
+                if cursor.description is None:
+                    connection.commit()
+                    return OkResponse(affected_rows=cursor.rowcount)
+
+                columns = _get_colums(cursor)
+                yield TableResponse(affected_rows=cursor.rowcount, columns=columns)
+                # Stream data in batches
+                while result := cursor.fetchmany(cursor.arraysize):
+                    yield _make_df(result, columns)
+                connection.commit()
+            except Exception as e:
+                return self._handle_query_exception(e, query, connection)
+
+    def _execute_client_side(self, query: str) -> DataHandlerResponse:
+        """Executes a SQL query and fetches all results at once (client-side).
 
         Args:
-            query (Text): The SQL query to be executed.
+            query (str): The SQL query to be executed.
 
         Returns:
-            Response: A response object containing the result of the query or an error message.
+            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
         """
-        need_to_close = self.is_connected is False
-
         connection = self.connect()
-        with connection.cursor() as cur:
+        with connection.cursor() as cursor:
             try:
-                cur.execute(query)
-                if cur.description is None:
-                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
+                cursor.execute(query)
+                if cursor.description is None:
+                    response = OkResponse(affected_rows=cursor.rowcount)
                 else:
-                    result = cur.fetchall()
-                    response = _make_table_response(result, cur)
+                    # Fetch all results at once
+                    result = cursor.fetchall()
+                    columns = _get_colums(cursor)
+                    response = _make_df(result, columns)
                 connection.commit()
-            except DatabaseError as database_error:
-                logger.error(f"Error running query: {query} on Oracle, {database_error}!")
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(database_error),
-                )
-                connection.rollback()
+            except Exception as e:
+                response = self._handle_query_exception(e, query, connection)
 
-            except Exception as unknown_error:
-                logger.error(f"Unknwon error running query: {query} on Oracle, {unknown_error}!")
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(unknown_error),
-                )
-                connection.rollback()
-
-        if need_to_close is True:
-            self.disconnect()
         return response
+
+    def _handle_query_exception(self, e: Exception, query: str, connection) -> ErrorResponse:
+        """Handle query execution errors with appropriate logging and rollback.
+
+        Args:
+            e: The exception that was raised
+            query: The SQL query that failed
+            connection: The database connection to rollback
+
+        Returns:
+            ErrorResponse with appropriate error details
+        """
+        if isinstance(e, DatabaseError):
+            logger.error(f"Error running query: {query} on Oracle, {e}!")
+            connection.rollback()
+            return ErrorResponse(error_code=0, error_message=str(e))
+
+        logger.error(f"Unknown error running query: {query} on Oracle, {e}!")
+        connection.rollback()
+        return ErrorResponse(error_code=0, error_message=str(e))
 
     def query_stream(self, query: ASTNode, fetch_size: int = 1000):
         """
@@ -454,12 +514,12 @@ class OracleHandler(MetaDatabaseHandler):
             """
         return self.native_query(query)
 
-    def get_columns(self, table_name: Text) -> Response:
+    def get_columns(self, table_name: str) -> Response:
         """
         Retrieves column details for a specified table in the Oracle database.
 
         Args:
-            table_name (Text): The name of the table for which to retrieve column information.
+            table_name (str): The name of the table for which to retrieve column information.
 
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
@@ -489,12 +549,12 @@ class OracleHandler(MetaDatabaseHandler):
             result.to_columns_table_response(map_type_fn=_map_type)
         return result
 
-    def meta_get_tables(self, table_names: Optional[List[str]]) -> Response:
+    def meta_get_tables(self, table_names: list[str] | None) -> Response:
         """
         Retrieves metadata about all non-system tables and views in the current schema of the Oracle database.
 
         Returns:
-            list[dict[str, Any]]: A list of dictionaries, each containing metadata about a table or view.
+            list[str] | None: A list of dictionaries, each containing metadata about a table or view.
         """
         query = """
             SELECT
@@ -521,11 +581,11 @@ class OracleHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_columns(self, table_names: Optional[List[str]]) -> Response:
+    def meta_get_columns(self, table_names: list[str] | None) -> Response:
         """Retrieves metadata about the columns of specified tables in the Oracle database.
 
         Args:
-            table_names (list[str]): A list of table names for which to retrieve column metadata.
+            table_names (list[str] | None): A list of table names for which to retrieve column metadata.
 
         Returns:
             list[dict[str, Any]]: A list of dictionaries, each containing metadata about a column.
@@ -555,11 +615,11 @@ class OracleHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_column_statistics(self, table_names: Optional[List[str]]) -> Response:
+    def meta_get_column_statistics(self, table_names: list[str] | None) -> Response:
         """Retrieves statistics about the columns of specified tables in the Oracle database.
 
         Args:
-            table_names (list[str]): A list of table names for which to retrieve column statistics.
+            table_names (list[str] | None): A list of table names for which to retrieve column statistics.
 
         Returns:
             list[dict[str, Any]]: A list of dictionaries, each containing statistics about a column.
@@ -612,7 +672,7 @@ class OracleHandler(MetaDatabaseHandler):
 
             def extract_min_max(
                 histogram_str: str,
-            ) -> tuple[Optional[float], Optional[float]]:
+            ) -> tuple[float | None, float | None]:
                 if histogram_str and str(histogram_str).lower() not in ["nan", "none"]:
                     values = str(histogram_str).split(",")
                     if values:
@@ -627,12 +687,12 @@ class OracleHandler(MetaDatabaseHandler):
             df.drop(columns=["HISTOGRAM_BOUNDS"], inplace=True)
         return result
 
-    def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> Response:
+    def meta_get_primary_keys(self, table_names: list[str] | None) -> Response:
         """
         Retrieves the primary keys for the specified tables in the Oracle database.
 
         Args:
-            table_names (list[str]): A list of table names for which to retrieve primary keys.
+            table_names (list[str] | None): A list of table names for which to retrieve primary keys.
 
         Returns:
             list[dict[str, Any]]: A list of dictionaries, each containing information about a primary key.
@@ -661,12 +721,12 @@ class OracleHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_foreign_keys(self, table_names: Optional[List[str]]) -> Response:
+    def meta_get_foreign_keys(self, table_names: list[str] | None) -> Response:
         """
         Retrieves the foreign keys for the specified tables in the Oracle database.
 
         Args:
-            table_names (list[str]): A list of table names for which to retrieve foreign keys.
+            table_names (list[str] | None): A list of table names for which to retrieve foreign keys.
 
         Returns:
             list[dict[str, Any]]: A list of dictionaries, each containing information about a foreign key.

@@ -134,6 +134,15 @@ def _get_colums(cursor: Cursor) -> list[Column]:
 
 
 def _make_df(result: list[tuple[Any]], columns: list[Column]) -> pd.DataFrame:
+    """Make pandas DataFrame from result and columns.
+
+    Args:
+        result (list[tuple[Any]]): result of the query.
+        columns (list[Column]): list of columns.
+
+    Returns:
+        pd.DataFrame: pandas DataFrame.
+    """
     serieses = []
     for i, column in enumerate(columns):
         serieses.append(pd.Series([row[i] for row in result], dtype=column.dtype, name=column.name))
@@ -306,22 +315,17 @@ class PostgresHandler(MetaDatabaseHandler):
         Returns:
             TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
         """
-        need_to_close = not self.is_connected
-        try:
-            if server_side is False:
-                response = self._execute_client_side(query, params, **kwargs)
-            else:
-                generator = self._execute_server_side(query, params, **kwargs)
-                try:
-                    response: TableResponse = next(generator)
-                    response.data_generator = generator
-                except StopIteration as e:
-                    response = e.value
-                    if isinstance(response, DataHandlerResponse) is False:
-                        raise
-        finally:
-            if need_to_close:
-                self.disconnect()
+        if server_side is False:
+            response = self._execute_client_side(query, params, **kwargs)
+        else:
+            generator = self._execute_server_side(query, params, **kwargs)
+            try:
+                response: TableResponse = next(generator)
+                response.data_generator = generator
+            except StopIteration as e:
+                response = e.value
+                if isinstance(response, DataHandlerResponse) is False:
+                    raise
         return response
 
     def _execute_client_side(self, query: str, params=None, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
@@ -392,7 +396,7 @@ class PostgresHandler(MetaDatabaseHandler):
 
                 columns: list[Column] = _get_colums(cursor)
                 yield TableResponse(affected_rows=cursor.rowcount, columns=columns)
-                while result := cursor.fetchmany(mindsdb_config["data_stream"]["fetch_size"]):
+                while result := cursor.fetchmany(size=mindsdb_config["data_stream"]["fetch_size"]):
                     yield _make_df(result, columns)
                 connection.commit()
             except Exception as e:

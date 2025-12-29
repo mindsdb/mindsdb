@@ -2,7 +2,6 @@ import time
 import inspect
 import functools
 from dataclasses import astuple
-from typing import Iterable, List
 
 import pandas as pd
 from sqlalchemy.types import Integer, Float
@@ -162,7 +161,7 @@ class IntegrationDataNode(DataNode):
         self,
         table_name: Identifier,
         result_set: ResultSet = None,
-        columns: List[TableColumn] = None,
+        columns: list[TableColumn] = None,
         is_replace: bool = False,
         is_create: bool = False,
         raise_if_exists: bool = True,

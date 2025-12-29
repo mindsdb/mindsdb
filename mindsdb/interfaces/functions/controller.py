@@ -1,7 +1,5 @@
 import os
 import copy
-import asyncio
-import concurrent.futures
 
 from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
@@ -22,31 +20,6 @@ def python_to_duckdb_type(py_type):
     else:
         # Unknown
         return VARCHAR
-
-
-def run_async_safely(coro):
-    """
-    Safely run an async coroutine from a synchronous context.
-    Checks if an event loop is already running and handles accordingly.
-    
-    Args:
-        coro: The coroutine to run
-        
-    Returns:
-        The result of the coroutine
-    """
-    try:
-        # Check if there's a running event loop
-        asyncio.get_running_loop()
-        # If we're here, there's a running loop
-        # Create a new event loop in a new thread context
-        # This is a fallback for edge cases where we're called from async context
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(asyncio.run, coro)
-            return future.result()
-    except RuntimeError:
-        # No running event loop, safe to use asyncio.run
-        return asyncio.run(coro)
 
 
 # duckdb doesn't like *args
@@ -138,8 +111,9 @@ class BYOMFunctionsController:
 
 
 class FunctionController(BYOMFunctionsController):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, session, *args, **kwargs):
+        self.session = session
+        super().__init__(session)
 
     def check_function(self, node):
         meta = super().check_function(node)
@@ -162,16 +136,14 @@ class FunctionController(BYOMFunctionsController):
         chat_model_params = self._parse_chat_model_params()
 
         try:
-            from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
-
-            llm = create_chat_model(chat_model_params)
+            from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
+            llm = LLMClient(chat_model_params, session=self.session)
         except Exception as e:
             raise RuntimeError(f"Unable to use LLM function, check ENV variables: {e}") from e
 
         def callback(question):
-            # Use abatch method for async processing with improved event loop handling
-            resp = run_async_safely(llm.abatch([question]))[0]
-            return resp.content
+            resp = llm.completion([{"role": "user", "content": question}])
+            return resp[0]
 
         meta = {"name": name, "callback": callback, "input_types": ["str"], "output_type": "str"}
         self.callbacks[name] = meta

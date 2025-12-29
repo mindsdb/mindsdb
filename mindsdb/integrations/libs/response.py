@@ -140,15 +140,17 @@ class TableResponse(DataHandlerResponse):
         data_generator: Generator[pandas.DataFrame, None, None] | None - generator of data for lazy loading
         _columns: list[Column] | None - list of columns
         _data: pandas.DataFrame | None - loaded data
-        _fetched: bool | None - if data was already fetched (data_generator is consumed)
+        _fetched: bool - if data was already fetched (data_generator is consumed)
+        _invalid: bool - if data has already been fetched and cannot be iterated over
     """
 
     type: ClassVar[str] = RESPONSE_TYPE.TABLE
     affected_rows: int | None
-    data_generator: Generator[pandas.DataFrame, None, None] | None
+    _data_generator: Generator[pandas.DataFrame, None, None] | None
     _columns: list[Column] | None
     _data: pandas.DataFrame | None
-    _fetched: bool | None
+    _fetched: bool
+    _invalid: bool
 
     def __init__(
         self,
@@ -167,36 +169,48 @@ class TableResponse(DataHandlerResponse):
             columns (list[Column])
 
         """
-        self.data_generator = data_generator
+        self._data_generator = data_generator
         self._columns = columns
         self.affected_rows = affected_rows
         self._data = data
         self._fetched = False if data_generator else True
+        self._invalid = False
+
+    @property
+    def data_generator(self):
+        return self._data_generator
+
+    @data_generator.setter
+    def data_generator(self, value):
+        self._fetched = False if value else True
+        self._data_generator = value
 
     def fetchall(self) -> pandas.DataFrame:
         """Fetch all data from the generator and store it in the _data attribute."""
-        if self.data_generator is None or self._fetched:
+        self._raise_if_invalid()
+        if self._data_generator is None or self._fetched:
             return self._data
 
-        for el in self.data_generator:
+        for el in self._data_generator:
             if self._data is None:
                 self._data = el
             else:
                 self._data = pandas.concat([self._data, el])
 
         self._fetched = True
-        self.data_generator = None
+        self._data_generator = None
 
         return self._data
 
     def fetchmany(self) -> pandas.DataFrame | None:
         """Fetch one piece of data"""
+        self._raise_if_invalid()
         try:
-            piece = next(self.data_generator)
+            piece = next(self._data_generator)
             self._data = pandas.concat([self._data, piece])
         except StopIteration:
             self._fetched = True
-            self.data_generator = None
+            self._data_generator = None
             return None
         return piece
 
@@ -205,10 +219,17 @@ class TableResponse(DataHandlerResponse):
 
         NOTE: do it only once, before return result to the user
         """
+        self._raise_if_invalid()
         if self._data is not None:
             yield self._data
-        for el in self.data_generator:
-            yield el
+        if self._data_generator:
+            self._invalid = True
+            for el in self._data_generator:
+                yield el
+
+    def _raise_if_invalid(self):
+        if self._invalid:
+            raise ValueError("Data has already been fetched and cannot be iterated over.")
 
     @property
     def data_frame(self) -> pandas.DataFrame:

@@ -11,7 +11,7 @@ from mindsdb.interfaces.agents.utils.chart_toolkit import ChartConfig
 from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import (
     get_model_instance_from_kwargs
 )
-from mindsdb.interfaces.agents.prompts import agent_prompts
+from mindsdb.interfaces.agents.modes import prompts
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
@@ -220,7 +220,7 @@ SQL Query:
         if prompt:
             chart_prompt += f"\nChart Intent: {prompt}\n"
         
-        chart_prompt += f"\nSample Data Catalog:\n{data_catalog}\nInstructions:\n{agent_prompts.sql_description}\n\n{agent_prompts.chart_generation_prompt}"
+        chart_prompt += f"\nSample Data Catalog:\n{data_catalog}\nInstructions:\n{prompts.sql_description}\n\n{prompts.chart_generation_prompt}"
         
         # Add error context if provided (for retry attempts)
         if error_context:
@@ -295,7 +295,7 @@ SQL Query:
                     # Format error context from accumulated errors (keep last 3)
                     error_context = "\n---\n".join(accumulated_errors[-3:])
                     logger.debug(f"ChartAgent.generate_chart_with_data: Regenerating chart config with error context (attempt {retry_count}/{self.MAX_RETRIES})")
-                
+
                 chart_config = self.generate_chart_config(
                     query, 
                     prompt, 
@@ -304,7 +304,7 @@ SQL Query:
                     error_context=error_context,
                     retry_count=retry_count if retry_count > 0 else None
                 )
-                
+
                 # Execute the data query
                 logger.debug(f"ChartAgent.generate_chart_with_data: Executing data query: {chart_config.data_query_string[:100]}...")
                 

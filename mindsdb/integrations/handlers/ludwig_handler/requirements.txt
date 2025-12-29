@@ -1,3 +1,4 @@
 ludwig[distributed]>=0.5.2
 ray==2.52.0
 dask
+transformers>=5.0.0rc1 # not directly required, pinned by Snyk to avoid a vulnerability

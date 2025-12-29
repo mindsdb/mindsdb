@@ -171,6 +171,7 @@ class OracleHandler(MetaDatabaseHandler):
     """
 
     name = "oracle"
+    stream_response = True
 
     def __init__(self, name: str, connection_data: dict | None, **kwargs) -> None:
         """

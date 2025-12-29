@@ -243,8 +243,7 @@ class IntegrationDataNode(DataNode):
         return OkResponse(affected_rows=result.affected_rows)
 
     def has_support_stream(self) -> bool:
-        # checks if data handler has query_stream method
-        return hasattr(self.integration_handler, "query_stream") and callable(self.integration_handler.query_stream)
+        return getattr(self.integration_handler, "stream_response", False)
 
     @profiler.profile()
     def query_stream(self, query: ASTNode, fetch_size: int = None) -> Iterable:

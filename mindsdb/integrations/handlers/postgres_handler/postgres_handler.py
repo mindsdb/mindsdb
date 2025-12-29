@@ -155,6 +155,7 @@ class PostgresHandler(MetaDatabaseHandler):
     """
 
     name = "postgres"
+    stream_response = True
 
     @profiler.profile("init_pg_handler")
     def __init__(self, name=None, **kwargs):

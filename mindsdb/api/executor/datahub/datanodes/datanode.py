@@ -5,6 +5,7 @@ from mindsdb.integrations.libs.response import DataHandlerResponse
 
 class DataNode:
     type = "meta"
+    has_support_stream = False
 
     def __init__(self):
         pass

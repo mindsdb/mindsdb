@@ -317,12 +317,12 @@ class OracleHandler(MetaDatabaseHandler):
         self, query: str, server_side: bool = True, **kwargs
     ) -> TableResponse | OkResponse | ErrorResponse:
         """Executes a SQL query on the Oracle database and returns the result.
-        
+
         Args:
             query (str): The SQL query to be executed.
             server_side (bool): Whether to execute the query on the server side (streaming).
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
             TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
         """

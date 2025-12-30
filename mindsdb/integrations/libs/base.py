@@ -29,6 +29,8 @@ class BaseHandler:
     broader MindsDB ecosystem via SQL commands.
     """
 
+    stream_response = False
+
     def __init_subclass__(cls, **kwargs):
         """Automatically wrap handler methods to normalize their responses.
 
@@ -112,13 +114,13 @@ class BaseHandler:
         """
         raise NotImplementedError()
 
-    def native_query(self, query: Any) -> DataHandlerResponse:
+    def native_query(self, query: Any, stream: bool = False, **kwargs) -> DataHandlerResponse:
         """Receive raw query and act upon it somehow.
 
         Args:
-            query (Any): query in native format (str for sql databases,
-                etc)
-
+            query (Any): query in native format (str for sql databases, etc)
+            stream (bool): Whether to stream the results of the query
+            **kwargs: Additional keyword arguments.
         Returns:
             DataHandlerResponse
         """

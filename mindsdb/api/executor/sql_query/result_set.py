@@ -295,8 +295,7 @@ class ResultSet:
     # --- records ---
 
     def _resolve_table_response(self):
-        """Resolve the table response by fetching all data from the table response and storing it in the _df attribute.
-        """
+        """Resolve the table response by fetching all data from the table response and storing it in the _df attribute."""
         if self._table_response is not None:
             self._table_response.fetchall()
             if self._df is None:

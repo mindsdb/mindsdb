@@ -25,6 +25,7 @@ class SQLAnswer:
         affected_rows: Number of rows affected by the query (for DML operations).
         mysql_types: List of MySQL data types for result columns.
     """
+
     resp_type: RESPONSE_TYPE = RESPONSE_TYPE.OK
     result_set: ResultSet | None = None
     status: int | None = None

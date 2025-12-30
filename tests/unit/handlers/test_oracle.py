@@ -185,7 +185,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         query_str = "SELECT ID, NAME FROM test_table"
-        data = self.handler.native_query(query_str, server_side=True)
+        data = self.handler.native_query(query_str, stream=True)
 
         mock_conn.cursor.assert_called_once()
         mock_cursor.execute.assert_called_once_with(query_str)
@@ -219,7 +219,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         query_str = "SELECT ID, NAME FROM test_table"
-        data = self.handler.native_query(query_str, server_side=False)
+        data = self.handler.native_query(query_str, stream=False)
 
         mock_conn.cursor.assert_called_once()
         mock_cursor.execute.assert_called_once_with(query_str)
@@ -606,7 +606,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("N_BINARY_DOUBLE", oracledb.DB_TYPE_NUMBER, 127, None, None, None, True),
         ]
 
-        response: TableResponse = self.handler.native_query(query_str, server_side=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.DECIMAL,
@@ -645,7 +645,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
             ("T_BOOL", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
-        response: TableResponse = self.handler.native_query(query_str, server_side=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOLEAN, MYSQL_DATA_TYPE.BOOLEAN]
         self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
@@ -713,7 +713,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("T_RAW", oracledb.DB_TYPE_RAW, 100, 100, None, None, True),
             ("T_BLOB", oracledb.DB_TYPE_LONG_RAW, None, None, None, None, True),
         ]
-        response: TableResponse = self.handler.native_query(query_str, server_side=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.TEXT,
             MYSQL_DATA_TYPE.TEXT,
@@ -772,7 +772,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("D_TIMESTAMP", oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 6, True),
             ("D_TIMESTAMP_P", oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 9, True),
         ]
-        response: TableResponse = self.handler.native_query(query_str, server_side=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.DATE,
             MYSQL_DATA_TYPE.TIMESTAMP,
@@ -800,7 +800,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ),  # set 17 just to force cast to Int64
             ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
-        response: TableResponse = self.handler.native_query(query_str, server_side=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         self.assertEqual(response.data_frame.dtypes[0], "Int64")
         self.assertEqual(response.data_frame.dtypes[1], "boolean")
         self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
@@ -833,7 +833,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("T_EMBEDDING", oracledb.DB_TYPE_VECTOR, None, None, None, None, True),
             ("T_JSON", oracledb.DB_TYPE_JSON, None, None, None, None, True),
         ]
-        response: TableResponse = self.handler.native_query(query_str, server_side=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.VECTOR, MYSQL_DATA_TYPE.JSON]
         self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):

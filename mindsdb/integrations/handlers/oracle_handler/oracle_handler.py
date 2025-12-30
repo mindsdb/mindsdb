@@ -314,22 +314,22 @@ class OracleHandler(MetaDatabaseHandler):
         return response
 
     def native_query(
-        self, query: str, server_side: bool = True, **kwargs
+        self, query: str, stream: bool = True, **kwargs
     ) -> TableResponse | OkResponse | ErrorResponse:
         """Executes a SQL query on the Oracle database and returns the result.
 
         Args:
             query (str): The SQL query to be executed.
-            server_side (bool): Whether to execute the query on the server side (streaming).
+            stream (bool): Whether to execute the query on the server side (streaming).
             **kwargs: Additional keyword arguments.
 
         Returns:
             TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
         """
-        if server_side is False:
-            response = self._execute_client_side(query, **kwargs)
+        if stream is False:
+            response = self._execute_fetchall(query, **kwargs)
         else:
-            generator = self._execute_server_side(query, **kwargs)
+            generator = self._execute_fetchmany(query, **kwargs)
             try:
                 response: TableResponse = next(generator)
                 response.data_generator = generator
@@ -339,7 +339,7 @@ class OracleHandler(MetaDatabaseHandler):
                     raise
         return response
 
-    def _execute_server_side(self, query: str) -> Generator[pd.DataFrame, None, OkResponse | ErrorResponse]:
+    def _execute_fetchmany(self, query: str) -> Generator[pd.DataFrame, None, OkResponse | ErrorResponse]:
         connection = self.connect()
         with connection.cursor() as cursor:
             try:
@@ -362,7 +362,7 @@ class OracleHandler(MetaDatabaseHandler):
             except Exception as e:
                 return self._handle_query_exception(e, query, connection)
 
-    def _execute_client_side(self, query: str) -> DataHandlerResponse:
+    def _execute_fetchall(self, query: str) -> DataHandlerResponse:
         """Executes a SQL query and fetches all results at once (client-side).
 
         Args:

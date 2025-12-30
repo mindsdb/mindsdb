@@ -301,7 +301,7 @@ class PostgresHandler(MetaDatabaseHandler):
         df.columns = columns
 
     def native_query(
-        self, query: str, params=None, server_side: bool = True, **kwargs
+        self, query: str, params=None, stream: bool = True, **kwargs
     ) -> TableResponse | OkResponse | ErrorResponse:
         """Executes a SQL query on the PostgreSQL database and returns the result.
         NOTE: 'INSERT' (and may be some else) queries can not be executed on the server side,
@@ -310,13 +310,13 @@ class PostgresHandler(MetaDatabaseHandler):
         Args:
             query (str): The SQL query to be executed.
             params (list): The parameters to be passed to the query.
-            server_side (bool): Whether to execute the query on the server side.
+            stream (bool): Whether to stream the results of the query.
             **kwargs: Additional keyword arguments.
 
         Returns:
             TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
         """
-        if server_side is False:
+        if stream is False:
             response = self._execute_client_side(query, params, **kwargs)
         else:
             generator = self._execute_server_side(query, params, **kwargs)
@@ -479,8 +479,8 @@ class PostgresHandler(MetaDatabaseHandler):
         """
         query_str, params = self.renderer.get_exec_params(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        server_side = isinstance(query, Select)
-        return self.native_query(query_str, params, server_side=server_side)
+        support_stream = isinstance(query, Select)
+        return self.native_query(query_str, params, stream=support_stream)
 
     def get_tables(self, all: bool = False) -> Response:
         """

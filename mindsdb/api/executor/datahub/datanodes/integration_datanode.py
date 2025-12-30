@@ -242,6 +242,11 @@ class IntegrationDataNode(DataNode):
         return OkResponse(affected_rows=result.affected_rows)
 
     def has_support_stream(self) -> bool:
+        """Check if the integration handler supports streaming responses.
+
+        Returns:
+            bool: True if the integration handler supports streaming responses, False otherwise.
+        """
         return getattr(self.integration_handler, "stream_response", False)
 
     @profiler.profile()

@@ -160,14 +160,13 @@ class TableResponse(DataHandlerResponse):
         columns: list[Column] = None,
     ):
         """
-        Either data or data_generator must be provided.
+        Either data and/or data_generator must be provided.
         Args:
-            data_generator
-            data (list[Any]): initial data
-            affected_rows (int): total data rowcount - может быть None в зависимости от хендлера
-            NOTE: имя affected_rows для совместимости с OKResponse
-            columns (list[Column])
-
+            data (pandas.DataFrame): initial data
+            data_generator (Generator[pandas.DataFrame, None, None]): generator of data
+            affected_rows (int): total data rowcount - can be None depending on the handler
+                                 NOTE: name affected_rows for compatibility with OKResponse
+            columns (list[Column]): list of columns
         """
         self._data_generator = data_generator
         self._columns = columns
@@ -177,7 +176,7 @@ class TableResponse(DataHandlerResponse):
         self._invalid = False
 
     @property
-    def data_generator(self):
+    def data_generator(self) -> Generator[pandas.DataFrame, None, None]:
         return self._data_generator
 
     @data_generator.setter
@@ -186,7 +185,11 @@ class TableResponse(DataHandlerResponse):
         self._data_generator = value
 
     def fetchall(self) -> pandas.DataFrame:
-        """Fetch all data from the generator and store it in the _data attribute."""
+        """Fetch all data and store it in the _data attribute.
+
+        Returns:
+            pandas.DataFrame: Data frame.
+        """
         self._raise_if_invalid()
         if self._data_generator is None or self._fetched:
             return self._data
@@ -203,7 +206,11 @@ class TableResponse(DataHandlerResponse):
         return self._data
 
     def fetchmany(self) -> pandas.DataFrame | None:
-        """Fetch one piece of data"""
+        """Fetch one piece of data and store it in the _data attribute.
+
+        Returns:
+            pandas.DataFrame: Data frame, piece of data.
+        """
         self._raise_if_invalid()
         try:
             piece = next(self._data_generator)
@@ -216,8 +223,10 @@ class TableResponse(DataHandlerResponse):
 
     def iterate_no_save(self) -> Generator[pandas.DataFrame, None, None]:
         """Iterate over the data and yield each piece of data. Do not save the data to the _data attribute.
-
         NOTE: do it only once, before return result to the user
+
+        Returns:
+            Generator[pandas.DataFrame, None, None]: Generator of data frames.
         """
         self._raise_if_invalid()
         if self._data is not None:
@@ -233,11 +242,21 @@ class TableResponse(DataHandlerResponse):
 
     @property
     def data_frame(self) -> pandas.DataFrame:
+        """Get the data frame. Represents the entire dataset.
+
+        Returns:
+            pandas.DataFrame: Data frame.
+        """
         self.fetchall()
         return self._data
 
     @property
     def columns(self) -> list[Column]:
+        """Get the columns.
+
+        Returns:
+            list[Column]: List of columns.
+        """
         self._resolve_columns()
         return self._columns
 
@@ -248,6 +267,13 @@ class TableResponse(DataHandlerResponse):
         self._columns = [Column(name=c) for c in self._data.columns]
 
     def set_columns_attrs(self, table_name: str | None, table_alias: str | None, database: str | None):
+        """Set the attributes of the columns.
+
+        Args:
+            table_name (str | None): Table name.
+            table_alias (str | None): Table alias.
+            database (str | None): Database name.
+        """
         self._resolve_columns()
         for column in self._columns:
             if table_name:
@@ -260,6 +286,9 @@ class TableResponse(DataHandlerResponse):
     def to_columns_table_response(self, map_type_fn: Callable) -> None:
         """Transform the response to a `columns table` response.
         NOTE: original dataframe will be mutated
+
+        Args:
+            map_type_fn (Callable): Function to map the data type to the MySQL data type.
         """
         if self.type == RESPONSE_TYPE.COLUMNS_TABLE:
             return

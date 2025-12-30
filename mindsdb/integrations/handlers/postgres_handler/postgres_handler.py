@@ -363,9 +363,8 @@ class PostgresHandler(MetaDatabaseHandler):
 
     def _execute_server_side(
         self, query: str, params=None, **kwargs
-    ) -> Generator[pd.DataFrame, None, OkResponse | ErrorResponse]:
-        """Executes a SQL query on the PostgreSQL database and returns the result.
-           This method is used to execute queries on the server side.
+    ) -> Generator[TableResponse | pd.DataFrame, None, OkResponse | ErrorResponse]:
+        """Execute a SQL query on the PostgreSQL database and return a generator of data frames.
 
         Args:
             query (str): The SQL query to be executed.
@@ -373,7 +372,7 @@ class PostgresHandler(MetaDatabaseHandler):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            Response: A response object containing the result of the query or an error message.
+            Generator[TableResponse | pd.DataFrame, None, OkResponse | ErrorResponse]: Generator of data frames.
         """
         connection = self.connect()
         with connection.cursor(name=f"mindsdb_{id(self)}") as cursor:

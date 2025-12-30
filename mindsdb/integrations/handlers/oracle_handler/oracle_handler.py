@@ -147,6 +147,15 @@ def _get_colums(cursor: Cursor) -> list[Column]:
 
 
 def _make_df(result: list[tuple[Any]], columns: list[Column]) -> pd.DataFrame:
+    """Make pandas DataFrame from result and columns.
+
+    Args:
+        result (list[tuple[Any]]): result of the query.
+        columns (list[Column]): list of columns.
+
+    Returns:
+        pd.DataFrame: pandas DataFrame.
+    """
     serieses = []
     for i, column in enumerate(columns):
         expected_dtype = None

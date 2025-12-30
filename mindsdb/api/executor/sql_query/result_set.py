@@ -1,6 +1,6 @@
 import copy
 from array import array
-from typing import Any
+from typing import Any, Generator
 
 import numpy as np
 import pandas as pd
@@ -114,7 +114,7 @@ class ResultSet:
         col_names = ", ".join([col.name for col in self._columns])
 
         if self._table_response is not None:
-            return f"{self.__class__.__name__}(stream data, cols: {col_names})"
+            return f"{self.__class__.__name__}(table response, cols: {col_names})"
         return f"{self.__class__.__name__}({self.length()} rows, cols: {col_names})"
 
     def __len__(self) -> int:
@@ -295,16 +295,22 @@ class ResultSet:
     # --- records ---
 
     def _resolve_table_response(self):
+        """Resolve the table response by fetching all data from the table response and storing it in the _df attribute.
+        """
         if self._table_response is not None:
             self._table_response.fetchall()
-            # names = range(len(self._columns))
             if self._df is None:
-                self._df = self._table_response._data  # pd.DataFrame(self._table_response._data, columns=names)
+                self._df = self._table_response._data
             else:
                 self._df = pd.concat([self._df, self._table_response._data])
             self._table_response = None
 
-    def stream_data(self):
+    def stream_data(self) -> Generator[pd.DataFrame, None, None]:
+        """Stream data from the result set.
+
+        Yields:
+            pd.DataFrame: Data frame.
+        """
         if self._df is not None:
             yield self._df
         else:
@@ -431,13 +437,6 @@ class ResultSet:
 
         if self._df is not None:
             self._df[col_idx] = values
-
-    def __add__(self, rs: "ResultSet"):
-        df1 = self.get_raw_df()
-        df2 = rs.get_raw_df()
-        df1.columns = list(range(len(df1.columns)))
-        df2.columns = list(range(len(df2.columns)))
-        return self
 
     def add_from_result_set(self, rs):
         source_names = rs.get_column_names()

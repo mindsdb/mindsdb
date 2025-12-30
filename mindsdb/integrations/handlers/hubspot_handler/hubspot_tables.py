@@ -1,4 +1,4 @@
-from typing import List, Dict, Text, Any, Optional, Tuple
+from typing import List, Dict, Text, Any, Optional, Tuple, Set
 
 import pandas as pd
 from hubspot import HubSpot
@@ -34,6 +34,7 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("lastname", "VARCHAR", "Last name"),
         ("phone", "VARCHAR", "Phone number"),
         ("company", "VARCHAR", "Associated company"),
+        ("city", "VARCHAR", "City"),
         ("website", "VARCHAR", "Website URL"),
         ("createdate", "TIMESTAMP", "Creation date"),
         ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
@@ -67,6 +68,119 @@ def _normalize_filter_conditions(conditions: Optional[List[FilterCondition]]) ->
     return normalized
 
 
+OPERATOR_MAP = {
+    "=": "EQ",
+    "!=": "NEQ",
+    "<": "LT",
+    "<=": "LTE",
+    ">": "GT",
+    ">=": "GTE",
+    "in": "IN",
+    "not in": "NOT_IN",
+}
+
+
+def _build_hubspot_search_filters(
+    conditions: List[List[Any]],
+    searchable_columns: Set[str],
+) -> Optional[List[Dict]]:
+    """
+    Convert normalized conditions to HubSpot Search API filter format.
+
+    Returns a list of filter dicts if all conditions are supported, otherwise None.
+    """
+    if not conditions:
+        return None
+
+    filters: List[Dict[str, Any]] = []
+
+    for condition in conditions:
+        if not isinstance(condition, (list, tuple)) or len(condition) < 3:
+            return None
+
+        operator, column, value = condition[0], condition[1], condition[2]
+        operator_key = str(operator).lower()
+        if operator_key not in OPERATOR_MAP:
+            return None
+
+        if column not in searchable_columns:
+            return None
+
+        property_name = "hs_object_id" if column == "id" else column
+        if column == "lastmodifieddate":
+            property_name = "hs_lastmodifieddate"
+
+        hubspot_operator = OPERATOR_MAP[operator_key]
+        if hubspot_operator in {"IN", "NOT_IN"}:
+            values = value if isinstance(value, (list, tuple, set)) else [value]
+            filters.append(
+                {
+                    "propertyName": property_name,
+                    "operator": hubspot_operator,
+                    "values": [str(val) for val in values],
+                }
+            )
+        else:
+            filters.append(
+                {
+                    "propertyName": property_name,
+                    "operator": hubspot_operator,
+                    "value": str(value),
+                }
+            )
+
+    if not filters:
+        return None
+
+    return filters
+
+
+def _execute_hubspot_search(
+    search_api,
+    filters: List[Dict],
+    properties: List[str],
+    limit: Optional[int],
+    to_dict_fn: callable,
+) -> List[Dict[str, Any]]:
+    """
+    Execute paginated HubSpot search with filters.
+    """
+    collected: List[Dict[str, Any]] = []
+    remaining = limit if limit is not None else float("inf")
+    after = None
+
+    while remaining > 0:
+        page_limit = min(int(remaining) if remaining != float("inf") else 200,200)
+        search_request = {
+            "filterGroups": [{"filters": filters}],
+            "properties": properties,
+            "limit": page_limit,
+        }
+
+        if after is not None:
+            search_request["after"] = after
+
+        response = search_api.do_search(public_object_search_request=search_request)
+
+        results = getattr(response, "results", []) or []
+        for result in results:
+            collected.append(to_dict_fn(result))
+            if limit is not None and len(collected) >= limit:
+                return collected
+
+        paging = getattr(response, "paging", None)
+        next_page = getattr(paging, "next", None) if paging else None
+        after = getattr(next_page, "after", None) if next_page else None
+
+        if after is None:
+            break
+
+        if remaining != float("inf"):
+            remaining = limit - len(collected)
+
+    return collected
+
+
 class CompaniesTable(APIResource):
     """Hubspot Companies table."""
 
@@ -97,7 +211,7 @@ class CompaniesTable(APIResource):
         sort: List[SortColumn] = None,
         targets: List[str] = None,
     ) -> pd.DataFrame:
-        companies_df = pd.json_normalize(self.get_companies(limit=limit))
+        companies_df = pd.json_normalize(self.get_companies(limit=limit, where_conditions=conditions))
         if companies_df.empty:
             companies_df = pd.DataFrame(columns=self._get_default_company_columns())
         return companies_df
@@ -106,14 +220,14 @@ class CompaniesTable(APIResource):
         self.create_companies(company_data)
 
     def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
-        companies_df = pd.json_normalize(self.get_companies(limit=1000))
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        companies_df = pd.json_normalize(self.get_companies(limit=200, where_conditions=normalized_conditions))
 
         if companies_df.empty:
             raise ValueError(
                 "No companies retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
             )
 
-        normalized_conditions = _normalize_filter_conditions(conditions)
         update_query_executor = UPDATEQueryExecutor(companies_df, normalized_conditions)
         filtered_df = update_query_executor.execute_query()
 
@@ -127,14 +241,14 @@ class CompaniesTable(APIResource):
         self.update_companies(company_ids, values)
 
     def remove(self, conditions: List[FilterCondition]) -> None:
-        companies_df = pd.json_normalize(self.get_companies(limit=1000))
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        companies_df = pd.json_normalize(self.get_companies(limit=200, where_conditions=normalized_conditions))
 
         if companies_df.empty:
             raise ValueError(
                 "No companies retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
             )
 
-        normalized_conditions = _normalize_filter_conditions(conditions)
         delete_query_executor = DELETEQueryExecutor(companies_df, normalized_conditions)
         filtered_df = delete_query_executor.execute_query()
 
@@ -164,7 +278,13 @@ class CompaniesTable(APIResource):
             "lastmodifieddate",
         ]
 
-    def get_companies(self, limit: int | None = None, **kwargs) -> List[Dict]:
+    def get_companies(
+        self,
+        limit: Optional[int] = None,
+        where_conditions: Optional[List] = None,
+        **kwargs,
+    ) -> List[Dict]:
+        normalized_conditions = _normalize_filter_conditions(where_conditions)
         hubspot = self.handler.connect()
 
         requested_properties = kwargs.get("properties", [])
@@ -184,30 +304,59 @@ class CompaniesTable(APIResource):
         api_kwargs = {**kwargs, "properties": properties}
         if limit is not None:
             api_kwargs["limit"] = limit
+        else:
+            api_kwargs.pop("limit", None)
+
+        if normalized_conditions:
+            filters = _build_hubspot_search_filters(
+                normalized_conditions, {"name", "domain", "industry", "city", "state", "id"}
+            )
+            if filters:
+                search_results = self._search_companies_by_conditions(hubspot, filters, properties, limit)
+                logger.info(f"Retrieved {len(search_results)} companies from HubSpot via search API")
+                return search_results
 
         companies = hubspot.crm.companies.get_all(**api_kwargs)
         companies_dict = []
 
         for company in companies:
             try:
-                company_dict = {
-                    "id": company.id,
-                    "name": company.properties.get("name"),
-                    "city": company.properties.get("city"),
-                    "phone": company.properties.get("phone"),
-                    "state": company.properties.get("state"),
-                    "domain": company.properties.get("domain"),
-                    "industry": company.properties.get("industry"),
-                    "createdate": company.properties.get("createdate"),
-                    "lastmodifieddate": company.properties.get("hs_lastmodifieddate"),
-                }
-                companies_dict.append(company_dict)
+                companies_dict.append(self._company_to_dict(company))
             except Exception as e:
                 logger.warning(f"Error processing company {getattr(company, 'id', 'unknown')}: {str(e)}")
                 continue
 
         logger.info(f"Retrieved {len(companies_dict)} companies from HubSpot")
         return companies_dict
+
+    def _search_companies_by_conditions(
+        self,
+        hubspot: HubSpot,
+        filters: List[Dict[str, Any]],
+        properties: List[str],
+        limit: Optional[int],
+    ) -> List[Dict[str, Any]]:
+        return _execute_hubspot_search(
+            hubspot.crm.companies.search_api,
+            filters,
+            properties,
+            limit,
+            self._company_to_dict,
+        )
+
+    def _company_to_dict(self, company: Any) -> Dict[str, Any]:
+        properties = getattr(company, "properties", {}) or {}
+        return {
+            "id": company.id,
+            "name": properties.get("name"),
+            "city": properties.get("city"),
+            "phone": properties.get("phone"),
+            "state": properties.get("state"),
+            "domain": properties.get("domain"),
+            "industry": properties.get("industry"),
+            "createdate": properties.get("createdate"),
+            "lastmodifieddate": properties.get("hs_lastmodifieddate"),
+        }
 
     def create_companies(self, companies_data: List[Dict[Text, Any]]) -> None:
         if not companies_data:
@@ -304,7 +453,7 @@ class ContactsTable(APIResource):
 
     def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
         where_conditions = _normalize_filter_conditions(conditions)
-        contacts_df = pd.json_normalize(self.get_contacts(limit=1000, where_conditions=where_conditions))
+        contacts_df = pd.json_normalize(self.get_contacts(limit=200, where_conditions=where_conditions))
 
         if contacts_df.empty:
             raise ValueError(
@@ -325,7 +474,7 @@ class ContactsTable(APIResource):
 
     def remove(self, conditions: List[FilterCondition]) -> None:
         where_conditions = _normalize_filter_conditions(conditions)
-        contacts_df = pd.json_normalize(self.get_contacts(limit=1000, where_conditions=where_conditions))
+        contacts_df = pd.json_normalize(self.get_contacts(limit=200, where_conditions=where_conditions))
 
         if contacts_df.empty:
             raise ValueError(
@@ -356,6 +505,7 @@ class ContactsTable(APIResource):
             "lastname",
             "phone",
             "company",
+            "city",
             "website",
             "createdate",
             "lastmodifieddate",
@@ -376,6 +526,7 @@ class ContactsTable(APIResource):
             "lastname",
             "phone",
             "company",
+            "city",
             "website",
             "createdate",
             "lastmodifieddate",
@@ -389,10 +540,12 @@ class ContactsTable(APIResource):
         else:
             api_kwargs.pop("limit", None)
 
-        # Try using HubSpot search API if we have simple equality filters
         if normalized_conditions:
-            search_results = self._search_contacts_by_conditions(hubspot, normalized_conditions, properties, limit)
-            if search_results is not None:
+            filters = _build_hubspot_search_filters(
+                normalized_conditions, {"email", "id", "firstname", "lastname", "phone", "company", "city"}
+            )
+            if filters:
+                search_results = self._search_contacts_by_conditions(hubspot, filters, properties, limit)
                 logger.info(f"Retrieved {len(search_results)} contacts from HubSpot via search API")
                 return search_results
 
@@ -414,66 +567,17 @@ class ContactsTable(APIResource):
     def _search_contacts_by_conditions(
         self,
         hubspot: HubSpot,
-        where_conditions: List,
+        filters: List[Dict[str, Any]],
         properties: List[str],
         limit: Optional[int],
-    ) -> Optional[List[Dict[str, Any]]]:
-        filters = []
-
-        for condition in where_conditions:
-            if not isinstance(condition, (list, tuple)) or len(condition) < 3:
-                continue
-
-            operator, column, value = condition[0], condition[1], condition[2]
-            if operator != "=" or column not in {"email", "id"}:
-                continue
-
-            property_name = "hs_object_id" if column == "id" else column
-            filters.append(
-                {
-                    "propertyName": property_name,
-                    "operator": "EQ",
-                    "value": str(value),
-                }
-            )
-
-        if not filters:
-            return None
-
-        collected: List[Dict[str, Any]] = []
-        remaining = limit if limit is not None else float("inf")
-        after = None
-
-        while remaining > 0:
-            page_limit = min(int(remaining) if remaining != float("inf") else 100, 100)
-            search_request = {
-                "properties": properties,
-                "limit": page_limit,
-                "filterGroups": [{"filters": filters}],
-            }
-
-            if after is not None:
-                search_request["after"] = after
-
-            response = hubspot.crm.contacts.search_api.do_search(public_object_search_request=search_request)
-
-            results = getattr(response, "results", [])
-            for contact in results:
-                collected.append(self._contact_to_dict(contact))
-                if limit is not None and len(collected) >= limit:
-                    return collected
-
-            paging = getattr(response, "paging", None)
-            next_page = getattr(paging, "next", None) if paging else None
-            after = getattr(next_page, "after", None) if next_page else None
-
-            if after is None or (limit is not None and len(collected) >= limit):
-                break
-
-            if remaining != float("inf"):
-                remaining = limit - len(collected)
-
-        return collected
+    ) -> List[Dict[str, Any]]:
+        return _execute_hubspot_search(
+            hubspot.crm.contacts.search_api,
+            filters,
+            properties,
+            limit,
+            self._contact_to_dict,
+        )
 
     def _contact_to_dict(self, contact: Any) -> Dict[str, Any]:
         try:
@@ -485,6 +589,7 @@ class ContactsTable(APIResource):
                 "lastname": properties.get("lastname"),
                 "phone": properties.get("phone"),
                 "company": properties.get("company"),
+                "city": properties.get("city"),
                 "website": properties.get("website"),
                 "createdate": properties.get("createdate"),
                 "lastmodifieddate": properties.get("lastmodifieddate"),
@@ -498,6 +603,7 @@ class ContactsTable(APIResource):
                 "lastname": None,
                 "phone": None,
                 "company": None,
+                "city": None,
                 "website": None,
                 "createdate": None,
                 "lastmodifieddate": None,
@@ -583,7 +689,7 @@ class DealsTable(APIResource):
         sort: List[SortColumn] = None,
         targets: List[str] = None,
     ) -> pd.DataFrame:
-        deals_df = pd.json_normalize(self.get_deals(limit=limit))
+        deals_df = pd.json_normalize(self.get_deals(limit=limit, where_conditions=conditions))
         if deals_df.empty:
             deals_df = pd.DataFrame(columns=self._get_default_deal_columns())
         else:
@@ -595,7 +701,7 @@ class DealsTable(APIResource):
 
     def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
         where_conditions = _normalize_filter_conditions(conditions)
-        deals_df = pd.json_normalize(self.get_deals(limit=1000))
+        deals_df = pd.json_normalize(self.get_deals(limit=200, where_conditions=where_conditions))
 
         if deals_df.empty:
             raise ValueError(
@@ -616,7 +722,7 @@ class DealsTable(APIResource):
 
     def remove(self, conditions: List[FilterCondition]) -> None:
         where_conditions = _normalize_filter_conditions(conditions)
-        deals_df = pd.json_normalize(self.get_deals(limit=1000))
+        deals_df = pd.json_normalize(self.get_deals(limit=200, where_conditions=where_conditions))
 
         if deals_df.empty:
             raise ValueError(
@@ -667,25 +773,48 @@ class DealsTable(APIResource):
 
         return deals_df
 
-    def get_deals(self, **kwargs) -> List[Dict]:
+    def get_deals(
+        self,
+        limit: Optional[int] = None,
+        where_conditions: Optional[List] = None,
+        **kwargs,
+    ) -> List[Dict]:
+        normalized_conditions = _normalize_filter_conditions(where_conditions)
         hubspot = self.handler.connect()
-        deals = hubspot.crm.deals.get_all(**kwargs)
+        requested_properties = kwargs.get("properties", [])
+        default_properties = [
+            "dealname",
+            "amount",
+            "pipeline",
+            "closedate",
+            "dealstage",
+            "hubspot_owner_id",
+            "createdate",
+            "hs_lastmodifieddate",
+        ]
+
+        properties = list({*default_properties, *requested_properties})
+        api_kwargs = {**kwargs, "properties": properties}
+        if limit is not None:
+            api_kwargs["limit"] = limit
+        else:
+            api_kwargs.pop("limit", None)
+
+        if normalized_conditions:
+            filters = _build_hubspot_search_filters(
+                normalized_conditions, {"dealname", "amount", "dealstage", "pipeline", "closedate", "id"}
+            )
+            if filters:
+                search_results = self._search_deals_by_conditions(hubspot, filters, properties, limit)
+                logger.info(f"Retrieved {len(search_results)} deals from HubSpot via search API")
+                return search_results
+
+        deals = hubspot.crm.deals.get_all(**api_kwargs)
         deals_dict = []
 
         for deal in deals:
             try:
-                deal_dict = {
-                    "id": deal.id,
-                    "dealname": deal.properties.get("dealname", None),
-                    "amount": deal.properties.get("amount", None),
-                    "pipeline": deal.properties.get("pipeline", None),
-                    "closedate": deal.properties.get("closedate", None),
-                    "dealstage": deal.properties.get("dealstage", None),
-                    "hubspot_owner_id": deal.properties.get("hubspot_owner_id", None),
-                    "createdate": deal.properties.get("createdate", None),
-                    "hs_lastmodifieddate": deal.properties.get("hs_lastmodifieddate", None),
-                }
-                deals_dict.append(deal_dict)
+                deals_dict.append(self._deal_to_dict(deal))
             except Exception as e:
                 logger.error(f"Error processing deal {getattr(deal, 'id', 'unknown')}: {str(e)}")
                 raise ValueError(
@@ -695,6 +824,35 @@ class DealsTable(APIResource):
 
         logger.info(f"Retrieved {len(deals_dict)} deals from HubSpot")
         return deals_dict
+
+    def _search_deals_by_conditions(
+        self,
+        hubspot: HubSpot,
+        filters: List[Dict[str, Any]],
+        properties: List[str],
+        limit: Optional[int],
+    ) -> List[Dict[str, Any]]:
+        return _execute_hubspot_search(
+            hubspot.crm.deals.search_api,
+            filters,
+            properties,
+            limit,
+            self._deal_to_dict,
+        )
+
+    def _deal_to_dict(self, deal: Any) -> Dict[str, Any]:
+        properties = getattr(deal, "properties", {}) or {}
+        return {
+            "id": deal.id,
+            "dealname": properties.get("dealname", None),
+            "amount": properties.get("amount", None),
+            "pipeline": properties.get("pipeline", None),
+            "closedate": properties.get("closedate", None),
+            "dealstage": properties.get("dealstage", None),
+            "hubspot_owner_id": properties.get("hubspot_owner_id", None),
+            "createdate": properties.get("createdate", None),
+            "hs_lastmodifieddate": properties.get("hs_lastmodifieddate", None),
+        }
 
     def create_deals(self, deals_data: List[Dict[Text, Any]]) -> None:
         if not deals_data:

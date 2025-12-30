@@ -381,7 +381,8 @@ class OracleHandler(MetaDatabaseHandler):
                     # Fetch all results at once
                     result = cursor.fetchall()
                     columns = _get_colums(cursor)
-                    response = _make_df(result, columns)
+                    df = _make_df(result, columns)
+                    response = TableResponse(data=df, affected_rows=cursor.rowcount, columns=columns)
                 connection.commit()
             except Exception as e:
                 response = self._handle_query_exception(e, query, connection)

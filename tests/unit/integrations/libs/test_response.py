@@ -9,6 +9,7 @@ This module tests all response types used by handlers:
 """
 
 import pandas as pd
+import pytest
 
 from mindsdb.integrations.libs.response import (
     TableResponse,
@@ -187,7 +188,10 @@ class TestTableResponse:
 
         assert len(chunks) == 1
         pd.testing.assert_frame_equal(chunks[0], df)
-        pd.testing.assert_frame_equal(response.data_frame, df)
+
+        # after `iterate_no_save` result should be invalid
+        with pytest.raises(ValueError):
+            pd.testing.assert_frame_equal(response.data_frame, df)
 
     def test_iterate_no_save_with_generator(self):
         """Test iterate_no_save yields all chunks without saving."""
@@ -206,7 +210,10 @@ class TestTableResponse:
         pd.testing.assert_frame_equal(chunks[0], df)
         pd.testing.assert_frame_equal(chunks[1], df1)
         pd.testing.assert_frame_equal(chunks[2], df2)
-        pd.testing.assert_frame_equal(response.data_frame, df)
+
+        # after `iterate_no_save` result should be invalid
+        with pytest.raises(ValueError):
+            pd.testing.assert_frame_equal(response.data_frame, df)
 
 
 class TestNormalizeResponse:

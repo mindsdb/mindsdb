@@ -1,3 +1,4 @@
+from typing import Generator
 from dataclasses import dataclass
 
 import orjson
@@ -12,6 +13,18 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 @dataclass
 class SQLAnswer:
+    """Container for SQL query execution results and metadata.
+
+    Attributes:
+        resp_type: Type of response (OK, ERROR, TABLE, COLUMNS_TABLE).
+        result_set: Query result data as a ResultSet object.
+        status: Status code for the response.
+        state_track: List of state tracking information.
+        error_code: Error code if query execution failed.
+        error_message: Human-readable error message if query failed.
+        affected_rows: Number of rows affected by the query (for DML operations).
+        mysql_types: List of MySQL data types for result columns.
+    """
     resp_type: RESPONSE_TYPE = RESPONSE_TYPE.OK
     result_set: ResultSet | None = None
     status: int | None = None
@@ -22,14 +35,35 @@ class SQLAnswer:
     mysql_types: list[MYSQL_DATA_TYPE] | None = None
 
     @property
-    def type(self):
+    def type(self) -> RESPONSE_TYPE:
+        """Get the response type.
+
+        Returns:
+            RESPONSE_TYPE: The type of this SQL response.
+        """
         return self.resp_type
 
-    def stream_http_response_sse(self, context: dict | None):
+    def stream_http_response_sse(self, context: dict | None) -> Generator[str, None, None]:
+        """Stream response in Server-Sent Events (SSE) format.
+
+        Args:
+            context: Optional context information.
+
+        Yields:
+            str: SSE-formatted data lines (prefixed with "data: ").
+        """
         for piece in self.stream_http_response_jsonlines(context=context):
             yield f"data: {piece}\n"
 
-    def stream_http_response_jsonlines(self, context: dict | None):
+    def stream_http_response_jsonlines(self, context: dict | None) -> Generator[str, None, None]:
+        """Stream response as newline-delimited JSON (JSONL).
+
+        Args:
+            context: Optional context information.
+
+        Yields:
+            str: JSON-encoded lines terminated with newline characters.
+        """
         _default_json = CustomJSONEncoder().default
 
         if self.resp_type in (RESPONSE_TYPE.OK, RESPONSE_TYPE.ERROR):
@@ -46,7 +80,7 @@ class SQLAnswer:
             ).decode()
             + "\n"
         )
-        # import pandas as pd
+
         for el in self.result_set.stream_data():
             el.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
             yield (
@@ -59,6 +93,14 @@ class SQLAnswer:
             )
 
     def dump_http_response(self, context: dict | None = None) -> dict:
+        """Serialize the complete response as a single dictionary.
+
+        Args:
+            context: Optional context information.
+
+        Returns:
+            dict: Serialized response.
+        """
         if context is None:
             context = {}
         if self.resp_type == RESPONSE_TYPE.OK:

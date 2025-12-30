@@ -499,9 +499,12 @@ class TestKB(BaseExecutorDummyML):
             # --- stream mode ---
             # Mock native_query to return TableResponse with generator
             mock_handler().stream_response = True
+
             def native_query_with_generator(*args, **kwargs):
                 from mindsdb.integrations.libs.response import TableResponse
+
                 return TableResponse(data_generator=stream_f())
+
             mock_handler().native_query.side_effect = native_query_with_generator
 
             # test iterate
@@ -531,9 +534,12 @@ class TestKB(BaseExecutorDummyML):
             # --- general mode ---
             # Mock native_query to return TableResponse with full data
             mock_handler().stream_response = False
+
             def native_query_without_generator(*args, **kwargs):
                 from mindsdb.integrations.libs.response import TableResponse
+
                 return TableResponse(data=df)
+
             mock_handler().native_query.side_effect = native_query_without_generator
 
             # test iterate

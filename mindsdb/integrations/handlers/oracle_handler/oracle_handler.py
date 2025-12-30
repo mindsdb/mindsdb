@@ -313,9 +313,7 @@ class OracleHandler(MetaDatabaseHandler):
 
         return response
 
-    def native_query(
-        self, query: str, stream: bool = True, **kwargs
-    ) -> TableResponse | OkResponse | ErrorResponse:
+    def native_query(self, query: str, stream: bool = True, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
         """Executes a SQL query on the Oracle database and returns the result.
 
         Args:

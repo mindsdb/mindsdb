@@ -150,7 +150,7 @@ def _execute_hubspot_search(
     after = None
 
     while remaining > 0:
-        page_limit = min(int(remaining) if remaining != float("inf") else 200,200)
+        page_limit = min(int(remaining) if remaining != float("inf") else 200, 200)
         search_request = {
             "filterGroups": [{"filters": filters}],
             "properties": properties,
@@ -542,7 +542,8 @@ class ContactsTable(APIResource):
 
         if normalized_conditions:
             filters = _build_hubspot_search_filters(
-                normalized_conditions, {"email", "id", "firstname", "lastname", "phone", "company", "city"}
+                normalized_conditions,
+                {"email", "id", "firstname", "lastname", "phone", "company", "city", "website"},
             )
             if filters:
                 search_results = self._search_contacts_by_conditions(hubspot, filters, properties, limit)

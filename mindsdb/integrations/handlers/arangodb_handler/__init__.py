@@ -3,9 +3,9 @@ from mindsdb.integrations.handlers.arangodb_handler.arangodb_handler import Aran
 
 title = 'ArangoDB'
 name = 'arangodb'
-type = HANDLER_TYPE.DATA
+handler_type = HANDLER_TYPE.DATA
 icon_path = 'icon.svg'
 
 __all__ = [
-    'ArangoDBHandler', 'title', 'name', 'type', 'icon_path'
+    'ArangoDBHandler', 'title', 'name', 'handler_type', 'icon_path'
 ]

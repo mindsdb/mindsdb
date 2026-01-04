@@ -23,6 +23,7 @@ class DeepSeekHandler(OpenAIHandler):
         """
         Validate the DeepSeek API credentials on engine creation.
         """
+        connection_args = connection_args.copy()
         # Set default API base if not provided
         if 'api_base' not in connection_args:
              connection_args['api_base'] = self.api_base

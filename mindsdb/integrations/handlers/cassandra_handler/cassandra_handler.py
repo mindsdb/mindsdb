@@ -1,4 +1,5 @@
 import tempfile
+import os
 
 import pandas as pd
 import requests
@@ -91,19 +92,28 @@ class CassandraHandler(DatabaseHandler):
             # Check if the secure bundle is a URL
             if secure_connect_bundle.startswith(('http://', 'https://')):
                 secure_connect_bundle = self.download_secure_bundle(secure_connect_bundle)
+                temp_bundle_path = secure_connect_bundle
+            else:
+                temp_bundle_path = None
+                
             connection_props['cloud'] = {
                 'secure_connect_bundle': secure_connect_bundle
             }
         else:
+            temp_bundle_path = None
             connection_props['contact_points'] = [self.connection_args['host']]
             connection_props['port'] = int(self.connection_args['port'])
 
-        cluster = Cluster(**connection_props)
-        session = cluster.connect(self.connection_args.get('keyspace'))
+        try:
+            cluster = Cluster(**connection_props)
+            session = cluster.connect(self.connection_args.get('keyspace'))
 
-        self.is_connected = True
-        self.session = session
-        return self.session
+            self.is_connected = True
+            self.session = session
+            return self.session
+        finally:
+            if temp_bundle_path and os.path.exists(temp_bundle_path):
+                os.remove(temp_bundle_path)
 
     def check_connection(self) -> StatusResponse:
         """

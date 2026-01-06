@@ -84,16 +84,11 @@ class DataCatalogRetriever:
         tables_metadata_str = ""
 
         # Convert all DataFrame column names to uppercase for consistency.
-        if not tables_df.empty:
-            tables_df.columns = [str(c).upper() for c in tables_df.columns]
-        if not columns_df.empty:
-            columns_df.columns = [str(c).upper() for c in columns_df.columns]
-        if not column_stats_df.empty:
-            column_stats_df.columns = [str(c).upper() for c in column_stats_df.columns]
-        if not primary_keys_df.empty:
-            primary_keys_df.columns = [str(c).upper() for c in primary_keys_df.columns]
-        if not foreign_keys_df.empty:
-            foreign_keys_df.columns = [str(c).upper() for c in foreign_keys_df.columns]
+        tables_df.columns = tables_df.columns.astype(str).str.upper()
+        columns_df.columns = columns_df.columns.astype(str).str.upper()
+        column_stats_df.columns = column_stats_df.columns.astype(str).str.upper()
+        primary_keys_df.columns = primary_keys_df.columns.astype(str).str.upper()
+        foreign_keys_df.columns = foreign_keys_df.columns.astype(str).str.upper()
 
         for _, table_row in tables_df.iterrows():
             table_columns_df = columns_df[columns_df["TABLE_NAME"] == table_row["TABLE_NAME"]]

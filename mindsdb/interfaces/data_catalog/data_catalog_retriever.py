@@ -200,14 +200,6 @@ class DataCatalogRetriever:
         """
         Construct a formatted string representation of a single column.
         """
-
-        def _sanitize_data_type(data_type: str) -> str:
-            """
-            Sanitize the data type string by removing excessive whitespace and newlines.
-            """
-            return " ".join(data_type.split())
-
-        column_row["DATA_TYPE"] = _sanitize_data_type(column_row["DATA_TYPE"])
         pad = " " * 4
         column_str = f"{column_row['COLUMN_NAME']} ({column_row['DATA_TYPE']}):"
 

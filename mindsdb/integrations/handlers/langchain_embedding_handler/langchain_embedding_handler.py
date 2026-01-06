@@ -90,7 +90,8 @@ def construct_model_from_args(args: Dict) -> Embeddings:
         class_name = EMBEDDING_MODELS[class_name]
     MODEL_CLASS = get_langchain_class(class_name)
     serialized_dict = copy.deepcopy(args)
-
+    if "base_url" in serialized_dict and "openai_api_base" not in serialized_dict:
+        serialized_dict["openai_api_base"] = serialized_dict["base_url"]
     # Make sure we don't pass in unnecessary arguments.
     if issubclass(MODEL_CLASS, BaseModel):
         serialized_dict = {

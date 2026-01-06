@@ -10,7 +10,9 @@ from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleServiceAccountOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import (
+    GoogleServiceAccountOAuth2Manager,
+)
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -54,7 +56,9 @@ class BigQueryHandler(MetaDatabaseHandler):
 
         # Mandatory connection parameters
         if not all(key in self.connection_data for key in ["project_id", "dataset"]):
-            raise ValueError("Required parameters (project_id, dataset) must be provided.")
+            raise ValueError(
+                "Required parameters (project_id, dataset) must be provided."
+            )
 
         service_account_json = self.connection_data.get("service_account_json")
         if isinstance(service_account_json, str):
@@ -63,10 +67,14 @@ class BigQueryHandler(MetaDatabaseHandler):
                 service_account_json = json.loads(service_account_json)
             except json.decoder.JSONDecodeError:
                 raise ValueError("'service_account_json' is not valid JSON")
-        if isinstance(service_account_json, dict) and isinstance(service_account_json.get("private_key"), str):
+        if isinstance(service_account_json, dict) and isinstance(
+            service_account_json.get("private_key"), str
+        ):
             # some editors may escape new line symbol, also replace windows-like newlines
             service_account_json["private_key"] = (
-                service_account_json["private_key"].replace("\\n", "\n").replace("\r\n", "\n")
+                service_account_json["private_key"]
+                .replace("\\n", "\n")
+                .replace("\r\n", "\n")
             )
 
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
@@ -75,7 +83,9 @@ class BigQueryHandler(MetaDatabaseHandler):
         )
         credentials = google_sa_oauth2_manager.get_oauth2_credentials()
 
-        client = Client(project=self.connection_data["project_id"], credentials=credentials)
+        client = Client(
+            project=self.connection_data["project_id"], credentials=credentials
+        )
         self.is_connected = True
         self.connection = client
         return self.connection
@@ -100,14 +110,18 @@ class BigQueryHandler(MetaDatabaseHandler):
 
         try:
             connection = self.connect()
-            connection.query("SELECT 1;", timeout=10, retry=DEFAULT_RETRY.with_deadline(10))
+            connection.query(
+                "SELECT 1;", timeout=10, retry=DEFAULT_RETRY.with_deadline(10)
+            )
 
             # Check if the dataset exists
             connection.get_dataset(self.connection_data["dataset"])
 
             response.success = True
         except (BadRequest, ValueError) as e:
-            logger.error(f"Error connecting to BigQuery {self.connection_data['project_id']}, {e}!")
+            logger.error(
+                f"Error connecting to BigQuery {self.connection_data['project_id']}, {e}!"
+            )
             response.error_message = e
         except NotFound:
             response.error_message = (
@@ -142,7 +156,9 @@ class BigQueryHandler(MetaDatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f"Error running query: {query} on {self.connection_data['project_id']}!")
+            logger.error(
+                f"Error running query: {query} on {self.connection_data['project_id']}!"
+            )
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
         return response
 
@@ -259,7 +275,9 @@ class BigQueryHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_column_statistics_for_table(self, table_name: str, columns: list) -> Response:
+    def meta_get_column_statistics_for_table(
+        self, table_name: str, columns: list
+    ) -> Response:
         """
         Retrieves statistics for the specified columns in a table.
 
@@ -270,14 +288,51 @@ class BigQueryHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the column statistics.
         """
+        # Check column data types
+        column_types_query = f"""
+            SELECT column_name, data_type
+            FROM `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.COLUMNS`
+            WHERE table_name = '{table_name}'
+        """
+        column_types_result = self.native_query(column_types_query)
+
+        if column_types_result.resp_type != RESPONSE_TYPE.TABLE:
+            logger.error(f"Error retrieving column types for table {table_name}")
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Could not retrieve column types for table {table_name}",
+            )
+
+        column_type_map = dict(
+            zip(
+                column_types_result.data_frame["column_name"],
+                column_types_result.data_frame["data_type"],
+            )
+        )
+
+        # Types that don't support MIN/MAX aggregations
+        UNSUPPORTED_MINMAX_PREFIXES = ("ARRAY", "STRUCT", "RECORD")
+        UNSUPPORTED_MINMAX_TYPES = ("GEOGRAPHY", "JSON", "BYTES")
+
+        def supports_minmax(data_type: str) -> bool:
+            """Check if a BigQuery data type supports MIN/MAX operations."""
+            if data_type is None:
+                return False
+            data_type_upper = data_type.upper()
+            if any(
+                data_type_upper.startswith(prefix)
+                for prefix in UNSUPPORTED_MINMAX_PREFIXES
+            ):
+                return False
+            if data_type_upper in UNSUPPORTED_MINMAX_TYPES:
+                return False
+            return True
+
         # To avoid hitting BigQuery's query size limits, we will chunk the columns into batches.
-        # This is because the queries are combined using UNION ALL, which can lead to very large queries if there are many columns.
         BATCH_SIZE = 20
 
         def chunked(lst, n):
-            """
-            Yields successive n-sized chunks from lst.
-            """
+            """Yields successive n-sized chunks from lst."""
             for i in range(0, len(lst), n):
                 yield lst[i : i + n]
 
@@ -285,22 +340,45 @@ class BigQueryHandler(MetaDatabaseHandler):
         for column_batch in chunked(columns, BATCH_SIZE):
             batch_queries = []
             for column in column_batch:
-                batch_queries.append(
-                    f"""
-                    SELECT
-                        '{table_name}' AS table_name,
-                        '{column}' AS column_name,
-                        SAFE_DIVIDE(COUNTIF({column} IS NULL), COUNT(*)) * 100 AS null_percentage,
-                        CAST(MIN(`{column}`) AS STRING) AS minimum_value,
-                        CAST(MAX(`{column}`) AS STRING) AS maximum_value,
-                        COUNT(DISTINCT {column}) AS distinct_values_count
-                    FROM
-                        `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.{table_name}`
-                    """
-                )
+                data_type = column_type_map.get(column)
 
-            query = " UNION ALL ".join(batch_queries)
-            queries.append(query)
+                if supports_minmax(data_type):
+                    # Full statistics for supported types
+                    batch_queries.append(
+                        f"""
+                        SELECT
+                            '{table_name}' AS table_name,
+                            '{column}' AS column_name,
+                            SAFE_DIVIDE(COUNTIF(`{column}` IS NULL), COUNT(*)) * 100 AS null_percentage,
+                            CAST(MIN(`{column}`) AS STRING) AS minimum_value,
+                            CAST(MAX(`{column}`) AS STRING) AS maximum_value,
+                            COUNT(DISTINCT `{column}`) AS distinct_values_count
+                        FROM
+                            `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.{table_name}`
+                        """
+                    )
+                else:
+                    # Limited statistics for complex types (no MIN/MAX/COUNT DISTINCT)
+                    logger.info(
+                        f"Skipping MIN/MAX for column {column} with unsupported type: {data_type}"
+                    )
+                    batch_queries.append(
+                        f"""
+                        SELECT
+                            '{table_name}' AS table_name,
+                            '{column}' AS column_name,
+                            SAFE_DIVIDE(COUNTIF(`{column}` IS NULL), COUNT(*)) * 100 AS null_percentage,
+                            CAST(NULL AS STRING) AS minimum_value,
+                            CAST(NULL AS STRING) AS maximum_value,
+                            CAST(NULL AS INT64) AS distinct_values_count
+                        FROM
+                            `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.{table_name}`
+                        """
+                    )
+
+            if batch_queries:
+                query = " UNION ALL ".join(batch_queries)
+                queries.append(query)
 
         results = []
         for query in queries:
@@ -309,16 +387,26 @@ class BigQueryHandler(MetaDatabaseHandler):
                 if result.resp_type == RESPONSE_TYPE.TABLE:
                     results.append(result.data_frame)
                 else:
-                    logger.error(f"Error retrieving column statistics for table {table_name}: {result.error_message}")
+                    logger.error(
+                        f"Error retrieving column statistics for table {table_name}: {result.error_message}"
+                    )
             except Exception as e:
-                logger.error(f"Exception occurred while retrieving column statistics for table {table_name}: {e}")
+                logger.error(
+                    f"Exception occurred while retrieving column statistics for table {table_name}: {e}"
+                )
 
         if not results:
-            logger.warning(f"No column statistics could be retrieved for table {table_name}.")
-            return Response(
-                RESPONSE_TYPE.ERROR, error_message=f"No column statistics could be retrieved for table {table_name}."
+            logger.warning(
+                f"No column statistics could be retrieved for table {table_name}."
             )
-        return Response(RESPONSE_TYPE.TABLE, pd.concat(results, ignore_index=True) if results else pd.DataFrame())
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"No column statistics could be retrieved for table {table_name}.",
+            )
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            pd.concat(results, ignore_index=True) if results else pd.DataFrame(),
+        )
 
     def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
         """

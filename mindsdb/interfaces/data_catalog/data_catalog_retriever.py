@@ -84,11 +84,16 @@ class DataCatalogRetriever:
         tables_metadata_str = ""
 
         # Convert all DataFrame column names to uppercase for consistency.
-        tables_df.columns = tables_df.columns.str.upper()
-        columns_df.columns = columns_df.columns.str.upper()
-        column_stats_df.columns = column_stats_df.columns.str.upper()
-        primary_keys_df.columns = primary_keys_df.columns.str.upper()
-        foreign_keys_df.columns = foreign_keys_df.columns.str.upper()
+        if not tables_df.empty:
+            tables_df.columns = [str(c).upper() for c in tables_df.columns]
+        if not columns_df.empty:
+            columns_df.columns = [str(c).upper() for c in columns_df.columns]
+        if not column_stats_df.empty:
+            column_stats_df.columns = [str(c).upper() for c in column_stats_df.columns]
+        if not primary_keys_df.empty:
+            primary_keys_df.columns = [str(c).upper() for c in primary_keys_df.columns]
+        if not foreign_keys_df.empty:
+            foreign_keys_df.columns = [str(c).upper() for c in foreign_keys_df.columns]
 
         for _, table_row in tables_df.iterrows():
             table_columns_df = columns_df[columns_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
@@ -195,6 +200,14 @@ class DataCatalogRetriever:
         """
         Construct a formatted string representation of a single column.
         """
+
+        def _sanitize_data_type(data_type: str) -> str:
+            """
+            Sanitize the data type string by removing excessive whitespace and newlines.
+            """
+            return " ".join(data_type.split())
+
+        column_row["DATA_TYPE"] = _sanitize_data_type(column_row["DATA_TYPE"])
         pad = " " * 4
         column_str = f"{column_row['COLUMN_NAME']} ({column_row['DATA_TYPE']}):"
 

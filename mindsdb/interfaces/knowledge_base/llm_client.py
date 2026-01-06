@@ -10,15 +10,26 @@ try:
     from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
 except ImportError:
 
-    def retry_with_exponential_backoff(func):
+    def retry_with_exponential_backoff(
+        initial_delay: float = 1,
+        hour_budget: float = 0.3,
+        jitter: bool = False,
+        exponential_base: int = 2,
+        wait_errors: tuple = (),
+        status_errors: tuple = (),
+    ):
         """
-        An empty decorator
+        Fallback decorator factory that matches the signature of the real decorator.
+        Returns a simple pass-through decorator when the real implementation is not available.
         """
-
-        def wrapper(*args, **kwargs):
-            return func(*args, **kwargs)
-
-        return wrapper
+        def _retry_with_exponential_backoff(func):
+            """
+            An empty decorator that just passes through the function
+            """
+            def wrapper(*args, **kwargs):
+                return func(*args, **kwargs)
+            return wrapper
+        return _retry_with_exponential_backoff
 
 
 def run_in_batches(batch_size):

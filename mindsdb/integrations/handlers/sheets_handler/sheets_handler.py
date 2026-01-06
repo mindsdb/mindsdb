@@ -224,7 +224,24 @@ class SheetsHandler(DatabaseHandler):
             HandlerStatusResponse
         """
         url = f"https://docs.google.com/spreadsheets/d/{self.connection_data['spreadsheet_id']}/gviz/tq?tqx=out:csv&sheet={self.connection_data['sheet_name']}"
-        self.sheet = pd.read_csv(url, on_bad_lines='skip')
+        try:
+            self.sheet = pd.read_csv(url, on_bad_lines='skip')
+        except pd.errors.EmptyDataError:
+            error_msg = (
+                f"Google Sheet '{self.connection_data['sheet_name']}' "
+                f"(ID: {self.connection_data['spreadsheet_id']}) is empty or has no columns. "
+                f"Please ensure the sheet contains data."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        except Exception as e:
+            error_msg = (
+                f"Error reading Google Sheet '{self.connection_data['sheet_name']}' "
+                f"(ID: {self.connection_data['spreadsheet_id']}): {str(e)}"
+            )
+            logger.error(error_msg)
+            raise
+        
         self.connection = duckdb.connect()
         self.connection.register(self.connection_data['sheet_name'], self.sheet)
         self.is_connected = True

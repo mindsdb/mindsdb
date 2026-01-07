@@ -1,4 +1,5 @@
 import gc
+from importlib import import_module
 
 gc.disable()
 
@@ -16,17 +17,30 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
 from mindsdb.api.common.middleware import PATAuthMiddleware
-from mindsdb.api.a2a import get_a2a_app
-from mindsdb.api.mcp import get_mcp_app
 
 gc.enable()
 
 logger = log.getLogger(__name__)
 
-
 async def health_check(request):
     """Async health check that bypasses the WSGI worker pool."""
     return JSONResponse({"status": "ok"})
+
+def _mount_optional_api(name: str, mount_path: str, get_app_fn, routes):
+    try:
+        optional_app = get_app_fn()
+    except ImportError as exc:
+        logger.warning(
+            "%s support is disabled (%s). To enable it, install the %s extra: pip install 'mindsdb[%s]'",
+            name,
+            exc,
+            name,
+            name.lower(),
+        )
+        return
+
+    optional_app.add_middleware(PATAuthMiddleware)
+    routes.append(Mount(mount_path, app=optional_app))
 
 
 def start(verbose, app: Flask = None, is_restart: bool = False):
@@ -46,13 +60,18 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
     # This ensures health checks respond even when all workers are blocked
     routes.append(Route("/api/util/ping", health_check, methods=["GET"]))
 
-    # Specific mounts
-    a2a = get_a2a_app()
-    a2a.add_middleware(PATAuthMiddleware)
-    mcp = get_mcp_app()
-    mcp.add_middleware(PATAuthMiddleware)
-    routes.append(Mount("/a2a", app=a2a))
-    routes.append(Mount("/mcp", app=mcp))
+    _mount_optional_api(
+        "A2A",
+        "/a2a",
+        lambda: import_module("mindsdb.api.a2a").get_a2a_app(),
+        routes,
+    )
+    _mount_optional_api(
+        "MCP",
+        "/mcp",
+        lambda: import_module("mindsdb.api.mcp").get_mcp_app(),
+        routes,
+    )
 
     # Root app LAST so it won't shadow the others
     routes.append(

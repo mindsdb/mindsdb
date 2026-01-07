@@ -2,3 +2,4 @@ fsspec
 gcsfs
 google-auth
 google-cloud-storage
+aiohttp>=3.13.3 # not directly required, pinned by Snyk to avoid a vulnerability

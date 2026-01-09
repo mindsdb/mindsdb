@@ -71,7 +71,7 @@ jobs:
       - uses: mindsdb/github-actions/docker-bake@main
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
-          target: cloud-cpu
+          target: snowflake
           platforms: linux/amd64
           push-cache: false
 

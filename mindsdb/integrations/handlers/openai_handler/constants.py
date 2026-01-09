@@ -1,6 +1,14 @@
 OPENAI_API_BASE = "https://api.openai.com/v1"
 
-CHAT_MODELS_PREFIXES = ("gpt-3.5", "gpt-3.5", "gpt-3.5", "gpt-4", "o3-mini", "o1-mini")
+# Updated Jan 2026: streamlined support for GPT-5, GPT-4, and O-series families
+CHAT_MODELS_PREFIXES = (
+    "gpt-5",    # Covers all GPT-5 variants
+    "gpt-4",    # Covers GPT-4, GPT-4o, GPT-4o-mini
+    "o1",       # Covers o1, o1-mini, o1-pro
+    "o3",       # Covers o3, o3-mini
+    "o4",       # Covers o4, o4-mini
+    "gpt-3.5",  # Legacy
+)
 COMPLETION_MODELS = ("babbage-002", "davinci-002")
 FINETUNING_MODELS = ("gpt-3.5-turbo", "babbage-002", "davinci-002", "gpt-4")
 COMPLETION_LEGACY_BASE_MODELS = ("davinci", "curie", "babbage", "ada")

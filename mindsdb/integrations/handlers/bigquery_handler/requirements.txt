@@ -1,3 +1,4 @@
 google-cloud-bigquery[pandas]
 sqlalchemy-bigquery
 -r mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt
+urllib3>=2.6.3 # not directly required, pinned by Snyk to avoid a vulnerability

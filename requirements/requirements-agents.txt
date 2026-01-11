@@ -1,0 +1,28 @@
+openai<1.100.0,>=1.58.1
+
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-core==0.3.72
+langchain-experimental==0.3.4
+langchain-nvidia-ai-endpoints==0.3.3
+langchain-openai==0.3.6
+langchain-anthropic==0.2.4
+langchain-text-splitters==0.3.9
+langchain-google-genai>=2.0.0
+langchain_writer==0.3.2 # Required for Writer agent
+
+
+# When using agents, some LLMs may require the 'transformers' library (like Ollama):
+transformers >= 4.42.4
+
+fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
+
+# Required for KB
+mindsdb-evaluator == 0.0.21
+litellm==1.63.14
+mcp~=1.10.1 # Required for MCP server
+
+# A2A requirements
+httpx==0.28.1
+jwcrypto==1.5.6
+typing-extensions==4.13.2

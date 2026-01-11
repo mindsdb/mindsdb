@@ -341,11 +341,22 @@ if __name__ == "__main__":
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)
 
-    if config.cmd_args.update_gui:
-        from mindsdb.api.http.initialize import initialize_static
+    if config.cmd_args.update_gui or config.cmd_args.load_tokenizer:
+        if config.cmd_args.update_gui:
+            from mindsdb.api.http.initialize import initialize_static
 
-        logger.info("Updating the GUI version")
-        initialize_static()
+            logger.info("Updating the GUI version")
+            initialize_static()
+
+        if config.cmd_args.load_tokenizer:
+            try:
+                from langchain_core.language_models import get_tokenizer
+
+                get_tokenizer()
+                logger.info("Tokenizer successfully loaded")
+            except Exception:
+                logger.info("Failed to load tokenizer: ", exc_info=True)
+
         sys.exit(0)
 
     config.raise_warnings(logger=logger)
@@ -482,7 +493,7 @@ if __name__ == "__main__":
     if config.cmd_args.ml_task_queue_consumer is True:
         trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
 
-    create_pid_file()
+    create_pid_file(config)
 
     for trunc_process_data in trunc_processes_struct.values():
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:
@@ -577,6 +588,12 @@ if __name__ == "__main__":
     ioloop.run_until_complete(wait_apis_start())
 
     threading.Thread(target=do_clean_process_marks, name="clean_process_marks").start()
+    if config["logging"]["resources_log"]["enabled"] is True:
+        threading.Thread(
+            target=log.resources_log_thread,
+            args=(_stop_event, config["logging"]["resources_log"]["interval"]),
+            name="resources_log",
+        ).start()
 
     ioloop.run_until_complete(gather_apis())
     ioloop.close()

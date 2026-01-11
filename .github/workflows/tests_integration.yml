@@ -58,11 +58,9 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install -r requirements/requirements-test.txt
-
     - name: Run Integration Tests on Deploy
       run: |
           make integration_tests_slow
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         INTERNAL_URL: ${{ vars.MINDSDB_INTERNAL_URL }}
-    

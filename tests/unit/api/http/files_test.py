@@ -57,7 +57,7 @@ def test_delete_nonexistent_file(client):
 
 def test_put_file_invalid_url(client):
     """Test uploading with an invalid URL"""
-    data = {"source_type": "url", "source": "not_a_url", "file": "bad.txt"}
+    data = {"source_type": "url", "source": "not_a_url"}
     response = client.put(
         "/api/files/bad.txt",
         json=data,

@@ -137,7 +137,7 @@ class RaindropAPIClient:
             wait_time = 1.0 - (current_time - oldest_request)
 
             if wait_time > 0:
-                logger.debug(".2f")
+                logger.debug(f"Rate limit: waiting {wait_time:.2f} seconds")
                 time.sleep(wait_time)
                 # Update current_time after sleep
                 current_time = time.time()

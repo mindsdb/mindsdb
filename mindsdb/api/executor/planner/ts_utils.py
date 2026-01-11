@@ -83,7 +83,7 @@ def recursively_check_join_identifiers_for_ambiguity(item, aliased_fields=None):
             if aliased_fields is not None and item.parts[0] in aliased_fields:
                 # is alias
                 return
-            raise PlanningException(f'Ambigous identifier {str(item)}, provide table name for operations on a join.')
+            raise PlanningException(f'Ambiguous identifier {str(item)}, provide table name for operations on a join.')
     elif isinstance(item, Operation):
         recursively_check_join_identifiers_for_ambiguity(item.args, aliased_fields=aliased_fields)
     elif isinstance(item, OrderBy):

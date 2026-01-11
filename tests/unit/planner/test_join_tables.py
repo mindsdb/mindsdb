@@ -446,7 +446,7 @@ class TestPlanJoinTables:
     #                                              BinaryOperation('=',
     #                                                              args=[Identifier('column3'),
     #                                                                    Constant(0)]),
-    #                                              # Ambigous column: no idea what table column3 comes from
+    #                                              # Ambiguous column: no idea what table column3 comes from
     #                                          ]
     #                                          )
     #                    )

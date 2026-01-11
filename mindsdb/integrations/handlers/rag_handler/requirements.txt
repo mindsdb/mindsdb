@@ -3,3 +3,8 @@ faiss-cpu
 html2text
 writerai~=1.1.0
 sentence-transformers # needed for HuggingFaceEmbeddings from langchain-community
+# For now workaround to install all langchain dependencies
+#TODO we are depricating langchain and rag in next version so this is temporary solution
+langchain-community==0.3.27
+langchain-core==0.3.72
+langchain-text-splitters==0.3.9

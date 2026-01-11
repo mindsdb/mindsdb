@@ -3,8 +3,8 @@ import datetime
 from typing import Any
 from array import array
 
-import numpy as np
 import orjson
+import numpy as np
 from numpy import dtype as np_dtype
 import pandas as pd
 from pandas.api import types as pd_types
@@ -16,9 +16,11 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     DATA_C_TYPE_MAP,
     CTypeProperties,
     CHARSET_NUMBERS,
+    NULL_VALUE,
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 
 logger = log.getLogger(__name__)
 
@@ -81,6 +83,7 @@ def column_to_mysql_column_dict(column: Column, database_name: str | None = None
         "size": type_properties.size,
         "flags": type_properties.flags,
         "type": type_properties.code,
+        "type_enum": column.type,
         "charset": charset,
     }
     return result
@@ -389,7 +392,7 @@ def dump_result_set_to_mysql(
 
         # inplace modification of dt types raise SettingWithCopyWarning, so do regular replace
         # we may split this operation for dt and other types for optimisation
-        df[i] = series.replace([np.NaN, pd.NA, pd.NaT], None)
+        df[i] = series.replace([np.nan, pd.NA, pd.NaT], None)
 
     columns_dicts = [column_to_mysql_column_dict(column) for column in result_set.columns]
 
@@ -407,3 +410,107 @@ def dump_result_set_to_mysql(
                     column_info["size"] = 1
 
     return df, columns_dicts
+
+
+def dump_columns_info(result_set: ResultSet, infer_column_size: bool = False) -> list[dict[str, str | int]]:
+    """Preare list of columns attrs that are required for dump to mysql protocol
+
+    Args:
+        result_set (ResultSet): result set
+        infer_column_size (bool): If True, infer the 'size' attribute of the column from the data.
+                                  Exact size is not necessary, approximate is enough.
+
+    Returns:
+        list[dict[str, str | int]]: list of MySQL column dictionaries.
+    """
+    df = result_set.get_raw_df()
+
+    for i, column in enumerate(result_set.columns):
+        series = df[i]
+        if isinstance(column.type, MYSQL_DATA_TYPE) is False:
+            column.type = get_mysql_data_type_from_series(series)
+
+    columns_dicts = [column_to_mysql_column_dict(column) for column in result_set.columns]
+
+    if infer_column_size and any(column_info.get("size") is None for column_info in columns_dicts):
+        if len(df) == 0:
+            for column_info in columns_dicts:
+                if column_info["size"] is None:
+                    column_info["size"] = 1
+        else:
+            sample = df.head(100)
+            for i, column_info in enumerate(columns_dicts):
+                try:
+                    column_info["size"] = sample[sample.columns[i]].astype(str).str.len().max()
+                except Exception:
+                    column_info["size"] = 1
+
+    return columns_dicts
+
+
+def serialize_bytes(data: bytes) -> bytes:
+    """serialize bytes to mysql protocol
+
+    Args:
+        data (bytes): the bytes to serialize
+
+    Returns:
+        bytes: the serialized bytes
+    """
+    if data == NULL_VALUE:
+        return data
+    else:
+        return Datum.serialize_bytes(data)
+
+
+def dump_chunks(df: pd.DataFrame, columns_info: list[dict], chunk_size: int):
+    """Serialize dataframe values to mysql TEXT protocol
+
+    Args:
+        df (pd.DataFrame): the dataframe to serialize
+        columns_info (list[dict]): the columns info
+        chunk_size (int): the chunk size
+
+    Yields:
+        list[bytes]: the serialized dataframe values
+    """
+    start = 0
+    while start < len(df):
+        serieces = []
+        for i, column in enumerate(columns_info):
+            series = df[i][start : start + chunk_size]
+            match column["type_enum"]:
+                case MYSQL_DATA_TYPE.BOOL | MYSQL_DATA_TYPE.BOOLEAN:
+                    series = series.apply(_dump_bool)
+                case MYSQL_DATA_TYPE.DATE:
+                    series = _handle_series_as_date(series)
+                case MYSQL_DATA_TYPE.DATETIME:
+                    series = _handle_series_as_datetime(series)
+                case MYSQL_DATA_TYPE.TIME:
+                    series = _handle_series_as_time(series)
+                case MYSQL_DATA_TYPE.VECTOR:
+                    series = _handle_series_as_vector(series)
+                case (
+                    MYSQL_DATA_TYPE.INT
+                    | MYSQL_DATA_TYPE.TINYINT
+                    | MYSQL_DATA_TYPE.SMALLINT
+                    | MYSQL_DATA_TYPE.MEDIUMINT
+                    | MYSQL_DATA_TYPE.BIGINT
+                    | MYSQL_DATA_TYPE.YEAR
+                    | MYSQL_DATA_TYPE.FLOAT
+                    | MYSQL_DATA_TYPE.DOUBLE
+                    | MYSQL_DATA_TYPE.DECIMAL
+                    | MYSQL_DATA_TYPE.TIMESTAMP
+                ):
+                    pass
+                case MYSQL_DATA_TYPE.TEXT:
+                    # NOTE: it would be good do nothing for TEXT column as for INT.
+                    # However, while we use TEXT as a fallback for undetected types, we need to handle it carefully.
+                    series = series.apply(_dump_str)
+                case _:
+                    series = series.apply(_dump_str)
+            serieces.append(series.astype(bytes).mask(series.isnull(), NULL_VALUE).apply(serialize_bytes))
+
+        yield pd.concat(serieces, axis=1).sum(axis=1).tolist()
+
+        start += chunk_size

@@ -1,0 +1,6 @@
+
+lxml==5.3.0 # Is this transitive dependency?
+pgvector==0.3.6 # Required for knowledge bases
+langchain-core==0.3.72
+langchain-text-splitters==0.3.9
+litellm==1.63.14

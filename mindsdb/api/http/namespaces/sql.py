@@ -47,7 +47,10 @@ class Query(Resource):
         start_time = time.time()
         query = request.json["query"]
         context = request.json.get("context", {})
-        params = request.json.get("params", {})
+
+        if "params" in request.json:
+            ctx.params = request.json["params"]
+
         try:
             response_format = ReponseFormat(request.json.get("response_format", None))
         except ValueError:
@@ -68,7 +71,7 @@ class Query(Resource):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
             try:
-                result: SQLAnswer = mysql_proxy.process_query(query, params=params)
+                result: SQLAnswer = mysql_proxy.process_query(query)
             except ExecutorException as e:
                 # classified error
                 error_type = "expected"

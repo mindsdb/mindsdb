@@ -217,6 +217,7 @@ class Config:
             "data_stream": {
                 "fetch_size": 10000,
             },
+            "pid_file_content": None,
         }
         # endregion
 
@@ -395,6 +396,12 @@ class Config:
         elif mindsdb_gui_autoupdate != "":
             raise ValueError(f"Wrong value of env var MINDSDB_GUI_AUTOUPDATE={mindsdb_gui_autoupdate}")
 
+        if os.environ.get("MINDSDB_PID_FILE_CONTENT", "") != "":
+            try:
+                self._env_config["pid_file_content"] = json.loads(os.environ["MINDSDB_PID_FILE_CONTENT"])
+            except json.JSONDecodeError as e:
+                raise ValueError(f"MINDSDB_PID_FILE_CONTENT contains invalid JSON: {e}")
+
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
         Do it only if `auto_config` was not loaded before or config.auto.json been changed.
@@ -402,20 +409,23 @@ class Config:
         Returns:
             bool: True if config was loaded or updated
         """
-
-        if (
-            self.auto_config_path.is_file()
-            and self.auto_config_path.read_text() != ""
-            and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
-        ):
-            try:
+        try:
+            if (
+                self.auto_config_path.is_file()
+                and self.auto_config_path.read_text() != ""
+                and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
+            ):
                 self._auto_config = json.loads(self.auto_config_path.read_text())
-            except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
-                )
-            self.auto_config_mtime = self.auto_config_path.stat().st_mtime
-            return True
+                self.auto_config_mtime = self.auto_config_path.stat().st_mtime
+                return True
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
+            )
+        except FileNotFoundError:
+            # this shouldn't happen during normal work, but it looks like it happens
+            # when using `prefect` as a result of race conditions or something else.
+            return False
         return False
 
     def fetch_user_config(self) -> bool:

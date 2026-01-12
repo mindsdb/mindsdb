@@ -38,6 +38,8 @@ from mindsdb_sql_parser.ast import (
     Variable,
     Intersect,
     Except,
+    Parameter,
+    NullConstant,
 )
 
 # typed models
@@ -99,6 +101,7 @@ from mindsdb.integrations.libs.const import (
     HANDLER_CONNECTION_ARG_TYPE,
     PREDICTOR_STATUS,
 )
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.database.projects import ProjectController
@@ -216,6 +219,20 @@ def match_two_part_name(
     return db_name, name
 
 
+def apply_parameters(statement, params):
+    def fill_parameters(node, **kwargs):
+        if isinstance(node, Parameter):
+            if node.value in params:
+                value = params[node.value]
+                if value is None:
+                    return NullConstant()
+                if isinstance(value, list):
+                    return Tuple([Constant(i) for i in value])
+                return Constant(value)
+
+    query_traversal(statement, fill_parameters)
+
+
 class ExecuteCommands:
     def __init__(self, session, context=None):
         if context is None:
@@ -234,6 +251,9 @@ class ExecuteCommands:
 
         if database_name is None:
             database_name = self.session.database
+
+        if ctx.params:
+            apply_parameters(statement, ctx.params)
 
         statement_type = type(statement)
         if statement_type is CreateDatabase:
@@ -787,7 +807,7 @@ class ExecuteCommands:
             agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
         )
         return ExecuteAnswer()
 
@@ -818,7 +838,7 @@ class ExecuteCommands:
             agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
         )
         if updated_chatbot is None:
             raise ExecutorException(f"Chatbot with name {name} not found")
@@ -834,7 +854,10 @@ class ExecuteCommands:
 
     def answer_evaluate_metric(self, statement, database_name):
         # heavy import, so we do it here on-demand
-        from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+        try:
+            from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+        except ImportError:
+            logger.error("mindsdb-evaluator is not installed. Please install it with `pip install mindsdb-evaluator]`.")
 
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
@@ -1180,7 +1203,7 @@ class ExecuteCommands:
 
         params_out = {}
         if params:
-            for key, value in params.items():
+            for key, value in variables_controller.fill_parameters(params).items():
                 # convert ast types to string
                 if isinstance(value, (Constant, Identifier)):
                     value = value.to_string()
@@ -1250,7 +1273,7 @@ class ExecuteCommands:
 
         engine = (statement.engine or "mindsdb").lower()
 
-        connection_args = statement.parameters
+        connection_args = variables_controller.fill_parameters(statement.parameters)
 
         try:
             if engine == "mindsdb":
@@ -1429,7 +1452,7 @@ class ExecuteCommands:
             project_name=project_name,
             # embedding_model=statement.model,
             storage=statement.storage,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
             if_not_exists=statement.if_not_exists,
         )
 
@@ -1444,7 +1467,7 @@ class ExecuteCommands:
         self.session.kb_controller.update(
             name=kb_name,
             project_name=project_name,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
         )
 
         return ExecuteAnswer()
@@ -1509,7 +1532,7 @@ class ExecuteCommands:
                 model_name=statement.model,
                 skills=skills,
                 provider=provider,
-                params=statement.params,
+                params=variables_controller.fill_parameters(statement.params),
             )
         except EntityExistsError as e:
             if statement.if_not_exists is not True:
@@ -1544,7 +1567,7 @@ class ExecuteCommands:
                 model_name=model,
                 skills_to_add=skills_to_add,
                 skills_to_remove=skills_to_remove,
-                params=statement.params,
+                params=variables_controller.fill_parameters(statement.params),
             )
         except (EntityExistsError, EntityNotExistsError, ValueError) as e:
             # Project does not exist or agent does not exist.

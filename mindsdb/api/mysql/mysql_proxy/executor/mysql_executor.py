@@ -1,8 +1,6 @@
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.exceptions import ParsingException
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb_sql_parser.ast import Constant, Parameter, Tuple, NullConstant
-
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.utilities.types.column import Column
@@ -12,7 +10,6 @@ from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.exceptions import SqlSyntaxError
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 logger = log.getLogger(__name__)
 
@@ -77,24 +74,9 @@ class Executor:
         self.do_execute()
 
     @profiler.profile()
-    def query_execute(self, sql, params=None):
+    def query_execute(self, sql):
         self.parse(sql)
-        if params:
-            self.apply_parameters(params)
         self.do_execute()
-
-    def apply_parameters(self, params):
-        def fill_parameters(node, **kwargs):
-            if isinstance(node, Parameter):
-                if node.value in params:
-                    value = params[node.value]
-                    if value is None:
-                        return NullConstant()
-                    if isinstance(value, list):
-                        return Tuple([Constant(i) for i in value])
-                    return Constant(value)
-
-        query_traversal(self.query, fill_parameters)
 
     @profiler.profile()
     def parse(self, sql):

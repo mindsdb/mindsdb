@@ -860,9 +860,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(id_stats["maximum_value"], 10)
 
     def test_meta_get_column_statistics_handles_error_response(self):
-        self.handler.native_query = MagicMock(
-            return_value=ErrorResponse(error_message="boom")
-        )
+        self.handler.native_query = MagicMock(return_value=ErrorResponse(error_message="boom"))
         result = self.handler.meta_get_column_statistics(table_names=["orders"])
         self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
 

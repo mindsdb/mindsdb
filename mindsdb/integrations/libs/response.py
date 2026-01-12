@@ -252,8 +252,7 @@ class TableResponse(DataHandlerResponse):
 
     @data_frame.setter
     def data_frame(self, value):
-        """for back compatibility
-        """
+        """for back compatibility"""
         self._data = value
 
     @property

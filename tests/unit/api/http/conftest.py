@@ -17,30 +17,35 @@ from mindsdb.integrations.libs.process_cache import process_cache
 
 @pytest.fixture(scope="module", autouse=True)
 def app():
-    old_minds_db_con = ""
-    if "MINDSDB_DB_CON" in os.environ:
-        old_minds_db_con = os.environ["MINDSDB_DB_CON"]
-
+    """Provide a temporary app instance and ensure cleanup even on setup issues."""
+    old_minds_db_con = os.environ.get("MINDSDB_DB_CON")
+    temp_dir_ctx = TemporaryDirectory(prefix="test_tmp_")
     try:
-        with TemporaryDirectory(prefix="test_tmp_") as temp_dir:
-            os.environ["MINDSDB_STORAGE_DIR"] = temp_dir
-            db_path = "sqlite:///" + os.path.join(temp_dir, "mindsdb.sqlite3.db")
-            # Need to change env variable for migrate module, since it calls db.init().
-            os.environ["MINDSDB_DB_CON"] = db_path
-            config.prepare_env_config()
-            config.merge_configs()
-            config["gui"]["open_on_start"] = False
-            config["gui"]["autoupdate"] = False
-            db.init()
-            migrate.migrate_to_head()
-            app = initialize_app()
-            app._mindsdb_temp_dir = temp_dir
-            yield app
-    except PermissionError:
-        print("PermissionError when deleting temporary directory. MindsDBs temp dir is going to be left as is.")
-
-    process_cache.shutdown()
-    os.environ["MINDSDB_DB_CON"] = old_minds_db_con
+        temp_dir = temp_dir_ctx.name
+        os.environ["MINDSDB_STORAGE_DIR"] = temp_dir
+        db_path = "sqlite:///" + os.path.join(temp_dir, "mindsdb.sqlite3.db")
+        # Need to change env variable for migrate module, since it calls db.init().
+        os.environ["MINDSDB_DB_CON"] = db_path
+        config.prepare_env_config()
+        config.merge_configs()
+        config["gui"]["open_on_start"] = False
+        config["gui"]["autoupdate"] = False
+        db.init()
+        migrate.migrate_to_head()
+        app = initialize_app()
+        app._mindsdb_temp_dir = temp_dir
+        yield app
+    finally:
+        process_cache.shutdown()
+        if old_minds_db_con is not None:
+            os.environ["MINDSDB_DB_CON"] = old_minds_db_con
+        else:
+            os.environ.pop("MINDSDB_DB_CON", None)
+        try:
+            temp_dir_ctx.cleanup()
+        except PermissionError:
+            # On Windows temp dirs may fail to clean up; leave them in place.
+            pass
 
 
 @pytest.fixture(scope="module")

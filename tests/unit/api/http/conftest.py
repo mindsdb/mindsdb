@@ -19,6 +19,7 @@ from mindsdb.integrations.libs.process_cache import process_cache
 def app():
     """Provide a temporary app instance and ensure cleanup even on setup issues."""
     old_minds_db_con = os.environ.get("MINDSDB_DB_CON")
+    old_config_path = os.environ.get("MINDSDB_CONFIG_PATH")
     temp_dir_ctx = TemporaryDirectory(prefix="test_tmp_")
     try:
         temp_dir = temp_dir_ctx.name
@@ -26,6 +27,8 @@ def app():
         db_path = "sqlite:///" + os.path.join(temp_dir, "mindsdb.sqlite3.db")
         # Need to change env variable for migrate module, since it calls db.init().
         os.environ["MINDSDB_DB_CON"] = db_path
+        # Ensure we don't inherit a stale config path from executor tests.
+        os.environ.pop("MINDSDB_CONFIG_PATH", None)
         config.prepare_env_config()
         config.merge_configs()
         config["gui"]["open_on_start"] = False
@@ -41,6 +44,10 @@ def app():
             os.environ["MINDSDB_DB_CON"] = old_minds_db_con
         else:
             os.environ.pop("MINDSDB_DB_CON", None)
+        if old_config_path is not None:
+            os.environ["MINDSDB_CONFIG_PATH"] = old_config_path
+        else:
+            os.environ.pop("MINDSDB_CONFIG_PATH", None)
         try:
             temp_dir_ctx.cleanup()
         except PermissionError:

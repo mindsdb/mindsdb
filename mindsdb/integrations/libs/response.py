@@ -333,7 +333,7 @@ class TableResponse(DataHandlerResponse):
                 INF_SCHEMA_COLUMNS_NAMES.COLLATION_NAME: "string",
             }
         )
-        self._data.replace([numpy.NaN, pandas.NA], None, inplace=True)
+        self._data.replace([numpy.nan, pandas.NA], None, inplace=True)
 
 
 def normalize_response(response) -> TableResponse | OkResponse | ErrorResponse:

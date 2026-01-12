@@ -406,20 +406,23 @@ class Config:
         Returns:
             bool: True if config was loaded or updated
         """
-
-        if (
-            self.auto_config_path.is_file()
-            and self.auto_config_path.read_text() != ""
-            and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
-        ):
-            try:
+        try:
+            if (
+                self.auto_config_path.is_file()
+                and self.auto_config_path.read_text() != ""
+                and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
+            ):
                 self._auto_config = json.loads(self.auto_config_path.read_text())
-            except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
-                )
-            self.auto_config_mtime = self.auto_config_path.stat().st_mtime
-            return True
+                self.auto_config_mtime = self.auto_config_path.stat().st_mtime
+                return True
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
+            )
+        except FileNotFoundError:
+            # this shouldn't happen during normal work, but it looks like it happens
+            # when using `prefect` as a result of race conditions or something else.
+            return False
         return False
 
     def fetch_user_config(self) -> bool:

@@ -31,7 +31,6 @@ class ListFilesTable(APIResource):
         *args,
         **kwargs,
     ) -> pd.DataFrame:
-
         buckets = None
         for condition in conditions:
             if condition.column == "bucket":
@@ -48,8 +47,8 @@ class ListFilesTable(APIResource):
                 item = {
                     "path": path,
                     "bucket": obj["Bucket"],
-                    "name": path[path.rfind("/") + 1:],
-                    "extension": path[path.rfind(".") + 1:],
+                    "name": path[path.rfind("/") + 1 :],
+                    "extension": path[path.rfind(".") + 1 :],
                 }
 
                 data.append(item)
@@ -61,9 +60,7 @@ class ListFilesTable(APIResource):
 
 
 class FileTable(APIResource):
-    def list(
-        self, targets: List[str] = None, table_name=None, *args, **kwargs
-    ) -> pd.DataFrame:
+    def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
         return self.handler.read_as_table(table_name)
 
     def add(self, data, table_name=None):
@@ -72,7 +69,6 @@ class FileTable(APIResource):
 
 
 class IBMCloudObjectStorageHandler(APIHandler):
-
     name = "ibm_cos"
     supported_file_formats = ["csv", "tsv", "json", "parquet"]
 
@@ -83,7 +79,7 @@ class IBMCloudObjectStorageHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.cache_thread_safe = True
         self._regions = {}
 
         self.bucket = self.connection_data.get("bucket")
@@ -142,9 +138,7 @@ class IBMCloudObjectStorageHandler(APIHandler):
             self._connect_ibm_boto3()
             response.success = True
         except (ClientError, ValueError) as e:
-            logger.error(
-                f"Error connecting to IBM COS with the given credentials, {e}!"
-            )
+            logger.error(f"Error connecting to IBM COS with the given credentials, {e}!")
             response.error_message = str(e)
 
         if response.success and need_to_close:
@@ -161,18 +155,14 @@ class IBMCloudObjectStorageHandler(APIHandler):
         duckdb_conn.execute("INSTALL httpfs")
         duckdb_conn.execute("LOAD httpfs")
 
-        duckdb_conn.execute(
-            f"SET s3_access_key_id='{self.connection_data['cos_hmac_access_key_id']}'"
-        )
-        duckdb_conn.execute(
-            f"SET s3_secret_access_key='{self.connection_data['cos_hmac_secret_access_key']}'"
-        )
+        duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['cos_hmac_access_key_id']}'")
+        duckdb_conn.execute(f"SET s3_secret_access_key='{self.connection_data['cos_hmac_secret_access_key']}'")
 
         endpoint_url = self.connection_data["cos_endpoint_url"]
         if endpoint_url.startswith("https://"):
-            endpoint_url = endpoint_url[len("https://"):]
+            endpoint_url = endpoint_url[len("https://") :]
         elif endpoint_url.startswith("http://"):
-            endpoint_url = endpoint_url[len("http://"):]
+            endpoint_url = endpoint_url[len("http://") :]
 
         duckdb_conn.execute(f"SET s3_endpoint='{endpoint_url}'")
         duckdb_conn.execute("SET s3_url_style='path'")
@@ -194,7 +184,6 @@ class IBMCloudObjectStorageHandler(APIHandler):
         bucket, key = self._get_bucket(key)
 
         with self._connect_duckdb() as connection:
-
             cursor = connection.execute(f"SELECT * FROM 's3://{bucket}/{key}'")
 
             return cursor.fetchdf()
@@ -209,7 +198,6 @@ class IBMCloudObjectStorageHandler(APIHandler):
         return content
 
     def add_data_to_table(self, key, df) -> None:
-
         bucket, key = self._get_bucket(key)
 
         try:
@@ -220,9 +208,7 @@ class IBMCloudObjectStorageHandler(APIHandler):
             raise e
 
         with self._connect_duckdb() as connection:
-            connection.execute(
-                f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{bucket}/{key}'"
-            )
+            connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{bucket}/{key}'")
 
             connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
 
@@ -239,10 +225,7 @@ class IBMCloudObjectStorageHandler(APIHandler):
 
                 has_content = False
                 for target in query.targets:
-                    if (
-                        isinstance(target, Identifier)
-                        and target.parts[-1].lower() == "content"
-                    ):
+                    if isinstance(target, Identifier) and target.parts[-1].lower() == "content":
                         has_content = True
                         break
                 if has_content:
@@ -290,7 +273,7 @@ class IBMCloudObjectStorageHandler(APIHandler):
                 obj["Bucket"] = bucket
                 obj["Filename"] = obj["Key"]
                 if add_bucket_to_name:
-                    obj["Key"] = f'{bucket}/{obj["Key"]}'
+                    obj["Key"] = f"{bucket}/{obj['Key']}"
                 objects.append(obj)
             if limit is not None and len(objects) >= limit:
                 break
@@ -299,9 +282,7 @@ class IBMCloudObjectStorageHandler(APIHandler):
 
     def get_tables(self) -> Response:
         supported_names = [
-            f"{obj['Key']}"
-            for obj in self.get_objects()
-            if obj["Key"].split(".")[-1] in self.supported_file_formats
+            f"{obj['Key']}" for obj in self.get_objects() if obj["Key"].split(".")[-1] in self.supported_file_formats
         ]
 
         supported_names.insert(0, "files")
@@ -328,8 +309,7 @@ class IBMCloudObjectStorageHandler(APIHandler):
                 {
                     "column_name": result.data_frame.columns,
                     "data_type": [
-                        str(dtype) if str(dtype) != "object" else "string"
-                        for dtype in result.data_frame.dtypes
+                        str(dtype) if str(dtype) != "object" else "string" for dtype in result.data_frame.dtypes
                     ],
                 }
             ),

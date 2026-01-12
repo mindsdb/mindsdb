@@ -59,8 +59,7 @@ def delete_process_mark(folder: str = "learn", mark: str | None = None):
     if mark is None:
         mark = _get_process_mark_id()
     p = get_tmp_dir().joinpath(f"processes/{folder}/").joinpath(mark)
-    if p.exists():
-        p.unlink()
+    p.unlink(missing_ok=True)
 
 
 def clean_process_marks():
@@ -73,7 +72,7 @@ def clean_process_marks():
         if path.is_dir() is False:
             return
         for file in path.iterdir():
-            file.unlink()
+            file.unlink(missing_ok=True)
 
 
 def get_processes_dir_files_generator() -> Generator[tuple[Path, int, int], None, None]:
@@ -115,7 +114,7 @@ def clean_unlinked_process_marks() -> list[int]:
             except StopIteration:
                 logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
                 deleted_pids.append(process_id)
-                file.unlink()
+                file.unlink(missing_ok=True)
 
         except psutil.AccessDenied:
             logger.warning(f"access to {process_id} denied")
@@ -124,7 +123,7 @@ def clean_unlinked_process_marks() -> list[int]:
         except psutil.NoSuchProcess:
             logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
             deleted_pids.append(process_id)
-            file.unlink()
+            file.unlink(missing_ok=True)
     return deleted_pids
 
 
@@ -167,7 +166,7 @@ def create_pid_file(config):
                 pass
             logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
 
-        pid_file.unlink()
+        pid_file.unlink(missing_ok=True)
 
     pid_file_content = config["pid_file_content"]
     if pid_file_content is None or len(pid_file_content) == 0:
@@ -214,7 +213,7 @@ def delete_pid_file():
         logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
         return
 
-    pid_file.unlink()
+    pid_file.unlink(missing_ok=True)
 
 
 def __is_within_directory(directory, target):

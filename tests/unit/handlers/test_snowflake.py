@@ -797,7 +797,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 }
             ]
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
 
         result = self.handler.meta_get_tables(table_names=["orders"])
 
@@ -818,7 +818,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 }
             ]
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
 
         result = self.handler.meta_get_columns(table_names=["orders"])
 
@@ -845,8 +845,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         )
         self.handler.native_query = MagicMock(
             side_effect=[
-                Response(RESPONSE_TYPE.TABLE, data_frame=columns_df),
-                Response(RESPONSE_TYPE.TABLE, data_frame=stats_df),
+                TableResponse(data=columns_df),
+                TableResponse(data=stats_df),
             ]
         )
 
@@ -861,7 +861,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def test_meta_get_column_statistics_handles_error_response(self):
         self.handler.native_query = MagicMock(
-            return_value=Response(RESPONSE_TYPE.ERROR, error_message="boom", data_frame=None)
+            return_value=ErrorResponse(error_message="boom")
         )
         result = self.handler.meta_get_column_statistics(table_names=["orders"])
         self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
@@ -873,7 +873,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 {"table_name": "CUSTOMERS", "column_name": "ID", "key_sequence": 1, "constraint_name": "PK_CUSTOMERS"},
             ]
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
 
         result = self.handler.meta_get_primary_keys(table_names=["ORDERS"])
 
@@ -905,7 +905,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 },
             ]
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
 
         result = self.handler.meta_get_foreign_keys(table_names=["ORDERS", "CUSTOMERS"])
 

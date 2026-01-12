@@ -250,6 +250,12 @@ class TableResponse(DataHandlerResponse):
         self.fetchall()
         return self._data
 
+    @data_frame.setter
+    def data_frame(self, value):
+        """for back compatibility
+        """
+        self._data = value
+
     @property
     def columns(self) -> list[Column]:
         """Get the columns.

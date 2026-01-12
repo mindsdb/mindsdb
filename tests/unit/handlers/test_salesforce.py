@@ -435,7 +435,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         with patch(
             "mindsdb.integrations.handlers.salesforce_handler.salesforce_handler.MetaAPIHandler.meta_get_tables",
-            return_value=Response(RESPONSE_TYPE.TABLE, None),
+            return_value=TableResponse(),
         ) as mock_meta:
             response = self.handler.meta_get_tables(table_names=["contact"])
 

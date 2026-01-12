@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -24,7 +25,9 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     for item in items:
         if _is_executor_item(item):
             item.add_marker("executor")
-            item.add_marker(pytest.mark.forked)
+            # Only use forked isolation where supported (posix); Windows lacks os.fork.
+            if hasattr(os, "fork"):
+                item.add_marker(pytest.mark.forked)
             executor_items.append(item)
         else:
             other_items.append(item)

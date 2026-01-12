@@ -83,7 +83,7 @@ class SQLAnswer:
         )
 
         for el in self.result_set.stream_data():
-            el.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
+            el.replace([np.nan, pd.NA, pd.NaT], None, inplace=True)
             yield (
                 orjson.dumps(
                     el.to_dict("split")["data"],

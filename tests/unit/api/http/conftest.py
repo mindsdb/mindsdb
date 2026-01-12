@@ -22,13 +22,15 @@ def app():
     old_config_path = os.environ.get("MINDSDB_CONFIG_PATH")
     temp_dir_ctx = TemporaryDirectory(prefix="test_tmp_")
     try:
-        temp_dir = temp_dir_ctx.name
-        os.environ["MINDSDB_STORAGE_DIR"] = temp_dir
+        temp_dir = Path(temp_dir_ctx.name)
+        os.environ["MINDSDB_STORAGE_DIR"] = str(temp_dir)
         db_path = "sqlite:///" + os.path.join(temp_dir, "mindsdb.sqlite3.db")
         # Need to change env variable for migrate module, since it calls db.init().
         os.environ["MINDSDB_DB_CON"] = db_path
         # Ensure we don't inherit a stale config path from executor tests.
         os.environ.pop("MINDSDB_CONFIG_PATH", None)
+        # Alembic/migrations expect the directory to exist.
+        temp_dir.mkdir(parents=True, exist_ok=True)
         config.prepare_env_config()
         config.merge_configs()
         config["gui"]["open_on_start"] = False

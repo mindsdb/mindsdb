@@ -6,9 +6,11 @@ from unittest.mock import patch, MagicMock
 from google.api_core.exceptions import BadRequest
 
 from mindsdb.integrations.libs.response import (
-    DataHandlerResponse as Response,
+    DataHandlerResponse,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE,
+    TableResponse,
+    ErrorResponse,
 )
 
 try:
@@ -87,7 +89,7 @@ class TestBigQueryHandler(unittest.TestCase):
             mock_query_job_config_instance = mock_query_job_config.return_value
             data = self.handler.native_query(query_str)
             mock_conn.query.assert_called_once_with(query_str, job_config=mock_query_job_config_instance)
-            assert isinstance(data, Response)
+            assert isinstance(data, DataHandlerResponse)
             self.assertFalse(data.error_code)
 
     def test_get_tables(self):
@@ -124,7 +126,7 @@ class TestBigQueryHandler(unittest.TestCase):
         self.handler.native_query.assert_called_once_with(expected_query)
 
     def test_meta_get_tables_filters(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
 
         self.handler.meta_get_tables(table_names=["orders"])
 
@@ -132,7 +134,7 @@ class TestBigQueryHandler(unittest.TestCase):
         self.assertIn("AND t.table_name IN ('orders')", query)
 
     def test_meta_get_columns_filters(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
 
         self.handler.meta_get_columns(table_names=["orders"])
 
@@ -176,9 +178,9 @@ class TestBigQueryHandler(unittest.TestCase):
 
         self.handler.native_query = MagicMock(
             side_effect=[
-                Response(RESPONSE_TYPE.TABLE, data_frame=column_types_result),
-                Response(RESPONSE_TYPE.TABLE, data_frame=first_batch_result),
-                Response(RESPONSE_TYPE.TABLE, data_frame=second_batch_result),
+                TableResponse(data=column_types_result),
+                TableResponse(data=first_batch_result),
+                TableResponse(data=second_batch_result),
             ]
         )
 
@@ -189,20 +191,20 @@ class TestBigQueryHandler(unittest.TestCase):
         self.assertEqual(self.handler.native_query.call_count, 3)  # 1 for column types + 2 for batches
 
     def test_meta_get_column_statistics_returns_error_when_empty(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.ERROR, error_message="boom"))
+        self.handler.native_query = MagicMock(return_value=ErrorResponse(error_message="boom"))
 
         response = self.handler.meta_get_column_statistics_for_table("table", ["col"])
         self.assertEqual(response.resp_type, RESPONSE_TYPE.ERROR)
 
     def test_meta_get_primary_keys_filters(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_primary_keys(table_names=["orders"])
 
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)
 
     def test_meta_get_foreign_keys_filters(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_foreign_keys(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)

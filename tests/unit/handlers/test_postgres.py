@@ -309,30 +309,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.assertEqual(result, "ok")
         self.handler.renderer.get_exec_params.assert_called_once_with(query_node, with_failback=True)
-        self.handler.native_query.assert_called_once_with("SELECT 1", ["foo"])
-
-    def test_query_stream_yields_batches(self):
-        mock_conn = MagicMock()
-        mock_cursor = MockCursorContextManager()
-        mock_cursor.pgresult = MagicMock(status=ExecStatus.TUPLES_OK)
-        mock_cursor.fetchmany = MagicMock(side_effect=[[(1, "name")], []])
-        mock_cursor.description = [
-            ColumnDescription(name="id", type_code=regtype_to_oid["integer"]),
-            ColumnDescription(name="name", type_code=regtype_to_oid["text"]),
-        ]
-
-        self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor = MagicMock(return_value=mock_cursor)
-        self.handler.renderer.get_exec_params = MagicMock(return_value=("SELECT * FROM table", None))
-        self.handler.disconnect = MagicMock()
-
-        batches = list(self.handler.query_stream(MagicMock(), fetch_size=1))
-
-        self.assertEqual(len(batches), 1)
-        self.assertListEqual(list(batches[0].columns), ["id", "name"])
-        mock_conn.commit.assert_called_once()
-        mock_conn.rollback.assert_called_once()
-        self.handler.disconnect.assert_called_once()
+        self.handler.native_query.assert_called_once_with("SELECT 1", ["foo"], stream=False)
 
     def test_insert_respects_existing_column_case(self):
         if getattr(self.handler, "name", None) != "postgres":
@@ -980,7 +957,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # endregion
 
     def test_get_tables_all_flag(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.get_tables(all=True)
         query = self.handler.native_query.call_args[0][0]
         self.assertNotIn("current_schema()", query.split("table_schema")[-1])
@@ -1002,19 +979,19 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 "COLLATION_NAME": [None],
             }
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
         self.handler.get_columns("customers", schema_name="analytics")
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("table_schema = 'analytics'", query)
 
     def test_meta_get_tables_filters_by_list(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_tables(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("IN ('orders')", query)
 
     def test_meta_get_columns_filters_by_list(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_columns(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("IN ('orders')", query)
@@ -1031,7 +1008,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 "histogram_bounds": ["{1,5,10}"],
             }
         )
-        response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        response = TableResponse(data=df)
         self.handler.native_query = MagicMock(return_value=response)
 
         result = self.handler.meta_get_column_statistics(table_names=["orders"])
@@ -1042,13 +1019,13 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(result.data_frame.loc[0, "MOST_COMMON_VALUES"], ["A", "B"])
 
     def test_meta_get_primary_keys_with_filter(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_primary_keys(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)
 
     def test_meta_get_foreign_keys_with_filter(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_foreign_keys(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)

@@ -1025,7 +1025,8 @@ class ContactsTable(HubSpotAPIResource):
         if contacts_df.empty:
             contacts_df = pd.DataFrame(columns=targets or self._get_default_contact_columns())
         else:
-            contacts_df["id"] = pd.to_numeric(contacts_df["id"], errors="coerce")
+            if "id" in contacts_df.columns:
+                contacts_df["id"] = pd.to_numeric(contacts_df["id"], errors="coerce")
         return contacts_df
 
     def add(self, contact_data: List[dict]):
@@ -1833,7 +1834,7 @@ class TasksTable(HubSpotAPIResource):
                 logger.info(f"Retrieved {len(search_results)} tasks from HubSpot via search API")
                 return search_results
 
-        tasks = hubspot.crm.objects.tasks.get_all(**api_kwargs)
+        tasks = self.handler._get_objects_all("tasks", **api_kwargs)
         tasks_dict = []
         for task in tasks:
             try:
@@ -2051,7 +2052,7 @@ class CallsTable(HubSpotAPIResource):
                 logger.info(f"Retrieved {len(search_results)} calls from HubSpot via search API")
                 return search_results
 
-        calls = hubspot.crm.objects.calls.get_all(**api_kwargs)
+        calls = self.handler._get_objects_all("calls", **api_kwargs)
         calls_dict = []
         for call in calls:
             try:
@@ -2269,7 +2270,7 @@ class EmailsTable(HubSpotAPIResource):
                 logger.info(f"Retrieved {len(search_results)} emails from HubSpot via search API")
                 return search_results
 
-        emails = hubspot.crm.objects.emails.get_all(**api_kwargs)
+        emails = self.handler._get_objects_all("emails", **api_kwargs)
         emails_dict = []
         for email in emails:
             try:
@@ -2487,7 +2488,7 @@ class MeetingsTable(HubSpotAPIResource):
                 logger.info(f"Retrieved {len(search_results)} meetings from HubSpot via search API")
                 return search_results
 
-        meetings = hubspot.crm.objects.meetings.get_all(**api_kwargs)
+        meetings = self.handler._get_objects_all("meetings", **api_kwargs)
         meetings_dict = []
         for meeting in meetings:
             try:
@@ -2693,7 +2694,7 @@ class NotesTable(HubSpotAPIResource):
                 logger.info(f"Retrieved {len(search_results)} notes from HubSpot via search API")
                 return search_results
 
-        notes = hubspot.crm.objects.notes.get_all(**api_kwargs)
+        notes = self.handler._get_objects_all("notes", **api_kwargs)
         notes_dict = []
         for note in notes:
             try:

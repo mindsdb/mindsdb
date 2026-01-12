@@ -278,8 +278,8 @@ class HubspotHandler(MetaAPIHandler):
                     if table_name in ["companies", "contacts", "deals", "tickets"]:
                         getattr(self.connection.crm, table_name).get_all(limit=1, properties=hubspot_properties)
                     else:
-                        # Engagement objects use crm.objects path
-                        getattr(self.connection.crm.objects, table_name).get_all(limit=1, properties=hubspot_properties)
+                        # Engagement objects use crm.objects with explicit paging
+                        self._get_objects_all(table_name, limit=1, properties=hubspot_properties)
 
                     table_info = {
                         "TABLE_SCHEMA": "hubspot",
@@ -408,9 +408,7 @@ class HubspotHandler(MetaAPIHandler):
                         )
                     else:
                         sample_data = list(
-                            getattr(self.connection.crm.objects, table_name).get_all(
-                                limit=1000, properties=hubspot_properties
-                            )
+                            self._get_objects_all(table_name, limit=1000, properties=hubspot_properties)
                         )
 
                     if len(sample_data) > 0:
@@ -502,6 +500,7 @@ class HubspotHandler(MetaAPIHandler):
 
     def _discover_columns(self, table_name: str, sample_size: int = 100) -> List[Dict[str, Any]]:
         """Discover columns from HubSpot API by sampling data."""
+        # Refeence: https://developers.hubspot.com/docs/cms/start-building/features/data-driven-content/crm-objects#crm-object-data-available-for-all-pages
         try:
             sample_data = None
 
@@ -514,15 +513,15 @@ class HubspotHandler(MetaAPIHandler):
             elif table_name == "tickets":
                 sample_data = list(self.connection.crm.tickets.get_all(limit=sample_size))
             elif table_name == "tasks":
-                sample_data = list(self.connection.crm.objects.tasks.get_all(limit=sample_size))
+                sample_data = list(self._get_objects_all("tasks", limit=sample_size))
             elif table_name == "calls":
-                sample_data = list(self.connection.crm.objects.calls.get_all(limit=sample_size))
+                sample_data = list(self._get_objects_all("calls", limit=sample_size))
             elif table_name == "emails":
-                sample_data = list(self.connection.crm.objects.emails.get_all(limit=sample_size))
+                sample_data = list(self._get_objects_all("emails", limit=sample_size))
             elif table_name == "meetings":
-                sample_data = list(self.connection.crm.objects.meetings.get_all(limit=sample_size))
+                sample_data = list(self._get_objects_all("meetings", limit=sample_size))
             elif table_name == "notes":
-                sample_data = list(self.connection.crm.objects.notes.get_all(limit=sample_size))
+                sample_data = list(self._get_objects_all("notes", limit=sample_size))
 
             if not sample_data or len(sample_data) == 0:
                 logger.warning(f"No data available for {table_name}, using defaults")
@@ -675,13 +674,50 @@ class HubspotHandler(MetaAPIHandler):
                     public_object_search_request={"limit": 1}
                 )
             else:
-                result = getattr(self.connection.crm.objects, table_name).search_api.do_search(
-                    public_object_search_request={"limit": 1}
+                result = self.connection.crm.objects.search_api.do_search(
+                    table_name, public_object_search_request={"limit": 1}
                 )
             return result.total if hasattr(result, "total") else None
         except Exception as e:
             logger.warning(f"Could not get row count for {table_name} using search API: {str(e)}")
         return None
+
+    def _get_objects_all(
+        self,
+        object_type: str,
+        limit: Optional[int] = None,
+        properties: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[Any]:
+        """Fetch objects with paging to honor custom limits for crm.objects."""
+        results: List[Any] = []
+        after = None
+        page_max_size = 100
+
+        if limit is None and "limit" in kwargs:
+            limit = kwargs.pop("limit")
+        if properties is None and "properties" in kwargs:
+            properties = kwargs.pop("properties")
+
+        while True:
+            if limit is not None:
+                remaining = limit - len(results)
+                if remaining <= 0:
+                    break
+                page_size = min(page_max_size, remaining)
+            else:
+                page_size = page_max_size
+
+            page = self.connection.crm.objects.basic_api.get_page(
+                object_type, after=after, limit=page_size, properties=properties, **kwargs
+            )
+            results.extend(page.results)
+
+            if page.paging is None:
+                break
+            after = page.paging.next.after
+
+        return results
 
     def _calculate_column_statistics(self, column_name: str, values: List[Any]) -> Dict[str, Any]:
         """Calculate comprehensive statistics for a column."""

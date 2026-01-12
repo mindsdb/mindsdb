@@ -100,6 +100,11 @@ class BaseUnitTest:
         self.reset_prom_collectors()
 
     def clear_db(self, db):
+        # Ensure backing sqlite path exists even if a previous test cleaned it up.
+        db_url = getattr(db.engine.url, "database", None)
+        if db_url:
+            Path(db_url).parent.mkdir(parents=True, exist_ok=True)
+
         # drop
         db.session.rollback()
         db.Base.metadata.drop_all(db.engine)

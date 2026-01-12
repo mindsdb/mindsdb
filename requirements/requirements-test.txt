@@ -5,6 +5,7 @@ pytest >= 8.3.5, < 9.0.0
 pytest-subtests
 pytest-xdist
 pytest-cov 
+pytest-forked
 pytest-json-report==1.5.0
 pytest-metadata==3.1.1
 python-dotenv==1.1.1

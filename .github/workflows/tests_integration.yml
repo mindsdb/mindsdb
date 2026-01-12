@@ -58,9 +58,31 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install -r requirements/requirements-test.txt
-    - name: Run Integration Tests on Deploy
+    - name: Prepare artifacts dir
+      run: mkdir -p artifacts
+    - name: Collect integration tests list
       run: |
-          make integration_tests_slow
+        pytest tests/integration --collect-only -q > artifacts/tests-collected.txt
+    - name: Run Integration Tests with coverage
+      run: |
+        pytest tests/integration -q \
+          --junitxml=artifacts/junit-integration.xml \
+          --cov=mindsdb \
+          --cov-report=xml:artifacts/coverage-integration.xml \
+          --cov-report=html:artifacts/coverage-html-integration
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         INTERNAL_URL: ${{ vars.MINDSDB_INTERNAL_URL }}
+    - name: Zip coverage HTML
+      if: always()
+      run: |
+        cd artifacts
+        if [ -d coverage-html-integration ]; then
+          zip -r coverage-html-integration.zip coverage-html-integration
+        fi
+    - name: Upload integration artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-artifacts
+        path: artifacts/*

@@ -170,6 +170,8 @@ jobs:
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
         run: |
           uv run tests/scripts/check_handler_coverage.py
+        env:
+          COVERAGE_FILE: .coverage.unit
 
       - name: Pytest coverage comment
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}

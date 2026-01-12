@@ -61,16 +61,36 @@ datasource_integration_tests_debug:
 	pytest $(PYTEST_ARGS_DEBUG) $(DSI_PYTEST_ARGS) $(DSI_REPORT_ARGS) tests/integration/handlers/
 
 unit_tests:
-	# We have to run executor tests separately because they do weird things that break everything else
-	env PYTHONPATH=./ pytest $(PYTEST_ARGS) tests/unit/executor/
-	pytest $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
+	@set -o pipefail; \
+	mkdir -p reports; \
+	COVERAGE_FILE=.coverage.unit PYTHONPATH=./ pytest $(PYTEST_ARGS) \
+		--junitxml=pytest.xml \
+		--cov=mindsdb \
+		--cov-report=term \
+		--cov-report=xml:coverage.xml \
+		--cov-branch \
+		tests/unit | tee pytest-coverage.txt
 
 unit_tests_slow:
-	env PYTHONPATH=./ pytest --runslow $(PYTEST_ARGS) tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
-	pytest --runslow $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
+	@set -o pipefail; \
+	mkdir -p reports; \
+	COVERAGE_FILE=.coverage.unit PYTHONPATH=./ pytest --runslow $(PYTEST_ARGS) \
+		--junitxml=pytest.xml \
+		--cov=mindsdb \
+		--cov-report=term \
+		--cov-report=xml:coverage.xml \
+		--cov-branch \
+		tests/unit | tee pytest-coverage.txt
 
 unit_tests_debug:
-	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/
-	pytest $(PYTEST_ARGS_DEBUG) --ignore=tests/unit/executor tests/unit/
+	@set -o pipefail; \
+	mkdir -p reports; \
+	COVERAGE_FILE=.coverage.unit PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) \
+		--junitxml=pytest.xml \
+		--cov=mindsdb \
+		--cov-report=term \
+		--cov-report=xml:coverage.xml \
+		--cov-branch \
+		tests/unit | tee pytest-coverage.txt
 
 .PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug datasource_integration_tests datasource_integration_tests_debug unit_tests unit_tests_slow unit_tests_debug

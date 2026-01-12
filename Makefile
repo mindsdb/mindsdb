@@ -1,3 +1,5 @@
+SHELL := /usr/bin/env bash
+
 PYTEST_ARGS = -v -rs --disable-warnings -n auto --dist loadfile
 PYTEST_ARGS_DEBUG = --runslow -vs -rs
 

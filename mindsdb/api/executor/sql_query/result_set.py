@@ -318,9 +318,10 @@ class ResultSet:
 
     def get_raw_df(self):
         self._resolve_table_response()
+        names = range(len(self._columns))
         if self._df is None:
-            names = range(len(self._columns))
             return pd.DataFrame([], columns=names)
+        self._df.columns = names
         return self._df
 
     def add_raw_df(self, df):

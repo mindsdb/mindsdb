@@ -19,14 +19,14 @@ logger = log.getLogger(__name__)
 class DuckDBHandler(DatabaseHandler):
     """This handler handles connection and execution of the DuckDB statements."""
 
-    name = 'duckdb'
+    name = "duckdb"
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'postgresql'
-        self.connection_data = kwargs.get('connection_data')
-        self.renderer = SqlalchemyRender('postgres')
+        self.dialect = "postgresql"
+        self.connection_data = kwargs.get("connection_data")
+        self.renderer = SqlalchemyRender("postgres")
 
         self.connection = None
         self.is_connected = False
@@ -44,10 +44,17 @@ class DuckDBHandler(DatabaseHandler):
 
         if self.is_connected is True:
             return self.connection
+        motherduck_token = self.connection_data.get("motherduck_token")
+        if motherduck_token:
+            database = (
+                f"md:{self.connection_data.get('database')}?motherduck_token={motherduck_token}&attach_mode=single"
+            )
+        else:
+            database = self.connection_data.get("database")
 
         args = {
-            'database': self.connection_data.get('database'),
-            'read_only': self.connection_data.get('read_only'),
+            "database": database,
+            "read_only": self.connection_data.get("read_only"),
         }
 
         self.connection = duckdb.connect(**args)
@@ -78,9 +85,7 @@ class DuckDBHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(
-                f'Error connecting to DuckDB {self.connection_data["database"]}, {e}!'
-            )
+            logger.error(f"Error connecting to DuckDB {self.connection_data['database']}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -111,17 +116,13 @@ class DuckDBHandler(DatabaseHandler):
             if result:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result, columns=[x[0] for x in cursor.description]
-                    ),
+                    data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description]),
                 )
             else:
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(
-                f'Error running query: {query} on {self.connection_data["database"]}!'
-            )
+            logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
@@ -150,10 +151,10 @@ class DuckDBHandler(DatabaseHandler):
             Response: Names of the tables in the database.
         """
 
-        q = 'SHOW TABLES;'
+        q = "SHOW TABLES;"
         result = self.native_query(q)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name: str) -> Response:
@@ -166,5 +167,5 @@ class DuckDBHandler(DatabaseHandler):
             Response: Details of the table.
         """
 
-        query = f'DESCRIBE {table_name};'
+        query = f"DESCRIBE {table_name};"
         return self.native_query(query)

@@ -1,8 +1,8 @@
 PYTEST_ARGS = -v -rs --disable-warnings -n auto --dist loadfile
 PYTEST_ARGS_DEBUG = --runslow -vs -rs
-
 DSI_PYTEST_ARGS = --run-dsi-tests
 DSI_REPORT_ARGS = --json-report --json-report-file=reports/report.json
+SHELL := /usr/bin/env bash
 
 install_mindsdb:
 	pip install -e .

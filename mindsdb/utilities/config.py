@@ -318,7 +318,8 @@ class Config:
         if os.environ.get("MINDSDB_DB_CON", "") != "":
             self._env_config["storage_db"] = os.environ["MINDSDB_DB_CON"]
             url = urlparse(self._env_config["storage_db"])
-            if not all([url.scheme, url.netloc]):
+            is_valid = url.scheme and (url.netloc or url.scheme == "sqlite")
+            if not is_valid:
                 raise ValueError(
                     f"Invalid MINDSDB_DB_CON value: {os.environ['MINDSDB_DB_CON']!r}\n"
                     f"Expected format: scheme://user:password@host:port/database\n"

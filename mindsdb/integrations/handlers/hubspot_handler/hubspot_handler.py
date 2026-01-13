@@ -407,9 +407,7 @@ class HubspotHandler(MetaAPIHandler):
                             getattr(self.connection.crm, table_name).get_all(limit=1000, properties=hubspot_properties)
                         )
                     else:
-                        sample_data = list(
-                            self._get_objects_all(table_name, limit=1000, properties=hubspot_properties)
-                        )
+                        sample_data = list(self._get_objects_all(table_name, limit=1000, properties=hubspot_properties))
 
                     if len(sample_data) > 0:
                         sample_size = len(sample_data)

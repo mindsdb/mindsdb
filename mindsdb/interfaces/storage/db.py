@@ -59,13 +59,25 @@ def init(connection_str: str = None):
             option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
         ).decode("utf-8")
 
-    base_args = {"json_serializer": _json_serializer}
-
-    # SQLite (file or memory) uses a different pooling model; avoid invalid args.
+    # Start with common args; tailor for SQLite vs others.
     if connection_str.startswith("sqlite"):
-        base_args["connect_args"] = {"check_same_thread": False}
+        # SQLite (file or memory) cannot use QueuePool tuning; use a simple pool and disable thread checks.
+        from sqlalchemy.pool import StaticPool
+
+        base_args = {
+            "json_serializer": _json_serializer,
+            "connect_args": {"check_same_thread": False},
+            "poolclass": StaticPool if connection_str.endswith(":memory:") else None,
+        }
+        # Remove None poolclass so create_engine can pick defaults for file-based sqlite.
+        if base_args["poolclass"] is None:
+            base_args.pop("poolclass")
     else:
-        base_args.update({"pool_size": 30, "max_overflow": 200})
+        base_args = {
+            "json_serializer": _json_serializer,
+            "pool_size": 30,
+            "max_overflow": 200,
+        }
     engine = create_engine(connection_str, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
     Base.query = session.query_property()

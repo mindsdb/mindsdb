@@ -61,6 +61,7 @@ class BaseUnitTest:
 
         os.environ["MINDSDB_STORAGE_DIR"] = cls.storage_dir
         os.environ["MINDSDB_CONFIG_PATH"] = cfg_file
+        os.environ["MINDSDB_DB_CON"] = config["storage_db"]
 
         # initialize config
         from mindsdb.utilities.config import Config
@@ -89,8 +90,8 @@ class BaseUnitTest:
         shutil.rmtree(cls.storage_dir, ignore_errors=True)
 
         # remove environ for next tests
-        if "MINDSDB_DB_CON" in os.environ:
-            del os.environ["MINDSDB_DB_CON"]
+        for key in ["MINDSDB_DB_CON", "MINDSDB_CONFIG_PATH", "MINDSDB_STORAGE_DIR"]:
+            os.environ.pop(key, None)
 
         # remove import of mindsdb for next tests
         unload_module("mindsdb")

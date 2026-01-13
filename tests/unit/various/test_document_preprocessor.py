@@ -619,7 +619,7 @@ class TestContextualPreprocessor:
             config = ContextualConfig(
                 chunk_size=100,
                 chunk_overlap=20,
-                llm_config={"model_name": "test_model", "provider": "test"},
+                llm_config={"model_name": "test_model", "provider": "openai", "api_keys": {"openai": "dummy"}},
                 summarize=True,  # Set summarize to True to only return context
             )
             return ContextualPreprocessor(config)

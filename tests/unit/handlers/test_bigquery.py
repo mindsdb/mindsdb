@@ -16,7 +16,6 @@ try:
 except ImportError:
     pytestmark = pytest.mark.skip("Bigquery handler not installed")
 
-
 class TestBigQueryHandler(unittest.TestCase):
     dummy_connection_data = OrderedDict(
         project_id="tough-future-332513",

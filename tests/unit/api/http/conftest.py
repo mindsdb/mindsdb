@@ -2,7 +2,8 @@ import os
 import sys
 from http import HTTPStatus
 from pathlib import Path
-from tempfile import TemporaryDirectory
+import tempfile
+import shutil
 
 import pytest
 from flask.testing import FlaskClient
@@ -20,9 +21,13 @@ def app():
     """Provide a temporary app instance and ensure cleanup even on setup issues."""
     old_minds_db_con = os.environ.get("MINDSDB_DB_CON")
     old_config_path = os.environ.get("MINDSDB_CONFIG_PATH")
-    temp_dir_ctx = TemporaryDirectory(prefix="test_tmp_")
+    temp_dir_ctx = None
     try:
-        temp_dir = Path(temp_dir_ctx.name)
+        # Use a workspace-local temp dir to avoid platform /tmp permission quirks.
+        temp_root = Path.cwd() / "var" / "tmp_http_app"
+        temp_root.mkdir(parents=True, exist_ok=True)
+        temp_dir = Path(tempfile.mkdtemp(prefix="test_tmp_", dir=temp_root))
+        temp_dir_ctx = temp_dir  # track for cleanup
         os.environ["MINDSDB_STORAGE_DIR"] = str(temp_dir)
         db_file = temp_dir / "mindsdb.sqlite3.db"
         db_path = "sqlite:///" + str(db_file)
@@ -54,7 +59,8 @@ def app():
         else:
             os.environ.pop("MINDSDB_CONFIG_PATH", None)
         try:
-            temp_dir_ctx.cleanup()
+            if temp_dir_ctx is not None:
+                shutil.rmtree(temp_dir_ctx, ignore_errors=True)
         except PermissionError:
             # On Windows temp dirs may fail to clean up; leave them in place.
             pass

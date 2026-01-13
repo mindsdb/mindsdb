@@ -682,10 +682,7 @@ class TestMySQLQueryComposability(BaseStuff):
             yield self.db_name
         finally:
             print(f"\n--> [Fixture composability_db] Tearing down database: {self.db_name}")
-            try:
-                self.query(f"DROP DATABASE IF EXISTS {self.db_name};")
-            except Exception:
-                pass
+            self.query(f"DROP DATABASE IF EXISTS {self.db_name};")
 
     @pytest.fixture
     def use_binary(self, request):

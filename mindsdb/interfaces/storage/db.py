@@ -59,11 +59,13 @@ def init(connection_str: str = None):
             option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
         ).decode("utf-8")
 
-    base_args = {
-        "pool_size": 30,
-        "max_overflow": 200,
-        "json_serializer": _json_serializer,
-    }
+    base_args = {"json_serializer": _json_serializer}
+
+    # SQLite (file or memory) uses a different pooling model; avoid invalid args.
+    if connection_str.startswith("sqlite"):
+        base_args["connect_args"] = {"check_same_thread": False}
+    else:
+        base_args.update({"pool_size": 30, "max_overflow": 200})
     engine = create_engine(connection_str, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
     Base.query = session.query_property()

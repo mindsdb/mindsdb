@@ -29,7 +29,7 @@ def app():
         temp_dir = Path(tempfile.mkdtemp(prefix="test_tmp_", dir=temp_root)).resolve()
         temp_dir_ctx = temp_dir  # track for cleanup
         os.environ["MINDSDB_STORAGE_DIR"] = str(temp_dir)
-        db_path = "sqlite:///:memory:"
+        db_path = "sqlite:///:memory:?check_same_thread=False"
         os.environ["MINDSDB_DB_CON"] = db_path
         # Ensure we don't inherit a stale config path from executor tests.
         os.environ.pop("MINDSDB_CONFIG_PATH", None)
@@ -39,7 +39,7 @@ def app():
         config.merge_configs()
         config["gui"]["open_on_start"] = False
         config["gui"]["autoupdate"] = False
-        db.init()
+        db.init(connection_str=db_path)
         migrate.migrate_to_head()
         app = initialize_app()
         app._mindsdb_temp_dir = temp_dir

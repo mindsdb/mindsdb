@@ -45,7 +45,9 @@ def app():
         config["gui"]["autoupdate"] = False
         from sqlalchemy.pool import NullPool
 
-        db.init(connection_str=db_path, engine_kwargs={"connect_args": {"check_same_thread": False}, "poolclass": NullPool})
+        db.init(
+            connection_str=db_path, engine_kwargs={"connect_args": {"check_same_thread": False}, "poolclass": NullPool}
+        )
         migrate.migrate_to_head()
         app = initialize_app()
         app._mindsdb_temp_dir = temp_dir

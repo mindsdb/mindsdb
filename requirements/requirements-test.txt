@@ -16,7 +16,7 @@ ollama >= 0.1.7 # Langchain tests
 anthropic >= 0.21.3 # Langchain tests
 langchain-google-genai>=2.0.0 # Langchain tests
 mindsdb-sdk
-filelock==3.18.0
+filelock==3.20.1
 mysql-connector-python==9.1.0
 walrus==0.9.3
 pymongo == 4.8.0

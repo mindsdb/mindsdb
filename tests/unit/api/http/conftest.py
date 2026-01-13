@@ -29,7 +29,11 @@ def app():
         temp_dir = Path(tempfile.mkdtemp(prefix="test_tmp_", dir=temp_root)).resolve()
         temp_dir_ctx = temp_dir  # track for cleanup
         os.environ["MINDSDB_STORAGE_DIR"] = str(temp_dir)
-        db_path = "sqlite:///:memory:?check_same_thread=False"
+
+        # File-backed sqlite with NullPool to avoid queue pooling args.
+        db_file = temp_dir / "mindsdb.sqlite3.db"
+        db_file.touch(exist_ok=True)
+        db_path = f"sqlite:///{db_file}"
         os.environ["MINDSDB_DB_CON"] = db_path
         # Ensure we don't inherit a stale config path from executor tests.
         os.environ.pop("MINDSDB_CONFIG_PATH", None)
@@ -39,7 +43,9 @@ def app():
         config.merge_configs()
         config["gui"]["open_on_start"] = False
         config["gui"]["autoupdate"] = False
-        db.init(connection_str=db_path)
+        from sqlalchemy.pool import NullPool
+
+        db.init(connection_str=db_path, engine_kwargs={"connect_args": {"check_same_thread": False}, "poolclass": NullPool})
         migrate.migrate_to_head()
         app = initialize_app()
         app._mindsdb_temp_dir = temp_dir

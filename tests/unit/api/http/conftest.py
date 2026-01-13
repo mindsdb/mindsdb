@@ -26,19 +26,19 @@ def app():
         # Use a workspace-local temp dir to avoid platform /tmp permission quirks.
         temp_root = Path.cwd() / "var" / "tmp_http_app"
         temp_root.mkdir(parents=True, exist_ok=True)
-        temp_dir = Path(tempfile.mkdtemp(prefix="test_tmp_", dir=temp_root))
+        temp_dir = Path(tempfile.mkdtemp(prefix="test_tmp_", dir=temp_root)).resolve()
         temp_dir_ctx = temp_dir  # track for cleanup
         os.environ["MINDSDB_STORAGE_DIR"] = str(temp_dir)
-        db_file = temp_dir / "mindsdb.sqlite3.db"
+        db_file = (temp_dir / "mindsdb.sqlite3.db").resolve()
+        db_file.parent.mkdir(parents=True, exist_ok=True)
+        db_file.touch(mode=0o666, exist_ok=True)
         db_path = "sqlite:///" + str(db_file)
         # Need to change env variable for migrate module, since it calls db.init().
         os.environ["MINDSDB_DB_CON"] = db_path
         # Ensure we don't inherit a stale config path from executor tests.
         os.environ.pop("MINDSDB_CONFIG_PATH", None)
-        # Alembic/migrations expect the directory to exist.
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        # Ensure the sqlite file exists to avoid permission/race issues on some runners.
-        db_file.touch(exist_ok=True)
+        # Alembic/migrations expect the directory/file to exist and be accessible.
+        os.chmod(db_file, 0o666)
         config.prepare_env_config()
         config.merge_configs()
         config["gui"]["open_on_start"] = False

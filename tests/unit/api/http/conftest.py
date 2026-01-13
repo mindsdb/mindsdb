@@ -39,6 +39,7 @@ def app():
         config._user_config = {}  # type: ignore[attr-defined]
         config.prepare_env_config()
         config.merge_configs()
+        config["storage_db"] = db_path
         config["gui"]["open_on_start"] = False
         config["gui"]["autoupdate"] = False
         from sqlalchemy.pool import StaticPool
@@ -48,6 +49,8 @@ def app():
                 connection_str=db_path,
                 engine_kwargs={"connect_args": {"check_same_thread": False}, "poolclass": StaticPool},
             )
+            # Ensure tables exist even if migrations are partial.
+            db.Base.metadata.create_all(bind=db.engine)
             migrate.migrate_to_head()
             app = initialize_app()
             app._mindsdb_temp_dir = temp_dir

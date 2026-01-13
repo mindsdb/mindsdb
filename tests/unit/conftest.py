@@ -3,6 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from mindsdb.integrations.libs.process_cache import process_cache
+from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.utilities.config import config as config_obj
 
 
 _EXECUTOR_ROOT = Path("tests/unit/executor").resolve()
@@ -32,3 +35,18 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
     # Run executor tests first; grouping keeps them on a dedicated worker.
     items[:] = executor_items + other_items
+
+
+@pytest.fixture(autouse=True, scope="function")
+def clear_global_state():
+    """Reset global registries/cache between tests to reduce cross-suite bleed-over."""
+    process_cache.cache = {}
+    try:
+        integration_controller.handlers_import_status.clear()
+    except Exception:
+        pass
+    try:
+        config_obj._user_config = None  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    yield

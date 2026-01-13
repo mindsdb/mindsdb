@@ -10,8 +10,6 @@ defaults:
 permissions:
   contents: read        # For checkout and comparing commits
   pull-requests: write  # For creating/updating PR comments
-  pages: write          # For publishing coverage HTML to GitHub Pages
-  id-token: write       # For deploy-pages OIDC
 
 env:
   HANDLERS_TO_INSTALL: |

@@ -9,6 +9,7 @@ import time
 from unittest import mock
 from pathlib import Path
 
+import pytest
 import duckdb
 import numpy as np
 import pandas as pd
@@ -268,10 +269,18 @@ class BaseExecutorTest(BaseUnitTest):
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if mock_lightwood:
+            # Lightwood may not be installed in all test environments; skip cleanly if missing.
+            try:
+                from mindsdb.integrations.handlers.lightwood_handler import Handler as LightwoodHandler
+            except Exception:
+                pytest.skip("Lightwood handler not available for mocking")
+            if not hasattr(LightwoodHandler, "create"):
+                pytest.skip("Lightwood handler lacks create method for mocking")
+
             predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")
             self.mock_predict = predict_patcher.__enter__()
 
-            create_patcher = mock.patch("mindsdb.integrations.handlers.lightwood_handler.Handler.create")
+            create_patcher = mock.patch.object(LightwoodHandler, "create")
             self.mock_create = create_patcher.__enter__()
 
         ctx.set_default()

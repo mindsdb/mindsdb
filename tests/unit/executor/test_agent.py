@@ -4,7 +4,8 @@ import json
 from textwrap import dedent
 
 from unittest.mock import patch, MagicMock, AsyncMock
-
+from openai.types.chat import ChatCompletion, ChatCompletionMessage
+from openai.types.chat.chat_completion import Choice
 import pandas as pd
 import pytest
 import sys
@@ -22,7 +23,7 @@ def set_openai_completion(mock_openai, response):
     calls = []
     responses = []
 
-    def resp_f(messages, *args, **kwargs):
+    def create_f(messages, *args, **kwargs):
         # return all responses in sequence, then yield only latest from list
         if len(response) == 1:
             resp = response[0]
@@ -46,9 +47,32 @@ def set_openai_completion(mock_openai, response):
         calls.append(messages[0]["content"])
         responses.append(resp)
 
-        return {"choices": [{"message": {"role": "assistant", "content": resp}}]}
+        return ChatCompletion(
+            id="chatcmpl-123",
+            object="chat.completion",
+            created=int(time.time()),
+            model=kwargs["model"],
+            choices=[
+                Choice(
+                    index=0,
+                    message=ChatCompletionMessage(
+                        role="assistant",
+                        content=resp,
+                    ),
+                    finish_reason="stop",
+                )
+            ],
+            usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        )
 
-    mock_openai().chat.completions.create.side_effect = resp_f
+    def create_parse_f(messages, *args, **kwargs):
+        completion = create_f(messages, *args, **kwargs)
+        resp = MagicMock()
+        resp.parse.return_value = completion
+        return resp
+
+    mock_openai().chat.completions.with_raw_response.create.side_effect = create_parse_f
+    mock_openai().chat.completions.create.side_effect = create_f
 
 
 def get_dataset_planets():
@@ -149,7 +173,7 @@ class TestAgent(BaseExecutorDummyML):
 
         # check model params
         assert mock_openai.call_args_list[-1][1]["api_key"] == "-key-"
-        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-3.5-turbo"
+        assert mock_openai().chat.completions.with_raw_response.create.call_args_list[-1][1]["model"] == "gpt-3.5-turbo"
 
         assert agent_response in ret.answer[0]
 
@@ -195,7 +219,7 @@ class TestAgent(BaseExecutorDummyML):
 
         # check model params
         assert mock_openai.call_args_list[-1][1]["api_key"] == "-secret-"
-        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-42"
+        assert mock_openai().chat.completions.with_raw_response.create.call_args_list[-1][1]["model"] == "gpt-42"
 
         assert agent_response in ret.answer[0]
 
@@ -261,7 +285,7 @@ class TestAgent(BaseExecutorDummyML):
             mock_completion = MagicMock()
             mock_completion.choices = [MagicMock()]
             mock_completion.choices[0].message.content = agent_response
-            mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+            mock_async_client.chat.completions.with_raw_response.create = AsyncMock(return_value=mock_completion)
 
             # Mock _initialize_args to capture the merged parameters
             mock_initialize_args.return_value = {
@@ -317,7 +341,7 @@ class TestAgent(BaseExecutorDummyML):
             mock_completion = MagicMock()
             mock_completion.choices = [MagicMock()]
             mock_completion.choices[0].message.content = agent_response
-            mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+            mock_async_client.chat.completions.with_raw_response.create = AsyncMock(return_value=mock_completion)
 
             # Mock _initialize_args to capture the merged parameters
             mock_initialize_args.return_value = {
@@ -398,7 +422,7 @@ class TestAgent(BaseExecutorDummyML):
             mock_completion = MagicMock()
             mock_completion.choices = [MagicMock()]
             mock_completion.choices[0].message.content = agent_response
-            mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+            mock_async_client.chat.completions.with_raw_response.create = AsyncMock(return_value=mock_completion)
 
             # Mock _initialize_args to capture the merged parameters
             mock_initialize_args.return_value = {
@@ -861,7 +885,7 @@ class TestAgent(BaseExecutorDummyML):
 
         # check model params
         assert mock_openai.call_args_list[-1][1]["api_key"] == "-secret-"
-        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-42"
+        assert mock_openai().chat.completions.with_raw_response.create.call_args_list[-1][1]["model"] == "gpt-42"
 
         # check agent response
         assert "Hi!" in ret.answer[0]
@@ -913,7 +937,7 @@ class TestAgent(BaseExecutorDummyML):
 
         # check model params
         assert mock_openai.call_args_list[-1][1]["api_key"] == "-almost secret-"
-        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-18"
+        assert mock_openai().chat.completions.with_raw_response.create.call_args_list[-1][1]["model"] == "gpt-18"
 
         # check agent response
         assert "Hi!" in ret.answer[0]

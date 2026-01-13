@@ -29,8 +29,10 @@ def app():
         temp_dir = Path(tempfile.mkdtemp(prefix="test_tmp_", dir=temp_root)).resolve()
         temp_dir_ctx = temp_dir  # track for cleanup
         os.environ["MINDSDB_STORAGE_DIR"] = str(temp_dir)
-        # Use in-memory sqlite to avoid filesystem issues on CI runners.
-        db_path = "sqlite:///:memory:?check_same_thread=False"
+        db_file = (temp_dir / "mindsdb.sqlite3.db").resolve()
+        db_file.parent.mkdir(parents=True, exist_ok=True)
+        db_file.touch(mode=0o666, exist_ok=True)
+        db_path = "sqlite:///" + str(db_file)
         os.environ["MINDSDB_DB_CON"] = db_path
         # Ensure we don't inherit a stale config path from executor tests.
         os.environ.pop("MINDSDB_CONFIG_PATH", None)

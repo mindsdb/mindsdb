@@ -166,6 +166,33 @@ jobs:
         run: |
           make unit_tests_slow
 
+      - name: Handler coverage (report only)
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        run: |
+          uv run tests/scripts/check_handler_coverage.py > pytest-coverage-handlers.txt
+        env:
+          COVERAGE_FILE: .coverage.unit
+
+      - name: Generate HTML coverage
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        run: |
+          uv run coverage html -d reports/htmlcov
+        env:
+          COVERAGE_FILE: .coverage.unit
+
+      - name: Upload test artifacts
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-artifacts
+          path: |
+            pytest.xml
+            coverage.xml
+            .coverage.unit
+            pytest-coverage.txt
+            pytest-coverage-handlers.txt
+            reports/htmlcov/**
+
       - name: Pytest coverage comment
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
         uses: MishaKav/pytest-coverage-comment@main

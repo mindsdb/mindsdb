@@ -191,9 +191,9 @@ jobs:
             pytest.xml
             coverage.xml
             .coverage.unit
-          pytest-coverage.txt
-          pytest-coverage-handlers.txt
-          reports/htmlcov/**
+            pytest-coverage.txt
+            pytest-coverage-handlers.txt
+            reports/htmlcov/**
 
       - name: Configure Pages
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}

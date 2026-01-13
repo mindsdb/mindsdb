@@ -45,7 +45,7 @@ Base = declarative_base(cls=Base)
 session, engine = None, None
 
 
-def init(connection_str: str = None):
+def init(connection_str: str = None, engine_kwargs: dict | None = None):
     global Base, session, engine
     if connection_str is None:
         connection_str = config["storage_db"]
@@ -78,6 +78,10 @@ def init(connection_str: str = None):
             "pool_size": 30,
             "max_overflow": 200,
         }
+
+    if engine_kwargs:
+        base_args.update(engine_kwargs)
+
     engine = create_engine(connection_str, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
     Base.query = session.query_property()

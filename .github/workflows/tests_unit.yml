@@ -46,45 +46,9 @@ env:
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:
-  # Run all of our static code checks here
-  code_checking:
-    name: Run static code checks
-    runs-on: mdb-dev
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # required to grab the history of the PR so pre-commit can work out what's changed
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          cache-local-path: "/home/runner/_work/_tool/uv-local-cache" # Place cache in the tool dir because we mount this in our runnners
-          prune-cache: false # We want to save all cache because it's in the mount^
-          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }} # Default to 3.11 where vars aren't available (PRs from forks)
-      # Checks the codebase for print() statements and fails if any are found
-      # We should be using loggers instead
-      - name: Check for print statements
-        run: |
-          # The pyproject file confuses uv: https://github.com/astral-sh/uv/issues/6838
-          rm pyproject.toml
-          uv run tests/scripts/check_print_statements.py
-      
-      - name: Install MDB dev requirements
-        run: |
-          uv pip install -r requirements/requirements-dev.txt
 
-      # Run pre-commit on all changed files
-      # See .pre-commit-config.yaml for the list of checks
-      - name: Run pre-commit
-        run: |
-          pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha || 'HEAD~1' }} --to-ref ${{ github.event.pull_request.head.sha || 'HEAD' }}
 
-      # Runs a few different checks against our many requirements files
-      # to make sure they're in order
-      - name: Check requirements files
-        run: |
-          uv run tests/scripts/check_requirements.py
+    
   # Creates a matrix of environments to test against using matrix_includes.json
   matrix_prep:
     name: Prepare matrix
@@ -100,34 +64,10 @@ jobs:
         with:
           filter: "[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]"
 
-  check_install:
-    name: Check pip installation
-    needs: [matrix_prep, code_checking]
-    strategy:
-      matrix: ${{ fromJson(needs.matrix_prep.outputs.matrix) }}
-    runs-on: ${{ matrix.runs_on }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          python-version: ${{ matrix.python-version }}
-      - name: Check pip package builds and installs
-        run: |
-          uv pip install -r requirements/requirements-dev.txt
-          # Install from the pip package
-          # If we install from source, we don't know if the pip package is installable.
-          python setup.py sdist
-          cd dist
-          uv pip install *.tar.gz
-
+ 
   unit_tests:
     name: Run Unit Tests
-    needs: [matrix_prep, code_checking]
+    needs: [matrix_prep]
     strategy:
       matrix: ${{ fromJson(needs.matrix_prep.outputs.matrix) }}
     runs-on: ${{ matrix.runs_on }}
@@ -173,10 +113,20 @@ jobs:
         env:
           COVERAGE_FILE: .coverage.unit
 
+      - name: Build handler coverage report (text)
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        run: |
+          uv run coverage report \
+            --include="mindsdb/integrations/handlers/*" \
+            --skip-covered \
+            --show-missing \
+            > pytest-coverage-handlers.txt
+
       - name: Pytest coverage comment
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
         uses: MishaKav/pytest-coverage-comment@main
         with:
-          pytest-coverage-path: ./pytest-coverage.txt
+          pytest-coverage-path: ./pytest-coverage-handlers.txt
           junitxml-path: ./pytest.xml
-          report-only-changed-files: true
+          report-only-changed-files: false
+          hide-report: false

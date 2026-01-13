@@ -202,7 +202,7 @@ jobs:
 
   deploy_coverage:
     needs: unit_tests
-    if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+    if: ${{ needs.unit_tests.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       pages: write

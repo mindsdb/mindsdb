@@ -10,6 +10,8 @@ defaults:
 permissions:
   contents: read        # For checkout and comparing commits
   pull-requests: write  # For creating/updating PR comments
+  pages: write          # For publishing coverage HTML to GitHub Pages
+  id-token: write       # For deploy-pages OIDC
 
 env:
   HANDLERS_TO_INSTALL: |
@@ -189,9 +191,24 @@ jobs:
             pytest.xml
             coverage.xml
             .coverage.unit
-            pytest-coverage.txt
-            pytest-coverage-handlers.txt
-            reports/htmlcov/**
+          pytest-coverage.txt
+          pytest-coverage-handlers.txt
+          reports/htmlcov/**
+
+      - name: Configure Pages
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports/htmlcov
+
+      - id: deploy
+        name: Deploy to GitHub Pages
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        uses: actions/deploy-pages@v4
 
       - name: Pytest coverage comment
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
@@ -199,29 +216,3 @@ jobs:
         with:
           pytest-coverage-path: ./pytest-coverage.txt
           junitxml-path: ./pytest.xml
-
-  deploy_coverage:
-    needs: unit_tests
-    if: ${{ needs.unit_tests.result == 'success' }}
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - name: Download coverage artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: unit-test-artifacts
-          path: ./artifact
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: artifact/reports/htmlcov
-
-      - id: deploy
-        name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4

@@ -5,7 +5,19 @@ from unittest.mock import patch, MagicMock
 
 try:
     from hubspot.crm.objects import SimplePublicObject
-    from mindsdb.integrations.handlers.hubspot_handler.hubspot_handler import HubspotHandler
+    from mindsdb.integrations.handlers.hubspot_handler.hubspot_handler import (
+        HubspotHandler,
+    )
+    from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
+        DealsTable,
+        canonical_op,
+        to_hubspot_property,
+        to_internal_property,
+        _build_hubspot_search_filters,
+        _normalize_filter_conditions,
+    )
+    from mindsdb_sql_parser.ast import Select, Identifier, Function
+    from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 except ImportError:
     pytestmark = pytest.mark.skip("HubSpot handler not installed")
 
@@ -20,6 +32,23 @@ from mindsdb.integrations.libs.response import (
 
 class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
     """Test class for HubspotHandler."""
+
+    EXPECTED_TABLES = [
+        "companies",
+        "contacts",
+        "deals",
+        "tickets",
+        "tasks",
+        "calls",
+        "emails",
+        "meetings",
+        "notes",
+        "company_contacts",
+        "company_deals",
+        "company_tickets",
+        "contact_deals",
+        "contact_tickets",
+    ]
 
     @property
     def dummy_connection_data(self):
@@ -143,14 +172,13 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         df = response.data_frame
 
-        self.assertEqual(len(df), 3)  # companies, contacts, deals
+        self.assertEqual(len(df), len(self.EXPECTED_TABLES))
         self.assertIn("TABLE_NAME", df.columns)
         self.assertIn("TABLE_TYPE", df.columns)
 
         table_names = df["TABLE_NAME"].tolist()
-        self.assertIn("companies", table_names)
-        self.assertIn("contacts", table_names)
-        self.assertIn("deals", table_names)
+        for table_name in self.EXPECTED_TABLES:
+            self.assertIn(table_name, table_names)
 
         # All should be BASE TABLE type
         table_types = df["TABLE_TYPE"].unique().tolist()
@@ -297,6 +325,20 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         for col in expected_columns:
             self.assertIn(col, column_names)
 
+    def test_deals_targets_include_function_identifiers(self):
+        """Ensure aggregate targets include referenced columns for fetch."""
+        deals_table = DealsTable(MagicMock())
+        query = Select(
+            targets=[
+                Identifier("pipeline"),
+                Function("sum", args=[Identifier("amount")], alias=Identifier("sum_amount")),
+            ],
+            from_table=Identifier("deals"),
+        )
+        targets = deals_table._get_targets(query)
+        self.assertIn("pipeline", targets)
+        self.assertIn("amount", targets)
+
     def test_get_columns_invalid_table(self):
         """Test get_columns method with invalid table name."""
         response = self.handler.get_columns("nonexistent_table")
@@ -324,7 +366,9 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
     def test_native_query_with_update(self):
         """Test native_query with UPDATE statement."""
         mock_hubspot_client = MagicMock()
-        mock_companies_data = [
+
+        mock_search_result = MagicMock()
+        mock_search_result.results = [
             SimplePublicObject(
                 id="123",
                 properties={
@@ -335,24 +379,27 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
                 },
             )
         ]
+        mock_search_result.paging = None
+
         mock_updated_companies = MagicMock()
         mock_updated_companies.results = [SimplePublicObject(id="123", properties={"name": "Updated Company"})]
 
         self.mock_connect.return_value = mock_hubspot_client
-        mock_hubspot_client.crm.companies.get_all.return_value = mock_companies_data
+        mock_hubspot_client.crm.companies.search_api.do_search.return_value = mock_search_result
         mock_hubspot_client.crm.companies.batch_api.update.return_value = mock_updated_companies
 
         update_query = "UPDATE companies SET city='Boston' WHERE name='Test Company'"
         response = self.handler.native_query(update_query)
 
         assert isinstance(response, Response)
-
         self.assertNotEqual(response.type, RESPONSE_TYPE.ERROR)
 
     def test_native_query_with_delete(self):
         """Test native_query with DELETE statement."""
         mock_hubspot_client = MagicMock()
-        mock_companies_data = [
+
+        mock_search_result = MagicMock()
+        mock_search_result.results = [
             SimplePublicObject(
                 id="123",
                 properties={
@@ -363,16 +410,16 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
                 },
             )
         ]
+        mock_search_result.paging = None
 
         self.mock_connect.return_value = mock_hubspot_client
-        mock_hubspot_client.crm.companies.get_all.return_value = mock_companies_data
+        mock_hubspot_client.crm.companies.search_api.do_search.return_value = mock_search_result
         mock_hubspot_client.crm.companies.batch_api.archive.return_value = None
 
         delete_query = "DELETE FROM companies WHERE name='Test Company'"
         response = self.handler.native_query(delete_query)
 
         assert isinstance(response, Response)
-
         self.assertNotEqual(response.type, RESPONSE_TYPE.ERROR)
 
     def test_handler_name(self):
@@ -381,7 +428,10 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_connection_data_storage(self):
         """Test connection data is stored correctly."""
-        self.assertEqual(self.handler.connection_data["access_token"], self.dummy_connection_data["access_token"])
+        self.assertEqual(
+            self.handler.connection_data["access_token"],
+            self.dummy_connection_data["access_token"],
+        )
 
     def test_connect_invalid_credentials(self):
         """Test connect method with invalid credentials."""
@@ -449,15 +499,14 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         df = response.data_frame
 
-        self.assertEqual(len(df), 3)  # companies, contacts, deals
+        self.assertEqual(len(df), len(self.EXPECTED_TABLES))
         self.assertIn("TABLE_NAME", df.columns)
         self.assertIn("TABLE_TYPE", df.columns)
         self.assertIn("TABLE_SCHEMA", df.columns)
 
         table_names = df["TABLE_NAME"].tolist()
-        self.assertIn("companies", table_names)
-        self.assertIn("contacts", table_names)
-        self.assertIn("deals", table_names)
+        for table_name in self.EXPECTED_TABLES:
+            self.assertIn(table_name, table_names)
 
     def test_get_tables_connection_failure(self):
         """Test get_tables method with connection failure."""
@@ -730,10 +779,9 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         # Verify all three tables are present
         table_names = df["TABLE_NAME"].tolist()
-        self.assertEqual(len(table_names), 3)
-        self.assertIn("companies", table_names)
-        self.assertIn("contacts", table_names)
-        self.assertIn("deals", table_names)
+        self.assertEqual(len(table_names), len(self.EXPECTED_TABLES))
+        for table_name in self.EXPECTED_TABLES:
+            self.assertIn(table_name, table_names)
 
     def test_estimate_table_rows_with_search_api(self):
         """Test that _estimate_table_rows uses search API for accurate counts."""
@@ -885,6 +933,248 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertIn("companies", tables_present)
         self.assertIn("contacts", tables_present)
         self.assertIn("deals", tables_present)
+
+    def test_select_companies_with_in_clause_uses_search_api(self):
+        """Test that SELECT with IN clause uses HubSpot Search API."""
+        mock_hubspot_client = MagicMock()
+        mock_search_result = MagicMock()
+        mock_search_result.results = [
+            SimplePublicObject(
+                id="1",
+                properties={
+                    "name": "NYC Company",
+                    "city": "New York",
+                    "createdate": "2023-01-01T00:00:00Z",
+                    "hs_lastmodifieddate": "2023-01-01T00:00:00Z",
+                },
+            ),
+            SimplePublicObject(
+                id="2",
+                properties={
+                    "name": "Austin Company",
+                    "city": "Austin",
+                    "createdate": "2023-01-01T00:00:00Z",
+                    "hs_lastmodifieddate": "2023-01-01T00:00:00Z",
+                },
+            ),
+        ]
+        mock_search_result.paging = None
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.companies.search_api.do_search.return_value = mock_search_result
+
+        query = "SELECT * FROM companies WHERE city IN ('New York', 'Austin')"
+        response = self.handler.native_query(query)
+
+        # Verify search API was called (not get_all)
+        mock_hubspot_client.crm.companies.search_api.do_search.assert_called()
+        mock_hubspot_client.crm.companies.get_all.assert_not_called()
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertIsNotNone(response.data_frame)
+
+    def test_select_contacts_with_in_clause(self):
+        """Test SELECT contacts with IN clause."""
+        mock_hubspot_client = MagicMock()
+        mock_search_result = MagicMock()
+        mock_search_result.results = [
+            SimplePublicObject(
+                id="101",
+                properties={
+                    "email": "john@example.com",
+                    "firstname": "John",
+                    "lastname": "Doe",
+                    "city": "Boston",
+                },
+            ),
+        ]
+        mock_search_result.paging = None
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.contacts.search_api.do_search.return_value = mock_search_result
+
+        query = "SELECT * FROM contacts WHERE city IN ('Boston', 'Chicago')"
+        response = self.handler.native_query(query)
+
+        mock_hubspot_client.crm.contacts.search_api.do_search.assert_called()
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+    def test_select_deals_with_in_clause(self):
+        """Test SELECT deals with IN clause on dealstage."""
+        mock_hubspot_client = MagicMock()
+        mock_search_result = MagicMock()
+        mock_search_result.results = [
+            SimplePublicObject(
+                id="201",
+                properties={
+                    "dealname": "Big Deal",
+                    "amount": "50000",
+                    "dealstage": "closedwon",
+                },
+            ),
+        ]
+        mock_search_result.paging = None
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.deals.search_api.do_search.return_value = mock_search_result
+
+        query = "SELECT * FROM deals WHERE dealstage IN ('closedwon', 'closedlost')"
+        response = self.handler.native_query(query)
+
+        mock_hubspot_client.crm.deals.search_api.do_search.assert_called()
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+    def test_select_with_in_clause_verifies_filter_structure(self):
+        """Test that IN clause generates correct HubSpot filter structure."""
+        mock_hubspot_client = MagicMock()
+        mock_search_result = MagicMock()
+        mock_search_result.results = []
+        mock_search_result.paging = None
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.companies.search_api.do_search.return_value = mock_search_result
+
+        query = "SELECT * FROM companies WHERE city IN ('NYC', 'LA', 'Chicago')"
+        self.handler.native_query(query)
+
+        # Capture the call arguments
+        call_args = mock_hubspot_client.crm.companies.search_api.do_search.call_args
+        search_request = call_args.kwargs.get("public_object_search_request", {})
+
+        # Verify filter structure
+        self.assertIn("filterGroups", search_request)
+        filter_groups = search_request["filterGroups"]
+        self.assertEqual(len(filter_groups), 1)
+
+        filters = filter_groups[0]["filters"]
+        self.assertEqual(len(filters), 1)
+
+        in_filter = filters[0]
+        self.assertEqual(in_filter["propertyName"], "city")
+        self.assertEqual(in_filter["operator"], "IN")
+        self.assertIn("values", in_filter)
+        self.assertEqual(set(in_filter["values"]), {"NYC", "LA", "Chicago"})
+
+    def test_select_with_not_in_clause(self):
+        """Test SELECT with NOT IN clause."""
+        mock_hubspot_client = MagicMock()
+        mock_search_result = MagicMock()
+        mock_search_result.results = []
+        mock_search_result.paging = None
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.companies.search_api.do_search.return_value = mock_search_result
+
+        query = "SELECT * FROM companies WHERE industry NOT IN ('Retail', 'Healthcare')"
+        self.handler.native_query(query)
+
+        call_args = mock_hubspot_client.crm.companies.search_api.do_search.call_args
+        search_request = call_args.kwargs.get("public_object_search_request", {})
+
+        filters = search_request["filterGroups"][0]["filters"]
+        self.assertEqual(filters[0]["operator"], "NOT_IN")
+
+    def test_select_with_in_and_equality_combined(self):
+        """Test SELECT combining IN clause with equality filter."""
+        mock_hubspot_client = MagicMock()
+        mock_search_result = MagicMock()
+        mock_search_result.results = []
+        mock_search_result.paging = None
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.companies.search_api.do_search.return_value = mock_search_result
+
+        query = "SELECT * FROM companies WHERE city IN ('NYC', 'LA') AND industry = 'Technology'"
+        self.handler.native_query(query)
+
+        mock_hubspot_client.crm.companies.search_api.do_search.assert_called()
+
+    def test_canonical_op_normalization(self):
+        """Test canonical operator normalization."""
+        self.assertEqual(canonical_op("="), "eq")
+        self.assertEqual(canonical_op("EQ"), "eq")
+        self.assertEqual(canonical_op(">="), "gte")
+        self.assertEqual(canonical_op(FilterOperator.GREATER_THAN_OR_EQUAL), "gte")
+        self.assertEqual(canonical_op("NOT IN"), "not_in")
+
+    def test_property_mapping(self):
+        """Test internal/HubSpot property mapping."""
+        self.assertEqual(to_hubspot_property("lastmodifieddate"), "hs_lastmodifieddate")
+        self.assertEqual(to_internal_property("hs_lastmodifieddate"), "lastmodifieddate")
+        self.assertEqual(to_hubspot_property("id"), "hs_object_id")
+        self.assertEqual(to_internal_property("hs_object_id"), "id")
+
+    def test_build_hubspot_search_filters_in_and_mapping(self):
+        """Test search filter mapping for IN and special properties."""
+        conditions = _normalize_filter_conditions(
+            [
+                FilterCondition("city", FilterOperator.IN, ["NYC", "LA"]),
+                FilterCondition("id", FilterOperator.EQUAL, "123"),
+                FilterCondition("lastmodifieddate", FilterOperator.GREATER_THAN_OR_EQUAL, "2024-01-01T00:00:00Z"),
+            ]
+        )
+        filters = _build_hubspot_search_filters(conditions, {"city", "id", "lastmodifieddate"})
+
+        self.assertIsNotNone(filters)
+        filter_by_property = {f["propertyName"]: f for f in filters}
+
+        self.assertIn("city", filter_by_property)
+        self.assertEqual(filter_by_property["city"]["operator"], "IN")
+        self.assertEqual(set(filter_by_property["city"]["values"]), {"NYC", "LA"})
+
+        self.assertIn("hs_object_id", filter_by_property)
+        self.assertEqual(filter_by_property["hs_object_id"]["operator"], "EQ")
+        self.assertEqual(filter_by_property["hs_object_id"]["value"], "123")
+
+        self.assertIn("hs_lastmodifieddate", filter_by_property)
+        self.assertEqual(filter_by_property["hs_lastmodifieddate"]["operator"], "GTE")
+
+    def test_meta_get_column_statistics_multiple_tables(self):
+        """Test meta_get_column_statistics retains stats across tables."""
+        mock_hubspot_client = MagicMock()
+        self.mock_connect.return_value = mock_hubspot_client
+
+        mock_hubspot_client.crm.companies.get_all.return_value = [
+            SimplePublicObject(
+                id="company_1",
+                properties={"name": "Company A", "hs_lastmodifieddate": "2024-01-01T00:00:00Z"},
+            )
+        ]
+        mock_hubspot_client.crm.contacts.get_all.return_value = [
+            SimplePublicObject(
+                id="contact_1",
+                properties={"email": "test@example.com", "hs_lastmodifieddate": "2024-01-02T00:00:00Z"},
+            )
+        ]
+
+        response = self.handler.meta_get_column_statistics(table_names=["companies", "contacts"])
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        df = response.data_frame
+        table_names = df["TABLE_NAME"].unique().tolist()
+        self.assertIn("companies", table_names)
+        self.assertIn("contacts", table_names)
+
+    def test_search_pushdown_builds_sorts_and_properties(self):
+        """Test search API payload includes sorts and properties when pushdown is used."""
+        mock_hubspot_client = MagicMock()
+        mock_search_result = MagicMock()
+        mock_search_result.results = []
+        mock_search_result.paging = None
+
+        self.mock_connect.return_value = mock_hubspot_client
+        mock_hubspot_client.crm.deals.search_api.do_search.return_value = mock_search_result
+
+        query = "SELECT dealname FROM deals WHERE pipeline='default' ORDER BY closedate DESC LIMIT 5"
+        self.handler.native_query(query)
+
+        call_args = mock_hubspot_client.crm.deals.search_api.do_search.call_args
+        search_request = call_args.kwargs.get("public_object_search_request", {})
+
+        self.assertIn("sorts", search_request)
+        self.assertEqual(search_request["sorts"][0]["propertyName"], "closedate")
+        self.assertEqual(search_request["sorts"][0]["direction"], "DESCENDING")
+        self.assertEqual(search_request["properties"], ["dealname"])
 
 
 if __name__ == "__main__":

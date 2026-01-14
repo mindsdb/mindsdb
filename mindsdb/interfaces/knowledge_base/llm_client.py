@@ -1,29 +1,35 @@
 import os
+import time
 from typing import List
 
 from openai import OpenAI, AzureOpenAI
 
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 
-try:
-    from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
-except ImportError:
 
-    def retry_with_exponential_backoff(func=None, **_kwargs):
-        """
-        No-op decorator used when the optional handler dependency is missing.
-        Accepts optional decorator arguments to mirror the real implementation.
-        """
+def retry_with_exponential_backoff(func):
+    def decorator(*args, **kwargs):
+        max_retries = 3
+        num_retries = 0
+        delay = 1
+        exponential_base = 2
 
-        def decorator(wrapped):
-            def wrapper(*args, **kwargs):
-                return wrapped(*args, **kwargs)
+        while True:
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                message = str(e).lower()
+                if "connection error" not in message and "timeout" not in message.lower():
+                    raise e
 
-            return wrapper
+                num_retries += 1
+                if num_retries > max_retries:
+                    raise Exception(f"Maximum number of retries ({max_retries}) exceeded.") from e
+                # Increment the delay and wait
+                delay *= exponential_base
+                time.sleep(delay)
 
-        if func is None:
-            return decorator
-        return decorator(func)
+    return decorator
 
 
 def run_in_batches(batch_size):
@@ -105,7 +111,7 @@ class LLMClient:
             self.engine = "litellm"
 
     @run_in_batches(1000)
-    @retry_with_exponential_backoff()
+    @retry_with_exponential_backoff
     def embeddings(self, messages: List[str]):
         params = self.params
         if self.engine == "openai":

@@ -20,12 +20,20 @@ MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
 
+
 # Utilities that have their own requirements.txt files.
 # These are used only within handlers.
 UTILITIES_REQS_PATHS = [
     "mindsdb/integrations/utilities/handlers/auth_utilities/microsoft/requirements.txt",
     "mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt",
 ]
+
+EXTRA_REQS_PATHS = [
+    "requirements/requirements-agents.txt",
+    "requirements/requirements-kb.txt",
+    "requirements/requirements-ml.txt",
+]
+
 
 HANDLER_REQS_PATHS = list(
     set(glob.glob("**/requirements*.txt", recursive=True)) - set(glob.glob("requirements/requirements*.txt"))
@@ -38,8 +46,12 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # lark is required for auto retrieval (RAG utilities). It is used by langchain
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
-# gunicorn and dataprep_ml are for optional features that aren't required.
+# dataprep_ml is for optional features that aren't required.
 # opentelemetry and langfuse are metrics/tracing libraries that are only used in the cloud images (they're installed there as extras)
+# langchain_aws is used to create agent with bedrock provider;
+#   if is not installed - error message will be shown, but it is possible to use other providers with agent
+# pyodbc is used in mssql but as optional dependency
+# litellm is used in KB but as optional dependency in case of using : snowflake,  bedrock, gemini llm providers
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
     "DEP001": [
@@ -47,10 +59,11 @@ MAIN_RULE_IGNORES = {
         "pgvector",
         "pyarrow",
         "openai",
-        "gunicorn",
         "dataprep_ml",
         "opentelemetry",
         "langfuse",
+        "langchain_aws",
+        "pyodbc",
     ],
     "DEP002": [
         "psycopg2-binary",
@@ -60,6 +73,7 @@ MAIN_RULE_IGNORES = {
         "lxml",
         "openpyxl",
         "onnxruntime",
+        "litellm",
     ],
 }
 
@@ -101,6 +115,9 @@ OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
 
+# upper version of numba is fixed in statsforecast handler to prevent installing numba==0.62.0 (its import fails on windows)
+STATSFORECAST_EP002_IGNORE_HANDLER_DEPS = ["numba"]
+
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
 SNOWFLAKE_DEP003_IGNORE_HANDLER_DEPS = ["pyarrow"]
@@ -119,6 +136,7 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
+        + STATSFORECAST_EP002_IGNORE_HANDLER_DEPS
     )
 )
 
@@ -135,6 +153,7 @@ HANDLER_RULE_IGNORES = {
         "pyarrow",
         "IfxPyDbi",
         "ingres_sa_dialect",
+        "pyodbc",
     ],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": DEP003_IGNORE_HANDLER_DEPS,
 }
@@ -211,6 +230,7 @@ PACKAGE_NAME_MAP = {
     "pydantic_core": ["pydantic"],
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
+    "sklearn": ["scikit-learn"],
 }
 
 # We use this to exit with a non-zero status code if any check fails
@@ -245,9 +265,13 @@ def run_deptry(reqs, rule_ignores, path, extra_args=""):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
         )
-        if result.returncode != 0 and not os.path.exists("deptry.json"):
-            # There was some issue with running deptry
-            errors.append(f"Error running deptry: {result.stderr.decode('utf-8')}")
+        if not os.path.exists("deptry.json"):
+            if result.returncode != 0:
+                # There was some issue with running deptry
+                errors.append(f"Error running deptry: {result.stderr.decode('utf-8')}")
+            else:
+                errors.append("Error running deptry: deptry.json was not generated.")
+            return errors
 
         with open("deptry.json", "r") as f:
             deptry_results = json.loads(f.read())
@@ -383,7 +407,7 @@ def check_requirements_imports():
 
     # Run against the main codebase
     errors = run_deptry(
-        ",".join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS),
+        ",".join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS + EXTRA_REQS_PATHS),
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f'--extend-exclude "{"|".join(MAIN_EXCLUDE_PATHS)}"',

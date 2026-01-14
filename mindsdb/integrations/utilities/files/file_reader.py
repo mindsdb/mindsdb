@@ -1,17 +1,16 @@
-from dataclasses import dataclass, astuple
-import traceback
-import json
 import csv
-from io import BytesIO, StringIO, IOBase
-from pathlib import Path
+import json
 import codecs
+from io import BytesIO, StringIO, IOBase
 from typing import List, Generator
+from pathlib import Path
+from dataclasses import dataclass, astuple
 
 import filetype
 import pandas as pd
 from charset_normalizer import from_bytes
-from mindsdb.interfaces.knowledge_base.preprocessing.text_splitter import TextSplitter
 
+from mindsdb.interfaces.knowledge_base.preprocessing.text_splitter import TextSplitter
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -76,7 +75,7 @@ def decode(file_obj: IOBase) -> StringIO:
 
                 data_str = StringIO(byte_str.decode(encoding, errors))
     except Exception as e:
-        logger.error(traceback.format_exc())
+        logger.exception("Error during file decode:")
         raise FileProcessingError("Could not load into string") from e
 
     return data_str

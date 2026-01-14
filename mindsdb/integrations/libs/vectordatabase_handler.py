@@ -1,4 +1,5 @@
 import ast
+import copy
 import hashlib
 from enum import Enum
 from typing import Dict, List, Optional
@@ -409,6 +410,9 @@ class VectorStoreHandler(BaseHandler):
         if conditions is None:
             where_statement = query.where
             conditions = self.extract_conditions(where_statement)
+        else:
+            # it is mutated
+            conditions = copy.deepcopy(conditions)
         self._convert_metadata_filters(conditions, allowed_metadata_columns=allowed_metadata_columns)
 
         # 4. Get offset and limit
@@ -592,6 +596,32 @@ class VectorStoreHandler(BaseHandler):
             df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
         """
         raise NotImplementedError(f"Hybrid search not supported for VectorStoreHandler {self.name}")
+
+    def check_existing_ids(self, table_name: str, ids: List[str]) -> List[str]:
+        """
+        Check which IDs from the provided list already exist in the table.
+
+        Args:
+            table_name (str): Name of the table to check
+            ids (List[str]): List of IDs to check for existence
+
+        Returns:
+            List[str]: List of IDs that already exist in the table
+        """
+        if not ids:
+            return []
+
+        try:
+            # Query existing IDs
+            df_existing = self.select(
+                table_name,
+                columns=[TableField.ID.value],
+                conditions=[FilterCondition(column=TableField.ID.value, op=FilterOperator.IN, value=ids)],
+            )
+            return list(df_existing[TableField.ID.value]) if not df_existing.empty else []
+        except Exception:
+            # If select fails for any reason, return empty list to be safe
+            return []
 
     def create_index(self, *args, **kwargs):
         """

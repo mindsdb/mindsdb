@@ -38,6 +38,8 @@ from mindsdb_sql_parser.ast import (
     Variable,
     Intersect,
     Except,
+    Parameter,
+    NullConstant,
 )
 
 # typed models
@@ -49,6 +51,7 @@ from mindsdb_sql_parser.ast.mindsdb import (
     CreateDatabase,
     CreateJob,
     CreateKnowledgeBase,
+    AlterKnowledgeBase,
     CreateMLEngine,
     CreatePredictor,
     CreateSkill,
@@ -97,6 +100,7 @@ from mindsdb.integrations.libs.const import (
     HANDLER_CONNECTION_ARG_TYPE,
     PREDICTOR_STATUS,
 )
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.database.projects import ProjectController
@@ -196,11 +200,13 @@ def match_two_part_name(
         ValueError: If the identifier does not contain one or two parts, or if ensure_lower_case is True and the name is not lowercase.
     """
     db_name = None
+
     match identifier.parts, identifier.is_quoted:
         case [name], [is_quoted]:
             ...
-        case [db_name, name], [_, is_quoted]:
-            ...
+        case [db_name, name], [db_is_quoted, is_quoted]:
+            if not db_is_quoted:
+                db_name = db_name.lower()
         case _:
             raise ValueError(f"Only single-part or two-part names are allowed: {identifier}")
     if not is_quoted:
@@ -210,6 +216,20 @@ def match_two_part_name(
     if db_name is None:
         db_name = default_db_name
     return db_name, name
+
+
+def apply_parameters(statement, params):
+    def fill_parameters(node, **kwargs):
+        if isinstance(node, Parameter):
+            if node.value in params:
+                value = params[node.value]
+                if value is None:
+                    return NullConstant()
+                if isinstance(value, list):
+                    return Tuple([Constant(i) for i in value])
+                return Constant(value)
+
+    query_traversal(statement, fill_parameters)
 
 
 class ExecuteCommands:
@@ -230,6 +250,9 @@ class ExecuteCommands:
 
         if database_name is None:
             database_name = self.session.database
+
+        if ctx.params:
+            apply_parameters(statement, ctx.params)
 
         statement_type = type(statement)
         if statement_type is CreateDatabase:
@@ -655,6 +678,8 @@ class ExecuteCommands:
             return self.answer_drop_chatbot(statement, database_name)
         elif statement_type is CreateKnowledgeBase:
             return self.answer_create_kb(statement, database_name)
+        elif statement_type is AlterKnowledgeBase:
+            return self.answer_alter_kb(statement, database_name)
         elif statement_type is DropKnowledgeBase:
             return self.answer_drop_kb(statement, database_name)
         elif statement_type is CreateSkill:
@@ -710,9 +735,7 @@ class ExecuteCommands:
 
     def answer_create_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
-        project_name, trigger_name = match_two_part_name(
-            statement.name, ensure_lower_case=True, default_db_name=database_name
-        )
+        project_name, trigger_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         triggers_controller.add(
             trigger_name,
@@ -726,9 +749,7 @@ class ExecuteCommands:
     def answer_drop_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
 
-        name = statement.name
-        trigger_name = statement.name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
+        project_name, trigger_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         triggers_controller.delete(trigger_name, project_name)
 
@@ -736,9 +757,7 @@ class ExecuteCommands:
 
     def answer_create_job(self, statement: CreateJob, database_name):
         jobs_controller = JobsController()
-        project_name, job_name = match_two_part_name(
-            statement.name, ensure_lower_case=True, default_db_name=database_name
-        )
+        project_name, job_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         try:
             jobs_controller.create(job_name, project_name, statement)
@@ -757,14 +776,12 @@ class ExecuteCommands:
         except EntityNotExistsError:
             if statement.if_exists is False:
                 raise
-        except Exception as e:
-            raise e
 
         return ExecuteAnswer()
 
     def answer_create_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
-        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         is_running = statement.params.pop("is_running", True)
 
@@ -789,16 +806,14 @@ class ExecuteCommands:
             agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
         )
         return ExecuteAnswer()
 
     def answer_update_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
 
-        name = statement.name
-        name_no_project = name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         # From SET keyword parameters
         updated_name = statement.params.pop("name", None)
@@ -815,36 +830,38 @@ class ExecuteCommands:
             database_id = database["id"]
 
         updated_chatbot = chatbot_controller.update_chatbot(
-            name_no_project,
+            name,
             project_name=project_name,
             name=updated_name,
             model_name=model_name,
             agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
         )
         if updated_chatbot is None:
-            raise ExecutorException(f"Chatbot with name {name_no_project} not found")
+            raise ExecutorException(f"Chatbot with name {name} not found")
         return ExecuteAnswer()
 
     def answer_drop_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
 
-        name = statement.name
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        chatbot_controller.delete_chatbot(name.parts[-1], project_name=project_name)
+        chatbot_controller.delete_chatbot(name, project_name=project_name)
         return ExecuteAnswer()
 
     def answer_evaluate_metric(self, statement, database_name):
         # heavy import, so we do it here on-demand
-        from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+        try:
+            from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+        except ImportError:
+            logger.error("mindsdb-evaluator is not installed. Please install it with `pip install mindsdb-evaluator]`.")
 
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
         except Exception as e:
-            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.')
+            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.') from e
         df = sqlquery.fetched_data.to_df()
         df.columns = [str(t.alias) if hasattr(t, "alias") else str(t.parts[-1]) for t in statement.data.targets]
 
@@ -974,6 +991,10 @@ class ExecuteCommands:
             identifier.is_quoted = [False] + identifier.is_quoted
 
         database_name, model_name, model_version = resolve_model_identifier(identifier)
+        # at least two part in identifier
+        identifier.parts[0] = database_name
+        identifier.parts[1] = model_name
+
         if database_name is None:
             database_name = database_name
 
@@ -1161,7 +1182,7 @@ class ExecuteCommands:
         Raises:
             ValueError: If the ml_engine name format is invalid.
         """
-        name = match_one_part_name(statement.name, ensure_lower_case=True)
+        name = match_one_part_name(statement.name)
 
         handler = statement.handler
         params = statement.params
@@ -1181,7 +1202,7 @@ class ExecuteCommands:
 
         params_out = {}
         if params:
-            for key, value in params.items():
+            for key, value in variables_controller.fill_parameters(params).items():
                 # convert ast types to string
                 if isinstance(value, (Constant, Identifier)):
                     value = value.to_string()
@@ -1210,7 +1231,7 @@ class ExecuteCommands:
             ast_drop = DropMLEngine(name=Identifier(name))
             self.answer_drop_ml_engine(ast_drop)
             logger.info(msg)
-            raise ExecutorException(msg)
+            raise ExecutorException(msg) from e
 
         return ExecuteAnswer()
 
@@ -1247,11 +1268,11 @@ class ExecuteCommands:
         Returns:
             ExecuteAnswer: 'ok' answer
         """
-        database_name = match_one_part_name(statement.name, ensure_lower_case=True)
+        database_name = match_one_part_name(statement.name)
 
         engine = (statement.engine or "mindsdb").lower()
 
-        connection_args = statement.parameters
+        connection_args = variables_controller.fill_parameters(statement.parameters)
 
         try:
             if engine == "mindsdb":
@@ -1288,7 +1309,9 @@ class ExecuteCommands:
 
     def answer_alter_database(self, statement: AlterDatabase) -> ExecuteAnswer:
         db_name = match_one_part_name(statement.name)
-        self.session.database_controller.update(db_name, data=statement.params, strict_case=statement.name.is_quoted[0])
+        self.session.database_controller.update(
+            db_name, data=statement.params, strict_case=statement.name.is_quoted[0], check_connection=True
+        )
         return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):
@@ -1336,9 +1359,7 @@ class ExecuteCommands:
         Returns:
             ExecuteAnswer: answer for the command
         """
-        project_name, view_name = match_two_part_name(
-            statement.name, default_db_name=database_name, ensure_lower_case=isinstance(statement, CreateView)
-        )
+        project_name, view_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         query_str = statement.query_str
 
@@ -1390,10 +1411,15 @@ class ExecuteCommands:
                 case _:
                     raise ValueError(f"Invalid view name: {name}")
 
+            if not db_name_quoted:
+                database_name = database_name.lower()
+            if not view_name_quoted:
+                view_name = view_name.lower()
+
             project = self.session.database_controller.get_project(database_name, db_name_quoted)
 
             try:
-                project.drop_view(view_name, strict_case=view_name_quoted)
+                project.drop_view(view_name, strict_case=True)
             except EntityNotExistsError:
                 if statement.if_exists is not True:
                     raise
@@ -1407,9 +1433,7 @@ class ExecuteCommands:
                 "Please pass the model parameters as a JSON object in the embedding_model field."
             )
 
-        project_name, kb_name = match_two_part_name(
-            statement.name, ensure_lower_case=True, default_db_name=database_name
-        )
+        project_name, kb_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         if statement.storage is not None:
             if len(statement.storage.parts) != 2:
@@ -1427,8 +1451,22 @@ class ExecuteCommands:
             project_name=project_name,
             # embedding_model=statement.model,
             storage=statement.storage,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
             if_not_exists=statement.if_not_exists,
+        )
+
+        return ExecuteAnswer()
+
+    def answer_alter_kb(self, statement: AlterKnowledgeBase, database_name: str):
+        project_name, kb_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
+
+        # update the knowledge base
+        self.session.kb_controller.update(
+            name=kb_name,
+            project_name=project_name,
+            params=variables_controller.fill_parameters(statement.params),
         )
 
         return ExecuteAnswer()
@@ -1446,7 +1484,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_create_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         try:
             _ = self.session.skills_controller.add_skill(name, project_name, statement.type, statement.params)
@@ -1482,7 +1520,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_create_agent(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         skills = statement.params.pop("skills", [])
         provider = statement.params.pop("provider", None)
@@ -1493,7 +1531,7 @@ class ExecuteCommands:
                 model_name=statement.model,
                 skills=skills,
                 provider=provider,
-                params=statement.params,
+                params=variables_controller.fill_parameters(statement.params),
             )
         except EntityExistsError as e:
             if statement.if_not_exists is not True:
@@ -1528,7 +1566,7 @@ class ExecuteCommands:
                 model_name=model,
                 skills_to_add=skills_to_add,
                 skills_to_remove=skills_to_remove,
-                params=statement.params,
+                params=variables_controller.fill_parameters(statement.params),
             )
         except (EntityExistsError, EntityNotExistsError, ValueError) as e:
             # Project does not exist or agent does not exist.
@@ -1538,11 +1576,9 @@ class ExecuteCommands:
 
     @mark_process("learn")
     def answer_create_predictor(self, statement: CreatePredictor, database_name: str):
-        integration_name, model_name = match_two_part_name(
-            statement.name, ensure_lower_case=True, default_db_name=database_name
-        )
+        integration_name, model_name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        statement.name.parts = [integration_name.lower(), model_name]
+        statement.name.parts = [integration_name, model_name]
         statement.name.is_quoted = [False, False]
 
         ml_integration_name = "lightwood"  # default
@@ -2018,7 +2054,7 @@ class ExecuteCommands:
         else:
             # drop model
             try:
-                project = self.session.database_controller.get_project(project_name)
+                project = self.session.database_controller.get_project(project_name, strict_case=True)
                 project.drop_model(model_name)
             except Exception as e:
                 if not statement.if_exists:

@@ -1,2 +1,4 @@
 neuralforecast>=1.6.0, <1.7.0
 ray[tune]>=2.8.1
+scikit-learn==1.5.2
+hierarchicalforecast~=0.4.0

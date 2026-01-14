@@ -4,7 +4,7 @@ import pytest
 
 import pandas as pd
 
-from tests.unit.executor_test_base import BaseExecutorDummyML
+from tests.unit.executor_test_base import BaseExecutorDummyML, BaseExecutorTest
 
 
 class TestSelect(BaseExecutorDummyML):
@@ -58,6 +58,27 @@ class TestSelect(BaseExecutorDummyML):
         """)
         assert ret.lower[0] == ret.upper[0] == ret.varcase[0]
         assert ret.value[0] == ret.VALUE[0]
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_view_conditions(self, data_handler):
+        # test view optimisations
+        df = pd.DataFrame(
+            [
+                {"a": 1, "b": 1},
+                {"a": 1, "b": 2},
+            ]
+        )
+        self.set_handler(data_handler, name="pg", tables={"tbl1": df})
+        self.run_sql("create view v1 (select * from pg.tbl1 where a=1)")
+
+        data_handler.reset_mock()
+        ret = self.run_sql("select * from v1 where b=2 limit 1")
+        assert len(ret) == 1 and ret["b"][0] == 2
+        calls = data_handler().query.call_args_list
+        sql = calls[0][0][0].to_string()
+
+        # both conditions are used in query to database
+        assert "a = 1" in sql and "b = 2" in sql and "LIMIT 1" in sql
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_complex_joins(self, data_handler):
@@ -218,6 +239,75 @@ class TestSelect(BaseExecutorDummyML):
         assert ret["col1"][0] == 7
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_db_mixed_case(self, data_handler):
+        df = pd.DataFrame(
+            [
+                {"a": 6, "c": 1},
+                {"a": 4, "c": 2},
+                {"a": 2, "c": 3},
+            ]
+        )
+        # mixed case
+        self.set_handler(data_handler, name="mixDb", tables={"tbl": df, "mixTbl": df})
+        self.set_handler(data_handler, name="mixDb2", tables={"tbl": df, "mixTbl": df})
+
+        # --- works with right case (with quotes and without)
+        self.run_sql("""
+          SELECT * FROM `mixDb`.tbl as t1
+          JOIN `mixDb2`.tbl as t2 on t1.c=t2.c
+        """)
+
+        self.run_sql("""
+          SELECT * FROM mixDb.tbl as t1
+          JOIN mixDb2.tbl as t2 on t1.c=t2.c
+        """)
+
+        self.run_sql("SELECT * FROM mixDb.tbl")
+
+        self.run_sql("SELECT * FROM `mixDb`.tbl")
+
+        # --- doesn't work with wrong case
+        with pytest.raises(Exception):
+            self.run_sql("""
+              SELECT * FROM mixdb.tbl as t1
+              JOIN mixDb2.tbl as t2 on t1.c=t2.c
+            """)
+
+        with pytest.raises(Exception):
+            self.run_sql("""
+              SELECT * FROM `mixdb`.tbl as t1
+              JOIN `mixDb2`.tbl as t2 on t1.c=t2.c
+            """)
+
+        with pytest.raises(Exception):
+            self.run_sql("SELECT * FROM mixdb.tbl")
+
+        with pytest.raises(Exception):
+            self.run_sql("SELECT * FROM `mixdb`.tbl")
+
+        # lower case
+        self.set_handler(data_handler, name="low_db", tables={"tbl": df, "mixTbl": df})
+        self.set_handler(data_handler, name="low_db2", tables={"tbl": df, "mixTbl": df})
+
+        # --- works with any case if not quoted
+        self.run_sql("""
+          SELECT * FROM low_DB.tbl as t1
+          JOIN low_DB2.tbl as t2 on t1.c=t2.c
+        """)
+
+        self.run_sql("SELECT * FROM low_DB.tbl")
+
+        # -- doesn't work quoted
+        with pytest.raises(Exception):
+            self.run_sql("""
+             SELECT * FROM `low_DB`.tbl as t1
+             JOIN `low_DB2`.tbl as t2 on t1.c=t2.c
+           """)
+
+        with pytest.raises(Exception):
+            self.run_sql("SELECT * FROM `low_DB`.tbl")
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_implicit_join(self, data_handler):
         df1 = pd.DataFrame(
             [
@@ -244,6 +334,83 @@ class TestSelect(BaseExecutorDummyML):
 
         # must be 2 rows
         assert len(ret) == 2
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_federated_query(self, data_handler):
+        statuses = pd.DataFrame(
+            [
+                [1, "new"],
+                [2, "progress"],
+                [3, "done"],
+                [4, "cancel"],
+                [5, "duplicate"],
+                [6, "docs"],
+                [7, "backlog"],
+            ],
+            columns=["id", "name"],
+        )
+
+        tasks = pd.DataFrame(
+            [
+                [1, 1, "new1"],
+                [2, 7, "backlog2"],
+                [3, 7, "backlog3"],
+                [4, 7, "backlog4"],
+                [5, 7, "backlog5"],
+                [6, 7, "backlog6"],
+            ],
+            columns=["id", "status", "name"],
+        )
+
+        self.set_handler(data_handler, name="db", tables={"statuses": statuses})
+        self.save_file("tasks", tasks)
+
+        # test inner join
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          JOIN files.tasks as t2 on t1.id=t2.status
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        assert len(tries) == 2
+        query1 = tries[0][0][0]
+        # not all record were fetched in first query
+        assert query1.limit.value < 6
+
+        # test with order by 2nd table
+        data_handler.reset_mock()
+
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          JOIN files.tasks as t2 on t1.id=t2.status
+          order by t2.id
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        # the first table was used once without the limit
+        assert len(tries) == 1
+        query1 = tries[0][0][0]
+        assert query1.limit is None
+
+        # test left join
+        data_handler.reset_mock()
+
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          left join files.tasks as t2 on t1.id=t2.status
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        # the first table was used once with the limit
+        assert len(tries) == 1
+        query1 = tries[0][0][0]
+        assert query1.limit.value == 2
 
     def test_complex_queries(self):
         # -- set up data --
@@ -556,29 +723,49 @@ class TestSelect(BaseExecutorDummyML):
 
         self.set_data("tasks", df)
 
-        sql = """
-            select * from dummy_data.tasks
-            where a > coalesce(last, 1)
-        """
+        # -- create model --
+        self.run_sql(
+            """
+                CREATE model task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            """
+        )
+
+        sqls = [
+            """
+                select * from dummy_data.tasks
+                where a > coalesce(last, 1)
+            """,
+            """
+                select t.* from dummy_data.tasks t
+                join task_model m
+                where t.a > coalesce(last, 1)
+            """,
+        ]
 
         # first call two rows
-        ret = self.run_sql(sql)
-        assert len(ret) == 2
+        for sql in sqls:
+            ret = self.run_sql(sql)
+            assert len(ret) == 2
 
         # second call zero rows
-        ret = self.run_sql(sql)
-        assert len(ret) == 0
+        for sql in sqls:
+            ret = self.run_sql(sql)
+            assert len(ret) == 0
 
         # add rows to dataframe
         df.loc[len(df.index)] = [4, "d"]  # should be tracked
         df.loc[len(df.index)] = [0, "z"]  # not tracked
         self.set_data("tasks", df)
 
-        ret = self.run_sql(sql)
+        for sql in sqls:
+            ret = self.run_sql(sql)
 
-        # have to be one new line
-        assert len(ret) == 1
-        assert ret.a[0] == 4
+            # have to be one new line
+            assert len(ret) == 1
+            assert ret.a[0] == 4
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_interval(self, data_handler):
@@ -668,6 +855,18 @@ class TestSelect(BaseExecutorDummyML):
         """)
         assert res["NAME"][0] == "test_db"
         assert res["CONNECTION_DATA"][0] == '{"key": 2}'
+
+
+class TestSet(BaseExecutorTest):
+    @pytest.mark.parametrize("var", ["var", "@@var", "@@session.var", "session var"])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "on", "off"])
+    def test_set(self, var, value):
+        query = f"set {var} = {value}"
+        self.run_sql(query)
+
+    def test_multy_set(self):
+        query = "set @@var = ON, session var = 0"
+        self.run_sql(query)
 
 
 class TestDML(BaseExecutorDummyML):

@@ -1,11 +1,53 @@
-import copy
 import os
 from typing import List
 
 from openai import OpenAI, AzureOpenAI
 
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.utilities.config import config
+
+try:
+    from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
+except ImportError:
+
+    def retry_with_exponential_backoff(func=None, **_kwargs):
+        """
+        No-op decorator used when the optional handler dependency is missing.
+        Accepts optional decorator arguments to mirror the real implementation.
+        """
+
+        def decorator(wrapped):
+            def wrapper(*args, **kwargs):
+                return wrapped(*args, **kwargs)
+
+            return wrapper
+
+        if func is None:
+            return decorator
+        return decorator(func)
+
+
+def run_in_batches(batch_size):
+    """
+    decorator to run function into batches if input is greater than batch_size
+    """
+
+    def decorator(func):
+        def wrapper(self, messages, *args, **kwargs):
+            if len(messages) <= batch_size:
+                return func(self, messages, *args, **kwargs)
+
+            chunk_num = 0
+            results = []
+            while chunk_num * batch_size < len(messages):
+                chunk = messages[chunk_num * batch_size : (chunk_num + 1) * batch_size]
+                results.extend(func(self, chunk, *args, **kwargs))
+                chunk_num += 1
+
+            return results
+
+        return wrapper
+
+    return decorator
 
 
 class LLMClient:
@@ -14,24 +56,24 @@ class LLMClient:
     It chooses openai client or litellm handler depending on the config
     """
 
-    def __init__(self, llm_params: dict = None):
-        params = copy.deepcopy(config.get("default_llm", {}))
-
-        if llm_params:
-            params.update(llm_params)
-
+    def __init__(self, params: dict = None, session=None):
+        self._session = session
         self.params = params
 
         self.provider = params.get("provider", "openai")
 
         if "api_key" not in params:
-            params["api_key"] = get_api_key(self.provider, params, strict=False)
+            api_key = get_api_key(self.provider, params, strict=False)
+            if api_key is not None:
+                params["api_key"] = api_key
+
+        self.engine = "openai"
 
         if self.provider == "azure_openai":
             azure_api_key = params.get("api_key") or os.getenv("AZURE_OPENAI_API_KEY")
             azure_api_endpoint = params.get("base_url") or os.environ.get("AZURE_OPENAI_ENDPOINT")
             azure_api_version = params.get("api_version") or os.environ.get("AZURE_OPENAI_API_VERSION")
-            self._llm_client = AzureOpenAI(
+            self.client = AzureOpenAI(
                 api_key=azure_api_key, azure_endpoint=azure_api_endpoint, api_version=azure_api_version, max_retries=2
             )
         elif self.provider == "openai":
@@ -41,34 +83,60 @@ class LLMClient:
             if base_url:
                 kwargs["base_url"] = base_url
             self.client = OpenAI(**kwargs)
-
+        elif self.provider == "ollama":
+            kwargs = params.copy()
+            kwargs.pop("model_name")
+            kwargs.pop("provider", None)
+            if kwargs.get("api_key") is None:
+                kwargs["api_key"] = "n/a"
+            self.client = OpenAI(**kwargs)
         else:
             # try to use litellm
-            from mindsdb.api.executor.controllers.session_controller import SessionController
+            if self._session is None:
+                from mindsdb.api.executor.controllers.session_controller import SessionController
 
-            session = SessionController()
-            module = session.integration_controller.get_handler_module("litellm")
+                self._session = SessionController()
+            module = self._session.integration_controller.get_handler_module("litellm")
 
             if module is None or module.Handler is None:
                 raise ValueError(f'Unable to use "{self.provider}" provider. Litellm handler is not installed')
 
             self.client = module.Handler
+            self.engine = "litellm"
 
-    def completion(self, messages: List[dict], json_output: bool = False) -> str:
+    @run_in_batches(1000)
+    @retry_with_exponential_backoff()
+    def embeddings(self, messages: List[str]):
+        params = self.params
+        if self.engine == "openai":
+            response = self.client.embeddings.create(
+                model=params["model_name"],
+                input=messages,
+            )
+            return [item.embedding for item in response.data]
+        else:
+            kwargs = params.copy()
+            model = kwargs.pop("model_name")
+            kwargs.pop("provider", None)
+
+            return self.client.embeddings(self.provider, model=model, messages=messages, args=kwargs)
+
+    @run_in_batches(100)
+    def completion(self, messages: List[dict], json_output: bool = False) -> List[str]:
         """
         Call LLM completion and get response
         """
         params = self.params
         params["json_output"] = json_output
-        if self.provider in ("azure_openai", "openai"):
+        if self.engine == "openai":
             response = self.client.chat.completions.create(
                 model=params["model_name"],
                 messages=messages,
             )
-            return response.choices[0].message.content
+            return [item.message.content for item in response.choices]
         else:
             kwargs = params.copy()
             model = kwargs.pop("model_name")
             kwargs.pop("provider", None)
             response = self.client.completion(self.provider, model=model, messages=messages, args=kwargs)
-            return response.choices[0].message.content
+            return [item.message.content for item in response.choices]

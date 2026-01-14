@@ -574,7 +574,7 @@ class Test(BaseExecutorMockPredictor):
         self.set_handler(mock_handler, name="pg", tables={})
         self.execute("drop database pg")
         self.set_handler(mock_handler, name="PG", tables={})
-        self.execute("drop database pg")
+        self.execute("drop database `PG`")
         self.set_handler(mock_handler, name="pg", tables={})
         self.execute("drop database Pg")
 
@@ -1073,6 +1073,38 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             check_dtype=False,
         )
 
+        # different case
+        sqls = [
+            """
+            WITH Ta as (
+                select 1 as x
+            )
+            select * from ta
+        """,
+            """
+            WITH ta as (
+                select 1 as x
+            )
+            select * from Ta
+        """,
+        ]
+        for sql in sqls:
+            resp = self.execute(sql)
+            pdt.assert_frame_equal(
+                resp.data.to_df(),
+                pd.DataFrame([[1]], columns=["x"]),
+                check_dtype=False,
+            )
+
+        sql = """
+            WITH `Ta` as (
+                select 1 as x
+            )
+            select * from ta
+        """
+        with pytest.raises(Exception):
+            resp = self.execute(sql)
+
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):
     #     self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
@@ -1415,42 +1447,91 @@ class TestExecutionTools:
         query_df(df, "select * from models")
 
     def test_query_df_functions(self):
+        cur_time = dt.datetime.now()
         tests = [
-            {"query": "select to_base64('test') as result from df", "result": "dGVzdA=="},
-            {"query": "select char_length('海豚') as result from df", "result": 2},
-            {"query": "select length('海豚') as result from df", "result": 6},
-            {"query": "select char(77, 78, 79) as result from df", "result": "MNO"},
-            {"query": "select locate('no', 'yes') as result from df", "result": 0},
-            {"query": "select locate('no', 'yesnoyes') as result from df", "result": 4},
-            {"query": "select format(1234567.89, 0) as result from df", "result": "1,234,568"},
-            {"query": "select format(1234567.89, 3) as result from df", "result": "1,234,567.890"},
-            {"query": "select format(f_float, 2) as result from df", "result": "1.10"},
-            {"query": "select FORMAT('{:,.2f}', 1234567.89) as result from df", "result": "1,234,567.89"},
+            {"query": "to_base64('test')", "result": "dGVzdA=="},
+            {"query": "char_length('海豚')", "result": 2},
+            {"query": "length('海豚')", "result": 6},
+            {"query": "char(77, 78, 79)", "result": "MNO"},
+            {"query": "locate('no', 'yes')", "result": 0},
+            {"query": "locate('no', 'yesnoyes')", "result": 4},
+            {"query": "format(1234567.89, 0)", "result": "1,234,568"},
+            {"query": "format(1234567.89, 3)", "result": "1,234,567.890"},
+            {"query": "format(f_float, 2)", "result": "1.10"},
+            {"query": "FORMAT('{:,.2f}', 1234567.89)", "result": "1,234,567.89"},
             {
-                "query": "select sha2('abc') as result from df",
+                "query": "sha2('abc')",
                 "result": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
             },
-            {"query": "select REGEXP_SUBSTR('abc def ghi', '[a-z]+') as result from df", "result": "abc"},
-            {"query": "select REGEXP_SUBSTR('abc def ghi', '[a-z]+', 1, 1) as result from df", "result": "abc"},
-            {"query": "select substring_index('www.mysql.com', '.', 2) as result from df", "result": "www.mysql"},
-            {"query": "select substring_index('www.mysql.com', '.', 1) as result from df", "result": "www"},
+            {"query": "REGEXP_SUBSTR('abc def ghi', '[a-z]+')", "result": "abc"},
+            {"query": "REGEXP_SUBSTR('abc def ghi', '[a-z]+', 1, 1)", "result": "abc"},
+            {"query": "substring_index('www.mysql.com', '.', 2)", "result": "www.mysql"},
+            {"query": "substring_index('www.mysql.com', '.', 1)", "result": "www"},
             {
-                "query": "select TIMESTAMPDIFF(MINUTE,'2003-02-01','2003-05-01 12:05:55') as result from df",
+                "query": "TIMESTAMPDIFF(MINUTE,'2003-02-01','2003-05-01 12:05:55')",
                 "result": 128885,
             },
-            {"query": "select TIMESTAMPDIFF(MONTH,'2003-02-01','2003-05-01') as result from df", "result": 3},
+            {"query": "TIMESTAMPDIFF(MONTH,'2003-02-01','2003-05-01')", "result": 3},
             {
-                "query": "select EXTRACT(YEAR FROM '2019-07-02') as result from df",
+                "query": "EXTRACT(YEAR FROM '2019-07-02')",
                 "result": 2019,
-                # }, {
-                #     "query": "select EXTRACT(YEAR_MONTH FROM '2019-07-02') as result from df",
-                #     "result": 201907
             },
+            {"query": "EXTRACT(YEAR_MONTH FROM '2019-07-02')", "result": 201907},
+            {"query": "EXTRACT(DAY_MINUTE FROM created)", "result": 302223},
+            {"query": "GET_FORMAT(DATE,'ISO')", "result": "%Y-%m-%d"},
+            {"query": "GET_FORMAT(DATETIME,'EUR')", "result": "%Y-%m-%d %H.%i.%s"},
+            {"query": "DATE_FORMAT('2009-10-30 22:23:11', '%X %V %H:%i:%s')", "result": "2009 43 22:23:11"},
+            {"query": "DATE_FORMAT(created, GET_FORMAT(DATE,'EUR'))", "result": "30.10.2009"},
+            {"query": "FROM_UNIXTIME(1447430881)", "result": dt.datetime.fromisoformat("2015-11-13 16:08:01")},
+            {"query": "FROM_UNIXTIME(f_seconds)", "result": dt.datetime.fromisoformat("2015-11-13 16:08:01")},
+            {"query": "FROM_DAYS(730669)", "result": dt.datetime.fromisoformat("2000-07-03")},
+            {"query": "FROM_DAYS(f_days)", "result": dt.datetime.fromisoformat("2000-07-03")},
+            {"query": "DAYOFYEAR('2009-10-30')", "result": 303},
+            {"query": "DAYOFYEAR(created)", "result": 303},
+            {"query": "DAYOFWEEK('2009-10-30')", "result": 6},
+            {"query": "DAYOFWEEK(created)", "result": 6},
+            {"query": "DAYOFMONTH('2009-10-30')", "result": 30},
+            {"query": "DAY(created)", "result": 30},
+            {"query": "DAYNAME('2009-10-30')", "result": "Friday"},
+            {"query": "DAYNAME(created)", "result": "Friday"},
+            {"query": "DAYNAME('2009-10-30')", "result": "Friday"},
+            {"query": "DAYNAME(created)", "result": "Friday"},
+            {"query": "CURDATE()", "result": dt.datetime(cur_time.year, cur_time.month, cur_time.day)},
+            {"query": "DATEDIFF('2011-01-15 01:02:03', '2009-10-30 22:23:11')", "result": 442},
+            {"query": "DATEDIFF(updated, created)", "result": 442},
+            {"query": "DATE_ADD('2011-01-15', INTERVAL 31 DAY)", "result": dt.datetime.fromisoformat("2011-02-15")},
+            {
+                "query": "ADDDATE(updated, INTERVAL '31 DAY')",
+                "result": dt.datetime.fromisoformat("2011-02-15 01:02:03"),
+            },
+            {"query": "DATE_SUB('2011-01-15', INTERVAL 31 DAY)", "result": dt.datetime.fromisoformat("2010-12-15")},
+            {"query": "DATE_SUB(updated, INTERVAL 31 DAY)", "result": dt.datetime.fromisoformat("2010-12-15 01:02:03")},
+            {
+                "query": "ADDTIME('2011-01-15 01:02:03', '1 1:1:1.2')",
+                "result": dt.datetime.fromisoformat("2011-01-16 02:03:04.200"),
+            },
+            {"query": "ADDTIME(updated, '1 1:1:1.2')", "result": dt.datetime.fromisoformat("2011-01-16 02:03:04.200")},
+            {
+                "query": "CONVERT_TZ('2009-10-30 22:23:11','GMT','MET')",
+                "result": dt.datetime.fromisoformat("2009-10-30 23:23:11"),
+            },
+            {"query": "CONVERT_TZ(created,'GMT','MET')", "result": dt.datetime.fromisoformat("2009-10-30 23:23:11")},
         ]
 
+        df = pd.DataFrame(
+            [
+                {
+                    "f_seconds": 1447430881,
+                    "f_days": 730669,
+                    "f_float": 1.1,
+                    "created": "2009-10-30 22:23:11",
+                    "updated": "2011-01-15 01:02:03",
+                }
+            ]
+        )
+
         for test in tests:
-            df = pd.DataFrame([[1, 1.1]], columns=["f_int", "f_float"])
-            query = test["query"]
+            query = f"select {test['query']} as result from df"
             expected_result = test["result"]
 
             result = query_df(df, query)["result"][0]

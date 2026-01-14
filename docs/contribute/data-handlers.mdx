@@ -16,12 +16,6 @@ In this section, you'll find how to add new integrations/databases to MindsDB.
 
 Database handlers act as a bridge to any database. You use database handlers to create databases using [the CREATE DATABASE command](/sql/create/databases/). So you can reach data from any database that has its handler implemented within MindsDB.
 
-<Note>
-    **ML Handlers**
-
-    To learn more about handlers and how to implement a machine learning (ML) handler, visit our [doc page here](/contribute/ml-handlers/).
-</Note>
-
 ## Creating a Database Handler
 
 You can create your own database handler within MindsDB by inheriting from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/base.py#L102) class.
@@ -134,7 +128,7 @@ Here is a step-by-step guide:
         """Receive raw query and act upon it somehow.
         Args:
             query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+                etc)
         Returns:
             HandlerResponse
         """
@@ -344,6 +338,17 @@ __pypi__ = 'https://pypi.org/project/mindsdb/'
 __license__ = 'MIT'
 __copyright__ = 'Copyright 2022- mindsdb'
 
+```
+
+### Exporting Requirements
+
+In the case if the integration requires other packages to function correctly, list them in the `requirements.txt` file.
+
+Create a text file named `requirements.txt` that stores all packages required for using the integration. Here is an example:
+
+```
+mysql-connector-python==9.1.0
+...
 ```
 
 ## Check out our Database Handlers!

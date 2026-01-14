@@ -1,4 +1,5 @@
 from typing import List, Dict, Text, Any, Optional, Tuple, Set, Iterable
+import inspect
 
 import pandas as pd
 from hubspot import HubSpot
@@ -18,6 +19,11 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn, extract_comparison_conditions
 from mindsdb.utilities import log
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_utils import (
+    get_association_targets_for_object,
+    get_primary_association_columns,
+    enrich_object_with_associations,
+)
 
 logger = log.getLogger(__name__)
 
@@ -134,6 +140,7 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("lifecyclestage", "VARCHAR", "Lifecycle stage"),
         ("hs_lead_status", "VARCHAR", "Lead status"),
         ("hubspot_owner_id", "VARCHAR", "Owner ID"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
         ("dc_contact", "BOOLEAN", "Direct Commerce contact indicator"),
         ("current_ecommerce_platform", "VARCHAR", "Current ecommerce platform"),
         ("departments", "VARCHAR", "Departments"),
@@ -153,6 +160,8 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
     "deals": [
         ("dealname", "VARCHAR", "Deal name"),
         ("amount", "DECIMAL", "Deal amount"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
+        ("primary_contact_id", "VARCHAR", "Primary associated contact ID"),
         ("dealstage", "VARCHAR", "Deal stage"),
         ("pipeline", "VARCHAR", "Sales pipeline"),
         ("closedate", "DATE", "Expected close date"),
@@ -178,8 +187,77 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("hs_ticket_priority", "VARCHAR", "Priority"),
         ("hs_ticket_category", "VARCHAR", "Category"),
         ("hubspot_owner_id", "VARCHAR", "Owner ID"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
+        ("primary_contact_id", "VARCHAR", "Primary associated contact ID"),
+        ("primary_deal_id", "VARCHAR", "Primary associated deal ID"),
         ("createdate", "TIMESTAMP", "Creation date"),
         ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+    ],
+    "company_contacts": [
+        ("company_id", "VARCHAR", "Company ID"),
+        ("contact_id", "VARCHAR", "Contact ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "company_deals": [
+        ("company_id", "VARCHAR", "Company ID"),
+        ("deal_id", "VARCHAR", "Deal ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "company_tickets": [
+        ("company_id", "VARCHAR", "Company ID"),
+        ("ticket_id", "VARCHAR", "Ticket ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "contact_companies": [
+        ("contact_id", "VARCHAR", "Contact ID"),
+        ("company_id", "VARCHAR", "Company ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "contact_deals": [
+        ("contact_id", "VARCHAR", "Contact ID"),
+        ("deal_id", "VARCHAR", "Deal ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "contact_tickets": [
+        ("contact_id", "VARCHAR", "Contact ID"),
+        ("ticket_id", "VARCHAR", "Ticket ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "deal_companies": [
+        ("deal_id", "VARCHAR", "Deal ID"),
+        ("company_id", "VARCHAR", "Company ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "deal_contacts": [
+        ("deal_id", "VARCHAR", "Deal ID"),
+        ("contact_id", "VARCHAR", "Contact ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "ticket_companies": [
+        ("ticket_id", "VARCHAR", "Ticket ID"),
+        ("company_id", "VARCHAR", "Company ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "ticket_contacts": [
+        ("ticket_id", "VARCHAR", "Ticket ID"),
+        ("contact_id", "VARCHAR", "Contact ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
+    ],
+    "ticket_deals": [
+        ("ticket_id", "VARCHAR", "Ticket ID"),
+        ("deal_id", "VARCHAR", "Deal ID"),
+        ("association_type", "VARCHAR", "Association type"),
+        ("association_label", "VARCHAR", "Association label"),
     ],
     "tasks": [
         ("hs_task_subject", "VARCHAR", "Task subject"),
@@ -189,6 +267,9 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("hs_task_type", "VARCHAR", "Task type"),
         ("hs_timestamp", "TIMESTAMP", "Due date"),
         ("hubspot_owner_id", "VARCHAR", "Owner ID"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
+        ("primary_contact_id", "VARCHAR", "Primary associated contact ID"),
+        ("primary_deal_id", "VARCHAR", "Primary associated deal ID"),
         ("createdate", "TIMESTAMP", "Creation date"),
         ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
     ],
@@ -202,6 +283,9 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("hs_call_status", "VARCHAR", "Call status"),
         ("hubspot_owner_id", "VARCHAR", "Owner ID"),
         ("hs_timestamp", "TIMESTAMP", "Call timestamp"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
+        ("primary_contact_id", "VARCHAR", "Primary associated contact ID"),
+        ("primary_deal_id", "VARCHAR", "Primary associated deal ID"),
         ("createdate", "TIMESTAMP", "Creation date"),
         ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
     ],
@@ -215,6 +299,9 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("hs_email_to_email", "VARCHAR", "Recipient email address"),
         ("hubspot_owner_id", "VARCHAR", "Owner ID"),
         ("hs_timestamp", "TIMESTAMP", "Email timestamp"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
+        ("primary_contact_id", "VARCHAR", "Primary associated contact ID"),
+        ("primary_deal_id", "VARCHAR", "Primary associated deal ID"),
         ("createdate", "TIMESTAMP", "Creation date"),
         ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
     ],
@@ -228,6 +315,9 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("hs_meeting_end_time", "TIMESTAMP", "Meeting end time"),
         ("hubspot_owner_id", "VARCHAR", "Owner ID"),
         ("hs_timestamp", "TIMESTAMP", "Meeting timestamp"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
+        ("primary_contact_id", "VARCHAR", "Primary associated contact ID"),
+        ("primary_deal_id", "VARCHAR", "Primary associated deal ID"),
         ("createdate", "TIMESTAMP", "Creation date"),
         ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
     ],
@@ -236,6 +326,9 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("hs_note_body", "TEXT", "Note content"),
         ("hubspot_owner_id", "VARCHAR", "Owner ID"),
         ("hs_timestamp", "TIMESTAMP", "Note timestamp"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
+        ("primary_contact_id", "VARCHAR", "Primary associated contact ID"),
+        ("primary_deal_id", "VARCHAR", "Primary associated deal ID"),
         ("createdate", "TIMESTAMP", "Creation date"),
         ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
     ],
@@ -402,6 +495,20 @@ def _build_hubspot_properties(columns: Iterable[str]) -> List[str]:
             continue
         properties.append(prop)
     return list(dict.fromkeys(properties))
+
+
+def _prepare_association_request(object_type: str, columns: List[str]) -> Tuple[List[str], List[str]]:
+    assoc_columns = set(get_primary_association_columns(object_type))
+    if not assoc_columns:
+        return [], columns
+
+    needs_associations = bool(assoc_columns.intersection(columns))
+    if not needs_associations:
+        return [], columns
+
+    association_targets = get_association_targets_for_object(object_type)
+    hubspot_columns = [col for col in columns if col not in assoc_columns]
+    return association_targets, hubspot_columns
 
 
 def _execute_hubspot_search(
@@ -1117,6 +1224,7 @@ class ContactsTable(HubSpotAPIResource):
             "hs_sales_email_last_opened",
             "createdate",
             "lastmodifieddate",
+            "primary_company_id",
         ]
 
     def get_contacts(
@@ -1134,21 +1242,32 @@ class ContactsTable(HubSpotAPIResource):
         requested_properties = properties or []
         default_properties = self._get_default_contact_columns()
         columns = requested_properties or default_properties
-        hubspot_properties = _build_hubspot_properties(columns)
+        association_targets, hubspot_columns = _prepare_association_request("contacts", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
+        if association_targets and "associations" in inspect.signature(hubspot.crm.contacts.get_all).parameters:
+            api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
             filters = search_filters
             if filters is None and normalized_conditions:
                 filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
             if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for contacts.")
                 search_results = self._search_contacts_by_conditions(
-                    hubspot, filters, hubspot_properties, limit, search_sorts, columns
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
                 )
                 logger.info(f"Retrieved {len(search_results)} contacts from HubSpot via search API")
                 return search_results
@@ -1157,7 +1276,8 @@ class ContactsTable(HubSpotAPIResource):
         contacts_dict = []
         try:
             for contact in contacts:
-                contacts_dict.append(self._contact_to_dict(contact, columns))
+                row = self._contact_to_dict(contact, hubspot_columns, association_targets)
+                contacts_dict.append(row)
                 if limit is not None and len(contacts_dict) >= limit:
                     break
         except Exception as e:
@@ -1175,25 +1295,36 @@ class ContactsTable(HubSpotAPIResource):
         limit: Optional[int],
         sorts: Optional[List[Dict[str, Any]]],
         columns: List[str],
+        association_targets: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
             hubspot.crm.contacts.search_api,
             filters or [],
             properties,
             limit,
-            lambda obj: self._contact_to_dict(obj, columns),
+            lambda obj: self._contact_to_dict(obj, columns, association_targets),
             sorts=sorts,
         )
 
-    def _contact_to_dict(self, contact: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    def _contact_to_dict(
+        self,
+        contact: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         columns = columns or self._get_default_contact_columns()
         try:
-            return self._object_to_dict(contact, columns)
+            row = self._object_to_dict(contact, columns)
+            if association_targets:
+                row = enrich_object_with_associations(contact, "contacts", row)
+            return row
         except Exception as e:
             logger.warning(f"Error processing contact {getattr(contact, 'id', 'unknown')}: {str(e)}")
+            assoc_columns = get_primary_association_columns("contacts") if association_targets else []
             return {
                 "id": getattr(contact, "id", None),
                 **{col: None for col in columns if col != "id"},
+                **{col: None for col in assoc_columns},
             }
 
     def create_contacts(self, contacts_data: List[Dict[Text, Any]]) -> None:
@@ -1261,6 +1392,7 @@ class DealsTable(HubSpotAPIResource):
         "id",
         "lastmodifieddate",
     }
+    ASSOCIATION_COLUMNS = {"primary_company_id", "primary_contact_id"}
 
     def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
         row_count = None
@@ -1354,6 +1486,8 @@ class DealsTable(HubSpotAPIResource):
             "id",
             "dealname",
             "amount",
+            "primary_company_id",
+            "primary_contact_id",
             "pipeline",
             "closedate",
             "dealstage",
@@ -1399,21 +1533,32 @@ class DealsTable(HubSpotAPIResource):
         requested_properties = properties or []
         default_properties = self._get_default_deal_columns()
         columns = requested_properties or default_properties
-        hubspot_properties = _build_hubspot_properties(columns)
+        association_targets, hubspot_columns = _prepare_association_request("deals", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
+        if association_targets and "associations" in inspect.signature(hubspot.crm.deals.get_all).parameters:
+            api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
             filters = search_filters
             if filters is None and normalized_conditions:
                 filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
             if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for deals.")
                 search_results = self._search_deals_by_conditions(
-                    hubspot, filters, hubspot_properties, limit, search_sorts, columns
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
                 )
                 logger.info(f"Retrieved {len(search_results)} deals from HubSpot via search API")
                 return search_results
@@ -1422,7 +1567,8 @@ class DealsTable(HubSpotAPIResource):
         deals_dict = []
         for deal in deals:
             try:
-                deals_dict.append(self._deal_to_dict(deal, columns))
+                row = self._deal_to_dict(deal, hubspot_columns, association_targets)
+                deals_dict.append(row)
             except Exception as e:
                 logger.error(f"Error processing deal {getattr(deal, 'id', 'unknown')}: {str(e)}")
                 raise ValueError(f"Failed to process deal {getattr(deal, 'id', 'unknown')}.") from e
@@ -1438,19 +1584,28 @@ class DealsTable(HubSpotAPIResource):
         limit: Optional[int],
         sorts: Optional[List[Dict[str, Any]]],
         columns: List[str],
+        association_targets: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
             hubspot.crm.deals.search_api,
             filters or [],
             properties,
             limit,
-            lambda obj: self._deal_to_dict(obj, columns),
+            lambda obj: self._deal_to_dict(obj, columns, association_targets),
             sorts=sorts,
         )
 
-    def _deal_to_dict(self, deal: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    def _deal_to_dict(
+        self,
+        deal: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         columns = columns or self._get_default_deal_columns()
-        return self._object_to_dict(deal, columns)
+        row = self._object_to_dict(deal, columns)
+        if association_targets:
+            row = enrich_object_with_associations(deal, "deals", row)
+        return row
 
     def create_deals(self, deals_data: List[Dict[Text, Any]]) -> None:
         if not deals_data:
@@ -1498,6 +1653,7 @@ class TicketsTable(HubSpotAPIResource):
     """HubSpot Tickets table for support ticket management."""
 
     SEARCHABLE_COLUMNS = {"subject", "hs_pipeline", "hs_pipeline_stage", "hs_ticket_priority", "id"}
+    ASSOCIATION_COLUMNS = {"primary_company_id", "primary_contact_id", "primary_deal_id"}
 
     def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
         row_count = None
@@ -1596,6 +1752,9 @@ class TicketsTable(HubSpotAPIResource):
             "hubspot_owner_id",
             "createdate",
             "lastmodifieddate",
+            "primary_company_id",
+            "primary_contact_id",
+            "primary_deal_id",
         ]
 
     def get_tickets(
@@ -1614,21 +1773,32 @@ class TicketsTable(HubSpotAPIResource):
         requested_properties = properties or []
         default_properties = self._get_default_ticket_columns()
         columns = requested_properties or default_properties
-        hubspot_properties = _build_hubspot_properties(columns)
+        association_targets, hubspot_columns = _prepare_association_request("tickets", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
+        if association_targets and "associations" in inspect.signature(hubspot.crm.tickets.get_all).parameters:
+            api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
             filters = search_filters
             if filters is None and normalized_conditions:
                 filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
             if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for tickets.")
                 search_results = self._search_tickets_by_conditions(
-                    hubspot, filters, hubspot_properties, limit, search_sorts, columns
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
                 )
                 logger.info(f"Retrieved {len(search_results)} tickets from HubSpot via search API")
                 return search_results
@@ -1637,7 +1807,8 @@ class TicketsTable(HubSpotAPIResource):
         tickets_dict = []
         for ticket in tickets:
             try:
-                tickets_dict.append(self._ticket_to_dict(ticket, columns))
+                row = self._ticket_to_dict(ticket, hubspot_columns, association_targets)
+                tickets_dict.append(row)
             except Exception as e:
                 logger.warning(f"Error processing ticket {getattr(ticket, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -1653,19 +1824,28 @@ class TicketsTable(HubSpotAPIResource):
         limit: Optional[int],
         sorts: Optional[List[Dict[str, Any]]],
         columns: List[str],
+        association_targets: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
             hubspot.crm.tickets.search_api,
             filters or [],
             properties,
             limit,
-            lambda obj: self._ticket_to_dict(obj, columns),
+            lambda obj: self._ticket_to_dict(obj, columns, association_targets),
             sorts=sorts,
         )
 
-    def _ticket_to_dict(self, ticket: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    def _ticket_to_dict(
+        self,
+        ticket: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         columns = columns or self._get_default_ticket_columns()
-        return self._object_to_dict(ticket, columns)
+        row = self._object_to_dict(ticket, columns)
+        if association_targets:
+            row = enrich_object_with_associations(ticket, "tickets", row)
+        return row
 
     def create_tickets(self, tickets_data: List[Dict[Text, Any]]) -> None:
         if not tickets_data:
@@ -1713,6 +1893,7 @@ class TasksTable(HubSpotAPIResource):
     """HubSpot Tasks table for task management and follow-ups."""
 
     SEARCHABLE_COLUMNS = {"hs_task_subject", "hs_task_status", "hs_task_priority", "hs_task_type", "id"}
+    ASSOCIATION_COLUMNS = {"primary_company_id", "primary_contact_id", "primary_deal_id"}
 
     def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
         row_count = None
@@ -1811,6 +1992,9 @@ class TasksTable(HubSpotAPIResource):
             "hubspot_owner_id",
             "createdate",
             "lastmodifieddate",
+            "primary_company_id",
+            "primary_contact_id",
+            "primary_deal_id",
         ]
 
     def get_tasks(
@@ -1829,13 +2013,16 @@ class TasksTable(HubSpotAPIResource):
         requested_properties = properties or []
         default_properties = self._get_default_task_columns()
         columns = requested_properties or default_properties
-        hubspot_properties = _build_hubspot_properties(columns)
+        association_targets, hubspot_columns = _prepare_association_request("tasks", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
+        if association_targets:
+            api_kwargs["associations"] = association_targets
 
         # Tasks use the objects API
         if allow_search and (search_filters or search_sorts or normalized_conditions):
@@ -1843,8 +2030,16 @@ class TasksTable(HubSpotAPIResource):
             if filters is None and normalized_conditions:
                 filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
             if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for tasks.")
                 search_results = self._search_tasks_by_conditions(
-                    hubspot, filters, hubspot_properties, limit, search_sorts, columns
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
                 )
                 logger.info(f"Retrieved {len(search_results)} tasks from HubSpot via search API")
                 return search_results
@@ -1853,7 +2048,8 @@ class TasksTable(HubSpotAPIResource):
         tasks_dict = []
         for task in tasks:
             try:
-                tasks_dict.append(self._task_to_dict(task, columns))
+                row = self._task_to_dict(task, hubspot_columns, association_targets)
+                tasks_dict.append(row)
             except Exception as e:
                 logger.warning(f"Error processing task {getattr(task, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -1869,20 +2065,29 @@ class TasksTable(HubSpotAPIResource):
         limit: Optional[int],
         sorts: Optional[List[Dict[str, Any]]],
         columns: List[str],
+        association_targets: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
             hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
-            lambda obj: self._task_to_dict(obj, columns),
+            lambda obj: self._task_to_dict(obj, columns, association_targets),
             sorts=sorts,
             object_type="tasks",
         )
 
-    def _task_to_dict(self, task: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    def _task_to_dict(
+        self,
+        task: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         columns = columns or self._get_default_task_columns()
-        return self._object_to_dict(task, columns)
+        row = self._object_to_dict(task, columns)
+        if association_targets:
+            row = enrich_object_with_associations(task, "tasks", row)
+        return row
 
     def create_tasks(self, tasks_data: List[Dict[Text, Any]]) -> None:
         if not tasks_data:
@@ -1932,6 +2137,7 @@ class CallsTable(HubSpotAPIResource):
     """HubSpot Calls table for phone/video call logs."""
 
     SEARCHABLE_COLUMNS = {"hs_call_title", "hs_call_direction", "hs_call_disposition", "hs_call_status", "id"}
+    ASSOCIATION_COLUMNS = {"primary_company_id", "primary_contact_id", "primary_deal_id"}
 
     def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
         row_count = None
@@ -2031,6 +2237,9 @@ class CallsTable(HubSpotAPIResource):
             "hs_timestamp",
             "createdate",
             "lastmodifieddate",
+            "primary_company_id",
+            "primary_contact_id",
+            "primary_deal_id",
         ]
 
     def get_calls(
@@ -2049,21 +2258,32 @@ class CallsTable(HubSpotAPIResource):
         requested_properties = properties or []
         default_properties = self._get_default_call_columns()
         columns = requested_properties or default_properties
-        hubspot_properties = _build_hubspot_properties(columns)
+        association_targets, hubspot_columns = _prepare_association_request("calls", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
+        if association_targets:
+            api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
             filters = search_filters
             if filters is None and normalized_conditions:
                 filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
             if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for calls.")
                 search_results = self._search_calls_by_conditions(
-                    hubspot, filters, hubspot_properties, limit, search_sorts, columns
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
                 )
                 logger.info(f"Retrieved {len(search_results)} calls from HubSpot via search API")
                 return search_results
@@ -2072,7 +2292,8 @@ class CallsTable(HubSpotAPIResource):
         calls_dict = []
         for call in calls:
             try:
-                calls_dict.append(self._call_to_dict(call, columns))
+                row = self._call_to_dict(call, hubspot_columns, association_targets)
+                calls_dict.append(row)
             except Exception as e:
                 logger.warning(f"Error processing call {getattr(call, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -2088,20 +2309,29 @@ class CallsTable(HubSpotAPIResource):
         limit: Optional[int],
         sorts: Optional[List[Dict[str, Any]]],
         columns: List[str],
+        association_targets: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
             hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
-            lambda obj: self._call_to_dict(obj, columns),
+            lambda obj: self._call_to_dict(obj, columns, association_targets),
             sorts=sorts,
             object_type="calls",
         )
 
-    def _call_to_dict(self, call: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    def _call_to_dict(
+        self,
+        call: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         columns = columns or self._get_default_call_columns()
-        return self._object_to_dict(call, columns)
+        row = self._object_to_dict(call, columns)
+        if association_targets:
+            row = enrich_object_with_associations(call, "calls", row)
+        return row
 
     def create_calls(self, calls_data: List[Dict[Text, Any]]) -> None:
         if not calls_data:
@@ -2151,6 +2381,7 @@ class EmailsTable(HubSpotAPIResource):
     """HubSpot Emails table for email engagement logs."""
 
     SEARCHABLE_COLUMNS = {"hs_email_subject", "hs_email_direction", "hs_email_status", "id"}
+    ASSOCIATION_COLUMNS = {"primary_company_id", "primary_contact_id", "primary_deal_id"}
 
     def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
         row_count = None
@@ -2250,6 +2481,9 @@ class EmailsTable(HubSpotAPIResource):
             "hs_timestamp",
             "createdate",
             "lastmodifieddate",
+            "primary_company_id",
+            "primary_contact_id",
+            "primary_deal_id",
         ]
 
     def get_emails(
@@ -2268,21 +2502,32 @@ class EmailsTable(HubSpotAPIResource):
         requested_properties = properties or []
         default_properties = self._get_default_email_columns()
         columns = requested_properties or default_properties
-        hubspot_properties = _build_hubspot_properties(columns)
+        association_targets, hubspot_columns = _prepare_association_request("emails", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
+        if association_targets:
+            api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
             filters = search_filters
             if filters is None and normalized_conditions:
                 filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
             if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for emails.")
                 search_results = self._search_emails_by_conditions(
-                    hubspot, filters, hubspot_properties, limit, search_sorts, columns
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
                 )
                 logger.info(f"Retrieved {len(search_results)} emails from HubSpot via search API")
                 return search_results
@@ -2291,7 +2536,8 @@ class EmailsTable(HubSpotAPIResource):
         emails_dict = []
         for email in emails:
             try:
-                emails_dict.append(self._email_to_dict(email, columns))
+                row = self._email_to_dict(email, hubspot_columns, association_targets)
+                emails_dict.append(row)
             except Exception as e:
                 logger.warning(f"Error processing email {getattr(email, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -2307,20 +2553,29 @@ class EmailsTable(HubSpotAPIResource):
         limit: Optional[int],
         sorts: Optional[List[Dict[str, Any]]],
         columns: List[str],
+        association_targets: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
             hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
-            lambda obj: self._email_to_dict(obj, columns),
+            lambda obj: self._email_to_dict(obj, columns, association_targets),
             sorts=sorts,
             object_type="emails",
         )
 
-    def _email_to_dict(self, email: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    def _email_to_dict(
+        self,
+        email: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         columns = columns or self._get_default_email_columns()
-        return self._object_to_dict(email, columns)
+        row = self._object_to_dict(email, columns)
+        if association_targets:
+            row = enrich_object_with_associations(email, "emails", row)
+        return row
 
     def create_emails(self, emails_data: List[Dict[Text, Any]]) -> None:
         if not emails_data:
@@ -2370,6 +2625,7 @@ class MeetingsTable(HubSpotAPIResource):
     """HubSpot Meetings table for meeting logs and scheduled meetings."""
 
     SEARCHABLE_COLUMNS = {"hs_meeting_title", "hs_meeting_outcome", "id"}
+    ASSOCIATION_COLUMNS = {"primary_company_id", "primary_contact_id", "primary_deal_id"}
 
     def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
         row_count = None
@@ -2469,6 +2725,9 @@ class MeetingsTable(HubSpotAPIResource):
             "hs_timestamp",
             "createdate",
             "lastmodifieddate",
+            "primary_company_id",
+            "primary_contact_id",
+            "primary_deal_id",
         ]
 
     def get_meetings(
@@ -2487,21 +2746,32 @@ class MeetingsTable(HubSpotAPIResource):
         requested_properties = properties or []
         default_properties = self._get_default_meeting_columns()
         columns = requested_properties or default_properties
-        hubspot_properties = _build_hubspot_properties(columns)
+        association_targets, hubspot_columns = _prepare_association_request("meetings", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
+        if association_targets:
+            api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
             filters = search_filters
             if filters is None and normalized_conditions:
                 filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
             if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for meetings.")
                 search_results = self._search_meetings_by_conditions(
-                    hubspot, filters, hubspot_properties, limit, search_sorts, columns
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
                 )
                 logger.info(f"Retrieved {len(search_results)} meetings from HubSpot via search API")
                 return search_results
@@ -2510,7 +2780,8 @@ class MeetingsTable(HubSpotAPIResource):
         meetings_dict = []
         for meeting in meetings:
             try:
-                meetings_dict.append(self._meeting_to_dict(meeting, columns))
+                row = self._meeting_to_dict(meeting, hubspot_columns, association_targets)
+                meetings_dict.append(row)
             except Exception as e:
                 logger.warning(f"Error processing meeting {getattr(meeting, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -2526,20 +2797,29 @@ class MeetingsTable(HubSpotAPIResource):
         limit: Optional[int],
         sorts: Optional[List[Dict[str, Any]]],
         columns: List[str],
+        association_targets: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
             hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
-            lambda obj: self._meeting_to_dict(obj, columns),
+            lambda obj: self._meeting_to_dict(obj, columns, association_targets),
             sorts=sorts,
             object_type="meetings",
         )
 
-    def _meeting_to_dict(self, meeting: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    def _meeting_to_dict(
+        self,
+        meeting: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         columns = columns or self._get_default_meeting_columns()
-        return self._object_to_dict(meeting, columns)
+        row = self._object_to_dict(meeting, columns)
+        if association_targets:
+            row = enrich_object_with_associations(meeting, "meetings", row)
+        return row
 
     def create_meetings(self, meetings_data: List[Dict[Text, Any]]) -> None:
         if not meetings_data:
@@ -2589,6 +2869,7 @@ class NotesTable(HubSpotAPIResource):
     """HubSpot Notes table for timeline notes on records."""
 
     SEARCHABLE_COLUMNS = {"id"}
+    ASSOCIATION_COLUMNS = {"primary_company_id", "primary_contact_id", "primary_deal_id"}
 
     def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
         row_count = None
@@ -2676,7 +2957,17 @@ class NotesTable(HubSpotAPIResource):
 
     @staticmethod
     def _get_default_note_columns() -> List[str]:
-        return ["id", "hs_note_body", "hubspot_owner_id", "hs_timestamp", "createdate", "lastmodifieddate"]
+        return [
+            "id",
+            "hs_note_body",
+            "hubspot_owner_id",
+            "hs_timestamp",
+            "createdate",
+            "lastmodifieddate",
+            "primary_company_id",
+            "primary_contact_id",
+            "primary_deal_id",
+        ]
 
     def get_notes(
         self,
@@ -2694,21 +2985,32 @@ class NotesTable(HubSpotAPIResource):
         requested_properties = properties or []
         default_properties = self._get_default_note_columns()
         columns = requested_properties or default_properties
-        hubspot_properties = _build_hubspot_properties(columns)
+        association_targets, hubspot_columns = _prepare_association_request("notes", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
+        if association_targets:
+            api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
             filters = search_filters
             if filters is None and normalized_conditions:
                 filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
             if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for notes.")
                 search_results = self._search_notes_by_conditions(
-                    hubspot, filters, hubspot_properties, limit, search_sorts, columns
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
                 )
                 logger.info(f"Retrieved {len(search_results)} notes from HubSpot via search API")
                 return search_results
@@ -2717,7 +3019,8 @@ class NotesTable(HubSpotAPIResource):
         notes_dict = []
         for note in notes:
             try:
-                notes_dict.append(self._note_to_dict(note, columns))
+                row = self._note_to_dict(note, hubspot_columns, association_targets)
+                notes_dict.append(row)
             except Exception as e:
                 logger.warning(f"Error processing note {getattr(note, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -2733,20 +3036,29 @@ class NotesTable(HubSpotAPIResource):
         limit: Optional[int],
         sorts: Optional[List[Dict[str, Any]]],
         columns: List[str],
+        association_targets: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
             hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
-            lambda obj: self._note_to_dict(obj, columns),
+            lambda obj: self._note_to_dict(obj, columns, association_targets),
             sorts=sorts,
             object_type="notes",
         )
 
-    def _note_to_dict(self, note: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    def _note_to_dict(
+        self,
+        note: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         columns = columns or self._get_default_note_columns()
-        return self._object_to_dict(note, columns)
+        row = self._object_to_dict(note, columns)
+        if association_targets:
+            row = enrich_object_with_associations(note, "notes", row)
+        return row
 
     def create_notes(self, notes_data: List[Dict[Text, Any]]) -> None:
         if not notes_data:

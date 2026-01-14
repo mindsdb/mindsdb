@@ -17,6 +17,9 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     to_internal_property,
     HUBSPOT_TABLE_COLUMN_DEFINITIONS,
 )
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_tables import (
+    ASSOCIATION_TABLE_CLASSES,
+)
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 
 from mindsdb.integrations.libs.response import (
@@ -115,6 +118,7 @@ class HubspotHandler(MetaAPIHandler):
 
         self.connection: Optional[HubSpot] = None
         self.is_connected: bool = False
+        self._association_tables = set(ASSOCIATION_TABLE_CLASSES.keys())
 
         # Register core CRM tables
         self._register_table("companies", CompaniesTable(self))
@@ -128,6 +132,9 @@ class HubspotHandler(MetaAPIHandler):
         self._register_table("emails", EmailsTable(self))
         self._register_table("meetings", MeetingsTable(self))
         self._register_table("notes", NotesTable(self))
+
+        for table_name, table_class in ASSOCIATION_TABLE_CLASSES.items():
+            self._register_table(table_name, table_class(self))
 
     def connect(self) -> HubSpot:
         """Creates a new Hubspot API client if needed."""
@@ -228,9 +235,18 @@ class HubspotHandler(MetaAPIHandler):
             self.connect()
 
             tables_data = []
-            all_tables = ["companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"]
+            all_tables = list(self._tables.keys())
             for table_name in all_tables:
                 try:
+                    if table_name in self._association_tables:
+                        table_info = {
+                            "TABLE_SCHEMA": "hubspot",
+                            "TABLE_NAME": table_name,
+                            "TABLE_TYPE": "BASE TABLE",
+                        }
+                        tables_data.append(table_info)
+                        continue
+
                     # Try to access each table with a minimal request
                     default_properties = self._tables[table_name].get_columns()
                     hubspot_properties = [
@@ -282,17 +298,7 @@ class HubspotHandler(MetaAPIHandler):
 
     def get_columns(self, table_name: str) -> Response:
         """Return column information for a specific table."""
-        valid_tables = [
-            "companies",
-            "contacts",
-            "deals",
-            "tickets",
-            "tasks",
-            "calls",
-            "emails",
-            "meetings",
-            "notes",
-        ]
+        valid_tables = list(self._tables.keys())
 
         if table_name not in valid_tables:
             return Response(
@@ -345,7 +351,7 @@ class HubspotHandler(MetaAPIHandler):
         try:
             self.connect()
 
-            all_tables = ["companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"]
+            all_tables = [name for name in self._tables.keys() if name not in self._association_tables]
             if table_names:
                 tables_to_process = [t for t in table_names if t in all_tables]
             else:
@@ -549,6 +555,23 @@ class HubspotHandler(MetaAPIHandler):
 
     def _get_default_discovered_columns(self, table_name: str) -> List[Dict[str, Any]]:
         """Get default discovered columns when API data is unavailable."""
+        if table_name in self._association_tables and table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
+            base_columns = []
+            ordinal_position = 1
+            for col_name, data_type, description in HUBSPOT_TABLE_COLUMN_DEFINITIONS[table_name]:
+                base_columns.append(
+                    {
+                        "column_name": col_name,
+                        "data_type": data_type,
+                        "is_nullable": True,
+                        "ordinal_position": ordinal_position,
+                        "description": description,
+                        "original_name": col_name,
+                    }
+                )
+                ordinal_position += 1
+            return base_columns
+
         ordinal_position = 1
         base_columns = [
             {
@@ -580,6 +603,21 @@ class HubspotHandler(MetaAPIHandler):
 
     def _get_default_meta_columns(self, table_name: str) -> List[Dict[str, Any]]:
         """Get default column metadata for data catalog when data is unavailable."""
+        if table_name in self._association_tables and table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
+            base_columns = []
+            for col_name, data_type, description in HUBSPOT_TABLE_COLUMN_DEFINITIONS[table_name]:
+                base_columns.append(
+                    {
+                        "TABLE_NAME": table_name,
+                        "COLUMN_NAME": col_name,
+                        "DATA_TYPE": data_type,
+                        "COLUMN_DESCRIPTION": description,
+                        "IS_NULLABLE": True,
+                        "COLUMN_DEFAULT": None,
+                    }
+                )
+            return base_columns
+
         base_columns = [
             {
                 "TABLE_NAME": table_name,
@@ -618,6 +656,17 @@ class HubspotHandler(MetaAPIHandler):
             "emails": "HubSpot email logs including subject, direction, status and content",
             "meetings": "HubSpot meeting logs including title, location, outcome and timing",
             "notes": "HubSpot notes for timeline entries on records",
+            "company_contacts": "HubSpot company to contact associations",
+            "company_deals": "HubSpot company to deal associations",
+            "company_tickets": "HubSpot company to ticket associations",
+            "contact_companies": "HubSpot contact to company associations",
+            "contact_deals": "HubSpot contact to deal associations",
+            "contact_tickets": "HubSpot contact to ticket associations",
+            "deal_companies": "HubSpot deal to company associations",
+            "deal_contacts": "HubSpot deal to contact associations",
+            "ticket_companies": "HubSpot ticket to company associations",
+            "ticket_contacts": "HubSpot ticket to contact associations",
+            "ticket_deals": "HubSpot ticket to deal associations",
         }
         return descriptions.get(table_name, f"HubSpot {table_name} data")
 

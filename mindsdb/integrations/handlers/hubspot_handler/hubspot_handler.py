@@ -13,11 +13,6 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     EmailsTable,
     MeetingsTable,
     NotesTable,
-    CompanyContactsTable,
-    CompanyDealsTable,
-    CompanyTicketsTable,
-    ContactDealsTable,
-    ContactTicketsTable,
     to_hubspot_property,
     to_internal_property,
     HUBSPOT_TABLE_COLUMN_DEFINITIONS,
@@ -134,13 +129,6 @@ class HubspotHandler(MetaAPIHandler):
         self._register_table("meetings", MeetingsTable(self))
         self._register_table("notes", NotesTable(self))
 
-        # Register association tables
-        self._register_table("company_contacts", CompanyContactsTable(self))
-        self._register_table("company_deals", CompanyDealsTable(self))
-        self._register_table("company_tickets", CompanyTicketsTable(self))
-        self._register_table("contact_deals", ContactDealsTable(self))
-        self._register_table("contact_tickets", ContactTicketsTable(self))
-
     def connect(self) -> HubSpot:
         """Creates a new Hubspot API client if needed."""
         if self.is_connected and self.connection is not None:
@@ -241,33 +229,10 @@ class HubspotHandler(MetaAPIHandler):
 
             tables_data = []
             all_tables = ["companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"]
-            association_tables = [
-                "company_contacts",
-                "company_deals",
-                "company_tickets",
-                "contact_deals",
-                "contact_tickets",
-            ]
-
-            for table_name in all_tables + association_tables:
+            for table_name in all_tables:
                 try:
-                    if table_name in association_tables:
-                        tables_data.append(
-                            {
-                                "TABLE_SCHEMA": "hubspot",
-                                "TABLE_NAME": table_name,
-                                "TABLE_TYPE": "BASE TABLE",
-                            }
-                        )
-                        continue
-
                     # Try to access each table with a minimal request
                     default_properties = self._tables[table_name].get_columns()
-                    hubspot_properties = [
-                        to_hubspot_property(col)
-                        for col in default_properties
-                        if to_hubspot_property(col) != "hs_object_id"
-                    ]
                     hubspot_properties = [
                         to_hubspot_property(col)
                         for col in default_properties
@@ -278,8 +243,10 @@ class HubspotHandler(MetaAPIHandler):
                     if table_name in ["companies", "contacts", "deals", "tickets"]:
                         getattr(self.connection.crm, table_name).get_all(limit=1, properties=hubspot_properties)
                     else:
-                        # Engagement objects use crm.objects with explicit paging
-                        self._get_objects_all(table_name, limit=1, properties=hubspot_properties)
+                        # Engagement objects use crm.objects; fetch a single page to validate access.
+                        self.connection.crm.objects.basic_api.get_page(
+                            table_name, limit=1, properties=hubspot_properties
+                        )
 
                     table_info = {
                         "TABLE_SCHEMA": "hubspot",
@@ -325,11 +292,6 @@ class HubspotHandler(MetaAPIHandler):
             "emails",
             "meetings",
             "notes",
-            "company_contacts",
-            "company_deals",
-            "company_tickets",
-            "contact_deals",
-            "contact_tickets",
         ]
 
         if table_name not in valid_tables:
@@ -341,7 +303,7 @@ class HubspotHandler(MetaAPIHandler):
         try:
             self.connect()
 
-            discovered_columns = self._discover_columns(table_name, sample_size=100)
+            discovered_columns = self._get_default_discovered_columns(table_name)
 
             columns_data = []
             for col in discovered_columns:
@@ -656,11 +618,6 @@ class HubspotHandler(MetaAPIHandler):
             "emails": "HubSpot email logs including subject, direction, status and content",
             "meetings": "HubSpot meeting logs including title, location, outcome and timing",
             "notes": "HubSpot notes for timeline entries on records",
-            "company_contacts": "HubSpot associations between companies and contacts",
-            "company_deals": "HubSpot associations between companies and deals",
-            "company_tickets": "HubSpot associations between companies and tickets",
-            "contact_deals": "HubSpot associations between contacts and deals",
-            "contact_tickets": "HubSpot associations between contacts and tickets",
         }
         return descriptions.get(table_name, f"HubSpot {table_name} data")
 

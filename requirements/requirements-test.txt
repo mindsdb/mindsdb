@@ -22,3 +22,4 @@ walrus==0.9.3
 pymongo == 4.8.0
 pytest-json-report==1.5.0
 appdirs >= 1.0.0
+git+https://github.com/mindsdb/mindsdb_sql_parser.git@union-in-in

@@ -32,9 +32,7 @@ def get_column_case_insensitive(columns, name):
     lower_names = [x.lower() for x in columns]
     count = [x.lower() for x in columns].count(name.lower())
     if count == 0:
-        raise ValueError(
-            f"Column '{name}' not found. Available columns: {columns}"
-        )
+        raise ValueError(f"Column '{name}' not found. Available columns: {columns}")
     if count == 1:
         return columns[lower_names.index(name.lower())]
 

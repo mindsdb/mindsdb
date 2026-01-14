@@ -239,26 +239,6 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("createdate", "TIMESTAMP", "Creation date"),
         ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
     ],
-    "company_contacts": [
-        ("company_id", "VARCHAR", "Company ID"),
-        ("contact_id", "VARCHAR", "Contact ID"),
-    ],
-    "company_deals": [
-        ("company_id", "VARCHAR", "Company ID"),
-        ("deal_id", "VARCHAR", "Deal ID"),
-    ],
-    "company_tickets": [
-        ("company_id", "VARCHAR", "Company ID"),
-        ("ticket_id", "VARCHAR", "Ticket ID"),
-    ],
-    "contact_deals": [
-        ("contact_id", "VARCHAR", "Contact ID"),
-        ("deal_id", "VARCHAR", "Deal ID"),
-    ],
-    "contact_tickets": [
-        ("contact_id", "VARCHAR", "Contact ID"),
-        ("ticket_id", "VARCHAR", "Ticket ID"),
-    ],
 }
 
 
@@ -431,6 +411,7 @@ def _execute_hubspot_search(
     limit: Optional[int],
     to_dict_fn: callable,
     sorts: Optional[List[Dict[str, Any]]] = None,
+    object_type: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
     Execute paginated HubSpot search with filters.
@@ -454,7 +435,10 @@ def _execute_hubspot_search(
         if after is not None:
             search_request["after"] = after
 
-        response = search_api.do_search(public_object_search_request=search_request)
+        if object_type is None:
+            response = search_api.do_search(public_object_search_request=search_request)
+        else:
+            response = search_api.do_search(object_type, public_object_search_request=search_request)
 
         results = getattr(response, "results", []) or []
         for result in results:
@@ -493,8 +477,9 @@ class HubSpotAPIResource(APIResource):
         conditions, order_by, result_limit = self._extract_query_params(query)
         targets = self._get_targets(query)
         original_targets = list(targets)
-
         normalized_conditions = _normalize_filter_conditions(conditions)
+        self._validate_query_columns(targets, normalized_conditions, order_by)
+
         filters = (
             _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
             if normalized_conditions
@@ -647,6 +632,37 @@ class HubSpotAPIResource(APIResource):
         if existing_targets:
             return df[existing_targets]
         return df
+
+    def _validate_query_columns(
+        self,
+        targets: List[str],
+        normalized_conditions: List[List[Any]],
+        order_by: List[SortColumn],
+    ) -> None:
+        requested = set()
+        requested.update(targets or [])
+
+        for condition in normalized_conditions:
+            if len(condition) >= 2:
+                requested.add(condition[1])
+
+        for sort_item in order_by or []:
+            requested.add(to_internal_property(sort_item.column))
+
+        if not requested:
+            return
+
+        available = set(self.get_columns())
+        missing = [col for col in requested if col not in available]
+        if not missing:
+            return
+
+        missing_cols = ", ".join(missing)
+        available_cols = ", ".join(sorted(available))
+        raise ValueError(
+            f"Column(s) {missing_cols} do not exist for this HubSpot table. "
+            f"Available columns: {available_cols}."
+        )
 
     def _get_fetch_columns(
         self,
@@ -1856,12 +1872,13 @@ class TasksTable(HubSpotAPIResource):
         columns: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
-            hubspot.crm.objects.tasks.search_api,
+            hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
             lambda obj: self._task_to_dict(obj, columns),
             sorts=sorts,
+            object_type="tasks",
         )
 
     def _task_to_dict(self, task: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -2074,12 +2091,13 @@ class CallsTable(HubSpotAPIResource):
         columns: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
-            hubspot.crm.objects.calls.search_api,
+            hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
             lambda obj: self._call_to_dict(obj, columns),
             sorts=sorts,
+            object_type="calls",
         )
 
     def _call_to_dict(self, call: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -2292,12 +2310,13 @@ class EmailsTable(HubSpotAPIResource):
         columns: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
-            hubspot.crm.objects.emails.search_api,
+            hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
             lambda obj: self._email_to_dict(obj, columns),
             sorts=sorts,
+            object_type="emails",
         )
 
     def _email_to_dict(self, email: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -2510,12 +2529,13 @@ class MeetingsTable(HubSpotAPIResource):
         columns: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
-            hubspot.crm.objects.meetings.search_api,
+            hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
             lambda obj: self._meeting_to_dict(obj, columns),
             sorts=sorts,
+            object_type="meetings",
         )
 
     def _meeting_to_dict(self, meeting: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -2716,12 +2736,13 @@ class NotesTable(HubSpotAPIResource):
         columns: List[str],
     ) -> List[Dict[str, Any]]:
         return _execute_hubspot_search(
-            hubspot.crm.objects.notes.search_api,
+            hubspot.crm.objects.search_api,
             filters or [],
             properties,
             limit,
             lambda obj: self._note_to_dict(obj, columns),
             sorts=sorts,
+            object_type="notes",
         )
 
     def _note_to_dict(self, note: Any, columns: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -2770,201 +2791,3 @@ class NotesTable(HubSpotAPIResource):
             logger.info("Notes deleted")
         except Exception as e:
             raise Exception(f"Notes deletion failed {e}")
-
-
-class AssociationsTable(HubSpotAPIResource):
-    """Base table for HubSpot associations."""
-
-    FROM_OBJECT_TYPE: str = ""
-    TO_OBJECT_TYPE: str = ""
-    FROM_COLUMN: str = ""
-    TO_COLUMN: str = ""
-
-    SEARCHABLE_COLUMNS = set()
-
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
-        return {
-            "TABLE_NAME": table_name,
-            "TABLE_TYPE": "BASE TABLE",
-            "TABLE_DESCRIPTION": self.handler._get_table_description(table_name),
-            "ROW_COUNT": None,
-        }
-
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
-        return self.handler._get_default_meta_columns(table_name)
-
-    def list(
-        self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        sort: List[SortColumn] = None,
-        targets: List[str] = None,
-        **kwargs,
-    ) -> pd.DataFrame:
-        rows = self.get_associations(limit=limit, where_conditions=conditions)
-        associations_df = pd.DataFrame(rows)
-        if associations_df.empty:
-            associations_df = pd.DataFrame(columns=targets or self.get_columns())
-        return associations_df
-
-    def add(self, associations_data: List[dict]):
-        raise NotImplementedError("Associations tables are read-only")
-
-    def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
-        raise NotImplementedError("Associations tables are read-only")
-
-    def remove(self, conditions: List[FilterCondition]) -> None:
-        raise NotImplementedError("Associations tables are read-only")
-
-    def get_columns(self) -> List[Text]:
-        return [self.FROM_COLUMN, self.TO_COLUMN]
-
-    def get_associations(
-        self,
-        limit: Optional[int] = None,
-        where_conditions: Optional[List] = None,
-    ) -> List[Dict[str, Any]]:
-        normalized_conditions = _normalize_filter_conditions(where_conditions)
-        from_ids = self._extract_id_values(normalized_conditions, self.FROM_COLUMN)
-        to_ids = self._extract_id_values(normalized_conditions, self.TO_COLUMN)
-
-        if not from_ids and not to_ids:
-            logger.warning(
-                f"No ID filter provided for {self.FROM_COLUMN}/{self.TO_COLUMN} associations; returning empty set"
-            )
-            return []
-
-        rows: List[Dict[str, Any]] = []
-        remaining = limit if limit is not None else float("inf")
-
-        if from_ids:
-            for from_id in from_ids:
-                if remaining <= 0:
-                    break
-                fetched = self._fetch_associations(
-                    from_object_type=self.FROM_OBJECT_TYPE,
-                    from_id=from_id,
-                    to_object_type=self.TO_OBJECT_TYPE,
-                    limit=remaining if remaining != float("inf") else None,
-                    forward=True,
-                )
-                rows.extend(fetched)
-                if remaining != float("inf"):
-                    remaining = limit - len(rows)
-        else:
-            for to_id in to_ids:
-                if remaining <= 0:
-                    break
-                fetched = self._fetch_associations(
-                    from_object_type=self.TO_OBJECT_TYPE,
-                    from_id=to_id,
-                    to_object_type=self.FROM_OBJECT_TYPE,
-                    limit=remaining if remaining != float("inf") else None,
-                    forward=False,
-                )
-                rows.extend(fetched)
-                if remaining != float("inf"):
-                    remaining = limit - len(rows)
-
-        return rows[:limit] if limit is not None else rows
-
-    def _extract_id_values(self, conditions: List[List[Any]], column_name: str) -> List[str]:
-        values: List[str] = []
-        for condition in conditions:
-            if len(condition) < 3:
-                continue
-            op, column, value = condition[0], condition[1], condition[2]
-            if column != column_name:
-                continue
-            if op == "eq":
-                values.append(str(_extract_scalar_value(value)))
-            elif op == "in":
-                values.extend([str(val) for val in _extract_in_values(value)])
-        return list(dict.fromkeys(values))
-
-    def _fetch_associations(
-        self,
-        from_object_type: str,
-        from_id: str,
-        to_object_type: str,
-        limit: Optional[int],
-        forward: bool,
-    ) -> List[Dict[str, Any]]:
-        hubspot = self.handler.connect()
-        rows: List[Dict[str, Any]] = []
-        remaining = limit if limit is not None else float("inf")
-        after = None
-
-        while remaining > 0:
-            page_limit = min(int(remaining) if remaining != float("inf") else 500, 500)
-            response = hubspot.crm.associations.v4.basic_api.get_page(
-                from_object_type=from_object_type,
-                from_object_id=str(from_id),
-                to_object_type=to_object_type,
-                limit=page_limit,
-                after=after,
-            )
-
-            results = getattr(response, "results", []) or []
-            for result in results:
-                to_object_id = None
-                if isinstance(result, dict):
-                    to_object_id = result.get("toObjectId") or result.get("to_object_id")
-                else:
-                    to_object_id = getattr(result, "to_object_id", None) or getattr(result, "toObjectId", None)
-                if to_object_id is None:
-                    continue
-
-                if forward:
-                    rows.append({self.FROM_COLUMN: str(from_id), self.TO_COLUMN: str(to_object_id)})
-                else:
-                    rows.append({self.FROM_COLUMN: str(to_object_id), self.TO_COLUMN: str(from_id)})
-
-                if remaining != float("inf") and len(rows) >= limit:
-                    return rows
-
-            paging = getattr(response, "paging", None)
-            next_page = getattr(paging, "next", None) if paging else None
-            after = getattr(next_page, "after", None) if next_page else None
-            if after is None:
-                break
-
-            if remaining != float("inf"):
-                remaining = limit - len(rows)
-
-        return rows
-
-
-class CompanyContactsTable(AssociationsTable):
-    FROM_OBJECT_TYPE = "companies"
-    TO_OBJECT_TYPE = "contacts"
-    FROM_COLUMN = "company_id"
-    TO_COLUMN = "contact_id"
-
-
-class CompanyDealsTable(AssociationsTable):
-    FROM_OBJECT_TYPE = "companies"
-    TO_OBJECT_TYPE = "deals"
-    FROM_COLUMN = "company_id"
-    TO_COLUMN = "deal_id"
-
-
-class CompanyTicketsTable(AssociationsTable):
-    FROM_OBJECT_TYPE = "companies"
-    TO_OBJECT_TYPE = "tickets"
-    FROM_COLUMN = "company_id"
-    TO_COLUMN = "ticket_id"
-
-
-class ContactDealsTable(AssociationsTable):
-    FROM_OBJECT_TYPE = "contacts"
-    TO_OBJECT_TYPE = "deals"
-    FROM_COLUMN = "contact_id"
-    TO_COLUMN = "deal_id"
-
-
-class ContactTicketsTable(AssociationsTable):
-    FROM_OBJECT_TYPE = "contacts"
-    TO_OBJECT_TYPE = "tickets"
-    FROM_COLUMN = "contact_id"
-    TO_COLUMN = "ticket_id"

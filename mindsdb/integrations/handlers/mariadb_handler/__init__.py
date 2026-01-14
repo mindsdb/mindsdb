@@ -1,4 +1,4 @@
-from mindsdb.integrations.libs.const import HANDLER_TYPE
+from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_MAINTAINER
 
 try:
     from .mariadb_handler import MariaDBHandler as Handler
@@ -13,8 +13,9 @@ title = 'MariaDB'
 name = 'mariadb'
 type = HANDLER_TYPE.DATA
 icon_path = 'icon.svg'
+maintainer = HANDLER_MAINTAINER.MINDSDB
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',
-    'import_error', 'icon_path'
+    'import_error', 'icon_path', 'maintainer',
 ]

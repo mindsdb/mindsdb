@@ -2,8 +2,10 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_MAINTAINER
 
 from .__about__ import __version__ as version, __description__ as description
 from .connection_args import connection_args, connection_args_example
+
 try:
     from .github_handler import GithubHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None

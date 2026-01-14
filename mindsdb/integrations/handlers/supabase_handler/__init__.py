@@ -2,6 +2,7 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_MAINTAINER
 
 try:
     from .supabase_handler import SupabaseHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None
@@ -9,13 +10,20 @@ except Exception as e:
 from .__about__ import __version__ as version, __description__ as description
 
 
-title = 'Supabase'
-name = 'supabase'
+title = "Supabase"
+name = "supabase"
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
 maintainer = HANDLER_MAINTAINER.MINDSDB
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description',
-    'import_error', 'icon_path', 'maintainer',
+    "Handler",
+    "version",
+    "name",
+    "type",
+    "title",
+    "description",
+    "import_error",
+    "icon_path",
+    "maintainer",
 ]

@@ -660,8 +660,7 @@ class HubSpotAPIResource(APIResource):
         missing_cols = ", ".join(missing)
         available_cols = ", ".join(sorted(available))
         raise ValueError(
-            f"Column(s) {missing_cols} do not exist for this HubSpot table. "
-            f"Available columns: {available_cols}."
+            f"Column(s) {missing_cols} do not exist for this HubSpot table. Available columns: {available_cols}."
         )
 
     def _get_fetch_columns(

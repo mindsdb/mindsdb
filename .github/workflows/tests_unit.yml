@@ -10,6 +10,8 @@ defaults:
 permissions:
   contents: read        # For checkout and comparing commits
   pull-requests: write  # For creating/updating PR comments
+  pages: write
+  id-token: write
 
 
 env:
@@ -195,18 +197,18 @@ jobs:
             reports/htmlcov/**
 
       - name: Configure Pages
-        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && (github.event.pull_request.head.repo.fork == false) }}
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && (github.event.pull_request.head.repo.fork == false) }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: reports/htmlcov
 
       - id: deploy
         name: Deploy to GitHub Pages
-        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && (github.event.pull_request.head.repo.fork == false) }}
         uses: actions/deploy-pages@v4
 
       - name: Pytest coverage comment

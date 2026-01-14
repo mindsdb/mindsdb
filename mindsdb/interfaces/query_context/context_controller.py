@@ -18,6 +18,32 @@ from mindsdb.utilities.config import config
 from .last_query import LastQuery
 
 
+def get_column_case_insensitive(columns, name):
+    """Get the column name from a list of columns using case-insensitive search
+
+    Args:
+        columns: list of column names
+        name: name of the column to search for (case-insensitive)
+    Returns:
+        str: the actual column name from the list
+    Raises:
+        ValueError: if column is not found or multiple columns match
+    """
+    lower_names = [x.lower() for x in columns]
+    count = [x.lower() for x in columns].count(name.lower())
+    if count == 0:
+        raise ValueError(
+            f"Column '{name}' not found. Available columns: {columns}"
+        )
+    if count == 1:
+        return columns[lower_names.index(name.lower())]
+
+    raise ValueError(
+        f"Ambiguous column reference: multiple columns with name '{name}' found (case-insensitive match). "
+        f"Available columns: {columns}"
+    )
+
+
 class RunningQuery:
     """
     Query in progres
@@ -173,7 +199,7 @@ class RunningQuery:
         """
         if "track_column" in self.record.parameters:
             track_column = self.record.parameters["track_column"]
-            return df[track_column].max()
+            return df[get_column_case_insensitive(df.columns, track_column)].max()
         else:
             # stream mode
             return None

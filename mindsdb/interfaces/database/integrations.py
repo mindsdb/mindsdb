@@ -731,7 +731,7 @@ class IntegrationController:
         code = ast.parse(init_file.read_text())
 
         info = {
-            'maintainer': 'unspecified',
+            'maintainer': HANDLER_MAINTAINER.UNSPECIFIED,
         }
         for item in code.body:
             if not isinstance(item, ast.Assign):

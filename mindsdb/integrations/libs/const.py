@@ -25,6 +25,7 @@ class HANDLER_MAINTAINER:
     __slots__ = ()
     MINDSDB = 'mindsdb'
     COMMUNITY = 'community'
+    UNSPECIFIED = 'unspecified'
 
 HANDLER_MAINTAINER = HANDLER_MAINTAINER()
 

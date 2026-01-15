@@ -1,0 +1,1 @@
+python-arango>=7.5.0

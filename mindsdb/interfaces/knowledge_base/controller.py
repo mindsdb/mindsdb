@@ -490,7 +490,7 @@ class KnowledgeBaseTable:
         dynamic_columns = self._kb.params.get("inserted_metadata", [])
 
         columns = set(user_columns) | set(dynamic_columns)
-        return [col.lower() for col in columns]
+        return list(columns)
 
     def score_documents(self, query_text, documents, reranking_model_params):
         rotate_provider_api_key(reranking_model_params)

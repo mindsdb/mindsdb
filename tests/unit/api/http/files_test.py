@@ -1,5 +1,6 @@
 import io
 import os.path
+import os
 from http import HTTPStatus
 
 
@@ -129,3 +130,25 @@ def test_archive_file_with_extension_upload(client):
     assert response.status_code == 400
     data = response.get_json()
     assert "File name cannot contain extension." in data["detail"]
+
+
+def test_zipfile_traversal(client):
+    """Test uploading a zip archive with path traversal filenames"""
+    import zipfile
+    import io
+
+    # Create a zip file in memory with a symlink
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("../../../../etc/passwd", "malicious content")
+    zip_buffer.seek(0)
+    data = {"file": (zip_buffer, "archive.zip")}
+    response = client.put(
+        "/api/files/archive",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    data = response.get_json()
+    assert "Attempted Path Traversal in Zip File" in data["detail"]

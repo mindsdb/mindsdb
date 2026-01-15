@@ -214,21 +214,25 @@ class File(Resource):
         file_path = os.path.join(temp_dir_path, data["file"])
         lp = file_path.lower()
         if lp.endswith((".zip", ".tar.gz")):
-            if lp.endswith(".zip"):
-                with zipfile.ZipFile(file_path) as f:
-                    f.extractall(temp_dir_path)
-            elif lp.endswith(".tar.gz"):
-                with tarfile.open(file_path) as f:
-                    safe_extract(f, temp_dir_path)
+            try:
+                if lp.endswith(".zip"):
+                    with zipfile.ZipFile(file_path) as f:
+                        safe_extract(f, temp_dir_path)
+                elif lp.endswith(".tar.gz"):
+                    with tarfile.open(file_path) as f:
+                        safe_extract(f, temp_dir_path)
+            except Exception as e:
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
+                return http_error(500, "Error", str(e))
             os.remove(file_path)
             files = os.listdir(temp_dir_path)
             if len(files) != 1:
-                os.rmdir(temp_dir_path)
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
                 return http_error(400, "Wrong content.", "Archive must contain only one data file.")
             file_path = os.path.join(temp_dir_path, files[0])
             mindsdb_file_name = files[0]
             if not os.path.isfile(file_path):
-                os.rmdir(temp_dir_path)
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
                 return http_error(400, "Wrong content.", "Archive must contain data file in root.")
 
         try:

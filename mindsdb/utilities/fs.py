@@ -6,6 +6,9 @@ import threading
 from pathlib import Path
 from typing import Generator
 
+import tarfile
+import zipfile
+
 import psutil
 
 from mindsdb.utilities import log
@@ -223,15 +226,24 @@ def __is_within_directory(directory, target):
     return prefix == abs_directory
 
 
-def safe_extract(tarfile, path=".", members=None, *, numeric_owner=False):
-    # for py >= 3.12
-    if hasattr(tarfile, "data_filter"):
-        tarfile.extractall(path, members=members, numeric_owner=numeric_owner, filter="data")
+def safe_extract(archivefile, path=".", members=None, *, numeric_owner=False):
+    if isinstance(archivefile, zipfile.ZipFile):
+        for member in archivefile.namelist():
+            member_path = os.path.join(path, member)
+            if not __is_within_directory(path, member_path):
+                raise Exception("Attempted Path Traversal in Zip File")
+        archivefile.extractall(path, members)
         return
 
-    # for py < 3.12
-    for member in tarfile.getmembers():
-        member_path = os.path.join(path, member.name)
-        if not __is_within_directory(path, member_path):
-            raise Exception("Attempted Path Traversal in Tar File")
-    tarfile.extractall(path, members=members, numeric_owner=numeric_owner)
+    if isinstance(archivefile, tarfile.TarFile):
+        # for py >= 3.12
+        if hasattr(archivefile, "data_filter"):
+            archivefile.extractall(path, members=members, numeric_owner=numeric_owner, filter="data")
+            return
+
+        # for py < 3.12
+        for member in archivefile.getmembers():
+            member_path = os.path.join(path, member.name)
+            if not __is_within_directory(path, member_path):
+                raise Exception("Attempted Path Traversal in Tar File")
+        archivefile.extractall(path, members=members, numeric_owner=numeric_owner)

@@ -215,5 +215,5 @@ jobs:
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
         uses: MishaKav/pytest-coverage-comment@main
         with:
-          pytest-coverage-path: ./pytest-coverage.txt
+          pytest-coverage-path: ./pytest-coverage-handlers.txt
           junitxml-path: ./pytest.xml

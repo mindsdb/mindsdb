@@ -110,6 +110,8 @@ def main() -> int:
     handlers_env = os.environ.get("HANDLERS_TO_VERIFY") or os.environ.get("HANDLERS_TO_INSTALL", "")
     handlers = parse_handlers_env(handlers_env)
 
+    print("[coverage] Verifying configured handlers only (not full-suite coverage).")
+
     if not handlers:
         print(
             "[coverage] No handlers configured in HANDLERS_TO_VERIFY or HANDLERS_TO_INSTALL; failing.",

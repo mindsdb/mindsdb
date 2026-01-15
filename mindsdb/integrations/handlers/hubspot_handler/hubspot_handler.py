@@ -458,7 +458,6 @@ class HubspotHandler(MetaAPIHandler):
             logger.error(f"Failed to get column statistics: {str(e)}")
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve column statistics: {str(e)}")
 
-
     def _get_default_discovered_columns(self, table_name: str) -> List[Dict[str, Any]]:
         """Get default discovered columns when API data is unavailable."""
         ordinal_position = 1

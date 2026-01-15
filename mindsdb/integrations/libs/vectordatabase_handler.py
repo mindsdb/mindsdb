@@ -20,11 +20,10 @@ from mindsdb_sql_parser.ast import (
 )
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
-from mindsdb.utilities import log
+from mindsdb.integrations.libs.response import DataHandlerResponse, OkResponse, TableResponse
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
-
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.utilities import log
 from .base import BaseHandler
 
 LOG = log.getLogger(__name__)
@@ -445,7 +444,7 @@ class VectorStoreHandler(BaseHandler):
                 handler_engine = self.__class__.name
                 raise VectorHandlerException(f"Error in {handler_engine} database: {e}")
 
-    def _dispatch(self, query: ASTNode) -> HandlerResponse:
+    def _dispatch(self, query: ASTNode) -> DataHandlerResponse:
         """
         Parse and Dispatch query to the appropriate method.
         """
@@ -460,14 +459,14 @@ class VectorStoreHandler(BaseHandler):
         if type(query) in dispatch_router:
             resp = dispatch_router[type(query)](query)
             if resp is not None:
-                return HandlerResponse(resp_type=RESPONSE_TYPE.TABLE, data_frame=resp)
+                return TableResponse(data=resp)
             else:
-                return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
+                return OkResponse()
 
         else:
             raise NotImplementedError(f"Query type {type(query)} not implemented.")
 
-    def query(self, query: ASTNode) -> HandlerResponse:
+    def query(self, query: ASTNode) -> DataHandlerResponse:
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
 
@@ -476,11 +475,11 @@ class VectorStoreHandler(BaseHandler):
                 of query: SELECT, INSERT, DELETE, etc
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         return self._dispatch(query)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True) -> DataHandlerResponse:
         """Create table
 
         Args:
@@ -488,11 +487,11 @@ class VectorStoreHandler(BaseHandler):
             if_not_exists (bool): if True, do nothing if table exists
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+    def drop_table(self, table_name: str, if_exists=True) -> DataHandlerResponse:
         """Drop table
 
         Args:
@@ -500,11 +499,11 @@ class VectorStoreHandler(BaseHandler):
             if_exists (bool): if True, do nothing if table does not exist
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def insert(self, table_name: str, data: pd.DataFrame) -> HandlerResponse:
+    def insert(self, table_name: str, data: pd.DataFrame) -> DataHandlerResponse:
         """Insert data into table
 
         Args:
@@ -513,11 +512,11 @@ class VectorStoreHandler(BaseHandler):
             columns (List[str]): columns to insert
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def update(self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None):
+    def update(self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None) -> DataHandlerResponse:
         """Update data in table
 
         Args:
@@ -526,11 +525,11 @@ class VectorStoreHandler(BaseHandler):
             key_columns (List[str]): key to  to update
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> HandlerResponse:
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> DataHandlerResponse:
         """Delete data from table
 
         Args:
@@ -538,7 +537,7 @@ class VectorStoreHandler(BaseHandler):
             conditions (List[FilterCondition]): conditions to delete
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
@@ -549,7 +548,7 @@ class VectorStoreHandler(BaseHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> pd.DataFrame:
+    ) -> DataHandlerResponse:
         """Select data from table
 
         Args:
@@ -558,18 +557,15 @@ class VectorStoreHandler(BaseHandler):
             conditions (List[FilterCondition]): conditions to select
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def get_columns(self, table_name: str) -> HandlerResponse:
+    def get_columns(self, table_name: str) -> TableResponse:
         # return a fixed set of columns
         data = pd.DataFrame(self.SCHEMA)
         data.columns = ["COLUMN_NAME", "DATA_TYPE"]
-        return HandlerResponse(
-            resp_type=RESPONSE_TYPE.DATA,
-            data_frame=data,
-        )
+        return TableResponse(data=data)
 
     def hybrid_search(
         self,

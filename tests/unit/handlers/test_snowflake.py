@@ -20,7 +20,13 @@ from types import SimpleNamespace
 
 
 from base_handler_test import BaseDatabaseHandlerTest
-from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    OkResponse,
+    TableResponse,
+    ErrorResponse,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
+    RESPONSE_TYPE,
+)
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
@@ -252,8 +258,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.fetch_pandas_batches.assert_called_once()
         mock_cursor.fetchall.assert_not_called()
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, TableResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
         self.assertListEqual(list(data.data_frame.columns), expected_columns)
@@ -291,8 +296,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.execute.assert_called_once_with(query_str)
         mock_cursor.fetch_pandas_batches.assert_called_once()
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, OkResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.OK)
         self.assertEqual(data.affected_rows, 1)
 
@@ -356,7 +360,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor.assert_called_once()
         mock_cursor.execute.assert_called_once_with(query_str)
 
-        self.assertIsInstance(data, Response)
+        self.assertIsInstance(data, ErrorResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.ERROR)
         self.assertIn(error_msg, data.error_message)
 
@@ -647,7 +651,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         renderer_mock.get_string.return_value = "SELECT * FROM test_table_rendered"
 
         self.handler.native_query = MagicMock()
-        expected_response = Response(RESPONSE_TYPE.TABLE)
+        expected_response = TableResponse(data=DataFrame())
         self.handler.native_query.return_value = expected_response
 
         try:
@@ -675,11 +679,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_tables calls native_query with the correct SQL for Snowflake
         """
-        expected_response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=DataFrame(
-                [("table1", "SCHEMA1", "BASE TABLE")], columns=["TABLE_NAME", "TABLE_SCHEMA", "TABLE_TYPE"]
-            ),
+        expected_response = TableResponse(
+            data=DataFrame([("table1", "SCHEMA1", "BASE TABLE")], columns=["TABLE_NAME", "TABLE_SCHEMA", "TABLE_TYPE"])
         )
         self.handler.native_query = MagicMock(return_value=expected_response)
 
@@ -753,7 +754,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         expected_df = DataFrame(expected_df_data, columns=query_columns)
 
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        expected_response = TableResponse(data=expected_df)
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"
@@ -796,7 +797,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 }
             ]
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
 
         result = self.handler.meta_get_tables(table_names=["orders"])
 
@@ -817,7 +818,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 }
             ]
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
 
         result = self.handler.meta_get_columns(table_names=["orders"])
 
@@ -844,8 +845,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         )
         self.handler.native_query = MagicMock(
             side_effect=[
-                Response(RESPONSE_TYPE.TABLE, data_frame=columns_df),
-                Response(RESPONSE_TYPE.TABLE, data_frame=stats_df),
+                TableResponse(data=columns_df),
+                TableResponse(data=stats_df),
             ]
         )
 
@@ -859,9 +860,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(id_stats["maximum_value"], 10)
 
     def test_meta_get_column_statistics_handles_error_response(self):
-        self.handler.native_query = MagicMock(
-            return_value=Response(RESPONSE_TYPE.ERROR, error_message="boom", data_frame=None)
-        )
+        self.handler.native_query = MagicMock(return_value=ErrorResponse(error_message="boom"))
         result = self.handler.meta_get_column_statistics(table_names=["orders"])
         self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
 
@@ -872,7 +871,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 {"table_name": "CUSTOMERS", "column_name": "ID", "key_sequence": 1, "constraint_name": "PK_CUSTOMERS"},
             ]
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
 
         result = self.handler.meta_get_primary_keys(table_names=["ORDERS"])
 
@@ -904,7 +903,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 },
             ]
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
 
         result = self.handler.meta_get_foreign_keys(table_names=["ORDERS", "CUSTOMERS"])
 
@@ -1190,7 +1189,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -1341,7 +1341,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -1375,7 +1376,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOLEAN]
 
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -1611,7 +1613,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             }
         )
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 
@@ -1674,7 +1677,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             }
         )
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 

@@ -11,7 +11,7 @@ except ImportError:
     pytestmark = pytest.mark.skip("Databricks handler not installed")
 
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
+    TableResponse,
     HandlerStatusResponse as StatusResponse,
 )
 
@@ -84,7 +84,7 @@ class TestDatabricksHandler(unittest.TestCase):
 
     def test_native_query(self):
         """
-        Tests the `native_query` method to ensure it executes a SQL query using a mock cursor and returns a Response object.
+        Tests the `native_query` method to ensure it executes a SQL query using a mock cursor and returns a TableResponse object.
         """
         mock_conn = MagicMock()
         mock_cursor = CursorContextManager()
@@ -93,13 +93,13 @@ class TestDatabricksHandler(unittest.TestCase):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
         mock_cursor.execute.return_value = None
-        mock_cursor.fetchall.return_value = None
+        mock_cursor.fetchall.return_value = [("value1", "value2")]
+        mock_cursor.description = [("column1",), ("column2",)]
 
         query_str = "SELECT * FROM table"
         data = self.handler.native_query(query_str)
         mock_cursor.execute.assert_called_once_with(query_str)
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
+        assert isinstance(data, TableResponse)
 
     def test_get_tables(self):
         """

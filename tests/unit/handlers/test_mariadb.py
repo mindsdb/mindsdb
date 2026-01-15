@@ -6,19 +6,18 @@ from mysql.connector import Error as MySQLError
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
-from mindsdb.integrations.libs.response import HandlerResponse as Response
+from mindsdb.integrations.libs.response import TableResponse
 
 
 class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
-
     @property
     def dummy_connection_data(self):
         return OrderedDict(
-            host='127.0.0.1',
+            host="127.0.0.1",
             port=3307,
-            user='example_user',
-            password='example_pass',
-            database='example_db',
+            user="example_user",
+            password="example_pass",
+            database="example_db",
         )
 
     @property
@@ -64,18 +63,16 @@ class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
 
     def create_handler(self):
-        return MariaDBHandler('mariadb', connection_data=self.dummy_connection_data)
+        return MariaDBHandler("mariadb", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch('mysql.connector.connect')
+        return patch("mysql.connector.connect")
 
     def test_native_query(self):
-        """Test that native_query returns a Response object with no error
-        """
+        """Test that native_query returns a TableResponse object with no error"""
         mock_conn = MagicMock()
         mock_cursor = MockCursorContextManager(
-            data=[{'id': 1}],
-            description=[('id', 3, None, None, None, None, 1, 0, 45)]
+            data=[{"id": 1}], description=[("id", 3, None, None, None, None, 1, 0, 45)]
         )
 
         self.handler.connect = MagicMock(return_value=mock_conn)
@@ -84,9 +81,8 @@ class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = f"SELECT * FROM {self.mock_table}"
         data = self.handler.native_query(query_str)
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, TableResponse)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

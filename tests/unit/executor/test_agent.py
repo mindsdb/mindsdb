@@ -61,6 +61,14 @@ def get_dataset_planets():
 
 
 class TestAgent(BaseExecutorDummyML):
+    @staticmethod
+    def _action(name, action_input=""):
+        return dedent(f"""\
+            Thought: Do I need to use a tool? Yes
+            Action: {name}
+            Action Input: {action_input}
+        """)
+
     @pytest.mark.slow
     def test_mindsdb_provider(self):
         from mindsdb.api.executor.exceptions import ExecutorException
@@ -642,14 +650,6 @@ class TestAgent(BaseExecutorDummyML):
          """)
         ret = self.run_sql("select * from default_retrieval_agent where question = 'test question'")
         assert agent_response in ret.answer[0]
-
-    @staticmethod
-    def _action(name, action_input=""):
-        return dedent(f"""
-                    Thought: Do I need to use a tool? Yes
-                    Action: {name}
-                    Action Input: {action_input}
-                """)
 
     @patch("openai.OpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")

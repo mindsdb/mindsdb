@@ -43,11 +43,6 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         "emails",
         "meetings",
         "notes",
-        "company_contacts",
-        "company_deals",
-        "company_tickets",
-        "contact_deals",
-        "contact_tickets",
     ]
 
     @property

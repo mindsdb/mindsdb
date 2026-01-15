@@ -1,15 +1,18 @@
-from typing import Any, Dict
+from typing import Any, Dict, Type, Optional
 
 from atlassian import Jira
 from requests.exceptions import HTTPError
 
 from mindsdb.integrations.handlers.jira_handler.jira_tables import (
-    JiraProjectsTable,
-    JiraIssuesTable,
-    JiraUsersTable,
+    JiraAttachmentsTable,
+    JiraCommentsTable,
     JiraGroupsTable,
+    JiraIssuesTable,
+    JiraProjectsTable,
+    JiraUsersTable,
 )
-from mindsdb.integrations.libs.api_handler import APIHandler
+
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -20,8 +23,80 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+DEFAULT_TABLES = ["projects", "issues", "users", "groups", "attachments", "comments"]
 
-class JiraHandler(APIHandler):
+
+def _normalize_cloud_credentials(connection_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalizes credentials for Jira Cloud connections.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the normalized credentials.
+    """
+    if "jira_username" not in connection_data or "jira_api_token" not in connection_data:
+        raise ValueError(
+            "For Jira Cloud, both 'jira_username' and 'jira_api_token' parameters are required in the connection data."
+        )
+
+    return {
+        "username": connection_data["jira_username"],
+        "api_token": connection_data["jira_api_token"],
+    }
+
+
+def _normalize_server_credentials(connection_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalizes credentials for Jira Server connections.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the normalized credentials.
+    """
+    if "jira_personal_access_token" in connection_data:
+        return {"personal_access_token": connection_data["jira_personal_access_token"]}
+
+    if "jira_username" in connection_data and "jira_password" in connection_data:
+        return {
+            "username": connection_data["jira_username"],
+            "password": connection_data["jira_password"],
+        }
+
+    raise ValueError(
+        "For Jira Server, either 'jira_personal_access_token' or both 'jira_username' and 'jira_password' parameters are required in the connection data."
+    )
+
+
+def normalize_jira_connection_data(connection_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalizes the connection data for Jira connections.
+    Returns:
+        Dict[str, Any]: A dictionary containing the normalized connection data.
+    """
+    if "jira_url" not in connection_data:
+        raise ValueError("The 'jira_url' parameter is required in the connection data.")
+
+    cloud_flag = connection_data.get("cloud")
+    if cloud_flag is None and "is_cloud" in connection_data:
+        cloud_flag = connection_data["is_cloud"]
+
+    cloud = bool(cloud_flag) if cloud_flag is not None else True
+
+    if (
+        not cloud
+        and "jira_api_token" in connection_data
+        and "jira_password" not in connection_data
+        and "jira_personal_access_token" not in connection_data
+    ):
+        cloud = True
+
+    credentials = (
+        _normalize_cloud_credentials(connection_data) if cloud else _normalize_server_credentials(connection_data)
+    )
+
+    return {
+        "url": connection_data["jira_url"],
+        "cloud": cloud,
+        **credentials,
+    }
+
+
+class JiraHandler(MetaAPIHandler):
     """
     This handler handles the connection and execution of SQL statements on Jira.
     """
@@ -36,16 +111,30 @@ class JiraHandler(APIHandler):
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.connection_data = connection_data
+        self.connection_data = self._normalize_connection_data(connection_data)
         self.kwargs = kwargs
 
-        self.connection = None
-        self.is_connected = False
+        self.connection: Optional[Jira] = None
+        self.is_connected: bool = False
 
-        self._register_table("projects", JiraProjectsTable(self))
-        self._register_table("issues", JiraIssuesTable(self))
-        self._register_table("groups", JiraGroupsTable(self))
-        self._register_table("users", JiraUsersTable(self))
+        table_factories: Dict[str, Type] = {
+            "projects": JiraProjectsTable,
+            "issues": JiraIssuesTable,
+            "groups": JiraGroupsTable,
+            "users": JiraUsersTable,
+            "attachments": JiraAttachmentsTable,
+            "comments": JiraCommentsTable,
+        }
+        for table in DEFAULT_TABLES:
+            table_name = table.lower()
+            table_class = table_factories.get(table_name)
+            if table_class is None:
+                logger.warning(f"Skipping unsupported Jira table '{table}'.")
+                continue
+            self._register_table(table_name, table_class(self))
+
+    def _normalize_connection_data(self, connection_data: Dict) -> Dict:
+        return normalize_jira_connection_data(connection_data)
 
     def connect(self) -> Jira:
         """
@@ -59,7 +148,10 @@ class JiraHandler(APIHandler):
             atlassian.jira.Jira: A connection object to the Jira API.
         """
         if self.is_connected is True:
-            return self.connection
+            if self.connection is not None:
+                return self.connection
+            else:
+                raise RuntimeError("Jira connection is not established.")
 
         is_cloud = self.connection_data.get("cloud", True)
 
@@ -75,14 +167,17 @@ class JiraHandler(APIHandler):
                 "cloud": is_cloud,
             }
         else:
-            # Jira Server supports personal access token authentication or open access.
+            # Jira Server
             if "url" not in self.connection_data:
                 raise ValueError("Required parameter 'url' must be provided.")
 
             config = {"url": self.connection_data["url"], "cloud": False}
 
             if "personal_access_token" in self.connection_data:
-                config["session"] = {"Authorization": f"Bearer {self.connection_data['personal_access_token']}"}
+                config["token"] = self.connection_data["personal_access_token"]
+            elif "username" in self.connection_data and "password" in self.connection_data:
+                config["username"] = self.connection_data["username"]
+                config["password"] = self.connection_data["password"]
 
         try:
             self.connection = Jira(**config)
@@ -118,7 +213,22 @@ class JiraHandler(APIHandler):
 
     def native_query(self, query: str) -> Response:
         """
-        Executes a native JQL query on Jira and returns the result.
+        Execute a native JQL query and return the result as rows from the `issues` table.
+
+        This uses Jira's issue search endpoint, which always returns an `issues` array,
+        so native_query is intentionally *issue-centric* and does not return projects,
+        users, or groups directly.
+
+        For JQL Cloud REST endpoints and behavior, see:
+        - JQL REST API group:
+        https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-jql/
+        - Issue search using JQL:
+        https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-search/
+
+        For Jira Server REST endpoints and behavior, see:
+        - JQL REST API group:
+        https://developer.atlassian.com/server/jira/platform/rest/v11002/api-group-jql/#api-group-jql
+
 
         Args:
             query (Text): The JQL query to be executed.
@@ -129,8 +239,11 @@ class JiraHandler(APIHandler):
         connection = self.connect()
 
         try:
+            logger.debug(f"Running query: {query} on Jira.")
             results = connection.jql(query)
-            df = JiraIssuesTable(self).normalize(results["issues"])
+            issues = results.get("issues", [])
+            issues_table = JiraIssuesTable(self)
+            df = issues_table.normalize(issues)
             response = Response(RESPONSE_TYPE.TABLE, df)
         except HTTPError as http_error:
             logger.error(f"Error running query: {query} on Jira, {http_error}!")

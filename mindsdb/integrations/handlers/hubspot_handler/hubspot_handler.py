@@ -7,6 +7,19 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     ContactsTable,
     CompaniesTable,
     DealsTable,
+    TicketsTable,
+    TasksTable,
+    CallsTable,
+    EmailsTable,
+    MeetingsTable,
+    NotesTable,
+    CompanyContactsTable,
+    CompanyDealsTable,
+    CompanyTicketsTable,
+    ContactDealsTable,
+    ContactTicketsTable,
+    to_hubspot_property,
+    to_internal_property,
     HUBSPOT_TABLE_COLUMN_DEFINITIONS,
 )
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
@@ -24,33 +37,21 @@ logger = log.getLogger(__name__)
 
 
 def _extract_hubspot_error_message(error: Exception) -> str:
-    """Extract a user-friendly error message from HubSpot API exceptions.
-
-    Args:
-        error (Exception): The exception from HubSpot API
-
-    Returns:
-        str: A clear, actionable error message
-    """
+    """Extract a user-friendly error message from HubSpot API exceptions."""
     error_str = str(error)
 
-    # Check for missing scopes error (403)
     if "403" in error_str and "MISSING_SCOPES" in error_str:
-        # Try to extract required scopes from error message
         if "requiredGranularScopes" in error_str:
             import json
 
             try:
-                # Extract JSON from error message
                 start = error_str.find('{"status":')
                 if start != -1:
                     json_str = error_str[start : error_str.find("}", start) + 1]
                     error_data = json.loads(json_str)
-
                     if "errors" in error_data and len(error_data["errors"]) > 0:
                         context = error_data["errors"][0].get("context", {})
                         scopes = context.get("requiredGranularScopes", [])
-
                         if scopes:
                             scopes_list = ", ".join(scopes)
                             return (
@@ -59,42 +60,26 @@ def _extract_hubspot_error_message(error: Exception) -> str:
                             )
             except (json.JSONDecodeError, KeyError, IndexError):
                 pass
-
         return (
             "Missing required HubSpot API permissions (scopes). "
-            "Please verify your access token has the necessary scopes: "
-            "crm.objects.companies.read, crm.objects.contacts.read, crm.objects.deals.read. "
+            "Please verify your access token has the necessary scopes. "
             "Update scopes at https://developers.hubspot.com/"
         )
 
-    # Check for authentication errors (401)
     if "401" in error_str or "Unauthorized" in error_str:
-        return (
-            "Invalid or expired HubSpot access token. "
-            "Please regenerate your access token at https://developers.hubspot.com/"
-        )
+        return "Invalid or expired HubSpot access token. Please regenerate your access token at https://developers.hubspot.com/"
 
-    # Check for rate limiting (429)
     if "429" in error_str or "rate limit" in error_str.lower():
         return "HubSpot API rate limit exceeded. Please wait a moment and try again."
 
-    # Generic HubSpot API error
     if "ApiException" in error_str or "hubspot" in error_str.lower():
         return f"HubSpot API error: {error_str[:200]}"
 
-    # Return original error message
     return str(error)
 
 
 def _map_type(data_type: str) -> MYSQL_DATA_TYPE:
-    """Map HubSpot data types to MySQL types.
-
-    Args:
-        data_type (str): The HubSpot/SQL data type name
-
-    Returns:
-        MYSQL_DATA_TYPE: The corresponding MySQL data type
-    """
+    """Map HubSpot data types to MySQL types."""
     if data_type is None:
         return MYSQL_DATA_TYPE.VARCHAR
 
@@ -126,13 +111,7 @@ class HubspotHandler(MetaAPIHandler):
     name = "hubspot"
 
     def __init__(self, name: str, **kwargs: Any) -> None:
-        """
-        Initialize the handler.
-
-        Args:
-            name (str): name of particular handler instance
-            **kwargs: arbitrary keyword arguments including connection_data
-        """
+        """Initialize the handler."""
         super().__init__(name)
 
         connection_data = kwargs.get("connection_data", {})
@@ -142,26 +121,28 @@ class HubspotHandler(MetaAPIHandler):
         self.connection: Optional[HubSpot] = None
         self.is_connected: bool = False
 
-        # Register tables for data catalog
-        companies_data = CompaniesTable(self)
-        self._register_table("companies", companies_data)
+        # Register core CRM tables
+        self._register_table("companies", CompaniesTable(self))
+        self._register_table("contacts", ContactsTable(self))
+        self._register_table("deals", DealsTable(self))
+        self._register_table("tickets", TicketsTable(self))
 
-        contacts_data = ContactsTable(self)
-        self._register_table("contacts", contacts_data)
+        # Register engagement/activity tables
+        self._register_table("tasks", TasksTable(self))
+        self._register_table("calls", CallsTable(self))
+        self._register_table("emails", EmailsTable(self))
+        self._register_table("meetings", MeetingsTable(self))
+        self._register_table("notes", NotesTable(self))
 
-        deals_data = DealsTable(self)
-        self._register_table("deals", deals_data)
+        # Register association tables
+        self._register_table("company_contacts", CompanyContactsTable(self))
+        self._register_table("company_deals", CompanyDealsTable(self))
+        self._register_table("company_tickets", CompanyTicketsTable(self))
+        self._register_table("contact_deals", ContactDealsTable(self))
+        self._register_table("contact_tickets", ContactTicketsTable(self))
 
     def connect(self) -> HubSpot:
-        """Creates a new Hubspot API client if needed and sets it as the client to use for requests.
-
-        Returns:
-            HubSpot: Newly created Hubspot API client, or current client if already set.
-
-        Raises:
-            ValueError: If authentication credentials are missing or invalid.
-            Exception: If connection to HubSpot API fails.
-        """
+        """Creates a new Hubspot API client if needed."""
         if self.is_connected and self.connection is not None:
             return self.connection
 
@@ -182,7 +163,6 @@ class HubspotHandler(MetaAPIHandler):
                     raise ValueError("Invalid OAuth credentials provided")
 
                 logger.info("Connecting to HubSpot using OAuth credentials")
-
                 self.connection = HubSpot(client_id=client_id, client_secret=client_secret)
             else:
                 raise ValueError(
@@ -208,11 +188,7 @@ class HubspotHandler(MetaAPIHandler):
         logger.info("Disconnected from HubSpot API")
 
     def check_connection(self) -> StatusResponse:
-        """Checks whether the API client is connected to Hubspot.
-
-        Returns:
-            StatusResponse: A status response indicating whether the API client is connected to Hubspot.
-        """
+        """Checks whether the API client is connected to Hubspot."""
         response = StatusResponse(False)
 
         try:
@@ -225,13 +201,11 @@ class HubspotHandler(MetaAPIHandler):
                     response.success = True
                     logger.info("HubSpot connection check successful (contacts accessible)")
                 except Exception as contacts_error:
-                    # If contacts fail, try companies as fallback
                     try:
                         list(self.connection.crm.companies.get_all(limit=1))
                         response.success = True
                         logger.info("HubSpot connection check successful (companies accessible)")
                     except Exception as companies_error:
-                        # If both fail, report both errors for better context
                         contacts_msg = _extract_hubspot_error_message(contacts_error)
                         companies_msg = _extract_hubspot_error_message(companies_error)
                         error_msg = f"Cannot access HubSpot data. Contacts error: {contacts_msg}. Companies error: {companies_msg}"
@@ -249,18 +223,7 @@ class HubspotHandler(MetaAPIHandler):
         return response
 
     def native_query(self, query: Optional[str] = None) -> Response:
-        """Receive and process a raw query.
-
-        Args:
-            query (str): query in a native format (SQL)
-
-        Returns:
-            Response: Response containing query results or error information
-
-        Raises:
-            ValueError: If query is None or empty
-            Exception: If query parsing or execution fails
-        """
+        """Receive and process a raw query."""
         if not query:
             return Response(RESPONSE_TYPE.ERROR, error_message="Query cannot be None or empty")
 
@@ -272,26 +235,52 @@ class HubspotHandler(MetaAPIHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}")
 
     def get_tables(self) -> Response:
-        """Return list of tables available in the HubSpot integration.
-
-        Returns:
-            Response: A response containing table metadata including table names, types,
-            estimated row counts, and descriptions.
-        """
+        """Return list of tables available in the HubSpot integration."""
         try:
             self.connect()
 
             tables_data = []
-            accessible_tables = ["companies", "contacts", "deals"]
+            all_tables = ["companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"]
+            association_tables = [
+                "company_contacts",
+                "company_deals",
+                "company_tickets",
+                "contact_deals",
+                "contact_tickets",
+            ]
 
-            # Check which tables are accessible based on scopes
-            for table_name in accessible_tables:
+            for table_name in all_tables + association_tables:
                 try:
+                    if table_name in association_tables:
+                        tables_data.append(
+                            {
+                                "TABLE_SCHEMA": "hubspot",
+                                "TABLE_NAME": table_name,
+                                "TABLE_TYPE": "BASE TABLE",
+                            }
+                        )
+                        continue
+
                     # Try to access each table with a minimal request
                     default_properties = self._tables[table_name].get_columns()
-                    getattr(self.connection.crm, table_name).get_all(limit=1, properties=default_properties)
+                    hubspot_properties = [
+                        to_hubspot_property(col)
+                        for col in default_properties
+                        if to_hubspot_property(col) != "hs_object_id"
+                    ]
+                    hubspot_properties = [
+                        to_hubspot_property(col)
+                        for col in default_properties
+                        if to_hubspot_property(col) != "hs_object_id"
+                    ]
 
-                    # If successful, get full metadata
+                    # Different API paths for different object types
+                    if table_name in ["companies", "contacts", "deals", "tickets"]:
+                        getattr(self.connection.crm, table_name).get_all(limit=1, properties=hubspot_properties)
+                    else:
+                        # Engagement objects use crm.objects with explicit paging
+                        self._get_objects_all(table_name, limit=1, properties=hubspot_properties)
+
                     table_info = {
                         "TABLE_SCHEMA": "hubspot",
                         "TABLE_NAME": table_name,
@@ -300,7 +289,6 @@ class HubspotHandler(MetaAPIHandler):
                     tables_data.append(table_info)
                     logger.info(f"Table '{table_name}' is accessible")
                 except Exception as access_error:
-                    # Table is not accessible (likely missing scope)
                     if "403" in str(access_error) or "MISSING_SCOPES" in str(access_error):
                         error_msg = _extract_hubspot_error_message(access_error)
                         logger.warning(f"Table '{table_name}' is not accessible: {error_msg}")
@@ -310,17 +298,14 @@ class HubspotHandler(MetaAPIHandler):
             if not tables_data:
                 error_msg = (
                     "No HubSpot tables are accessible with your current access token. "
-                    "Please ensure your token has at least one of these scopes: "
-                    "crm.objects.companies.read, crm.objects.contacts.read, or crm.objects.deals.read. "
+                    "Please ensure your token has the necessary scopes. "
                     "Update scopes at https://developers.hubspot.com/"
                 )
                 logger.error(error_msg)
                 return Response(RESPONSE_TYPE.ERROR, error_message=error_msg)
 
             df = pd.DataFrame(tables_data)
-            logger.info(
-                f"Retrieved metadata for {len(tables_data)} accessible table(s): {', '.join(accessible_tables)}"
-            )
+            logger.info(f"Retrieved metadata for {len(tables_data)} accessible table(s)")
             return Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
         except Exception as e:
@@ -329,27 +314,35 @@ class HubspotHandler(MetaAPIHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve table list: {error_msg}")
 
     def get_columns(self, table_name: str) -> Response:
-        """Return column information for a specific table in standard information_schema.columns format.
+        """Return column information for a specific table."""
+        valid_tables = [
+            "companies",
+            "contacts",
+            "deals",
+            "tickets",
+            "tasks",
+            "calls",
+            "emails",
+            "meetings",
+            "notes",
+            "company_contacts",
+            "company_deals",
+            "company_tickets",
+            "contact_deals",
+            "contact_tickets",
+        ]
 
-        Args:
-            table_name (str): Name of the table to get column information for
-
-        Returns:
-            Response: A response containing column metadata in standard information_schema.columns format.
-        """
-        if table_name not in ["companies", "contacts", "deals"]:
+        if table_name not in valid_tables:
             return Response(
                 RESPONSE_TYPE.ERROR,
-                error_message=f"Table '{table_name}' not found. Available tables: companies, contacts, deals",
+                error_message=f"Table '{table_name}' not found. Available tables: {', '.join(valid_tables)}",
             )
 
         try:
             self.connect()
 
-            # Discover columns from HubSpot API
             discovered_columns = self._discover_columns(table_name, sample_size=100)
 
-            # Transform to information_schema.columns format (12 standard fields)
             columns_data = []
             for col in discovered_columns:
                 columns_data.append(
@@ -381,28 +374,16 @@ class HubspotHandler(MetaAPIHandler):
         except Exception as e:
             error_msg = _extract_hubspot_error_message(e)
             logger.error(f"Failed to get columns for table {table_name}: {error_msg}")
-
             return Response(
                 RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve columns for table '{table_name}': {error_msg}"
             )
 
     def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
-        """Return column statistics for data catalog
-
-        Args:
-            table_names (Optional[List[str]]): List of table names to get statistics for,
-            or None for all tables
-
-        Returns:
-            Response: A response containing column statistics with fields:
-                     TABLE_NAME, COLUMN_NAME, MOST_COMMON_VALUES,
-                     MOST_COMMON_FREQUENCIES, NULL_PERCENTAGE, MINIMUM_VALUE,
-                     MAXIMUM_VALUE, DISTINCT_VALUES_COUNT
-        """
+        """Return column statistics for data catalog."""
         try:
             self.connect()
 
-            all_tables = ["companies", "contacts", "deals"]
+            all_tables = ["companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"]
             if table_names:
                 tables_to_process = [t for t in table_names if t in all_tables]
             else:
@@ -412,26 +393,35 @@ class HubspotHandler(MetaAPIHandler):
 
             for table_name in tables_to_process:
                 try:
-                    # Get sample data for statistics (use larger sample for better accuracy)
+                    table_statistics = []
                     default_properties = self._tables[table_name].get_columns()
-                    sample_data = list(
-                        getattr(self.connection.crm, table_name).get_all(limit=1000, properties=default_properties)
-                    )
+                    hubspot_properties = [
+                        to_hubspot_property(col)
+                        for col in default_properties
+                        if to_hubspot_property(col) != "hs_object_id"
+                    ]
+
+                    # Get sample data based on object type
+                    if table_name in ["companies", "contacts", "deals", "tickets"]:
+                        sample_data = list(
+                            getattr(self.connection.crm, table_name).get_all(limit=1000, properties=hubspot_properties)
+                        )
+                    else:
+                        sample_data = list(self._get_objects_all(table_name, limit=1000, properties=hubspot_properties))
 
                     if len(sample_data) > 0:
                         sample_size = len(sample_data)
                         logger.info(f"Calculating statistics from {sample_size} records for {table_name}")
 
-                        # Get all unique properties
                         all_properties = set()
                         for item in sample_data:
                             if hasattr(item, "properties") and item.properties:
                                 all_properties.update(item.properties.keys())
 
-                        # Calculate statistics for 'id' column
+                        # Statistics for 'id' column
                         id_values = [item.id for item in sample_data]
                         id_stats = self._calculate_column_statistics("id", id_values)
-                        all_statistics.append(
+                        table_statistics.append(
                             {
                                 "TABLE_NAME": table_name,
                                 "COLUMN_NAME": "id",
@@ -446,13 +436,9 @@ class HubspotHandler(MetaAPIHandler):
                             }
                         )
 
-                        # Calculate statistics for each property column
                         for prop_name in sorted(all_properties):
-                            column_name = prop_name
-                            if prop_name == "hs_lastmodifieddate":
-                                column_name = "lastmodifieddate"
+                            column_name = to_internal_property(prop_name)
 
-                            # Collect values
                             column_values = []
                             for item in sample_data:
                                 if hasattr(item, "properties") and item.properties:
@@ -460,9 +446,8 @@ class HubspotHandler(MetaAPIHandler):
                                 else:
                                     column_values.append(None)
 
-                            stats = self._calculate_column_statistics(prop_name, column_values)
+                            stats = self._calculate_column_statistics(column_name, column_values)
 
-                            # Calculate most common values and their frequencies
                             most_common_values = None
                             most_common_frequencies = None
                             non_null_values = [v for v in column_values if v is not None]
@@ -475,7 +460,7 @@ class HubspotHandler(MetaAPIHandler):
                                     most_common_values = [str(v) for v, _ in top_5]
                                     most_common_frequencies = [str(c) for _, c in top_5]
 
-                            all_statistics.append(
+                            table_statistics.append(
                                 {
                                     "TABLE_NAME": table_name,
                                     "COLUMN_NAME": column_name,
@@ -489,9 +474,14 @@ class HubspotHandler(MetaAPIHandler):
                                     "MOST_COMMON_FREQUENCIES": most_common_frequencies,
                                 }
                             )
-                            all_statistics = [
-                                column for column in all_statistics if column["COLUMN_NAME"] in default_properties
-                            ]
+
+                        # Filter to only include default properties
+                        table_statistics = [
+                            col
+                            for col in table_statistics
+                            if col["COLUMN_NAME"] in default_properties or col["COLUMN_NAME"] == "id"
+                        ]
+                        all_statistics.extend(table_statistics)
 
                 except Exception as e:
                     logger.warning(f"Could not get statistics for table {table_name}: {str(e)}")
@@ -507,33 +497,29 @@ class HubspotHandler(MetaAPIHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve column statistics: {str(e)}")
 
     def _discover_columns(self, table_name: str, sample_size: int = 100) -> List[Dict[str, Any]]:
-        """Discover columns from HubSpot API by sampling data.
-
-        Args:
-            table_name (str): Name of the table (companies, contacts, or deals)
-            sample_size (int): Number of records to sample for column discovery
-
-        Returns:
-            List[Dict[str, Any]]: List of discovered columns with:
-                - column_name: Name of the column
-                - data_type: Inferred SQL data type
-                - is_nullable: Whether the column can contain NULL values
-                - ordinal_position: Position in the table
-                - description: Human-readable description
-                - original_name: Original property name from HubSpot
-
-        Raises:
-            Exception: If there's a permissions error accessing the table
-        """
+        """Discover columns from HubSpot API by sampling data."""
+        # Refeence: https://developers.hubspot.com/docs/cms/start-building/features/data-driven-content/crm-objects#crm-object-data-available-for-all-pages
         try:
-            # Fetch sample data based on table type
             sample_data = None
+
             if table_name == "companies":
                 sample_data = list(self.connection.crm.companies.get_all(limit=sample_size))
             elif table_name == "contacts":
                 sample_data = list(self.connection.crm.contacts.get_all(limit=sample_size))
             elif table_name == "deals":
                 sample_data = list(self.connection.crm.deals.get_all(limit=sample_size))
+            elif table_name == "tickets":
+                sample_data = list(self.connection.crm.tickets.get_all(limit=sample_size))
+            elif table_name == "tasks":
+                sample_data = list(self._get_objects_all("tasks", limit=sample_size))
+            elif table_name == "calls":
+                sample_data = list(self._get_objects_all("calls", limit=sample_size))
+            elif table_name == "emails":
+                sample_data = list(self._get_objects_all("emails", limit=sample_size))
+            elif table_name == "meetings":
+                sample_data = list(self._get_objects_all("meetings", limit=sample_size))
+            elif table_name == "notes":
+                sample_data = list(self._get_objects_all("notes", limit=sample_size))
 
             if not sample_data or len(sample_data) == 0:
                 logger.warning(f"No data available for {table_name}, using defaults")
@@ -541,7 +527,6 @@ class HubspotHandler(MetaAPIHandler):
 
             logger.info(f"Analyzing {len(sample_data)} records for {table_name} column discovery")
 
-            # Discover all unique properties from the sample
             all_properties = set()
             for item in sample_data:
                 if hasattr(item, "properties") and item.properties:
@@ -550,7 +535,6 @@ class HubspotHandler(MetaAPIHandler):
             discovered_columns = []
             ordinal_position = 1
 
-            # Add 'id' column first (primary key, always present)
             discovered_columns.append(
                 {
                     "column_name": "id",
@@ -563,14 +547,11 @@ class HubspotHandler(MetaAPIHandler):
             )
             ordinal_position += 1
 
-            # Add columns for each discovered property
             for prop_name in sorted(all_properties):
-                # Map property name to column name
                 column_name = prop_name
                 if prop_name == "hs_lastmodifieddate":
                     column_name = "lastmodifieddate"
 
-                # Collect sample values for type inference and nullability detection
                 column_values = []
                 for item in sample_data:
                     if hasattr(item, "properties") and item.properties:
@@ -578,7 +559,6 @@ class HubspotHandler(MetaAPIHandler):
                     else:
                         column_values.append(None)
 
-                # Infer data type from samples
                 data_type = self._infer_data_type_from_samples(column_values)
 
                 discovered_columns.append(
@@ -606,14 +586,7 @@ class HubspotHandler(MetaAPIHandler):
             return self._get_default_discovered_columns(table_name)
 
     def _get_default_discovered_columns(self, table_name: str) -> List[Dict[str, Any]]:
-        """Get default discovered columns when API data is unavailable.
-
-        Args:
-            table_name (str): Name of the table
-
-        Returns:
-            List[Dict[str, Any]]: List of default discovered columns
-        """
+        """Get default discovered columns when API data is unavailable."""
         ordinal_position = 1
         base_columns = [
             {
@@ -644,14 +617,7 @@ class HubspotHandler(MetaAPIHandler):
         return base_columns
 
     def _get_default_meta_columns(self, table_name: str) -> List[Dict[str, Any]]:
-        """Get default column metadata for data catalog when data is unavailable
-
-        Args:
-            table_name (str): Name of the table
-
-        Returns:
-            List[Dict[str, Any]]: List of column metadata dictionaries
-        """
+        """Get default column metadata for data catalog when data is unavailable."""
         base_columns = [
             {
                 "TABLE_NAME": table_name,
@@ -684,31 +650,72 @@ class HubspotHandler(MetaAPIHandler):
             "companies": "HubSpot companies data including name, industry, location and other company properties",
             "contacts": "HubSpot contacts data including email, name, phone and other contact properties",
             "deals": "HubSpot deals data including deal name, amount, stage and other deal properties",
+            "tickets": "HubSpot tickets data including subject, status, priority and pipeline information",
+            "tasks": "HubSpot tasks data including subject, status, priority and due dates",
+            "calls": "HubSpot call logs including direction, duration, outcome and notes",
+            "emails": "HubSpot email logs including subject, direction, status and content",
+            "meetings": "HubSpot meeting logs including title, location, outcome and timing",
+            "notes": "HubSpot notes for timeline entries on records",
+            "company_contacts": "HubSpot associations between companies and contacts",
+            "company_deals": "HubSpot associations between companies and deals",
+            "company_tickets": "HubSpot associations between companies and tickets",
+            "contact_deals": "HubSpot associations between contacts and deals",
+            "contact_tickets": "HubSpot associations between contacts and tickets",
         }
         return descriptions.get(table_name, f"HubSpot {table_name} data")
 
     def _estimate_table_rows(self, table_name: str) -> Optional[int]:
-        """Get actual count of rows in a table using HubSpot Search API
-
-        Args:
-            table_name (str): Name of the table (companies, contacts, or deals)
-
-        Returns:
-            Optional[int]: Total number of records, or None if count cannot be determined
-        """
+        """Get actual count of rows in a table using HubSpot Search API."""
         try:
-            if table_name == "companies":
-                result = self.connection.crm.companies.search_api.do_search(public_object_search_request={"limit": 1})
-                return result.total if hasattr(result, "total") else None
-            elif table_name == "contacts":
-                result = self.connection.crm.contacts.search_api.do_search(public_object_search_request={"limit": 1})
-                return result.total if hasattr(result, "total") else None
-            elif table_name == "deals":
-                result = self.connection.crm.deals.search_api.do_search(public_object_search_request={"limit": 1})
-                return result.total if hasattr(result, "total") else None
+            if table_name in ["companies", "contacts", "deals", "tickets"]:
+                result = getattr(self.connection.crm, table_name).search_api.do_search(
+                    public_object_search_request={"limit": 1}
+                )
+            else:
+                result = self.connection.crm.objects.search_api.do_search(
+                    table_name, public_object_search_request={"limit": 1}
+                )
+            return result.total if hasattr(result, "total") else None
         except Exception as e:
             logger.warning(f"Could not get row count for {table_name} using search API: {str(e)}")
         return None
+
+    def _get_objects_all(
+        self,
+        object_type: str,
+        limit: Optional[int] = None,
+        properties: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[Any]:
+        """Fetch objects with paging to honor custom limits for crm.objects."""
+        results: List[Any] = []
+        after = None
+        page_max_size = 100
+
+        if limit is None and "limit" in kwargs:
+            limit = kwargs.pop("limit")
+        if properties is None and "properties" in kwargs:
+            properties = kwargs.pop("properties")
+
+        while True:
+            if limit is not None:
+                remaining = limit - len(results)
+                if remaining <= 0:
+                    break
+                page_size = min(page_max_size, remaining)
+            else:
+                page_size = page_max_size
+
+            page = self.connection.crm.objects.basic_api.get_page(
+                object_type, after=after, limit=page_size, properties=properties, **kwargs
+            )
+            results.extend(page.results)
+
+            if page.paging is None:
+                break
+            after = page.paging.next.after
+
+        return results
 
     def _calculate_column_statistics(self, column_name: str, values: List[Any]) -> Dict[str, Any]:
         """Calculate comprehensive statistics for a column."""
@@ -725,14 +732,12 @@ class HubspotHandler(MetaAPIHandler):
         }
 
         if non_null_values:
-            # Try to calculate numeric average for numeric columns using pandas
             try:
                 s = pd.Series(non_null_values)
                 if pd_types.is_numeric_dtype(s):
                     avg = s.mean()
                     stats["average_value"] = round(avg, 2)
             except (ValueError, TypeError):
-                # Not numeric data, average stays None
                 pass
 
         return stats
@@ -744,13 +749,11 @@ class HubspotHandler(MetaAPIHandler):
         if not non_null_values:
             return "VARCHAR"
 
-        # Analyze types across all samples
         type_counts = {}
-        for value in non_null_values[:100]:  # Sample first 100 for performance
+        for value in non_null_values[:100]:
             inferred_type = self._infer_data_type(value)
             type_counts[inferred_type] = type_counts.get(inferred_type, 0) + 1
 
-        # Return the most common type
         if type_counts:
             return max(type_counts.items(), key=lambda x: x[1])[0]
 

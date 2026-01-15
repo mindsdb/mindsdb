@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -62,7 +63,14 @@ query_tool_description = dedent("""\
 """)
 
 
-@mcp.tool(name="query", description=query_tool_description)
+@mcp.tool(
+    name="query",
+    description=query_tool_description,
+    annotations=ToolAnnotations(
+        title="Execute SQL Query",
+        destructiveHint=True,
+    ),
+)
 def query(query: str, context: dict | None = None) -> dict[str, Any]:
     """Execute a SQL query against MindsDB
 
@@ -109,7 +117,14 @@ list_databases_tool_description = (
 )
 
 
-@mcp.tool(name="list_databases", description=list_databases_tool_description)
+@mcp.tool(
+    name="list_databases",
+    description=list_databases_tool_description,
+    annotations=ToolAnnotations(
+        title="List Databases",
+        readOnlyHint=True,
+    ),
+)
 def list_databases() -> list[str]:
     """
     List all databases in MindsDB

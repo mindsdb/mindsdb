@@ -105,12 +105,12 @@ target "images" {
     item = [
       {
         name = "bare"
-        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce]"
+        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce,faiss-cpu>=1.7.4,portalocker]"
         target = ""
       },
       {
         name = "devel"
-        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce]"  # Required for running integration tests
+        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce,faiss-cpu>=1.7.4,portalocker]"  # Required for running integration tests
         target = "dev"
       },
       {

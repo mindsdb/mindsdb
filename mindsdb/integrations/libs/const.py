@@ -21,14 +21,13 @@ class HANDLER_CONNECTION_ARG_TYPE:
 HANDLER_CONNECTION_ARG_TYPE = HANDLER_CONNECTION_ARG_TYPE()
 
 
-class HANDLER_MAINTAINER:
+class HANDLER_SUPPORT_LEVEL:
     __slots__ = ()
     MINDSDB = "mindsdb"
-    COMMUNITY = "community"
-    UNSPECIFIED = "unspecified"
+    COMMUNITY = "community"  # default
 
 
-HANDLER_MAINTAINER = HANDLER_MAINTAINER()
+HANDLER_SUPPORT_LEVEL = HANDLER_SUPPORT_LEVEL()
 
 
 from mindsdb.interfaces.storage.db import PREDICTOR_STATUS  # noqa

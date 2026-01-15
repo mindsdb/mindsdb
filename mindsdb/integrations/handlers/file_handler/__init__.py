@@ -1,4 +1,4 @@
-from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_MAINTAINER
+from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_SUPPORT_LEVEL
 
 from .file_handler import FileHandler as Handler
 from .__about__ import __version__ as version
@@ -8,7 +8,7 @@ title = "File"
 name = "files"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.svg"
-maintainer = HANDLER_MAINTAINER.MINDSDB
+support_level = HANDLER_SUPPORT_LEVEL.MINDSDB
 permanent = True
 
 __all__ = [
@@ -18,5 +18,5 @@ __all__ = [
     "type",
     "title",
     "icon_path",
-    "maintainer",
+    "support_level",
 ]

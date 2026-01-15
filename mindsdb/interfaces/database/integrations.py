@@ -24,7 +24,7 @@ from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE, HANDLER_MAINTAINER
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE, HANDLER_SUPPORT_LEVEL
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
@@ -633,7 +633,7 @@ class IntegrationController:
                 "connection_args": handler_info.get("connection_args", None),
                 "class_type": handler_info.get("class_type", None),
                 "type": handler_info.get("type"),
-                "maintainer": handler_info.get("maintainer"),
+                "support_level": handler_info.get("support_level"),
             }
             if "icon_path" in handler_info:
                 icon = self._get_handler_icon(handler_dir, handler_info["icon_path"])
@@ -731,7 +731,7 @@ class IntegrationController:
         code = ast.parse(init_file.read_text())
 
         info = {
-            "maintainer": HANDLER_MAINTAINER.UNSPECIFIED,
+            "support_level": HANDLER_SUPPORT_LEVEL.COMMUNITY,
         }
         for item in code.body:
             if not isinstance(item, ast.Assign):
@@ -747,10 +747,10 @@ class IntegrationController:
                     case "type", ast.Attribute(attr="DATA"):
                         info[name] = HANDLER_TYPE.DATA
                         info["class_type"] = self._get_base_class_type(code, handler_dir) or "sql"
-                    case "maintainer", ast.Attribute(attr="MINDSDB"):
-                        info["maintainer"] = HANDLER_MAINTAINER.MINDSDB
-                    case "maintainer", ast.Attribute(attr="COMMUNITY"):
-                        info["maintainer"] = HANDLER_MAINTAINER.COMMUNITY
+                    case "support_level", ast.Attribute(attr="MINDSDB"):
+                        info["support_level"] = HANDLER_SUPPORT_LEVEL.MINDSDB
+                    case "support_level", ast.Attribute(attr="COMMUNITY"):
+                        info["support_level"] = HANDLER_SUPPORT_LEVEL.COMMUNITY
 
         # connection args
         if info["type"] == HANDLER_TYPE.ML:

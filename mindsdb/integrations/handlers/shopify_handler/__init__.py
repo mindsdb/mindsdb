@@ -1,4 +1,4 @@
-from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_MAINTAINER
+from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_SUPPORT_LEVEL
 
 from .__about__ import __version__ as version, __description__ as description
 
@@ -14,14 +14,14 @@ title = "Shopify"
 name = "shopify"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.svg"
-maintainer = HANDLER_MAINTAINER.MINDSDB
+support_level = HANDLER_SUPPORT_LEVEL.MINDSDB
 
 __all__ = [
     "Handler",
     "version",
     "name",
     "type",
-    "maintainer",
+    "support_level",
     "title",
     "description",
     "import_error",

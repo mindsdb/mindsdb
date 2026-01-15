@@ -1,4 +1,4 @@
-from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_MAINTAINER
+from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_SUPPORT_LEVEL
 
 from .connection_args import connection_args, connection_args_example
 
@@ -16,7 +16,7 @@ title = "Google BigQuery"
 name = "bigquery"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.svg"
-maintainer = HANDLER_MAINTAINER.MINDSDB
+support_level = HANDLER_SUPPORT_LEVEL.MINDSDB
 
 __all__ = [
     "Handler",
@@ -25,7 +25,7 @@ __all__ = [
     "type",
     "title",
     "description",
-    "maintainer",
+    "support_level",
     "import_error",
     "icon_path",
     "connection_args",

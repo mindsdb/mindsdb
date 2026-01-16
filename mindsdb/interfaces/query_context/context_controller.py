@@ -29,8 +29,8 @@ def get_column_case_insensitive(columns, name):
     Raises:
         ValueError: if column is not found or multiple columns match
     """
-    lower_names = [x.lower() for x in columns]
-    count = [x.lower() for x in columns].count(name.lower())
+    lower_names = [name.lower() for name in columns]
+    count = lower_names.count(name.lower())
     if count == 0:
         raise ValueError(f"Column '{name}' not found. Available columns: {columns}")
     if count == 1:

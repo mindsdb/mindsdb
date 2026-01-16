@@ -1,5 +1,8 @@
 import requests
 import shopify
+import json
+
+from pyactiveresource.connection import ClientError, ServerError, ConnectionError as ResourceConnectionError
 
 from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     ProductsTable,
@@ -120,10 +123,59 @@ class ShopifyHandler(MetaAPIHandler):
             shopify.ShopifyResource.activate_session(api_session)
             shopify.Shop.current()
             response.success = True
-        except Exception as e:
-            logger.error("Error connecting to Shopify!")
+        except ClientError as e:
+            # Handle Shopify API client errors (4xx responses)
+            logger.error(f"Error connecting to Shopify: {str(e)}")
             response.error_message = str(e)
-            raise ConnectionFailed("Conenction to Shopify failed.")
+
+            status_code = e.response.code if hasattr(e.response, "code") else None
+
+            # Try to parse error message from response body
+            error_detail = None
+            if hasattr(e.response, "body"):
+                try:
+                    body = json.loads(e.response.body)
+                    error_detail = body.get("errors", None)
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+
+            if status_code == 402:
+                if error_detail and "Unavailable Shop" in str(error_detail):
+                    raise ConnectionFailed(
+                        "Shopify shop is unavailable. This could be due to shop suspension, billing issues, or incorrect shop URL."
+                    )
+                else:
+                    raise ConnectionFailed(
+                        "Shopify API access requires payment. Please check your Shopify billing status."
+                    )
+            elif status_code == 401:
+                raise ConnectionFailed("Invalid Shopify API credentials. Please check your access token and shop URL.")
+            elif status_code == 404:
+                raise ConnectionFailed("Shopify shop not found. Please verify the shop URL is correct.")
+            elif status_code == 403:
+                raise ConnectionFailed("Access denied. Please check your API permissions and credentials.")
+            else:
+                if error_detail:
+                    raise ConnectionFailed(f"Shopify API error: {error_detail}")
+                else:
+                    raise ConnectionFailed(
+                        "Failed to connect to Shopify API. Please check your credentials and shop URL."
+                    )
+        except ServerError as e:
+            # Handle Shopify API server errors (5xx responses)
+            logger.error(f"Shopify server error: {str(e)}")
+            response.error_message = str(e)
+            raise ConnectionFailed("Shopify API server error. Please try again later or contact Shopify support.")
+        except ResourceConnectionError as e:
+            # Handle network/connection errors
+            logger.error(f"Connection error: {str(e)}")
+            response.error_message = str(e)
+            raise ConnectionFailed("Network connection failed. Please check your internet connection and try again.")
+        except Exception as e:
+            # Handle any other unexpected errors
+            logger.error(f"Unexpected error connecting to Shopify: {str(e)}")
+            response.error_message = str(e)
+            raise ConnectionFailed("Failed to connect to Shopify. Please verify your shop URL and access token.")
 
         self.is_connected = response.success
 

@@ -1,10 +1,12 @@
-import ast
-import sys
 import os
-from typing import Dict, List, Optional, Union
+import ast
+import shutil
 import hashlib
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
+import chromadb
+from chromadb.api.shared_system_client import SharedSystemClient
 
 from mindsdb.integrations.handlers.chromadb_handler.settings import ChromaHandlerConfig
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -20,31 +22,6 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
-
-
-def get_chromadb():
-    """
-    Import and return the chromadb module, using pysqlite3 if available.
-    this is a hack to make chromadb work with pysqlite3 instead of sqlite3 for cloud usage
-    see https://docs.trychroma.com/troubleshooting#sqlite
-    """
-
-    # if we are using python 3.10 or above, we don't need pysqlite
-    if sys.hexversion < 0x30A0000:
-        try:
-            __import__("pysqlite3")
-            sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-        except ImportError:
-            logger.warn(
-                "Python version < 3.10 and pysqlite3 is not installed. ChromaDB may not work without solving one of these: https://docs.trychroma.com/troubleshooting#sqlite"
-            )  # noqa: E501
-
-    try:
-        import chromadb
-
-        return chromadb
-    except ImportError:
-        raise ImportError("Failed to import chromadb.")
 
 
 class ChromaDBHandler(VectorStoreHandler):
@@ -97,10 +74,9 @@ class ChromaDBHandler(VectorStoreHandler):
         if client_config is None:
             raise Exception("Client config is not set!")
 
-        chromadb = get_chromadb()
-
         # decide the client type to be used, either persistent or httpclient
         if client_config["persist_directory"] is not None:
+            SharedSystemClient.clear_system_cache()
             return chromadb.PersistentClient(path=client_config["persist_directory"])
         else:
             return chromadb.HttpClient(
@@ -231,6 +207,7 @@ class ChromaDBHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> pd.DataFrame:
+        self.disconnect()
         self.connect()
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
@@ -494,6 +471,17 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         self.connect()
         try:
+            # NOTE: there is a bug in chromadb v0.6.3 - it delete only segments that loaded in memory,
+            # so we delete them manually
+            if self._client_config.get("persist_directory") is not None:
+                collection = self._client.get_collection(table_name)
+                segments = self._client._server._sysdb.get_segments(collection.id)
+                for segment in segments:
+                    self._client._server._sysdb.delete_segment(collection=collection.id, id=segment["id"])
+                    shutil.rmtree(
+                        os.path.join(self._client_config["persist_directory"], str(segment["id"])), ignore_errors=True
+                    )
+
             self._client.delete_collection(table_name)
             self._sync()
         except ValueError:

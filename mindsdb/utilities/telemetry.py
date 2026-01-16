@@ -138,6 +138,7 @@ def create_telemetry_start_record() -> None:
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error collecting telemetry data for 'start' event: {e}")
+        return
 
     record = {
         "mindsdb_version": mindsdb_version,

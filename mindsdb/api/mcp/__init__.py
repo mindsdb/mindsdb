@@ -1,3 +1,4 @@
+import os
 from textwrap import dedent
 from typing import Any
 from contextlib import asynccontextmanager
@@ -5,6 +6,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -14,6 +16,19 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+
+def _get_transport_security() -> TransportSecuritySettings:
+    default_hosts = ["localhost:*", "127.0.0.1:*"]
+    env_hosts = os.environ.get("MINDSDB_MCP_ALLOWED_HOSTS", "")
+    if env_hosts:
+        custom_hosts = [h.strip() for h in env_hosts.split(",") if h.strip()]
+        for host in custom_hosts:
+            if ":*" not in host and ":" not in host:
+                default_hosts.append(f"{host}:*")
+            default_hosts.append(host)
+        logger.info(f"MCP transport security allowed hosts: {default_hosts}")
+    return TransportSecuritySettings(allowed_hosts=default_hosts)
 
 
 @dataclass
@@ -33,11 +48,12 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         pass
 
 
-# Configure server with lifespan
+# Configure server with lifespan and transport security
 mcp = FastMCP(
     "MindsDB",
     lifespan=app_lifespan,
-    dependencies=["mindsdb"],  # Add any additional dependencies
+    dependencies=["mindsdb"],
+    transport_security=_get_transport_security(),
 )
 
 

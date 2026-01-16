@@ -8,7 +8,7 @@ from mindsdb.integrations.libs.api_handler import MetaAPIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 from mindsdb.utilities import log
 
-from .utils import query_graphql_nodes, get_graphql_columns, _format_error # query_graphql
+from .utils import query_graphql_nodes, get_graphql_columns, _format_error
 from .models.products import Products, columns as products_columns
 from .models.product_variants import ProductVariants, columns as product_variants_columns
 from .models.customers import Customers, columns as customers_columns
@@ -137,7 +137,7 @@ class ShopifyMetaAPIResource(MetaAPIResource):
             List[dict]: The columns metadata.
         """
         return self.columns
-    
+
     def query_graphql(self, query: str) -> dict:
         """Query the GraphQL API.
 

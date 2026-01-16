@@ -1286,9 +1286,7 @@ class ExecuteCommands:
 
         add_telemetry_record(
             event="create_database",
-            record={
-                "engine": engine
-            }
+            record={"engine": engine},
         )
 
         return ExecuteAnswer()
@@ -1472,8 +1470,8 @@ class ExecuteCommands:
                 },
                 "reranking_model": {
                     k: v for k, v in params.get("reranking_model", {}).items() if k in ("provider", "model_name")
-                }
-            }
+                },
+            },
         )
 
         return ExecuteAnswer()
@@ -1564,9 +1562,7 @@ class ExecuteCommands:
         params = statement.params or {}
         add_telemetry_record(
             event="create_agent",
-            record={
-                k: v for k, v in params.items() if k in ("provider", "model_name")
-            }
+            record={k: v for k, v in params.items() if k in ("provider", "model_name")},
         )
 
         return ExecuteAnswer()

@@ -232,7 +232,7 @@ class Config:
             "telemetry": {
                 "enabled": False,
                 "endpoint": None,
-                "records_limit": 10
+                "records_limit": 10,
             },
             "pid_file_content": None,
         }

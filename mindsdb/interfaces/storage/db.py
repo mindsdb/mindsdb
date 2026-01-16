@@ -643,8 +643,8 @@ class LLMData(Base):
 
 
 class Telemetry(Base):
-    """Table to store telemetry data, while it is not sent to the telemetry service.
-    """
+    """Table to store telemetry data, while it is not sent to the telemetry service."""
+
     __tablename__ = "telemetry"
     id: int = Column(Integer, primary_key=True)
     company_id: int = Column(String, nullable=False)

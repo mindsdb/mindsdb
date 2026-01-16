@@ -184,7 +184,7 @@ jobs:
           COVERAGE_FILE: .coverage.unit
 
       - name: Upload test artifacts
-        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'publish_artifacts') }}
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-artifacts
@@ -197,18 +197,18 @@ jobs:
             reports/htmlcov/**
 
       - name: Configure Pages
-        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && (github.event.pull_request.head.repo.fork == false) }}
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.fork == false) && contains(github.event.pull_request.labels.*.name, 'publish_artifacts') }}
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && (github.event.pull_request.head.repo.fork == false) }}
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.fork == false) && contains(github.event.pull_request.labels.*.name, 'publish_artifacts') }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: reports/htmlcov
 
       - id: deploy
         name: Deploy to GitHub Pages
-        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && (github.event.pull_request.head.repo.fork == false) }}
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.fork == false) && contains(github.event.pull_request.labels.*.name, 'publish_artifacts') }}
         uses: actions/deploy-pages@v4
 
       - name: Pytest coverage comment

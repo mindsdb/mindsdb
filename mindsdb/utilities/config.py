@@ -3,8 +3,10 @@ import sys
 import json
 import argparse
 import datetime
+import dataclasses
 from pathlib import Path
 from copy import deepcopy
+from urllib.parse import urlparse
 
 from appdirs import user_data_dir
 
@@ -69,6 +71,16 @@ def get_bool_env_var(env_name: str) -> bool:
         case _:
             raise ValueError(f"Expected a boolean value for the environment variable '{env_name}', but got '{value}'")
     return value
+
+
+@dataclasses.dataclass(frozen=True)
+class HTTP_AUTH_TYPE:
+    SESSION: str = "session"
+    TOKEN: str = "token"
+    SESSION_OR_TOKEN: str = "session_or_token"
+
+
+HTTP_AUTH_TYPE = HTTP_AUTH_TYPE()
 
 
 class Config:
@@ -152,6 +164,7 @@ class Config:
                 "locks": self.storage_root_path / "locks",
             },
             "auth": {
+                "http_auth_type": HTTP_AUTH_TYPE.SESSION_OR_TOKEN,  # token | session | session_or_token
                 "http_auth_enabled": False,
                 "http_permanent_session_lifetime": datetime.timedelta(days=31),
                 "username": "mindsdb",
@@ -171,7 +184,8 @@ class Config:
                         "maxBytes": 1 << 19,  # 0.5 Mb
                         "backupCount": 3,
                     },
-                }
+                },
+                "resources_log": {"enabled": False, "level": "INFO", "interval": 60},
             },
             "gui": {"open_on_start": True, "autoupdate": True},
             "debug": False,
@@ -220,6 +234,7 @@ class Config:
                 "endpoint": None,
                 "records_limit": 10
             },
+            "pid_file_content": None,
         }
         # endregion
 
@@ -305,6 +320,12 @@ class Config:
             self._env_config["auth"]["password"] = http_password
         # endregion
 
+        http_auth_type = os.environ.get("MINDSDB_HTTP_AUTH_TYPE", "").lower()
+        if http_auth_type in dataclasses.astuple(HTTP_AUTH_TYPE):
+            self._env_config["auth"]["http_auth_type"] = http_auth_type
+        elif http_auth_type != "":
+            raise ValueError(f"Wrong value of env var MINDSDB_HTTP_AUTH_TYPE={http_auth_type}")
+
         # region logging
         if os.environ.get("MINDSDB_LOG_LEVEL", "") != "":
             self._env_config["logging"]["handlers"]["console"]["level"] = os.environ["MINDSDB_LOG_LEVEL"]
@@ -319,6 +340,16 @@ class Config:
 
         if os.environ.get("MINDSDB_DB_CON", "") != "":
             self._env_config["storage_db"] = os.environ["MINDSDB_DB_CON"]
+            url = urlparse(self._env_config["storage_db"])
+            is_valid = url.scheme and (url.netloc or url.scheme == "sqlite")
+            if not is_valid:
+                raise ValueError(
+                    f"Invalid MINDSDB_DB_CON value: {os.environ['MINDSDB_DB_CON']!r}\n"
+                    f"Expected format: scheme://user:password@host:port/database\n"
+                    "Examples:\n"
+                    "  - postgresql://user:pass@localhost:5432/database\n"
+                    "  - sqlite:///path/to/database.db"
+                )
 
         if os.environ.get("MINDSDB_DEFAULT_PROJECT", "") != "":
             self._env_config["default_project"] = os.environ["MINDSDB_DEFAULT_PROJECT"].lower()
@@ -385,6 +416,12 @@ class Config:
         if mindsdb_gui_autoupdate is not None:
             self._env_config["gui"]["autoupdate"] = mindsdb_gui_autoupdate
 
+        if os.environ.get("MINDSDB_PID_FILE_CONTENT", "") != "":
+            try:
+                self._env_config["pid_file_content"] = json.loads(os.environ["MINDSDB_PID_FILE_CONTENT"])
+            except json.JSONDecodeError as e:
+                raise ValueError(f"MINDSDB_PID_FILE_CONTENT contains invalid JSON: {e}")
+
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
         Do it only if `auto_config` was not loaded before or config.auto.json been changed.
@@ -392,20 +429,23 @@ class Config:
         Returns:
             bool: True if config was loaded or updated
         """
-
-        if (
-            self.auto_config_path.is_file()
-            and self.auto_config_path.read_text() != ""
-            and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
-        ):
-            try:
+        try:
+            if (
+                self.auto_config_path.is_file()
+                and self.auto_config_path.read_text() != ""
+                and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
+            ):
                 self._auto_config = json.loads(self.auto_config_path.read_text())
-            except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
-                )
-            self.auto_config_mtime = self.auto_config_path.stat().st_mtime
-            return True
+                self.auto_config_mtime = self.auto_config_path.stat().st_mtime
+                return True
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
+            )
+        except FileNotFoundError:
+            # this shouldn't happen during normal work, but it looks like it happens
+            # when using `prefect` as a result of race conditions or something else.
+            return False
         return False
 
     def fetch_user_config(self) -> bool:
@@ -570,6 +610,7 @@ class Config:
 
         parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
         parser.add_argument("--update-gui", action="store_true", default=False, help="Update GUI and exit")
+        parser.add_argument("--load-tokenizer", action="store_true", default=False, help="Preload tokenizer and exit")
 
         self._cmd_args = parser.parse_args()
 

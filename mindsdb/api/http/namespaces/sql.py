@@ -223,68 +223,41 @@ class Charter(Resource):
         
         if not isinstance(context, dict):
             return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "context" as a dictionary.')
-        
+
         logger.debug(f"Incoming charter request: query={query[:100]}..., prompt={prompt}")
 
+        mysql_proxy = FakeMysqlProxy()
+        mysql_proxy.set_context(context)
         try:
-            # Create executor and chart agent
-            mysql_proxy = FakeMysqlProxy()
-            chart_agent = ChartAgent(executor=mysql_proxy)
-            
-            # Generate chart configuration, execute query, and populate datasets
-            logger.debug("Generating chart with data...")
-            try:
-                response = chart_agent.generate_chart_with_data(query, prompt, context, params)
-                
-                end_time = time.time()
-                logger.debug(f"Charter processed in {(end_time - start_time):.2f}s")
-                
-                return response, 200
-                
-            except QueryError as e:
-                # QueryError has db_error_msg attribute that's more descriptive
-                error_msg = self._extract_error_message(e, "query execution")
-                logger.warning(f"Query error: {error_msg}")
-                return http_error(
-                    HTTPStatus.BAD_REQUEST,
-                    "Query error",
-                    error_msg
-                )
-            except ValueError as e:
-                error_msg = self._extract_error_message(e, "data validation")
-                logger.warning(f"Data validation error: {error_msg}")
-                return http_error(
-                    HTTPStatus.BAD_REQUEST,
-                    "Data validation error",
-                    error_msg
-                )
-            except Exception as e:
-                # Extract meaningful error message from chart generation or execution
-                error_msg = self._extract_error_message(e, "chart generation or execution")
-                logger.warning(f"Error in chart generation or execution: {error_msg}")
-                return http_error(
-                    HTTPStatus.BAD_REQUEST,
-                    "Chart generation failed",
-                    error_msg
-                )
-                
-        except ValueError as e:
-            error_msg = self._extract_error_message(e, "configuration")
-            logger.warning(f"Value error in chart generation: {error_msg}")
+            result: SQLAnswer = mysql_proxy.process_query(query, params=params)
+        except Exception as e:
+            error_msg = self._extract_error_message(e, "query execution")
+            logger.warning(f"Query error: {error_msg}")
             return http_error(
                 HTTPStatus.BAD_REQUEST,
-                "Configuration error",
+                "Query error",
                 error_msg
             )
+
+        df = result.result_set.to_df()
+
+        try:
+            chart_agent = ChartAgent(executor=mysql_proxy)
+            response = chart_agent.generate_chart_with_data(query, df, prompt)
+
+            end_time = time.time()
+            logger.debug(f"Charter processed in {(end_time - start_time):.2f}s")
+
+            return response, 200
+
         except Exception as e:
-            error_msg = self._extract_error_message(e, "chart generation")
-            logger.exception("Error generating chart configuration")
+            error_msg = self._extract_error_message(e, "chart generation or execution")
+            logger.warning(f"Error in chart generation or execution: {error_msg}")
             return http_error(
-                HTTPStatus.INTERNAL_SERVER_ERROR,
+                HTTPStatus.BAD_REQUEST,
                 "Chart generation failed",
                 error_msg
             )
-
 
 @ns_conf.route("/query/utils/parametrize_constants")
 class ParametrizeConstants(Resource):

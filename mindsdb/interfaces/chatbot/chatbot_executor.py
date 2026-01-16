@@ -1,5 +1,5 @@
 
-from mindsdb.interfaces.agents.constants import USER_COLUMN, ASSISTANT_COLUMN
+from mindsdb.interfaces.agents.utils.constants import USER_COLUMN, ASSISTANT_COLUMN
 
 from .model_executor import ModelExecutor
 from .types import Function, BotException

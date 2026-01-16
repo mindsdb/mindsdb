@@ -1,7 +1,7 @@
 from unittest.mock import Mock
 from mindsdb.integrations.utilities.rag.settings import (
     RetrieverType, MultiVectorRetrieverMode, SearchType,
-    RAGPipelineModel, Embeddings
+    RAGPipelineModel
 )
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 
@@ -46,7 +46,7 @@ def test_load_rag_config_with_embedding_model():
     }
 
     # Create a mock that's a subclass of Embeddings
-    class MockEmbeddings(Embeddings):
+    class MockEmbeddings:
         def embed_documents(self, texts):
             return [[0.0] * 10] * len(texts)
 

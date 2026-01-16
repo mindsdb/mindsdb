@@ -26,8 +26,7 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get
 
 from mindsdb.integrations.utilities.rag.settings import RerankerMode
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
-from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
+from mindsdb.interfaces.agents.utils.constants import DEFAULT_EMBEDDINGS_MODEL_PROVIDER, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
@@ -39,6 +38,8 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
+from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
@@ -1017,9 +1018,7 @@ class KnowledgeBaseTable:
             ValueError: If the configuration is invalid or required components are missing
         """
         # Get embedding model from knowledge base
-        from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
-            construct_model_from_args,
-        )
+        from mindsdb.interfaces.knowledge_base.embedding_model_utils import construct_embedding_model_from_args
         from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
         from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 
@@ -1028,14 +1027,22 @@ class KnowledgeBaseTable:
             # Extract embedding model args from knowledge base table
             embedding_args = self._kb.embedding_model.learn_args.get("using", {})
             # Construct the embedding model directly
-            embeddings_model = construct_model_from_args(embedding_args)
+            embeddings_model = construct_embedding_model_from_args(embedding_args, session=self.session)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         elif embedding_model_params:
-            embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
+            embeddings_model = construct_embedding_model_from_args(adapt_embedding_model_params(embedding_model_params), session=self.session)
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
-            embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
-            logger.debug("Using default embedding model as knowledge base has no embedding model")
+            # Use default embedding model with default provider
+            # Default to OpenAI's text-embedding-3-small for OpenAI provider, otherwise let the provider choose
+            default_model_name = "text-embedding-3-small" if DEFAULT_EMBEDDINGS_MODEL_PROVIDER == "openai" else None
+            default_embedding_args = {
+                "provider": DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
+            }
+            if default_model_name:
+                default_embedding_args["model_name"] = default_model_name
+            embeddings_model = construct_embedding_model_from_args(default_embedding_args, session=self.session)
+            logger.debug(f"Using default embedding model ({DEFAULT_EMBEDDINGS_MODEL_PROVIDER}) as knowledge base has no embedding model")
 
         # Update retrieval config with knowledge base parameters
         kb_params = {"vector_store_config": {"kb_table": self}}

@@ -13,7 +13,6 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
-from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.functions.controller import FunctionController
 
 from mindsdb.utilities import log
@@ -45,7 +44,6 @@ class SessionController:
         self.integration_controller = integration_controller
 
         self.database_controller = DatabaseController()
-        self.skills_controller = SkillsController()
         self.function_controller = FunctionController(self)
 
         # to prevent circular imports

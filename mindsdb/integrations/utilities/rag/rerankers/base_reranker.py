@@ -292,10 +292,10 @@ class BaseLLMReranker(BaseModel, ABC):
                     You are an intelligent assistant that evaluates how relevant a given document chunk is to a user's search query.
                     Your task is to analyze the similarity between the search query and the document chunk, and return **only the class label** that best represents the relevance:
 
-                    - "class_1": Not relevant (score between 0.0 and 0.25)
-                    - "class_2": Slightly relevant (score between 0.25 and 0.5)
-                    - "class_3": Moderately relevant (score between 0.5 and 0.75)
-                    - "class_4": Highly relevant (score between 0.75 and 1.0)
+                    - "class_1": Not relevant or conflicting (document has nothing to do with the query or there are contradictions)
+                    - "class_2": Slightly relevant (document has a little to do with the query and there are no contradictions)
+                    - "class_3": Moderately relevant (document has something to do with the query but it may not be relevant to the user's intent)
+                    - "class_4": Highly relevant (document has everything to do with the query and it is very relevant)
 
                     Respond with only one of: "class_1", "class_2", "class_3", or "class_4".
 
@@ -321,8 +321,8 @@ class BaseLLMReranker(BaseModel, ABC):
                     Document chunk: "Kubernetes is an open-source system for automating deployment, scaling, and management of containerized applications."
                     Score: class_4
 
-                    Search query: "How to bake sourdough bread at home"
-                    Document chunk: "The French Revolution began in 1789 and radically transformed society."
+                    Search query: "Books about in French but not history"
+                    Document chunk: "Book about The French history began in 1789 and radically transformed society."
                     Score: class_1
 
                     Search query: "Machine learning algorithms for image classification"

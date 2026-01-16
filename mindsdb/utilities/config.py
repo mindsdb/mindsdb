@@ -288,7 +288,7 @@ class Config:
             self._env_config["permanent_storage"] = {"location": "absent"}
         # endregion
 
-        telemetry_enabled = get_bool_env_var("MINDSDB_TELEMETRY")
+        telemetry_enabled = get_bool_env_var("MINDSDB_TELEMETRY_ENABLED")
         if telemetry_enabled is not None:
             self._env_config["telemetry"]["enabled"] = telemetry_enabled
 

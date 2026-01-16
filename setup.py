@@ -3,16 +3,6 @@ import glob
 
 from setuptools import find_packages, setup
 
-# A special env var that allows us to disable the installation of the default extras for advanced users / containers / etc
-MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = (
-    True if os.getenv("MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS", "true").lower() == "true" else False
-)
-DEFAULT_PIP_EXTRAS = [
-    line.split("#")[0].rstrip()
-    for line in open("default_handlers.txt").read().splitlines()
-    if not line.strip().startswith("#")
-]
-
 
 class Deps:
     pkgs = []
@@ -114,11 +104,6 @@ def define_deps():
 
                 extra_requirements[extra_name] = extra
                 full_handlers_requirements += extra
-
-                # If this is a default extra and if we want to install defaults (enabled by default)
-                #   then add it to the default requirements needing to install
-                if MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS and extra_name in DEFAULT_PIP_EXTRAS and extra:
-                    requirements += extra
 
     extra_requirements["all_handlers_extras"] = list(set(full_handlers_requirements))
 

@@ -318,24 +318,27 @@ class MySQLHandler(MetaDatabaseHandler):
         result.to_columns_table_response(map_type_fn=_map_type)
         return result
 
-    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_tables(self, table_names: Optional[List[str]] = None, include_row_count: bool = False) -> Response:
         """
         Retrieves metadata information about the tables in the MySQL database
         to be stored in the data catalog.
 
         Args:
             table_names (list): A list of table names for which to retrieve metadata information.
+            include_row_count (bool): Include TABLE_ROWS statistics (can be expensive on large schemas).
 
         Returns:
             Response: A response object containing the metadata information.
         """
-        query = """
+        row_count_select = """,\n t.TABLE_ROWS as row_count""" if include_row_count else ""
+
+        query = f"""
             SELECT 
                 t.TABLE_NAME as table_name,
                 t.TABLE_SCHEMA as table_schema,
                 t.TABLE_TYPE as table_type,
-                t.TABLE_COMMENT as table_description,
-                t.TABLE_ROWS as row_count
+                t.TABLE_COMMENT as table_description
+                {row_count_select}
             FROM information_schema.TABLES t
             WHERE t.TABLE_SCHEMA = DATABASE()
                 AND t.TABLE_TYPE IN ('BASE TABLE', 'VIEW')

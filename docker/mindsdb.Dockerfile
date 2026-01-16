@@ -12,7 +12,7 @@ RUN find ./ -type f -not -name "requirements*.txt" -print0 | xargs -0 rm -f \
 # Find every empty directory and delete it
     && find ./ -type d -empty -delete
 # Copy setup.py and everything else used by setup.py
-COPY setup.py default_handlers.txt README.md ./
+COPY setup.py README.md ./
 COPY mindsdb/__about__.py mindsdb/
 # Now this stage only contains a few files and the layer hash will be the same if they don't change.
 # Which will mean the next stage can be cached, even if the cache for the above stage was invalidated.

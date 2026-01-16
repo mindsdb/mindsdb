@@ -354,6 +354,8 @@ if __name__ == "__main__":
 
                 get_tokenizer()
                 logger.info("Tokenizer successfully loaded")
+            except ImportError:
+                logger.info("Failed to load tokenizer due to an import error")
             except Exception:
                 logger.info("Failed to load tokenizer: ", exc_info=True)
 

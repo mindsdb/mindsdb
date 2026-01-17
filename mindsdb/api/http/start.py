@@ -5,7 +5,8 @@ gc.disable()
 
 from flask import Flask
 from starlette.applications import Starlette
-from starlette.routing import Mount
+from starlette.routing import Mount, Route
+from starlette.responses import JSONResponse
 from a2wsgi import WSGIMiddleware
 import uvicorn
 
@@ -20,6 +21,11 @@ from mindsdb.api.common.middleware import PATAuthMiddleware
 gc.enable()
 
 logger = log.getLogger(__name__)
+
+
+async def _health_check(request):
+    """Async health check that bypasses the WSGI worker pool for the mindsdb API."""
+    return JSONResponse({"status": "ok"})
 
 
 def _mount_optional_api(name: str, mount_path: str, get_app_fn, routes):
@@ -52,6 +58,11 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
     process_cache.init()
 
     routes = []
+
+    # Health check FIRST - async endpoint that bypasses WSGI worker pool
+    # This ensures health checks respond even when all workers are blocked
+    routes.append(Route("/api/util/ping", _health_check, methods=["GET"]))
+
     _mount_optional_api(
         "A2A",
         "/a2a",

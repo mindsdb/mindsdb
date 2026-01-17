@@ -141,30 +141,52 @@ class TestBigQueryHandler(unittest.TestCase):
 
     def test_meta_get_column_statistics_batches_results(self):
         columns = [f"col_{i}" for i in range(22)]
-        batch_result = pd.DataFrame(
+
+        # First response: column types query (required by meta_get_column_statistics_for_table)
+        column_types_result = pd.DataFrame(
+            {
+                "column_name": columns,
+                "data_type": ["INT64"] * 22,  # All columns are INT64 type
+            }
+        )
+
+        # Second response: first batch statistics (20 columns)
+        first_batch_result = pd.DataFrame(
+            {
+                "table_name": ["table"] * 20,
+                "column_name": [f"col_{i}" for i in range(20)],
+                "null_percentage": [0.0] * 20,
+                "minimum_value": ["1"] * 20,
+                "maximum_value": ["10"] * 20,
+                "distinct_values_count": [10] * 20,
+            }
+        )
+
+        # Third response: second batch statistics (2 columns)
+        second_batch_result = pd.DataFrame(
             {
                 "table_name": ["table"] * 2,
-                "column_name": ["col_0", "col_1"],
+                "column_name": ["col_20", "col_21"],
                 "null_percentage": [0.0, 50.0],
                 "minimum_value": ["1", "a"],
                 "maximum_value": ["10", "z"],
                 "distinct_values_count": [10, 20],
             }
         )
-        second_batch = batch_result.copy()
 
         self.handler.native_query = MagicMock(
             side_effect=[
-                Response(RESPONSE_TYPE.TABLE, data_frame=batch_result),
-                Response(RESPONSE_TYPE.TABLE, data_frame=second_batch),
+                Response(RESPONSE_TYPE.TABLE, data_frame=column_types_result),
+                Response(RESPONSE_TYPE.TABLE, data_frame=first_batch_result),
+                Response(RESPONSE_TYPE.TABLE, data_frame=second_batch_result),
             ]
         )
 
         response = self.handler.meta_get_column_statistics_for_table("table", columns)
 
         self.assertEqual(response.resp_type, RESPONSE_TYPE.TABLE)
-        self.assertEqual(len(response.data_frame), 4)
-        self.assertEqual(self.handler.native_query.call_count, 2)
+        self.assertEqual(len(response.data_frame), 22)  # Total of 20 + 2 = 22 columns
+        self.assertEqual(self.handler.native_query.call_count, 3)  # 1 for column types + 2 for batches
 
     def test_meta_get_column_statistics_returns_error_when_empty(self):
         self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.ERROR, error_message="boom"))

@@ -183,6 +183,11 @@ jobs:
         env:
           COVERAGE_FILE: .coverage.unit
 
+      - name: Merge coverage summaries for PR comment
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
+        run: |
+          cat pytest-coverage-handlers.txt pytest-coverage.txt > pytest-coverage-merged.txt
+
       - name: Upload test artifacts
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'publish_artifacts') }}
         uses: actions/upload-artifact@v4
@@ -215,5 +220,5 @@ jobs:
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
         uses: MishaKav/pytest-coverage-comment@main
         with:
-          pytest-coverage-path: ./pytest-coverage-handlers.txt
+          pytest-coverage-path: ./pytest-coverage-merged.txt
           junitxml-path: ./pytest.xml

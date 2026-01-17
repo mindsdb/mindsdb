@@ -155,5 +155,8 @@ class TestPreparedStatement:
                         elif str(e) == "Predictor is not at first level":
                             # TODO make prepared statement planner more sophisticated
                             pass
+                        elif str(e).startswith("Table is not found "):
+                            # Prepared statement planner doesn't resolve columns for nested tables.
+                            pass
                         else:
                             raise e

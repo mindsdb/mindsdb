@@ -607,7 +607,7 @@ class TestPlanIntegrationSelect:
             steps=[
                 FetchDataframeStep(
                     integration="int1",
-                    query=parse_sql("select `id` AS `id` from tab1"),
+                    query=parse_sql("select id AS id from tab1"),
                 ),
                 SubSelectStep(dataframe=Result(0), query=parse_sql("select id"), table_name="tab1"),
                 FetchDataframeStep(
@@ -717,7 +717,7 @@ class TestPlanIntegrationSelect:
             steps=[
                 FetchDataframeStep(
                     integration="int1",
-                    query=parse_sql("select `id` AS `id` from tab1"),
+                    query=parse_sql("select id AS id from tab1"),
                 ),
                 SubSelectStep(dataframe=Result(0), query=parse_sql("select id"), table_name="tab1"),
                 DeleteStep(

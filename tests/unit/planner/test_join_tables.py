@@ -784,7 +784,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.JOIN,
                     ),
                 ),
-                QueryStep(parse_sql("SELECT t1.`id`, t2.*"), from_table=Result(3), strict_where=False),
+                QueryStep(parse_sql("SELECT t1.id, t2.*"), from_table=Result(3), strict_where=False),
             ]
         )
 

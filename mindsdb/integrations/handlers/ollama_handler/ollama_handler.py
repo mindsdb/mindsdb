@@ -110,12 +110,24 @@ class OllamaHandler(BaseMLEngine):
         completions = []
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
+                temperature = pred_args.get('temperature', args.get('temperature'))
+                
+                # Options dictionary
+                options = {}
+                if temperature is not None:
+                    try:
+                        options['temperature'] = float(temperature)
+                    except ValueError:
+                        pass 
+
+                # Calling API with the new options
                 connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
                 raw_output = requests.post(
                     connection + f'/api/{endpoint}',
                     json={
                         'model': model_name,
                         'prompt': row['__mdb_prompt'],
+                        'options': options,  # options passed here
                     }
                 )
                 lines = raw_output.content.decode().split('\n')  # stream of output tokens

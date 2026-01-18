@@ -96,8 +96,19 @@ class OllamaHandler(BaseMLEngine):
         pred_args = args.get('predict_params', {})
         args = self.model_storage.json_get('args')
         model_name, target_col = args['model_name'], args['target']
-        prompt_template = pred_args.get('prompt_template',
-                                        args.get('prompt_template', 'Answer the following question: {{{{text}}}}'))
+
+        # Auto-detect column if template is missing
+        # If user provided a specific template
+        user_template = pred_args.get('prompt_template', args.get('prompt_template'))
+
+        # OR If no template and 'text' column is missing, then auto-detect
+        if user_template is None and 'text' not in df.columns and len(df.columns) == 1:
+            col_name = df.columns[0]
+            # Create a template dynamically 
+            prompt_template = 'Answer the following question: {{{{' + col_name + '}}}}'
+        else:
+            # Fallback: Use user template OR default to 'text' (Old behavior)
+            prompt_template = user_template if user_template else 'Answer the following question: {{{{text}}}}'
 
         # prepare prompts
         prompts, empty_prompt_ids = get_completed_prompts(prompt_template, df)

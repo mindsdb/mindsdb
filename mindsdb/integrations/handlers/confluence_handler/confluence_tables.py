@@ -226,7 +226,11 @@ class ConfluencePagesTable(APIResource):
         if sort:
             for sort_column in sort:
                 if sort_column.column in ["id", "title", "createdAt"]:
-                    sort_condition = sort_column.column if sort_column != "createdAt" else "created-date"
+                    sort_condition = (
+                        sort_column.column
+                        if sort_column.column != "createdAt"
+                        else "created-date"
+                    )
                     if not sort_column.ascending:
                         sort_condition = f"-{sort_condition}"
 
@@ -363,7 +367,11 @@ class ConfluenceBlogPostsTable(APIResource):
         if sort:
             for sort_column in sort:
                 if sort_column.column in ["id", "title", "createdAt"]:
-                    sort_condition = sort_column.column if sort_column != "createdAt" else "created-date"
+                    sort_condition = (
+                        sort_column.column
+                        if sort_column.column != "createdAt"
+                        else "created-date"
+                    )
                     if not sort_column.ascending:
                         sort_condition = f"-{sort_condition}"
 

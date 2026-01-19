@@ -24,7 +24,7 @@ def _get_transport_security() -> TransportSecuritySettings:
     if env_hosts:
         custom_hosts = [h.strip() for h in env_hosts.split(",") if h.strip()]
         for host in custom_hosts:
-            if ":*" not in host and ":" not in host:
+            if ":" not in host:
                 default_hosts.append(f"{host}:*")
             default_hosts.append(host)
         logger.info(f"MCP transport security allowed hosts: {default_hosts}")

@@ -39,8 +39,31 @@ def _get_all_telemetry_db_records():
     # fmt: on
 
 
+def _kb_params_to_record(params: dict) -> dict:
+    """make record from kb params
+    embedding_model and reranking_model may be bool type, process only if they are dict
+
+    Args:
+        params: params of kb
+
+    Returns:
+        dict: telemetry record
+    """
+    record = {
+        "embedding_model": {},
+        "reranking_model": {}
+    }
+    for name in record:
+        p = params.get(name)
+        if isinstance(p, dict):
+            record[name] = {
+                k: v for k, v in p.items() if k in ("provider", "model_name")
+            }
+    return record
+
+
 @if_telemetry_enabled
-def add_telemetry_record(event: str, record: dict) -> None:
+def add_telemetry_record(event: str, record: dict = None, params: dict | None = None) -> None:
     """Add a telemetry record to the database.
 
     Args:
@@ -50,6 +73,9 @@ def add_telemetry_record(event: str, record: dict) -> None:
     Returns:
         None
     """
+    if event == "create_knowledge_base":
+        record = _kb_params_to_record(params)
+
     records_limit = config["telemetry"]["records_limit"]
     telemetry_records = _get_all_telemetry_db_records()
     try:
@@ -115,16 +141,7 @@ def create_telemetry_start_record() -> None:
         kb_result = []
         for kb in knowledge_base_records:
             params = kb.params or {}
-            kb_result.append(
-                {
-                    "embedding_model": {
-                        k: v for k, v in params.get("embedding_model", {}).items() if k in ("provider", "model_name")
-                    },
-                    "reranking_model": {
-                        k: v for k, v in params.get("reranking_model", {}).items() if k in ("provider", "model_name")
-                    },
-                }
-            )
+            kb_result.append(_kb_params_to_record(params))
         # endregion
 
         # region collect agents

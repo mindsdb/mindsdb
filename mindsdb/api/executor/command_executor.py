@@ -1464,14 +1464,7 @@ class ExecuteCommands:
         params = statement.params or {}
         add_telemetry_record(
             event="create_knowledge_base",
-            record={
-                "embedding_model": {
-                    k: v for k, v in params.get("embedding_model", {}).items() if k in ("provider", "model_name")
-                },
-                "reranking_model": {
-                    k: v for k, v in params.get("reranking_model", {}).items() if k in ("provider", "model_name")
-                },
-            },
+            params=params
         )
 
         return ExecuteAnswer()

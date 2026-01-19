@@ -103,6 +103,10 @@ class TestKB(BaseExecutorDummyML):
         if storage is not None:
             kb_params["storage"] = storage
 
+        storage_table = self._get_storage_table(name)
+        if storage_table:
+            kb_params["storage"] = storage_table
+
         param_str = ""
         if kb_params:
             param_items = []
@@ -117,6 +121,10 @@ class TestKB(BaseExecutorDummyML):
                 {param_str}
         """
         )
+
+    def _get_storage_table(self, kb_name):
+        # default chromadb
+        return None
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb(self, mock_litellm_embedding):
@@ -562,16 +570,7 @@ class TestKB(BaseExecutorDummyML):
 
         self.save_file("items", df)
 
-        self.run_sql(
-            """
-            create knowledge base kb_alg
-            using
-                embedding_model = {
-                    "provider": "bedrock",
-                    "model_name": "titan"
-                }
-        """
-        )
+        self._create_kb("kb_alg", embedding_model={"provider": "bedrock", "model_name": "titan"})
 
         self.run_sql(
             """
@@ -866,7 +865,7 @@ class TestKB(BaseExecutorDummyML):
 
         mock_config_get.side_effect = config_get_side_effect
 
-        self.run_sql("create knowledge base kb1")
+        self._create_kb("kb1")
 
         ret = self.run_sql("describe  knowledge base kb1")
 

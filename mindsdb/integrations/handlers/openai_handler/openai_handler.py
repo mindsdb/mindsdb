@@ -818,9 +818,7 @@ class OpenAIHandler(BaseMLEngine):
                 if not completion:
                     completion = partial
                 else:
-                    completion["choices"].extend(partial["choices"])
-                    for field in ("prompt_tokens", "completion_tokens", "total_tokens"):
-                        completion["usage"][field] += partial["usage"][field]
+                    completion.extend(partial)
         else:
             promises = []
             with concurrent.futures.ThreadPoolExecutor() as executor:

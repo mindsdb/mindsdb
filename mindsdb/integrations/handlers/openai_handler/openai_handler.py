@@ -145,6 +145,10 @@ class OpenAIHandler(BaseMLEngine):
             raise Exception("OpenAI engine requires a USING clause! Refer to its documentation for more details.")
         else:
             args = args["using"]
+# LiteLLM Fix
+        if "base_url" in args and "api_base" not in args:
+            args["api_base"] = args["base_url"]
+           
 
         if len(set(args.keys()) & {"question_column", "prompt_template", "prompt"}) == 0:
             raise Exception("One of `question_column`, `prompt_template` or `prompt` is required for this engine.")

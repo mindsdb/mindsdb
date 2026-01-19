@@ -49,16 +49,11 @@ def _kb_params_to_record(params: dict) -> dict:
     Returns:
         dict: telemetry record
     """
-    record = {
-        "embedding_model": {},
-        "reranking_model": {}
-    }
+    record = {"embedding_model": {}, "reranking_model": {}}
     for name in record:
         p = params.get(name)
         if isinstance(p, dict):
-            record[name] = {
-                k: v for k, v in p.items() if k in ("provider", "model_name")
-            }
+            record[name] = {k: v for k, v in p.items() if k in ("provider", "model_name")}
     return record
 
 

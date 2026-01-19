@@ -1462,10 +1462,7 @@ class ExecuteCommands:
         )
 
         params = statement.params or {}
-        add_telemetry_record(
-            event="create_knowledge_base",
-            params=params
-        )
+        add_telemetry_record(event="create_knowledge_base", params=params)
 
         return ExecuteAnswer()
 

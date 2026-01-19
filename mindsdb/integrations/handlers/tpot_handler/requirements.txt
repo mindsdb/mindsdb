@@ -1,2 +1,3 @@
 tpot<=0.11.7
-type_infer==0.0.25
+type_infer==0.0.26
+scikit-learn==1.5.2

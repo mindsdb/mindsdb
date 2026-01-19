@@ -179,6 +179,8 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         vector_filter = None
         meta_filters = []
+        if conditions is None:
+            conditions = []
         for condition in conditions:
             if condition.column == "embeddings":
                 vector_filter = condition
@@ -328,7 +330,8 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
                         break
                     if len(df) > 0:
                         dfs.append(df)
-
+                if len(dfs) == 0:
+                    return pd.DataFrame([], columns=["faiss_id", "id", "content", "metadata"])
                 return pd.concat(dfs)
 
             if where_clause is None:
@@ -420,6 +423,10 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
             self._sync()
 
+    def get_dimension(self, table_name: str) -> int:
+        if self.faiss_index:
+            return self.faiss_index.dim
+
     def _sync(self):
         """Sync the database to disk if using persistent storage"""
         self.faiss_index.dump()
@@ -428,8 +435,11 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
     def get_tables(self) -> Response:
         """Get list of tables."""
-        data = [{"table_name": "meta_data"}]
-        return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
+        with self.connection.cursor() as cur:
+            df = cur.execute("show tables").fetchdf()
+            df = df.rename(columns={"name": "table_name"})
+
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
     def check_connection(self) -> Response:
         """Check the connection to the database."""

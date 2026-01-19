@@ -300,7 +300,13 @@ class SqlServerHandler(MetaDatabaseHandler):
 
         if not self.is_connected:
             return
-        self.connection.close()
+        if self.connection is not None:
+            try:
+                self.connection.close()
+            except Exception:
+                logger.exception("Failed to close connection:")
+                pass
+        self.connection = None
         self.is_connected = False
 
     def check_connection(self) -> StatusResponse:

@@ -47,6 +47,7 @@ class FaissIndex:
         self._since_ram_checked = 0
 
         self.index = None
+        self.dim = None
         self.index_fd = None
         if os.path.exists(self.path):
             self.load_index()
@@ -55,18 +56,20 @@ class FaissIndex:
         # check RAM
         index_size = os.path.getsize(self.path)
         # according to tests faiss index occupies ~ the same amount of RAM as file size
-        # add 10% and 2GB to it
-        required_ram = index_size * 1.1 + 2 * 1024**3
+        # add 10% and 1Gb to it, check only if index > 1Gb
+        _1gb = 1024**3
+        required_ram = index_size * 1.1 + _1gb
         available_ram = psutil.virtual_memory().available
-        if available_ram < required_ram:
-            to_free_gb = round((required_ram - available_ram) / 1024**3, 2)
+        if required_ram > _1gb and available_ram < required_ram:
+            to_free_gb = round((required_ram - available_ram) / _1gb, 2)
             raise ValueError(f"Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb")
 
-        self.index_fd = open(self.path, "rb")
-        try:
-            portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
-        except portalocker.exceptions.AlreadyLocked:
-            raise ValueError(f"Index is already used: {self.path}")
+        if os.name != "nt":
+            self.index_fd = open(self.path, "rb")
+            try:
+                portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
+            except portalocker.exceptions.AlreadyLocked:
+                raise ValueError(f"Index is already used: {self.path}")
 
         self.index = faiss.read_index(self.path)
         self.dim = self.index.d
@@ -108,8 +111,8 @@ class FaissIndex:
                 raise ValueError(f"Unknown index type: {index_type}")
 
         # check RAM usage
-        # keep extra 2Gb
-        available = psutil.virtual_memory().available - 2 * 1024**3
+        # keep extra 1Gb
+        available = psutil.virtual_memory().available - 1 * 1024**3
 
         if available < required:
             raise ValueError("Unable insert records, not enough RAM")
@@ -124,8 +127,6 @@ class FaissIndex:
         if len(vectors) == 0:
             return
 
-        self.check_ram_usage(len(vectors), "flat")
-
         vectors = np.array(vectors)
         ids = np.array(ids)
 
@@ -134,6 +135,8 @@ class FaissIndex:
             self.dim = vectors.shape[1]
 
             self._build_index()
+
+        self.check_ram_usage(len(vectors), "flat")
 
         if vectors.shape[1] != self.dim:
             raise ValueError(f"Dimension mismatch: expected {self.dim}, got {vectors.shape[1]}")

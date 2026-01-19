@@ -18,10 +18,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  run_unit_tests:
+    name: Run Unit Tests
+    uses: ./.github/workflows/tests_unit.yml
+    secrets: inherit
+
   # Check that the version defined in the github release is valid
   check-version:
     name: Check Code Version
     runs-on: mdb-dev
+    needs: [run_unit_tests]
     if: github.actor != 'mindsdbadmin'
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +44,7 @@ jobs:
   deploy_to_pypi:
     name: Publish to PyPI
     runs-on: mdb-dev
-    needs: check-version
+    needs: [check-version, run_unit_tests]
     if: github.actor != 'mindsdbadmin'
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +72,7 @@ jobs:
   build:
     name: Build Docker Images
     runs-on: mdb-dev
-    needs: [check-version]
+    needs: [check-version, run_unit_tests]
     if: github.actor != 'mindsdbadmin'
     steps:
       - uses: actions/checkout@v4
@@ -124,22 +130,33 @@ jobs:
           client_payload: '{"image-tag": "${{ env.CI_REF_NAME }}"}'
   
   # Run integration tests
-  run_tests:
+  run_integration_tests:
     name: Run Integration Tests
     needs: [deploy]
     concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
-      cancel-in-progress: true
-    uses: ./.github/workflows/test_on_deploy.yml
+      group: deploy-prod
+      cancel-in-progress: false
+    uses: ./.github/workflows/tests_integration.yml
     with:
+      git-sha: ${{ github.event.release.tag_name }}
       deploy-env: prod
     secrets: inherit
+
+  tests_completed:
+    name: All Tests Succeeded
+    needs: [run_unit_tests, run_integration_tests]
+    runs-on: mdb-dev
+    steps:
+      - name: fail if tests failed or didnt run
+        if: ${{ needs.run_unit_tests.result != 'success' || needs.run_integration_tests.result != 'success'}}
+        run: exit 1
+      - run: echo "Tests ran successfully"
 
   slack_message:
     if: failure() && !cancelled()
     name: Notify Slack
     # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
-    needs: [check-version, deploy_to_pypi, build, build-cache, deploy, trigger_dd_extension_release, run_tests]
+    needs: [check-version, run_unit_tests, deploy_to_pypi, build, build-cache, deploy, trigger_dd_extension_release, run_integration_tests, tests_completed]
     runs-on: mdb-dev
     steps:
       - name: Notify of failing tests

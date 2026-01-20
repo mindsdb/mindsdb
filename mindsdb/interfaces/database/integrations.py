@@ -705,7 +705,7 @@ class IntegrationController:
 
         if not path.exists():
             return
-        code = ast.parse(path.read_text())
+        code = ast.parse(path.read_text(encoding="utf-8"))
         # find base class of handler.
         #  TODO trace inheritance (is used only for sql handler)
         for item in code.body:

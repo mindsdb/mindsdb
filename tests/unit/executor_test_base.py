@@ -71,16 +71,6 @@ class BaseUnitTest:
         db.init()
         cls.db = db
 
-        from multiprocessing import dummy
-
-        # We might not have torch installed. So ignore any errors
-        try:
-            mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
-            mp_patcher.side_effect = lambda *args, **kwargs: dummy
-        except Exception:
-            mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
-            mp_patcher.side_effect = lambda *args, **kwargs: dummy
-
     @staticmethod
     def teardown_class(cls):
         # remove tmp db file

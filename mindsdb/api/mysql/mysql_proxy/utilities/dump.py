@@ -37,7 +37,7 @@ def column_to_mysql_column_dict(column: Column, database_name: str | None = None
     Returns:
         dict[str, str | int]: Dictionary with mysql column properties.
     """
-    # region infer type. Should not happen, but what if it is dtype of lightwood type?
+    # region infer type. Should not happen, but what if it is dtype?
     if isinstance(column.type, str):
         try:
             column.type = MYSQL_DATA_TYPE(column.type.upper())

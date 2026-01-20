@@ -24,12 +24,6 @@ def predict_process(integration_id: int, predictor_record: db.Predictor, args: d
     else:
         ml_handler = handlers_cacher[predictor_record.id]
 
-    if ml_engine_name == 'lightwood':
-        args['code'] = predictor_record.code
-        args['target'] = predictor_record.to_predict[0]
-        args['dtype_dict'] = predictor_record.dtype_dict
-        args['learn_args'] = predictor_record.learn_args
-
     predictions = ml_handler.predict(dataframe, args)
     ml_handler.close()
     return predictions

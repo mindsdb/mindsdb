@@ -195,7 +195,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 "DROP ML_ENGINE IF EXISTS test_comp_ml", company_id=cid,
                 expected_resp_type=RESPONSE_TYPE.OK)
             self.sql_via_http(
-                "CREATE ML_ENGINE test_comp_ml FROM lightwood USING password=''",
+                "CREATE ML_ENGINE test_comp_ml FROM openai USING password=''",
                 company_id=cid,
                 expected_resp_type=RESPONSE_TYPE.OK
             )

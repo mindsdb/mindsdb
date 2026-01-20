@@ -3,9 +3,7 @@ import tempfile
 from pathlib import Path
 
 import psutil
-from flask import request
 from flask_restx import Resource
-from flask import current_app as ca
 
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.api.http.namespaces.configs.util import ns_conf

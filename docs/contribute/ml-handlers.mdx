@@ -161,7 +161,7 @@ We would appreciate your feedback regarding usage & feature roadmap for the abov
 
         1. Check that you can run the existing handler tests with `python -m pytest tests/unit/ml_handlers/`. If you get the `ModuleNotFoundError` error, try adding the `__init__.py` file to any subdirectory that doesn't have it.
 
-        2. Copy the simple tests from a relevant handler. For regular data, use the [Ludwig](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ludwig_handler) handler. And for time series data, use the [StatsForecast](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/statsforecast_handler) handler.
+        2. Copy the simple tests from a relevant handler.
         
         3. Change the SQL query to reference your handler. Specifically, set `USING engine={HandlerName}`.
         
@@ -254,7 +254,6 @@ To see some ML handlers that are currently in use, we encourage you to check out
 
 * [Lightwood](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/lightwood_handler)
 * [HuggingFace](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/huggingface_handler)
-* [Ludwig](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ludwig_handler)
 * [OpenAI](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler)
 
 And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers).

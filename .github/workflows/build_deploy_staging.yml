@@ -2,8 +2,6 @@ name: Build and deploy to staging
 
 permissions:
   contents: read
-  pages: write          # For publishing coverage HTML to GitHub Pages
-  id-token: write       # For deploy-pages OIDC
 
 on:
   # Using pull_request instead of push on main because we want access to the pull request's details via 'github.event'

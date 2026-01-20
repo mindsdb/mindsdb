@@ -80,9 +80,7 @@ class ModelsList(Resource):
             ml_integration = create_statement.using.pop("engine", ml_integration)
 
         if ml_integration is None:
-            return http_error(
-                HTTPStatus.NOT_FOUND, "ML handler not found", "Default ML handler is not specified"
-            )
+            return http_error(HTTPStatus.NOT_FOUND, "ML handler not found", "Default ML handler is not specified")
 
         try:
             ml_handler = session.integration_controller.get_ml_handler(ml_integration)

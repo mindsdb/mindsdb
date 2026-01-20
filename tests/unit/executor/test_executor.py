@@ -12,12 +12,20 @@ import numpy as np
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.executor.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
 from tests.unit.executor_test_base import BaseExecutorMockPredictor
+
+
+class DTYPE:
+    INT = "Int64"
+    FLOAT = "Float64"
+    CATEGORY = "category"
+    DATETIME = "datetime64[ns]"
+
+DTYPE = DTYPE()
 
 
 def to_str(query):
@@ -30,7 +38,7 @@ def to_str(query):
 class Test(BaseExecutorMockPredictor):
     def setup_method(self, method):
         super().setup_method()
-        self.set_executor(mock_lightwood=True, mock_model_controller=True, import_dummy_ml=True)
+        self.set_executor(mock_predict=True, mock_model_controller=True, import_dummy_ml=True)
 
     @pytest.mark.slow
     def test_describe(self):
@@ -108,7 +116,7 @@ class Test(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": predicted_value,
         }
         self.set_predictor(predictor)
@@ -134,7 +142,7 @@ class Test(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": 3.14,
         }
         self.set_predictor(predictor)
@@ -183,10 +191,10 @@ class Test(BaseExecutorMockPredictor):
                     "horizon": 3,
                 }
             },
-            "dtypes": {
-                "a": dtype.integer,
-                "t": dtype.date,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "a": DTYPE.INT,
+                "t": DTYPE.DATETIME,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": "",
         }
@@ -346,10 +354,10 @@ class Test(BaseExecutorMockPredictor):
             "problem_definition": {
                 "timeseries_settings": {"is_timeseries": True, "window": 2, "order_by": "t", "horizon": 3}
             },
-            "dtypes": {
-                "a": dtype.integer,
-                "t": dtype.date,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "a": DTYPE.INT,
+                "t": DTYPE.DATETIME,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": "",
         }
@@ -451,10 +459,10 @@ class Test(BaseExecutorMockPredictor):
             "problem_definition": {
                 "timeseries_settings": {"is_timeseries": True, "window": 2, "order_by": "t", "horizon": 3}
             },
-            "dtypes": {
-                "a": dtype.integer,
-                "t": dtype.date,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "a": DTYPE.INT,
+                "t": DTYPE.DATETIME,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": "",
         }
@@ -519,10 +527,10 @@ class Test(BaseExecutorMockPredictor):
                     "horizon": 3,
                 }
             },
-            "dtypes": {
-                "a": dtype.integer,
-                "t": dtype.float,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "a": DTYPE.INT,
+                "t": DTYPE.FLOAT,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": "",
         }
@@ -618,7 +626,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
     task_predictor = {
         "name": "task_model",
         "predict": "p",
-        "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical, "c": dtype.datetime},
+        "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY, "c": DTYPE.DATETIME},
         "predicted_value": "ccc",
     }
 
@@ -1136,7 +1144,7 @@ class TestTableau(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": 3.14,
         }
         self.set_predictor(predictor)
@@ -1166,7 +1174,7 @@ class TestTableau(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": predicted_value,
         }
         self.set_predictor(predictor)
@@ -1196,7 +1204,7 @@ class TestTableau(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": predicted_value,
         }
         self.set_predictor(predictor)
@@ -1320,7 +1328,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": predicted_value,
         }
         self.set_predictor(predictor)
@@ -1380,11 +1388,11 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
                     "horizon": 1,
                 }
             },
-            "dtypes": {
-                "p": dtype.categorical,
-                "a": dtype.integer,
-                "t": dtype.date,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "p": DTYPE.CATEGORY,
+                "a": DTYPE.INT,
+                "t": DTYPE.DATETIME,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": predicted_value,
         }
@@ -1545,14 +1553,14 @@ class TestExecutionTools:
 class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
     def setup_method(self, method):
         super().setup_method()
-        self.set_executor(mock_lightwood=True, mock_model_controller=True, import_dummy_ml=True)
+        self.set_executor(mock_predict=True, mock_model_controller=True, import_dummy_ml=True)
 
     def test_ml_engine(self):
         from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
         sql = """
             CREATE ML_ENGINE test_engine
-            FROM lightwood
+            FROM dummy_ml
         """
 
         # create an ml engine
@@ -1565,13 +1573,13 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         # create the same ml engine with if not exists doesn't throw an error
         self.execute("""
             CREATE ML_ENGINE IF NOT EXISTS test_engine
-            FROM lightwood
+            FROM dummy_ml
         """)
 
         # create an engine with if not exists should indeed create a new engine
         self.execute("""
             CREATE ML_ENGINE IF NOT EXISTS test_engine2
-            FROM lightwood
+            FROM dummy_ml
         """)
 
         # check that the engine was indeed created

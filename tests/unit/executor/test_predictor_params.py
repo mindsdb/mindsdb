@@ -4,8 +4,6 @@ import pandas as pd
 
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
-
 from tests.unit.executor_test_base import BaseExecutorMockPredictor
 
 
@@ -27,10 +25,10 @@ class Test(BaseExecutorMockPredictor):
         predictor = {
             'name': 'task_model',
             'predict': 'p',
-            'dtypes': {
-                'p': dtype.float,
-                'a': dtype.integer,
-                'b': dtype.categorical
+            'dtype_dict': {
+                'p': "Float64",
+                'a': "Int64",
+                'b': "category"
             },
             'predicted_value': predicted_value
         }

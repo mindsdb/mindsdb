@@ -30,6 +30,7 @@ env:
     ms_teams
     statsforecast
     chromadb
+    confluence
   # We measure 80% on this handlers, as they are the verified
   HANDLERS_TO_VERIFY: |
     mysql
@@ -43,6 +44,7 @@ env:
     file
     redshift
     bigquery
+    confluence
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

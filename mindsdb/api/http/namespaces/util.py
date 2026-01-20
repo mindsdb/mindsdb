@@ -92,21 +92,6 @@ class PingNative(Resource):
         return get_active_tasks()
 
 
-@ns_conf.route('/validate_json_ai')
-class ValidateJsonAI(Resource):
-    @api_endpoint_metrics('POST', '/util/validate_json_ai')
-    def post(self):
-        json_ai = request.json.get('json_ai')
-        if json_ai is None:
-            return 'Please provide json_ai', 400
-        try:
-            lw_handler = ca.integration_controller.get_ml_handler('lightwood')
-            code = lw_handler.code_from_json_ai(json_ai)
-        except Exception as e:
-            return {'error': str(e)}
-        return {'code': code}
-
-
 @ns_conf.route('/update-gui')
 class UpdateGui(Resource):
     @ns_conf.doc('get_update_gui')

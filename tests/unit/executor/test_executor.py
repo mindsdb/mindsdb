@@ -25,6 +25,7 @@ class DTYPE:
     CATEGORY = "category"
     DATETIME = "datetime64[ns]"
 
+
 DTYPE = DTYPE()
 
 

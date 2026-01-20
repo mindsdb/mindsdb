@@ -207,7 +207,6 @@ class NetSuiteHandler(APIHandler):
             return [value for value in record_types if isinstance(value, str) and value]
         return self.DEFAULT_TABLES
 
-
     def connect(self) -> requests.Session:
         """
         Creates an authenticated NetSuite session using token-based authentication.

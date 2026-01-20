@@ -174,7 +174,7 @@ jobs:
                       "type": "header",
                       "text": {
                         "type": "plain_text",
-                        "text": "TEST RUN FAILED ON RELEASE",
+                        "text": "TEST RUN FAILED ON RELEASE ${{ github.event.release.tag_name }}",
                         "emoji": true
                       }
                     },

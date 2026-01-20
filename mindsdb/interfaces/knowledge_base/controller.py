@@ -743,6 +743,8 @@ class KnowledgeBaseTable:
         except AttributeError:
             ...
 
+        df.replace({np.nan: None}, inplace=True)
+
         # First adapt column names to identify content and metadata columns
         adapted_df, normalized_columns = self._adapt_column_names(df)
         content_columns = normalized_columns["content_columns"]

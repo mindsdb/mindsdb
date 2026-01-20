@@ -2,15 +2,14 @@ import re
 import datetime as dt
 
 import sqlalchemy as sa
-from sqlalchemy.sql import operators
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased
+from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.dialects import mysql, postgresql, sqlite, mssql, oracle
 from sqlalchemy.schema import CreateTable, DropTable
-from sqlalchemy.sql import ColumnElement
-from sqlalchemy.sql import functions as sa_fnc
-from sqlalchemy.engine.interfaces import Dialect
+from sqlalchemy.sql import operators, ColumnElement, functions as sa_fnc
+from sqlalchemy.sql.expression import ClauseElement
 
 from mindsdb_sql_parser import ast
 
@@ -57,6 +56,25 @@ def _compile_interval(element, compiler, **kw):
         items[0] = f"'{items[0]}'"
         args = " ".join(items)
     return "INTERVAL " + args
+
+
+# region definitions of custom clauses for GROUP BY ROLLUP
+# This will work also in DuckDB, as it use postgres dialect
+class GroupByRollup(ClauseElement):
+    def __init__(self, *columns):
+        self.columns = columns
+
+
+@compiles(GroupByRollup)
+def visit_group_by_rollup(element, compiler, **kw):
+    columns = ", ".join([compiler.process(col, **kw) for col in element.columns])
+    if compiler.dialect.name in ("mysql", "default"):
+        return f"{columns} WITH ROLLUP"
+    else:
+        return f"ROLLUP({columns})"
+
+
+# endregion
 
 
 class AttributedStr(str):
@@ -625,7 +643,10 @@ class SqlalchemyRender:
 
         if node.group_by is not None:
             cols = [self.to_expression(i) for i in node.group_by]
-            query = query.group_by(*cols)
+            if getattr(node.group_by[-1], "with_rollup", False):
+                query = query.group_by(GroupByRollup(*cols))
+            else:
+                query = query.group_by(*cols)
 
         if node.having is not None:
             query = query.having(self.to_expression(node.having))

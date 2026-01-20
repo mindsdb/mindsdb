@@ -1,6 +1,6 @@
 scipy==1.15.3   # MacOS has issue with higher versions
 docker >= 5.0.3
-openai<2.0.0,>=1.54.0
+openai<3.0.0,>=2.9.0
 pytest >= 8.3.5, < 9.0.0
 pytest-subtests
 pytest-xdist
@@ -15,7 +15,7 @@ ollama >= 0.1.7 # Langchain tests
 anthropic >= 0.21.3 # Langchain tests
 langchain-google-genai>=2.0.0 # Langchain tests
 mindsdb-sdk
-filelock==3.18.0
+filelock==3.20.1
 mysql-connector-python==9.1.0
 walrus==0.9.3
 pymongo == 4.8.0

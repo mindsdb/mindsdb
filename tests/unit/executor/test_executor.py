@@ -1276,7 +1276,8 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
             (select * from vtasks)
             PREDICT a
             using
-            join_learn_process=true
+                engine='dummy_ml',
+                join_learn_process=true
         """)
 
         # test creating with if not exists
@@ -1286,7 +1287,8 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
             (select * from vtasks)
             PREDICT a
             using
-            join_learn_process=true
+                engine='dummy_ml',
+                join_learn_process=true
         """)
 
         # learn was called.

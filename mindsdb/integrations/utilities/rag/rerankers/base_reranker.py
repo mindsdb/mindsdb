@@ -123,9 +123,6 @@ class BaseLLMReranker(BaseModel, ABC):
         else:
             kwargs = self.model_extra.copy()
 
-            if self.base_url is not None:
-                kwargs["api_base"] = self.base_url
-
             if self.api_key is not None:
                 kwargs["api_key"] = self.api_key
 

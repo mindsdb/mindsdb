@@ -6,12 +6,28 @@ from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
 )
-from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 from mindsdb.interfaces.knowledge_base.preprocessing.models import Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 from mindsdb.utilities import log
 
+try:  # Optional web handler dependency
+    from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
+except ImportError:  # pragma: no cover - executed when web handler extras missing
+    get_all_websites = None
+
 logger = log.getLogger(__name__)
+
+
+def _get_langchain_document(feature: str):
+    try:
+        from langchain_core.documents import Document
+    except ModuleNotFoundError as exc:  # pragma: no cover - runtime guard
+        if getattr(exc, "name", "").startswith("langchain") or "langchain" in str(exc):
+            raise ImportError(
+                f"{feature} requires the optional knowledge base dependencies. Install them via `pip install mindsdb[kb]`."
+            ) from exc
+        raise
+    return Document
 
 
 class DocumentLoader:
@@ -67,7 +83,20 @@ class DocumentLoader:
         filters: List[str] = None,
     ) -> Iterator[Document]:
         """Load and split documents from web pages"""
+        if get_all_websites is None:
+            raise RuntimeError(
+                "Web crawling requires the optional web handler dependencies. "
+                "Install them via `pip install mindsdb[web]` or skip web sources."
+            )
+
         websites_df = get_all_websites(urls, crawl_depth=crawl_depth, limit=limit, filters=filters)
+        if get_all_websites is None:
+            raise RuntimeError(
+                "Web crawling requires the optional web handler dependencies. "
+                "Install them via `pip install mindsdb[web]` or skip web sources."
+            )
+
+        LangchainDocument = _get_langchain_document("Web page ingestion for knowledge bases")
 
         for _, row in websites_df.iterrows():
             # Create a document with HTML extension for proper splitting

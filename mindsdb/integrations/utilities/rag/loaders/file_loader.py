@@ -15,6 +15,7 @@ from mindsdb.integrations.utilities.rag.loaders.document_loaders import (
 class FileLoader:
     '''Loads files of various types into vector database document representation'''
     def __init__(self, path: str):
+        _require_file_loader_dependency()
         self.path = path
 
     def _get_loader_from_extension(self, extension: str, path: str) -> BaseDocumentLoader:

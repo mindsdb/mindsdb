@@ -5,15 +5,14 @@ from pandas.api import types as pd_types
 import duckdb
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb.integrations.libs.base import DatabaseHandler
-
 from mindsdb_sql_parser.ast.base import ASTNode
-
 from mindsdb.utilities import log
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
@@ -190,10 +189,11 @@ def _cast_column_to_type(series: pd.Series, sql_type: str) -> pd.Series:
 
 class SheetsHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Airtable statements.
+    This handler handles connection and execution of queries against the Excel Sheet.
+    TODO: add authentication for private sheets
     """
 
-    name = 'sheets'
+    name = "sheets"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -205,7 +205,7 @@ class SheetsHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'sheets'
+        self.renderer = SqlalchemyRender("postgresql")
         self.connection_data = connection_data
         self.kwargs = kwargs
 
@@ -243,7 +243,7 @@ class SheetsHandler(DatabaseHandler):
             raise
         
         self.connection = duckdb.connect()
-        self.connection.register(self.connection_data['sheet_name'], self.sheet)
+        self.connection.register(self.connection_data["sheet_name"], self.sheet)
         self.is_connected = True
         # Clear column types cache when reconnecting
         self._column_types_cache = None
@@ -274,7 +274,7 @@ class SheetsHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to the Google Sheet with ID {self.connection_data["spreadsheet_id"]}, {e}!')
+            logger.error(f"Error connecting to the Google Sheet with ID {self.connection_data['spreadsheet_id']}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -316,11 +316,10 @@ class SheetsHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
         except Exception as e:
-            logger.error(f'Error running query: {query} on the Google Sheet with ID {self.connection_data["spreadsheet_id"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
+            logger.error(
+                f"Error running query: {query} on the Google Sheet with ID {self.connection_data['spreadsheet_id']}!"
             )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -336,7 +335,8 @@ class SheetsHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        return self.native_query(query.to_string())
+        query_str = self.renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:
         """
@@ -345,11 +345,7 @@ class SheetsHandler(DatabaseHandler):
             HandlerResponse
         """
         response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                [self.connection_data['sheet_name']],
-                columns=['table_name']
-            )
+            RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([self.connection_data["sheet_name"]], columns=["table_name"])
         )
 
         return response

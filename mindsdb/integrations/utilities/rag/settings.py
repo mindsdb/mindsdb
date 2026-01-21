@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import List, Union, Any, Optional, Dict, OrderedDict
+from functools import lru_cache
+from typing import List, Union, Any, Optional, Dict, OrderedDict, TYPE_CHECKING
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter as TextSplitter
@@ -400,6 +401,11 @@ class VectorStoreConfig(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         extra = "forbid"
+
+
+def _default_vector_store_factory():
+    config = VectorStoreConfig()
+    return get_vector_store_class(config.vector_store_type)
 
 
 class RetrieverType(str, Enum):

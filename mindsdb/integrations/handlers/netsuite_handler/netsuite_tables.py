@@ -185,9 +185,17 @@ class NetSuiteRecordTable(APIResource):
         if not record_ids:
             raise ValueError("Update requires an equality condition on 'id' or 'internalId'.")
 
+        failures = []
         for record_id in record_ids:
             path = f"{self._base_path}/{record_id}"
-            self.handler._request("PATCH", path, json=values)
+            try:
+                self.handler._request("PATCH", path, json=values)
+            except RuntimeError as exc:
+                failures.append((record_id, str(exc)))
+
+        if failures:
+            details = "; ".join([f"{record_id}: {message}" for record_id, message in failures])
+            raise RuntimeError(f"Failed to update {len(failures)} record(s): {details}")
 
     def remove(self, conditions: List[FilterCondition]):
         """

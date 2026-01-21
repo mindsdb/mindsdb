@@ -1,21 +1,17 @@
-import shopify
 import requests
-import json
-
-from pyactiveresource.connection import ClientError, ServerError, ConnectionError as ResourceConnectionError
+import shopify
 
 from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     ProductsTable,
+    ProductVariantsTable,
     CustomersTable,
     OrdersTable,
-    InventoryLevelTable,
-    LocationTable,
-    CustomerReviews,
-    CarrierServiceTable,
-    ShippingZoneTable,
-    SalesChannelTable,
+    MarketingEventsTable,
+    InventoryItemsTable,
+    StaffMembersTable,
+    GiftCardsTable,
 )
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
@@ -28,10 +24,12 @@ from mindsdb.integrations.libs.api_handler_exceptions import (
     MissingConnectionParams,
 )
 
+from .connection_args import connection_args
+
 logger = log.getLogger(__name__)
 
 
-class ShopifyHandler(APIHandler):
+class ShopifyHandler(MetaAPIHandler):
     """
     The Shopify handler implementation.
     """
@@ -51,38 +49,28 @@ class ShopifyHandler(APIHandler):
             raise MissingConnectionParams("Incomplete parameters passed to Shopify Handler")
 
         connection_data = kwargs.get("connection_data", {})
+
+        required_args = [arg_name for arg_name, arg_meta in connection_args.items() if arg_meta.get("required") is True]
+        missed_args = set(required_args) - set(connection_data)
+        if missed_args:
+            raise MissingConnectionParams(
+                f"Required parameters are not found in the connection data: {', '.join(list(missed_args))}"
+            )
+
         self.connection_data = connection_data
         self.kwargs = kwargs
 
         self.connection = None
         self.is_connected = False
 
-        products_data = ProductsTable(self)
-        self._register_table("products", products_data)
-
-        customers_data = CustomersTable(self)
-        self._register_table("customers", customers_data)
-
-        orders_data = OrdersTable(self)
-        self._register_table("orders", orders_data)
-
-        inventory_level_data = InventoryLevelTable(self)
-        self._register_table("inventory_level", inventory_level_data)
-
-        location_data = LocationTable(self)
-        self._register_table("locations", location_data)
-
-        customer_reviews_data = CustomerReviews(self)
-        self._register_table("customer_reviews", customer_reviews_data)
-
-        carrier_service_data = CarrierServiceTable(self)
-        self._register_table("carrier_service", carrier_service_data)
-
-        shipping_zone_data = ShippingZoneTable(self)
-        self._register_table("shipping_zone", shipping_zone_data)
-
-        sales_channel_data = SalesChannelTable(self)
-        self._register_table("sales_channel", sales_channel_data)
+        self._register_table("products", ProductsTable(self))
+        self._register_table("customers", CustomersTable(self))
+        self._register_table("orders", OrdersTable(self))
+        self._register_table("product_variants", ProductVariantsTable(self))
+        self._register_table("marketing_events", MarketingEventsTable(self))
+        self._register_table("inventory_items", InventoryItemsTable(self))
+        self._register_table("staff_members", StaffMembersTable(self))
+        self._register_table("gift_cards", GiftCardsTable(self))
 
     def connect(self):
         """
@@ -95,20 +83,25 @@ class ShopifyHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        if self.kwargs.get("connection_data") is None:
-            raise MissingConnectionParams("Incomplete parameters passed to Shopify Handler")
+        shop_url = self.connection_data["shop_url"]
+        client_id = self.connection_data["client_id"]
+        client_secret = self.connection_data["client_secret"]
 
-        api_session = shopify.Session(
-            self.connection_data["shop_url"].strip(), "2021-10", self.connection_data["access_token"]
+        response = requests.post(
+            f"https://{shop_url}/admin/oauth/access_token",
+            data={"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=10,
         )
+        response.raise_for_status()
+        result = response.json()
+        access_token = result.get("access_token")
+        if not access_token:
+            raise ConnectionFailed("Unable to get an access token")
 
-        self.yotpo_app_key = self.connection_data["yotpo_app_key"] if "yotpo_app_key" in self.connection_data else None
-        self.yotpo_access_token = (
-            self.connection_data["yotpo_access_token"] if "yotpo_access_token" in self.connection_data else None
-        )
+        api_session = shopify.Session(shop_url, "2025-10", access_token)
 
         self.connection = api_session
-
         self.is_connected = True
 
         return self.connection
@@ -127,67 +120,9 @@ class ShopifyHandler(APIHandler):
             shopify.ShopifyResource.activate_session(api_session)
             shopify.Shop.current()
             response.success = True
-        except ClientError as e:
-            # Handle Shopify API client errors (4xx responses)
-            logger.error(f"Error connecting to Shopify: {str(e)}")
-            response.error_message = str(e)
-
-            status_code = e.response.code if hasattr(e.response, "code") else None
-
-            # Try to parse error message from response body
-            error_detail = None
-            if hasattr(e.response, "body"):
-                try:
-                    body = json.loads(e.response.body)
-                    error_detail = body.get("errors", None)
-                except (json.JSONDecodeError, AttributeError):
-                    pass
-
-            if status_code == 402:
-                if error_detail and "Unavailable Shop" in str(error_detail):
-                    raise ConnectionFailed(
-                        "Shopify shop is unavailable. This could be due to shop suspension, billing issues, or incorrect shop URL."
-                    )
-                else:
-                    raise ConnectionFailed(
-                        "Shopify API access requires payment. Please check your Shopify billing status."
-                    )
-            elif status_code == 401:
-                raise ConnectionFailed("Invalid Shopify API credentials. Please check your access token and shop URL.")
-            elif status_code == 404:
-                raise ConnectionFailed("Shopify shop not found. Please verify the shop URL is correct.")
-            elif status_code == 403:
-                raise ConnectionFailed("Access denied. Please check your API permissions and credentials.")
-            else:
-                if error_detail:
-                    raise ConnectionFailed(f"Shopify API error: {error_detail}")
-                else:
-                    raise ConnectionFailed(
-                        "Failed to connect to Shopify API. Please check your credentials and shop URL."
-                    )
-        except ServerError as e:
-            # Handle Shopify API server errors (5xx responses)
-            logger.error(f"Shopify server error: {str(e)}")
-            response.error_message = str(e)
-            raise ConnectionFailed("Shopify API server error. Please try again later or contact Shopify support.")
-        except ResourceConnectionError as e:
-            # Handle network/connection errors
-            logger.error(f"Connection error: {str(e)}")
-            response.error_message = str(e)
-            raise ConnectionFailed("Network connection failed. Please check your internet connection and try again.")
         except Exception as e:
-            # Handle any other unexpected errors
-            logger.error(f"Unexpected error connecting to Shopify: {str(e)}")
+            logger.error("Error connecting to Shopify!")
             response.error_message = str(e)
-            raise ConnectionFailed("Failed to connect to Shopify. Please verify your shop URL and access token.")
-
-        if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
-            url = f"https://api.yotpo.com/v1/apps/{self.yotpo_app_key}/reviews?count=1&utoken={self.yotpo_access_token}"
-            headers = {"accept": "application/json", "Content-Type": "application/json"}
-            if requests.get(url, headers=headers).status_code == 200:
-                response.success = True
-            else:
-                response.success = False
 
         self.is_connected = response.success
 

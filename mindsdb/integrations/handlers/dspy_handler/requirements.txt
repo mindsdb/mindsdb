@@ -3,5 +3,5 @@ tiktoken
 anthropic>=0.26.1
 chromadb # Knowledge bases.
 dspy-ai==2.4.12
-dspy==0.1.4
+dspy==3.1.2
 

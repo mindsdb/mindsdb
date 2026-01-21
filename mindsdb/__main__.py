@@ -354,6 +354,8 @@ if __name__ == "__main__":
 
                 get_tokenizer()
                 logger.info("Tokenizer successfully loaded")
+            except ImportError:
+                logger.info("Failed to load tokenizer due to an import error")
             except Exception:
                 logger.info("Failed to load tokenizer: ", exc_info=True)
 
@@ -493,7 +495,7 @@ if __name__ == "__main__":
     if config.cmd_args.ml_task_queue_consumer is True:
         trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
 
-    create_pid_file()
+    create_pid_file(config)
 
     for trunc_process_data in trunc_processes_struct.values():
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:

@@ -25,7 +25,6 @@ from functools import partial
 from typing import List
 from dataclasses import dataclass
 
-from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.sql import clear_sql
@@ -61,7 +60,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     SERVER_STATUS,
     CAPABILITIES,
-    NULL_VALUE,
     COMMANDS,
     ERR,
     getConstName,
@@ -80,7 +78,12 @@ from mindsdb.utilities.otel import increment_otel_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.exception import QueryError
 from mindsdb.utilities.functions import mark_process
-from mindsdb.api.mysql.mysql_proxy.utilities.dump import dump_result_set_to_mysql, column_to_mysql_column_dict
+from mindsdb.api.mysql.mysql_proxy.utilities.dump import (
+    dump_result_set_to_mysql,
+    column_to_mysql_column_dict,
+    dump_columns_info,
+    dump_chunks,
+)
 from mindsdb.api.executor.exceptions import WrongCharsetError
 
 logger = log.getLogger(__name__)
@@ -330,7 +333,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if answer.type in (RESPONSE_TYPE.TABLE, RESPONSE_TYPE.COLUMNS_TABLE):
             packages = []
 
-            if len(answer.result_set) > 1000:
+            if len(answer.result_set) >= 1000:
                 # for big responses leverage pandas map function to convert data to packages
                 self.send_table_packets(result_set=answer.result_set)
             else:
@@ -405,34 +408,31 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return packets
 
     def send_table_packets(self, result_set: ResultSet, status: int = 0):
-        df, columns_dicts = dump_result_set_to_mysql(result_set, infer_column_size=True)
-        # text protocol, convert all to string and serialize as packages
+        """Send table packets to client, piece by piece
 
-        def apply_f(v):
-            if v is None:
-                return NULL_VALUE
-            if not isinstance(v, str):
-                v = str(v)
-            return Datum.serialize_str(v)
+        Args:
+            result_set (ResultSet): the result set to send
+            status (int): the status to send
 
-        # columns packages
+        Returns:
+            None
+        """
+        columns_dicts = dump_columns_info(result_set, infer_column_size=True)
+
         packets = [self.packet(ColumnCountPacket, count=len(columns_dicts))]
-
         packets.extend(self._get_column_defenition_packets(columns_dicts))
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packets.append(self.packet(EofPacket, status=status))
         self.send_package_group(packets)
 
-        chunk_size = 100
-        for start in range(0, len(df), chunk_size):
-            string = b"".join(
-                [
-                    self.packet(body=body, length=len(body)).accum()
-                    for body in df[start : start + chunk_size].applymap(apply_f).values.sum(axis=1)
-                ]
-            )
-            self.socket.sendall(string)
+        chunk_size = 1000
+        df = result_set.get_raw_df()
+        if len(df) > 0:
+            for chunk in dump_chunks(df, columns_dicts, chunk_size):
+                for i in range(len(chunk)):
+                    chunk[i] = self.packet(body=chunk[i], length=len(chunk[i])).accum()
+                self.socket.sendall(b"".join(chunk))
 
     def decode_utf(self, text):
         try:
@@ -498,7 +498,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return [column_to_mysql_column_dict(column, database_name=database_name) for column in columns_list]
 
     @profiler.profile()
-    def process_query(self, sql) -> SQLAnswer:
+    def process_query(self, sql: str) -> SQLAnswer:
         log.log_ram_info(logger)
         executor = Executor(session=self.session, sqlserver=self)
         executor.query_execute(sql)

@@ -6,6 +6,7 @@ import datetime
 import dataclasses
 from pathlib import Path
 from copy import deepcopy
+from urllib.parse import urlparse
 
 from appdirs import user_data_dir
 
@@ -214,6 +215,7 @@ class Config:
             "data_catalog": {
                 "enabled": False,
             },
+            "pid_file_content": None,
         }
         # endregion
 
@@ -315,6 +317,16 @@ class Config:
 
         if os.environ.get("MINDSDB_DB_CON", "") != "":
             self._env_config["storage_db"] = os.environ["MINDSDB_DB_CON"]
+            url = urlparse(self._env_config["storage_db"])
+            is_valid = url.scheme and (url.netloc or url.scheme == "sqlite")
+            if not is_valid:
+                raise ValueError(
+                    f"Invalid MINDSDB_DB_CON value: {os.environ['MINDSDB_DB_CON']!r}\n"
+                    f"Expected format: scheme://user:password@host:port/database\n"
+                    "Examples:\n"
+                    "  - postgresql://user:pass@localhost:5432/database\n"
+                    "  - sqlite:///path/to/database.db"
+                )
 
         if os.environ.get("MINDSDB_DEFAULT_PROJECT", "") != "":
             self._env_config["default_project"] = os.environ["MINDSDB_DEFAULT_PROJECT"].lower()
@@ -392,6 +404,12 @@ class Config:
         elif mindsdb_gui_autoupdate != "":
             raise ValueError(f"Wrong value of env var MINDSDB_GUI_AUTOUPDATE={mindsdb_gui_autoupdate}")
 
+        if os.environ.get("MINDSDB_PID_FILE_CONTENT", "") != "":
+            try:
+                self._env_config["pid_file_content"] = json.loads(os.environ["MINDSDB_PID_FILE_CONTENT"])
+            except json.JSONDecodeError as e:
+                raise ValueError(f"MINDSDB_PID_FILE_CONTENT contains invalid JSON: {e}")
+
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
         Do it only if `auto_config` was not loaded before or config.auto.json been changed.
@@ -399,20 +417,23 @@ class Config:
         Returns:
             bool: True if config was loaded or updated
         """
-
-        if (
-            self.auto_config_path.is_file()
-            and self.auto_config_path.read_text() != ""
-            and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
-        ):
-            try:
+        try:
+            if (
+                self.auto_config_path.is_file()
+                and self.auto_config_path.read_text() != ""
+                and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
+            ):
                 self._auto_config = json.loads(self.auto_config_path.read_text())
-            except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
-                )
-            self.auto_config_mtime = self.auto_config_path.stat().st_mtime
-            return True
+                self.auto_config_mtime = self.auto_config_path.stat().st_mtime
+                return True
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
+            )
+        except FileNotFoundError:
+            # this shouldn't happen during normal work, but it looks like it happens
+            # when using `prefect` as a result of race conditions or something else.
+            return False
         return False
 
     def fetch_user_config(self) -> bool:

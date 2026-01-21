@@ -28,9 +28,9 @@ class CustomEmbeddingModel:
         params = {
             "model_name": args.get("model", args.get("model_name")),
             "provider": args.get("provider", "openai"),
-            **{k: v for k, v in args.items() if k not in ["model", "model_name", "provider", "class", "target"]}
+            **{k: v for k, v in args.items() if k not in ["model", "model_name", "provider", "class", "target"]},
         }
-        
+
         self.llm_client = LLMClient(params=params, session=session)
         self.model_name = params["model_name"]
 
@@ -77,20 +77,19 @@ def construct_embedding_model_from_args(args: Dict[str, Any], session=None):
     """
     # Work on a copy to avoid mutating the original
     args_copy = copy.deepcopy(args)
-    
+
     # Extract class name for logging (but we don't use it)
     class_name = args_copy.pop("class", "OpenAIEmbeddings")
     target = args_copy.pop("target", None)
-    
+
     logger.debug(f"Constructing embedding model with class: {class_name}, args: {args_copy}")
-    
+
     # Create the custom embedding model
     model = CustomEmbeddingModel(args_copy, session=session)
-    
+
     # Restore args for compatibility (in case caller expects them)
     if target is not None:
         args["target"] = target
     args["class"] = class_name
-    
-    return model
 
+    return model

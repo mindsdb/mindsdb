@@ -175,7 +175,6 @@ class TestLowercase(BaseExecutorDummyML):
                 mode='retrieval'
         """
 
-
         # mixed case: agent
         self.run_sql(f"create agent `MyAGENT` using {agent_params}")
 

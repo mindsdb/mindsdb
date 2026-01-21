@@ -1,7 +1,10 @@
 from pydantic import BaseModel, Field
 
+
 class PlanResponse(BaseModel):
-    plan: str = Field(..., description="A step-by-step plan for solving the question, identifying data sources and steps needed")
+    plan: str = Field(
+        ..., description="A step-by-step plan for solving the question, identifying data sources and steps needed"
+    )
     estimated_steps: int = Field(..., description="Estimated number of steps needed to solve the question")
 
 

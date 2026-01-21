@@ -1061,7 +1061,9 @@ class KnowledgeBaseTable:
             embeddings_model = construct_embedding_model_from_args(embedding_args, session=self.session)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         elif embedding_model_params:
-            embeddings_model = construct_embedding_model_from_args(adapt_embedding_model_params(embedding_model_params), session=self.session)
+            embeddings_model = construct_embedding_model_from_args(
+                adapt_embedding_model_params(embedding_model_params), session=self.session
+            )
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
             # Use default embedding model with default provider
@@ -1073,7 +1075,9 @@ class KnowledgeBaseTable:
             if default_model_name:
                 default_embedding_args["model_name"] = default_model_name
             embeddings_model = construct_embedding_model_from_args(default_embedding_args, session=self.session)
-            logger.debug(f"Using default embedding model ({DEFAULT_EMBEDDINGS_MODEL_PROVIDER}) as knowledge base has no embedding model")
+            logger.debug(
+                f"Using default embedding model ({DEFAULT_EMBEDDINGS_MODEL_PROVIDER}) as knowledge base has no embedding model"
+            )
 
         # Update retrieval config with knowledge base parameters
         kb_params = {"vector_store_config": {"kb_table": self}}

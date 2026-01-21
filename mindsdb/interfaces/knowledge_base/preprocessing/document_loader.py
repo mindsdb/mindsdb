@@ -18,7 +18,6 @@ except ImportError:  # pragma: no cover - executed when web handler extras missi
 logger = log.getLogger(__name__)
 
 
-
 class DocumentLoader:
     """Handles loading documents from various sources including SQL queries"""
 
@@ -82,9 +81,7 @@ class DocumentLoader:
 
         for _, row in websites_df.iterrows():
             # Create a document with HTML extension for proper splitting
-            doc = SimpleDocument(
-                page_content=row["text_content"], metadata={"extension": ".html", "url": row["url"]}
-            )
+            doc = SimpleDocument(page_content=row["text_content"], metadata={"extension": ".html", "url": row["url"]})
 
             # Use FileSplitter to handle HTML content
             split_docs = self.file_splitter.split_documents([doc])

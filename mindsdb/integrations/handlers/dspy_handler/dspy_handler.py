@@ -19,18 +19,17 @@ from mindsdb.utilities import log
 
 DEFAULT_MODEL_NAME = "gpt-4o"
 
-_PARSING_ERROR_PREFIX = 'An output parsing error occured'
+_PARSING_ERROR_PREFIX = "An output parsing error occured"
 
 logger = log.getLogger(__name__)
 
-START_URL = 'http://20.102.90.50:2017/wiki17_abstracts'
+START_URL = "http://20.102.90.50:2017/wiki17_abstracts"
 DEMOS = 4
 DF_EXAMPLES = 25
 PRIME_MULTIPLIER = 31
 
 
 class DSPyHandler(BaseMLEngine):
-
     """
     This is a MindsDB integration for the DSPy library, which provides a unified interface for interacting with
     various large language models (LLMs) and self improving prompts for these LLMs.
@@ -42,13 +41,10 @@ class DSPyHandler(BaseMLEngine):
         - python_repl
         - serper.dev search
     """
-    name = 'dspy'
 
-    def __init__(
-            self,
-            model_storage: ModelStorage,
-            engine_storage: HandlerStorage,
-            **kwargs):
+    name = "dspy"
+
+    def __init__(self, model_storage: ModelStorage, engine_storage: HandlerStorage, **kwargs):
         super().__init__(model_storage, engine_storage, **kwargs)
         # if True, the target column name does not have to be specified at creation time.
         self.generative = True
@@ -56,9 +52,9 @@ class DSPyHandler(BaseMLEngine):
         self.model_id = 0
 
     def calculate_model_id(self, model_name):
-        '''
+        """
         Based on the model name calculate a unique number to be used as model_id
-        '''
+        """
         sum_chars = sum((i + 1) * ord(char) * PRIME_MULTIPLIER for i, char in enumerate(model_name))
         return sum_chars
 
@@ -75,22 +71,22 @@ class DSPyHandler(BaseMLEngine):
             None
         """
 
-        args = args['using']
-        args['target'] = target
-        args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
-        args['provider'] = args.get('provider', "openai")
+        args = args["using"]
+        args["target"] = target
+        args["model_name"] = args.get("model_name", DEFAULT_MODEL_NAME)
+        args["provider"] = args.get("provider", "openai")
         # args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
-        if args.get('mode') == 'retrieval':
+        if args.get("mode") == "retrieval":
             # use default prompt template for retrieval i.e. RAG if not provided
             if "prompt_template" not in args:
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
 
-        self.model_storage.json_set('args', args)
+        self.model_storage.json_set("args", args)
         if not isinstance(df, type(None)):
-            self.model_storage.file_set('cold_start_df', dill.dumps(df.to_dict()))
+            self.model_storage.file_set("cold_start_df", dill.dumps(df.to_dict()))
         else:
             # no cold start df if data not provided
-            self.model_storage.file_set('cold_start_df', dill.dumps({}))
+            self.model_storage.file_set("cold_start_df", dill.dumps({}))
         # TODO: temporal workaround: serialize df and args, instead. And recreate chain (with training) every inference call.
         # ideally, we serialize the chain itself to avoid duplicate training.
 
@@ -105,32 +101,33 @@ class DSPyHandler(BaseMLEngine):
         Returns:
             df (DataFrame): response from the model
         """
-        pred_args = args['predict_params'] if args else {}
-        args = self.model_storage.json_get('args')
-        if 'prompt_template' not in args and 'prompt_template' not in pred_args:
+        pred_args = args["predict_params"] if args else {}
+        args = self.model_storage.json_get("args")
+        if "prompt_template" not in args and "prompt_template" not in pred_args:
             raise ValueError("This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
-        args['provider'] = args.get('provider', "openai")
+        args["provider"] = args.get("provider", "openai")
         # args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
 
         # retrieves llm and pass it around as context
-        model = args.get('model_name')
+        model = args.get("model_name")
         self.model_id = self.calculate_model_id(model)
-        api_key = get_api_key('openai', args, self.engine_storage, strict=False)
+        api_key = get_api_key("openai", args, self.engine_storage, strict=False)
         llm = dspy.OpenAI(model=model, api_key=api_key)
 
         df = df.reset_index(drop=True)
 
-        cold_start_df = pd.DataFrame(dill.loads(self.model_storage.file_get("cold_start_df")))  # fixed in "training"  # noqa
+        cold_start_df = pd.DataFrame(
+            dill.loads(self.model_storage.file_get("cold_start_df"))
+        )  # fixed in "training"  # noqa
         # gets larger as agent is used more
         self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(self.model_id))
         if self_improvement_df.empty:
-            self_improvement_df = pd.DataFrame([{'input': 'dummy_input', 'output': 'dummy_output'}])
+            self_improvement_df = pd.DataFrame([{"input": "dummy_input", "output": "dummy_output"}])
 
-        self_improvement_df = self_improvement_df.rename(columns={
-            'output': args['target'],
-            'input': args['user_column']
-        })
+        self_improvement_df = self_improvement_df.rename(
+            columns={"output": args["target"], "input": args["user_column"]}
+        )
         self_improvement_df = self_improvement_df.tail(DF_EXAMPLES)
 
         # add cold start DF
@@ -140,11 +137,11 @@ class DSPyHandler(BaseMLEngine):
         return output
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        tables = ['info']
-        return pd.DataFrame(tables, columns=['tables'])
+        tables = ["info"]
+        return pd.DataFrame(tables, columns=["tables"])
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        raise NotImplementedError('Fine-tuning is not supported for LangChain models')
+        raise NotImplementedError("Fine-tuning is not supported for LangChain models")
 
     def setup_dspy(self, df, args):
         """
@@ -176,31 +173,36 @@ class DSPyHandler(BaseMLEngine):
         """
 
         # Initialize the LLM with the API key
-        model = args.get('model_name')
+        model = args.get("model_name")
         api_key = get_api_key(model, args, self.engine_storage, strict=False)
         llm = dspy.OpenAI(model=model, api_key=api_key)
 
         # Convert to DSPy Module
         with dspy.context(lm=llm):
-            dspy_module = dspy.ReAct(f'{args["user_column"]} -> {args["target"]}')
+            dspy_module = dspy.ReAct(f"{args['user_column']} -> {args['target']}")
 
         # create a list of DSPy examples
         dspy_examples = []
 
         # TODO: maybe random choose a fixed set of rows
         for i, row in df.iterrows():
-            example = dspy.Example(
-                question=row[args["user_column"]],
-                answer=row[args["target"]]
-            ).with_inputs(args["user_column"])
+            example = dspy.Example(question=row[args["user_column"]], answer=row[args["target"]]).with_inputs(
+                args["user_column"]
+            )
             dspy_examples.append(example)
 
         # TODO: add the optimizer, maybe the metric
         config = dict(max_bootstrapped_demos=DEMOS, max_labeled_demos=DEMOS)
-        metric = dspy.evaluate.metrics.answer_exact_match  # TODO: passage match requires context from prediction... we'll probably modify the signature of ReAct
-        teleprompter = BootstrapFewShot(metric=metric, **config)  # TODO: maybe it's better to have this persisted so that the internal state does a better job at optimizing RAG
+        metric = (
+            dspy.evaluate.metrics.answer_exact_match
+        )  # TODO: passage match requires context from prediction... we'll probably modify the signature of ReAct
+        teleprompter = BootstrapFewShot(
+            metric=metric, **config
+        )  # TODO: maybe it's better to have this persisted so that the internal state does a better job at optimizing RAG
         with dspy.context(lm=llm):
-            optimized = teleprompter.compile(dspy_module, trainset=dspy_examples)  # TODO: check columns have the right name
+            optimized = teleprompter.compile(
+                dspy_module, trainset=dspy_examples
+            )  # TODO: check columns have the right name
         return optimized
 
     def generate_dspy_response(self, question, chain, llm):
@@ -217,7 +219,7 @@ class DSPyHandler(BaseMLEngine):
         """
         input_dict = {"question": question}
         with dspy.context(lm=llm):
-            response = chain(question=input_dict['question'])
+            response = chain(question=input_dict["question"])
         return response.answer
 
     def predict_dspy(self, df: pd.DataFrame, args: Dict, chain, llm) -> pd.DataFrame:
@@ -235,11 +237,13 @@ class DSPyHandler(BaseMLEngine):
         """
         responses = []
         for index, row in df.iterrows():
-            question = row[args['user_column']]
+            question = row[args["user_column"]]
             answer = self.generate_dspy_response(question, chain, llm)
-            responses.append({'answer': answer, 'question': question})
+            responses.append({"answer": answer, "question": question})
             # TODO: check this only adds new incoming rows
-            self.llm_data_controller.add_llm_data(question, answer, self.model_id)  # stores new traces for use in new calls
+            self.llm_data_controller.add_llm_data(
+                question, answer, self.model_id
+            )  # stores new traces for use in new calls
 
         # Set up the evaluator, which can be used multiple times.
         # TODO: use this in the EVALUATE command

@@ -27,7 +27,11 @@ class VectorStoreLoader(BaseModel):
         Loads the vector store based on the provided config and embeddings model
         :return:
         """
-        if self.config.is_sparse is not None and self.config.vector_size is not None and self.config.kb_table is not None:
+        if (
+            self.config.is_sparse is not None
+            and self.config.vector_size is not None
+            and self.config.kb_table is not None
+        ):
             # Only use PGVector store for sparse vectors.
             db_handler = self.config.kb_table.get_vector_db()
             db_args = db_handler.connection_args
@@ -39,7 +43,7 @@ class VectorStoreLoader(BaseModel):
                 collection_name=self.config.kb_table._kb.vector_database_table,
                 embedding_function=self.embedding_model,
                 is_sparse=self.config.is_sparse,
-                vector_size=self.config.vector_size
+                vector_size=self.config.vector_size,
             )
         return MDBVectorStore(kb_table=self.config.kb_table)
 
@@ -47,7 +51,6 @@ class VectorStoreLoader(BaseModel):
 class VectorStoreFactory:
     @staticmethod
     def create(embedding_model: Any, config: VectorStoreConfig) -> VectorStore:
-
         if config.vector_store_type == VectorStoreType.CHROMA:
             return VectorStoreFactory._load_chromadb_store(embedding_model, config)
         elif config.vector_store_type == VectorStoreType.PGVECTOR:
@@ -59,6 +62,7 @@ class VectorStoreFactory:
     def _load_chromadb_store(embedding_model: Any, settings) -> VectorStore:
         # Chroma still uses langchain, import only when needed
         from langchain_community.vectorstores import Chroma
+
         return Chroma(
             persist_directory=settings.persist_directory,
             collection_name=settings.collection_name,
@@ -68,10 +72,11 @@ class VectorStoreFactory:
     @staticmethod
     def _load_pgvector_store(embedding_model: Any, settings) -> VectorStore:
         from .pgvector import PGVectorMDB
+
         return PGVectorMDB(
             connection_string=settings.connection_string,
             collection_name=settings.collection_name,
             embedding_function=embedding_model,
             is_sparse=settings.is_sparse,
-            vector_size=settings.vector_size
+            vector_size=settings.vector_size,
         )

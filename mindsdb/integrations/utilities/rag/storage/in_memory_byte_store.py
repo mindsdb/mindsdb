@@ -94,4 +94,3 @@ class InMemoryByteStore:
     def __len__(self) -> int:
         """Get the number of key-value pairs in the store"""
         return len(self._store)
-

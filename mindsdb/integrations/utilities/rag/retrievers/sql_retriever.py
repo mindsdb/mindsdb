@@ -175,7 +175,9 @@ class SQLRetriever(BaseRetriever):
 
         prepared_column_prompt = self._prepare_column_prompt(column_schema=column_schema, table_schema=table_schema)
         # Extract column schema string from prepared prompt (it's now a string)
-        column_schema_str = prepared_column_prompt.split("Query:")[0] if "Query:" in prepared_column_prompt else prepared_column_prompt
+        column_schema_str = (
+            prepared_column_prompt.split("Query:")[0] if "Query:" in prepared_column_prompt else prepared_column_prompt
+        )
 
         value_str = ""
         header_str = ""
@@ -282,7 +284,9 @@ Query: {{query}}"""
             table_schema=table_schema, boolean_system_prompt=boolean_system_prompt
         )
         # Extract table schema string from prepared prompt (it's now a string)
-        table_schema_str = prepared_table_prompt.split("Query:")[0] if "Query:" in prepared_table_prompt else prepared_table_prompt
+        table_schema_str = (
+            prepared_table_prompt.split("Query:")[0] if "Query:" in prepared_table_prompt else prepared_table_prompt
+        )
 
         header_str = f"This schema describes a column in the {table_schema.table} table."
 
@@ -333,9 +337,7 @@ Examples:
 Query: {{query}}"""
         return prompt
 
-    def _prepare_table_prompt(
-        self, table_schema: TableSchema, boolean_system_prompt: bool = True
-    ) -> str:
+    def _prepare_table_prompt(self, table_schema: TableSchema, boolean_system_prompt: bool = True) -> str:
         if boolean_system_prompt is True:
             system_prompt = self.boolean_system_prompt
         else:
@@ -382,61 +384,61 @@ Query: {{query}}"""
     def _rank_schema(self, prompt: str, query: str) -> float:
         """
         Rank schema by calling LLM with prompt and query.
-        
+
         Args:
             prompt: Prompt template string with {query} placeholder
             query: Query string
-            
+
         Returns:
             Relevance score between 0 and 1
         """
         # Format prompt with query
         formatted_prompt = prompt.format(query=query)
-        
+
         try:
             # Call LLM - try to get logprobs if supported
-            if hasattr(self.llm, 'bind') and hasattr(self.llm.bind(logprobs=True), 'invoke'):
+            if hasattr(self.llm, "bind") and hasattr(self.llm.bind(logprobs=True), "invoke"):
                 llm_with_logprobs = self.llm.bind(logprobs=True)
                 output = llm_with_logprobs.invoke(formatted_prompt)
             else:
                 # Fallback to regular invoke
                 output = self.llm.invoke(formatted_prompt)
-            
+
             # Try to extract logprobs from response
             score = None
-            if hasattr(output, 'response_metadata') and 'logprobs' in output.response_metadata:
-                logprobs = output.response_metadata['logprobs']
-                if 'content' in logprobs:
-                    for content in logprobs['content']:
-                        token = content.get('token', '').lower().strip()
-                        logprob = content.get('logprob', 0.0)
+            if hasattr(output, "response_metadata") and "logprobs" in output.response_metadata:
+                logprobs = output.response_metadata["logprobs"]
+                if "content" in logprobs:
+                    for content in logprobs["content"]:
+                        token = content.get("token", "").lower().strip()
+                        logprob = content.get("logprob", 0.0)
                         if token == "yes":
                             score = (1 + math.exp(logprob)) / 2
                             break
                         elif token == "no":
                             score = (1 - math.exp(logprob)) / 2
                             break
-            
+
             # If no logprobs, try to parse yes/no from content
             if score is None:
                 content_text = ""
-                if hasattr(output, 'content'):
+                if hasattr(output, "content"):
                     content_text = output.content.lower().strip()
                 elif isinstance(output, str):
                     content_text = output.lower().strip()
                 else:
                     content_text = str(output).lower().strip()
-                
+
                 if "yes" in content_text:
                     score = 0.75  # Default positive score
                 elif "no" in content_text:
                     score = 0.25  # Default negative score
                 else:
                     score = 0.5  # Neutral score
-            
+
             if score is None:
                 score = 0.0
-                
+
         except Exception as e:
             logger.warning(f"Error ranking schema: {e}")
             score = 0.0
@@ -456,9 +458,7 @@ Query: {{query}}"""
         tables = {}
         # rank tables by relevance
         for table_key, table_schema in ordered_database_schema.tables.items():
-            prompt: str = self._prepare_table_prompt(
-                table_schema=table_schema, boolean_system_prompt=True
-            )
+            prompt: str = self._prepare_table_prompt(table_schema=table_schema, boolean_system_prompt=True)
             table_schema.relevance = self._rank_schema(prompt=prompt, query=query)
 
             # only keep greedy tables
@@ -663,12 +663,12 @@ Query: {{query}}"""
         """Rewrite query to be suitable for retrieval using LLM"""
         # Format prompt with query
         formatted_prompt = self.rewrite_prompt_template.format(input=query)
-        
+
         # Call LLM
         llm_response = self.llm.invoke(formatted_prompt)
-        
+
         # Extract content from LLM response
-        if hasattr(llm_response, 'content'):
+        if hasattr(llm_response, "content"):
             return llm_response.content
         elif isinstance(llm_response, str):
             return llm_response
@@ -718,18 +718,18 @@ Query: {{query}}"""
         """Generate metadata filter using LLM"""
         # Format prompt with query
         formatted_prompt = prompt.format(query=query)
-        
+
         # Call LLM
         llm_response = self.llm.invoke(formatted_prompt)
-        
+
         # Extract content from LLM response
-        if hasattr(llm_response, 'content'):
+        if hasattr(llm_response, "content"):
             response_text = llm_response.content
         elif isinstance(llm_response, str):
             response_text = llm_response
         else:
             response_text = str(llm_response)
-        
+
         # Parse JSON response to get MetadataFilter
         try:
             parsed = json.loads(response_text)
@@ -767,7 +767,7 @@ Query: {{query}}"""
   "comparator": "comparison_operator",
   "value": "filter_value"
 }"""
-                                
+
                                 metadata_prompt: str = self._prepare_value_prompt(
                                     format_instructions=format_instructions,
                                     value_schema=value_schema,
@@ -779,9 +779,9 @@ Query: {{query}}"""
                                 # Call LLM directly
                                 formatted_prompt = metadata_prompt.format(query=query)
                                 llm_response = self.llm.invoke(formatted_prompt)
-                                
+
                                 # Extract content from LLM response
-                                if hasattr(llm_response, 'content'):
+                                if hasattr(llm_response, "content"):
                                     metadata_filter_output = llm_response.content
                                 elif isinstance(llm_response, str):
                                     metadata_filter_output = llm_response
@@ -915,32 +915,35 @@ Query: {{query}}"""
             # If no metadata fields could be generated fallback.
             logger.info("No metadata fields were successfully generated, using fallback retriever.")
             return self._retrieve_from_fallback_retriever(retrieval_query)
-    
+
     def _retrieve_from_fallback_retriever(self, query: str) -> List[Any]:
         """Retrieve documents from fallback retriever using duck typing"""
-        if hasattr(self.fallback_retriever, '_get_relevant_documents'):
+        if hasattr(self.fallback_retriever, "_get_relevant_documents"):
             return self.fallback_retriever._get_relevant_documents(query)
-        elif hasattr(self.fallback_retriever, 'get_relevant_documents'):
+        elif hasattr(self.fallback_retriever, "get_relevant_documents"):
             return self.fallback_retriever.get_relevant_documents(query)
-        elif hasattr(self.fallback_retriever, 'invoke'):
+        elif hasattr(self.fallback_retriever, "invoke"):
             return self.fallback_retriever.invoke(query)
         else:
-            raise ValueError("Fallback retriever must have _get_relevant_documents, get_relevant_documents, or invoke method")
-    
+            raise ValueError(
+                "Fallback retriever must have _get_relevant_documents, get_relevant_documents, or invoke method"
+            )
+
     def invoke(self, query: str) -> List[Any]:
         """Sync invocation - retrieve documents for a query"""
         return self._get_relevant_documents(query)
-    
+
     async def ainvoke(self, query: str) -> List[Any]:
         """Async invocation - retrieve documents for a query"""
         import asyncio
+
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self._get_relevant_documents, query)
-    
+
     def get_relevant_documents(self, query: str) -> List[Any]:
         """Get relevant documents (sync)"""
         return self._get_relevant_documents(query)
-    
+
     def as_runnable(self) -> RunnableRetriever:
         """Return self as a runnable retriever"""
         return self

@@ -8,7 +8,6 @@ from mindsdb.interfaces.knowledge_base.preprocessing.document_types import Simpl
 
 
 class MDBVectorStore(VectorStore):
-
     def __init__(self, kb_table) -> None:
         self.kb_table = kb_table
 
@@ -22,12 +21,9 @@ class MDBVectorStore(VectorStore):
         k: int = 4,
         **kwargs: Any,
     ) -> List[SimpleDocument]:
-
         query = Select(
             targets=[Star()],
-            where=BinaryOperation(op='=', args=[
-                Identifier(TableField.CONTENT.value), Constant(query)
-            ]),
+            where=BinaryOperation(op="=", args=[Identifier(TableField.CONTENT.value), Constant(query)]),
             limit=Constant(k),
         )
 
@@ -38,10 +34,7 @@ class MDBVectorStore(VectorStore):
             metadata = row[TableField.METADATA.value]
             if metadata is None:
                 metadata = {}
-            docs.append(SimpleDocument(
-                page_content=row[TableField.CONTENT.value],
-                metadata=metadata
-            ))
+            docs.append(SimpleDocument(page_content=row[TableField.CONTENT.value], metadata=metadata))
 
         return docs
 

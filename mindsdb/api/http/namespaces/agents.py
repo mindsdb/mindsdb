@@ -258,7 +258,7 @@ def _completion_event_generator(agent_name: str, messages: List[Dict], project_n
                     df = chunk["content"]
                     # Convert DataFrame to markdown format
                     chunk["content"] = dataframe_to_markdown(df)
-                
+
                 if "error" in chunk:
                     # Handle error chunks
                     logger.error(f"Error in completion stream: {chunk['error']}")

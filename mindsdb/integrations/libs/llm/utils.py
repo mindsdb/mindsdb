@@ -21,6 +21,7 @@ from mindsdb.integrations.libs.llm.config import (
 from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter
 
+
 # Simple Language enum replacement
 class Language:
     PYTHON = "python"

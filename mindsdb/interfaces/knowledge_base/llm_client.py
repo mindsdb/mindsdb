@@ -168,12 +168,7 @@ class LLMClient:
         async def process_single_messages(messages: List[dict]) -> List[str]:
             """Process a single messages list asynchronously"""
             # Run completion in executor for async compatibility
-            result = await loop.run_in_executor(
-                None,
-                self.completion,
-                messages,
-                json_output
-            )
+            result = await loop.run_in_executor(None, self.completion, messages, json_output)
             return result
 
         # Process all message lists in parallel

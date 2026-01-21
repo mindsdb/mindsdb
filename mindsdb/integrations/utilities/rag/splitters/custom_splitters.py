@@ -110,13 +110,10 @@ class RecursiveCharacterTextSplitter:
             for chunk in chunks:
                 # Preserve metadata from original document
                 split_docs.append(
-                    SimpleDocument(
-                        page_content=chunk,
-                        metadata=doc.metadata.copy() if doc.metadata else {}
-                    )
+                    SimpleDocument(page_content=chunk, metadata=doc.metadata.copy() if doc.metadata else {})
                 )
         return split_docs
-    
+
     def create_documents(self, texts: List[str], metadatas: Optional[List[dict]] = None) -> List[SimpleDocument]:
         """
         Create documents from a list of texts (compatible with langchain interface)
@@ -130,67 +127,58 @@ class RecursiveCharacterTextSplitter:
         """
         if metadatas is None:
             metadatas = [{}] * len(texts)
-        
+
         docs = []
         for text, metadata in zip(texts, metadatas):
             docs.append(SimpleDocument(page_content=text, metadata=metadata))
-        
+
         return docs
-    
+
     @classmethod
     def from_language(
-        cls,
-        language: Any,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200,
-        **kwargs
-    ) -> 'RecursiveCharacterTextSplitter':
+        cls, language: Any, chunk_size: int = 1000, chunk_overlap: int = 200, **kwargs
+    ) -> "RecursiveCharacterTextSplitter":
         """
         Create a RecursiveCharacterTextSplitter with language-specific separators
-        
+
         Args:
             language: Language enum or string (e.g., Language.PYTHON or "python")
             chunk_size: Maximum size of chunks
             chunk_overlap: Overlap between chunks
             **kwargs: Additional arguments
-            
+
         Returns:
             RecursiveCharacterTextSplitter instance with language-specific separators
         """
         # Get language name as string (handle both enum and string)
-        if hasattr(language, 'value'):
+        if hasattr(language, "value"):
             lang_name = language.value.lower()
-        elif hasattr(language, 'name'):
+        elif hasattr(language, "name"):
             lang_name = language.name.lower()
         else:
             lang_name = str(language).lower()
-        
+
         # Language-specific separators (based on langchain's implementation)
         language_separators = {
-            'python': ["\n\n", "\n", "def ", "class ", "    ", " ", ""],
-            'javascript': ["\n\n", "\n", "function ", "class ", "    ", " ", ""],
-            'typescript': ["\n\n", "\n", "function ", "class ", "    ", " ", ""],
-            'java': ["\n\n", "\n", "public ", "private ", "class ", "    ", " ", ""],
-            'cpp': ["\n\n", "\n", "namespace ", "class ", "    ", " ", ""],
-            'c': ["\n\n", "\n", "    ", " ", ""],
-            'go': ["\n\n", "\n", "func ", "    ", " ", ""],
-            'rust': ["\n\n", "\n", "fn ", "    ", " ", ""],
-            'ruby': ["\n\n", "\n", "def ", "class ", "    ", " ", ""],
-            'php': ["\n\n", "\n", "function ", "class ", "    ", " ", ""],
-            'swift': ["\n\n", "\n", "func ", "class ", "    ", " ", ""],
-            'kotlin': ["\n\n", "\n", "fun ", "class ", "    ", " ", ""],
-            'scala': ["\n\n", "\n", "def ", "class ", "    ", " ", ""],
+            "python": ["\n\n", "\n", "def ", "class ", "    ", " ", ""],
+            "javascript": ["\n\n", "\n", "function ", "class ", "    ", " ", ""],
+            "typescript": ["\n\n", "\n", "function ", "class ", "    ", " ", ""],
+            "java": ["\n\n", "\n", "public ", "private ", "class ", "    ", " ", ""],
+            "cpp": ["\n\n", "\n", "namespace ", "class ", "    ", " ", ""],
+            "c": ["\n\n", "\n", "    ", " ", ""],
+            "go": ["\n\n", "\n", "func ", "    ", " ", ""],
+            "rust": ["\n\n", "\n", "fn ", "    ", " ", ""],
+            "ruby": ["\n\n", "\n", "def ", "class ", "    ", " ", ""],
+            "php": ["\n\n", "\n", "function ", "class ", "    ", " ", ""],
+            "swift": ["\n\n", "\n", "func ", "class ", "    ", " ", ""],
+            "kotlin": ["\n\n", "\n", "fun ", "class ", "    ", " ", ""],
+            "scala": ["\n\n", "\n", "def ", "class ", "    ", " ", ""],
         }
-        
+
         # Get separators for language, or use default
         separators = language_separators.get(lang_name, ["\n\n", "\n", ". ", " ", ""])
-        
-        return cls(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            separators=separators,
-            **kwargs
-        )
+
+        return cls(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=separators, **kwargs)
 
 
 class MarkdownHeaderTextSplitter:
@@ -210,11 +198,7 @@ class MarkdownHeaderTextSplitter:
         self.headers_to_split_on = headers_to_split_on
         # Sort by header level (more # = higher level) in reverse order
         # to match from most specific to least specific
-        self.headers_to_split_on = sorted(
-            headers_to_split_on,
-            key=lambda x: len(x[0]),
-            reverse=True
-        )
+        self.headers_to_split_on = sorted(headers_to_split_on, key=lambda x: len(x[0]), reverse=True)
 
     def split_text(self, text: str) -> List[SimpleDocument]:
         """
@@ -226,7 +210,7 @@ class MarkdownHeaderTextSplitter:
         Returns:
             List of SimpleDocument objects, each containing a section
         """
-        lines = text.split('\n')
+        lines = text.split("\n")
         documents = []
         current_chunk_lines = []
         current_metadata = {}
@@ -240,7 +224,7 @@ class MarkdownHeaderTextSplitter:
             # Check if this line matches any header pattern
             for header_marker, header_name in self.headers_to_split_on:
                 # Match header pattern: optional whitespace, header marker, space, header text
-                pattern = rf'^\s*{re.escape(header_marker)}\s+(.+)$'
+                pattern = rf"^\s*{re.escape(header_marker)}\s+(.+)$"
                 match = re.match(pattern, line)
                 if match:
                     matched_header = (header_marker, header_name, match.group(1))
@@ -249,25 +233,17 @@ class MarkdownHeaderTextSplitter:
             if matched_header:
                 # Save previous chunk if it has content
                 if current_chunk_lines:
-                    chunk_text = '\n'.join(current_chunk_lines).strip()
+                    chunk_text = "\n".join(current_chunk_lines).strip()
                     if chunk_text:
-                        documents.append(
-                            SimpleDocument(
-                                page_content=chunk_text,
-                                metadata=current_metadata.copy()
-                            )
-                        )
+                        documents.append(SimpleDocument(page_content=chunk_text, metadata=current_metadata.copy()))
 
                 # Start new chunk
                 header_marker, header_name, header_text = matched_header
                 current_chunk_lines = [line]  # Include header in chunk
-                
+
                 # Update header stack - remove headers at same or lower level
                 header_level = len(header_marker)
-                current_header_stack = [
-                    h for h in current_header_stack
-                    if len(h[0]) < header_level
-                ]
+                current_header_stack = [h for h in current_header_stack if len(h[0]) < header_level]
                 current_header_stack.append((header_marker, header_name, header_text))
 
                 # Build metadata with header hierarchy
@@ -286,23 +262,13 @@ class MarkdownHeaderTextSplitter:
 
         # Add final chunk
         if current_chunk_lines:
-            chunk_text = '\n'.join(current_chunk_lines).strip()
+            chunk_text = "\n".join(current_chunk_lines).strip()
             if chunk_text:
-                documents.append(
-                    SimpleDocument(
-                        page_content=chunk_text,
-                        metadata=current_metadata.copy()
-                    )
-                )
+                documents.append(SimpleDocument(page_content=chunk_text, metadata=current_metadata.copy()))
 
         # If no headers found, return entire text as one document
         if not documents:
-            documents.append(
-                SimpleDocument(
-                    page_content=text,
-                    metadata={}
-                )
-            )
+            documents.append(SimpleDocument(page_content=text, metadata={}))
 
         return documents
 
@@ -384,19 +350,11 @@ class HTMLHeaderTextSplitter:
             if header_pos > current_pos:
                 chunk_text = text[current_pos:header_pos].strip()
                 if chunk_text:
-                    documents.append(
-                        SimpleDocument(
-                            page_content=chunk_text,
-                            metadata=current_metadata.copy()
-                        )
-                    )
+                    documents.append(SimpleDocument(page_content=chunk_text, metadata=current_metadata.copy()))
 
             # Update header stack - remove headers at same or lower level
             header_level = int(tag[1]) if tag[1].isdigit() else 6  # h1=1, h2=2, etc.
-            current_header_stack = [
-                h for h in current_header_stack
-                if int(h[0][1]) < header_level
-            ]
+            current_header_stack = [h for h in current_header_stack if int(h[0][1]) < header_level]
             current_header_stack.append((tag, self.tag_to_name.get(tag, tag), header_text))
 
             # Build metadata with header hierarchy
@@ -414,16 +372,10 @@ class HTMLHeaderTextSplitter:
         if current_pos < len(text):
             chunk_text = text[current_pos:].strip()
             if chunk_text:
-                documents.append(
-                    SimpleDocument(
-                        page_content=chunk_text,
-                        metadata=current_metadata.copy()
-                    )
-                )
+                documents.append(SimpleDocument(page_content=chunk_text, metadata=current_metadata.copy()))
 
         # If no documents created, return entire text
         if not documents:
             documents.append(SimpleDocument(page_content=text, metadata={}))
 
         return documents
-

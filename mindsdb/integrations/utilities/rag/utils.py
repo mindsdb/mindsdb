@@ -21,10 +21,9 @@ def df_to_documents(df: pd.DataFrame, content_column_name: str) -> List[SimpleDo
     return documents
 
 
-def documents_to_df(content_column_name: str,
-                    documents: List[Any],
-                    embedding_model: Any = None,
-                    with_embeddings: bool = False) -> pd.DataFrame:
+def documents_to_df(
+    content_column_name: str, documents: List[Any], embedding_model: Any = None, with_embeddings: bool = False
+) -> pd.DataFrame:
     """
     Given a list of documents, convert it to a dataframe.
 
@@ -39,8 +38,8 @@ def documents_to_df(content_column_name: str,
 
     df[content_column_name] = [doc.page_content for doc in documents]
 
-    if 'date' in df.columns:
-        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
 
     # Reordering the columns to have the content column first.
     df = df[[content_column_name] + [col for col in df.columns if col != content_column_name]]

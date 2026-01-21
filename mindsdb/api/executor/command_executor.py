@@ -534,7 +534,7 @@ class ExecuteCommands:
                 db_name = database_name
                 if statement.from_table is not None:
                     db_name = statement.from_table.parts[-1]
-                
+
                 where = BinaryOperation(op="=", args=[Identifier("project"), Constant(db_name)])
 
                 select_statement = Select(

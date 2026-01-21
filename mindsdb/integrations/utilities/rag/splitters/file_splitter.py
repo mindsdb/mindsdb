@@ -77,9 +77,7 @@ class FileSplitter:
         }
         self.default_splitter = self._recursive_splitter_fn
 
-    def _split_func_by_extension(
-        self, extension
-    ) -> Callable:
+    def _split_func_by_extension(self, extension) -> Callable:
         return self._extension_map.get(extension, self.default_splitter)()
 
     def split_documents(self, documents: List[SimpleDocument], default_failover: bool = True) -> List[SimpleDocument]:

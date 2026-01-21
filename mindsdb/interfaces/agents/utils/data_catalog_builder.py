@@ -8,8 +8,6 @@ from mindsdb_sql_parser.ast import Identifier, Select, Constant, Star, Show
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.cache import get_cache
-from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery
-from mindsdb.utilities.exception import QueryError
 from mindsdb.utilities.config import config
 
 
@@ -21,26 +19,26 @@ _MAX_CACHE_SIZE = 100
 def dataframe_to_markdown(df: pd.DataFrame) -> str:
     """
     Convert a pandas DataFrame to markdown table string.
-    
+
     Args:
         df: DataFrame to convert
-        
+
     Returns:
         Markdown-formatted table string
     """
     if df is None or df.empty:
         return ""
-    
+
     # Try using pandas' built-in to_markdown if available (requires tabulate)
     try:
         return df.to_markdown(index=False)
     except (AttributeError, ImportError):
         # Fallback: manual markdown table generation
         lines = []
-        
+
         # Get column names
         columns = df.columns.tolist()
-        
+
         # Convert all values to strings and handle None/NaN/arrays
         def format_value(val):
             # Handle arrays/lists first - pd.isna() fails on arrays
@@ -52,6 +50,7 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
             # Handle numpy arrays
             try:
                 import numpy as np
+
                 if isinstance(val, np.ndarray):
                     return str(val.tolist())
             except ImportError:
@@ -61,7 +60,7 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
             try:
                 is_na_result = pd.isna(val)
                 # Check if result is array-like (would cause ambiguity error in if statement)
-                if hasattr(is_na_result, '__len__') and not isinstance(is_na_result, (str, bool)):
+                if hasattr(is_na_result, "__len__") and not isinstance(is_na_result, (str, bool)):
                     # Result is array-like, treat as non-NA and convert to string
                     return str(val)
                 # Only check boolean result if it's a scalar
@@ -71,30 +70,25 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
                 # pd.isna() can fail on some types (e.g., arrays), just convert to string
                 pass
             return str(val)
-        
+
         # Calculate column widths
         col_widths = {}
         for col in columns:
-            col_widths[col] = max(
-                len(str(col)),
-                max([len(format_value(val)) for val in df[col]], default=0)
-            )
-        
+            col_widths[col] = max(len(str(col)), max([len(format_value(val)) for val in df[col]], default=0))
+
         # Build header row
         header = "| " + " | ".join([str(col).ljust(col_widths[col]) for col in columns]) + " |"
         lines.append(header)
-        
+
         # Build separator row
         separator = "| " + " | ".join(["-" * col_widths[col] for col in columns]) + " |"
         lines.append(separator)
-        
+
         # Build data rows
         for _, row in df.iterrows():
-            data_row = "| " + " | ".join([
-                format_value(row[col]).ljust(col_widths[col]) for col in columns
-            ]) + " |"
+            data_row = "| " + " | ".join([format_value(row[col]).ljust(col_widths[col]) for col in columns]) + " |"
             lines.append(data_row)
-        
+
         return "\n".join(lines)
 
 
@@ -113,19 +107,19 @@ class DataCatalogBuilder:
         self.disable_cache = disable_cache
 
     def _get_cache_key(
-        self, 
-        tables: Optional[List[str]] = None, 
+        self,
+        tables: Optional[List[str]] = None,
         knowledge_bases: Optional[List[str]] = None,
-        suffix: str = "data_catalog"
+        suffix: str = "data_catalog",
     ) -> str:
         """
         Generate cache key for data catalog based on MD5 hash of tables and knowledge bases.
-        
+
         Args:
             tables: List of table names
             knowledge_bases: List of knowledge base names
             suffix: Cache key suffix
-            
+
         Returns:
             Cache key string
         """
@@ -133,27 +127,27 @@ class DataCatalogBuilder:
         tables_str = ",".join(sorted(tables or []))
         kbs_str = ",".join(sorted(knowledge_bases or []))
         combined = f"{tables_str}|{kbs_str}"
-        
+
         # Generate MD5 hash
-        md5_hash = hashlib.md5(combined.encode('utf-8')).hexdigest()+'.2'
-        
+        md5_hash = hashlib.md5(combined.encode("utf-8")).hexdigest() + ".2"
+
         return f"{ctx.company_id}_{md5_hash}_{suffix}"
 
     def _dataframe_to_csv(self, df: pd.DataFrame) -> str:
         """
         Convert a pandas DataFrame to CSV string.
-        
+
         Args:
             df: DataFrame to convert
-            
+
         Returns:
             CSV-formatted string
         """
         if df is None or df.empty:
             return ""
-        
+
         output = StringIO()
-        df.to_csv(output, index=False, lineterminator='\n')
+        df.to_csv(output, index=False, lineterminator="\n")
         return output.getvalue()
 
     def build_table_catalog_entry(self, table: Identifier, schema: Optional[str] = None) -> Dict[str, Any]:
@@ -171,11 +165,7 @@ class DataCatalogBuilder:
             schema = "mindsdb"
 
         # Get sample data
-        sample_data_query = Select(
-            targets=[Star()],
-            from_table=table,
-            limit=Constant(5)
-        )
+        sample_data_query = Select(targets=[Star()], from_table=table, limit=Constant(5))
         try:
             result = self.sql_toolkit.execute(sample_data_query)
             sample_data_csv = self._dataframe_to_csv(result)
@@ -185,7 +175,7 @@ class DataCatalogBuilder:
 
         # Get metadata
         # Query information_schema.columns for table metadata
-        metadata_query = Show(category='columns', from_table=table)
+        metadata_query = Show(category="columns", from_table=table)
         try:
             result = self.sql_toolkit.execute(metadata_query)
             logger.debug(f"result: {result}")
@@ -200,9 +190,7 @@ class DataCatalogBuilder:
             "sample_data_query": str(sample_data_query),
         }
 
-    def build_knowledge_base_catalog_entry(
-        self, kb: Identifier
-    ) -> Dict[str, str]:
+    def build_knowledge_base_catalog_entry(self, kb: Identifier) -> Dict[str, str]:
         """
         Build catalog entry for a single knowledge base.
 
@@ -214,13 +202,8 @@ class DataCatalogBuilder:
             Dictionary with 'sample_data', 'metadata', 'sample_data_query', 'metadata_query', and 'kb_name'
         """
 
-
         # Get sample data
-        sample_data_query = Select(
-            targets=[Star()],
-            from_table=kb,
-            limit=Constant(3)
-        )
+        sample_data_query = Select(targets=[Star()], from_table=kb, limit=Constant(3))
         try:
             result = self.sql_toolkit.execute(sample_data_query)
             sample_data_csv = self._dataframe_to_csv(result)
@@ -306,9 +289,9 @@ class DataCatalogBuilder:
                     info.append(f"\n--- Table: {table} ---")
                     info.append(f"Sample Data Query:\n{entry['sample_data_query']}")
                     info.append(f"Sample Data (csv):\n{entry['sample_data']}")
-                    if entry['metadata'] is not None:
+                    if entry["metadata"] is not None:
                         info.append(f"Metadata (csv):\n{entry['metadata']}")
-                    catalog = '\n'.join(info)
+                    catalog = "\n".join(info)
                     if use_cache:
                         self.cache.set(cache_key, catalog)
 
@@ -327,4 +310,3 @@ class DataCatalogBuilder:
         catalog_str = "\n".join(catalog_parts)
 
         return catalog_str
-

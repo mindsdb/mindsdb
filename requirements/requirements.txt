@@ -47,3 +47,5 @@ orjson==3.11.3
 
 mind-castle >= 0.4.9
 pydantic-ai>=0.0.14 # Required for Pydantic AI agents
+
+bs4 # for rag HTMLDocumentLoader

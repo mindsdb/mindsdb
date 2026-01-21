@@ -79,7 +79,7 @@ class FaissIndex:
             self.index_fd.close()
         self.index = None
 
-    def _build_index(self):
+    def _build_flat_index(self):
         # TODO option to create hnsw
 
         index = faiss.IndexFlat(self.dim, self.metric)
@@ -134,7 +134,7 @@ class FaissIndex:
             # this if the first insert, detect dimension
             self.dim = vectors.shape[1]
 
-            self._build_index()
+            self._build_flat_index()
 
         self.check_ram_usage(len(vectors), "flat")
 

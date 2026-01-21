@@ -261,6 +261,44 @@ class TestQuery:
         with pytest.raises(ParsingException):
             file_handler.native_query("INVALID QUERY")
 
+    def test_query_drop_other_database(self):
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.query(DropTables([Identifier(parts=["otherdb", "table1"])]))
+        assert response.type == RESPONSE_TYPE.ERROR
+        assert "database" in response.error_message.lower()
+
+    def test_query_create_existing_without_replace(self):
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.query(
+            CreateTable(
+                name=Identifier(parts=["one"]),
+                columns=[TableColumn(name="col1")],
+                is_replace=False,
+            )
+        )
+        assert response.type == RESPONSE_TYPE.ERROR
+        assert "already exists" in response.error_message.lower()
+
+    def test_query_create_invalid_namespace(self):
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.query(
+            CreateTable(
+                name=Identifier(parts=["files", "nested", "tbl"]),
+                columns=[TableColumn(name="col1")],
+            )
+        )
+        assert response.type == RESPONSE_TYPE.ERROR
+        assert "namespace" in response.error_message.lower()
+
+    def test_query_select_missing_table(self, monkeypatch):
+        def missing_file(self, name, page_name=None):
+            raise FileNotFoundError(f"{name} not found")
+
+        monkeypatch.setattr(MockFileController, "get_file_data", missing_file)
+        file_handler = FileHandler(file_controller=MockFileController())
+        with pytest.raises(RuntimeError):
+            file_handler.query(file_handler.parser("select * from files.missing_table"))
+
 
 def test_handle_source():
     def get_reader(file_path):

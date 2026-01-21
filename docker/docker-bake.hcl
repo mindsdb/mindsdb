@@ -1,6 +1,6 @@
 # The default targets to be built if none are specified
 group "default" {
-  targets = ["bare", "devel", "cloud", "cloud-cpu", "lightwood", "huggingface", "huggingface-cpu"]
+  targets = ["bare", "devel", "cloud", "cloud-cpu", "lightwood"]
 }
 
 variable "PUSH_TO_DOCKERHUB" {
@@ -105,12 +105,12 @@ target "images" {
     item = [
       {
         name = "bare"
-        extras = ""
+        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce,duckdb_faiss]"
         target = ""
       },
       {
         name = "devel"
-        extras = ".[lightwood]"  # Required for running integration tests
+        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce,duckdb_faiss]"  # Required for running integration tests
         target = "dev"
       },
       {
@@ -119,25 +119,14 @@ target "images" {
         target = ""
       },
       {
-        # If you make any changes here, make them to huggingface-cpu as well
-        name = "huggingface"
-        extras = ".[huggingface]"
-        target = ""
-      },
-      {
-        name = "huggingface-cpu"
-        extras = ".[huggingface_cpu]"
-        target = ""
-      },
-      {
         # If you make any changes here, make them to cloud-cpu as well
         name = "cloud"
-        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,pgvector,rag,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
+        extras = ".[lightwood,mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
         target = ""
       },
       {
         name = "cloud-cpu"
-        extras = ".[lightwood,huggingface_cpu,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,pgvector,rag,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
+        extras = ".[lightwood,mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
         target = ""
       },
     ]

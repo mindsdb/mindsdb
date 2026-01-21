@@ -48,6 +48,8 @@ class Query(Resource):
         context = request.json.get("context", {})
         params = request.json.get("params", {})
 
+        if "params" in request.json:
+            ctx.params = request.json["params"]
         if isinstance(query, str) is False or isinstance(context, dict) is False:
             return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" with the request.')
         logger.debug(f"Incoming query: {query}")

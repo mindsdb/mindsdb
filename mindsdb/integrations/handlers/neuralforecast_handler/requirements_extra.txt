@@ -1,2 +1,0 @@
-neuralforecast>=1.6.0, <1.7.0
-ray[tune]>=2.2.0

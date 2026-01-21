@@ -48,11 +48,19 @@ class FaissIndex:
         self._since_ram_checked = 0
 
         self.index = None
-        self.index_type = 'flat'
+        self.index_type = "flat"
         self.dim = None
         self.index_fd = None
         if os.path.exists(self.path):
             self._load_index()
+
+    def _lock_index(self):
+        if os.name != "nt":
+            self.index_fd = open(self.path, "rb")
+            try:
+                portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
+            except portalocker.exceptions.AlreadyLocked:
+                raise ValueError(f"Index is already used: {self.path}")
 
     def _load_index(self):
         # check RAM
@@ -66,20 +74,14 @@ class FaissIndex:
             to_free_gb = round((required_ram - available_ram) / _1gb, 2)
             raise ValueError(f"Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb")
 
-        if os.name != "nt":
-            self.index_fd = open(self.path, "rb")
-            try:
-                portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
-            except portalocker.exceptions.AlreadyLocked:
-                raise ValueError(f"Index is already used: {self.path}")
+        self._lock_index()
 
         self.index = faiss.read_index(self.path)
         self.dim = self.index.d
 
         sub_index = faiss.downcast_index(self.index.index)
         if isinstance(sub_index, faiss.IndexIVFFlat):
-            self.index_type = 'ivf'
-
+            self.index_type = "ivf"
 
     def close(self):
         if self.index_fd is not None:
@@ -194,7 +196,6 @@ class FaissIndex:
 
 
 class FaissIVFIndex(FaissIndex):
-
     def _dump_vectors(self, index, path, batch_size: int = 10000):
         """
         Save vectors from a Faiss IndexIDMap to disk in batches using numpy memmap.
@@ -206,7 +207,7 @@ class FaissIVFIndex(FaissIndex):
         :param  batch_size: Number of vectors per batch file
         """
 
-        if not hasattr(index, 'id_map') or not hasattr(index, 'index'):
+        if not hasattr(index, "id_map") or not hasattr(index, "index"):
             raise ValueError("Expected a Faiss IndexIDMap-like object with 'id_map' and 'index' attributes")
 
         ntotal = index.ntotal
@@ -215,7 +216,7 @@ class FaissIVFIndex(FaissIndex):
 
         # Write all ids once to a single memmap file
         ids_path = path / "ids.mmap"
-        mmap_ids = np.memmap(ids_path, dtype=np.int64, mode='w+', shape=(ntotal,))
+        mmap_ids = np.memmap(ids_path, dtype=np.int64, mode="w+", shape=(ntotal,))
         mmap_ids[:] = ids
         del mmap_ids  # flush
 
@@ -238,7 +239,7 @@ class FaissIVFIndex(FaissIndex):
             vecs_path = path / f"batch_{batch_num:05d}_vecs.mmap"
 
             # Create memmap for vectors and write
-            mmap_vecs = np.memmap(vecs_path, dtype=np.float32, mode='w+', shape=(size, self.dim))
+            mmap_vecs = np.memmap(vecs_path, dtype=np.float32, mode="w+", shape=(size, self.dim))
             mmap_vecs[:] = vecs
             mmap_vecs.flush()
             del mmap_vecs
@@ -247,14 +248,14 @@ class FaissIVFIndex(FaissIndex):
 
     def _create_ifv_index_from_dump(self, path, train_count=10000, nlist=1024):
         """
-            Build an IVF index (wrapped in IndexIDMap) from memmap batches
-            - Reads a single `ids.mmap` and multiple `batch_{i}_vecs.mmap` files from `path`.
-            - Accumulates up to `train_count` vectors to train the IVF quantizer.
-            - Creates IndexIVFFlat and adds all vectors with their ids to it.
+        Build an IVF index (wrapped in IndexIDMap) from memmap batches
+        - Reads a single `ids.mmap` and multiple `batch_{i}_vecs.mmap` files from `path`.
+        - Accumulates up to `train_count` vectors to train the IVF quantizer.
+        - Creates IndexIVFFlat and adds all vectors with their ids to it.
 
-            :param path: Directory containing memmap files
-            :param train_count: Number of vectors to use for training (upper bound)
-            :param nlist: number of clusters for IVF
+        :param path: Directory containing memmap files
+        :param train_count: Number of vectors to use for training (upper bound)
+        :param nlist: number of clusters for IVF
         """
 
         # Load ids
@@ -262,7 +263,7 @@ class FaissIVFIndex(FaissIndex):
         if not os.path.exists(ids_path):
             raise FileNotFoundError(f"Missing ids memmap: {ids_path}")
 
-        ids = np.fromfile(ids_path, dtype='float32')
+        ids = np.fromfile(ids_path, dtype="int64")
 
         # Collect vector batch files and sort by batch index
         vec_files = [f for f in os.listdir(path) if f.startswith("batch_")]
@@ -277,7 +278,7 @@ class FaissIVFIndex(FaissIndex):
 
         for fname in vec_files:
             fpath = path / fname
-            batch_data = np.fromfile(fpath, dtype='float32')
+            batch_data = np.fromfile(fpath, dtype="float32")
             rows = int(batch_data.shape[0] / self.dim)
 
             train_chunks.append(batch_data.reshape([rows, self.dim]))
@@ -302,21 +303,23 @@ class FaissIVFIndex(FaissIndex):
         for fname in vec_files:
             fpath = path / fname
 
-            batch_data = np.fromfile(fpath, dtype='float32')
+            batch_data = np.fromfile(fpath, dtype="float32")
             rows = int(batch_data.shape[0] / self.dim)
 
             batch_vectors = batch_data.reshape([rows, self.dim])
 
-            ids_batch = np.asarray(ids[start:start + rows])
+            ids_batch = np.asarray(ids[start : start + rows])
             ivf_id_map.add_with_ids(batch_vectors, ids_batch)
             start += rows
 
         return ivf_id_map
 
     def create_index(self, nlist=1024, train_count=10000):
-
         # index might not fit into RAM, extract data to files
-        dump_path = Path(self.path).parent / 'dump'
+        dump_path = Path(self.path).parent / "dump"
+
+        # if self.index_type != 'flat':
+        #     raise ValueError('Index was already created')
 
         if self.index is None:
             ntotal = 0
@@ -324,7 +327,6 @@ class FaissIVFIndex(FaissIndex):
             ntotal = self.index.ntotal
         if nlist > ntotal:
             raise ValueError(f"Not enough data to create: {ntotal}, required at lease {nlist} records")
-
 
         dump_path.mkdir(exist_ok=True)
 
@@ -341,10 +343,10 @@ class FaissIVFIndex(FaissIndex):
         ivf_index = self._create_ifv_index_from_dump(dump_path, train_count=train_count, nlist=nlist)
 
         self.index = ivf_index
+        self.index_type = "ivf"
         self.dump()
+        self._lock_index()
 
         # remove unused items
         for item in dump_path.iterdir():
             item.unlink()
-
-

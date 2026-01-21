@@ -1515,7 +1515,7 @@ class ExecuteCommands:
                 name,
                 project_name=project_name,
                 model_name=model,
-                params=statement.params
+                params=variables_controller.fill_parameters(statement.params),
             )
         except (EntityExistsError, EntityNotExistsError, ValueError) as e:
             # Project does not exist or agent does not exist.

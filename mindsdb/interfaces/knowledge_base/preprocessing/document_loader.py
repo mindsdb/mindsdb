@@ -18,17 +18,6 @@ except ImportError:  # pragma: no cover - executed when web handler extras missi
 logger = log.getLogger(__name__)
 
 
-def _get_langchain_document(feature: str):
-    try:
-        from langchain_core.documents import Document
-    except ModuleNotFoundError as exc:  # pragma: no cover - runtime guard
-        if getattr(exc, "name", "").startswith("langchain") or "langchain" in str(exc):
-            raise ImportError(
-                f"{feature} requires the optional knowledge base dependencies. Install them via `pip install mindsdb[kb]`."
-            ) from exc
-        raise
-    return Document
-
 
 class DocumentLoader:
     """Handles loading documents from various sources including SQL queries"""
@@ -90,13 +79,6 @@ class DocumentLoader:
             )
 
         websites_df = get_all_websites(urls, crawl_depth=crawl_depth, limit=limit, filters=filters)
-        if get_all_websites is None:
-            raise RuntimeError(
-                "Web crawling requires the optional web handler dependencies. "
-                "Install them via `pip install mindsdb[web]` or skip web sources."
-            )
-
-        LangchainDocument = _get_langchain_document("Web page ingestion for knowledge bases")
 
         for _, row in websites_df.iterrows():
             # Create a document with HTML extension for proper splitting

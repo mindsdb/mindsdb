@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from typing import Callable, List
-from typing import TYPE_CHECKING, Any
-from functools import lru_cache
+
+from mindsdb.integrations.utilities.rag.splitters.custom_splitters import (
+    RecursiveCharacterTextSplitter,
+    MarkdownHeaderTextSplitter,
+    HTMLHeaderTextSplitter,
+)
 from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 from mindsdb.interfaces.knowledge_base.preprocessing.models import TextChunkingConfig
 
@@ -20,41 +24,9 @@ DEFAULT_HTML_HEADERS_TO_SPLIT_ON = [
     ("h3", "Header 3"),
     ("h4", "Header 4"),
 ]
-if TYPE_CHECKING:  # pragma: no cover - type checking only
-    from langchain_core.documents import Document
-else:
-    Document = Any
+
 
 logger = log.getLogger(__name__)
-
-
-def _require_kb_dependency(feature: str, exc: ModuleNotFoundError):
-    missing = exc.name or "required module"
-    raise ImportError(
-        f"{feature} requires the optional knowledge base dependencies (missing {missing}). "
-        "Install them via `pip install mindsdb[kb]`."
-    ) from exc
-
-
-@lru_cache(maxsize=1)
-def _load_splitter_dependencies():
-    from langchain_core.documents import Document as LangchainDocument
-    from langchain_text_splitters import (
-        MarkdownHeaderTextSplitter,
-        HTMLHeaderTextSplitter,
-        RecursiveCharacterTextSplitter,
-    )
-
-    return LangchainDocument, MarkdownHeaderTextSplitter, HTMLHeaderTextSplitter, RecursiveCharacterTextSplitter
-
-
-def _get_splitter_dependencies(feature: str):
-    try:
-        return _load_splitter_dependencies()
-    except ModuleNotFoundError as exc:  # pragma: no cover - runtime guard
-        if getattr(exc, "name", "").startswith("langchain") or "langchain" in str(exc):
-            _require_kb_dependency(feature, exc)
-        raise
 
 
 @dataclass
@@ -68,33 +40,25 @@ class FileSplitterConfig:
     # Chunking parameters are passed as a TextChunkingConfig
     text_chunking_config: TextChunkingConfig = None
     # Default recursive splitter to use for text files, or unsupported files
-    recursive_splitter: Any = None
+    recursive_splitter: RecursiveCharacterTextSplitter = None
     # Splitter to use for MD splitting
-    markdown_splitter: Any = None
+    markdown_splitter: MarkdownHeaderTextSplitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON
+    )
     # Splitter to use for HTML splitting
-    html_splitter: Any = None
+    html_splitter: HTMLHeaderTextSplitter = HTMLHeaderTextSplitter(headers_to_split_on=DEFAULT_HTML_HEADERS_TO_SPLIT_ON)
 
     def __post_init__(self):
-        feature = "Knowledge base document splitting"
         if self.text_chunking_config is None:
             self.text_chunking_config = TextChunkingConfig(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
 
         if self.recursive_splitter is None:
-            _, _, _, RecursiveCharacterTextSplitter = _get_splitter_dependencies(feature)
             self.recursive_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=self.text_chunking_config.chunk_size,
                 chunk_overlap=self.text_chunking_config.chunk_overlap,
                 length_function=self.text_chunking_config.length_function,
                 separators=self.text_chunking_config.separators,
             )
-        if self.markdown_splitter is None:
-            _, MarkdownHeaderTextSplitter, _, _ = _get_splitter_dependencies(feature)
-            self.markdown_splitter = MarkdownHeaderTextSplitter(
-                headers_to_split_on=DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON
-            )
-        if self.html_splitter is None:
-            _, _, HTMLHeaderTextSplitter, _ = _get_splitter_dependencies(feature)
-            self.html_splitter = HTMLHeaderTextSplitter(headers_to_split_on=DEFAULT_HTML_HEADERS_TO_SPLIT_ON)
 
 
 class FileSplitter:

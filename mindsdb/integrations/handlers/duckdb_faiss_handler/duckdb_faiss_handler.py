@@ -33,7 +33,7 @@ from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
-from .faiss_index import FaissIndex
+from .faiss_index import FaissIVFIndex
 
 logger = log.getLogger(__name__)
 
@@ -90,7 +90,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         try:
             self.connection = duckdb.connect(self.duckdb_path)
-            self.faiss_index = FaissIndex(self.faiss_index_path, self.connection_data)
+            self.faiss_index = FaissIVFIndex(self.faiss_index_path, self.connection_data)
             self.is_connected = True
 
             logger.info("Connected to DuckDB database")
@@ -132,10 +132,14 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
     def create_index(
         self,
         table_name: str,
-        type: str = "ivfflat",
-        nlist: int = 100,
+        type: str = "ivf",
+        nlist: int = 1024,
+        train_count: int = 10000
     ):
-        ...
+        if type != "ivf":
+            raise NotImplementedError("Only ivf index is supported")
+
+        self.faiss_index.create_index(nlist=nlist, train_count=train_count)
 
 
     def insert(self, table_name: str, data: pd.DataFrame):

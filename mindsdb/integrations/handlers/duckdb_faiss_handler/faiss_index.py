@@ -50,9 +50,9 @@ class FaissIndex:
         self.dim = None
         self.index_fd = None
         if os.path.exists(self.path):
-            self.load_index()
+            self._load_index()
 
-    def load_index(self):
+    def _load_index(self):
         # check RAM
         index_size = os.path.getsize(self.path)
         # according to tests faiss index occupies ~ the same amount of RAM as file size
@@ -93,7 +93,7 @@ class FaissIndex:
 
         self.index = index
 
-    def check_ram_usage(self, count_vectors, index_type: str = "flat", m=32, nlist=4096):
+    def _check_ram_usage(self, count_vectors, index_type: str = "flat", m=32, nlist=4096):
         self._since_ram_checked += count_vectors
 
         # check after every 10k vectors
@@ -136,7 +136,7 @@ class FaissIndex:
 
             self._build_flat_index()
 
-        self.check_ram_usage(len(vectors), "flat")
+        self._check_ram_usage(len(vectors), "flat")
 
         if vectors.shape[1] != self.dim:
             raise ValueError(f"Dimension mismatch: expected {self.dim}, got {vectors.shape[1]}")

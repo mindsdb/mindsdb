@@ -63,10 +63,17 @@ class NetSuiteRecordTable(APIResource):
                 break
         if record_id is not None:
             record_url = f"{self._base_path}/{record_id}"
-            payload = self.handler._request("GET", record_url)
+            try:
+                payload = self.handler._request("GET", record_url)
+            except RuntimeError:
+                if targets:
+                    return pd.DataFrame(columns=targets)
+                return pd.DataFrame(columns=["internalId"])
             if isinstance(payload, dict):
                 return pd.DataFrame([payload])
-            return pd.DataFrame()
+            if targets:
+                return pd.DataFrame(columns=targets)
+            return pd.DataFrame(columns=["internalId"])
 
         def _format_q_value(value):
             if value is None:

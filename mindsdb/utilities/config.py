@@ -6,6 +6,7 @@ import datetime
 import dataclasses
 from pathlib import Path
 from copy import deepcopy
+from urllib.parse import urlparse
 
 from appdirs import user_data_dir
 
@@ -319,6 +320,16 @@ class Config:
 
         if os.environ.get("MINDSDB_DB_CON", "") != "":
             self._env_config["storage_db"] = os.environ["MINDSDB_DB_CON"]
+            url = urlparse(self._env_config["storage_db"])
+            is_valid = url.scheme and (url.netloc or url.scheme == "sqlite")
+            if not is_valid:
+                raise ValueError(
+                    f"Invalid MINDSDB_DB_CON value: {os.environ['MINDSDB_DB_CON']!r}\n"
+                    f"Expected format: scheme://user:password@host:port/database\n"
+                    "Examples:\n"
+                    "  - postgresql://user:pass@localhost:5432/database\n"
+                    "  - sqlite:///path/to/database.db"
+                )
 
         if os.environ.get("MINDSDB_DEFAULT_PROJECT", "") != "":
             self._env_config["default_project"] = os.environ["MINDSDB_DEFAULT_PROJECT"].lower()

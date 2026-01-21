@@ -336,6 +336,9 @@ class BaseExecutorTest(BaseUnitTest):
             return handler_response(pd.DataFrame(tables_ar))
 
         mock_handler().get_tables.side_effect = get_tables_f
+        mock_handler().cache_single_instance = False
+        mock_handler().cache_thread_safe = True
+        mock_handler().cache_usage_lock = True
 
         def get_columns_f(table_name):
             type = "varchar"

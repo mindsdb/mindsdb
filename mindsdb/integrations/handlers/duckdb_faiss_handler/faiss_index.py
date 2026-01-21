@@ -254,7 +254,7 @@ class FaissIVFIndex(FaissIndex):
         - Creates IndexIVFFlat and adds all vectors with their ids to it.
 
         :param path: Directory containing memmap files
-        :param train_count: Number of vectors to use for training (upper bound)
+        :param train_count: Number of vectors to use for training
         :param nlist: number of clusters for IVF
         """
 

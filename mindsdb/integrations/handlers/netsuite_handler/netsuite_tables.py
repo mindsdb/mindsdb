@@ -3,7 +3,7 @@ from typing import List, Optional
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, filter_dataframe
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -70,10 +70,23 @@ class NetSuiteRecordTable(APIResource):
                     return pd.DataFrame(columns=targets)
                 return pd.DataFrame(columns=["internalId"])
             if isinstance(payload, dict):
-                return pd.DataFrame([payload])
+                df = pd.DataFrame([payload])
             if targets:
-                return pd.DataFrame(columns=targets)
-            return pd.DataFrame(columns=["internalId"])
+                df = df.reindex(columns=targets) if not df.empty else pd.DataFrame(columns=targets)
+            else:
+                df = df if not df.empty else pd.DataFrame(columns=["internalId"])
+
+            remaining_conditions = [
+                cond for cond in conditions or [] if cond.column.lower() not in ("id", "internalid")
+            ]
+            if remaining_conditions:
+                filters = [[cond.op.value, cond.column, cond.value] for cond in remaining_conditions]
+                df = filter_dataframe(df, filters)
+
+            for cond in conditions or []:
+                cond.applied = True
+
+            return df
 
         def _format_q_value(value):
             if value is None:
@@ -136,12 +149,15 @@ class NetSuiteRecordTable(APIResource):
                 page_items = []
                 next_url = None
 
+            if remaining is not None:
+                if len(page_items) > remaining:
+                    page_items = page_items[:remaining]
+                remaining -= len(page_items)
+
             items.extend(page_items)
 
-            if remaining is not None:
-                remaining -= len(page_items)
-                if remaining <= 0:
-                    break
+            if remaining is not None and remaining <= 0:
+                break
 
             if not page_items:
                 break

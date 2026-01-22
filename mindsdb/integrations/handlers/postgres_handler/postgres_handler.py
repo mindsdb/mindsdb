@@ -176,9 +176,6 @@ class PostgresHandler(MetaDatabaseHandler):
         if self.connection_args.get("autocommit"):
             config["autocommit"] = self.connection_args.get("autocommit")
 
-        # If schema is not provided set public as default one
-        if self.connection_args.get("schema"):
-            config["options"] = f"-c search_path={self.connection_args.get('schema')},public"
         return config
 
     @profiler.profile()
@@ -199,6 +196,12 @@ class PostgresHandler(MetaDatabaseHandler):
         try:
             self.connection = psycopg.connect(**config)
             self.is_connected = True
+
+            schema = self.connection_args.get("schema")
+            if schema:
+                with self.connection.cursor() as cur:
+                    cur.execute(f'SET search_path TO "{schema}", public;')
+                self.connection.commit()
             return self.connection
         except psycopg.Error as e:
             logger.error(f"Error connecting to PostgreSQL {self.database}, {e}!")

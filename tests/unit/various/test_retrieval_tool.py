@@ -6,8 +6,7 @@ from mindsdb.integrations.utilities.rag.settings import (
     VectorStoreConfig,
     DEFAULT_LLM_MODEL, DEFAULT_TEST_TABLE_NAME, DEFAULT_CHUNK_SIZE
 )
-# from mindsdb.interfaces.skills.retrieval_tool import _get_rag_params
-from mindsdb.interfaces.skills.retrieval_tool import load_rag_config
+from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 
 
 @pytest.fixture

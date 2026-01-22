@@ -5,6 +5,7 @@ from sqlalchemy import null, func
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 
 class PredictorRecordNotFound(Exception):
@@ -24,22 +25,29 @@ class MultiplePredictorRecordsFound(Exception):
 @profiler.profile()
 def get_integration_record(name: str) -> db.Integration:
     company_id = ctx.company_id
-    if company_id is None:
-        company_id = null()
+    user_id = ctx.user_id
 
-    record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
+    if company_id is None:
+        company_id = DEFAULT_COMPANY_ID
+
+    if user_id is None:
+        user_id = DEFAULT_USER_ID
+
+    record = db.session.query(db.Integration).filter_by(company_id=company_id, user_id=user_id, name=name).first()
     return record
 
 
 @profiler.profile()
 def get_project_record(name: str) -> db.Project:
-    company_id = ctx.company_id if ctx.company_id is not None else "0"
+    company_id = ctx.company_id if ctx.company_id is not None else DEFAULT_COMPANY_ID
+    user_id = ctx.user_id if ctx.user_id is not None else DEFAULT_USER_ID
 
     project_record = (
         db.session.query(db.Project)
         .filter(
             (func.lower(db.Project.name) == name)
             & (db.Project.company_id == company_id)
+            & (db.Project.user_id == user_id)
             & (db.Project.deleted_at == null())
         )
         .first()
@@ -49,11 +57,14 @@ def get_project_record(name: str) -> db.Project:
 
 @profiler.profile()
 def get_project_records() -> List[db.Project]:
-    company_id = ctx.company_id if ctx.company_id is not None else "0"
+    company_id = ctx.company_id if ctx.company_id is not None else DEFAULT_COMPANY_ID
+    user_id = ctx.user_id if ctx.user_id is not None else DEFAULT_USER_ID
 
     return (
         db.session.query(db.Project)
-        .filter((db.Project.company_id == company_id) & (db.Project.deleted_at == null()))
+        .filter(
+            (db.Project.company_id == company_id) & (db.Project.user_id == user_id) & (db.Project.deleted_at == null())
+        )
         .all()
     )
 
@@ -81,7 +92,11 @@ def get_model_records(
 ):
     kwargs["company_id"] = ctx.company_id
     if kwargs["company_id"] is None:
-        kwargs["company_id"] = null()
+        kwargs["company_id"] = DEFAULT_COMPANY_ID
+
+    kwargs["user_id"] = ctx.user_id
+    if kwargs["user_id"] is None:
+        kwargs["user_id"] = DEFAULT_USER_ID
 
     if deleted_at is not None:
         kwargs["deleted_at"] = deleted_at
@@ -119,7 +134,11 @@ def get_model_record(
 ):
     kwargs["company_id"] = ctx.company_id
     if kwargs["company_id"] is None:
-        kwargs["company_id"] = null()
+        kwargs["company_id"] = DEFAULT_COMPANY_ID
+
+    kwargs["user_id"] = ctx.user_id
+    if kwargs["user_id"] is None:
+        kwargs["user_id"] = DEFAULT_USER_ID
 
     kwargs["deleted_at"] = deleted_at
     if active is not None:

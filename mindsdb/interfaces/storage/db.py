@@ -34,6 +34,7 @@ from mind_castle.sqlalchemy_type import SecretData
 
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.config import config
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 
 class Base:
@@ -168,8 +169,8 @@ class Predictor(Base):
     name = Column(String)
     data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
     mindsdb_version = Column(String)
     native_version = Column(String)
     integration_id = Column(ForeignKey("integration.id", name="fk_integration_id"))
@@ -225,8 +226,8 @@ class Project(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     deleted_at = Column(DateTime)
     name = Column(String, nullable=False)
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
     metadata_: dict = Column("metadata", JSON, nullable=True)
     __table_args__ = (UniqueConstraint("name", "company_id", "user_id", name="unique_project_name_company_id_user_id"),)
 
@@ -239,8 +240,8 @@ class Integration(Base):
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
     data = Column(SecretDataJson(os.environ.get("MINDSDB_DATA_ENCRYPTION_TYPE", "none")))
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
 
     __table_args__ = (
         UniqueConstraint("name", "company_id", "user_id", name="unique_integration_name_company_id_user_id"),
@@ -251,8 +252,8 @@ class File(Base):
     __tablename__ = "file"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
     source_file_path = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
     row_count = Column(Integer, nullable=False)
@@ -267,8 +268,8 @@ class View(Base):
     __tablename__ = "view"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
     query = Column(String, nullable=False)
     project_id = Column(Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False)
     __table_args__ = (UniqueConstraint("name", "company_id", "user_id", name="unique_view_name_company_id_user_id"),)
@@ -282,8 +283,8 @@ class JsonStorage(Base):
     name = Column(String)
     content = Column(JSON)
     encrypted_content = Column(LargeBinary, nullable=True)
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
 
     def to_dict(self) -> Dict:
         return {
@@ -301,8 +302,8 @@ class JsonStorage(Base):
 class Jobs(Base):
     __tablename__ = "jobs"
     id = Column(Integer, primary_key=True)
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
     user_class = Column(Integer, nullable=True)
     active = Column(Boolean, default=True)
 
@@ -323,8 +324,8 @@ class Jobs(Base):
 class JobsHistory(Base):
     __tablename__ = "jobs_history"
     id = Column(Integer, primary_key=True)
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
 
     job_id = Column(Integer)
 
@@ -401,8 +402,8 @@ class Triggers(Base):
 class Tasks(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True)
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
     user_class = Column(Integer, nullable=True)
 
     # trigger, chatbot
@@ -461,8 +462,8 @@ class Agents(Base):
     __tablename__ = "agents"
     id = Column(Integer, primary_key=True)
     skills_relationships: Mapped[List["Skills"]] = relationship(AgentSkillsAssociation, back_populates="agent")
-    company_id = Column(String, default="0", nullable=False)
-    user_id = Column(String, default="0", nullable=False)
+    company_id = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id = Column(String, default=DEFAULT_USER_ID, nullable=False)
     user_class = Column(Integer, nullable=True)
 
     name = Column(String, nullable=False)
@@ -589,8 +590,8 @@ class KnowledgeBase(Base):
 class QueryContext(Base):
     __tablename__ = "query_context"
     id: int = Column(Integer, primary_key=True)
-    company_id: str = Column(String, default="0", nullable=False)
-    user_id: str = Column(String, default="0", nullable=False)
+    company_id: str = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id: str = Column(String, default=DEFAULT_USER_ID, nullable=False)
 
     query: str = Column(String, nullable=False)
     context_name: str = Column(String, nullable=False)
@@ -603,8 +604,8 @@ class QueryContext(Base):
 class Queries(Base):
     __tablename__ = "queries"
     id: int = Column(Integer, primary_key=True)
-    company_id: str = Column(String, default="0", nullable=False)
-    user_id: str = Column(String, default="0", nullable=False)
+    company_id: str = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id: str = Column(String, default=DEFAULT_USER_ID, nullable=False)
 
     sql: str = Column(String, nullable=False)
     database: str = Column(String, nullable=True)
@@ -624,8 +625,8 @@ class Queries(Base):
 class LLMLog(Base):
     __tablename__ = "llm_log"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(String, default="0", nullable=False)
-    user_id: int = Column(String, default="0", nullable=False)
+    company_id: int = Column(String, default=DEFAULT_COMPANY_ID, nullable=False)
+    user_id: int = Column(String, default=DEFAULT_USER_ID, nullable=False)
     api_key: str = Column(String, nullable=True)
     model_id: int = Column(Integer, nullable=True)
     model_group: str = Column(String, nullable=True)

@@ -24,6 +24,68 @@ class FileController:
         self.fs_store = FsStore()
         self.dir = os.path.join(self.config.paths["content"], "file")
 
+    @staticmethod
+    def _get_file_dir(file_id: int) -> str:
+        """Get the file directory path with user namespace."""
+        return f"file_{ctx.company_id}_{ctx.user_id}_{file_id}"
+
+    @staticmethod
+    def _get_legacy_file_dir(file_id: int) -> str:
+        """Get the legacy file directory path (without user namespace)."""
+        return f"file_{ctx.company_id}_{file_id}"
+
+    def _migrate_legacy_file_path(self, file_record):
+        """
+        Migrate legacy file paths from file_{company_id}_{file_id} to file_{company_id}_{user_id}_{file_id}.
+        Updates the file_record.file_path if migration occurs.
+
+        Args:
+            file_record: The file database record.
+
+        Raises:
+            Exception: If the file path migration fails.
+        """
+        old_path = self._get_legacy_file_dir(file_record.id)
+        new_path = self._get_file_dir(file_record.id)
+
+        # Skip if already migrated
+        if file_record.file_path == new_path:
+            return
+
+        try:
+            old_dir = Path(self.dir).joinpath(old_path)
+            new_dir = Path(self.dir).joinpath(new_path)
+
+            # Try to get from fs_store first (might be in remote storage)
+            try:
+                self.fs_store.get(old_path, base_dir=self.dir)
+            except (FileNotFoundError, OSError) as e:
+                logger.warning(f"Could not fetch legacy file {old_path} from remote: {e}")
+            except Exception:
+                logger.exception(f"Unexpected error fetching legacy file {old_path} from remote")
+                raise
+
+            if old_dir.exists() and not new_dir.exists():
+                logger.info(f"Migrating legacy file path {old_path} to {new_path}")
+                shutil.move(str(old_dir), str(new_dir))
+
+                # Update remote storage
+                self.fs_store.put(new_path, base_dir=self.dir)
+                try:
+                    self.fs_store.delete(old_path)
+                except (FileNotFoundError, OSError) as e:
+                    logger.warning(f"Could not delete legacy file {old_path} from remote: {e}")
+                except Exception:
+                    logger.exception(f"Unexpected error deleting legacy file {old_path} from remote")
+                    raise
+
+                # Update database record
+                file_record.file_path = new_path
+                db.session.commit()
+        except Exception:
+            logger.exception(f"Failed to migrate legacy file path {old_path} to {new_path}")
+            raise
+
     def get_files_names(self, lower: bool = False):
         """return list of files names
 
@@ -33,13 +95,18 @@ class FileController:
         Returns:
             list[str]: list of files names
         """
-        names = [record[0] for record in db.session.query(db.File.name).filter_by(company_id=ctx.company_id)]
+        names = [
+            record[0]
+            for record in db.session.query(db.File.name).filter_by(company_id=ctx.company_id, user_id=ctx.user_id)
+        ]
         if lower:
             names = [name.lower() for name in names]
         return names
 
     def get_file_meta(self, name):
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             return None
         columns = file_record.columns
@@ -57,7 +124,7 @@ class FileController:
         Returns:
             list[dict]: files metadata
         """
-        file_records = db.session.query(db.File).filter_by(company_id=ctx.company_id).all()
+        file_records = db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id).all()
         files_metadata = [
             {
                 "name": record.name,
@@ -95,6 +162,7 @@ class FileController:
             file_record = db.File(
                 name=name,
                 company_id=ctx.company_id,
+                user_id=ctx.user_id,
                 source_file_path=file_name,
                 file_path="",
                 row_count=len(df),
@@ -104,7 +172,7 @@ class FileController:
             db.session.add(file_record)
             db.session.flush()
 
-            store_file_path = f"file_{ctx.company_id}_{file_record.id}"
+            store_file_path = self._get_file_dir(file_record.id)
             file_record.file_path = store_file_path
 
             file_dir = Path(self.dir).joinpath(store_file_path)
@@ -159,20 +227,44 @@ class FileController:
             df.to_feather(str(dest))
 
     def delete_file(self, name):
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
         file_id = file_record.id
+
+        # Try to delete both old and new path formats for backwards compatibility
+        old_path = self._get_legacy_file_dir(file_id)
+        new_path = self._get_file_dir(file_id)
+
         db.session.delete(file_record)
         db.session.commit()
-        self.fs_store.delete(f"file_{ctx.company_id}_{file_id}")
+
+        # Delete from storage (try both paths)
+        for path in [new_path, old_path]:
+            try:
+                self.fs_store.delete(path)
+            except (FileNotFoundError, OSError) as e:
+                # Log if file doesn't exist, this is expected for one of the paths
+                logger.warning(f"Failed to delete file {path}: {e}")
+            except Exception:
+                logger.exception(f"Unexpected error deleting file {path}")
+                raise
+
         return True
 
     def get_file_path(self, name):
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
-        file_dir = f"file_{ctx.company_id}_{file_record.id}"
+
+        # Migrate legacy file path if needed
+        self._migrate_legacy_file_path(file_record)
+
+        file_dir = self._get_file_dir(file_record.id)
         self.fs_store.get(file_dir, base_dir=self.dir)
         return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))
 
@@ -184,11 +276,16 @@ class FileController:
         :param page_name: page name, optional
         :return: Page or file content
         """
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
 
-        file_dir = f"file_{ctx.company_id}_{file_record.id}"
+        # Migrate legacy file path if needed
+        self._migrate_legacy_file_path(file_record)
+
+        file_dir = self._get_file_dir(file_record.id)
         self.fs_store.get(file_dir, base_dir=self.dir)
 
         metadata = file_record.metadata_ or {}
@@ -225,11 +322,16 @@ class FileController:
         :param page_name: name of page, optional
         """
 
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
 
-        file_dir = f"file_{ctx.company_id}_{file_record.id}"
+        # Migrate legacy file path if needed
+        self._migrate_legacy_file_path(file_record)
+
+        file_dir = self._get_file_dir(file_record.id)
         self.fs_store.get(file_dir, base_dir=self.dir)
 
         num = 0

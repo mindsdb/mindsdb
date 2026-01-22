@@ -20,6 +20,7 @@ from mindsdb.api.executor.datahub.classes.tables_row import (
     TABLES_ROW_TYPE,
     TablesRow,
 )
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID
 
 
 class LogTable(ABC):
@@ -61,8 +62,8 @@ class LogTable(ABC):
         return BinaryOperation(
             op="=",
             args=(
-                Function(op="coalesce", args=(Identifier(f"{table_a}.company_id"), "0")),
-                Function(op="coalesce", args=(Identifier(f"{table_b}.company_id"), "0")),
+                Function(op="coalesce", args=(Identifier(f"{table_a}.company_id"), DEFAULT_COMPANY_ID)),
+                Function(op="coalesce", args=(Identifier(f"{table_b}.company_id"), DEFAULT_COMPANY_ID)),
             ),
         )
 
@@ -113,8 +114,17 @@ class LLMLogTable(LogTable):
                 ),
             ),
             where=BinaryOperation(
-                op="is" if ctx.company_id is None else "=",
-                args=(Identifier("llm_log.company_id"), Constant(ctx.company_id)),
+                op="and",
+                args=(
+                    BinaryOperation(
+                        op="is" if ctx.company_id is None else "=",
+                        args=(Identifier("llm_log.company_id"), Constant(ctx.company_id)),
+                    ),
+                    BinaryOperation(
+                        op="is" if ctx.user_id is None else "=",
+                        args=(Identifier("llm_log.user_id"), Constant(ctx.user_id)),
+                    ),
+                ),
             ),
             alias=Identifier("llm_log"),
         )
@@ -162,8 +172,17 @@ class JobsHistoryTable(LogTable):
                 ),
             ),
             where=BinaryOperation(
-                op="is" if ctx.company_id is None else "=",
-                args=(Identifier("jobs_history.company_id"), Constant(ctx.company_id)),
+                op="and",
+                args=(
+                    BinaryOperation(
+                        op="is" if ctx.company_id is None else "=",
+                        args=(Identifier("jobs_history.company_id"), Constant(ctx.company_id)),
+                    ),
+                    BinaryOperation(
+                        op="is" if ctx.user_id is None else "=",
+                        args=(Identifier("jobs_history.user_id"), Constant(ctx.user_id)),
+                    ),
+                ),
             ),
             alias=Identifier("jobs_history"),
         )

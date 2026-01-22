@@ -307,7 +307,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             f"connecting to database {self.session.database}"
         )
 
-        auth_data = self.server.check_auth(username, password, scramble_func, self.salt, ctx.company_id)
+        auth_data = self.server.check_auth(
+            username, password, scramble_func, self.salt, ctx.company_id, ctx.user_id, config
+        )
         if auth_data["success"]:
             self.session.username = auth_data["username"]
             self.session.auth = True
@@ -634,10 +636,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.server.hook_before_handle()
 
-        logger.debug("handle new incoming connection")
+        logger.debug("Handling new incoming connection.")
         cloud_connection = self.is_cloud_connection()
 
         ctx.company_id = cloud_connection.get("company_id")
+        ctx.user_id = cloud_connection.get("user_id")
+        logger.debug(f"Connection context: company_id: {ctx.company_id}, user_id: {ctx.user_id}.")
 
         self.init_session()
         if cloud_connection["is_cloud"] is False:
@@ -792,6 +796,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             hooks.after_api_query(
                 company_id=ctx.company_id,
+                user_id=ctx.user_id,
                 api="mysql",
                 command=getConstName(COMMANDS, p.type.value),
                 payload=sql,

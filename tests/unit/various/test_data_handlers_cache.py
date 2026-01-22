@@ -4,7 +4,10 @@ from unittest.mock import patch
 
 import pytest
 
-from mindsdb.interfaces.database.data_handlers_cache import HandlersCache, HandlersCacheRecord
+from mindsdb.interfaces.database.data_handlers_cache import (
+    HandlersCache,
+    HandlersCacheRecord,
+)
 from mindsdb.utilities.context import context as ctx
 
 
@@ -70,7 +73,9 @@ class TestHandlersCache:
         cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True))
 
         assert len(cache.handlers) == 1
-        assert first_key()[2] == 0  # Thread id for thread safe handler
+        assert (
+            first_key()[3] == 0
+        )  # Thread id for thread safe handler (key is now: name, company_id, user_id, thread_id)
         assert len(cache.handlers[first_key()]) == 2
 
         handler_1 = cache.get("test_handler_a")
@@ -176,7 +181,10 @@ class TestHandlersCache:
 
         cache.set(
             MockDatabaseHandler(
-                "test_handler_a", cache_thread_safe=True, cache_single_instance=True, cache_usage_lock=True
+                "test_handler_a",
+                cache_thread_safe=True,
+                cache_single_instance=True,
+                cache_usage_lock=True,
             )
         )
         with pytest.raises(ValueError):

@@ -141,6 +141,7 @@ jobs:
     with:
       git-sha: ${{ github.event.release.tag_name }}
       deploy-env: prod
+      runs-on: mdb-prod
     secrets: inherit
 
   tests_completed:
@@ -174,7 +175,7 @@ jobs:
                       "type": "header",
                       "text": {
                         "type": "plain_text",
-                        "text": "TEST RUN FAILED ON RELEASE",
+                        "text": "TEST RUN FAILED ON RELEASE ${{ github.event.release.tag_name }}",
                         "emoji": true
                       }
                     },

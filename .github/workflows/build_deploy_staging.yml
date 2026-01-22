@@ -10,7 +10,7 @@ on:
     types:
       - closed
     branches:
-      - 'develop'
+      - 'main'
       - 'releases/*'
 
 concurrency:

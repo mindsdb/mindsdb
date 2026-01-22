@@ -74,7 +74,7 @@ MAIN_RULE_IGNORES = {
         "openpyxl",
         "onnxruntime",
         "litellm",
-        "numba",    # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
+        "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
     ],
 }
 
@@ -260,7 +260,7 @@ def run_deptry(reqs, rule_ignores, path, extra_args=""):
 
     errors = []
     # Get the full path to deptry executable from the current Python environment
-    deptry_path = os.path.join(os.path.dirname(sys.executable), 'deptry')
+    deptry_path = os.path.join(os.path.dirname(sys.executable), "deptry")
     try:
         result = subprocess.run(
             f'{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb --requirements-files "{reqs}" --per-rule-ignores "{rule_ignores}" --package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" {extra_args} {path}',

@@ -214,17 +214,22 @@ class ChromaDBHandler(VectorStoreHandler):
 
         include = ["metadatas", "documents", "embeddings"]
 
-        # check if embedding vector filter is present
-        vector_filter = (
-            []
-            if conditions is None
-            else [condition for condition in conditions if condition.column == TableField.EMBEDDINGS.value]
-        )
+        # Identify Search Intent 
+        vector_filter = None
+        content_filter = None
+        
+        if conditions is not None:
+            # Embeddings
+            v_filters = [c for c in conditions if c.column == TableField.EMBEDDINGS.value]
+            if v_filters:
+                vector_filter = v_filters[0]
+            
+            # Semantic Search
+            c_filters = [c for c in conditions if c.column == TableField.CONTENT.value]
+            if c_filters:
+                content_filter = c_filters[0]
 
-        if len(vector_filter) > 0:
-            vector_filter = vector_filter[0]
-        else:
-            vector_filter = None
+        # ID Filtering
         ids_include = []
         ids_exclude = []
 
@@ -241,13 +246,25 @@ class ChromaDBHandler(VectorStoreHandler):
                 elif condition.op == FilterOperator.NOT_IN:
                     ids_exclude.extend(condition.value)
 
-        if vector_filter is not None:
-            # similarity search
+        # Trigger search if Vector OR Content is present
+        if vector_filter is not None or content_filter is not None:
+            # Similarity search
             query_payload = {
                 "where": filters,
-                "query_embeddings": vector_filter.value if vector_filter is not None else None,
                 "include": include + ["distances"],
             }
+            
+            # Handle Vector Search
+            if vector_filter:
+                query_payload["query_embeddings"] = vector_filter.value
+                
+            # Handle Text Search 
+            if content_filter:
+                val = content_filter.value
+                if isinstance(val, list):
+                    query_payload["query_texts"] = val
+                else:
+                    query_payload["query_texts"] = [val]
 
             if limit is not None:
                 if len(ids_include) == 0 and len(ids_exclude) == 0:
@@ -264,7 +281,7 @@ class ChromaDBHandler(VectorStoreHandler):
             embeddings = result["embeddings"][0]
 
         else:
-            # general get query
+            # general get query (Exact Match)
             result = collection.get(
                 ids=ids_include or None,
                 where=filters,
@@ -278,7 +295,6 @@ class ChromaDBHandler(VectorStoreHandler):
             embeddings = result["embeddings"]
             distances = None
 
-        # project based on columns
         payload = {
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
@@ -289,7 +305,7 @@ class ChromaDBHandler(VectorStoreHandler):
         if columns is not None:
             payload = {column: payload[column] for column in columns if column != TableField.DISTANCE.value}
 
-        # always include distance
+        # Include distance
         distance_filter = None
         distance_col = TableField.DISTANCE.value
         if distances is not None:
@@ -322,7 +338,7 @@ class ChromaDBHandler(VectorStoreHandler):
             if op:
                 df = df[getattr(df[distance_col], op)(distance_filter.value)]
         return df
-
+    
     def _dataframe_metadata_to_chroma_metadata(self, metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
         """Convert DataFrame metadata to ChromaDB compatible metadata format"""
         if pd.isna(metadata) or metadata is None:

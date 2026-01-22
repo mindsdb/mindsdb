@@ -72,3 +72,6 @@ jobs:
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         INTERNAL_URL: ${{ vars.MINDSDB_INTERNAL_URL }}
+
+
+

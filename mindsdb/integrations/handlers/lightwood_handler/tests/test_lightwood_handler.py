@@ -2,19 +2,29 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
+from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import (
+    LightwoodHandler,
+)
 from mindsdb.interfaces.database.integrations import integration_controller
-from mindsdb.integrations.utilities.test_utils import PG_HANDLER_NAME, PG_CONNECTION_DATA
+from mindsdb.integrations.utilities.test_utils import (
+    PG_HANDLER_NAME,
+    PG_CONNECTION_DATA,
+)
 from mindsdb.utilities.config import Config
 from mindsdb.migrations import migrate
 import os
 import time
 import unittest
 import tempfile
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
-temp_dir = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
-os.environ['MINDSDB_STORAGE_DIR'] = os.environ.get('MINDSDB_STORAGE_DIR', temp_dir)
-os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
+temp_dir = tempfile.mkdtemp(dir="/tmp/", prefix="lightwood_handler_test_")
+os.environ["MINDSDB_STORAGE_DIR"] = os.environ.get("MINDSDB_STORAGE_DIR", temp_dir)
+os.environ["MINDSDB_DB_CON"] = (
+    "sqlite:///"
+    + os.path.join(os.environ["MINDSDB_STORAGE_DIR"], "mindsdb.sqlite3.db")
+    + "?check_same_thread=False&timeout=30"
+)
 
 migrate.migrate_to_head()
 
@@ -26,20 +36,22 @@ class LightwoodHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # region create permanent integrations
-        for integration_name in ['files', 'lightwood']:
+        for integration_name in ["files", "lightwood"]:
             integration_record = db.Integration(
                 name=integration_name,
                 data={},
                 engine=integration_name,
-                company_id=None
+                company_id=DEFAULT_COMPANY_ID,
+                user_id=DEFAULT_USER_ID,
             )
             db.session.add(integration_record)
             db.session.commit()
         integration_record = db.Integration(
             name=PG_HANDLER_NAME,
             data=PG_CONNECTION_DATA,
-            engine='postgres',
-            company_id=None
+            engine="postgres",
+            company_id=DEFAULT_COMPANY_ID,
+            user_id=DEFAULT_USER_ID,
         )
         db.session.add(integration_record)
         db.session.commit()
@@ -48,21 +60,21 @@ class LightwoodHandlerTest(unittest.TestCase):
         handler_controller = integration_controller
 
         cls.handler = LightwoodHandler(
-            'lightwood',
+            "lightwood",
             handler_controller=handler_controller,
             fs_store=FsStore(),
-            model_controller=ModelController()
+            model_controller=ModelController(),
         )
         cls.config = Config()
 
-        cls.target_1 = 'rental_price'
-        cls.data_table_1 = 'demo_data.home_rentals'
-        cls.test_model_1 = 'test_lightwood_home_rentals'
-        cls.test_model_1b = 'test_lightwood_home_rentals_custom'
+        cls.target_1 = "rental_price"
+        cls.data_table_1 = "demo_data.home_rentals"
+        cls.test_model_1 = "test_lightwood_home_rentals"
+        cls.test_model_1b = "test_lightwood_home_rentals_custom"
 
-        cls.target_2 = 'Traffic'
-        cls.data_table_2 = 'demo_data.house_sales'
-        cls.test_model_2 = 'test_lightwood_house_sales'
+        cls.target_2 = "Traffic"
+        cls.data_table_2 = "demo_data.house_sales"
+        cls.test_model_2 = "test_lightwood_house_sales"
 
     def test_00_check_connection(self):
         conn = self.handler.check_connection()
@@ -105,8 +117,8 @@ class LightwoodHandlerTest(unittest.TestCase):
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
         self.assertTrue(len(response.data_frame) == 1)
-        self.assertTrue(response.data_frame['sqft'][0] == 100)
-        self.assertTrue(response.data_frame['rental_price'][0] is not None)
+        self.assertTrue(response.data_frame["sqft"][0] == 100)
+        self.assertTrue(response.data_frame["rental_price"][0] is not None)
 
     def test_05_query_predictor_multi_where_condition(self):
         query = f"""
@@ -119,12 +131,14 @@ class LightwoodHandlerTest(unittest.TestCase):
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
         self.assertTrue(len(response.data_frame) == 1)
-        self.assertTrue(response.data_frame['number_of_rooms'][0] == 2)
-        self.assertTrue(response.data_frame['number_of_bathrooms'][0] == 1)
+        self.assertTrue(response.data_frame["number_of_rooms"][0] == 2)
+        self.assertTrue(response.data_frame["number_of_bathrooms"][0] == 1)
 
     def test_06_train_predictor_custom_jsonai(self):
         # TODO: turn this into a decorator?
-        if self.test_model_1b in self.handler.get_tables().data_frame.values:  # TODO this accesor feels weird, maybe rethink output format?
+        if (
+            self.test_model_1b in self.handler.get_tables().data_frame.values
+        ):  # TODO this accesor feels weird, maybe rethink output format?
             self.handler.native_query(f"DROP PREDICTOR {self.test_model_1b}")
 
         using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": true}}]}'
@@ -146,7 +160,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
 
     def test_08_get_columns(self):
-        response = self.handler.get_columns(f'{self.test_model_1}')
+        response = self.handler.get_columns(f"{self.test_model_1}")
         self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
 
     # TODO

@@ -13,6 +13,8 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     EmailsTable,
     MeetingsTable,
     NotesTable,
+    OwnersTable,
+    DealStagesTable,
     to_hubspot_property,
     to_internal_property,
     HUBSPOT_TABLE_COLUMN_DEFINITIONS,
@@ -119,6 +121,7 @@ class HubspotHandler(MetaAPIHandler):
         self.connection: Optional[HubSpot] = None
         self.is_connected: bool = False
         self._association_tables = set(ASSOCIATION_TABLE_CLASSES.keys())
+        self._non_object_tables = {"owners", "deal_stages"}
 
         # Register core CRM tables
         self._register_table("companies", CompaniesTable(self))
@@ -132,6 +135,8 @@ class HubspotHandler(MetaAPIHandler):
         self._register_table("emails", EmailsTable(self))
         self._register_table("meetings", MeetingsTable(self))
         self._register_table("notes", NotesTable(self))
+        self._register_table("owners", OwnersTable(self))
+        self._register_table("deal_stages", DealStagesTable(self))
 
         for table_name, table_class in ASSOCIATION_TABLE_CLASSES.items():
             self._register_table(table_name, table_class(self))
@@ -224,6 +229,10 @@ class HubspotHandler(MetaAPIHandler):
 
         try:
             ast = parse_sql(query)
+            result = self.query(ast)
+            print("****************************************************************************")
+            print(result)
+            print("****************************************************************************")
             return self.query(ast)
         except Exception as e:
             logger.error(f"Failed to execute native query: {str(e)}")
@@ -246,8 +255,16 @@ class HubspotHandler(MetaAPIHandler):
                         }
                         tables_data.append(table_info)
                         continue
+                    if table_name in self._non_object_tables:
+                        self._tables[table_name].list(limit=1)
+                        table_info = {
+                            "TABLE_SCHEMA": "hubspot",
+                            "TABLE_NAME": table_name,
+                            "TABLE_TYPE": "BASE TABLE",
+                        }
+                        tables_data.append(table_info)
+                        continue
 
-                    # Try to access each table with a minimal request
                     default_properties = self._tables[table_name].get_columns()
                     hubspot_properties = [
                         to_hubspot_property(col)
@@ -351,7 +368,11 @@ class HubspotHandler(MetaAPIHandler):
         try:
             self.connect()
 
-            all_tables = [name for name in self._tables.keys() if name not in self._association_tables]
+            all_tables = [
+                name
+                for name in self._tables.keys()
+                if name not in self._association_tables and name not in self._non_object_tables
+            ]
             if table_names:
                 tables_to_process = [t for t in table_names if t in all_tables]
             else:
@@ -464,98 +485,11 @@ class HubspotHandler(MetaAPIHandler):
             logger.error(f"Failed to get column statistics: {str(e)}")
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve column statistics: {str(e)}")
 
-    def _discover_columns(self, table_name: str, sample_size: int = 100) -> List[Dict[str, Any]]:
-        """Discover columns from HubSpot API by sampling data."""
-        # Refeence: https://developers.hubspot.com/docs/cms/start-building/features/data-driven-content/crm-objects#crm-object-data-available-for-all-pages
-        try:
-            sample_data = None
-
-            if table_name == "companies":
-                sample_data = list(self.connection.crm.companies.get_all(limit=sample_size))
-            elif table_name == "contacts":
-                sample_data = list(self.connection.crm.contacts.get_all(limit=sample_size))
-            elif table_name == "deals":
-                sample_data = list(self.connection.crm.deals.get_all(limit=sample_size))
-            elif table_name == "tickets":
-                sample_data = list(self.connection.crm.tickets.get_all(limit=sample_size))
-            elif table_name == "tasks":
-                sample_data = list(self._get_objects_all("tasks", limit=sample_size))
-            elif table_name == "calls":
-                sample_data = list(self._get_objects_all("calls", limit=sample_size))
-            elif table_name == "emails":
-                sample_data = list(self._get_objects_all("emails", limit=sample_size))
-            elif table_name == "meetings":
-                sample_data = list(self._get_objects_all("meetings", limit=sample_size))
-            elif table_name == "notes":
-                sample_data = list(self._get_objects_all("notes", limit=sample_size))
-
-            if not sample_data or len(sample_data) == 0:
-                logger.warning(f"No data available for {table_name}, using defaults")
-                return self._get_default_discovered_columns(table_name)
-
-            logger.info(f"Analyzing {len(sample_data)} records for {table_name} column discovery")
-
-            all_properties = set()
-            for item in sample_data:
-                if hasattr(item, "properties") and item.properties:
-                    all_properties.update(item.properties.keys())
-
-            discovered_columns = []
-            ordinal_position = 1
-
-            discovered_columns.append(
-                {
-                    "column_name": "id",
-                    "data_type": "VARCHAR",
-                    "is_nullable": False,
-                    "ordinal_position": ordinal_position,
-                    "description": "Unique identifier for the record (Primary Key)",
-                    "original_name": "id",
-                }
-            )
-            ordinal_position += 1
-
-            for prop_name in sorted(all_properties):
-                column_name = prop_name
-                if prop_name == "hs_lastmodifieddate":
-                    column_name = "lastmodifieddate"
-
-                column_values = []
-                for item in sample_data:
-                    if hasattr(item, "properties") and item.properties:
-                        column_values.append(item.properties.get(prop_name))
-                    else:
-                        column_values.append(None)
-
-                data_type = self._infer_data_type_from_samples(column_values)
-
-                discovered_columns.append(
-                    {
-                        "column_name": column_name,
-                        "data_type": data_type,
-                        "is_nullable": None,
-                        "ordinal_position": ordinal_position,
-                        "description": f"HubSpot property: {prop_name}",
-                        "original_name": prop_name,
-                    }
-                )
-                ordinal_position += 1
-
-            logger.info(f"Discovered {len(discovered_columns)} columns for {table_name}")
-            return discovered_columns
-
-        except Exception as e:
-            if "403" in str(e) or "MISSING_SCOPES" in str(e) or "401" in str(e):
-                error_msg = _extract_hubspot_error_message(e)
-                logger.error(f"Permission error discovering columns for {table_name}: {error_msg}")
-                raise Exception(error_msg) from e
-
-            logger.warning(f"Could not discover columns for {table_name}, using defaults: {str(e)}")
-            return self._get_default_discovered_columns(table_name)
-
     def _get_default_discovered_columns(self, table_name: str) -> List[Dict[str, Any]]:
         """Get default discovered columns when API data is unavailable."""
-        if table_name in self._association_tables and table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
+        if (
+            table_name in self._association_tables or table_name in self._non_object_tables
+        ) and table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
             base_columns = []
             ordinal_position = 1
             for col_name, data_type, description in HUBSPOT_TABLE_COLUMN_DEFINITIONS[table_name]:
@@ -603,7 +537,9 @@ class HubspotHandler(MetaAPIHandler):
 
     def _get_default_meta_columns(self, table_name: str) -> List[Dict[str, Any]]:
         """Get default column metadata for data catalog when data is unavailable."""
-        if table_name in self._association_tables and table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
+        if (
+            table_name in self._association_tables or table_name in self._non_object_tables
+        ) and table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
             base_columns = []
             for col_name, data_type, description in HUBSPOT_TABLE_COLUMN_DEFINITIONS[table_name]:
                 base_columns.append(
@@ -667,6 +603,8 @@ class HubspotHandler(MetaAPIHandler):
             "ticket_companies": "HubSpot ticket to company associations",
             "ticket_contacts": "HubSpot ticket to contact associations",
             "ticket_deals": "HubSpot ticket to deal associations",
+            "owners": "HubSpot owners with names and emails",
+            "deal_stages": "HubSpot deal pipeline stages with labels",
         }
         return descriptions.get(table_name, f"HubSpot {table_name} data")
 

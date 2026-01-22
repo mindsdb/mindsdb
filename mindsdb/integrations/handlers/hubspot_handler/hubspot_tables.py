@@ -1,5 +1,8 @@
 from typing import List, Dict, Text, Any, Optional, Tuple, Set, Iterable
+import calendar
 import inspect
+import re
+from datetime import date, datetime, time, timedelta
 
 import pandas as pd
 from hubspot import HubSpot
@@ -91,6 +94,243 @@ def canonical_op(op: Any) -> str:
         op = op.value
     op_str = str(op).strip().lower()
     return CANONICAL_OPERATOR_MAP.get(op_str, op_str)
+
+
+def _parse_interval_value(interval_expr: Any) -> Optional[Tuple[float, str]]:
+    if interval_expr is None:
+        return None
+
+    raw = None
+    if isinstance(interval_expr, sql_ast.Interval):
+        args = getattr(interval_expr, "args", []) or []
+        if len(args) >= 2:
+            value = args[0].value if isinstance(args[0], sql_ast.Constant) else str(args[0])
+            unit = args[1].value if isinstance(args[1], sql_ast.Constant) else str(args[1])
+            raw = f"{value} {unit}"
+        elif len(args) == 1:
+            raw = args[0].value if isinstance(args[0], sql_ast.Constant) else str(args[0])
+    elif isinstance(interval_expr, sql_ast.Constant):
+        raw = interval_expr.value
+    elif isinstance(interval_expr, sql_ast.UnaryOperation):
+        op = getattr(interval_expr, "op", None)
+        if op == "-" and interval_expr.args:
+            parsed = _parse_interval_value(interval_expr.args[0])
+            if parsed is None:
+                return None
+            value, unit = parsed
+            return (-value, unit)
+    else:
+        raw = str(interval_expr)
+
+    if raw is None:
+        return None
+
+    match = re.search(r"(?i)interval\\s+'?([0-9]+(?:\\.[0-9]+)?)'?\\s+([a-zA-Z]+)", str(raw))
+    if not match:
+        match = re.search(r"(?i)^\\s*'?([0-9]+(?:\\.[0-9]+)?)'?\\s+([a-zA-Z]+)\\s*$", str(raw))
+    if not match:
+        return None
+
+    value = float(match.group(1))
+    unit = match.group(2).lower()
+    if unit.endswith("s"):
+        unit = unit[:-1]
+    return value, unit
+
+
+def _add_months(dt_value: Any, months: int) -> Any:
+    if not isinstance(dt_value, (date, datetime)):
+        return dt_value
+    year = dt_value.year + (dt_value.month - 1 + months) // 12
+    month = (dt_value.month - 1 + months) % 12 + 1
+    day = min(dt_value.day, calendar.monthrange(year, month)[1])
+    if isinstance(dt_value, datetime):
+        return dt_value.replace(year=year, month=month, day=day)
+    return dt_value.replace(year=year, month=month, day=day)
+
+
+def _apply_interval(base: Any, interval: Tuple[float, str]) -> Any:
+    value, unit = interval
+    if not isinstance(base, (date, datetime)):
+        return base
+
+    if unit == "year":
+        return _add_months(base, int(round(value * 12)))
+    if unit == "month":
+        return _add_months(base, int(round(value)))
+
+    if unit in {"day", "hour", "minute", "second", "week"}:
+        if isinstance(base, date) and not isinstance(base, datetime) and unit in {"hour", "minute", "second"}:
+            base = datetime.combine(base, time.min)
+
+        seconds = value
+        if unit == "week":
+            seconds = value * 7
+            unit = "day"
+        if unit == "day":
+            return base + timedelta(days=seconds)
+        if unit == "hour":
+            return base + timedelta(hours=seconds)
+        if unit == "minute":
+            return base + timedelta(minutes=seconds)
+        if unit == "second":
+            return base + timedelta(seconds=seconds)
+
+    return base
+
+
+def _evaluate_function_value(node: sql_ast.Function) -> Optional[Any]:
+    func = getattr(node, "op", None) or getattr(node, "name", None)
+    if not func:
+        return None
+
+    func = str(func).lower()
+    if func in {"curdate", "current_date"}:
+        return date.today()
+    if func in {"now", "current_timestamp"}:
+        return datetime.now()
+    if func in {"date_sub", "date_add"} and len(node.args) == 2:
+        base = _evaluate_value_node(node.args[0])
+        interval = _parse_interval_value(node.args[1])
+        if base is None or interval is None:
+            return None
+        if func == "date_sub":
+            interval = (-interval[0], interval[1])
+        return _apply_interval(base, interval)
+
+    return None
+
+
+def _evaluate_value_node(node: ASTNode) -> Optional[Any]:
+    if isinstance(node, sql_ast.Constant):
+        return node.value
+    if isinstance(node, sql_ast.Identifier):
+        ident = node.parts[-1].lower() if node.parts else ""
+        if ident in {"curdate", "current_date"}:
+            return date.today()
+        if ident in {"now", "current_timestamp"}:
+            return datetime.now()
+        return None
+    if isinstance(node, sql_ast.Interval):
+        return _parse_interval_value(node)
+    if isinstance(node, sql_ast.Tuple):
+        return [item.value if isinstance(item, sql_ast.Constant) else _evaluate_value_node(item) for item in node.items]
+    if isinstance(node, sql_ast.Function):
+        return _evaluate_function_value(node)
+    if isinstance(node, sql_ast.UnaryOperation):
+        op = getattr(node, "op", None)
+        if op == "-" and node.args:
+            value = _evaluate_value_node(node.args[0])
+            if value is None:
+                return None
+            if isinstance(value, (int, float)):
+                return -value
+            if isinstance(value, tuple) and len(value) == 2:
+                return (-value[0], value[1])
+        return None
+    if isinstance(node, sql_ast.BinaryOperation):
+        op = getattr(node, "op", None)
+        if not op or len(node.args) != 2:
+            return None
+        left = _evaluate_value_node(node.args[0])
+        right = _evaluate_value_node(node.args[1])
+        if left is None or right is None:
+            return None
+        op = op.lower()
+        if op in {"+", "-"}:
+            if isinstance(left, (date, datetime)) and isinstance(right, tuple):
+                interval = right
+                if op == "-":
+                    interval = (-interval[0], interval[1])
+                return _apply_interval(left, interval)
+            if isinstance(right, (date, datetime)) and isinstance(left, tuple) and op == "+":
+                return _apply_interval(right, left)
+            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                return left + right if op == "+" else left - right
+        if op == "*" and isinstance(left, (int, float)) and isinstance(right, (int, float)):
+            return left * right
+        if op == "/" and isinstance(left, (int, float)) and isinstance(right, (int, float)) and right != 0:
+            return left / right
+    return None
+
+
+def _extract_comparison_conditions_with_functions(binary_op: ASTNode) -> List[List[Any]]:
+    conditions: List[List[Any]] = []
+
+    def _extract_identifier(node: ASTNode) -> Optional[sql_ast.Identifier]:
+        if isinstance(node, sql_ast.Identifier):
+            return node
+        if isinstance(node, sql_ast.Function):
+            func = getattr(node, "op", None) or getattr(node, "name", None)
+            if func and str(func).lower() in {"lower", "upper"} and node.args:
+                if isinstance(node.args[0], sql_ast.Identifier):
+                    return node.args[0]
+        return None
+
+    def _invert_comparison(op: str) -> Optional[str]:
+        inverse_ops = {
+            "<": ">",
+            "<=": ">=",
+            ">": "<",
+            ">=": "<=",
+            "lt": "gt",
+            "lte": "gte",
+            "gt": "lt",
+            "gte": "lte",
+        }
+        if op in inverse_ops:
+            return inverse_ops[op]
+        if op in {"=", "==", "eq", "!=", "<>", "neq"}:
+            return op
+        return None
+
+    def _extract(node: ASTNode, **kwargs):
+        if isinstance(node, sql_ast.BinaryOperation):
+            op = node.op.lower()
+            if op == "and":
+                return
+
+            arg1, arg2 = node.args
+            identifier = _extract_identifier(arg1)
+            if identifier is None:
+                identifier = _extract_identifier(arg2)
+                if identifier is None:
+                    logger.debug(f"Skipping unsupported condition arg1: {arg1}")
+                    return
+                value = _evaluate_value_node(arg1)
+                if value is None:
+                    logger.debug(f"Skipping unsupported condition arg1: {arg1}")
+                    return
+                inverted_op = _invert_comparison(op)
+                if inverted_op is None:
+                    logger.debug(f"Skipping unsupported condition op swap: {op}")
+                    return
+                conditions.append([inverted_op, identifier.parts[-1], value])
+                return
+
+            value = _evaluate_value_node(arg2)
+            if value is None:
+                logger.debug(f"Skipping unsupported condition arg2: {arg2}")
+                return
+
+            conditions.append([op, identifier.parts[-1], value])
+        if isinstance(node, sql_ast.BetweenOperation):
+            var, up, down = node.args
+            if not isinstance(var, sql_ast.Identifier):
+                logger.debug(f"Skipping unsupported between condition: {node}")
+                return
+
+            up_value = _evaluate_value_node(up)
+            down_value = _evaluate_value_node(down)
+            if up_value is None or down_value is None:
+                logger.debug(f"Skipping unsupported between condition: {node}")
+                return
+
+            op = node.op.lower()
+            conditions.append([op, var.parts[-1], (up_value, down_value)])
+
+    query_traversal(binary_op, _extract)
+    return conditions
 
 
 HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
@@ -842,17 +1082,42 @@ class HubSpotAPIResource(APIResource):
 
     def _extract_query_params(self, query: ASTNode) -> Tuple[List, List, Optional[int]]:
         """Extract conditions, order_by, and limit from query AST."""
-        conditions = extract_comparison_conditions(query.where) if query.where else []
+        if query.where:
+            try:
+                conditions = extract_comparison_conditions(query.where)
+            except NotImplementedError:
+                conditions = _extract_comparison_conditions_with_functions(query.where)
+        else:
+            conditions = []
 
         order_by = []
         if query.order_by:
+
+            def _extract_order_column(field: ASTNode) -> Optional[str]:
+                if isinstance(field, sql_ast.Identifier):
+                    return field.parts[-1]
+                if isinstance(field, sql_ast.Function):
+                    func = getattr(field, "op", None) or getattr(field, "name", None)
+                    if func and str(func).lower() in {"lower", "upper"} and field.args:
+                        if isinstance(field.args[0], sql_ast.Identifier):
+                            return field.args[0].parts[-1]
+                if hasattr(field, "args") and field.args:
+                    last_arg = field.args[-1]
+                    if isinstance(last_arg, sql_ast.Identifier):
+                        return last_arg.parts[-1]
+                return None
+
             for col in query.order_by:
                 ascending = True
                 if hasattr(col, "direction") and col.direction:
                     ascending = col.direction.upper() != "DESC"
                 elif hasattr(col, "ascending"):
                     ascending = col.ascending
-                order_by.append(SortColumn(col.field.parts[-1], ascending))
+                column_name = _extract_order_column(col.field)
+                if not column_name:
+                    logger.debug(f"Skipping unsupported order by field: {col.field}")
+                    continue
+                order_by.append(SortColumn(column_name, ascending))
 
         result_limit = query.limit.value if query.limit else None
 

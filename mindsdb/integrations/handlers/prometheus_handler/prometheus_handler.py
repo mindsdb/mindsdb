@@ -92,9 +92,7 @@ class PrometheusHandler(MetaAPIHandler):
         if self.username and not self.password:
             raise ValueError("Password is required when username is provided")
         if self.bearer_token and (self.username or self.password):
-            logger.warning(
-                "Both bearer_token and username/password provided. Bearer token will be used."
-            )
+            logger.warning("Both bearer_token and username/password provided. Bearer token will be used.")
 
         # Pushgateway configuration
         pushgateway_url = connection_data.get("pushgateway_url")
@@ -203,18 +201,14 @@ class PrometheusHandler(MetaAPIHandler):
             Exception: If query parsing or execution fails
         """
         if not query:
-            return Response(
-                RESPONSE_TYPE.ERROR, error_message="Query cannot be None or empty"
-            )
+            return Response(RESPONSE_TYPE.ERROR, error_message="Query cannot be None or empty")
 
         try:
             ast = parse_sql(query)
             return self.query(ast)
         except Exception as e:
             logger.error(f"Failed to execute native query: {str(e)}")
-            return Response(
-                RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}"
-            )
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}")
 
     def get_tables(self) -> Response:
         """Return list of tables available in the Prometheus integration.
@@ -290,11 +284,7 @@ class PrometheusHandler(MetaAPIHandler):
             columns_data = []
             for idx, col in enumerate(columns, start=1):
                 col_name = col if isinstance(col, str) else col.get("COLUMN_NAME", "")
-                data_type = (
-                    "VARCHAR"
-                    if isinstance(col, str)
-                    else col.get("DATA_TYPE", "VARCHAR")
-                )
+                data_type = "VARCHAR" if isinstance(col, str) else col.get("DATA_TYPE", "VARCHAR")
 
                 columns_data.append(
                     {
@@ -361,9 +351,7 @@ class PrometheusHandler(MetaAPIHandler):
         }
         return defaults.get(table_name, [])
 
-    def call_prometheus_api(
-        self, endpoint: str, params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    def call_prometheus_api(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Make a request to the Prometheus API.
 
         Args:
@@ -392,9 +380,7 @@ class PrometheusHandler(MetaAPIHandler):
 
             auth = HTTPBasicAuth(self.username, self.password)
 
-        response = requests.get(
-            url, params=params, auth=auth, headers=headers, timeout=self.timeout
-        )
+        response = requests.get(url, params=params, auth=auth, headers=headers, timeout=self.timeout)
         response.raise_for_status()
         return response.json()
 
@@ -421,7 +407,5 @@ class PrometheusHandler(MetaAPIHandler):
 
             auth = HTTPBasicAuth(self.username, self.password)
 
-        response = requests.post(
-            url, data=data, auth=auth, headers=headers, timeout=self.timeout
-        )
+        response = requests.post(url, data=data, auth=auth, headers=headers, timeout=self.timeout)
         response.raise_for_status()

@@ -57,4 +57,3 @@ connection_args_example = OrderedDict(
     pushgateway_url="http://localhost:9091",
     pushgateway_job="default",
 )
-

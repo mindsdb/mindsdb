@@ -5,6 +5,7 @@ from .connection_args import connection_args, connection_args_example
 
 try:
     from .prometheus_handler import PrometheusHandler as Handler
+
     import_error = None
 except ImportError as e:
     Handler = None

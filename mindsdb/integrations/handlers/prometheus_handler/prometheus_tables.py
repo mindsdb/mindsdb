@@ -94,11 +94,7 @@ class MetricsTable(APIResource):
                     metric_metadata = metadata[metric_name]
                     if metric_metadata:
                         # Get the first entry (most recent)
-                        first_entry = (
-                            metric_metadata[0]
-                            if isinstance(metric_metadata, list)
-                            else metric_metadata
-                        )
+                        first_entry = metric_metadata[0] if isinstance(metric_metadata, list) else metric_metadata
                         metric_info["type"] = first_entry.get("type")
                         metric_info["help"] = first_entry.get("help")
                         metric_info["unit"] = first_entry.get("unit")
@@ -112,9 +108,7 @@ class MetricsTable(APIResource):
                 for condition in conditions:
                     if condition.column == "metric_name" and condition.op.value == "=":
                         df = df[df["metric_name"] == condition.value]
-                    elif (
-                        condition.column == "metric_name" and condition.op.value == "!="
-                    ):
+                    elif condition.column == "metric_name" and condition.op.value == "!=":
                         df = df[df["metric_name"] != condition.value]
 
             if limit:
@@ -212,23 +206,17 @@ class LabelsTable(APIResource):
             _ = response.get("data", [])
 
             # Get all metric names
-            metric_response = self.handler.call_prometheus_api(
-                "/api/v1/label/__name__/values"
-            )
+            metric_response = self.handler.call_prometheus_api("/api/v1/label/__name__/values")
             metric_names = metric_response.get("data", [])
 
             labels_data = []
             # Sample a subset of metrics to avoid too much data
-            sample_metrics = (
-                metric_names[:100] if len(metric_names) > 100 else metric_names
-            )
+            sample_metrics = metric_names[:100] if len(metric_names) > 100 else metric_names
 
             for metric_name in sample_metrics:
                 # Query a sample of the metric to get label combinations
                 query = f'{{__name__="{metric_name}"}}'
-                query_response = self.handler.call_prometheus_api(
-                    "/api/v1/query", params={"query": query}
-                )
+                query_response = self.handler.call_prometheus_api("/api/v1/query", params={"query": query})
 
                 if query_response.get("status") == "success":
                     results = query_response.get("data", {}).get("result", [])
@@ -237,8 +225,7 @@ class LabelsTable(APIResource):
                         custom_labels = {
                             k: v
                             for k, v in labels.items()
-                            if k
-                            not in ["__name__", "job", "instance", "method", "status"]
+                            if k not in ["__name__", "job", "instance", "method", "status"]
                         }
 
                         labels_data.append(
@@ -249,9 +236,7 @@ class LabelsTable(APIResource):
                                 "instance": labels.get("instance"),
                                 "method": labels.get("method"),
                                 "status": labels.get("status"),
-                                "custom_labels": (
-                                    json.dumps(custom_labels) if custom_labels else None
-                                ),
+                                "custom_labels": (json.dumps(custom_labels) if custom_labels else None),
                             }
                         )
 
@@ -437,10 +422,7 @@ def _parse_json_path_expression(node: Any) -> Optional[Tuple[str, str]]:
             second_arg = node.args[1]
 
             # Check if first arg is labels_json
-            if (
-                isinstance(first_arg, Identifier)
-                and first_arg.parts[-1] == "labels_json"
-            ):
+            if isinstance(first_arg, Identifier) and first_arg.parts[-1] == "labels_json":
                 if isinstance(second_arg, Constant):
                     json_path = second_arg.value
                     # Extract label name from JSON path like '$.label_name'
@@ -607,14 +589,10 @@ class MetricDataTable(APIResource):
 
         try:
             # Try to use the built-in parser first
-            api_conditions, raw_conditions = self._extract_conditions(
-                query.where, strict=False
-            )
+            api_conditions, raw_conditions = self._extract_conditions(query.where, strict=False)
 
             # Extract JSON path filters from raw_conditions
-            json_path_filters, remaining_raw_conditions = _extract_json_path_filters(
-                raw_conditions
-            )
+            json_path_filters, remaining_raw_conditions = _extract_json_path_filters(raw_conditions)
 
         except Exception:
             # If _extract_conditions fails (e.g. precedence issues with ->>), we parse manually
@@ -638,11 +616,7 @@ class MetricDataTable(APIResource):
 
             pql_val = find_pql(query.where)
             if pql_val:
-                api_conditions.append(
-                    FilterCondition(
-                        column="pql_query", op=FilterOperator.EQUAL, value=pql_val
-                    )
-                )
+                api_conditions.append(FilterCondition(column="pql_query", op=FilterOperator.EQUAL, value=pql_val))
 
             # 2. Flatten and find JSON filters
             nodes = []
@@ -676,11 +650,7 @@ class MetricDataTable(APIResource):
                         val = node.args[1].value
 
                 # Extract Key if target is ->>
-                if (
-                    target
-                    and isinstance(target, BinaryOperation)
-                    and target.op == "->>"
-                ):
+                if target and isinstance(target, BinaryOperation) and target.op == "->>":
                     if isinstance(target.args[1], Constant):
                         json_path_filters[target.args[1].value] = {
                             "op": op,
@@ -724,9 +694,7 @@ class MetricDataTable(APIResource):
             from mindsdb.integrations.utilities.sql_utils import filter_dataframe
 
             filters = []
-            result = filter_dataframe(
-                result, filters, raw_conditions=remaining_raw_conditions
-            )
+            result = filter_dataframe(result, filters, raw_conditions=remaining_raw_conditions)
 
         if limit is not None and len(result) > limit:
             result = result[: int(limit)]
@@ -792,9 +760,7 @@ class MetricDataTable(APIResource):
 
             # Build the PromQL query with label filters
             # Returns (final_query, filters_not_pushed_down)
-            final_query, filters_not_pushed = self._build_query_with_label_filters(
-                pql_query, label_filters
-            )
+            final_query, filters_not_pushed = self._build_query_with_label_filters(pql_query, label_filters)
 
             # Prepare API parameters
             params = {"query": final_query}
@@ -808,9 +774,7 @@ class MetricDataTable(APIResource):
                 params["end"] = self._parse_timestamp(end_ts)
                 params["step"] = step
 
-                response = self.handler.call_prometheus_api(
-                    "/api/v1/query_range", params=params
-                )
+                response = self.handler.call_prometheus_api("/api/v1/query_range", params=params)
                 return self._process_range_query_response(
                     response,
                     pql_query,
@@ -825,9 +789,7 @@ class MetricDataTable(APIResource):
                 if start_ts:
                     params["time"] = self._parse_timestamp(start_ts)
 
-                response = self.handler.call_prometheus_api(
-                    "/api/v1/query", params=params
-                )
+                response = self.handler.call_prometheus_api("/api/v1/query", params=params)
                 return self._process_instant_query_response(
                     response,
                     pql_query,
@@ -890,12 +852,7 @@ class MetricDataTable(APIResource):
                 last_brace = base_query.rfind("}")
                 if last_brace != -1:
                     # Insert before closing brace
-                    base_query = (
-                        base_query[:last_brace]
-                        + ", "
-                        + ", ".join(label_parts)
-                        + base_query[last_brace:]
-                    )
+                    base_query = base_query[:last_brace] + ", " + ", ".join(label_parts) + base_query[last_brace:]
                 else:
                     # Fallback: wrap entire query
                     base_query = f"{base_query}{{{', '.join(label_parts)}}}"
@@ -934,9 +891,7 @@ class MetricDataTable(APIResource):
         else:
             raise ValueError(f"Invalid timestamp type: {type(ts)}")
 
-    def _apply_label_filters(
-        self, labels_dict: Dict[str, Any], label_filters: Dict[str, Dict[str, Any]]
-    ) -> bool:
+    def _apply_label_filters(self, labels_dict: Dict[str, Any], label_filters: Dict[str, Dict[str, Any]]) -> bool:
         """Apply label filters to labels dictionary.
 
         Args:
@@ -1016,9 +971,7 @@ class MetricDataTable(APIResource):
     ) -> pd.DataFrame:
         """Process instant query response into DataFrame."""
         if response.get("status") != "success":
-            raise Exception(
-                f"Prometheus query failed: {response.get('error', 'Unknown error')}"
-            )
+            raise Exception(f"Prometheus query failed: {response.get('error', 'Unknown error')}")
 
         results = response.get("data", {}).get("result", [])
         rows = []
@@ -1070,9 +1023,7 @@ class MetricDataTable(APIResource):
     ) -> pd.DataFrame:
         """Process range query response into DataFrame."""
         if response.get("status") != "success":
-            raise Exception(
-                f"Prometheus query failed: {response.get('error', 'Unknown error')}"
-            )
+            raise Exception(f"Prometheus query failed: {response.get('error', 'Unknown error')}")
 
         results = response.get("data", {}).get("result", [])
         rows = []
@@ -1166,9 +1117,7 @@ class MetricDataTable(APIResource):
                     elif isinstance(row["labels_json"], dict):
                         labels = row["labels_json"]
                     else:
-                        raise ValueError(
-                            f"labels_json must be a JSON string or dict, got {type(row['labels_json'])}"
-                        )
+                        raise ValueError(f"labels_json must be a JSON string or dict, got {type(row['labels_json'])}")
                 except json.JSONDecodeError as e:
                     raise ValueError(f"Invalid JSON in labels_json: {str(e)}")
 
@@ -1192,24 +1141,18 @@ class MetricDataTable(APIResource):
                 instance = labels["instance"]
                 endpoint = f"{endpoint}/instance/{instance}"
                 # Create a copy of labels without instance for formatting
-                labels_for_formatting = {
-                    k: v for k, v in labels.items() if k != "instance"
-                }
+                labels_for_formatting = {k: v for k, v in labels.items() if k != "instance"}
             else:
                 labels_for_formatting = labels
 
             # Format metric in Prometheus text format
-            metric_text = self._format_metric_for_pushgateway(
-                metric_name, value, labels_for_formatting, timestamp
-            )
+            metric_text = self._format_metric_for_pushgateway(metric_name, value, labels_for_formatting, timestamp)
 
             try:
                 self.handler.call_pushgateway_api(endpoint, metric_text)
                 logger.info(f"Successfully pushed metric {metric_name} to Pushgateway")
             except Exception as e:
-                logger.error(
-                    f"Failed to push metric {metric_name} to Pushgateway: {str(e)}"
-                )
+                logger.error(f"Failed to push metric {metric_name} to Pushgateway: {str(e)}")
                 raise Exception(f"Failed to push metric to Pushgateway: {str(e)}")
 
     def _format_metric_for_pushgateway(
@@ -1231,17 +1174,13 @@ class MetricDataTable(APIResource):
         """
         # Validate metric name (Prometheus naming rules)
         if not metric_name or not metric_name[0].isalpha():
-            raise ValueError(
-                f"Invalid metric name: {metric_name}. Must start with a letter."
-            )
+            raise ValueError(f"Invalid metric name: {metric_name}. Must start with a letter.")
 
         # Format labels
         label_parts = []
         for key, val in sorted(labels.items()):
             # Escape special characters in label values
-            val_str = (
-                str(val).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
-            )
+            val_str = str(val).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
             label_parts.append(f'{key}="{val_str}"')
 
         label_str = ""

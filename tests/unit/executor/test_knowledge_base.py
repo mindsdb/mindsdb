@@ -516,8 +516,16 @@ class TestKB(BaseExecutorDummyML):
             # test iterate
             check_partition(
                 """
-                insert into kb_part SELECT id, english FROM  pg.ral
+                insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id
+            """
+            )
+
+            # test iterate (mix case of track_column)
+            check_partition(
+                """
+                insert into kb_part SELECT id, english FROM pg.ral
+                using batch_size=20, track_column=Id
             """
             )
 
@@ -532,7 +540,7 @@ class TestKB(BaseExecutorDummyML):
             # without track column
             check_partition(
                 """
-                insert into kb_part SELECT id, english FROM  pg.ral
+                insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20
             """
             )

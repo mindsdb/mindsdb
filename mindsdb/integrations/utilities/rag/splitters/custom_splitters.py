@@ -58,11 +58,10 @@ class RecursiveCharacterTextSplitter:
         while start_idx < len(text):
             # Get the next chunk
             end_idx = min(start_idx + self.chunk_size, len(text))
-            chunk = text[start_idx:end_idx]
 
             # If we're at the end, add the remaining text
             if end_idx >= len(text):
-                chunks.append(chunk)
+                chunks.append(text[start_idx:end_idx])
                 break
 
             # Try to find a good split point using separators
@@ -74,10 +73,11 @@ class RecursiveCharacterTextSplitter:
                     break
 
                 # Look for separator near the end of the chunk
-                search_start = max(0, end_idx - self.chunk_size // 2)
+                # Search in the second half of the chunk for a good break point
+                search_start = max(start_idx, start_idx + self.chunk_size // 2)
                 pos = text.rfind(separator, search_start, end_idx)
 
-                if pos != -1:
+                if pos != -1 and pos > start_idx:
                     split_idx = pos + len(separator)
                     break
 
@@ -86,8 +86,7 @@ class RecursiveCharacterTextSplitter:
                 split_idx = end_idx
 
             # Extract chunk
-            chunk = text[start_idx:split_idx]
-            chunks.append(chunk)
+            chunks.append(text[start_idx:split_idx])
 
             # Move start_idx forward, accounting for overlap
             start_idx = max(start_idx + 1, split_idx - self.chunk_overlap)
@@ -117,6 +116,7 @@ class RecursiveCharacterTextSplitter:
     def create_documents(self, texts: List[str], metadatas: Optional[List[dict]] = None) -> List[SimpleDocument]:
         """
         Create documents from a list of texts (compatible with langchain interface)
+        This method splits each text into chunks and creates a document for each chunk.
 
         Args:
             texts: List of text strings
@@ -130,7 +130,9 @@ class RecursiveCharacterTextSplitter:
 
         docs = []
         for text, metadata in zip(texts, metadatas):
-            docs.append(SimpleDocument(page_content=text, metadata=metadata))
+            chunks = self.split_text(text)
+            for chunk in chunks:
+                docs.append(SimpleDocument(page_content=chunk, metadata=metadata.copy() if metadata else {}))
 
         return docs
 

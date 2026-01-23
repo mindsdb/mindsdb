@@ -29,7 +29,7 @@ env:
     github
     ms_teams
     statsforecast
-    chromadb
+    duckdb_faiss
   # We measure 80% on this handlers, as they are the verified
   HANDLERS_TO_VERIFY: |
     mysql
@@ -158,8 +158,6 @@ jobs:
           uv pip install ".[agents,kb]" \
             -r requirements/requirements-test.txt \
             "${HANDLER_EXTRAS[@]}"
-          # Onuxruntime is required for ChromaDB, once we have default pgvector we can remove it
-          uv pip install --force-reinstall onnxruntime==1.20.1
           git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
           
       - name: Run unit tests

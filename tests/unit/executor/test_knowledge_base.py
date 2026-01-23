@@ -19,17 +19,36 @@ from mindsdb.integrations.utilities.rag.rerankers.base_reranker import (
 @contextmanager
 def task_monitor():
     from mindsdb.interfaces.tasks.task_monitor import TaskMonitor
+    from mindsdb.interfaces.storage import db
 
     monitor = TaskMonitor()
 
     stop_event = threading.Event()
-    worker = threading.Thread(target=monitor.start, daemon=True, args=(stop_event,))
+
+    # Wrap the monitor start to skip db.init() since the test already initialized the db
+    def monitored_start(stop_event):
+        # Don't call db.init() - the test has already set up the database
+        # Just run the check loop
+        while True:
+            try:
+                monitor.check_tasks()
+                db.session.rollback()  # disable cache
+                time.sleep(monitor.MONITOR_INTERVAL_SECONDS)
+            except (SystemExit, KeyboardInterrupt):
+                monitor.stop_all_tasks()
+                return
+            except Exception:
+                db.session.rollback()
+            if stop_event is not None and stop_event.is_set():
+                return
+
+    worker = threading.Thread(target=monitored_start, daemon=True, args=(stop_event,))
     worker.start()
 
     yield worker
 
     stop_event.set()
-    worker.join()
+    worker.join(timeout=5)  # Add timeout to avoid hanging
 
 
 def dummy_embeddings(string, dimension=None):

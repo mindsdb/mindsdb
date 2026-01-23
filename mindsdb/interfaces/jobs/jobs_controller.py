@@ -353,6 +353,8 @@ class JobsExecutor:
                 db.Jobs.next_run_at < dt.datetime.now(),
                 db.Jobs.deleted_at == sa.null(),
                 db.Jobs.active == True,  # noqa
+                db.Jobs.company_id == ctx.company_id,
+                db.Jobs.user_id == ctx.user_id,
             )
             .order_by(db.Jobs.next_run_at)
         )
@@ -452,7 +454,6 @@ class JobsExecutor:
 
         ctx.company_id = record.company_id
         ctx.user_id = record.user_id
-
         if record.user_class is not None:
             ctx.user_class = record.user_class
 

@@ -232,6 +232,7 @@ def create_permanent_integrations():
         .first()
     )
     if existing is not None:
+        logger.info(f"Permanent integration '{integration_name}' already exists")
         return
     integration_record = db.Integration(
         name=integration_name,

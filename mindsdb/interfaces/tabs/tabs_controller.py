@@ -100,14 +100,21 @@ class TabsController:
             trailing = stripped[idx:].strip()
             if trailing:
                 logger.warning(
-                    "Detected trailing data in tab %s/%s, attempting to sanitize", ctx.company_id, ctx.user_id, tab_id
+                    "Detected trailing data in tab %s/%s/%s, attempting to sanitize",
+                    ctx.company_id,
+                    ctx.user_id,
+                    tab_id,
                 )
                 try:
                     sanitized_bytes = json.dumps(data).encode("utf-8")
                     self._get_file_storage().file_set(f"tab_{tab_id}", sanitized_bytes)
                 except Exception as rewrite_error:
                     logger.warning(
-                        "Failed to rewrite sanitized tab %s/%s: %s", ctx.company_id, ctx.user_id, tab_id, rewrite_error
+                        "Failed to rewrite sanitized tab %s/%s/%s: %s",
+                        ctx.company_id,
+                        ctx.user_id,
+                        tab_id,
+                        rewrite_error,
                     )
             return data
 

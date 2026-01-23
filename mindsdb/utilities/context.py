@@ -2,7 +2,7 @@ from contextvars import ContextVar
 from typing import Any
 from copy import deepcopy
 
-from mindsdb.utilities.constants import DEFAULT_USER_ID, DEFAULT_COMPANY_ID
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 
 class Context:

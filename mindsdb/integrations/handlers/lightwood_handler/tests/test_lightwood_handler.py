@@ -2,9 +2,14 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
+from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import (
+    LightwoodHandler,
+)
 from mindsdb.interfaces.database.integrations import integration_controller
-from mindsdb.integrations.utilities.test_utils import PG_HANDLER_NAME, PG_CONNECTION_DATA
+from mindsdb.integrations.utilities.test_utils import (
+    PG_HANDLER_NAME,
+    PG_CONNECTION_DATA,
+)
 from mindsdb.utilities.config import Config
 from mindsdb.migrations import migrate
 import os

@@ -641,11 +641,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.server.hook_before_handle()
 
-        logger.debug("handle new incoming connection")
+        logger.debug("Handling new incoming connection.")
         cloud_connection = self.is_cloud_connection()
 
         ctx.company_id = cloud_connection.get("company_id")
         ctx.user_id = cloud_connection.get("user_id")
+        logger.debug(f"Connection context: company_id: {ctx.company_id}, user_id: {ctx.user_id}.")
 
         self.init_session()
         if cloud_connection["is_cloud"] is False:

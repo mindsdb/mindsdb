@@ -411,11 +411,12 @@ class ChromaDBHandler(VectorStoreHandler):
             raise Exception(f"Failed to insert/update data: {str(e)}")
         return Response(RESPONSE_TYPE.OK, affected_rows=len(df))
 
-    def upsert(self, table_name: str, data: pd.DataFrame):
-        """
-        Alias for insert since insert handles upsert functionality
-        """
-        return self.insert(table_name, data)
+    # def upsert(self, table_name: str, data: pd.DataFrame):
+    #     """
+    #     Alias for insert since insert handles upsert functionality
+    #     """
+    #     # upsert doesn't check existed origin_ids in metadata
+    #     return self.insert(table_name, data)
 
     def update(
         self,
@@ -460,7 +461,7 @@ class ChromaDBHandler(VectorStoreHandler):
         if filters is None and len(id_filters) == 0:
             raise Exception("Delete query must have at least one condition!")
         collection = self._client.get_collection(table_name)
-        collection.delete(ids=id_filters, where=filters)
+        collection.delete(ids=id_filters or None, where=filters)
         self._sync()
 
     def create_table(self, table_name: str, if_not_exists=True):

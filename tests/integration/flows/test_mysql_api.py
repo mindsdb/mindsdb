@@ -467,7 +467,7 @@ class TestMySqlApi(BaseStuff):
         self.query(query)
 
     def test_show_columns(self, use_binary):
-        ret = self.query("""
+        ret = self.query(f"""
             SELECT
                 *
             FROM information_schema.columns

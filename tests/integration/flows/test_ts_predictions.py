@@ -3,6 +3,7 @@ import random
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from tests.integration.utils.http_test_helpers import HTTPHelperMixin
+from tests.integration.conftest import get_test_resource_name
 
 
 def to_dicts(data):
@@ -15,22 +16,31 @@ def to_dicts(data):
 
 
 class TestHTTP(HTTPHelperMixin):
+    # Unique resource names for this test session (initialized in setup_class)
+    POSTGRES_DB_NAME = None
+    VIEW_NAME = None
+    MODEL_NAME = None
+
     @classmethod
     def setup_class(cls):
         cls._sql_via_http_context = {}
+        # Initialize unique resource names for this test session
+        cls.POSTGRES_DB_NAME = get_test_resource_name("test_ts_demo_postgres")
+        cls.VIEW_NAME = get_test_resource_name("testv")
+        cls.MODEL_NAME = get_test_resource_name("tstest")
 
     def test_create_model(self, train_finetune_lock):
-        self.sql_via_http("DROP DATABASE IF EXISTS test_ts_demo_postgres;", RESPONSE_TYPE.OK)
-        sql = """
-        CREATE DATABASE test_ts_demo_postgres
+        self.sql_via_http(f"DROP DATABASE IF EXISTS {self.POSTGRES_DB_NAME};", RESPONSE_TYPE.OK)
+        sql = f"""
+        CREATE DATABASE {self.POSTGRES_DB_NAME}
         WITH ENGINE = "postgres",
-        PARAMETERS = {
+        PARAMETERS = {{
             "user": "demo_user",
             "password": "demo_password",
             "host": "samples.mindsdb.com",
             "port": "5432",
             "database": "demo"
-            };
+            }};
         """
         resp = self.sql_via_http(sql, RESPONSE_TYPE.OK)
 
@@ -43,20 +53,20 @@ class TestHTTP(HTTPHelperMixin):
                 selects.append(f"select '{day_str}' as date, '{group}' as group, {value} as value")
         selects = " union all ".join(selects)
 
-        self.sql_via_http("DROP VIEW IF EXISTS testv;", RESPONSE_TYPE.OK)
+        self.sql_via_http(f"DROP VIEW IF EXISTS {self.VIEW_NAME};", RESPONSE_TYPE.OK)
         sql = f"""
-            create view testv as (
-                select * from test_ts_demo_postgres ({selects})
+            create view {self.VIEW_NAME} as (
+                select * from {self.POSTGRES_DB_NAME} ({selects})
             )
         """
         self.sql_via_http(sql, RESPONSE_TYPE.OK)
 
-        self.sql_via_http("DROP MODEL IF EXISTS mindsdb.tstest;", RESPONSE_TYPE.OK)
+        self.sql_via_http(f"DROP MODEL IF EXISTS mindsdb.{self.MODEL_NAME};", RESPONSE_TYPE.OK)
         with train_finetune_lock.acquire(timeout=600):
-            sql = """
+            sql = f"""
                 CREATE MODEL
-                    mindsdb.tstest
-                FROM mindsdb (select * from testv)
+                    mindsdb.{self.MODEL_NAME}
+                FROM mindsdb (select * from {self.VIEW_NAME})
                 PREDICT value
                 ORDER BY date
                 GROUP BY group
@@ -69,12 +79,12 @@ class TestHTTP(HTTPHelperMixin):
             status = resp["column_names"].index("STATUS")
             assert resp["data"][0][status] == "generating"
 
-            self.await_model("tstest")
+            self.await_model(self.MODEL_NAME)
 
     def test_gt_latest_date(self):
-        sql = """
+        sql = f"""
             select p.date, p.group, p.value
-            from mindsdb.testv as t join mindsdb.tstest as p
+            from mindsdb.{self.VIEW_NAME} as t join mindsdb.{self.MODEL_NAME} as p
             where t.date > LATEST
         """
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
@@ -84,9 +94,9 @@ class TestHTTP(HTTPHelperMixin):
         assert data[0]["date"] == (datetime.date.today() + datetime.timedelta(days=30))
 
     def test_gt_latest_date_empty_join(self):
-        sql = """
+        sql = f"""
             select p.date, p.group, p.value
-            from mindsdb.testv as t join mindsdb.tstest as p
+            from mindsdb.{self.VIEW_NAME} as t join mindsdb.{self.MODEL_NAME} as p
             where t.date > LATEST and t.group = 'wrong'
         """
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
@@ -94,9 +104,9 @@ class TestHTTP(HTTPHelperMixin):
         assert len(data) == 0
 
     def test_eq_latest_date(self):
-        sql = """
+        sql = f"""
             select p.date, p.group, p.value
-            from mindsdb.testv as t join mindsdb.tstest as p
+            from mindsdb.{self.VIEW_NAME} as t join mindsdb.{self.MODEL_NAME} as p
             where t.date = LATEST
         """
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
@@ -109,7 +119,7 @@ class TestHTTP(HTTPHelperMixin):
         since = datetime.date.today() + datetime.timedelta(days=15)
         sql = f"""
             select p.date, p.group, p.value
-            from mindsdb.testv as t join mindsdb.tstest as p
+            from mindsdb.{self.VIEW_NAME} as t join mindsdb.{self.MODEL_NAME} as p
             where t.date > '{since}'
         """
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
@@ -122,7 +132,7 @@ class TestHTTP(HTTPHelperMixin):
         since = datetime.date.today() + datetime.timedelta(days=15)
         sql = f"""
             select p.date, p.group, p.value
-            from mindsdb.testv as t join mindsdb.tstest as p
+            from mindsdb.{self.VIEW_NAME} as t join mindsdb.{self.MODEL_NAME} as p
             where t.date = '{since}'
         """
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)

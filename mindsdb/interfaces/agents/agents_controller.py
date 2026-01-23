@@ -19,7 +19,7 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from .utils.constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .utils.pydantic_ai_model_factory import get_llm_provider
-import re
+
 
 logger = log.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class AgentsController:
         self.project_controller = project_controller
         self.model_controller = model_controller
 
-    def check_model_provider(self, model_name: str, provider: str = None) -> Tuple[dict, str]:
+    def check_model_provider(self, model_name: str, provider: str = None) -> Tuple[Optional[str], str]:
         """
         Checks if a model exists, and gets the provider of the model.
 
@@ -316,7 +316,7 @@ class AgentsController:
                 model_name = None
 
             # check model and provider
-            model, provider = self.check_model_provider(model_name, provider)
+            _, provider = self.check_model_provider(model_name, provider)
             # Update model and provider
             existing_agent.model_name = model_name
             existing_agent.provider = provider
@@ -355,41 +355,44 @@ class AgentsController:
         agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
-    def get_agent_llm_params(self, agent_params: dict):
+    def get_agent_llm_params(self, agent):
         """
         Get agent LLM parameters by combining default config with user provided parameters.
         Uses the same pattern as knowledge bases get_model_params function.
         """
-        # Import get_model_params pattern from knowledge_base (or implement inline for consistency)
-        from mindsdb.utilities.config import config
-        
-        # Get default LLM config from system config
-        default_llm_config = copy.deepcopy(config.get("default_llm", {}))
-        
+
+        agent_params = agent.params
+
         # Get model params from agent params (same structure as knowledge bases)
         if "model" in agent_params:
             model_params = agent_params.get("model", {})
-        else:
-            # params for LLM can be arbitrary (backward compatibility)
-            model_params = agent_params
-
-        if model_params:
             if not isinstance(model_params, dict):
                 raise ValueError("Model parameters must be passed as a JSON object")
-            
-            # If provider mismatches - don't use default values (same as knowledge bases)
-            if "provider" in model_params and model_params["provider"] != default_llm_config.get("provider"):
-                combined_model_params = model_params.copy()
-            else:
-                combined_model_params = copy.deepcopy(default_llm_config)
-                combined_model_params.update(model_params)
         else:
-            # No model params provided - use defaults from config
-            combined_model_params = default_llm_config
-        
+            # params for LLM can be arbitrary (backward compatibility)
+            model_params = copy.deepcopy(agent_params)
+            model_params.pop("mode", None)
+            model_params.pop("prompt_template", None)
+
+            _, provider = self.check_model_provider(agent.model_name, agent.provider)
+
+            if agent.model_name is not None:
+                model_params["model_name"] = agent.model_name
+            if provider is not None:
+                model_params["provider"] = provider
+
+        combined_model_params = copy.deepcopy(config.get("default_llm", {}))
+
+        if model_params:
+            # If provider mismatches - don't use default values (same as knowledge bases)
+            if "provider" in model_params and model_params["provider"] != combined_model_params.get("provider"):
+                return model_params
+
+            combined_model_params.update(model_params)
+
         # Remove use_default_llm flag if present
         combined_model_params.pop("use_default_llm", None)
-        
+
         return combined_model_params
 
     def get_completion(
@@ -419,83 +422,15 @@ class AgentsController:
             ValueError: Agent's model does not exist.
         """
         # Extract SQL context from params if present
-        sql_context = None
-        if params and '_sql_context' in params:
-            sql_context = params.pop('_sql_context')
-        
+
+        from .pydantic_ai_agent import PydanticAIAgent
+
+        # Get agent parameters and combine with default LLM parameters at runtime
+        llm_params = self.get_agent_llm_params(agent)
+
+        pydantic_agent = PydanticAIAgent(agent, llm_params=llm_params)
+
         if stream:
-            return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools, params=params)
-        from .pydantic_ai_agent import PydanticAIAgent
-
-        model, provider = self.check_model_provider(agent.model_name, agent.provider)
-        # update old agents
-        if agent.provider is None and provider is not None:
-            agent.provider = provider
-            db.session.commit()
-
-        # Get agent parameters and combine with default LLM parameters at runtime
-        llm_params = self.get_agent_llm_params(agent.params)
-
-        pydantic_agent = PydanticAIAgent(agent, model, llm_params=llm_params)
-        
-        # If SQL context is available, extract SELECT targets using regex (keep as string; use '*' if SELECT *)
-
-        if sql_context and isinstance(sql_context, dict) and "original_query" in sql_context:
-            query = sql_context["original_query"]
-            match = re.search(r"select\s+(.*?)\s+from\b", query, re.IGNORECASE | re.DOTALL)
-            if match:
-                select_part = match.group(1).strip()
-                if select_part == "*":
-                    sql_context["select_targets"] = "*"
-                else:
-                    sql_context["select_targets"] = select_part
-            else:
-                sql_context["select_targets"] = "*"
-        if sql_context:
-            if params is None:
-                params = {}
-            params['_sql_context'] = sql_context
-        
-        return pydantic_agent.get_completion(messages, params=params)
-
-    def _get_completion_stream(
-        self,
-        agent: db.Agents,
-        messages: list[Dict[str, str]],
-        project_name: str = default_project,
-        tools: list[Any] = None,
-        params: dict | None = None,
-    ) -> Iterator[object]:
-        """
-        Queries an agent to get a stream of completion chunks.
-
-        Parameters:
-            agent (db.Agents): Existing agent to get completion from
-            messages (list[Dict[str, str]]): Chat history to send to the agent
-            trace_id (str): ID of Langfuse trace to use
-            observation_id (str): ID of parent Langfuse observation to use
-            project_name (str): Project the agent belongs to (default mindsdb)
-            tools (list[BaseTool]): Tools to use while getting the completion
-            params (dict | None): params to redefine agent params
-
-        Returns:
-            chunks (Iterator[object]): Completion chunks as an iterator
-
-        Raises:
-            ValueError: Agent's model does not exist.
-        """
-        # For circular dependency.
-        from .pydantic_ai_agent import PydanticAIAgent
-
-        model, provider = self.check_model_provider(agent.model_name, agent.provider)
-
-        # update old agents
-        if agent.provider is None and provider is not None:
-            agent.provider = provider
-            db.session.commit()
-
-        # Get agent parameters and combine with default LLM parameters at runtime
-        llm_params = self.get_agent_llm_params(agent.params)
-
-        pydantic_agent = PydanticAIAgent(agent, model=model, llm_params=llm_params)
-        return pydantic_agent.get_completion(messages, stream=True, params=params)
+            return pydantic_agent.get_completion(messages, stream=True, params=params)
+        else:
+            return pydantic_agent.get_completion(messages, params=params)

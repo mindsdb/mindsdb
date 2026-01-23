@@ -6,10 +6,14 @@ from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
 )
-from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 from mindsdb.interfaces.knowledge_base.preprocessing.models import Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 from mindsdb.utilities import log
+
+try:  # Optional web handler dependency
+    from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
+except ImportError:  # pragma: no cover - executed when web handler extras missing
+    get_all_websites = None
 
 logger = log.getLogger(__name__)
 
@@ -67,13 +71,17 @@ class DocumentLoader:
         filters: List[str] = None,
     ) -> Iterator[Document]:
         """Load and split documents from web pages"""
+        if get_all_websites is None:
+            raise RuntimeError(
+                "Web crawling requires the optional web handler dependencies. "
+                "Install them via `pip install mindsdb[web]` or skip web sources."
+            )
+
         websites_df = get_all_websites(urls, crawl_depth=crawl_depth, limit=limit, filters=filters)
 
         for _, row in websites_df.iterrows():
             # Create a document with HTML extension for proper splitting
-            doc = SimpleDocument(
-                page_content=row["text_content"], metadata={"extension": ".html", "url": row["url"]}
-            )
+            doc = SimpleDocument(page_content=row["text_content"], metadata={"extension": ".html", "url": row["url"]})
 
             # Use FileSplitter to handle HTML content
             split_docs = self.file_splitter.split_documents([doc])

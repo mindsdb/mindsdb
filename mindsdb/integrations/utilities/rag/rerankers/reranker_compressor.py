@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 def _dispatch_custom_event(event_name: str, data: dict):
     """Simple event dispatcher replacement for langchain's dispatch_custom_event.
-    
+
     This is a no-op implementation. If custom event handling is needed,
     it can be extended to dispatch events to registered handlers.
     """
@@ -34,17 +34,17 @@ class LLMReranker(BaseLLMReranker):
     ) -> Sequence[Any]:
         """
         Async compress documents using reranking with proper error handling.
-        
+
         Args:
             documents: Sequence of document objects with page_content and metadata attributes
             query: Query string for reranking
-            callbacks: Optional callbacks object with on_retriever_start, on_retriever_end, 
+            callbacks: Optional callbacks object with on_retriever_start, on_retriever_end,
                      on_text, and on_retriever_error methods
-        
+
         Returns:
             Sequence of filtered and reranked documents
         """
-        if callbacks and hasattr(callbacks, 'on_retriever_start'):
+        if callbacks and hasattr(callbacks, "on_retriever_start"):
             try:
                 await callbacks.on_retriever_start({"query": query}, "Reranking documents")
             except Exception as e:
@@ -52,7 +52,7 @@ class LLMReranker(BaseLLMReranker):
 
         log.info(f"Async compressing documents. Initial count: {len(documents)}")
         if not documents:
-            if callbacks and hasattr(callbacks, 'on_retriever_end'):
+            if callbacks and hasattr(callbacks, "on_retriever_end"):
                 try:
                     await callbacks.on_retriever_end({"documents": []})
                 except Exception as e:
@@ -67,7 +67,7 @@ class LLMReranker(BaseLLMReranker):
             # Use duck typing to access page_content attribute
             query_document_pairs = [(query, doc.page_content) for doc in documents]
 
-            if callbacks and hasattr(callbacks, 'on_text'):
+            if callbacks and hasattr(callbacks, "on_text"):
                 try:
                     await callbacks.on_text("Starting document reranking...")
                 except Exception as e:
@@ -85,11 +85,11 @@ class LLMReranker(BaseLLMReranker):
                 if score >= self.filtering_threshold:
                     matching_doc = next(d for d in documents if d.page_content == doc)
                     # Use duck typing to access and update metadata
-                    metadata = getattr(matching_doc, 'metadata', None) or {}
+                    metadata = getattr(matching_doc, "metadata", None) or {}
                     matching_doc.metadata = {**metadata, "relevance_score": score}
                     filtered_docs.append(matching_doc)
 
-                    if callbacks and hasattr(callbacks, 'on_text'):
+                    if callbacks and hasattr(callbacks, "on_text"):
                         try:
                             await callbacks.on_text(f"Document scored {score:.2f}")
                         except Exception as e:
@@ -100,7 +100,7 @@ class LLMReranker(BaseLLMReranker):
 
             log.info(f"Async compression complete. Final count: {len(filtered_docs)}")
 
-            if callbacks and hasattr(callbacks, 'on_retriever_end'):
+            if callbacks and hasattr(callbacks, "on_retriever_end"):
                 try:
                     await callbacks.on_retriever_end({"documents": filtered_docs})
                 except Exception as e:
@@ -111,7 +111,7 @@ class LLMReranker(BaseLLMReranker):
         except Exception as e:
             error_msg = "Error during async document compression:"
             log.exception(error_msg)
-            if callbacks and hasattr(callbacks, 'on_retriever_error'):
+            if callbacks and hasattr(callbacks, "on_retriever_error"):
                 try:
                     await callbacks.on_retriever_error(f"{error_msg} {e}")
                 except Exception as callback_error:
@@ -126,12 +126,12 @@ class LLMReranker(BaseLLMReranker):
     ) -> Sequence[Any]:
         """
         Sync wrapper for async compression.
-        
+
         Args:
             documents: Sequence of document objects with page_content and metadata attributes
             query: Query string for reranking
             callbacks: Optional callbacks object
-        
+
         Returns:
             Sequence of filtered and reranked documents
         """

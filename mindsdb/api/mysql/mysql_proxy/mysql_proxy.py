@@ -498,7 +498,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return [column_to_mysql_column_dict(column, database_name=database_name) for column in columns_list]
 
     @profiler.profile()
-    def process_query(self, sql) -> SQLAnswer:
+    def process_query(self, sql: str) -> SQLAnswer:
         log.log_ram_info(logger)
         executor = Executor(session=self.session, sqlserver=self)
         executor.query_execute(sql)

@@ -7,11 +7,14 @@ from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRet
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
 from mindsdb.integrations.utilities.rag.retrievers.sql_retriever import SQLRetriever
 from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
-from mindsdb.integrations.utilities.rag.settings import (RAGPipelineModel,
-                                                         DEFAULT_AUTO_META_PROMPT_TEMPLATE,
-                                                         SearchKwargs, SearchType,
-                                                         RerankerConfig,
-                                                         VectorStoreConfig)
+from mindsdb.integrations.utilities.rag.settings import (
+    RAGPipelineModel,
+    DEFAULT_AUTO_META_PROMPT_TEMPLATE,
+    SearchKwargs,
+    SearchType,
+    RerankerConfig,
+    VectorStoreConfig,
+)
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
@@ -26,7 +29,7 @@ class SimpleRAGPipeline:
     """
     Custom RAG pipeline implementation to replace LangChain LCEL components
     """
-    
+
     def __init__(
         self,
         retriever_runnable: Any,
@@ -36,7 +39,7 @@ class SimpleRAGPipeline:
     ):
         """
         Initialize SimpleRAGPipeline
-        
+
         Args:
             retriever_runnable: Retriever that can be invoked with question
             prompt_template: Prompt template string with {question} and {context} placeholders
@@ -47,76 +50,76 @@ class SimpleRAGPipeline:
         self.prompt_template = prompt_template
         self.llm = llm
         self.reranker = reranker
-    
+
     def _format_docs(self, docs: Union[List[Any], str]) -> str:
         """Format documents into context string"""
         if isinstance(docs, str):
             # Handle case where retriever returns a string (e.g., SQLRetriever)
             return docs
         if not docs:
-            return ''
-        
+            return ""
+
         # Sort by original document so we can group source summaries together
-        docs.sort(key=lambda d: d.metadata.get('original_row_id') if hasattr(d, 'metadata') and d.metadata else 0)
+        docs.sort(key=lambda d: d.metadata.get("original_row_id") if hasattr(d, "metadata") and d.metadata else 0)
         original_document_id = None
-        summary_prepended_text = 'Summary of the original document that the below context was taken from:\n'
-        document_content = ''
-        
+        summary_prepended_text = "Summary of the original document that the below context was taken from:\n"
+        document_content = ""
+
         for d in docs:
-            metadata = d.metadata if hasattr(d, 'metadata') else {}
-            if metadata.get('original_row_id') != original_document_id and metadata.get('summary'):
+            metadata = d.metadata if hasattr(d, "metadata") else {}
+            if metadata.get("original_row_id") != original_document_id and metadata.get("summary"):
                 # We have a summary of a new document to prepend
-                original_document_id = metadata.get('original_row_id')
+                original_document_id = metadata.get("original_row_id")
                 summary = f"{summary_prepended_text}{metadata.get('summary')}\n"
                 document_content += summary
-            
-            page_content = d.page_content if hasattr(d, 'page_content') else str(d)
-            document_content += f'{page_content}\n\n'
-        
+
+            page_content = d.page_content if hasattr(d, "page_content") else str(d)
+            document_content += f"{page_content}\n\n"
+
         return document_content
-    
+
     def _format_prompt(self, question: str, context: str) -> str:
         """Format prompt template with question and context"""
         return self.prompt_template.format(question=question, context=context)
-    
+
     def _extract_llm_response(self, response: Any) -> str:
         """Extract text content from LLM response"""
         # Handle different response types
         if isinstance(response, str):
             return response
-        if hasattr(response, 'content'):
+        if hasattr(response, "content"):
             return response.content
-        if hasattr(response, 'text'):
+        if hasattr(response, "text"):
             return response.text
         # Try to get from message if it's a message object
-        if hasattr(response, 'message') and hasattr(response.message, 'content'):
+        if hasattr(response, "message") and hasattr(response.message, "content"):
             return response.message.content
         # Fallback to string conversion
         return str(response)
-    
+
     async def _retrieve_documents(self, question: str) -> List[Any]:
         """Retrieve documents using retriever"""
         # Try async first
-        if hasattr(self.retriever_runnable, 'ainvoke'):
+        if hasattr(self.retriever_runnable, "ainvoke"):
             return await self.retriever_runnable.ainvoke(question)
-        elif hasattr(self.retriever_runnable, 'invoke'):
+        elif hasattr(self.retriever_runnable, "invoke"):
             return self.retriever_runnable.invoke(question)
-        elif hasattr(self.retriever_runnable, 'get_relevant_documents'):
+        elif hasattr(self.retriever_runnable, "get_relevant_documents"):
             # Sync method, run in executor for async compatibility
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, self.retriever_runnable.get_relevant_documents, question)
         else:
             raise ValueError("Retriever must have ainvoke, invoke, or get_relevant_documents method")
-    
+
     async def ainvoke(self, question: Union[str, dict]) -> dict:
         """Async invocation of the RAG pipeline"""
         # Handle both string and dict input (for compatibility)
         if isinstance(question, dict):
-            question = question.get('question', question.get('input', ''))
-        
+            question = question.get("question", question.get("input", ""))
+
         # 1. Retrieve documents
         docs = await self._retrieve_documents(question)
-        
+
         # 2. Apply reranker if enabled
         if self.reranker and docs:
             try:
@@ -128,51 +131,49 @@ class SimpleRAGPipeline:
                     if isinstance(doc, SimpleDocument):
                         simple_docs.append(doc)
                     else:
-                        simple_docs.append(SimpleDocument(
-                            page_content=doc.page_content if hasattr(doc, 'page_content') else str(doc),
-                            metadata=doc.metadata if hasattr(doc, 'metadata') else {}
-                        ))
+                        simple_docs.append(
+                            SimpleDocument(
+                                page_content=doc.page_content if hasattr(doc, "page_content") else str(doc),
+                                metadata=doc.metadata if hasattr(doc, "metadata") else {},
+                            )
+                        )
                 docs = simple_docs
             except Exception as e:
                 logger.warning(f"Error during reranking, continuing without reranking: {e}")
-        
+
         # 3. Format documents into context
         context = self._format_docs(docs)
-        
+
         # 4. Format prompt
         formatted_prompt = self._format_prompt(question, context)
-        
+
         # 5. Generate answer using LLM
         # Use dict format for messages instead of HumanMessage
         messages = [{"role": "user", "content": formatted_prompt}]
-        
+
         # Try different LLM interfaces
-        if hasattr(self.llm, 'abatch'):
+        if hasattr(self.llm, "abatch"):
             # CustomLLMWrapper interface
             responses = await self.llm.abatch([formatted_prompt])
             llm_response = responses[0] if responses else None
-        elif hasattr(self.llm, 'ainvoke'):
+        elif hasattr(self.llm, "ainvoke"):
             llm_response = await self.llm.ainvoke(messages)
-        elif hasattr(self.llm, 'batch'):
+        elif hasattr(self.llm, "batch"):
             # CustomLLMWrapper sync interface
             responses = self.llm.batch([formatted_prompt])
             llm_response = responses[0] if responses else None
-        elif hasattr(self.llm, 'invoke'):
+        elif hasattr(self.llm, "invoke"):
             loop = asyncio.get_event_loop()
             llm_response = await loop.run_in_executor(None, self.llm.invoke, messages)
         else:
             raise ValueError("LLM must have ainvoke, invoke, abatch, or batch method")
-        
+
         # 6. Extract text from LLM response
         answer = self._extract_llm_response(llm_response)
-        
+
         # 7. Return dict with context, question, answer
-        return {
-            'context': docs,
-            'question': question,
-            'answer': answer
-        }
-    
+        return {"context": docs, "question": question, "answer": answer}
+
     def invoke(self, question: Union[str, dict]) -> dict:
         """Sync invocation of the RAG pipeline"""
         return asyncio.run(self.ainvoke(question))
@@ -200,13 +201,13 @@ class LangChainRAGPipeline:
     """
 
     def __init__(
-            self,
-            retriever_runnable,
-            prompt_template,
-            llm,
-            reranker: bool = DEFAULT_RERANKER_FLAG,
-            reranker_config: Optional[RerankerConfig] = None,
-            vector_store_config: Optional[VectorStoreConfig] = None
+        self,
+        retriever_runnable,
+        prompt_template,
+        llm,
+        reranker: bool = DEFAULT_RERANKER_FLAG,
+        reranker_config: Optional[RerankerConfig] = None,
+        vector_store_config: Optional[VectorStoreConfig] = None,
     ):
         self.retriever_runnable = retriever_runnable
         self.prompt_template = prompt_template
@@ -237,7 +238,7 @@ class LangChainRAGPipeline:
             retriever_runnable=self.retriever_runnable,
             prompt_template=self.prompt_template,
             llm=self.llm,
-            reranker=self.reranker
+            reranker=self.reranker,
         )
 
     async def ainvoke(self, input_dict: dict) -> dict:
@@ -248,33 +249,36 @@ class LangChainRAGPipeline:
     def invoke(self, input_dict: dict) -> dict:
         """Sync invocation of the RAG pipeline."""
         import asyncio
+
         return asyncio.run(self.ainvoke(input_dict))
 
     @classmethod
-    def _apply_search_kwargs(cls, retriever: Any, search_kwargs: Optional[SearchKwargs] = None, search_type: Optional[SearchType] = None) -> Any:
+    def _apply_search_kwargs(
+        cls, retriever: Any, search_kwargs: Optional[SearchKwargs] = None, search_type: Optional[SearchType] = None
+    ) -> Any:
         """Apply search kwargs and search type to the retriever if they exist"""
-        if hasattr(retriever, 'search_kwargs') and search_kwargs:
+        if hasattr(retriever, "search_kwargs") and search_kwargs:
             # Convert search kwargs to dict, excluding None values
             kwargs_dict = search_kwargs.model_dump(exclude_none=True)
 
             # Only include relevant parameters based on search type
             if search_type == SearchType.SIMILARITY:
                 # Remove MMR and similarity threshold specific params
-                kwargs_dict.pop('fetch_k', None)
-                kwargs_dict.pop('lambda_mult', None)
-                kwargs_dict.pop('score_threshold', None)
+                kwargs_dict.pop("fetch_k", None)
+                kwargs_dict.pop("lambda_mult", None)
+                kwargs_dict.pop("score_threshold", None)
             elif search_type == SearchType.MMR:
                 # Remove similarity threshold specific params
-                kwargs_dict.pop('score_threshold', None)
+                kwargs_dict.pop("score_threshold", None)
             elif search_type == SearchType.SIMILARITY_SCORE_THRESHOLD:
                 # Remove MMR specific params
-                kwargs_dict.pop('fetch_k', None)
-                kwargs_dict.pop('lambda_mult', None)
+                kwargs_dict.pop("fetch_k", None)
+                kwargs_dict.pop("lambda_mult", None)
 
             retriever.search_kwargs.update(kwargs_dict)
 
             # Set search type if supported by the retriever
-            if hasattr(retriever, 'search_type') and search_type:
+            if hasattr(retriever, "search_type") and search_type:
                 retriever.search_type = search_type.value
 
         return retriever
@@ -290,7 +294,7 @@ class LangChainRAGPipeline:
             vector_store=config.vector_store,
             documents=config.documents,
             embedding_model=config.embedding_model,
-            vector_store_config=config.vector_store_config
+            vector_store_config=config.vector_store_config,
         )
         retriever = vector_store_operator.vector_store.as_retriever()
         retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
@@ -301,7 +305,7 @@ class LangChainRAGPipeline:
             config.llm,
             vector_store_config=config.vector_store_config,
             reranker=config.reranker,
-            reranker_config=config.reranker_config
+            reranker_config=config.reranker_config,
         )
 
     @classmethod
@@ -318,7 +322,7 @@ class LangChainRAGPipeline:
             reranker_config=config.reranker_config,
             reranker=config.reranker,
             vector_store_config=config.vector_store_config,
-            summarization_config=config.summarization_config
+            summarization_config=config.summarization_config,
         )
 
     @classmethod
@@ -332,7 +336,7 @@ class LangChainRAGPipeline:
             reranker_config=config.reranker_config,
             reranker=config.reranker,
             vector_store_config=config.vector_store_config,
-            summarization_config=config.summarization_config
+            summarization_config=config.summarization_config,
         )
 
     @classmethod
@@ -344,21 +348,25 @@ class LangChainRAGPipeline:
         knowledge_base_table = vector_store_config.kb_table if vector_store_config is not None else None
         if knowledge_base_table is None:
             raise ValueError('Must provide valid "vector_store_config" for RAG pipeline config')
-        embedding_args = knowledge_base_table._kb.embedding_model.learn_args.get('using', {})
+        embedding_args = knowledge_base_table._kb.embedding_model.learn_args.get("using", {})
         embeddings = construct_embedding_model_from_args(embedding_args)
-        sql_llm = create_chat_model({
-            'model_name': retriever_config.llm_config.model_name,
-            'provider': retriever_config.llm_config.provider,
-            **retriever_config.llm_config.params
-        })
+        sql_llm = create_chat_model(
+            {
+                "model_name": retriever_config.llm_config.model_name,
+                "provider": retriever_config.llm_config.provider,
+                **retriever_config.llm_config.params,
+            }
+        )
         vector_store_operator = VectorStoreOperator(
             vector_store=config.vector_store,
             documents=config.documents,
             embedding_model=config.embedding_model,
-            vector_store_config=config.vector_store_config
+            vector_store_config=config.vector_store_config,
         )
         vector_store_retriever = vector_store_operator.vector_store.as_retriever()
-        vector_store_retriever = cls._apply_search_kwargs(vector_store_retriever, config.search_kwargs, config.search_type)
+        vector_store_retriever = cls._apply_search_kwargs(
+            vector_store_retriever, config.search_kwargs, config.search_type
+        )
         distance_function = DistanceFunction.SQUARED_EUCLIDEAN_DISTANCE
         if config.vector_store_config.is_sparse and config.vector_store_config.vector_size is not None:
             # Use negative dot product for sparse retrieval.
@@ -383,7 +391,7 @@ class LangChainRAGPipeline:
             source_table=retriever_config.source_table,
             source_id_column=retriever_config.source_id_column,
             distance_function=distance_function,
-            llm=sql_llm
+            llm=sql_llm,
         )
         return cls(
             retriever,
@@ -392,5 +400,5 @@ class LangChainRAGPipeline:
             reranker_config=config.reranker_config,
             reranker=config.reranker,
             vector_store_config=config.vector_store_config,
-            summarization_config=config.summarization_config
+            summarization_config=config.summarization_config,
         )

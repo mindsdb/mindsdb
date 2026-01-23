@@ -113,25 +113,25 @@ class MindsDBAgent:
                                 if isinstance(chunk, dict):
                                     chunk_type = chunk.get("type")
                                     content = chunk.get("content")
-                                    
+
                                     # Transform chunks with type/content structure to A2A format
                                     if chunk_type is not None and content is not None:
                                         # Map content to text field for A2A compatibility
                                         transformed_chunk = chunk.copy()
                                         transformed_chunk["text"] = str(content) if content is not None else ""
-                                        
+
                                         # Preserve original fields but ensure A2A-compatible format
                                         # For data chunks (markdown), the content is already in text format
                                         if chunk_type == "data":
                                             transformed_chunk["output"] = str(content)
                                         elif chunk_type in ("sql", "status", "context"):
-                                            transformed_chunk["type"] = "thought"
                                             # These are informational chunks, map to text
                                             transformed_chunk["text"] = str(content)
                                         elif chunk_type == "error":
+                                            transformed_chunk["type"] = "context"
                                             # Error chunks should have error field
-                                            transformed_chunk["error"] = str(content)
-                                        
+                                            transformed_chunk["text"] = str(content)
+
                                         yield transformed_chunk
                                     else:
                                         # Chunk doesn't have type/content structure, yield as-is

@@ -13,19 +13,20 @@ from mindsdb.integrations.utilities.rag.loaders.document_loaders import (
 
 
 class FileLoader:
-    '''Loads files of various types into vector database document representation'''
+    """Loads files of various types into vector database document representation"""
+
     def __init__(self, path: str):
         self.path = path
 
     def _get_loader_from_extension(self, extension: str, path: str) -> BaseDocumentLoader:
         """Get appropriate loader based on file extension"""
-        if extension == '.pdf':
+        if extension == ".pdf":
             return PDFDocumentLoader(path)
-        if extension == '.csv':
+        if extension == ".csv":
             return CSVDocumentLoader(path)
-        if extension == '.html':
+        if extension == ".html":
             return HTMLDocumentLoader(path)
-        if extension == '.md':
+        if extension == ".md":
             return MarkdownDocumentLoader(path)
         return TextDocumentLoader(path)
 
@@ -36,15 +37,15 @@ class FileLoader:
 
         for doc in loader.lazy_load():
             # Ensure extension is in metadata
-            if 'extension' not in doc.metadata:
-                doc.metadata['extension'] = file_extension
+            if "extension" not in doc.metadata:
+                doc.metadata["extension"] = file_extension
             yield doc
 
     def load(self) -> List[SimpleDocument]:
-        '''Loads a file and converts the contents into a vector database Document representation'''
+        """Loads a file and converts the contents into a vector database Document representation"""
         return list(self.lazy_load())
 
     def lazy_load(self) -> Iterator[SimpleDocument]:
-        '''Loads a file and converts the contents into a vector database Document representation'''
+        """Loads a file and converts the contents into a vector database Document representation"""
         for doc in self._lazy_load_documents_from_file(self.path):
             yield doc

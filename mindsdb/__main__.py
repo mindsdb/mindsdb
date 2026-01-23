@@ -341,14 +341,11 @@ if __name__ == "__main__":
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)
 
-    if config.cmd_args.update_gui or config.cmd_args.load_tokenizer:
-        if config.cmd_args.update_gui:
-            from mindsdb.api.http.initialize import initialize_static
+    if config.cmd_args.update_gui:
+        from mindsdb.api.http.initialize import initialize_static
 
-            logger.info("Updating the GUI version")
-            initialize_static()
-
-        # Tokenizer loading removed - was optional feature using langchain
+        logger.info("Updating the GUI version")
+        initialize_static()
 
         sys.exit(0)
 
@@ -486,7 +483,7 @@ if __name__ == "__main__":
     if config.cmd_args.ml_task_queue_consumer is True:
         trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
 
-    create_pid_file()
+    create_pid_file(config)
 
     for trunc_process_data in trunc_processes_struct.values():
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:

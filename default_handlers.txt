@@ -1,5 +1,0 @@
-file                 # Required by the core codebase
-postgres
-mysql
-openai
-web

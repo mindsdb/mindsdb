@@ -21,10 +21,10 @@ logger = log.getLogger(__name__)
 def get_llm_provider(args: Dict) -> str:
     """
     Get LLM provider from args.
-    
+
     Args:
         args: Dictionary containing model_name and optionally provider
-        
+
     Returns:
         Provider name string
     """
@@ -36,7 +36,7 @@ def get_llm_provider(args: Dict) -> str:
     model_name = args.get("model_name")
     if not model_name:
         raise ValueError("model_name is required to determine provider")
-    
+
     if model_name in ANTHROPIC_CHAT_MODELS:
         return "anthropic"
     if model_name in OPEN_AI_CHAT_MODELS:
@@ -58,10 +58,10 @@ def get_llm_provider(args: Dict) -> str:
 def get_embedding_model_provider(args: Dict) -> str:
     """
     Get the embedding model provider from args.
-    
+
     Args:
         args: Dictionary containing embedding model configuration
-        
+
     Returns:
         Provider name string
     """
@@ -99,10 +99,10 @@ def get_embedding_model_provider(args: Dict) -> str:
 def get_chat_model_params(args: Dict) -> Dict:
     """
     Get chat model parameters from args.
-    
+
     Args:
         args: Dictionary containing model configuration
-        
+
     Returns:
         Dictionary of formatted model parameters
     """
@@ -123,26 +123,26 @@ def get_chat_model_params(args: Dict) -> Dict:
 def get_pydantic_ai_model_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
     """
     Get keyword arguments for Pydantic AI model initialization.
-    
+
     This extracts API keys and other configuration needed by Pydantic AI models.
     API keys are retrieved from system configuration if not provided in args,
     following the same pattern as knowledge bases.
-    
+
     Args:
         args: Dictionary containing model configuration
-        
+
     Returns:
         Dictionary of keyword arguments for Pydantic AI model
     """
     from mindsdb.integrations.utilities.handler_utils import get_api_key
-    
+
     kwargs = {}
-    
+
     # Get provider
     provider = args.get("provider")
     if provider is None:
         provider = get_llm_provider(args)
-    
+
     # Extract API keys based on provider, using get_api_key to get from system config if needed
     if provider == "openai" or provider == "vllm":
         # Try to get API key from args first, then from system config
@@ -151,14 +151,14 @@ def get_pydantic_ai_model_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
             api_key = get_api_key("openai", args, strict=False)
         if api_key:
             kwargs["api_key"] = api_key
-        
+
         base_url = args.get("openai_api_base") or args.get("base_url")
         if base_url:
             kwargs["base_url"] = base_url
         organization = args.get("openai_api_organization") or args.get("api_organization")
         if organization:
             kwargs["organization"] = organization
-    
+
     elif provider == "anthropic":
         # Try to get API key from args first, then from system config
         api_key = args.get("anthropic_api_key") or args.get("api_key")
@@ -166,11 +166,11 @@ def get_pydantic_ai_model_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
             api_key = get_api_key("anthropic", args, strict=False)
         if api_key:
             kwargs["api_key"] = api_key
-        
+
         base_url = args.get("anthropic_api_url") or args.get("base_url")
         if base_url:
             kwargs["base_url"] = base_url
-    
+
     elif provider == "google":
         # Try to get API key from args first, then from system config
         api_key = args.get("google_api_key") or args.get("api_key")
@@ -178,12 +178,12 @@ def get_pydantic_ai_model_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
             api_key = get_api_key("google", args, strict=False)
         if api_key:
             kwargs["api_key"] = api_key
-    
+
     elif provider == "ollama":
         base_url = args.get("ollama_base_url") or args.get("base_url")
         if base_url:
             kwargs["base_url"] = base_url
-    
+
     # Add other common parameters
     if "temperature" in args:
         kwargs["temperature"] = args["temperature"]
@@ -193,24 +193,24 @@ def get_pydantic_ai_model_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
         kwargs["top_p"] = args["top_p"]
     if "top_k" in args:
         kwargs["top_k"] = args["top_k"]
-    
+
     return kwargs
 
 
 def get_model_instance_from_kwargs(args: Dict[str, Any]) -> Any:
     """
     Create and return a Pydantic AI model instance from MindsDB args.
-    
+
     This method creates an actual model instance that can be passed directly to
     Agent(model_instance) instead of using a model string.
-    
+
     Args:
         args: Dictionary containing model configuration (provider, model_name, api keys, etc.)
                Similar format to what get_pydantic_ai_model_kwargs expects
-        
+
     Returns:
         Model instance that can be passed to Pydantic AI Agent
-        
+
     Raises:
         ValueError: If provider is not supported or model name is invalid
         ImportError: If required Pydantic AI model classes are not available
@@ -219,28 +219,28 @@ def get_model_instance_from_kwargs(args: Dict[str, Any]) -> Any:
     provider = args.get("provider")
     if provider is None:
         provider = get_llm_provider(args)
-    
+
     model_name = args.get("model_name")
     if not model_name:
         raise ValueError("model_name is required")
-    
+
     # Get model kwargs (includes API keys from system config)
     model_kwargs = get_pydantic_ai_model_kwargs(args)
-    
+
     try:
         if provider == "openai" or provider == "vllm":
             from pydantic_ai.models.openai import OpenAIChatModel
             from pydantic_ai.providers.openai import OpenAIProvider
-            
+
             # Extract API key and other settings
             api_key = model_kwargs.pop("api_key", None)
             base_url = model_kwargs.pop("base_url", None)
             organization = model_kwargs.pop("organization", None)
-            
+
             # For vLLM, ensure base_url is set if provided
             if provider == "vllm" and not base_url:
                 base_url = args.get("openai_api_base") or args.get("base_url")
-            
+
             # Create provider with API key and settings
             provider_kwargs = {}
             if api_key:
@@ -249,22 +249,22 @@ def get_model_instance_from_kwargs(args: Dict[str, Any]) -> Any:
                 provider_kwargs["base_url"] = base_url
             if organization:
                 provider_kwargs["organization"] = organization
-            
+
             if provider_kwargs:
                 openai_provider = OpenAIProvider(**provider_kwargs)
                 return OpenAIChatModel(model_name, provider=openai_provider, **model_kwargs)
             else:
                 # No custom provider needed, use default
                 return OpenAIChatModel(model_name, **model_kwargs)
-        
+
         elif provider == "anthropic":
             from pydantic_ai.models.anthropic import AnthropicModel
             from pydantic_ai.providers.anthropic import AnthropicProvider
-            
+
             # Extract API key and other settings
             api_key = model_kwargs.pop("api_key", None)
             base_url = model_kwargs.pop("base_url", None)
-            
+
             # Create provider with API key and settings
             if api_key or base_url:
                 provider_kwargs = {}
@@ -277,14 +277,14 @@ def get_model_instance_from_kwargs(args: Dict[str, Any]) -> Any:
             else:
                 # No custom provider needed, use default
                 return AnthropicModel(model_name, **model_kwargs)
-        
+
         elif provider == "google":
             from pydantic_ai.models.google import GoogleModel
             from pydantic_ai.providers.google import GoogleProvider
-            
+
             # Extract API key
             api_key = model_kwargs.pop("api_key", None)
-            
+
             # Create provider with API key
             if api_key:
                 google_provider = GoogleProvider(api_key=api_key)
@@ -292,14 +292,14 @@ def get_model_instance_from_kwargs(args: Dict[str, Any]) -> Any:
             else:
                 # No custom provider needed, use default
                 return GoogleModel(model_name, **model_kwargs)
-        
+
         elif provider == "ollama":
             from pydantic_ai.models.openai import OpenAIChatModel
             from pydantic_ai.providers.ollama import OllamaProvider
-            
+
             # Extract base_url if provided
             base_url = model_kwargs.pop("base_url", None) or args.get("ollama_base_url")
-            
+
             # Create Ollama provider with base_url
             if base_url:
                 ollama_provider = OllamaProvider(base_url=base_url)
@@ -308,66 +308,68 @@ def get_model_instance_from_kwargs(args: Dict[str, Any]) -> Any:
                 # Default Ollama base_url
                 ollama_provider = OllamaProvider()
                 return OpenAIChatModel(model_name, provider=ollama_provider, **model_kwargs)
-        
+
         elif provider == "nvidia_nim":
             # NVIDIA NIM uses OpenAI-compatible API
             from pydantic_ai.models.openai import OpenAIChatModel
             from pydantic_ai.providers.openai import OpenAIProvider
-            
+
             # Extract API key and base_url
             api_key = model_kwargs.pop("api_key", None)
             base_url = args.get("nvidia_nim_base_url") or args.get("base_url") or model_kwargs.pop("base_url", None)
-            
+
             # Create provider with base_url for NVIDIA NIM
             provider_kwargs = {}
             if api_key:
                 provider_kwargs["api_key"] = api_key
             if base_url:
                 provider_kwargs["base_url"] = base_url
-            
+
             if provider_kwargs:
                 nim_provider = OpenAIProvider(**provider_kwargs)
                 return OpenAIChatModel(model_name, provider=nim_provider, **model_kwargs)
             else:
                 return OpenAIChatModel(model_name, **model_kwargs)
-        
+
         elif provider == "writer":
             # Writer might need custom handling or OpenAI-compatible API
             raise ValueError("Writer provider not yet supported for model instances")
-        
+
         elif provider == "litellm":
             # LiteLLM uses OpenAI-compatible API
             from pydantic_ai.models.openai import OpenAIChatModel
             from pydantic_ai.providers.openai import OpenAIProvider
-            
+
             # Extract API key and base_url
             api_key = model_kwargs.pop("api_key", None)
             base_url = args.get("litellm_api_base") or args.get("base_url") or model_kwargs.pop("base_url", None)
-            
+
             # Create provider with base_url for LiteLLM
             provider_kwargs = {}
             if api_key:
                 provider_kwargs["api_key"] = api_key
             if base_url:
                 provider_kwargs["base_url"] = base_url
-            
+
             if provider_kwargs:
                 litellm_provider = OpenAIProvider(**provider_kwargs)
                 return OpenAIChatModel(model_name, provider=litellm_provider, **model_kwargs)
             else:
                 return OpenAIChatModel(model_name, **model_kwargs)
-        
+
         elif provider == "bedrock":
             # AWS Bedrock might need custom wrapper
             raise ValueError("Bedrock provider not yet supported for model instances")
-        
+
         elif provider == "mindsdb":
             # MindsDB custom provider - not yet supported for model instances
-            raise ValueError("MindsDB provider is not yet supported for model instances. Please use a different provider.")
-        
+            raise ValueError(
+                "MindsDB provider is not yet supported for model instances. Please use a different provider."
+            )
+
         else:
             raise ValueError(f"Unknown provider: {provider}")
-    
+
     except ImportError as e:
         logger.error(f"Failed to import Pydantic AI model class for provider {provider}: {e}")
         raise ImportError(
@@ -377,4 +379,3 @@ def get_model_instance_from_kwargs(args: Dict[str, Any]) -> Any:
     except Exception as e:
         logger.error(f"Error creating model instance for provider {provider}: {e}", exc_info=True)
         raise ValueError(f"Failed to create model instance: {str(e)}") from e
-

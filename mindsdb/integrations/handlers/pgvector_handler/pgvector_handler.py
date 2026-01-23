@@ -1,5 +1,6 @@
 import os
 import json
+import hashlib
 from collections import OrderedDict
 from typing import Dict, List, Literal, Tuple
 from urllib.parse import urlparse
@@ -407,9 +408,15 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         if self._is_shared_db:
             company_id = ctx.company_id
             user_id = ctx.user_id
-            new_table_name = f"t_{company_id}_{user_id}_{table_name}"
 
-            # Backwards compatibility: migrate old tables without user_id
+            # PostgreSQL has a 63-character limit for identifiers.
+            # Using full UUIDs (36 chars each) would exceed this limit.
+            # We use a hash of company_id + user_id to create a shorter, unique prefix.
+            namespace_hash = hashlib.md5(f"{company_id}_{user_id}".encode()).hexdigest()[:16]
+            new_table_name = f"t_{namespace_hash}_{table_name}"
+
+            # Backwards compatibility: migrate old tables to the new hashed format
+            # Old format: t_{company_id}_{table_name} (without user_id)
             old_table_name = f"t_{company_id}_{table_name}"
             self._migrate_legacy_table(old_table_name, new_table_name)
 

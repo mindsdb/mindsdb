@@ -5,7 +5,6 @@ from sqlalchemy import null, func
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 
 class PredictorRecordNotFound(Exception):

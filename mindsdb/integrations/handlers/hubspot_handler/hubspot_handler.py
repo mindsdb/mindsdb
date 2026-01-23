@@ -229,10 +229,6 @@ class HubspotHandler(MetaAPIHandler):
 
         try:
             ast = parse_sql(query)
-            result = self.query(ast)
-            print("****************************************************************************")
-            print(result)
-            print("****************************************************************************")
             return self.query(ast)
         except Exception as e:
             logger.error(f"Failed to execute native query: {str(e)}")

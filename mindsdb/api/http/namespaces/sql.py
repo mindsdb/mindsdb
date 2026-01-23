@@ -26,6 +26,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import QueryError
 from mindsdb.utilities.functions import mark_process
+from mindsdb.interfaces.agents.chart_agent import ChartAgent
 
 logger = log.getLogger(__name__)
 
@@ -133,6 +134,122 @@ class Query(Resource):
         logger.debug(log_msg)
 
         return query_response, 200
+
+
+@ns_conf.route("/charter")
+@ns_conf.param("charter", "Generate Chart.js configuration from SQL query")
+class Charter(Resource):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _extract_error_message(self, error: Exception, context: str) -> str:
+        """
+        Extract a user-friendly error message from an exception.
+
+        Args:
+            error: The exception to extract message from
+            context: Context string for the error (e.g., "chart generation", "query execution")
+
+        Returns:
+            str: User-friendly error message
+        """
+        error_str = str(error)
+
+        # Handle Pydantic validation errors
+        if "validation" in error_str.lower() or "pydantic" in error_str.lower():
+            # Try to extract validation details
+            if hasattr(error, "errors"):
+                # Pydantic validation errors
+                try:
+                    errors = error.errors()
+                    if errors:
+                        error_details = []
+                        for err in errors[:3]:  # Limit to first 3 errors
+                            loc = " -> ".join(str(x) for x in err.get("loc", []))
+                            msg = err.get("msg", "Validation error")
+                            error_details.append(f"{loc}: {msg}")
+                        if error_details:
+                            return f"Chart configuration validation failed: {'; '.join(error_details)}"
+                except Exception:
+                    pass
+
+            # Check for retry errors from Pydantic AI
+            if "retries" in error_str.lower() or "retry" in error_str.lower():
+                return "Failed to generate valid chart configuration after multiple attempts. The AI model may have generated an invalid format. Please try again or check your query."
+
+        # Handle QueryError with db_error_msg
+        if isinstance(error, QueryError):
+            if hasattr(error, "db_error_msg") and error.db_error_msg:
+                msg = error.db_error_msg
+                if hasattr(error, "failed_query") and error.failed_query:
+                    msg += f"\n\nFailed query: {error.failed_query[:200]}..."
+                return msg
+            if hasattr(error, "failed_query") and error.failed_query:
+                return f"Query execution failed: {error_str}\n\nFailed query: {error.failed_query[:200]}..."
+
+        # Handle ExecutorException
+        if isinstance(error, ExecutorException):
+            return f"Query execution error: {error_str}"
+
+        # For other exceptions, try to extract the main message
+        # Remove traceback-like content
+        lines = error_str.split("\n")
+        # Take the first line which usually contains the main error message
+        main_message = lines[0] if lines else error_str
+
+        # If it's a generic exception, add context
+        if len(main_message) < 50 and context:
+            return f"Error during {context}: {main_message}"
+
+        return main_message
+
+    @ns_conf.doc("charter")
+    @api_endpoint_metrics("POST", "/sql/charter")
+    @mark_process(name="http_charter")
+    def post(self):
+        start_time = time.time()
+
+        # Validate request
+        if not request.json:
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide JSON body with "query".')
+
+        query = request.json.get("query")
+        prompt = request.json.get("prompt")
+        context = request.json.get("context", {})
+        params = request.json.get("params", {})
+
+        if not isinstance(query, str):
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" as a string.')
+
+        if not isinstance(context, dict):
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "context" as a dictionary.')
+
+        logger.debug(f"Incoming charter request: query={query[:100]}..., prompt={prompt}")
+
+        mysql_proxy = FakeMysqlProxy()
+        mysql_proxy.set_context(context)
+        try:
+            result: SQLAnswer = mysql_proxy.process_query(query, params=params)
+        except Exception as e:
+            error_msg = self._extract_error_message(e, "query execution")
+            logger.warning(f"Query error: {error_msg}")
+            return http_error(HTTPStatus.BAD_REQUEST, "Query error", error_msg)
+
+        df = result.result_set.to_df()
+
+        try:
+            chart_agent = ChartAgent(executor=mysql_proxy)
+            response = chart_agent.generate_chart_with_data(query, df, prompt)
+
+            end_time = time.time()
+            logger.debug(f"Charter processed in {(end_time - start_time):.2f}s")
+
+            return response, 200
+
+        except Exception as e:
+            error_msg = self._extract_error_message(e, "chart generation or execution")
+            logger.warning(f"Error in chart generation or execution: {error_msg}")
+            return http_error(HTTPStatus.BAD_REQUEST, "Chart generation failed", error_msg)
 
 
 @ns_conf.route("/query/utils/parametrize_constants")

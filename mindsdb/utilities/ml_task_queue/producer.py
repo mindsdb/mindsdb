@@ -11,6 +11,7 @@ from mindsdb.utilities.ml_task_queue.base import BaseRedisQueue
 from mindsdb.utilities.ml_task_queue.const import TASKS_STREAM_NAME, ML_TASK_TYPE, ML_TASK_STATUS
 from mindsdb.utilities import log
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -59,7 +60,8 @@ class MLTaskProducer(BaseRedisQueue):
             redis_key = RedisKey.new()
             message = {
                 "task_type": task_type.value,
-                "company_id": "" if ctx.company_id is None else ctx.company_id,  # None can not be dumped
+                "company_id": ctx.company_id if ctx.company_id else DEFAULT_COMPANY_ID,
+                "user_id": ctx.user_id if ctx.user_id else DEFAULT_USER_ID,
                 "model_id": model_id,
                 "payload": payload,
                 "redis_key": redis_key.base,

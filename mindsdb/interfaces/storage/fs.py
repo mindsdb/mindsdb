@@ -28,6 +28,7 @@ from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities import log
 from mindsdb.utilities.fs import safe_extract
+from mindsdb.utilities.constants import DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -425,7 +426,13 @@ class FileStorage:
         self.root_dir = root_dir
         self.sync = sync
 
-        self.folder_name = f"{resource_group}_{ctx.company_id}_{resource_id}"
+        # Hybrid folder naming for backwards compatibility:
+        # - Old format (DEFAULT_USER_ID): {resource_group}_{company_id}_{resource_id}
+        # - New format (real user_id): {resource_group}_{company_id}_{user_id}_{resource_id}
+        if ctx.user_id == DEFAULT_USER_ID:
+            self.folder_name = f"{resource_group}_{ctx.company_id}_{resource_id}"
+        else:
+            self.folder_name = f"{resource_group}_{ctx.company_id}_{ctx.user_id}_{resource_id}"
 
         config = Config()
         self.fs_store = FsStore()

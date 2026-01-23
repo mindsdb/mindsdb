@@ -2,6 +2,8 @@ from contextvars import ContextVar
 from typing import Any
 from copy import deepcopy
 
+from mindsdb.utilities.constants import DEFAULT_USER_ID, DEFAULT_COMPANY_ID
+
 
 class Context:
     """Thread independent storage"""
@@ -15,8 +17,8 @@ class Context:
     def set_default(self) -> None:
         self._storage.set(
             {
-                "user_id": None,
-                "company_id": None,
+                "company_id": DEFAULT_COMPANY_ID,
+                "user_id": DEFAULT_USER_ID,
                 "session_id": "",
                 "task_id": None,
                 "user_class": 0,
@@ -54,8 +56,8 @@ class Context:
 
     def get_metadata(self, **kwargs) -> dict:
         return {
-            "user_id": self.user_id or "",
-            "company_id": self.company_id or "",
+            "company_id": self.company_id if self.company_id else DEFAULT_COMPANY_ID,
+            "user_id": self.user_id if self.user_id else DEFAULT_USER_ID,
             "session_id": self.session_id,
             "user_class": self.user_class,
             **kwargs,

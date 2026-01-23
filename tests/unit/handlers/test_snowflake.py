@@ -480,6 +480,79 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             if os.path.exists(temp_key_path):
                 os.unlink(temp_key_path)
 
+    def test_key_pair_authentication_with_inline_private_key(self):
+        """
+        Tests successful connection using in-memory private key content
+        """
+        connection_data = OrderedDict(
+            account="tvuibdy-vm85921",
+            user="example_user",
+            database="example_db",
+            private_key="-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----",
+            auth_type="key_pair",
+        )
+
+        handler = SnowflakeHandler("snowflake", connection_data=connection_data)
+
+        with (
+            patch(
+                "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
+                return_value="parsed_key",
+            ) as mock_loader,
+            patch("snowflake.connector.connect") as mock_connect,
+        ):
+            mock_conn = MagicMock()
+            mock_connect.return_value = mock_conn
+
+            connection = handler.connect()
+
+            mock_loader.assert_called_once_with(
+                "-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----", None
+            )
+            mock_connect.assert_called_once()
+            call_kwargs = mock_connect.call_args[1]
+
+            self.assertIn("private_key", call_kwargs)
+            self.assertEqual(call_kwargs["private_key"], "parsed_key")
+            self.assertNotIn("private_key_file", call_kwargs)
+            self.assertTrue(handler.is_connected)
+            self.assertEqual(connection, mock_conn)
+
+    def test_key_pair_authentication_with_inline_private_key_and_passphrase(self):
+        """
+        Tests inline private key content when a passphrase is supplied
+        """
+        connection_data = OrderedDict(
+            account="tvuibdy-vm85921",
+            user="example_user",
+            database="example_db",
+            private_key="-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----",
+            private_key_passphrase="inline-pass",
+            auth_type="key_pair",
+        )
+
+        handler = SnowflakeHandler("snowflake", connection_data=connection_data)
+
+        with (
+            patch(
+                "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
+                return_value="parsed_key",
+            ) as mock_loader,
+            patch("snowflake.connector.connect") as mock_connect,
+        ):
+            mock_conn = MagicMock()
+            mock_connect.return_value = mock_conn
+
+            handler.connect()
+
+            mock_loader.assert_called_once_with(
+                "-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----", "inline-pass"
+            )
+            call_kwargs = mock_connect.call_args[1]
+            self.assertIn("private_key", call_kwargs)
+            self.assertEqual(call_kwargs["private_key"], "parsed_key")
+            self.assertNotIn("private_key_file", call_kwargs)
+
     def test_key_pair_authentication_file_not_found(self):
         """
         Tests that ValueError is raised when private key file doesn't exist

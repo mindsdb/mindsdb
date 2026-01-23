@@ -14,7 +14,7 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql-parser ~= 0.13.6
+mindsdb-sql-parser ~= 0.13.7
 pydantic == 2.11.4
 duckdb == 1.3.0; sys_platform == "win32"
 duckdb ~= 1.3.2; sys_platform != "win32"
@@ -41,7 +41,7 @@ pymupdf==1.25.2
 filetype
 charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
-aipdf==0.0.5
+aipdf==0.0.7.0
 pyarrow<=19.0.0 # used by pandas to read feather files in Files handler
 orjson==3.11.3
 

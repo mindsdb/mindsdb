@@ -7,6 +7,13 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: read        # For checkout and comparing commits
+  pull-requests: write  # For creating/updating PR comments
+  pages: write
+  id-token: write
+
+
 env:
   HANDLERS_TO_INSTALL: |
     postgres
@@ -26,6 +33,7 @@ env:
     ms_teams
     statsforecast
     chromadb
+    confluence
   # We measure 80% on this handlers, as they are the verified
   HANDLERS_TO_VERIFY: |
     mysql
@@ -39,6 +47,7 @@ env:
     file
     redshift
     bigquery
+    confluence
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:
@@ -162,14 +171,44 @@ jobs:
         run: |
           make unit_tests_slow
 
-      - name: Run handler coverage
+      - name: Handler coverage (report only)
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
         run: |
-          uv run tests/scripts/check_handler_coverage.py
+          uv run tests/scripts/check_handler_coverage.py > pytest-coverage-handlers.txt
+        env:
+          COVERAGE_FILE: .coverage.unit
 
-      - name: Pytest coverage comment
+      - name: Generate HTML coverage
         if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' }}
-        uses: MishaKav/pytest-coverage-comment@main
+        run: |
+          uv run coverage html -d reports/htmlcov
+        env:
+          COVERAGE_FILE: .coverage.unit
+
+      - name: Upload test artifacts
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'publish_artifacts') }}
+        uses: actions/upload-artifact@v4
         with:
-          pytest-coverage-path: ./pytest-coverage.txt
-          junitxml-path: ./pytest.xml
+          name: unit-test-artifacts
+          path: |
+            pytest.xml
+            coverage.xml
+            .coverage.unit
+            pytest-coverage.txt
+            pytest-coverage-handlers.txt
+            reports/htmlcov/**
+
+      - name: Configure Pages
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.fork == false) && contains(github.event.pull_request.labels.*.name, 'publish_artifacts') }}
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.fork == false) && contains(github.event.pull_request.labels.*.name, 'publish_artifacts') }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports/htmlcov
+
+      - id: deploy
+        name: Deploy to GitHub Pages
+        if: ${{ matrix.python-version == '3.11' && matrix.runs_on == 'ubuntu-latest' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.fork == false) && contains(github.event.pull_request.labels.*.name, 'publish_artifacts') }}
+        uses: actions/deploy-pages@v4

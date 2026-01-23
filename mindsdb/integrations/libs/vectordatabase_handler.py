@@ -567,7 +567,7 @@ class VectorStoreHandler(BaseHandler):
         data = pd.DataFrame(self.SCHEMA)
         data.columns = ["COLUMN_NAME", "DATA_TYPE"]
         return HandlerResponse(
-            resp_type=RESPONSE_TYPE.DATA,
+            resp_type=RESPONSE_TYPE.TABLE,
             data_frame=data,
         )
 

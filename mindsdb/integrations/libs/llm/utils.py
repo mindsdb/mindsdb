@@ -1,7 +1,8 @@
-from typing import Optional, Dict, List, Tuple
+import re
 import json
 import itertools
-import re
+from enum import Enum
+from typing import Optional, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -22,8 +23,7 @@ from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter
 
 
-# Simple Language enum replacement
-class Language:
+class Language(Enum):
     PYTHON = "python"
     JAVASCRIPT = "javascript"
     TYPESCRIPT = "typescript"
@@ -543,7 +543,7 @@ def ft_code_formatter(
 
     # split code into chunks
     # Get language enum value (handle both string and enum)
-    lang_enum = getattr(Language, language.upper(), None) if hasattr(Language, language.upper()) else language
+    lang_enum = getattr(Language, language.upper(), language)
     code_splitter = RecursiveCharacterTextSplitter.from_language(
         language=lang_enum,
         chunk_size=3 * chunk_size,  # each triplet element has `chunk_size`

@@ -423,7 +423,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
 
         # ensure embeddings are returned as string so they can be parsed by mindsdb
         if "embeddings" in columns:
-            result["embeddings"] = result["embeddings"].astype(str)
+            result["embeddings"] = result["embeddings"].apply(list)
 
         return result
 

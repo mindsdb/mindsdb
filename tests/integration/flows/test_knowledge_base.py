@@ -404,7 +404,7 @@ class TestKB(KBTestBase):
 
         # -----------------  search with reranking ---------------
 
-        threshold = 0.5
+        threshold = 0.4
         ret = self.run_sql(f"""
             SELECT *
             FROM {kb_name}

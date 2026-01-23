@@ -2,41 +2,11 @@ import requests
 import time
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
-from tests.integration.conftest import (
-    HTTP_API_ROOT,
-    get_resource_tracker,
-    get_test_resource_name,
-    get_test_company_id,
-    get_test_user_id,
-)
+from tests.integration.conftest import HTTP_API_ROOT
 
 
 class HTTPHelperMixin:
     _sql_via_http_context = {}
-    _resource_tracker = None
-
-    @classmethod
-    def get_resource_tracker(cls):
-        """Get or create the resource tracker."""
-        if cls._resource_tracker is None:
-            cls._resource_tracker = get_resource_tracker()
-        return cls._resource_tracker
-
-    @classmethod
-    def get_unique_name(cls, base_name: str) -> str:
-        """Generate a unique resource name for this test session."""
-        return get_test_resource_name(base_name)
-
-    @classmethod
-    def get_unique_company_id(cls, base_id: int = 1) -> str:
-        """Generate a unique company ID for this test session."""
-        return get_test_company_id(base_id)
-
-    @classmethod
-    def get_unique_user_id(cls, base_id: int = 1) -> str:
-        """Generate a unique user ID for this test session."""
-        return get_test_user_id(base_id)
 
     @staticmethod
     def api_request(method, url, payload=None, headers=None):
@@ -55,8 +25,7 @@ class HTTPHelperMixin:
         expected_resp_type: str = None,
         context: dict = None,
         headers: dict = None,
-        company_id: str = DEFAULT_COMPANY_ID,
-        user_id: str = DEFAULT_USER_ID,
+        company_id: int = None,
     ) -> dict:
         if context is None:
             context = self._sql_via_http_context
@@ -64,8 +33,8 @@ class HTTPHelperMixin:
         if headers is None:
             headers = {}
 
-        headers["company-id"] = str(company_id)
-        headers["user-id"] = str(user_id)
+        if company_id is not None:
+            headers["company-id"] = str(company_id)
 
         payload = {"query": request, "context": context}
         response = self.api_request("post", "/sql/query", payload, headers)
@@ -117,17 +86,17 @@ class HTTPHelperMixin:
         return status
 
 
-def get_predictors_list(company_id: str = DEFAULT_COMPANY_ID, user_id: str = DEFAULT_USER_ID):
+def get_predictors_list(company_id=None):
     headers = {}
-    headers["company-id"] = str(company_id)
-    headers["user-id"] = str(user_id)
+    if company_id is not None:
+        headers["company-id"] = f"{company_id}"
     res = requests.get(f"{HTTP_API_ROOT}/predictors/", headers=headers)
     assert res.status_code == 200
     return res.json()
 
 
-def get_predictors_names_list(company_id: str = DEFAULT_COMPANY_ID, user_id: str = DEFAULT_USER_ID):
-    predictors = get_predictors_list(company_id=company_id, user_id=user_id)
+def get_predictors_names_list(company_id=None):
+    predictors = get_predictors_list(company_id=company_id)
     return [x["name"] for x in predictors]
 
 
@@ -156,10 +125,10 @@ def wait_predictor_learn(predictor_name):
     assert learn_done
 
 
-def get_integrations_names(company_id: str = DEFAULT_COMPANY_ID, user_id: str = DEFAULT_USER_ID):
+def get_integrations_names(company_id=None):
     headers = {}
-    headers["company-id"] = str(company_id)
-    headers["user-id"] = str(user_id)
+    if company_id is not None:
+        headers["company-id"] = f"{company_id}"
     res = requests.get(f"{HTTP_API_ROOT}/config/integrations", headers=headers)
     assert res.status_code == 200
     return res.json()["integrations"]

@@ -2,21 +2,15 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import (
-    LightwoodHandler,
-)
+from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
 from mindsdb.interfaces.database.integrations import integration_controller
-from mindsdb.integrations.utilities.test_utils import (
-    PG_HANDLER_NAME,
-    PG_CONNECTION_DATA,
-)
+from mindsdb.integrations.utilities.test_utils import PG_HANDLER_NAME, PG_CONNECTION_DATA
 from mindsdb.utilities.config import Config
 from mindsdb.migrations import migrate
 import os
 import time
 import unittest
 import tempfile
-from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 temp_dir = tempfile.mkdtemp(dir="/tmp/", prefix="lightwood_handler_test_")
 os.environ["MINDSDB_STORAGE_DIR"] = os.environ.get("MINDSDB_STORAGE_DIR", temp_dir)
@@ -36,25 +30,38 @@ class LightwoodHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # region create permanent integrations
+        from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
+
         for integration_name in ["files", "lightwood"]:
+            # Skip if already exists
+            existing = db.Integration.query.filter_by(
+                name=integration_name, company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+            ).first()
+            if existing is None:
+                integration_record = db.Integration(
+                    name=integration_name,
+                    data={},
+                    engine=integration_name,
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(integration_record)
+        db.session.commit()
+
+        # Skip if already exists
+        existing = db.Integration.query.filter_by(
+            name=PG_HANDLER_NAME, company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+        ).first()
+        if existing is None:
             integration_record = db.Integration(
-                name=integration_name,
-                data={},
-                engine=integration_name,
+                name=PG_HANDLER_NAME,
+                data=PG_CONNECTION_DATA,
+                engine="postgres",
                 company_id=DEFAULT_COMPANY_ID,
                 user_id=DEFAULT_USER_ID,
             )
             db.session.add(integration_record)
             db.session.commit()
-        integration_record = db.Integration(
-            name=PG_HANDLER_NAME,
-            data=PG_CONNECTION_DATA,
-            engine="postgres",
-            company_id=DEFAULT_COMPANY_ID,
-            user_id=DEFAULT_USER_ID,
-        )
-        db.session.add(integration_record)
-        db.session.commit()
         # endregion
 
         handler_controller = integration_controller

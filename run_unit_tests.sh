@@ -204,8 +204,8 @@ if [[ "$RUN_TESTS" == "true" ]]; then
     print_header "Installing Dependencies"
 
     # Build handler extras list
-    HANDLER_EXTRAS=()
-    for handler in "${HANDLERS_TO_INSTALL[@]}"; do
+HANDLER_EXTRAS=()
+for handler in "${HANDLERS_TO_INSTALL[@]}"; do
         HANDLER_EXTRAS+=(".[${handler}]")
     done
 
@@ -231,18 +231,18 @@ if [[ "$RUN_TESTS" == "true" ]]; then
 
     #
     # RUN UNIT TESTS
-    #
-    print_header "Running Unit Tests"
+#
+print_header "Running Unit Tests"
 
-    mkdir -p reports
+mkdir -p reports
 
-    if [[ "$RUN_SLOW" == "true" ]]; then
-        echo "Running unit tests (with slow tests)..."
-        make unit_tests_slow
-    else
-        echo "Running unit tests (fast mode)..."
-        make unit_tests
-    fi
+if [[ "$RUN_SLOW" == "true" ]]; then
+    echo "Running unit tests (with slow tests)..."
+    make unit_tests_slow
+else
+    echo "Running unit tests (fast mode)..."
+    make unit_tests
+fi
 
     print_success "Unit tests completed"
 

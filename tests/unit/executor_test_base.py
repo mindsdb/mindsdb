@@ -16,6 +16,7 @@ from prometheus_client import REGISTRY
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.utilities import log
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 logger = log.getLogger(__name__)
@@ -109,21 +110,70 @@ class BaseUnitTest:
 
         # fill with data
         from mindsdb.interfaces.database.integrations import integration_controller
+        from sqlalchemy.exc import IntegrityError as SQLAlchemyIntegrityError
 
         integration_controller.create_permanent_integrations()
 
-        r = db.Integration(name="dummy_data", data={"db_path": self._dummy_db_path}, engine="dummy_data")
-        db.session.add(r)
+        # Insert dummy_data if it doesn't exist (idempotent with race condition handling)
+        dummy_record = db.Integration.query.filter_by(
+            name="dummy_data", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+        ).first()
+        if dummy_record is None:
+            try:
+                dummy_record = db.Integration(
+                    name="dummy_data",
+                    data={"db_path": self._dummy_db_path},
+                    engine="dummy_data",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(dummy_record)
+                db.session.flush()
+            except SQLAlchemyIntegrityError:
+                db.session.rollback()
+                dummy_record = db.Integration.query.filter_by(
+                    name="dummy_data", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+                ).first()
 
-        db.session.flush()
+        # Lightwood should always be last (else tests break, why?)
+        # Insert lightwood if it doesn't exist (idempotent with race condition handling)
+        lw_record = db.Integration.query.filter_by(
+            name="lightwood", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+        ).first()
+        if lw_record is None:
+            try:
+                lw_record = db.Integration(
+                    name="lightwood",
+                    data={},
+                    engine="lightwood",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(lw_record)
+                db.session.flush()
+            except SQLAlchemyIntegrityError:
+                db.session.rollback()
+                lw_record = db.Integration.query.filter_by(
+                    name="lightwood", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+                ).first()
 
-        # Get lightwood integration ID (created by create_permanent_integrations)
-        lw_integration = db.Integration.query.filter_by(name="lightwood").first()
-        self.lw_integration_id = lw_integration.id if lw_integration else None
+        self.lw_integration_id = lw_record.id
 
-        # default project
-        r = db.Project(name="mindsdb")
-        db.session.add(r)
+        # default project (idempotent with race condition handling)
+        project_record = db.Project.query.filter_by(
+            name="mindsdb", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+        ).first()
+        if project_record is None:
+            try:
+                project_record = db.Project(
+                    name="mindsdb",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(project_record)
+                db.session.flush()
+            except SQLAlchemyIntegrityError:
+                db.session.rollback()
 
         db.session.commit()
         return db
@@ -299,7 +349,13 @@ class BaseExecutorTest(BaseUnitTest):
             self.db.session.delete(r)
 
         # create
-        r = self.db.Integration(name=name, data={"password": "secret"}, engine=engine)
+        r = self.db.Integration(
+            name=name,
+            data={"password": "secret"},
+            engine=engine,
+            company_id=DEFAULT_COMPANY_ID,
+            user_id=DEFAULT_USER_ID,
+        )
         self.db.session.add(r)
         self.db.session.commit()
 
@@ -400,6 +456,8 @@ class BaseExecutorTest(BaseUnitTest):
         r = self.db.Project(
             id=1,
             name=project["name"],
+            company_id=DEFAULT_COMPANY_ID,
+            user_id=DEFAULT_USER_ID,
         )
         self.db.session.add(r)
         self.db.session.commit()
@@ -472,6 +530,8 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
             integration_id=self.lw_integration_id,
             project_id=1,
             status="complete",
+            company_id=DEFAULT_COMPANY_ID,
+            user_id=DEFAULT_USER_ID,
         )
         self.db.session.add(r)
         self.db.session.commit()

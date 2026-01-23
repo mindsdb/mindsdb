@@ -1,13 +1,19 @@
 from typing import List, Dict, Text, Any, Optional, Tuple
 import pandas as pd
-import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 
 from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn
 from mindsdb.utilities import log
-from mindsdb_sql_parser.ast import BinaryOperation, Function, Identifier, Constant, Select, BetweenOperation
+from mindsdb_sql_parser.ast import (
+    BinaryOperation,
+    Function,
+    Identifier,
+    Constant,
+    Select,
+    BetweenOperation,
+)
 
 logger = log.getLogger(__name__)
 
@@ -88,7 +94,11 @@ class MetricsTable(APIResource):
                     metric_metadata = metadata[metric_name]
                     if metric_metadata:
                         # Get the first entry (most recent)
-                        first_entry = metric_metadata[0] if isinstance(metric_metadata, list) else metric_metadata
+                        first_entry = (
+                            metric_metadata[0]
+                            if isinstance(metric_metadata, list)
+                            else metric_metadata
+                        )
                         metric_info["type"] = first_entry.get("type")
                         metric_info["help"] = first_entry.get("help")
                         metric_info["unit"] = first_entry.get("unit")
@@ -102,7 +112,9 @@ class MetricsTable(APIResource):
                 for condition in conditions:
                     if condition.column == "metric_name" and condition.op.value == "=":
                         df = df[df["metric_name"] == condition.value]
-                    elif condition.column == "metric_name" and condition.op.value == "!=":
+                    elif (
+                        condition.column == "metric_name" and condition.op.value == "!="
+                    ):
                         df = df[df["metric_name"] != condition.value]
 
             if limit:
@@ -196,26 +208,38 @@ class LabelsTable(APIResource):
         try:
             # Get all label names
             response = self.handler.call_prometheus_api("/api/v1/labels")
-            label_names = response.get("data", [])
+            # Label names
+            _ = response.get("data", [])
 
             # Get all metric names
-            metric_response = self.handler.call_prometheus_api("/api/v1/label/__name__/values")
+            metric_response = self.handler.call_prometheus_api(
+                "/api/v1/label/__name__/values"
+            )
             metric_names = metric_response.get("data", [])
 
             labels_data = []
             # Sample a subset of metrics to avoid too much data
-            sample_metrics = metric_names[:100] if len(metric_names) > 100 else metric_names
+            sample_metrics = (
+                metric_names[:100] if len(metric_names) > 100 else metric_names
+            )
 
             for metric_name in sample_metrics:
                 # Query a sample of the metric to get label combinations
                 query = f'{{__name__="{metric_name}"}}'
-                query_response = self.handler.call_prometheus_api("/api/v1/query", params={"query": query})
+                query_response = self.handler.call_prometheus_api(
+                    "/api/v1/query", params={"query": query}
+                )
 
                 if query_response.get("status") == "success":
                     results = query_response.get("data", {}).get("result", [])
                     for result in results[:10]:  # Limit to 10 samples per metric
                         labels = result.get("metric", {})
-                        custom_labels = {k: v for k, v in labels.items() if k not in ["__name__", "job", "instance", "method", "status"]}
+                        custom_labels = {
+                            k: v
+                            for k, v in labels.items()
+                            if k
+                            not in ["__name__", "job", "instance", "method", "status"]
+                        }
 
                         labels_data.append(
                             {
@@ -225,7 +249,9 @@ class LabelsTable(APIResource):
                                 "instance": labels.get("instance"),
                                 "method": labels.get("method"),
                                 "status": labels.get("status"),
-                                "custom_labels": json.dumps(custom_labels) if custom_labels else None,
+                                "custom_labels": (
+                                    json.dumps(custom_labels) if custom_labels else None
+                                ),
                             }
                         )
 
@@ -249,11 +275,29 @@ class LabelsTable(APIResource):
 
         except Exception as e:
             logger.error(f"Error listing labels: {str(e)}")
-            return pd.DataFrame(columns=["metric_name", "label", "job", "instance", "method", "status", "custom_labels"])
+            return pd.DataFrame(
+                columns=[
+                    "metric_name",
+                    "label",
+                    "job",
+                    "instance",
+                    "method",
+                    "status",
+                    "custom_labels",
+                ]
+            )
 
     def get_columns(self) -> List[Text]:
         """Return column names for the labels table."""
-        return ["metric_name", "label", "job", "instance", "method", "status", "custom_labels"]
+        return [
+            "metric_name",
+            "label",
+            "job",
+            "instance",
+            "method",
+            "status",
+            "custom_labels",
+        ]
 
 
 class ScrapeTargetsTable(APIResource):
@@ -311,13 +355,13 @@ class ScrapeTargetsTable(APIResource):
                 # Prometheus API returns labels as a flat dict, not a list
                 # Example: {"job": "prometheus", "instance": "localhost:9090"}
                 labels = target.get("labels", {})
-                
+
                 # Handle both dict format (standard) and list format (legacy)
                 if isinstance(labels, list):
                     # Legacy format: list of {name, value} dicts
                     labels_dict = {
-                        label.get("name"): label.get("value") 
-                        for label in labels 
+                        label.get("name"): label.get("value")
+                        for label in labels
                         if label.get("name") and label.get("value")
                     }
                 elif isinstance(labels, dict):
@@ -361,14 +405,14 @@ class ScrapeTargetsTable(APIResource):
 
 def _parse_json_path_expression(node: Any) -> Optional[Tuple[str, str]]:
     """Parse JSON path expression to extract label name.
-    
+
     Supports:
     - PostgreSQL style: labels_json->>'label_name'
     - MySQL style: JSON_EXTRACT(labels_json, '$.label_name')
-    
+
     Args:
         node: AST node (BinaryOperation for ->>, Function for JSON_EXTRACT)
-        
+
     Returns:
         Tuple of (label_name, json_path_type) or None if not a JSON path expression
     """
@@ -376,7 +420,7 @@ def _parse_json_path_expression(node: Any) -> Optional[Tuple[str, str]]:
     if isinstance(node, BinaryOperation) and node.op in ("->>", "->"):
         left = node.args[0]
         right = node.args[1]
-        
+
         # Check if left side is labels_json column
         if isinstance(left, Identifier) and left.parts[-1] == "labels_json":
             if isinstance(right, Constant):
@@ -385,48 +429,53 @@ def _parse_json_path_expression(node: Any) -> Optional[Tuple[str, str]]:
                 if isinstance(label_name, str):
                     label_name = label_name.strip("'\"")
                 return (label_name, "postgres")
-    
+
     # MySQL style: JSON_EXTRACT(labels_json, '$.label_name')
     if isinstance(node, Function) and node.op.upper() == "JSON_EXTRACT":
         if len(node.args) >= 2:
             first_arg = node.args[0]
             second_arg = node.args[1]
-            
+
             # Check if first arg is labels_json
-            if isinstance(first_arg, Identifier) and first_arg.parts[-1] == "labels_json":
+            if (
+                isinstance(first_arg, Identifier)
+                and first_arg.parts[-1] == "labels_json"
+            ):
                 if isinstance(second_arg, Constant):
                     json_path = second_arg.value
                     # Extract label name from JSON path like '$.label_name'
                     if isinstance(json_path, str) and json_path.startswith("$."):
                         label_name = json_path[2:].strip("'\"")
                         return (label_name, "mysql")
-    
+
     return None
 
 
-def _extract_json_path_filters(raw_conditions: List[Any]) -> Tuple[Dict[str, Dict[str, Any]], List[Any]]:
+def _extract_json_path_filters(
+    raw_conditions: List[Any],
+) -> Tuple[Dict[str, Dict[str, Any]], List[Any]]:
     """Extract label filters from JSON path expressions in raw_conditions.
-    
+
     Args:
         raw_conditions: List of raw condition AST nodes
-        
+
     Returns:
         Tuple of (label_filters_dict, remaining_conditions)
     """
     label_filters = {}
     remaining_conditions = []
-    
+
     for condition in raw_conditions:
         if isinstance(condition, BinaryOperation):
             # Check if left side is a JSON path expression
             left = condition.args[0]
             right = condition.args[1]
             op = condition.op.upper()
-            
+
             json_path_info = _parse_json_path_expression(left)
             if json_path_info:
                 label_name, _ = json_path_info
-                
+
                 # Extract value from right side
                 if isinstance(right, Constant):
                     value = right.value
@@ -442,15 +491,15 @@ def _extract_json_path_filters(raw_conditions: List[Any]) -> Tuple[Dict[str, Dic
             left = condition.args[0]
             lower = condition.args[1]
             upper = condition.args[2]
-            
+
             json_path_info = _parse_json_path_expression(left)
             if json_path_info:
                 label_name, _ = json_path_info
-                
+
                 if isinstance(lower, Constant) and isinstance(upper, Constant):
                     label_filters[label_name] = {
                         "op": "BETWEEN",
-                        "value": (lower.value, upper.value)
+                        "value": (lower.value, upper.value),
                     }
                 else:
                     remaining_conditions.append(condition)
@@ -459,13 +508,13 @@ def _extract_json_path_filters(raw_conditions: List[Any]) -> Tuple[Dict[str, Dic
         else:
             # Unknown condition type, keep as remaining
             remaining_conditions.append(condition)
-    
+
     return label_filters, remaining_conditions
 
 
 class MetricDataTable(APIResource):
     """Prometheus Metric Data table - query metric data with PromQL.
-    
+
     Supports:
     - Instant queries (single timestamp)
     - Range queries (time series with step)
@@ -545,15 +594,27 @@ class MetricDataTable(APIResource):
 
     def select(self, query: Select) -> pd.DataFrame:
         """Override select with a fallback for complex JSON syntax."""
-        from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, FilterCondition, FilterOperator
-        from mindsdb_sql_parser.ast import BinaryOperation, Identifier, Constant, BetweenOperation
+        from mindsdb.integrations.utilities.sql_utils import (
+            FilterCondition,
+            FilterOperator,
+        )
+        from mindsdb_sql_parser.ast import (
+            BinaryOperation,
+            Identifier,
+            Constant,
+            BetweenOperation,
+        )
 
         try:
             # Try to use the built-in parser first
-            api_conditions, raw_conditions = self._extract_conditions(query.where, strict=False)
-            
+            api_conditions, raw_conditions = self._extract_conditions(
+                query.where, strict=False
+            )
+
             # Extract JSON path filters from raw_conditions
-            json_path_filters, remaining_raw_conditions = _extract_json_path_filters(raw_conditions)
+            json_path_filters, remaining_raw_conditions = _extract_json_path_filters(
+                raw_conditions
+            )
 
         except Exception:
             # If _extract_conditions fails (e.g. precedence issues with ->>), we parse manually
@@ -563,87 +624,115 @@ class MetricDataTable(APIResource):
 
             # 1. Find pql_query recursively (even if buried in JSON logic)
             def find_pql(node):
-                if isinstance(node, BinaryOperation) and node.op == '=':
+                if isinstance(node, BinaryOperation) and node.op == "=":
                     left, right = node.args[0], node.args[1]
-                    if isinstance(left, Identifier) and left.parts[-1] == 'pql_query':
+                    if isinstance(left, Identifier) and left.parts[-1] == "pql_query":
                         if isinstance(right, Constant):
                             return right.value
-                if hasattr(node, 'args'):
+                if hasattr(node, "args"):
                     for arg in node.args:
                         res = find_pql(arg)
-                        if res: return res
+                        if res:
+                            return res
                 return None
 
             pql_val = find_pql(query.where)
             if pql_val:
-                api_conditions.append(FilterCondition(column='pql_query', op=FilterOperator.EQUAL, value=pql_val))
+                api_conditions.append(
+                    FilterCondition(
+                        column="pql_query", op=FilterOperator.EQUAL, value=pql_val
+                    )
+                )
 
             # 2. Flatten and find JSON filters
             nodes = []
+
             def flatten(node):
-                if isinstance(node, BinaryOperation) and node.op.upper() == 'AND':
+                if isinstance(node, BinaryOperation) and node.op.upper() == "AND":
                     flatten(node.args[0])
                     flatten(node.args[1])
                 else:
                     nodes.append(node)
-            if query.where: flatten(query.where)
+
+            if query.where:
+                flatten(query.where)
 
             for node in nodes:
                 target = None
                 op = None
                 val = None
-                
+
                 # Identify comparison vs BETWEEN
                 if isinstance(node, BetweenOperation):
                     target, op = node.args[0], "BETWEEN"
-                    if isinstance(node.args[1], Constant): val = (node.args[1].value, node.args[2].value)
-                elif isinstance(node, BinaryOperation) and node.op.upper() not in ['AND', 'OR']:
+                    if isinstance(node.args[1], Constant):
+                        val = (node.args[1].value, node.args[2].value)
+                elif isinstance(node, BinaryOperation) and node.op.upper() not in [
+                    "AND",
+                    "OR",
+                ]:
                     target, op = node.args[0], node.op.upper()
-                    if isinstance(node.args[1], Constant): val = node.args[1].value
+                    if isinstance(node.args[1], Constant):
+                        val = node.args[1].value
 
                 # Extract Key if target is ->>
-                if target and isinstance(target, BinaryOperation) and target.op == '->>':
+                if (
+                    target
+                    and isinstance(target, BinaryOperation)
+                    and target.op == "->>"
+                ):
                     if isinstance(target.args[1], Constant):
-                        json_path_filters[target.args[1].value] = {"op": op, "value": val}
-
+                        json_path_filters[target.args[1].value] = {
+                            "op": op,
+                            "value": val,
+                        }
 
         limit = None
         if query.limit:
             limit = query.limit.value
-        
+
         sort = None
         if query.order_by and len(query.order_by) > 0:
             from mindsdb.integrations.utilities.sql_utils import SortColumn
+
             sort = []
             for an_order in query.order_by:
                 if isinstance(an_order.field, Identifier):
-                    sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
-        
+                    sort.append(
+                        SortColumn(
+                            an_order.field.parts[-1],
+                            an_order.direction.upper() != "DESC",
+                        )
+                    )
+
         targets = []
         for col in query.targets:
             if isinstance(col, Identifier):
                 targets.append(col.parts[-1])
-        
+
         # Call list with JSON path filters
         result = self.list(
             conditions=api_conditions,
             json_path_filters=json_path_filters,
             limit=limit,
             sort=sort,
-            targets=targets
+            targets=targets,
         )
-        
+
         # Apply remaining raw conditions using filter_dataframe
         if remaining_raw_conditions:
             from mindsdb.integrations.utilities.sql_utils import filter_dataframe
+
             filters = []
-            result = filter_dataframe(result, filters, raw_conditions=remaining_raw_conditions)
-        
+            result = filter_dataframe(
+                result, filters, raw_conditions=remaining_raw_conditions
+            )
+
         if limit is not None and len(result) > limit:
             result = result[: int(limit)]
-            
+
         query.where = None
-        
+
         return result
 
     def list(
@@ -655,14 +744,14 @@ class MetricDataTable(APIResource):
         targets: List[str] = None,
     ) -> pd.DataFrame:
         """Query metric data using PromQL.
-        
+
         Args:
             conditions: List of FilterCondition objects for query parameters
             json_path_filters: Dictionary of label filters from JSON path expressions
             limit: Maximum number of rows to return
             sort: List of SortColumn objects for ordering
             targets: List of column names to select
-            
+
         Returns:
             DataFrame with query results
         """
@@ -703,7 +792,9 @@ class MetricDataTable(APIResource):
 
             # Build the PromQL query with label filters
             # Returns (final_query, filters_not_pushed_down)
-            final_query, filters_not_pushed = self._build_query_with_label_filters(pql_query, label_filters)
+            final_query, filters_not_pushed = self._build_query_with_label_filters(
+                pql_query, label_filters
+            )
 
             # Prepare API parameters
             params = {"query": final_query}
@@ -717,15 +808,35 @@ class MetricDataTable(APIResource):
                 params["end"] = self._parse_timestamp(end_ts)
                 params["step"] = step
 
-                response = self.handler.call_prometheus_api("/api/v1/query_range", params=params)
-                return self._process_range_query_response(response, pql_query, start_ts, end_ts, step, timeout, filters_not_pushed)
+                response = self.handler.call_prometheus_api(
+                    "/api/v1/query_range", params=params
+                )
+                return self._process_range_query_response(
+                    response,
+                    pql_query,
+                    start_ts,
+                    end_ts,
+                    step,
+                    timeout,
+                    filters_not_pushed,
+                )
             else:
                 # Instant query
                 if start_ts:
                     params["time"] = self._parse_timestamp(start_ts)
 
-                response = self.handler.call_prometheus_api("/api/v1/query", params=params)
-                return self._process_instant_query_response(response, pql_query, start_ts, end_ts, step, timeout, filters_not_pushed)
+                response = self.handler.call_prometheus_api(
+                    "/api/v1/query", params=params
+                )
+                return self._process_instant_query_response(
+                    response,
+                    pql_query,
+                    start_ts,
+                    end_ts,
+                    step,
+                    timeout,
+                    filters_not_pushed,
+                )
 
         except Exception as e:
             logger.error(f"Error querying metric data: {str(e)}")
@@ -752,14 +863,14 @@ class MetricDataTable(APIResource):
 
         filters_not_pushed = {}
         label_parts = []
-        
+
         # Check if the query already has label selectors
         has_existing_selectors = "{" in base_query and "}" in base_query
-        
+
         for label_name, filter_info in label_filters.items():
             op = filter_info["op"]
             val = filter_info["value"]
-            
+
             # PromQL only supports: =, !=, =~, !~ for label matching
             # All other operators must be handled in-memory
             if op == "=":
@@ -770,7 +881,7 @@ class MetricDataTable(APIResource):
                 # Complex operators (>, <, >=, <=, BETWEEN) cannot be pushed to PromQL
                 # These must be applied in-memory after query returns
                 filters_not_pushed[label_name] = filter_info
-        
+
         # Add label filters to query if we have any to push down
         if label_parts:
             if has_existing_selectors:
@@ -779,14 +890,19 @@ class MetricDataTable(APIResource):
                 last_brace = base_query.rfind("}")
                 if last_brace != -1:
                     # Insert before closing brace
-                    base_query = base_query[:last_brace] + ", " + ", ".join(label_parts) + base_query[last_brace:]
+                    base_query = (
+                        base_query[:last_brace]
+                        + ", "
+                        + ", ".join(label_parts)
+                        + base_query[last_brace:]
+                    )
                 else:
                     # Fallback: wrap entire query
                     base_query = f"{base_query}{{{', '.join(label_parts)}}}"
             else:
                 # Add braces with label filters
                 base_query = f"{base_query}{{{', '.join(label_parts)}}}"
-        
+
         return base_query, filters_not_pushed
 
     def _parse_timestamp(self, ts: Any) -> str:
@@ -797,7 +913,7 @@ class MetricDataTable(APIResource):
 
         Returns:
             String representation of timestamp
-            
+
         Raises:
             ValueError: If timestamp format is invalid
         """
@@ -818,7 +934,9 @@ class MetricDataTable(APIResource):
         else:
             raise ValueError(f"Invalid timestamp type: {type(ts)}")
 
-    def _apply_label_filters(self, labels_dict: Dict[str, Any], label_filters: Dict[str, Dict[str, Any]]) -> bool:
+    def _apply_label_filters(
+        self, labels_dict: Dict[str, Any], label_filters: Dict[str, Dict[str, Any]]
+    ) -> bool:
         """Apply label filters to labels dictionary.
 
         Args:
@@ -872,7 +990,9 @@ class MetricDataTable(APIResource):
                         return False
                 except (ValueError, TypeError):
                     # String comparison fallback
-                    logger.warning(f"Label value '{label_value}' or filter value '{val}' is not numeric, using string comparison")
+                    logger.warning(
+                        f"Label value '{label_value}' or filter value '{val}' is not numeric, using string comparison"
+                    )
                     if op == ">" and not (str(label_value) > str(val)):
                         return False
                     elif op == "<" and not (str(label_value) < str(val)):
@@ -885,11 +1005,20 @@ class MetricDataTable(APIResource):
         return True
 
     def _process_instant_query_response(
-        self, response: Dict[str, Any], pql_query: str, start_ts: Any, end_ts: Any, step: Any, timeout: Any, label_filters: Dict
+        self,
+        response: Dict[str, Any],
+        pql_query: str,
+        start_ts: Any,
+        end_ts: Any,
+        step: Any,
+        timeout: Any,
+        label_filters: Dict,
     ) -> pd.DataFrame:
         """Process instant query response into DataFrame."""
         if response.get("status") != "success":
-            raise Exception(f"Prometheus query failed: {response.get('error', 'Unknown error')}")
+            raise Exception(
+                f"Prometheus query failed: {response.get('error', 'Unknown error')}"
+            )
 
         results = response.get("data", {}).get("result", [])
         rows = []
@@ -930,11 +1059,20 @@ class MetricDataTable(APIResource):
         return df
 
     def _process_range_query_response(
-        self, response: Dict[str, Any], pql_query: str, start_ts: Any, end_ts: Any, step: Any, timeout: Any, label_filters: Dict
+        self,
+        response: Dict[str, Any],
+        pql_query: str,
+        start_ts: Any,
+        end_ts: Any,
+        step: Any,
+        timeout: Any,
+        label_filters: Dict,
     ) -> pd.DataFrame:
         """Process range query response into DataFrame."""
         if response.get("status") != "success":
-            raise Exception(f"Prometheus query failed: {response.get('error', 'Unknown error')}")
+            raise Exception(
+                f"Prometheus query failed: {response.get('error', 'Unknown error')}"
+            )
 
         results = response.get("data", {}).get("result", [])
         rows = []
@@ -979,7 +1117,16 @@ class MetricDataTable(APIResource):
 
     def get_columns(self) -> List[Text]:
         """Return base column names for the metric_data table."""
-        return ["pql_query", "start_ts", "end_ts", "step", "timeout", "timestamp", "value", "labels_json"]
+        return [
+            "pql_query",
+            "start_ts",
+            "end_ts",
+            "step",
+            "timeout",
+            "timestamp",
+            "value",
+            "labels_json",
+        ]
 
     def add(self, data: List[dict], **kwargs) -> None:
         """Add metrics to Prometheus Pushgateway.
@@ -993,23 +1140,23 @@ class MetricDataTable(APIResource):
                     - labels_json (JSON/TEXT): JSON string or dict of label key-value pairs
                     - timestamp (INTEGER): Unix timestamp in seconds (default: current time)
                     - job (VARCHAR): Job name for Pushgateway grouping (default: from config)
-                    
+
         Raises:
             ValueError: If required fields are missing or invalid
             Exception: If push to Pushgateway fails
         """
         import time
-        
+
         for row in data:
             # Validate required fields
             if "metric_name" not in row:
                 raise ValueError("metric_name is required for INSERT")
             if "value" not in row:
                 raise ValueError("value is required for INSERT")
-            
+
             metric_name = str(row["metric_name"])
             value = row["value"]
-            
+
             # Parse labels_json
             labels = {}
             if "labels_json" in row and row["labels_json"]:
@@ -1019,10 +1166,12 @@ class MetricDataTable(APIResource):
                     elif isinstance(row["labels_json"], dict):
                         labels = row["labels_json"]
                     else:
-                        raise ValueError(f"labels_json must be a JSON string or dict, got {type(row['labels_json'])}")
+                        raise ValueError(
+                            f"labels_json must be a JSON string or dict, got {type(row['labels_json'])}"
+                        )
                 except json.JSONDecodeError as e:
                     raise ValueError(f"Invalid JSON in labels_json: {str(e)}")
-            
+
             # Get timestamp (default to current time)
             timestamp = row.get("timestamp")
             if timestamp is None:
@@ -1030,31 +1179,37 @@ class MetricDataTable(APIResource):
             else:
                 # Convert to int if it's a float
                 timestamp = int(float(timestamp))
-            
+
             # Get job name (default from handler config)
             job = row.get("job", self.handler.pushgateway_job)
-            
+
             # Build Pushgateway endpoint
             endpoint = f"/metrics/job/{job}"
-            
+
             # Extract instance label for Pushgateway instance grouping
             instance = None
             if "instance" in labels:
                 instance = labels["instance"]
                 endpoint = f"{endpoint}/instance/{instance}"
                 # Create a copy of labels without instance for formatting
-                labels_for_formatting = {k: v for k, v in labels.items() if k != "instance"}
+                labels_for_formatting = {
+                    k: v for k, v in labels.items() if k != "instance"
+                }
             else:
                 labels_for_formatting = labels
-            
+
             # Format metric in Prometheus text format
-            metric_text = self._format_metric_for_pushgateway(metric_name, value, labels_for_formatting, timestamp)
-            
+            metric_text = self._format_metric_for_pushgateway(
+                metric_name, value, labels_for_formatting, timestamp
+            )
+
             try:
                 self.handler.call_pushgateway_api(endpoint, metric_text)
                 logger.info(f"Successfully pushed metric {metric_name} to Pushgateway")
             except Exception as e:
-                logger.error(f"Failed to push metric {metric_name} to Pushgateway: {str(e)}")
+                logger.error(
+                    f"Failed to push metric {metric_name} to Pushgateway: {str(e)}"
+                )
                 raise Exception(f"Failed to push metric to Pushgateway: {str(e)}")
 
     def _format_metric_for_pushgateway(
@@ -1070,33 +1225,37 @@ class MetricDataTable(APIResource):
 
         Returns:
             Formatted metric string in Prometheus text format
-            
+
         Raises:
             ValueError: If metric name or value is invalid
         """
         # Validate metric name (Prometheus naming rules)
         if not metric_name or not metric_name[0].isalpha():
-            raise ValueError(f"Invalid metric name: {metric_name}. Must start with a letter.")
-        
+            raise ValueError(
+                f"Invalid metric name: {metric_name}. Must start with a letter."
+            )
+
         # Format labels
         label_parts = []
         for key, val in sorted(labels.items()):
             # Escape special characters in label values
-            val_str = str(val).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+            val_str = (
+                str(val).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+            )
             label_parts.append(f'{key}="{val_str}"')
-        
+
         label_str = ""
         if label_parts:
             label_str = "{" + ", ".join(label_parts) + "}"
-        
+
         # Format value (ensure it's numeric)
         try:
             numeric_value = float(value)
         except (ValueError, TypeError):
             raise ValueError(f"Metric value must be numeric, got: {value}")
-        
+
         # Prometheus text format: metric_name{labels} value timestamp
         # Timestamp should be in milliseconds for Pushgateway
         timestamp_ms = timestamp * 1000
-        
+
         return f"{metric_name}{label_str} {numeric_value} {timestamp_ms}\n"

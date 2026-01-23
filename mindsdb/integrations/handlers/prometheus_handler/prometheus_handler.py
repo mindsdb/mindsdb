@@ -1,7 +1,6 @@
 from typing import Optional, List, Dict, Any
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
 
 from mindsdb.integrations.handlers.prometheus_handler.prometheus_tables import (
     MetricsTable,
@@ -59,7 +58,7 @@ def _map_type(data_type: str) -> MYSQL_DATA_TYPE:
 
 class PrometheusHandler(MetaAPIHandler):
     """Prometheus API handler implementation.
-    
+
     This handler allows querying Prometheus metrics, labels, scrape targets,
     and metric data using SQL. It also supports pushing metrics to Pushgateway.
     """
@@ -83,18 +82,20 @@ class PrometheusHandler(MetaAPIHandler):
         # Remove trailing slash if present
         self.base_url = self.base_url.rstrip("/")
         self.timeout = connection_data.get("timeout", 10)
-        
+
         # Authentication
         self.username = connection_data.get("username")
         self.password = connection_data.get("password")
         self.bearer_token = connection_data.get("bearer_token")
-        
+
         # Validate authentication parameters
         if self.username and not self.password:
             raise ValueError("Password is required when username is provided")
         if self.bearer_token and (self.username or self.password):
-            logger.warning("Both bearer_token and username/password provided. Bearer token will be used.")
-        
+            logger.warning(
+                "Both bearer_token and username/password provided. Bearer token will be used."
+            )
+
         # Pushgateway configuration
         pushgateway_url = connection_data.get("pushgateway_url")
         if not pushgateway_url:
@@ -104,7 +105,7 @@ class PrometheusHandler(MetaAPIHandler):
             else:
                 # Default Pushgateway URL
                 pushgateway_url = "http://localhost:9091"
-        
+
         self.pushgateway_url = pushgateway_url.rstrip("/")
         self.pushgateway_job = connection_data.get("pushgateway_job", "default")
 
@@ -139,13 +140,14 @@ class PrometheusHandler(MetaAPIHandler):
             # Prepare authentication
             auth = None
             headers = {}
-            
+
             if self.bearer_token:
                 headers["Authorization"] = f"Bearer {self.bearer_token}"
             elif self.username and self.password:
                 from requests.auth import HTTPBasicAuth
+
                 auth = HTTPBasicAuth(self.username, self.password)
-            
+
             # Test connection by querying the /api/v1/status/config endpoint
             response = requests.get(
                 f"{self.base_url}/api/v1/status/config",
@@ -201,14 +203,18 @@ class PrometheusHandler(MetaAPIHandler):
             Exception: If query parsing or execution fails
         """
         if not query:
-            return Response(RESPONSE_TYPE.ERROR, error_message="Query cannot be None or empty")
+            return Response(
+                RESPONSE_TYPE.ERROR, error_message="Query cannot be None or empty"
+            )
 
         try:
             ast = parse_sql(query)
             return self.query(ast)
         except Exception as e:
             logger.error(f"Failed to execute native query: {str(e)}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}")
+            return Response(
+                RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}"
+            )
 
     def get_tables(self) -> Response:
         """Return list of tables available in the Prometheus integration.
@@ -249,7 +255,10 @@ class PrometheusHandler(MetaAPIHandler):
 
         except Exception as e:
             logger.error(f"Failed to get tables: {str(e)}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve table list: {str(e)}")
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Failed to retrieve table list: {str(e)}",
+            )
 
     def get_columns(self, table_name: str) -> Response:
         """Return column information for a specific table in standard information_schema.columns format.
@@ -281,7 +290,11 @@ class PrometheusHandler(MetaAPIHandler):
             columns_data = []
             for idx, col in enumerate(columns, start=1):
                 col_name = col if isinstance(col, str) else col.get("COLUMN_NAME", "")
-                data_type = "VARCHAR" if isinstance(col, str) else col.get("DATA_TYPE", "VARCHAR")
+                data_type = (
+                    "VARCHAR"
+                    if isinstance(col, str)
+                    else col.get("DATA_TYPE", "VARCHAR")
+                )
 
                 columns_data.append(
                     {
@@ -310,27 +323,47 @@ class PrometheusHandler(MetaAPIHandler):
         except Exception as e:
             logger.error(f"Failed to get columns for table {table_name}: {str(e)}")
             return Response(
-                RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve columns for table '{table_name}': {str(e)}"
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Failed to retrieve columns for table '{table_name}': {str(e)}",
             )
 
     def _get_default_columns(self, table_name: str) -> List[str]:
         """Get default column names for a table.
-        
+
         Args:
             table_name (str): Name of the table
-            
+
         Returns:
             List[str]: List of column names
         """
         defaults = {
             "metrics": ["metric_name", "type", "help", "unit"],
-            "labels": ["metric_name", "label", "job", "instance", "method", "status", "custom_labels"],
+            "labels": [
+                "metric_name",
+                "label",
+                "job",
+                "instance",
+                "method",
+                "status",
+                "custom_labels",
+            ],
             "scrape_targets": ["target_labels", "health", "scrape_url"],
-            "metric_data": ["pql_query", "start_ts", "end_ts", "step", "timeout", "timestamp", "value", "labels_json"],
+            "metric_data": [
+                "pql_query",
+                "start_ts",
+                "end_ts",
+                "step",
+                "timeout",
+                "timestamp",
+                "value",
+                "labels_json",
+            ],
         }
         return defaults.get(table_name, [])
 
-    def call_prometheus_api(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def call_prometheus_api(
+        self, endpoint: str, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Make a request to the Prometheus API.
 
         Args:
@@ -339,7 +372,7 @@ class PrometheusHandler(MetaAPIHandler):
 
         Returns:
             dict: API response JSON
-            
+
         Raises:
             requests.exceptions.RequestException: If the request fails
         """
@@ -347,18 +380,21 @@ class PrometheusHandler(MetaAPIHandler):
             self.connect()
 
         url = f"{self.base_url}{endpoint}"
-        
+
         # Prepare authentication
         auth = None
         headers = {}
-        
+
         if self.bearer_token:
             headers["Authorization"] = f"Bearer {self.bearer_token}"
         elif self.username and self.password:
             from requests.auth import HTTPBasicAuth
+
             auth = HTTPBasicAuth(self.username, self.password)
-        
-        response = requests.get(url, params=params, auth=auth, headers=headers, timeout=self.timeout)
+
+        response = requests.get(
+            url, params=params, auth=auth, headers=headers, timeout=self.timeout
+        )
         response.raise_for_status()
         return response.json()
 
@@ -373,16 +409,19 @@ class PrometheusHandler(MetaAPIHandler):
             requests.exceptions.RequestException: If the request fails
         """
         url = f"{self.pushgateway_url}{endpoint}"
-        
+
         # Prepare authentication
         auth = None
         headers = {"Content-Type": "text/plain; version=0.0.4"}
-        
+
         if self.bearer_token:
             headers["Authorization"] = f"Bearer {self.bearer_token}"
         elif self.username and self.password:
             from requests.auth import HTTPBasicAuth
+
             auth = HTTPBasicAuth(self.username, self.password)
-        
-        response = requests.post(url, data=data, auth=auth, headers=headers, timeout=self.timeout)
+
+        response = requests.post(
+            url, data=data, auth=auth, headers=headers, timeout=self.timeout
+        )
         response.raise_for_status()

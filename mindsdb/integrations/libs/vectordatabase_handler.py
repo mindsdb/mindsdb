@@ -321,21 +321,49 @@ class VectorStoreHandler(BaseHandler):
             self.upsert(table_name, df)
             return
 
-        # find existing ids
+        origin_id_col = "_original_doc_id"
+
+        def get_orig_ids(metadata):
+            return metadata.apply(lambda m: m.get(origin_id_col))
+
+        df["orig_id"] = get_orig_ids(df[metadata_col])
+        all_ids = list(get_orig_ids(df[metadata_col]))
+
+        # find existing origin_ids
         df_existed = self.select(
             table_name,
             columns=[id_col, metadata_col],
-            conditions=[FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))],
+            conditions=[FilterCondition(column=f"metadata.{origin_id_col}", op=FilterOperator.IN, value=all_ids)],
         )
-        existed_ids = list(df_existed[id_col])
 
-        # update existed
-        df_update = df[df[id_col].isin(existed_ids)]
-        df_insert = df[~df[id_col].isin(existed_ids)]
+        # split into groups:
+        # - to update: records that match by `chunk_id`+`origin_id` in `df_existed` and `df`
+        # - to delete: all chunk_ids from `df_existed` that don't match by `chunk_id`+`origin_id`
+        # - to insert: all records from `df` that  don't match by `chunk_id`+`origin_id`
+
+        if not df_existed.empty:
+            df_existed["orig_id"] = get_orig_ids(df_existed[metadata_col])
+            df_existed["match"] = 1
+
+            df_common = df.merge(df_existed[["id", "orig_id", "match"]], on=["id", "orig_id"], how="left")
+
+            df_update = df_common[~df_common["match"].isna()]
+            df_insert = df_common[df_common["match"].isna()]
+
+            ids_to_remove = set(df_existed["id"]) - set(df_update["id"])
+        else:
+            df_insert = df
+            ids_to_remove = []
+            df_update = pd.DataFrame()
+
+        # -- apply changes --
+
+        if ids_to_remove:
+            conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(ids_to_remove))]
+            self.delete(table_name, conditions)
 
         if not df_update.empty:
             # get values of existed `created_at` and return them to metadata
-            origin_id_col = "_original_doc_id"
 
             created_dates, ids = {}, {}
             for _, row in df_existed.iterrows():
@@ -352,19 +380,22 @@ class VectorStoreHandler(BaseHandler):
                     row[metadata_col][origin_id_col] = ids.get(row[id_col])
                 return row
 
+            df_update = df_update.drop("orig_id", axis=1).drop("match", axis=1)
             df_update.apply(keep_created_at, axis=1)
 
-            try:
+            if hasattr(self, "update"):
                 self.update(table_name, df_update, [id_col])
-            except NotImplementedError:
-                # not implemented? do it with delete and insert
-                conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))]
+            else:
+                # no update method in vector db: just remove old records before insert
+
+                ids_to_remove = df_update[id_col]
+                conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(ids_to_remove))]
                 self.delete(table_name, conditions)
                 self.insert(table_name, df_update)
         if not df_insert.empty:
             # set created_at
             self.set_metadata_cur_time(df_insert, "_created_at")
-
+            df_insert = df_insert.drop("orig_id", axis=1)
             self.insert(table_name, df_insert)
 
     def dispatch_delete(self, query: Delete, conditions: List[FilterCondition] = None):
@@ -511,19 +542,6 @@ class VectorStoreHandler(BaseHandler):
             table_name (str): table name
             data (pd.DataFrame): data to insert
             columns (List[str]): columns to insert
-
-        Returns:
-            HandlerResponse
-        """
-        raise NotImplementedError()
-
-    def update(self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None):
-        """Update data in table
-
-        Args:
-            table_name (str): table name
-            data (pd.DataFrame): data to update
-            key_columns (List[str]): key to  to update
 
         Returns:
             HandlerResponse

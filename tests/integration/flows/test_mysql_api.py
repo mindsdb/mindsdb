@@ -137,7 +137,39 @@ class BaseStuff:
         )
 
 
+@pytest.fixture(scope="class")
+def postgres_datasource(request):
+    """
+    Class-scoped fixture to create the postgres datasource once.
+    Ensures the database exists for all tests that need it.
+    """
+    helper = BaseStuff()
+    helper.use_binary = False
+    db_name = get_test_resource_name("test_demo_postgres")
+    db_details = {
+        "type": "postgres",
+        "connection_data": {
+            "host": "samples.mindsdb.com",
+            "port": "5432",
+            "user": "demo_user",
+            "password": "demo_password",
+            "database": "demo",
+            "schema": "demo",
+        },
+    }
+    helper.create_database(db_name, db_details)
+    helper.validate_database_creation(db_name)
+    request.cls.POSTGRES_DB_NAME = db_name
+    yield db_name
+    # Cleanup
+    try:
+        helper.query(f"DROP DATABASE IF EXISTS {db_name};")
+    except Exception:
+        pass
+
+
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
+@pytest.mark.usefixtures("postgres_datasource")
 class TestMySqlApi(BaseStuff):
     # Unique resource names for this test session (initialized in setup_class)
     POSTGRES_DB_NAME = None
@@ -147,7 +179,7 @@ class TestMySqlApi(BaseStuff):
     @classmethod
     def setup_class(cls):
         """Initialize unique resource names for this test session."""
-        cls.POSTGRES_DB_NAME = get_test_resource_name("test_demo_postgres")
+        # Note: POSTGRES_DB_NAME is set by the postgres_datasource fixture
         cls.MARIADB_DB_NAME = get_test_resource_name("test_demo_mariadb")
         cls.MYSQL_DB_NAME = get_test_resource_name("test_demo_mysql")
 

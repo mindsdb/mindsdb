@@ -278,11 +278,7 @@ class TestMySQLViewsNegative(BaseStuff):
         assert "view not found" in error_str or "unknown view" in error_str
 
 
-# NOTE: Knowledge Base tests only run with text protocol (use_binary=False).
-# The binary protocol (prepared statements) fails because MindsDB's internal
-# query processing generates PostgreSQL-style parameter placeholders ($1) which
-# are incompatible with MySQL's prepared statement protocol.
-@pytest.mark.parametrize("use_binary", [False], indirect=True)
+@pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySQLKnowledgeBases(BaseStuff):
     """Test suite for Knowledge Base operations."""
 

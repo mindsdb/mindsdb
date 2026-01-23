@@ -439,8 +439,9 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
             return
 
         # Check if old table exists
+        # Note: Use %s without quotes - psycopg handles proper escaping for string values
         old_exists_df = self.raw_query(
-            'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = "%s")', [[old_name]]
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = %s)", [[old_name]]
         )
         old_exists = old_exists_df.iloc[0, 0] if old_exists_df is not None and not old_exists_df.empty else False
 
@@ -448,7 +449,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
             if old_exists:
                 # Check if new table already exists
                 new_exists_df = self.raw_query(
-                    'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = "%s")', [[new_name]]
+                    "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = %s)", [[new_name]]
                 )
                 new_exists = (
                     new_exists_df.iloc[0, 0] if new_exists_df is not None and not new_exists_df.empty else False

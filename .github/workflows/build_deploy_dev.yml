@@ -3,6 +3,8 @@ name: Build and deploy to dev
 permissions:
   contents: read
   pull-requests: write
+  pages: write
+  id-token: write
 
 on:
   pull_request:
@@ -32,7 +34,8 @@ jobs:
           predicate-quantifier: "every"
           filters: |
             not-docs:
-              - '!docs/**'  
+              - '!docs/**'
+              - '!assets/**'  
               - '!**/*.md'
               - '!.github/workflows/build_deploy_dev.yml'
               - '!.github/workflows/test_on_deploy.yml'

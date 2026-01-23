@@ -8,15 +8,31 @@ import shutil
 import time
 from unittest import mock
 from pathlib import Path
-
 import duckdb
 import numpy as np
 import pandas as pd
 from prometheus_client import REGISTRY
 from mindsdb_sql_parser import parse_sql
-
+from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
+from sqlalchemy.exc import IntegrityError as SQLAlchemyIntegrityError
+from mindsdb.interfaces.database.integrations import integration_controller
+from multiprocessing import dummy
+from mindsdb.interfaces.storage import db
+from mindsdb.api.executor.controllers.session_controller import (
+    SessionController,
+)
+from mindsdb.api.executor.command_executor import (
+    ExecuteCommands,
+)
+from mindsdb.integrations.libs.process_cache import process_cache
+from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.utilities.context import context as ctx
+from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from mindsdb.integrations.libs.response import HandlerResponse as Response
 
 logger = log.getLogger(__name__)
 
@@ -62,16 +78,10 @@ class BaseUnitTest:
         os.environ["MINDSDB_CONFIG_PATH"] = cfg_file
 
         # initialize config
-        from mindsdb.utilities.config import Config
-
         Config()
-
-        from mindsdb.interfaces.storage import db
 
         db.init()
         cls.db = db
-
-        from multiprocessing import dummy
 
         # We might not have torch installed. So ignore any errors
         try:
@@ -108,24 +118,65 @@ class BaseUnitTest:
         db.Base.metadata.create_all(db.engine)
 
         # fill with data
-        from mindsdb.interfaces.database.integrations import integration_controller
 
         integration_controller.create_permanent_integrations()
 
-        r = db.Integration(name="dummy_data", data={"db_path": self._dummy_db_path}, engine="dummy_data")
-        db.session.add(r)
+        # Insert dummy_data if it doesn't exist (idempotent with race condition handling)
+        dummy_record = db.Integration.query.filter_by(
+            name="dummy_data", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+        ).first()
+        if dummy_record is None:
+            try:
+                dummy_record = db.Integration(
+                    name="dummy_data",
+                    data={"db_path": self._dummy_db_path},
+                    engine="dummy_data",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(dummy_record)
+                db.session.flush()
+            except SQLAlchemyIntegrityError:
+                db.session.rollback()
+                dummy_record = db.Integration.query.filter_by(
+                    name="dummy_data", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+                ).first()
 
         # Lightwood should always be last (else tests break, why?)
-        r = db.Integration(name="lightwood", data={}, engine="lightwood")
-        db.session.add(r)
+        # Insert lightwood if it doesn't exist (idempotent with race condition handling)
+        lw_record = db.Integration.query.filter_by(
+            name="lightwood", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+        ).first()
+        if lw_record is None:
+            try:
+                lw_record = db.Integration(
+                    name="lightwood",
+                    data={},
+                    engine="lightwood",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(lw_record)
+                db.session.flush()
+            except SQLAlchemyIntegrityError:
+                db.session.rollback()
+                lw_record = db.Integration.query.filter_by(
+                    name="lightwood", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+                ).first()
 
-        db.session.flush()
+        self.lw_integration_id = lw_record.id
 
-        self.lw_integration_id = r.id
-
-        # default project
-        r = db.Project(name="mindsdb")
-        db.session.add(r)
+        # default project (idempotent with race condition handling)
+        project_record = db.Project.query.filter_by(
+            name="mindsdb", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+        ).first()
+        if project_record is None:
+            try:
+                project_record = db.Project(name="mindsdb", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID)
+                db.session.add(project_record)
+                db.session.flush()
+            except SQLAlchemyIntegrityError:
+                db.session.rollback()
 
         db.session.commit()
         return db
@@ -213,21 +264,8 @@ class BaseExecutorTest(BaseUnitTest):
         import_dummy_llm=False,
     ):
         # creates executor instance with mocked model_interface
-        from mindsdb.api.executor.controllers.session_controller import (
-            SessionController,
-        )
-        from mindsdb.api.executor.command_executor import (
-            ExecuteCommands,
-        )
-
         # clear cache of previous test case to apply mocks of current test case
-        from mindsdb.integrations.libs.process_cache import process_cache
-
         process_cache.cache = {}
-        from mindsdb.interfaces.database.integrations import integration_controller
-        from mindsdb.interfaces.file.file_controller import FileController
-        from mindsdb.interfaces.model.model_controller import ModelController
-        from mindsdb.utilities.context import context as ctx
 
         self.file_controller = FileController()
 
@@ -305,9 +343,6 @@ class BaseExecutorTest(BaseUnitTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        from mindsdb.integrations.libs.response import RESPONSE_TYPE
-        from mindsdb.integrations.libs.response import HandlerResponse as Response
-
         def handler_response(df, affected_rows: None | int = None):
             response = Response(RESPONSE_TYPE.TABLE, df, affected_rows=affected_rows)
             return response
@@ -367,7 +402,7 @@ class BaseExecutorTest(BaseUnitTest):
                 # region for insert/update/delete duckdb returns rowcount as 'Count' value in result, rather than using the
                 # cursor.rowcount attr.
                 match (columns, data):
-                    case ["Count"], [(affected_rows,)]:
+                    case [["Count"], [(affected_rows,)]]:
                         result_df = pd.DataFrame()
                     case _:
                         affected_rows = None

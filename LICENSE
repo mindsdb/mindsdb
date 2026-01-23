@@ -3,7 +3,7 @@
 1. MindsDB Core: The MindsDB Core component specifically uses the Elastic License 2.0. This is a distinct license that applies to this particular part of the project.
 
 2. License File in Work's Directory: If there is a LICENSE file located in the same directory as the work, that license will apply to the work:
- *  `/mindsdb/integraions` directory that contains all integrations is Licensed under MIT License.
+ *  `/mindsdb/integrations` directory that contains all integrations is Licensed under MIT License.
 
 3. Default to Elastic License 2.0: If no specific LICENSE file is found following the above rules, the work defaults to being licensed under the Elastic License 2.0.
 

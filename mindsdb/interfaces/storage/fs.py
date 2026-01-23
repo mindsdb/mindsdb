@@ -438,9 +438,71 @@ class FileStorage:
         self.fs_store = FsStore()
         self.content_path = Path(config["paths"][root_dir])
         self.resource_group_path = self.content_path / resource_group
+
+        # Migrate legacy folder if needed (before setting folder_path)
+        self._migrate_legacy_folder(resource_group, resource_id)
+
         self.folder_path = self.resource_group_path / self.folder_name
         if self.folder_path.exists() is False:
             self.folder_path.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def _get_folder_name(resource_group: str, resource_id: int) -> str:
+        """Get the folder name with user namespace."""
+        return f"{resource_group}_{ctx.company_id}_{ctx.user_id}_{resource_id}"
+
+    @staticmethod
+    def _get_legacy_folder_name(resource_group: str, resource_id: int) -> str:
+        """Get the legacy folder name (without user namespace)."""
+        return f"{resource_group}_{ctx.company_id}_{resource_id}"
+
+    def _migrate_legacy_folder(self, resource_group: str, resource_id: int):
+        """
+        Migrate legacy folders from {resource_group}_{company_id}_{resource_id}
+        to {resource_group}_{company_id}_{user_id}_{resource_id}.
+
+        Args:
+            resource_group (str): The resource group name.
+            resource_id (int): The resource ID.
+
+        Raises:
+            Exception: If the folder migration fails.
+        """
+        old_name = self._get_legacy_folder_name(resource_group, resource_id)
+        new_name = self._get_folder_name(resource_group, resource_id)
+
+        if old_name == new_name:
+            return
+
+        old_path = self.resource_group_path / old_name
+        new_path = self.resource_group_path / new_name
+
+        try:
+            # Try to get from fs_store first (might be in remote storage)
+            try:
+                self.fs_store.get(old_name, str(self.resource_group_path))
+            except (FileNotFoundError, OSError, S3ClientError) as e:
+                logger.debug(f"Could not fetch legacy folder {old_name} from remote: {e}")
+            except Exception:
+                logger.exception(f"Unexpected error fetching legacy folder {old_name} from remote")
+                raise
+
+            if old_path.exists() and not new_path.exists():
+                logger.info(f"Migrating legacy folder {old_name} to {new_name}")
+                shutil.move(str(old_path), str(new_path))
+
+                # Update remote storage
+                self.fs_store.put(new_name, str(self.resource_group_path))
+                try:
+                    self.fs_store.delete(old_name)
+                except (FileNotFoundError, OSError, S3ClientError) as e:
+                    logger.warning(f"Could not delete legacy folder {old_name} from remote: {e}")
+                except Exception:
+                    logger.exception(f"Unexpected error deleting legacy folder {old_name} from remote")
+                    raise
+        except Exception:
+            logger.exception(f"Failed to migrate legacy folder {old_name} to {new_name}")
+            raise
 
     @profiler.profile()
     def push(self, compression_level: int = 9):

@@ -559,7 +559,6 @@ class ProjectController:
 
         company_id = ctx.company_id if ctx.company_id is not None else DEFAULT_COMPANY_ID
         user_id = ctx.user_id if ctx.user_id is not None else DEFAULT_USER_ID
-
         q = db.Project.query.filter_by(company_id=company_id, user_id=user_id)
 
         if id is not None:

@@ -1492,7 +1492,7 @@ class KnowledgeBaseController:
         if self.session.integration_controller.get(vector_store_name):
             return vector_store_name
 
-        self.session.integration_controller.add(vector_store_name, 'duckdb_faiss', {})
+        self.session.integration_controller.add(vector_store_name, "duckdb_faiss", {})
         return vector_store_name
 
     def _check_embedding_model(self, project_name, params: dict = None, kb_name="") -> dict:

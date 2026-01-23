@@ -23,6 +23,7 @@ def test_prepare(client):
     response = client.post("/api/projects/mindsdb/models", json=train_data, follow_redirects=True)
     assert response.status_code == HTTPStatus.CREATED
 
+
 @pytest.mark.deprecated(
     "MindsDB models are no longer used with agents. However, Minds still uses models, so this test is kept for now"
 )

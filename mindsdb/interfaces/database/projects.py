@@ -565,9 +565,9 @@ class ProjectController:
             q = q.filter_by(id=id)
         elif name is not None:
             if strict_case:
-                q = q.filter((db.Project.name == name) & (db.Project.user_id == user_id))
+                q = q.filter((db.Project.name == name))
             else:
-                q = q.filter((sa.func.lower(db.Project.name) == sa.func.lower(name)) & (db.Project.user_id == user_id))
+                q = q.filter((sa.func.lower(db.Project.name) == sa.func.lower(name)))
 
         if deleted is True:
             q = q.filter((db.Project.deleted_at != sa.null()))

@@ -327,36 +327,65 @@ class VectorStoreHandler(BaseHandler):
             return metadata.apply(lambda m: m.get(origin_id_col))
 
         df["orig_id"] = get_orig_ids(df[metadata_col])
-        all_ids = list(get_orig_ids(df[metadata_col]))
 
-        # find existing origin_ids
-        df_existed = self.select(
-            table_name,
-            columns=[id_col, metadata_col],
-            conditions=[FilterCondition(column=f"metadata.{origin_id_col}", op=FilterOperator.IN, value=all_ids)],
-        )
+        df_orig_ids = df[~df["orig_id"].isna()]
+        df_chunk_ids = df[df["orig_id"].isna()]
 
-        # split into groups:
-        # - to update: records that match by `chunk_id`+`origin_id` in `df_existed` and `df`
-        # - to delete: all chunk_ids from `df_existed` that don't match by `chunk_id`+`origin_id`
-        # - to insert: all records from `df` that  don't match by `chunk_id`+`origin_id`
+        if not df_orig_ids.empty:
+            # data has original ids - find all related records
 
-        if not df_existed.empty:
-            df_existed["orig_id"] = get_orig_ids(df_existed[metadata_col])
-            df_existed["match"] = 1
+            all_ids = list(df_orig_ids["orig_id"])
 
-            df_common = df.merge(df_existed[["id", "orig_id", "match"]], on=["id", "orig_id"], how="left")
+            # find existing origin_ids
+            df_existed = self.select(
+                table_name,
+                columns=[id_col, metadata_col],
+                conditions=[FilterCondition(column=f"metadata.{origin_id_col}", op=FilterOperator.IN, value=all_ids)],
+            )
 
-            df_update = df_common[~df_common["match"].isna()]
-            df_insert = df_common[df_common["match"].isna()]
+            # split into groups:
+            # - to update: records that match by `chunk_id`+`origin_id` in `df_existed` and `df`
+            # - to delete: all chunk_ids from `df_existed` that don't match by `chunk_id`+`origin_id`
+            # - to insert: all records from `df` that  don't match by `chunk_id`+`origin_id`
 
-            ids_to_remove = set(df_existed["id"]) - set(df_update["id"])
-        else:
-            df_insert = df
-            ids_to_remove = []
-            df_update = pd.DataFrame()
+            if not df_existed.empty:
+                df_existed["orig_id"] = get_orig_ids(df_existed[metadata_col])
+                df_existed["match"] = 1
 
+                df_common = df_orig_ids.merge(df_existed[["id", "orig_id", "match"]], on=["id", "orig_id"], how="left")
+
+                df_update = df_common[~df_common["match"].isna()].drop("orig_id", axis=1).drop("match", axis=1)
+                df_insert = df_common[df_common["match"].isna()].drop("orig_id", axis=1)
+
+                ids_to_remove = set(df_existed["id"]) - set(df_update["id"])
+            else:
+                df_insert = df_orig_ids
+                ids_to_remove = []
+                df_update = pd.DataFrame()
+
+            self._apply_diff_changes(table_name, ids_to_remove, df_update, df_insert, df_existed)
+
+        if not df_chunk_ids.empty:
+            # records have only chunk_ids - update/insert only them
+            df_existed = self.select(
+                table_name,
+                columns=[id_col, metadata_col],
+                conditions=[FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df_chunk_ids[id_col]))],
+            )
+            existed_ids = list(df_existed[id_col])
+
+            # update existed
+            df_update = df_chunk_ids[df_chunk_ids[id_col].isin(existed_ids)]
+            df_insert = df_chunk_ids[~df_chunk_ids[id_col].isin(existed_ids)]
+
+            self._apply_diff_changes(table_name, [], df_update, df_insert, df_existed)
+
+    def _apply_diff_changes(self, table_name, ids_to_remove, df_update, df_insert, df_existed):
         # -- apply changes --
+
+        id_col = TableField.ID.value
+        metadata_col = TableField.METADATA.value
+        origin_id_col = "_original_doc_id"
 
         if ids_to_remove:
             conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(ids_to_remove))]
@@ -380,7 +409,7 @@ class VectorStoreHandler(BaseHandler):
                     row[metadata_col][origin_id_col] = ids.get(row[id_col])
                 return row
 
-            df_update = df_update.drop("orig_id", axis=1).drop("match", axis=1)
+            df_update = df_update
             df_update.apply(keep_created_at, axis=1)
 
             if hasattr(self, "update"):
@@ -395,7 +424,7 @@ class VectorStoreHandler(BaseHandler):
         if not df_insert.empty:
             # set created_at
             self.set_metadata_cur_time(df_insert, "_created_at")
-            df_insert = df_insert.drop("orig_id", axis=1)
+            df_insert = df_insert
             self.insert(table_name, df_insert)
 
     def dispatch_delete(self, query: Delete, conditions: List[FilterCondition] = None):

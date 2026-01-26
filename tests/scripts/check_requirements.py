@@ -99,7 +99,7 @@ MAIN_RULE_IGNORES = {
         "openpyxl",
         "onnxruntime",
         "litellm",
-        "urllib3"  # pinned by Snyk to avoid a vulnerability
+        "urllib3",  # pinned by Snyk to avoid a vulnerability
     ],
 }
 

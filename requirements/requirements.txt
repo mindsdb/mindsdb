@@ -46,4 +46,4 @@ pyarrow<=19.0.0 # used by pandas to read feather files in Files handler
 orjson==3.11.3
 
 mind-castle >= 0.4.9
-urllib3>=2.6.0 # not directly required, pinned by Snyk to avoid a vulnerability
+urllib3>=2.6.3 # not directly required, pinned by Snyk to avoid a vulnerability

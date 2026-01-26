@@ -208,6 +208,26 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # Ensure rollback was called
         mock_conn.rollback.assert_called_once()
 
+    def test_connect_with_schema_sets_search_path_after_connection(self):
+        """
+        Tests that when schema is provided, search_path is set via SET command
+        after connection (pooler-compatible) rather than via startup options.
+        """
+        self.tearDown()
+        self.setUp()
+        self.handler.connection_args["schema"] = "my_schema"
+
+        mock_cursor = MockCursorContextManager()
+        self.mock_connect.return_value.cursor.return_value = mock_cursor
+
+        connection = self.handler.connect()
+
+        self.assertTrue(self.handler.is_connected)
+        self.assertIsNotNone(connection)
+
+        mock_cursor.execute.assert_called_once_with('SET search_path TO "my_schema", public;')
+        self.mock_connect.return_value.commit.assert_called_once()
+
     def test_make_connection_args_applies_overrides(self):
         handler = self.handler
         handler.connection_args = OrderedDict(
@@ -223,7 +243,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         config = handler._make_connection_args()
         self.assertEqual(config["application_name"], "mdb")
         self.assertEqual(config["connect_timeout"], 10)
-        self.assertEqual(config["options"], "-c search_path=custom,public")
         self.assertTrue(config["autocommit"])
 
     def test_map_type_handles_known_and_unknown(self):
@@ -536,9 +555,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(call_kwargs["connect_timeout"], 10)
         self.assertEqual(call_kwargs["sslmode"], "prefer")
 
-        expected_options = "-c search_path=public,public"
-        self.assertEqual(call_kwargs["options"], expected_options)
-
         # Test with a different schema
         # Create a fresh handler with different schema
         self.tearDown()
@@ -548,8 +564,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.handler.connect()
         call_kwargs = self.mock_connect.call_args[1]
-        expected_options = "-c search_path=custom_schema,public"
-        self.assertEqual(call_kwargs["options"], expected_options)
 
     def test_types_casting(self):
         """Test that types are casted correctly"""

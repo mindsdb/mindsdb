@@ -8,11 +8,17 @@ import json
 pattern = "\=|~|>|<| |\n|#|\["  # noqa: W605
 
 
-def get_requirements_from_file(path):
+def get_requirements_from_file(path, with_snyk: bool = True):
     """Takes a requirements file path and extracts only the package names from it"""
 
     with open(path, "r") as main_f:
-        reqs = [re.split(pattern, line)[0] for line in main_f.readlines() if re.split(pattern, line)[0]]
+        reqs = []
+        for line in main_f.readlines():
+            if with_snyk is False and "pinned by Snyk to avoid a vulnerability" in line:
+                continue
+            parts = re.split(pattern, line)
+            if parts and parts[0]:
+                reqs.append(parts[0])
     return reqs
 
 
@@ -93,6 +99,7 @@ MAIN_RULE_IGNORES = {
         "openpyxl",
         "onnxruntime",
         "litellm",
+        "urllib3"  # pinned by Snyk to avoid a vulnerability
     ],
 }
 
@@ -322,10 +329,10 @@ def check_for_requirements_duplicates():
     """Checks that handler requirements.txt and the main requirements.txt don't contain any of the same packages"""
 
     global success
-    main_reqs = get_requirements_from_file(MAIN_REQS_PATH)
+    main_reqs = get_requirements_from_file(MAIN_REQS_PATH, with_snyk=False)
 
     for file in HANDLER_REQS_PATHS:
-        handler_reqs = get_requirements_from_file(file)
+        handler_reqs = get_requirements_from_file(file, with_snyk=False)
 
         for req in handler_reqs:
             if req in main_reqs:

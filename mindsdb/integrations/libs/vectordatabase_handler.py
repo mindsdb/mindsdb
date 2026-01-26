@@ -355,17 +355,19 @@ class VectorStoreHandler(BaseHandler):
                 df_common = df_orig_ids.merge(df_existed[["id", "orig_id", "match"]], on=["id", "orig_id"], how="left")
 
                 df_update = df_common[~df_common["match"].isna()].drop("orig_id", axis=1).drop("match", axis=1)
-                df_insert = df_common[df_common["match"].isna()].drop("orig_id", axis=1)
+                df_insert = df_common[df_common["match"].isna()]
 
                 ids_to_remove = set(df_existed["id"]) - set(df_update["id"])
             else:
                 df_insert = df_orig_ids
                 ids_to_remove = []
                 df_update = pd.DataFrame()
-
+            df_insert = df_insert.drop("orig_id", axis=1)
             self._apply_diff_changes(table_name, ids_to_remove, df_update, df_insert, df_existed)
 
         if not df_chunk_ids.empty:
+            df_chunk_ids = df_chunk_ids.drop("orig_id", axis=1)
+
             # records have only chunk_ids - update/insert only them
             df_existed = self.select(
                 table_name,

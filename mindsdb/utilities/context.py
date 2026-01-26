@@ -23,6 +23,7 @@ class Context:
                 "profiling": {"level": 0, "enabled": False, "pointer": None, "tree": None},
                 "email_confirmed": 0,
                 "used_handlers": set(),
+                "params": {},
             }
         )
 

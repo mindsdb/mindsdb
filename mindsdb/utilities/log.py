@@ -1,7 +1,9 @@
+import re
 import os
 import json
 import logging
 import threading
+from typing import Any
 from logging.config import dictConfig
 
 from mindsdb.utilities.config import config as app_config
@@ -52,6 +54,131 @@ FORMATTERS = {
 }
 
 
+class LogSanitizer:
+    """Log Sanitizer"""
+
+    SENSITIVE_KEYS = {
+        "password",
+        "passwd",
+        "pwd",
+        "token",
+        "access_token",
+        "refresh_token",
+        "bearer_token",
+        "api_key",
+        "apikey",
+        "api-key",
+        "openai_api_key",
+        "secret",
+        "secret_key",
+        "client_secret",
+        "credentials",
+        "auth",
+        "authorization",
+        "private_key",
+        "private-key",
+        "session_id",
+        "sessionid",
+        "credit_card",
+        "card_number",
+        "cvv",
+    }
+
+    def __init__(self, mask: str | None = None):
+        self.mask = mask or "********"
+        self._compile_patterns()
+
+    def _compile_patterns(self):
+        self.search_pattern = re.compile(
+            r"\b(" + "|".join(re.escape(key) for key in self.SENSITIVE_KEYS) + r")\b", re.IGNORECASE
+        )
+        self.patterns = []
+        for key in self.SENSITIVE_KEYS:
+            # Patterns for: key=value, key: value, "key": "value", 'key': 'value'
+            # Note: negative lookahead (?!%) excludes Python format placeholders like %s, %d, etc.
+            patterns = [
+                re.compile(f'{key}["\s]*[:=]["\s]*(?!%)([^\s,}}\\]"\n]+)', re.IGNORECASE),
+                re.compile(f'"{key}"["\s]*:["\s]*"([^"]+)"', re.IGNORECASE),
+                re.compile(f"'{key}'['\s]*:['\s]*'([^']+)'", re.IGNORECASE),
+            ]
+            self.patterns.extend(patterns)
+
+    def _replace(self, m) -> str:
+        return m.group(0).replace(m.group(1), self.mask)
+
+    def sanitize_text(self, text: str) -> str:
+        if self.search_pattern.search(text):
+            for pattern in self.patterns:
+                text = pattern.sub(self._replace, text)
+        return text
+
+    def sanitize_dict(self, data: dict) -> dict:
+        if not isinstance(data, dict):
+            return data
+
+        sanitized = {}
+        for key, value in data.items():
+            if any(sensitive in str(key).lower() for sensitive in self.SENSITIVE_KEYS):
+                sanitized[key] = self.mask
+            elif isinstance(value, dict):
+                sanitized[key] = self.sanitize_dict(value)
+            elif isinstance(value, list):
+                sanitized[key] = [self.sanitize_dict(item) if isinstance(item, dict) else item for item in value]
+            else:
+                sanitized[key] = value
+        return sanitized
+
+    def sanitize(self, data: Any) -> Any:
+        if isinstance(data, dict):
+            return self.sanitize_dict(data)
+        elif isinstance(data, str):
+            return self.sanitize_text(data)
+        elif isinstance(data, (list, tuple)):
+            return type(data)(self.sanitize(item) for item in data)
+        return data
+
+
+class SanitizingMixin:
+    """Mixin for sanitizing log records."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sanitizer = LogSanitizer()
+
+    def sanitize_record(self, record):
+        """Sanitize a log record before emitting."""
+        if (
+            hasattr(record, "args")
+            and isinstance(record.args, (list, tuple))
+            and len(record.args) > 0
+            and isinstance(record.msg, str)
+        ):
+            record.msg = record.msg % record.args
+            record.args = []
+
+        if isinstance(record.msg, str):
+            record.msg = self.sanitizer.sanitize_text(record.msg)
+        elif isinstance(record.msg, dict):
+            record.msg = self.sanitizer.sanitize_dict(record.msg)
+
+        if hasattr(record, "args") and record.args:
+            record.args = self.sanitizer.sanitize(record.args)
+
+        return record
+
+
+class StreamSanitizingHandler(SanitizingMixin, logging.StreamHandler):
+    def emit(self, record):
+        record = self.sanitize_record(record)
+        super().emit(record)
+
+
+class FileSanitizingHandler(SanitizingMixin, logging.handlers.RotatingFileHandler):
+    def emit(self, record):
+        record = self.sanitize_record(record)
+        super().emit(record)
+
+
 def get_console_handler_config_level() -> int:
     console_handler_config = app_config["logging"]["handlers"]["console"]
     return getattr(logging, console_handler_config["level"])
@@ -75,7 +202,7 @@ def get_handlers_config(process_name: str) -> dict:
     console_handler_config_level = getattr(logging, console_handler_config["level"])
     if console_handler_config["enabled"] is True:
         handlers_config["console"] = {
-            "class": "logging.StreamHandler",
+            "class": "mindsdb.utilities.log.StreamSanitizingHandler",
             "formatter": console_handler_config.get("formatter", "default"),
             "level": console_handler_config_level,
         }
@@ -91,7 +218,7 @@ def get_handlers_config(process_name: str) -> dict:
             else:
                 file_name = f"{file_name}_{process_name}"
         handlers_config["file"] = {
-            "class": "logging.handlers.RotatingFileHandler",
+            "class": "mindsdb.utilities.log.FileSanitizingHandler",
             "formatter": "file",
             "level": file_handler_config_level,
             "filename": app_config.paths["log"] / file_name,

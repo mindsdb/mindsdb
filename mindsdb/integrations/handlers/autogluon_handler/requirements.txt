@@ -1,2 +1,2 @@
 autogluon
-type_infer==0.0.25
+type_infer==0.0.26

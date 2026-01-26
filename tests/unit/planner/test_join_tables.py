@@ -10,7 +10,6 @@ from mindsdb_sql_parser.ast import (
     Constant,
     Star,
     BinaryOperation,
-    OrderBy,
     Function,
 )
 from mindsdb_sql_parser.utils import JoinType
@@ -21,6 +20,7 @@ from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep,
+    FetchDataframeStepPartition,
     ProjectStep,
     JoinStep,
     ApplyPredictorStep,
@@ -318,18 +318,72 @@ class TestPlanJoinTables:
         assert plan.steps == expected_plan.steps
 
     def test_join_tables_plan_order_by(self):
-        query = Select(
-            targets=[Identifier("tab1.column1"), Identifier("tab2.column1"), Identifier("tab2.column2")],
-            from_table=Join(
-                left=Identifier("int.tab1"),
-                right=Identifier("int2.tab2"),
-                condition=BinaryOperation(op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]),
-                join_type=JoinType.INNER_JOIN,
-            ),
-            limit=Constant(10),
-            offset=Constant(15),
-            order_by=[OrderBy(field=Identifier("tab1.column1"))],
+        query = parse_sql("""
+            SELECT 
+              tab1.column1, tab2.column1, tab2.column2 
+            FROM int.tab1 INNER 
+             JOIN int2.tab2 ON tab1.column1 > tab2.column1 
+            ORDER BY tab1.column1 
+            LIMIT 10 
+        """)
+
+        subquery = copy.deepcopy(query)
+        subquery.from_table = None
+        subquery.offset = None
+
+        plan = plan_query(query, integrations=["int", "int2"])
+        expected_plan = QueryPlan(
+            integrations=["int"],
+            steps=[
+                FetchDataframeStepPartition(
+                    step_num=0,
+                    integration="int",
+                    query=parse_sql("select column1 AS column1 from tab1 order by column1"),
+                    condition={"limit": 10},
+                    steps=[
+                        FetchDataframeStep(
+                            step_num=1,
+                            integration="int2",
+                            query=Select(
+                                targets=[
+                                    Identifier("column1", alias=Identifier("column1")),
+                                    Identifier("column2", alias=Identifier("column2")),
+                                ],  # Column pruning
+                                from_table=Identifier("tab2"),
+                            ),
+                        ),
+                        JoinStep(
+                            step_num=2,
+                            left=Result(0),
+                            right=Result(1),
+                            query=Join(
+                                left=Identifier("tab1"),
+                                right=Identifier("tab2"),
+                                condition=BinaryOperation(
+                                    op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]
+                                ),
+                                join_type=JoinType.INNER_JOIN,
+                            ),
+                        ),
+                    ],
+                ),
+                QueryStep(subquery, from_table=Result(0), strict_where=False),
+            ],
         )
+
+        assert plan.steps == expected_plan.steps
+
+    def test_join_tables_plan_order_by_offset(self):
+        # no optimisation with offset
+        query = parse_sql("""
+            SELECT 
+              tab1.column1, tab2.column1, tab2.column2 
+            FROM int.tab1 INNER 
+             JOIN int2.tab2 ON tab1.column1 > tab2.column1 
+            ORDER BY tab1.column1 
+            LIMIT 10 
+            OFFSET 15
+        """)
 
         subquery = copy.deepcopy(query)
         subquery.from_table = None
@@ -730,7 +784,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.JOIN,
                     ),
                 ),
-                QueryStep(parse_sql("SELECT t1.`id`, t2.*"), from_table=Result(3), strict_where=False),
+                QueryStep(parse_sql("SELECT t1.id, t2.*"), from_table=Result(3), strict_where=False),
             ]
         )
 

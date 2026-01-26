@@ -9,7 +9,7 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
     construct_model_from_args,
 )
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
+from mindsdb.interfaces.agents.constants import get_default_embeddings_model_class
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import KnowledgeBase
@@ -51,10 +51,12 @@ def _load_rag_config(tool: dict, pred_args: dict, skill: db.Skills) -> RAGPipeli
             embeddings_model = construct_model_from_args(embedding_args)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         else:
-            embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+            embeddings_model_class = get_default_embeddings_model_class()
+            embeddings_model = embeddings_model_class()
             logger.debug("Using default embedding model as knowledge base has no embedding model")
     elif "embedding_model" not in tools_config:
-        embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+        embeddings_model_class = get_default_embeddings_model_class()
+        embeddings_model = embeddings_model_class()
         logger.debug("Using default embedding model as no knowledge base provided")
 
     # Load and validate config

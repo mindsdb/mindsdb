@@ -1,5 +1,6 @@
 import time
 import json
+import tempfile
 
 from unittest.mock import patch, MagicMock
 import threading
@@ -31,10 +32,11 @@ def task_monitor():
     worker.join()
 
 
-def dummy_embeddings(string):
+def dummy_embeddings(string, dimension=None):
     # Imitates embedding generation: create vectors which are similar for similar words in inputs
-
-    embeds = [0] * 25**2
+    if dimension is None:
+        dimension = 25**2
+    embeds = [0] * dimension
     base = 25
 
     string = string.lower().replace(",", " ").replace(".", " ")
@@ -58,10 +60,10 @@ def dummy_embeddings(string):
     return embeds
 
 
-def set_litellm_embedding(mock_litellm_embedding):
+def set_litellm_embedding(mock_litellm_embedding, dimension=None):
     def resp_f(input, *args, **kwargs):
         mock_response = MagicMock()
-        mock_response.data = [{"embedding": dummy_embeddings(s)} for s in input]
+        mock_response.data = [{"embedding": dummy_embeddings(s, dimension)} for s in input]
         return mock_response
 
     mock_litellm_embedding.side_effect = resp_f
@@ -76,6 +78,7 @@ class TestKB(BaseExecutorDummyML):
         content_columns=None,
         id_column=None,
         metadata_columns=None,
+        storage=None,
     ):
         self.run_sql(f"drop knowledge base if exists {name}")
 
@@ -97,6 +100,12 @@ class TestKB(BaseExecutorDummyML):
             kb_params["id_column"] = id_column
         if metadata_columns is not None:
             kb_params["metadata_columns"] = metadata_columns
+        if storage is not None:
+            kb_params["storage"] = storage
+
+        storage_table = self._get_storage_table(name)
+        if storage_table:
+            kb_params["storage"] = storage_table
 
         param_str = ""
         if kb_params:
@@ -113,11 +122,16 @@ class TestKB(BaseExecutorDummyML):
         """
         )
 
+    def _get_storage_table(self, kb_name):
+        # default chromadb
+        return None
+
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         self._create_kb("kb_review")
 
-        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("insert into kb_review (content) values ('review')")
 
         # selectable
@@ -134,6 +148,8 @@ class TestKB(BaseExecutorDummyML):
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb_metadata(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         record = {
             "review": "all is good, haven't used yet",
             "url": "https://laptops.com/123",
@@ -146,8 +162,6 @@ class TestKB(BaseExecutorDummyML):
 
         # ---  case 1: kb with default columns settings ---
         self._create_kb("kb_review")
-
-        set_litellm_embedding(mock_litellm_embedding)
 
         self.run_sql(
             """
@@ -202,7 +216,6 @@ class TestKB(BaseExecutorDummyML):
             metadata_columns=["specs", "id"],
         )
 
-        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql(
             """
             insert into kb_review
@@ -228,7 +241,6 @@ class TestKB(BaseExecutorDummyML):
         # ---  case 3: content is defined, id is id, the rest goes to metadata ---
         self._create_kb("kb_review", content_columns=["review"])
 
-        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql(
             """
             insert into kb_review
@@ -359,12 +371,13 @@ class TestKB(BaseExecutorDummyML):
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_join_kb_table(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         df = self._get_ral_table()
         self.save_file("ral", df)
 
         self._create_kb("kb_ral")
 
-        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql(
             """
             insert into kb_ral
@@ -428,6 +441,8 @@ class TestKB(BaseExecutorDummyML):
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_kb_partitions(self, mock_handler, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         df = self._get_ral_table()
         self.save_file("ral", df)
 
@@ -441,7 +456,6 @@ class TestKB(BaseExecutorDummyML):
             self._create_kb("kb_part", content_columns=["english"])
 
             # load kb
-            set_litellm_embedding(mock_litellm_embedding)
             ret = self.run_sql(insert_sql)
             # inserts returns query
             query_id = ret["ID"][0]
@@ -502,8 +516,16 @@ class TestKB(BaseExecutorDummyML):
             # test iterate
             check_partition(
                 """
-                insert into kb_part SELECT id, english FROM  pg.ral
+                insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id
+            """
+            )
+
+            # test iterate (mix case of track_column)
+            check_partition(
+                """
+                insert into kb_part SELECT id, english FROM pg.ral
+                using batch_size=20, track_column=Id
             """
             )
 
@@ -518,7 +540,7 @@ class TestKB(BaseExecutorDummyML):
             # without track column
             check_partition(
                 """
-                insert into kb_part SELECT id, english FROM  pg.ral
+                insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20
             """
             )
@@ -556,16 +578,7 @@ class TestKB(BaseExecutorDummyML):
 
         self.save_file("items", df)
 
-        self.run_sql(
-            """
-            create knowledge base kb_alg
-            using
-                embedding_model = {
-                    "provider": "bedrock",
-                    "model_name": "titan"
-                }
-        """
-        )
+        self._create_kb("kb_alg", embedding_model={"provider": "bedrock", "model_name": "titan"})
 
         self.run_sql(
             """
@@ -860,7 +873,7 @@ class TestKB(BaseExecutorDummyML):
 
         mock_config_get.side_effect = config_get_side_effect
 
-        self.run_sql("create knowledge base kb1")
+        self._create_kb("kb1")
 
         ret = self.run_sql("describe  knowledge base kb1")
 
@@ -994,17 +1007,34 @@ class TestKB(BaseExecutorDummyML):
 
         df = pd.DataFrame(
             [
-                {
-                    "PRODUCT_ID": 1,
-                    "PRODUCT_NAME": 'Laptop Pro 15"',
-                    "DESCRIPTION": "High-performance laptop with 16GB RAM and 512GB SSD",
-                    "CATEGORY": "Electronics",
-                    "PRICE": 1299.99,
-                }
+                [1, 'Laptop Pro 15"', "High-performance laptop with 16GB RAM and 512GB SSD", "Electronics", 1299.99],
+                [2, "Table", "Dining table,  144 cm", "Home", 100],
             ],
-            columns=["PRODUCT_ID", "PRODUCT_NAME", "DESCRIPTION", "CATEGORY", "PRICE"],
+            columns=["Product_ID", "Product_Name", "Description", "Category", "Price"],
         )
 
+        self.save_file("oracle_products", df)
+
+        # -- mixed case source columns
+        self._create_kb(
+            "kb_oracle_mixedcase",
+            content_columns=["Product_Name", "Description"],
+            id_column="Product_ID",
+            metadata_columns=["Category", "Price"],
+        )
+        self.run_sql(
+            """
+            insert into kb_oracle_mixedcase
+            select * from files.oracle_products
+            """
+        )
+        ret = self.run_sql("select `Category` from kb_oracle_mixedcase  where `Category` = 'Home'")
+        assert len(ret) == 2
+        assert ret["Category"][0] == "Home"
+
+        # -- uppercase source columns
+        df.columns = df.columns.str.upper()
+        self.run_sql("drop table files.oracle_products")
         self.save_file("oracle_products", df)
 
         self._create_kb(
@@ -1017,14 +1047,18 @@ class TestKB(BaseExecutorDummyML):
             """
             insert into kb_oracle_uppercase
             select * from files.oracle_products
-        """
+            """
         )
 
-        ret = self.run_sql("select * from kb_oracle_uppercase")
-        assert isinstance(ret, pd.DataFrame)
+        ret = self.run_sql("select * from kb_oracle_uppercase where `CATEGORY` = 'Electronics'")
         assert len(ret) == 2
+        assert ret["CATEGORY"][0] == "Electronics"
 
         # -- lowercase source columns
+        df.columns = df.columns.str.lower()
+        self.run_sql("drop table files.oracle_products")
+        self.save_file("oracle_products", df)
+
         self._create_kb(
             "kb_oracle_lowercase",
             content_columns=["product_name", "description"],
@@ -1037,23 +1071,34 @@ class TestKB(BaseExecutorDummyML):
             select * from files.oracle_products
         """
         )
-        ret = self.run_sql("select * from kb_oracle_lowercase")
-        assert isinstance(ret, pd.DataFrame)
+        ret = self.run_sql("select category from kb_oracle_lowercase where category = 'Home'")
         assert len(ret) == 2
+        assert ret["category"][0] == "Home"
 
-        # -- mixed case source columns
-        self._create_kb(
-            "kb_oracle_mixedcase",
-            content_columns=["Product_Name", "DESCRIPTION"],
-            id_column="Product_ID",
-            metadata_columns=["Category", "price"],
-        )
-        self.run_sql(
-            """
-            insert into kb_oracle_mixedcase
-            select * from files.oracle_products
-        """
-        )
-        ret = self.run_sql("select * from kb_oracle_mixedcase")
-        assert isinstance(ret, pd.DataFrame)
-        assert len(ret) == 2
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_dimension_mismatch(self, mock_litellm_embedding):
+        temp_dir = tempfile.mkdtemp()
+
+        self.run_sql(f"""
+        create database my_chroma 
+          with 
+           engine='chromadb',
+           PARAMETERS = {{
+               'persist_directory': '{temp_dir}'
+           }}
+        """)
+
+        set_litellm_embedding(mock_litellm_embedding, dimension=1000)
+        self._create_kb("kb1", storage="my_chroma.table1")
+
+        self.run_sql("insert into kb1 (content) values ('review')")
+
+        # change dimension
+        set_litellm_embedding(mock_litellm_embedding, dimension=1500)
+
+        with pytest.raises(ValueError):
+            self._create_kb("kb2", storage="my_chroma.table1")
+
+        self.run_sql("drop knowledge base kb1")
+        self.run_sql("drop table my_chroma.table1")
+        self.run_sql("drop database my_chroma")

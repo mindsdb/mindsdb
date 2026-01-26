@@ -16,6 +16,28 @@ def get_requirements_from_file(path):
     return reqs
 
 
+def get_requirements_with_DEP002(path):
+    """Extract package names that have 'pinned by Snyk' comment from requirements file"""
+    no_check_packages = []
+
+    with open(path, "r") as f:
+        for line in f.readlines():
+            line = line.strip()
+            if (
+                line
+                and not line.startswith("#")
+                and (
+                    "pinned by Snyk to avoid a vulnerability" in line
+                    or "ignore-DEP002" in line
+                )
+            ):
+                package_name = re.split(pattern, line)[0]
+                if package_name:
+                    no_check_packages.append(package_name)
+
+    return no_check_packages
+
+
 MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
@@ -248,10 +270,24 @@ def print_errors(file, errors):
         print()
 
 
-def get_ignores_str(ignores_dict):
-    """Get a list of rule ignores for deptry"""
+def get_ignores_str(ignores_dict: dict, dep002_ignore: list[str] = None) -> str:
+    """Get a list of rule ignores for deptry
 
-    return ",".join([f"{k}={'|'.join(v)}" for k, v in ignores_dict.items()])
+    Args:
+        ignores_dict: A dictionary of rule ignores for deptry
+        dep002_ignore: Additional list of packages to ignore for DEP002
+
+    Returns:
+        A string of rule ignores for deptry
+    """
+
+    rules = []
+    for k, v in ignores_dict.items():
+        rules.append(f"{k}={'|'.join(v)}")
+        if k == "DEP002" and dep002_ignore:
+            rules[-1] += '|' + '|'.join(dep002_ignore)
+
+    return ",".join(rules)
 
 
 def run_deptry(reqs, rule_ignores, path, extra_args=""):
@@ -416,9 +452,13 @@ def check_requirements_imports():
 
     # Run on each handler
     for file in HANDLER_REQS_PATHS:
+        handler_no_check = get_requirements_with_DEP002(file)
+
+        ignore_str = get_ignores_str(HANDLER_RULE_IGNORES, dep002_ignore=handler_no_check)
+
         errors = run_deptry(
             f"{file},{MAIN_REQS_PATH},{TEST_REQS_PATH}",
-            get_ignores_str(HANDLER_RULE_IGNORES),
+            ignore_str,
             os.path.dirname(file),
         )
         print_errors(file, errors)

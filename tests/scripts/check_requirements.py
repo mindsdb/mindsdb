@@ -26,10 +26,7 @@ def get_requirements_with_DEP002(path):
             if (
                 line
                 and not line.startswith("#")
-                and (
-                    "pinned by Snyk to avoid a vulnerability" in line
-                    or "ignore-DEP002" in line
-                )
+                and ("pinned by Snyk to avoid a vulnerability" in line or "ignore-DEP002" in line)
             ):
                 package_name = re.split(pattern, line)[0]
                 if package_name:
@@ -285,7 +282,7 @@ def get_ignores_str(ignores_dict: dict, dep002_ignore: list[str] = None) -> str:
     for k, v in ignores_dict.items():
         rules.append(f"{k}={'|'.join(v)}")
         if k == "DEP002" and dep002_ignore:
-            rules[-1] += '|' + '|'.join(dep002_ignore)
+            rules[-1] += "|" + "|".join(dep002_ignore)
 
     return ",".join(rules)
 

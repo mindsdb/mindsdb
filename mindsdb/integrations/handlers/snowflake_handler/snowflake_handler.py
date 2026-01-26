@@ -501,6 +501,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the column metadata.
         """
+        logger.info(f"meta_get_columns called with table_names: {table_names}")
         # Get all tables if not specified
         if table_names is None or len(table_names) == 0:
             tables_query = """

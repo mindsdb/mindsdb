@@ -109,6 +109,13 @@ class SqlalchemyRender:
                             return True
 
                     lc_value = value.lower()
+
+                    # Snowflake requires quoting for mixed-case identifiers to preserve case
+                    # Otherwise, unquoted identifiers are converted to uppercase
+                    is_snowflake = getattr(dialect, "driver", None) == "snowflake"
+                    if is_snowflake and lc_value != value:
+                        return True
+
                     return (
                         lc_value in self.reserved_words
                         or value[0] in self.illegal_initial_characters

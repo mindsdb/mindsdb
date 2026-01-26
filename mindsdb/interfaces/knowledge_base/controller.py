@@ -192,12 +192,19 @@ def rotate_provider_api_key(params):
     provider = params.get("provider").lower()
 
     if provider == "snowflake":
+        if "snowflake_account_id" in params:
+            # `snowflake_account_id` is the old name
+            params["account_id"] = params.pop("snowflake_account_id")
+
+        if "private_key" not in params:
+            return
+
         api_key = params.get("api_key")
         api_key2 = get_validated_jwt(
             api_key,
-            account=params.get("snowflake_account_id"),
+            account=params.get("account_id"),
             user=params.get("user"),
-            private_key=params.get("private_key"),
+            private_key=params["private_key"],
         )
         if api_key2 != api_key:
             # update keys
@@ -483,7 +490,7 @@ class KnowledgeBaseTable:
         dynamic_columns = self._kb.params.get("inserted_metadata", [])
 
         columns = set(user_columns) | set(dynamic_columns)
-        return [col.lower() for col in columns]
+        return list(columns)
 
     def score_documents(self, query_text, documents, reranking_model_params):
         rotate_provider_api_key(reranking_model_params)
@@ -716,7 +723,15 @@ class KnowledgeBaseTable:
             return
 
         if len(df) > MAX_INSERT_BATCH_SIZE:
-            raise ValueError("Input data is too large, please load data in batches")
+            # auto-batching
+            batch_size = MAX_INSERT_BATCH_SIZE
+
+            chunk_num = 0
+            while chunk_num * batch_size < len(df):
+                df2 = df[chunk_num * batch_size : (chunk_num + 1) * batch_size]
+                self.insert(df2, params=params)
+                chunk_num += 1
+            return
 
         try:
             run_query_id = ctx.run_query_id
@@ -727,6 +742,8 @@ class KnowledgeBaseTable:
 
         except AttributeError:
             ...
+
+        df.replace({np.nan: None}, inplace=True)
 
         # First adapt column names to identify content and metadata columns
         adapted_df, normalized_columns = self._adapt_column_names(df)
@@ -961,6 +978,14 @@ class KnowledgeBaseTable:
         if model_id is None:
             messages = list(df[TableField.CONTENT.value])
             embedding_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
+            new_api_key = rotate_provider_api_key(embedding_params)
+            if new_api_key:
+                # update key
+                if "embedding_model" not in self._kb.params:
+                    self._kb.params["embedding_model"] = {}
+                self._kb.params["embedding_model"]["api_key"] = new_api_key
+                flag_modified(self._kb, "params")
+                db.session.commit()
 
             llm_client = LLMClient(embedding_params, session=self.session)
             results = llm_client.embeddings(messages)
@@ -1217,6 +1242,7 @@ class KnowledgeBaseController:
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
         params["embedding_model"] = embedding_params
+        rotate_provider_api_key(embedding_params)
 
         # if model_name is None:  # Legacy
         embed_info = self._check_embedding_model(
@@ -1312,15 +1338,20 @@ class KnowledgeBaseController:
             from_table=Identifier(parts=[vector_table_name]),
             limit=Constant(1),
         )
-        df = vector_store_handler.dispatch_select(query, [])
-        if len(df) > 0:
-            value = df[TableField.EMBEDDINGS.value][0]
-            if isinstance(value, str):
-                value = json.loads(value)
-            if len(value) != embed_info["dimension"]:
-                raise ValueError(
-                    f"Dimension of embedding model doesn't match to dimension of vector table: {embed_info['dimension']} != {len(value)}"
-                )
+        dimension = None
+        if hasattr(vector_store_handler, "get_dimension"):
+            dimension = vector_store_handler.get_dimension(vector_table_name)
+        else:
+            df = vector_store_handler.dispatch_select(query, [])
+            if len(df) > 0:
+                value = df[TableField.EMBEDDINGS.value][0]
+                if isinstance(value, str):
+                    value = json.loads(value)
+                dimension = len(value)
+        if dimension is not None and dimension != embed_info["dimension"]:
+            raise ValueError(
+                f"Dimension of embedding model doesn't match to dimension of vector table: {embed_info['dimension']} != {dimension}"
+            )
 
     def update(
         self,
@@ -1463,7 +1494,7 @@ class KnowledgeBaseController:
             raise ValueError("'provider' parameter is required for embedding model")
 
         # check available providers
-        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "ollama")
+        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "ollama", "snowflake")
         if params["provider"] not in avail_providers:
             raise ValueError(
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"

@@ -18,45 +18,24 @@ def parse_handlers_env(value: str | None) -> List[str]:
     return handlers
 
 
-def run(cmd: list[str], capture: bool = False) -> subprocess.CompletedProcess:
+def run(cmd: list[str], capture: bool = False, env: dict | None = None) -> subprocess.CompletedProcess:
     print("[coverage]", " ".join(cmd))
     kwargs: dict = {"text": True}
+    if env is not None:
+        kwargs["env"] = env
     if capture:
         kwargs["stdout"] = subprocess.PIPE
         kwargs["stderr"] = subprocess.STDOUT
     return subprocess.run(cmd, **kwargs)
 
 
-def run_pytest_with_coverage(handlers: list[str]) -> None:
-    """Run pytest with coverage only for the selected handlers."""
-    cov_args: list[str] = [f"--cov=mindsdb.integrations.handlers.{h}_handler" for h in handlers]
+def build_handler_metrics(handlers: list[str], coverage_file: str) -> Dict[str, Dict[str, float]]:
+    """Generate coverage metrics per handler directory from an existing coverage data file."""
+    env = os.environ.copy()
+    env["COVERAGE_FILE"] = coverage_file
 
-    pytest_cmd = [
-        "pytest",
-        "--junitxml=pytest.xml",
-        "--cov-report=term-missing:skip-covered",
-        "--cov-report=xml",
-        *cov_args,
-        "tests/unit/handlers",
-    ]
-
-    proc = run(pytest_cmd, capture=True)
-
-    # Save output for the GitHub coverage comment action
-    output = proc.stdout or ""
-    with open("pytest-coverage.txt", "w", encoding="utf-8") as fh:
-        fh.write(output)
-    print(output, end="")
-
-    if proc.returncode != 0:
-        print(f"[coverage] pytest failed with exit code {proc.returncode}", file=sys.stderr)
-        sys.exit(proc.returncode)
-
-
-def build_handler_metrics(handlers: list[str]) -> Dict[str, Dict[str, float]]:
-    """Generate coverage metrics per handler directory."""
-    # `coverage json` reads the latest .coverage data created by pytest
-    result = run(["coverage", "json", "-o", "coverage.json"])
+    # `coverage json` reads the .coverage data created by pytest
+    result = run(["coverage", "json", "-o", "coverage.json"], env=env)
     if result.returncode != 0:
         print("[coverage] Failed to produce coverage.json", file=sys.stderr)
         sys.exit(result.returncode)
@@ -131,6 +110,8 @@ def main() -> int:
     handlers_env = os.environ.get("HANDLERS_TO_VERIFY") or os.environ.get("HANDLERS_TO_INSTALL", "")
     handlers = parse_handlers_env(handlers_env)
 
+    print("[coverage] Verifying configured handlers only (not full-suite coverage).")
+
     if not handlers:
         print(
             "[coverage] No handlers configured in HANDLERS_TO_VERIFY or HANDLERS_TO_INSTALL; failing.",
@@ -145,8 +126,16 @@ def main() -> int:
         print(f"[coverage] Invalid COVERAGE_FAIL_UNDER={threshold_str!r}", file=sys.stderr)
         return 1
 
-    run_pytest_with_coverage(handlers)
-    metrics = build_handler_metrics(handlers)
+    coverage_file = os.environ.get("COVERAGE_FILE") or ".coverage"
+    if not os.path.exists(coverage_file):
+        print(
+            f"[coverage] Coverage data file {coverage_file!r} not found. "
+            "Run pytest with coverage before executing this script.",
+            file=sys.stderr,
+        )
+        return 1
+
+    metrics = build_handler_metrics(handlers, coverage_file)
     enforce_per_handler_directory_threshold(metrics, threshold)
     return 0
 

@@ -1,3 +1,5 @@
 tensorflow
 autokeras
 protobuf>=4.25.8 # not directly required, pinned by Snyk to avoid a vulnerability
+keras>=3.12.0 # not directly required, pinned by Snyk to avoid a vulnerability
+scikit-learn==1.5.2

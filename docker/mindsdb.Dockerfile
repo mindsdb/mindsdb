@@ -12,7 +12,7 @@ RUN find ./ -type f -not -name "requirements*.txt" -print0 | xargs -0 rm -f \
 # Find every empty directory and delete it
     && find ./ -type d -empty -delete
 # Copy setup.py and everything else used by setup.py
-COPY setup.py default_handlers.txt README.md ./
+COPY setup.py README.md ./
 COPY mindsdb/__about__.py mindsdb/
 # Now this stage only contains a few files and the layer hash will be the same if they don't change.
 # Which will mean the next stage can be cached, even if the cache for the above stage was invalidated.
@@ -34,7 +34,16 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -qy \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
-    freetds-dev freetds-bin libpq5 curl # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
+    freetds-dev freetds-bin libpq5 curl unixodbc unixodbc-dev gnupg # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
+
+# Install Microsoft ODBC Driver 18 for SQL Server
+# Use Debian 12 (bookworm) repo as it's the latest stable version supported by Microsoft
+RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql18
 
 # Use a specific tag so the file doesn't change
 COPY --from=ghcr.io/astral-sh/uv:0.8.11 /uv /usr/local/bin/uv
@@ -84,7 +93,8 @@ ENV PATH=/venv/bin:$PATH
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 
-
+# Pre-load tokenizer from Huggingface, and UI
+RUN python -m mindsdb --config=/root/mindsdb_config.json --load-tokenizer --update-gui
 
 # Same as extras image, but with dev dependencies installed.
 # This image is used in our docker-compose
@@ -96,6 +106,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloa
 # Install system dependencies, with caching for faster builds
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    export DEBIAN_FRONTEND=noninteractive ACCEPT_EULA=Y && \
     apt update -qy \
     && apt-get upgrade -qy \
     && apt-get install -qy \

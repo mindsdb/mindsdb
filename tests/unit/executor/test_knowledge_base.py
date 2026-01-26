@@ -1100,13 +1100,24 @@ class TestKB(BaseExecutorDummyML):
         # insert bug content
         self.run_sql(f"insert into kb1 (id, content) values (1, '{'my content' * 1000}')")
 
-        # it was chunked
-        ret = self.run_sql("select * from kb1")
+        # insert second id
+        self.run_sql("insert into kb1 (id, content) values (2, 'content2')")
+
+        # first was chunked
+        ret = self.run_sql("select * from kb1 where id = 1")
         assert len(ret) > 1
+
+        # second wasn't
+        ret = self.run_sql("select * from kb1 where id = 2")
+        assert len(ret) == 1
 
         # insert short string
         self.run_sql("insert into kb1 (id, content) values (1, 'content')")
 
         # chunks were removed
-        ret = self.run_sql("select * from kb1")
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+
+        # second id wasn't removed
+        ret = self.run_sql("select * from kb1 where id = 2")
         assert len(ret) == 1

@@ -1073,6 +1073,38 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             check_dtype=False,
         )
 
+        # different case
+        sqls = [
+            """
+            WITH Ta as (
+                select 1 as x
+            )
+            select * from ta
+        """,
+            """
+            WITH ta as (
+                select 1 as x
+            )
+            select * from Ta
+        """,
+        ]
+        for sql in sqls:
+            resp = self.execute(sql)
+            pdt.assert_frame_equal(
+                resp.data.to_df(),
+                pd.DataFrame([[1]], columns=["x"]),
+                check_dtype=False,
+            )
+
+        sql = """
+            WITH `Ta` as (
+                select 1 as x
+            )
+            select * from ta
+        """
+        with pytest.raises(Exception):
+            resp = self.execute(sql)
+
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):
     #     self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
@@ -1413,6 +1445,72 @@ class TestExecutionTools:
         d = [{"TRAINING_OPTIONS": {"b": {"x": "A", "y": "B"}}}, {"TRAINING_OPTIONS": {"b": {"x": "A"}}}]
         df = pd.DataFrame(d)
         query_df(df, "select * from models")
+
+    def test_query_df_with_rollup(self):
+        """Test GROUP BY WITH ROLLUP functionality"""
+        # Create test data with hierarchical structure
+        df = pd.DataFrame(
+            [
+                {"country": "USA", "city": "NY", "amount": 100},
+                {"country": "USA", "city": "NY", "amount": 150},
+                {"country": "USA", "city": "LA", "amount": 200},
+                {"country": "UK", "city": "London", "amount": 250},
+                {"country": "UK", "city": "London", "amount": 300},
+            ]
+        )
+
+        result = query_df(
+            df,
+            """
+            SELECT country, SUM(amount) as total
+            FROM df
+            GROUP BY country WITH ROLLUP
+        """,
+        )
+
+        # Should have 3 rows: USA, UK, and grand total (NULL)
+        assert len(result) == 3
+        # Check that we have a NULL row (grand total)
+        null_rows = result[result["country"].isna()]
+        assert len(null_rows) == 1
+        # Grand total should be 1000
+        assert null_rows["total"].values[0] == 1000
+
+        # Test multiple column ROLLUP
+        result = query_df(
+            df,
+            """
+            SELECT country, city, SUM(amount) as total
+            FROM df
+            GROUP BY country, city WITH ROLLUP
+        """,
+        )
+
+        # Should have:
+        # - 3 detail rows (USA-NY, USA-LA, UK-London)
+        # - 2 country subtotals (USA-NULL, UK-NULL)
+        # - 1 grand total (NULL-NULL)
+        # Total: 6 rows
+        assert len(result) == 6
+
+        # Check country subtotals (city is NULL but country is not)
+        country_subtotals = result[result["city"].isna() & result["country"].notna()]
+        assert len(country_subtotals) == 2
+
+        # Check USA subtotal
+        usa_subtotal = country_subtotals[country_subtotals["country"] == "USA"]
+        assert len(usa_subtotal) == 1
+        assert usa_subtotal["total"].values[0] == 450  # 100 + 150 + 200
+
+        # Check UK subtotal
+        uk_subtotal = country_subtotals[country_subtotals["country"] == "UK"]
+        assert len(uk_subtotal) == 1
+        assert uk_subtotal["total"].values[0] == 550  # 250 + 300
+
+        # Check grand total (both NULL)
+        grand_total = result[result["country"].isna() & result["city"].isna()]
+        assert len(grand_total) == 1
+        assert grand_total["total"].values[0] == 1000
 
     def test_query_df_functions(self):
         cur_time = dt.datetime.now()

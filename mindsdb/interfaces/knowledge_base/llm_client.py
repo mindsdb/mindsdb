@@ -1,23 +1,59 @@
 import os
+import time
 from typing import List
 
 from openai import OpenAI, AzureOpenAI
 
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 
-try:
-    from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
-except ImportError:
 
-    def retry_with_exponential_backoff(func):
-        """
-        An empty decorator
-        """
+def retry_with_exponential_backoff(func):
+    def decorator(*args, **kwargs):
+        max_retries = 3
+        num_retries = 0
+        delay = 1
+        exponential_base = 2
 
-        def wrapper(*args, **kwargs):
-            return func(*args, **kwargs)
+        while True:
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                message = str(e).lower()
+                if "connection error" not in message and "timeout" not in message.lower():
+                    raise e
+
+                num_retries += 1
+                if num_retries > max_retries:
+                    raise Exception(f"Maximum number of retries ({max_retries}) exceeded.") from e
+                # Increment the delay and wait
+                delay *= exponential_base
+                time.sleep(delay)
+
+    return decorator
+
+
+def run_in_batches(batch_size):
+    """
+    decorator to run function into batches if input is greater than batch_size
+    """
+
+    def decorator(func):
+        def wrapper(self, messages, *args, **kwargs):
+            if len(messages) <= batch_size:
+                return func(self, messages, *args, **kwargs)
+
+            chunk_num = 0
+            results = []
+            while chunk_num * batch_size < len(messages):
+                chunk = messages[chunk_num * batch_size : (chunk_num + 1) * batch_size]
+                results.extend(func(self, chunk, *args, **kwargs))
+                chunk_num += 1
+
+            return results
 
         return wrapper
+
+    return decorator
 
 
 class LLMClient:
@@ -33,7 +69,9 @@ class LLMClient:
         self.provider = params.get("provider", "openai")
 
         if "api_key" not in params:
-            params["api_key"] = get_api_key(self.provider, params, strict=False)
+            api_key = get_api_key(self.provider, params, strict=False)
+            if api_key is not None:
+                params["api_key"] = api_key
 
         self.engine = "openai"
 
@@ -55,7 +93,7 @@ class LLMClient:
             kwargs = params.copy()
             kwargs.pop("model_name")
             kwargs.pop("provider", None)
-            if kwargs["api_key"] is None:
+            if kwargs.get("api_key") is None:
                 kwargs["api_key"] = "n/a"
             self.client = OpenAI(**kwargs)
         else:
@@ -72,7 +110,8 @@ class LLMClient:
             self.client = module.Handler
             self.engine = "litellm"
 
-    @retry_with_exponential_backoff()
+    @run_in_batches(1000)
+    @retry_with_exponential_backoff
     def embeddings(self, messages: List[str]):
         params = self.params
         if self.engine == "openai":
@@ -88,6 +127,7 @@ class LLMClient:
 
             return self.client.embeddings(self.provider, model=model, messages=messages, args=kwargs)
 
+    @run_in_batches(100)
     def completion(self, messages: List[dict], json_output: bool = False) -> List[str]:
         """
         Call LLM completion and get response

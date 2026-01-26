@@ -3,16 +3,6 @@ import glob
 
 from setuptools import find_packages, setup
 
-# A special env var that allows us to disable the installation of the default extras for advanced users / containers / etc
-MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = (
-    True if os.getenv("MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS", "true").lower() == "true" else False
-)
-DEFAULT_PIP_EXTRAS = [
-    line.split("#")[0].rstrip()
-    for line in open("default_handlers.txt").read().splitlines()
-    if not line.strip().startswith("#")
-]
-
 
 class Deps:
     pkgs = []
@@ -86,7 +76,6 @@ def define_deps():
     extra_requirements = {}
     full_requirements = []
     for fn in os.listdir(os.path.normpath("./requirements")):
-        extra = []
         if fn.startswith("requirements-") and fn.endswith(".txt"):
             extra_name = fn.replace("requirements-", "").replace(".txt", "")
             with open(os.path.normpath(f"./requirements/{fn}")) as fp:
@@ -95,34 +84,26 @@ def define_deps():
             full_requirements += extra
 
     extra_requirements["all_extras"] = list(set(full_requirements))
+    extra_requirements["all"] = list(set(full_requirements))
 
     full_handlers_requirements = []
     handlers_dir_path = os.path.normpath("./mindsdb/integrations/handlers")
     for fn in os.listdir(handlers_dir_path):
         if os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith("_handler"):
-            extra = []
+            base_extra_name = fn.replace("_handler", "")
+            extra_requirements[base_extra_name] = []
             for req_file_path in glob.glob(os.path.join(handlers_dir_path, fn, "requirements*.txt")):
-                extra_name = fn.replace("_handler", "")
+                extra_name = base_extra_name
                 file_name = os.path.basename(req_file_path)
                 if file_name != "requirements.txt":
                     extra_name += "-" + file_name.replace("requirements_", "").replace(".txt", "")
 
                 # If requirements.txt in our handler folder, import them as our extra's requirements
-                if os.path.exists(req_file_path):
-                    with open(req_file_path) as fp:
-                        extra = expand_requirements_links([req.strip() for req in fp.read().splitlines()])
+                with open(req_file_path) as fp:
+                    extra = expand_requirements_links([req.strip() for req in fp.read().splitlines()])
 
-                    extra_requirements[extra_name] = extra
-                    full_handlers_requirements += extra
-
-                # Even with no requirements in our handler, list the handler as an extra (with no reqs)
-                else:
-                    extra_requirements[extra_name] = []
-
-                # If this is a default extra and if we want to install defaults (enabled by default)
-                #   then add it to the default requirements needing to install
-                if MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS and extra_name in DEFAULT_PIP_EXTRAS and extra:
-                    requirements += extra
+                extra_requirements[extra_name] = extra
+                full_handlers_requirements += extra
 
     extra_requirements["all_handlers_extras"] = list(set(full_handlers_requirements))
 

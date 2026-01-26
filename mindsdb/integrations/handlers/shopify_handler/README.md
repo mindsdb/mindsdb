@@ -1,261 +1,391 @@
 # Shopify Handler
 
-Shopify handler for MindsDB provides interfaces to connect to Shopify via APIs and pull store data into MindsDB.
+## Overview
+
+The Shopify Handler for MindsDB provides an interface to connect to Shopify stores via GraphQL API and enables executing SQL queries against store data.
 
 ---
 
 ## Table of Contents
 
-- [Shopify Handler](#shopify-handler)
-  - [Table of Contents](#table-of-contents)
-  - [About Shopify](#about-shopify)
-  - [Shopify Handler Implementation](#shopify-handler-implementation)
-  - [Shopify Handler Initialization](#shopify-handler-initialization)
-  - [Implemented Features](#implemented-features)
-  - [TODO](#todo)
-  - [Example Usage](#example-usage)
+- [Shopify Handler Implementation](#shopify-handler-implementation)
+- [Connection Initialization](#connection-initialization)
+- [Available Tables](#available-tables)
+- [Supported Operations](#supported-operations)
+- [Usage Examples](#usage-examples)
+- [Technical Details](#technical-details)
 
 ---
 
-## About Shopify
-
-Shopify is a complete commerce platform that lets you start, grow, and manage a business.
-<br>
-https://www.shopify.com/blog/what-is-shopify
 
 ## Shopify Handler Implementation
 
-This handler was implemented using [shopify_python_api](https://github.com/Shopify/shopify_python_api), the Python SDK for Shopify.
+This handler is implemented using:
+- **ShopifyAPI** - the official Python library for Shopify
+- **Shopify GraphQL Admin API** version **2025-10**
 
-## Shopify Handler Initialization
+All requests to Shopify are executed through the GraphQL API, which ensures efficient data loading with the ability to select only the necessary fields.
 
-The Shopify handler is initialized with the following parameters:
+Where possible, sorting and filtering are performed on the Shopify side. When this is not supported, sorting and filtering are handled on the MindsDB side.
 
-- `shop_url`: a required URL to your Shopify store.
-- `access_token`: a required access token to use for authentication.
+---
 
-These are the optional parameters:
+## Connection Initialization
 
-- `yotpo_app_key`: token needed to access customer reviews via the Yotpo Product Reviews app.
-- `yotpo_access_token`: token needed to access customer reviews via the Yotpo Product Reviews app.
+To connect to Shopify, the following parameters are required:
 
-If you want to query customer reviews, use the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app available in Shopify. Here are the steps to follow:
-1. Install the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app for your Shopify store.
-2. Generate `yotpo_app_key` following [this instruction](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) for retrieving your app key. Learn more about [Yotpo authentication here](https://apidocs.yotpo.com/reference/yotpo-authentication).
-3. Generate `yotpo_access_token` following [this instruction](https://develop.yotpo.com/reference/generate-a-token).
-Watch this video on creating a Shopify access token [here](https://www.youtube.com/watch?v=4f_aiC5oTNc&t=302s).
+### Required Parameters
 
-## Implemented Features
+| Parameter | Type | Description |
+|----------|-----|----------|
+| `shop_url` | `str` | Your store URL (e.g., `shop-123456.myshopify.com`) |
+| `client_id` | `str` | Client ID of your Shopify app |
+| `client_secret` | `str` | Client Secret of your Shopify app |
 
-- [x] Shopify Products Table for a given Store
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
-  - [x] Support UPDATE
-  - [x] Support INSERT
-  - [x] Support DELETE
-- [x] Shopify Customers Table for a given Store
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
-  - [x] Support UPDATE
-  - [x] Support INSERT
-  - [x] Support DELETE
-  - [x] Support WHERE
-- [x] Shopify Orders Table for a given Store
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
-  - [x] Support UPDATE
-  - [x] Support INSERT
-  - [x] Support DELETE
-- [x] Shopify Customer Reviews Table for a given Store
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
-- [x] Shopify Inventory Level Table for a given Store
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
-- [x] Shopify Carrier Service Table for a given Store
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
-- [x] Shopify Shipping Zone Table for a given Store
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
-- [x] Shopify Sales Channel for a given Store
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
+### Creating a Connection
 
-## TODO
-
-- [ ] Support UPDATE and DELETE for Customers table
-- [ ] Support INSERT, UPDATE and DELETE for Product table
-- [ ] Shopify Payments table
-- [ ] Shopify Inventory table
-- [ ] Shopify Discounts table
-- [ ] Many more
-
-## Example Usage
-
-The first step is to create a database with the new `shopify` engine by passing in the required `shop_url` and `access_token` parameters. Optionally, you can provide additional keys, `yotpo_app_key` and `yotpo_access_token`, to access customer reviews.
-
-~~~~sql
-CREATE DATABASE shopify_datasource
+```sql
+CREATE DATABASE shopify_store
 WITH ENGINE = 'shopify',
 PARAMETERS = {
   "shop_url": "your-shop-name.myshopify.com",
-  "access_token": "shppa_...",
-  "yotpo_app_key": "...",
-  "yotpo_access_token": "..."
+  "client_id": "your_client_id",
+  "client_secret": "your_client_secret"
 };
-~~~~
+```
 
-Use the established connection to query your database:
+### Obtaining Credentials
 
-~~~~sql
-SELECT * FROM shopify_datasource.products
-~~~~
+1. Log in to the Shopify admin panel
+2. Navigate to **https://dev.shopify.com/dashboard/**
+3. Create a new app. During app creation, define the required scopes. Depending on which tables you need to access, you may want to add:
+   - `read_products` - for access to products and variants
+   - `read_customers` - for access to customer data
+   - `read_orders` (or `read_marketplace_orders`, `read_quick_sale`) - for access to orders
+   - `read_inventory` - for access to inventory data
+   - `read_marketing_events` - for access to marketing events
+   - `read_staff` - for access to staff member data
+   - `read_gift_cards` - for access to gift cards
+4. In the **Settings** section, locate:
+   - **Client ID**
+   - **Secret**
+5. Install the app to your store.
 
-~~~~sql
-SELECT * FROM shopify_datasource.carrier_service;
-~~~~
+---
 
-~~~~sql
-SELECT * FROM shopify_datasource.shipping_zone;
-~~~~
+## Available Tables
 
-Run more advanced SELECT queries:
+The handler provides access to the following tables:
 
-~~~~sql
-SELECT  id, title
-FROM shopify_datasource.products
+### 1. `products` - Products
+
+Contains information about store products.
+
+**Key Fields:**
+- `id` - Unique product identifier
+- `title` - Product name
+- `description` - Product description
+- `vendor` - Manufacturer/supplier
+- `productType` - Product type
+- `status` - Product status (active, draft, archived)
+- `tags` - Product tags
+- `createdAt` - Creation date
+- `updatedAt` - Last update date
+- `totalInventory` - Total stock quantity
+- `priceRangeV2` - Price range
+- `variantsCount` - Number of variants
+
+**Shopify Native Sorting:**
+This table supports native sorting in Shopify API by the following fields: `createdAt`, `id`, `totalInventory`, `productType`, `publishedAt`, `title`, `updatedAt`, `vendor`.
+
+**Shopify Native Filtering:**
+This table supports native filtering in Shopify API by the following fields: `createdAt`, `id`, `isGiftCard`, `handle`, `totalInventory`, `productType`, `publishedAt`, `status`, `title`, `updatedAt`, `vendor`.
+
+### 2. `product_variants` - Product Variants
+
+Contains information about product variants (sizes, colors, etc.).
+
+**Key Fields:**
+- `id` - Unique variant identifier
+- `productId` - Parent product ID
+- `title` - Variant name
+- `displayName` - Display name
+- `sku` - Stock Keeping Unit
+- `barcode` - Barcode
+- `inventoryQuantity` - Stock quantity
+- `position` - Position in list
+
+**Shopify Native Sorting:**
+This table supports native sorting in Shopify API by the following fields: `id`, `inventoryQuantity`, `displayName`, `position`, `sku`, `title`.
+
+**Shopify Native Filtering:**
+This table supports native filtering in Shopify API by the following fields: `barcode`, `id`, `inventoryQuantity`, `productId`, `sku`, `title`, `updatedAt`.
+
+### 3. `customers` - Customers
+
+Contains information about store customers.
+
+**Key Fields:**
+- `id` - Unique customer identifier
+- `firstName` - First name
+- `lastName` - Last name
+- `emailAddress` - Email address
+- `phoneNumber` - Phone number
+- `displayName` - Display name
+- `country` - Country
+- `createdAt` - Creation date
+- `updatedAt` - Update date
+- `numberOfOrders` - Number of orders
+- `amountSpent` - Total amount spent
+- `tags` - Customer tags
+- `state` - Account state
+- `verifiedEmail` - Email verified
+
+**Shopify Native Sorting:**
+This table supports native sorting in Shopify API by the following fields: `createdAt`, `id`, `updatedAt`.
+
+**Shopify Native Filtering:**
+This table supports native filtering in Shopify API by the following fields: `country`, `createdAt`, `email`, `firstName`, `id`, `lastName`, `phoneNumber`, `updatedAt`.
+
+### 4. `orders` - Orders
+
+Contains information about orders.
+
+**Key Fields:**
+- `id` - Unique order identifier
+- `name` - Order number (e.g., #1001)
+- `number` - Numeric order number
+- `customerId` - Customer ID
+- `email` - Customer email
+- `phone` - Customer phone
+- `createdAt` - Creation date
+- `processedAt` - Processing date
+- `updatedAt` - Update date
+- `cancelledAt` - Cancellation date
+- `currentTotalPriceSet` - Current total price
+- `currentSubtotalPriceSet` - Current subtotal price
+- `totalWeight` - Total weight
+- `test` - Test order
+- `shippingAddress` - Shipping address
+- `tags` - Order tags
+
+**Shopify Native Sorting:**
+This table supports native sorting in Shopify API by the following fields: `createdAt`, `id`, `number`, `poNumber`, `processedAt`, `updatedAt`.
+
+**Shopify Native Filtering:**
+This table supports native filtering in Shopify API by the following fields: `confirmationNumber`, `createdAt`, `customerId`, `discountCode`, `email`, `id`, `name`, `poNumber`, `processedAt`, `returnStatus`, `sourceIdentifier`, `sourceName`, `test`, `totalWeight`, `updatedAt`.
+
+### 5. `marketing_events` - Marketing Events
+
+Contains information about marketing events and campaigns.
+
+**Key Fields:**
+- `id` - Unique event identifier
+- `startedAt` - Start date
+- `description` - Description
+- `type` - Event type
+
+**Shopify Native Sorting:**
+This table supports native sorting in Shopify API by the following fields: `id`, `startedAt`.
+
+**Shopify Native Filtering:**
+This table supports native filtering in Shopify API by the following fields: `id`, `startedAt`, `description`, `type`.
+
+### 6. `inventory_items` - Inventory Items
+
+Contains information about inventory items.
+
+**Key Fields:**
+- `id` - Unique identifier
+- `sku` - Stock Keeping Unit
+- `createdAt` - Creation date
+- `updatedAt` - Update date
+
+**Shopify Native Sorting:**
+This table does not support native sorting in Shopify API. Sorting is handled on the MindsDB side.
+
+**Shopify Native Filtering:**
+This table supports native filtering in Shopify API by the following fields: `id`, `createdAt`, `sku`, `updatedAt`.
+
+### 7. `staff_members` - Staff Members
+
+Contains information about store staff members.
+
+**Key Fields:**
+- `id` - Unique identifier
+- `firstName` - First name
+- `lastName` - Last name
+- `email` - Email
+- `accountType` - Account type
+
+**Shopify Native Sorting:**
+This table supports native sorting in Shopify API by the following fields: `id`, `email`, `firstName`, `lastName`.
+
+**Shopify Native Filtering:**
+This table supports native filtering in Shopify API by the following fields: `accountType`, `email`, `firstName`, `lastName`, `id`.
+
+### 8. `gift_cards` - Gift Cards
+
+Contains information about gift cards.
+
+**Key Fields:**
+- `id` - Unique identifier
+- `balance` - Current balance
+- `initialValue` - Initial value
+- `customerId` - Customer ID
+- `orderId` - Order ID
+- `createdAt` - Creation date
+- `updatedAt` - Update date
+- `expiresOn` - Expiration date
+- `deactivatedAt` - Deactivation date
+
+**Shopify Native Sorting:**
+This table supports native sorting in Shopify API by the following fields: `balance`, `createdAt`, `deactivatedAt`, `expiresOn`, `id`, `initialValue`, `updatedAt`.
+
+**Shopify Native Filtering:**
+This table supports native filtering in Shopify API by the following fields: `createdAt`, `expiresOn`, `id`.
+
+---
+
+## Supported Operations
+
+### SELECT - Reading Data
+
+All tables support the SELECT operation with the following capabilities:
+
+- **SELECT** - data selection
+- **WHERE** - filtering by conditions (depending on the table)
+- **ORDER BY** - sorting (depending on the table)
+- **LIMIT** - limiting the number of records
+- **Selecting specific columns** - query optimization
+
+### WHERE Operators
+
+Depending on the field and table, the following operators are supported:
+
+- `=` (EQUAL) - equality
+- `>` (GREATER_THAN) - greater than
+- `>=` (GREATER_THAN_OR_EQUAL) - greater than or equal
+- `<` (LESS_THAN) - less than
+- `<=` (LESS_THAN_OR_EQUAL) - less than or equal
+- `IN` - check for inclusion in a list (for some fields)
+- `LIKE` - partial match (for some text fields)
+
+---
+
+## Usage Examples
+
+### Basic SELECT Queries
+
+#### Get All Products
+
+```sql
+SELECT id, title, vendor, status, totalInventory
+FROM shopify_store.products;
+```
+
+#### Get Active Products with Sorting
+
+```sql
+SELECT id, title, vendor, totalInventory, createdAt
+FROM shopify_store.products
 WHERE status = 'active'
-ORDER BY id
-LIMIT 5
-~~~~
+ORDER BY createdAt DESC
+LIMIT 10;
+```
 
-It is also possible to INSERT data into your Shopify store. At the moment, only the `customers`, `products`, and `orders` tables support INSERT:
+#### Get Products from a Specific Vendor
 
-~~~~sql
-INSERT INTO shopify_datasource.customers(first_name, last_name, email)
-VALUES 
-('John', 'Doe', 'john.doe@example.com')
-~~~~
+```sql
+SELECT id, title, productType, priceRangeV2
+FROM shopify_store.products
+WHERE vendor = 'Nike'
+ORDER BY title;
+```
 
-~~~~sql
-INSERT INTO shopify_datasource.products(title, vendor, tags)
-VALUES 
-('Product Name', 'Vendor Name', 'new, sale, winter')
-~~~~
+#### Get Customers from a Specific Country
 
-~~~~sql
-INSERT INTO shopify_datasource.orders(title_li, price_li, quantity, test)
-VALUES 
-("Product Name", 25.00, 3, true)
-~~~~
+```sql
+SELECT id, displayName, emailAddress, phoneNumber, numberOfOrders
+FROM shopify_store.customers
+WHERE country = 'Canada'
+ORDER BY numberOfOrders DESC
+LIMIT 20;
+```
 
-A limited number of columns are supported for INSERT for each table: 
+#### Get Customers Created After a Specific Date
 
-The `products` table supports the following columns: 'title', 'body_html', 'vendor', 'product_type', 'tags', and 'status'. Of these, 'title' must be provided.
+```sql
+SELECT id, firstName, lastName, emailAddress, createdAt
+FROM shopify_store.customers
+WHERE createdAt > '2024-01-01'
+ORDER BY createdAt DESC;
+```
 
-The `customers` table supports the following columns: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these, either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
+#### Get Orders for a Specific Customer
 
-The `orders` table supports the following columns: 'billing_address', 'discount_codes', 'buyer_accepts_marketing', 'currency', 'email', 'financial_status', 'fulfillment_status', 'line_items', 'note', 'note_attributes', 'phone', 'po_number', 'processed_at', 'referring_site', 'shipping_address', 'shipping_lines', 'source_name', 'source_identifier', 'source_url', 'tags', 'taxes_included', 'tax_lines', 'test', 'total_tax', 'total_weight'. 
+```sql
+SELECT id, name, email, currentTotalPriceSet, processedAt
+FROM shopify_store.orders
+WHERE customerId = 'gid://shopify/Customer/123456789'
+ORDER BY processedAt DESC;
+```
+#### Get Orders with Customer Information
 
-Of these columns, 'billing_address', 'discount_codes', 'line_items', 'note_attributes', 'shipping_address', 'shipping_lines', and 'tax_lines' are comprised of sub-components as follows:
+```sql
+SELECT 
+    o.id as order_id,
+    o.name as order_name,
+    o.createdAt as order_date,
+    c.displayName as customer_name,
+    c.emailAddress as customer_email,
+    o.currentTotalPriceSet as total
+FROM shopify_store.orders o
+JOIN shopify_store.customers c ON o.customerId = c.id
+WHERE o.createdAt > '2024-01-01'
+ORDER BY o.createdAt DESC
+LIMIT 50;
+```
 
-'billing_address': 'address1_ba', 'address2_ba', 'city_ba', 'company_ba', 'country_ba', 'country_code_ba', 'first_name_ba', 'last_name_ba', 'latitude_ba', 'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 'province_code_ba', 'zip_ba'
+---
 
-'discount_codes': 'amount_dc', 'code_dc', 'type_dc'
+## Technical Details
 
-'line_items': 'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li', 'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li'
+### API Version
 
-'note_attributes': 'name_na', 'value_na'
+The connector uses **Shopify GraphQL Admin API version 2025-10**.
 
-'shipping_address': 'address1_sa', 'address2_sa', 'city_sa', 'company_sa', 'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa', 'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa', 'province_sa', 'province_code_sa', 'zip_sa'
+### Authentication
 
-'shipping_lines': 'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl', 'title_sl', 'carrier_identifier_sl', 'requested_fulfillment_service_id_sl', 'is_removed_sl'
+The connector uses OAuth 2.0 authentication with the `client_credentials` grant type:
 
-'tax_lines': 'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl'
+1. Upon connection, a POST request is made to `https://{shop_url}/admin/oauth/access_token`
+2. The `client_id` and `client_secret` are sent
+3. An `access_token` is obtained for subsequent requests
+4. A Shopify session is created with the obtained token
 
-The value fields 'price_li' and 'title_li' must be provided.
+### GraphQL Queries
 
-It is also possible to DELETE data from your Shopify store. At the moment, only the `customers`, `products`, and `orders` tables support DELETE:
+All data is loaded through the GraphQL API using nodes and connections. The connector automatically:
 
-~~~~sql
-DELETE FROM shopify_datasource.customers
-WHERE first_name = 'John'
-AND last_name = 'Doe'
-AND email = 'john.doe@example.com';
-~~~~
+- Selects only requested fields for optimization
+- Applies WHERE filters to GraphQL queries
+- Performs sorting at the API level
+- Limits the number of returned records
 
-~~~~sql
-DELETE FROM shopify_datasource.orders
-WHERE id=5632671580477;
-~~~~
+### Limitations
 
+- The connector provides **read-only access** (SELECT)
+- INSERT, UPDATE, DELETE operations are not supported in the current version
+- Some fields may be null depending on store settings
+- The current version does not handle API rate limiting
+- For sorting, it is recommended to use fields that have native sorting support in the Shopify API
 
-Inventory details for the products can be queried as follows:
+## Useful Links
 
-~~~~sql
-SELECT  *
-FROM shopify_datasource.inventory_level
-WHERE inventory_item_ids="id1,id2" AND location_ids="id1,id2"
-ORDER BY available
-LIMIT 5
-~~~~
+- [Shopify GraphQL Admin API Documentation](https://shopify.dev/docs/api/admin-graphql)
+- [Shopify API Permissions](https://shopify.dev/docs/api/usage/access-scopes)
+- [Shopify App Development](https://shopify.dev/docs/apps)
+- [ShopifyAPI Python Library](https://github.com/Shopify/shopify_python_api)
 
-`inventory_item_ids` or `location_ids` have to be specified in the `where` clause of the query. 
-
-For querying locations, you can use the `locations` table:
-
-~~~~sql
-SELECT  id, name, address
-FROM shopify_datasource.locations
-ORDER BY id
-LIMIT 5
-~~~~
-
-For the `customer_reviews` table, only SELECT is supported.
-
-~~~~sql
-SELECT  *
-FROM shopify_datasource.customer_reviews
-WHERE score=5
-ORDER BY id
-LIMIT 5
-~~~~
-
-For the `customers` table, DELETE is supported too. You can delete the customers as follows:
-
-~~~~sql
-DELETE FROM shopify_datasource.customers
-WHERE verified_email = false;
-~~~~
-
-For the `orders` table, UPDATE is supported. You can update the orders as follows:
-~~~~sql
-UPDATE shopify_datasource.orders
-SET email="abc@your_domain.com"
-WHERE id=5632671580477;
-~~~~
+---

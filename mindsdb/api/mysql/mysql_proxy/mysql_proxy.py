@@ -25,7 +25,6 @@ from functools import partial
 from typing import List
 from dataclasses import dataclass
 
-from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.sql import clear_sql
@@ -61,7 +60,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     SERVER_STATUS,
     CAPABILITIES,
-    NULL_VALUE,
     COMMANDS,
     ERR,
     getConstName,
@@ -79,7 +77,13 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.otel import increment_otel_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.exception import QueryError
-from mindsdb.api.mysql.mysql_proxy.utilities.dump import dump_result_set_to_mysql, column_to_mysql_column_dict
+from mindsdb.utilities.functions import mark_process
+from mindsdb.api.mysql.mysql_proxy.utilities.dump import (
+    dump_result_set_to_mysql,
+    column_to_mysql_column_dict,
+    dump_columns_info,
+    dump_chunks,
+)
 from mindsdb.api.executor.exceptions import WrongCharsetError
 
 logger = log.getLogger(__name__)
@@ -329,7 +333,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if answer.type in (RESPONSE_TYPE.TABLE, RESPONSE_TYPE.COLUMNS_TABLE):
             packages = []
 
-            if len(answer.result_set) > 1000:
+            if len(answer.result_set) >= 1000:
                 # for big responses leverage pandas map function to convert data to packages
                 self.send_table_packets(result_set=answer.result_set)
             else:
@@ -344,6 +348,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket, state_track=answer.state_track, affected_rows=answer.affected_rows).send()
         elif answer.type == RESPONSE_TYPE.ERROR:
             self.packet(ErrPacket, err_code=answer.error_code, msg=answer.error_message).send()
+        elif answer.type == RESPONSE_TYPE.EOF:
+            self.packet(EofPacket).send()
 
     def _get_column_defenition_packets(self, columns: dict, data=None):
         if data is None:
@@ -402,34 +408,31 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return packets
 
     def send_table_packets(self, result_set: ResultSet, status: int = 0):
-        df, columns_dicts = dump_result_set_to_mysql(result_set, infer_column_size=True)
-        # text protocol, convert all to string and serialize as packages
+        """Send table packets to client, piece by piece
 
-        def apply_f(v):
-            if v is None:
-                return NULL_VALUE
-            if not isinstance(v, str):
-                v = str(v)
-            return Datum.serialize_str(v)
+        Args:
+            result_set (ResultSet): the result set to send
+            status (int): the status to send
 
-        # columns packages
+        Returns:
+            None
+        """
+        columns_dicts = dump_columns_info(result_set, infer_column_size=True)
+
         packets = [self.packet(ColumnCountPacket, count=len(columns_dicts))]
-
         packets.extend(self._get_column_defenition_packets(columns_dicts))
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packets.append(self.packet(EofPacket, status=status))
         self.send_package_group(packets)
 
-        chunk_size = 100
-        for start in range(0, len(df), chunk_size):
-            string = b"".join(
-                [
-                    self.packet(body=body, length=len(body)).accum()
-                    for body in df[start : start + chunk_size].applymap(apply_f).values.sum(axis=1)
-                ]
-            )
-            self.socket.sendall(string)
+        chunk_size = 1000
+        df = result_set.get_raw_df()
+        if len(df) > 0:
+            for chunk in dump_chunks(df, columns_dicts, chunk_size):
+                for i in range(len(chunk)):
+                    chunk[i] = self.packet(body=chunk[i], length=len(chunk[i])).accum()
+                self.socket.sendall(b"".join(chunk))
 
     def decode_utf(self, text):
         try:
@@ -495,7 +498,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return [column_to_mysql_column_dict(column, database_name=database_name) for column in columns_list]
 
     @profiler.profile()
-    def process_query(self, sql) -> SQLAnswer:
+    def process_query(self, sql: str) -> SQLAnswer:
         log.log_ram_info(logger)
         executor = Executor(session=self.session, sqlserver=self)
         executor.query_execute(sql)
@@ -664,18 +667,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             logger.debug("Command TYPE: {type}".format(type=getConstName(COMMANDS, p.type.value)))
 
-            command_names = {
-                COMMANDS.COM_QUERY: "COM_QUERY",
-                COMMANDS.COM_STMT_PREPARE: "COM_STMT_PREPARE",
-                COMMANDS.COM_STMT_EXECUTE: "COM_STMT_EXECUTE",
-                COMMANDS.COM_STMT_FETCH: "COM_STMT_FETCH",
-                COMMANDS.COM_STMT_CLOSE: "COM_STMT_CLOSE",
-                COMMANDS.COM_QUIT: "COM_QUIT",
-                COMMANDS.COM_INIT_DB: "COM_INIT_DB",
-                COMMANDS.COM_FIELD_LIST: "COM_FIELD_LIST",
-            }
-
-            command_name = command_names.get(p.type.value, f"UNKNOWN {p.type.value}")
             sql = None
             response = None
             error_type = None
@@ -689,7 +680,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     sql = clear_sql(sql)
                     logger.debug(f"Incoming query: {sql}")
                     profiler.set_meta(query=sql, api="mysql", environment=config.get("environment"))
-                    with profiler.Context("mysql_query_processing"):
+                    with profiler.Context("mysql_query_processing"), mark_process("mysql_query"):
                         response = self.process_query(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     sql = self.decode_utf(p.sql.value)
@@ -716,6 +707,50 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_STMT_RESET:
                     response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_PING:
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_CHANGE_USER:
+                    # This package should trigger re-authentication. For now it is forbidden.
+                    logger.warning("Got COM_CHANGE_USER packet that could not be processed, return error.")
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="Packet COM_CHANGE_USER could not be processed",
+                    )
+                elif p.type.value == COMMANDS.COM_DEBUG:
+                    response = SQLAnswer(resp_type=RESPONSE_TYPE.EOF)
+                elif p.type.value == COMMANDS.COM_SET_OPTION:
+                    # While regular MySQL options have no effect on mindsdb, we can safely return Ok.
+                    logger.warning("Unexpected packet COM_SET_OPTION recieved, return ok.")
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_SLEEP:
+                    # error - is the only valid answer for the packet
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="",
+                    )
+                elif p.type.value == COMMANDS.COM_PROCESS_KILL:
+                    logger.warning("Unexpected packet COM_PROCESS_KILL recieved, return error.")
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="Packet COM_PROCESS_KILL could not be processed",
+                    )
+                elif p.type.value == COMMANDS.COM_RESET_CONNECTION:
+                    logger.warning("Unexpected packet COM_RESET_CONNECTION recieved, return error.")
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="Packet COM_RESET_CONNECTION could not be processed",
+                    )
+                elif p.type.value == COMMANDS.COM_SHUTDOWN:
+                    logger.warning("Unexpected packet COM_SHUTDOWN recieved, return error.")
+                    response = SQLAnswer(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_code=None,
+                        error_message="Packet COM_SHUTDOWN could not be processed",
+                    )
                 else:
                     logger.warning("Command has no specific handler, return OK msg")
                     logger.debug(str(p))
@@ -758,7 +793,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             hooks.after_api_query(
                 company_id=ctx.company_id,
                 api="mysql",
-                command=command_name,
+                command=getConstName(COMMANDS, p.type.value),
                 payload=sql,
                 error_type=error_type,
                 error_code=error_code,

@@ -1,4 +1,5 @@
 import ast
+import copy
 import hashlib
 from enum import Enum
 from typing import Dict, List, Optional
@@ -140,9 +141,7 @@ class VectorStoreHandler(BaseHandler):
                 # check restriction
                 if allowed_metadata_columns is not None:
                     # system columns are underscored, skip them
-                    if condition.column.lower() not in allowed_metadata_columns and not condition.column.startswith(
-                        "_"
-                    ):
+                    if condition.column not in allowed_metadata_columns and not condition.column.startswith("_"):
                         raise ValueError(f"Column is not found: {condition.column}")
 
                 # convert if required
@@ -409,6 +408,9 @@ class VectorStoreHandler(BaseHandler):
         if conditions is None:
             where_statement = query.where
             conditions = self.extract_conditions(where_statement)
+        else:
+            # it is mutated
+            conditions = copy.deepcopy(conditions)
         self._convert_metadata_filters(conditions, allowed_metadata_columns=allowed_metadata_columns)
 
         # 4. Get offset and limit
@@ -563,7 +565,7 @@ class VectorStoreHandler(BaseHandler):
         data = pd.DataFrame(self.SCHEMA)
         data.columns = ["COLUMN_NAME", "DATA_TYPE"]
         return HandlerResponse(
-            resp_type=RESPONSE_TYPE.DATA,
+            resp_type=RESPONSE_TYPE.TABLE,
             data_frame=data,
         )
 

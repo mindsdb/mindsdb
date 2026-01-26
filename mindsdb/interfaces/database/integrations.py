@@ -24,14 +24,13 @@ from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE, HANDLER_SUPPORT_LEVEL
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
-from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
 from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
 
 logger = log.getLogger(__name__)
@@ -91,7 +90,7 @@ class IntegrationController:
 
         return integration_id
 
-    def modify(self, name, data):
+    def modify(self, name, data, check_connection=False):
         self.handlers_cache.delete(name)
         integration_record = self._get_integration_record(name)
         if isinstance(integration_record.data, dict) and integration_record.data.get("is_demo") is True:
@@ -100,6 +99,18 @@ class IntegrationController:
         for k in old_data:
             if k not in data:
                 data[k] = old_data[k]
+
+        # Test the new connection data before applying
+        if check_connection:
+            try:
+                temp_name = f"{integration_record.name}_update_{time.time()}".replace(".", "")
+                handler = self.create_tmp_handler(temp_name, integration_record.engine, data)
+                status = handler.check_connection()
+            except ImportError:
+                raise
+
+            if status.success is not True:
+                raise Exception(f"Connection test failed: {status.error_message}")
 
         integration_record.data = data
         db.session.commit()
@@ -159,14 +170,6 @@ class IntegrationController:
         for model in engine_models:
             if model.deleted_at is not None:
                 model.integration_id = None
-
-        # Remove the integration metadata from the data catalog (if enabled).
-        # TODO: Can this be handled via cascading delete in the database?
-        if self.get_handler_meta(integration_record.engine).get("type") == HANDLER_TYPE.DATA and Config().get(
-            "data_catalog", {}
-        ).get("enabled", False):
-            data_catalog_reader = DataCatalogLoader(database_name=name)
-            data_catalog_reader.unload_metadata()
 
         db.session.delete(integration_record)
         db.session.commit()
@@ -421,6 +424,7 @@ class IntegrationController:
         """
         handler = self.handlers_cache.get(name)
         if handler is not None:
+            ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
             return handler
 
         integration_record = self._get_integration_record(name, case_sensitive)
@@ -494,6 +498,7 @@ class IntegrationController:
         if connect:
             self.handlers_cache.set(handler)
 
+        ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
         return handler
 
     def reload_handler_module(self, handler_name):
@@ -526,7 +531,7 @@ class IntegrationController:
         handler_meta = self.handlers_import_status[handler_name]
         handler_meta["import"]["success"] = import_error is None
         handler_meta["version"] = module.version
-        handler_meta["thread_safe"] = getattr(module, "thread_safe", False)
+        handler_meta["thread_safe"] = getattr(module, "cache_thread_safe", False)
 
         if import_error is not None:
             handler_meta["import"]["error_message"] = str(import_error)
@@ -628,6 +633,7 @@ class IntegrationController:
                 "connection_args": handler_info.get("connection_args", None),
                 "class_type": handler_info.get("class_type", None),
                 "type": handler_info.get("type"),
+                "support_level": handler_info.get("support_level"),
             }
             if "icon_path" in handler_info:
                 icon = self._get_handler_icon(handler_dir, handler_info["icon_path"])
@@ -724,21 +730,27 @@ class IntegrationController:
             return {}
         code = ast.parse(init_file.read_text())
 
-        info = {}
+        info = {
+            "support_level": HANDLER_SUPPORT_LEVEL.COMMUNITY,
+        }
         for item in code.body:
             if not isinstance(item, ast.Assign):
                 continue
             if isinstance(item.targets[0], ast.Name):
                 name = item.targets[0].id
-                if isinstance(item.value, ast.Constant):
-                    info[name] = item.value.value
-                if isinstance(item.value, ast.Attribute) and name == "type":
-                    if item.value.attr == "ML":
+                match name, item.value:
+                    case _, ast.Constant():
+                        info[name] = item.value.value
+                    case "type", ast.Attribute(attr="ML"):
                         info[name] = HANDLER_TYPE.ML
                         info["class_type"] = "ml"
-                    else:
+                    case "type", ast.Attribute(attr="DATA"):
                         info[name] = HANDLER_TYPE.DATA
                         info["class_type"] = self._get_base_class_type(code, handler_dir) or "sql"
+                    case "support_level", ast.Attribute(attr="MINDSDB"):
+                        info["support_level"] = HANDLER_SUPPORT_LEVEL.MINDSDB
+                    case "support_level", ast.Attribute(attr="COMMUNITY"):
+                        info["support_level"] = HANDLER_SUPPORT_LEVEL.COMMUNITY
 
         # connection args
         if info["type"] == HANDLER_TYPE.ML:

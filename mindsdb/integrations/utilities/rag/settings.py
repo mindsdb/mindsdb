@@ -1,15 +1,39 @@
 from enum import Enum
-from typing import List, Union, Any, Optional, Dict, OrderedDict
+from functools import lru_cache
+from typing import List, Union, Any, Optional, Dict, OrderedDict, TYPE_CHECKING
 
-from langchain_community.vectorstores.chroma import Chroma
-from langchain_community.vectorstores.pgvector import PGVector
-from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
-from langchain_core.language_models import BaseChatModel
-from langchain_core.vectorstores import VectorStore
-from langchain_core.stores import BaseStore
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from langchain_text_splitters import TextSplitter
+
+if TYPE_CHECKING:  # pragma: no cover - import only for type hints
+    from langchain_core.documents import Document
+    from langchain_core.embeddings import Embeddings
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.vectorstores import VectorStore
+    from langchain_core.stores import BaseStore
+    from langchain_text_splitters import TextSplitter
+else:  # Avoid importing heavy optional dependencies at runtime
+    Document = Embeddings = BaseChatModel = VectorStore = BaseStore = TextSplitter = Any
+
+
+def _require_kb_dependency(feature: str, exc: ModuleNotFoundError):
+    missing = exc.name or "langchain dependency"
+    raise ImportError(
+        f"{feature} requires the optional knowledge base dependencies (missing {missing}). "
+        "Install them via `pip install mindsdb[kb]`."
+    ) from exc
+
+
+@lru_cache(maxsize=1)
+def _load_vector_store_classes():
+    try:
+        from langchain_community.vectorstores.chroma import Chroma
+        from langchain_community.vectorstores.pgvector import PGVector
+    except ModuleNotFoundError as exc:  # pragma: no cover - runtime guard
+        if getattr(exc, "name", "").startswith("langchain") or "langchain" in str(exc):
+            _require_kb_dependency("Vector store configuration", exc)
+        raise
+    return {"chromadb": Chroma, "pgvector": PGVector}
+
 
 DEFAULT_COLLECTION_NAME = "default_collection"
 
@@ -28,7 +52,6 @@ DEFAULT_LLM_MODEL_PROVIDER = "openai"
 DEFAULT_CONTENT_COLUMN_NAME = "body"
 DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
-DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_RERANKER_FLAG = False
 DEFAULT_RERANKING_MODEL = "gpt-4o"
 DEFAULT_LLM_ENDPOINT = "https://api.openai.com/v1"
@@ -395,7 +418,17 @@ class VectorStoreType(Enum):
     PGVECTOR = "pgvector"
 
 
-vector_store_map = {VectorStoreType.CHROMA: Chroma, VectorStoreType.PGVECTOR: PGVector}
+def get_vector_store_map():
+    """Return available vector store classes, importing on demand."""
+    classes = _load_vector_store_classes()
+    return {
+        VectorStoreType.CHROMA: classes["chromadb"],
+        VectorStoreType.PGVECTOR: classes["pgvector"],
+    }
+
+
+def get_vector_store_class(store_type: "VectorStoreType"):
+    return get_vector_store_map()[store_type]
 
 
 class VectorStoreConfig(BaseModel):
@@ -410,6 +443,11 @@ class VectorStoreConfig(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         extra = "forbid"
+
+
+def _default_vector_store_factory():
+    config = VectorStoreConfig()
+    return get_vector_store_class(config.vector_store_type)
 
 
 class RetrieverType(str, Enum):
@@ -690,11 +728,30 @@ class SummarizationConfig(BaseModel):
     )
 
 
+class RerankerMode(str, Enum):
+    POINTWISE = "pointwise"
+    LISTWISE = "listwise"
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            value = value.lower()
+            for member in cls:
+                if member.value == value:
+                    return member
+        return None
+
+
 class RerankerConfig(BaseModel):
     model: str = DEFAULT_RERANKING_MODEL
     base_url: str = DEFAULT_LLM_ENDPOINT
     filtering_threshold: float = 0.5
     num_docs_to_keep: Optional[int] = None
+    mode: RerankerMode = Field(
+        default=RerankerMode.POINTWISE,
+        description="Reranking mode to use. 'pointwise' for individual scoring, '"
+        "listwise' for joint scoring of all documents.",
+    )
     max_concurrent_requests: int = 20
     max_retries: int = 3
     retry_delay: float = 1.0
@@ -736,7 +793,7 @@ class RAGPipelineModel(BaseModel):
     llm_model_name: str = Field(default=DEFAULT_LLM_MODEL, description="Language model name")
     llm_provider: Optional[str] = Field(default=None, description="Language model provider")
     vector_store: VectorStore = Field(
-        default_factory=lambda: vector_store_map[VectorStoreConfig().vector_store_type],
+        default_factory=_default_vector_store_factory,
         description="Vector store",
     )
     db_connection_string: Optional[str] = Field(default=None, description="Database connection string")

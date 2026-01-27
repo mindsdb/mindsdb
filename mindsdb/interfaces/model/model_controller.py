@@ -42,7 +42,7 @@ class ModelController:
     def __init__(self) -> None:
         self.config = Config()
 
-    def get_model_data(self, predictor_record=None) -> dict:
+    def get_model_data(self, predictor_record) -> dict:
         data = deepcopy(predictor_record.data)
         data["dtype_dict"] = predictor_record.dtype_dict
         data["created_at"] = str(parse_datetime(str(predictor_record.created_at).split(".")[0]))

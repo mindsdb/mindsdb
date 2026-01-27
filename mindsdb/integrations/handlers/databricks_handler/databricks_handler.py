@@ -1,6 +1,8 @@
 from typing import Text, Dict, Any, Optional, List
 
 import pandas as pd
+import re
+
 from databricks.sql import connect, RequestError, ServerOperationError
 from databricks.sql.client import Connection
 from databricks.sqlalchemy import DatabricksDialect
@@ -22,9 +24,11 @@ logger = log.getLogger(__name__)
 
 
 def _escape_literal(value: str) -> str:
-    """Escape a literal string to be safely embedded into SQL single quotes."""
-    if not isinstance(value, str):
-        raise ValueError("Invalid literal value")
+    """Escape a literal string to be safely embedded into SQL single quotes.
+
+    This function also validates the identifier before escaping to ensure it contains only safe characters.
+    """
+    _validate_identifier(value)
     return value.replace("'", "''")
 
 
@@ -37,8 +41,6 @@ def _quote_identifier(identifier: str) -> str:
 
 def _validate_identifier(identifier: str) -> str:
     """Validate and sanitize an identifier (table/column name)."""
-    import re
-
     if not isinstance(identifier, str) or not identifier:
         raise ValueError("Identifier must be a non-empty string")
     if not re.match(r"^[\w\s\-]+$", identifier):
@@ -192,7 +194,6 @@ class DatabricksHandler(MetaDatabaseHandler):
             schema_value = self.connection_data.get("schema")
             if isinstance(schema_value, str) and schema_value != "":
                 try:
-                    _validate_identifier(schema_value)
                     escaped_schema = _escape_literal(schema_value)
                     query += f" WHERE schema_name = '{escaped_schema}'"
                 except ValueError as e:
@@ -326,7 +327,6 @@ class DatabricksHandler(MetaDatabaseHandler):
             raise ValueError("Invalid table name provided.")
 
         try:
-            _validate_identifier(table_name)
             table_literal = _escape_literal(table_name)
         except ValueError as e:
             logger.error(f"Invalid table name: {e}")
@@ -334,7 +334,6 @@ class DatabricksHandler(MetaDatabaseHandler):
 
         if isinstance(schema_name, str):
             try:
-                _validate_identifier(schema_name)
                 schema_name_sql = f"'{_escape_literal(schema_name)}'"
             except ValueError as e:
                 logger.error(f"Invalid schema name: {e}")
@@ -388,7 +387,6 @@ class DatabricksHandler(MetaDatabaseHandler):
         schema_name = self.connection_data.get("schema") or "default"
 
         try:
-            _validate_identifier(schema_name)
             schema_literal = _escape_literal(schema_name)
         except ValueError as e:
             logger.error(f"Invalid schema name: {e}")
@@ -413,7 +411,6 @@ class DatabricksHandler(MetaDatabaseHandler):
             try:
                 escaped_names = []
                 for t in table_names:
-                    _validate_identifier(t)
                     escaped_names.append(f"'{_escape_literal(t)}'")
                 table_names_str = ", ".join(escaped_names)
                 query += f" AND table_name IN ({table_names_str})"
@@ -442,7 +439,6 @@ class DatabricksHandler(MetaDatabaseHandler):
         schema_name = self.connection_data.get("schema") or "default"
 
         try:
-            _validate_identifier(schema_name)
             schema_literal = _escape_literal(schema_name)
         except ValueError as e:
             logger.error(f"Invalid schema name: {e}")
@@ -471,7 +467,6 @@ class DatabricksHandler(MetaDatabaseHandler):
             try:
                 escaped_names = []
                 for t in table_names:
-                    _validate_identifier(t)
                     escaped_names.append(f"'{_escape_literal(t.lower())}'")
                 table_names_str = ", ".join(escaped_names)
                 query += f" AND LOWER(table_name) IN ({table_names_str})"
@@ -495,7 +490,6 @@ class DatabricksHandler(MetaDatabaseHandler):
         schema_name = self.connection_data.get("schema") or "default"
 
         try:
-            _validate_identifier(schema_name)
             schema_literal = _escape_literal(schema_name)
         except ValueError as e:
             logger.error(f"Invalid schema name: {e}")
@@ -511,7 +505,6 @@ class DatabricksHandler(MetaDatabaseHandler):
             try:
                 escaped_names = []
                 for t in table_names:
-                    _validate_identifier(t)
                     escaped_names.append(f"'{_escape_literal(t)}'")
                 table_names_str = ", ".join(escaped_names)
                 columns_query += f" AND table_name IN ({table_names_str})"

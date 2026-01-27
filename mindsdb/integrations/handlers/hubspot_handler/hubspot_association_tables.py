@@ -7,7 +7,7 @@ between HubSpot CRM objects (companies, contacts, deals, tickets, etc.).
 Reference: https://developers.hubspot.com/docs/api/crm/associations
 """
 
-from typing import List, Dict, Text, Any, Optional
+from typing import Any
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APIResource
@@ -31,7 +31,7 @@ class HubSpotAssociationTable(APIResource):
     FROM_ID_COLUMN: str = ""
     TO_ID_COLUMN: str = ""
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> list[str]:
         """Return column names for the association table."""
         return [self.FROM_ID_COLUMN, self.TO_ID_COLUMN, "association_type", "association_label"]
 
@@ -43,10 +43,10 @@ class HubSpotAssociationTable(APIResource):
 
     def list(
         self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        sort: List[SortColumn] = None,
-        targets: List[str] = None,
+        conditions: list[FilterCondition] | None = None,
+        limit: int | None = None,
+        sort: list[SortColumn] | None = None,
+        targets: list[str] | None = None,
         **kwargs,
     ) -> pd.DataFrame:
         """Fetch associations between objects."""
@@ -62,7 +62,7 @@ class HubSpotAssociationTable(APIResource):
 
         return df
 
-    def _fetch_associations(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def _fetch_associations(self, limit: int | None = None) -> list[dict[str, Any]]:
         """
         Fetch associations by getting source objects with their associations.
 
@@ -174,7 +174,7 @@ class HubSpotAssociationTable(APIResource):
             logger.error(f"Failed to fetch associations: {str(e)}")
             raise
 
-    def _apply_conditions(self, df: pd.DataFrame, conditions: List[FilterCondition]) -> pd.DataFrame:
+    def _apply_conditions(self, df: pd.DataFrame, conditions: list[FilterCondition]) -> pd.DataFrame:
         """Apply filter conditions to the DataFrame."""
         if df.empty:
             return df
@@ -197,18 +197,18 @@ class HubSpotAssociationTable(APIResource):
 
         return df
 
-    def add(self, data: List[dict]) -> None:
+    def add(self, data: list[dict]) -> None:
         """Create associations - not yet implemented."""
         raise NotImplementedError(
             "Creating associations via INSERT is not yet supported. "
             "Use the HubSpot API directly to create associations."
         )
 
-    def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
+    def modify(self, conditions: list[FilterCondition], values: dict) -> None:
         """Update associations - not applicable."""
         raise NotImplementedError("Associations cannot be updated. Delete and recreate instead.")
 
-    def remove(self, conditions: List[FilterCondition]) -> None:
+    def remove(self, conditions: list[FilterCondition]) -> None:
         """Delete associations - not yet implemented."""
         raise NotImplementedError(
             "Deleting associations via DELETE is not yet supported. "
@@ -224,7 +224,7 @@ class CompanyContactsTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "company_id"
     TO_ID_COLUMN = "contact_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "company_contacts",
             "TABLE_TYPE": "VIEW",
@@ -232,7 +232,7 @@ class CompanyContactsTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "company_contacts",
@@ -269,7 +269,7 @@ class CompanyDealsTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "company_id"
     TO_ID_COLUMN = "deal_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "company_deals",
             "TABLE_TYPE": "VIEW",
@@ -277,7 +277,7 @@ class CompanyDealsTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "company_deals",
@@ -314,7 +314,7 @@ class CompanyTicketsTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "company_id"
     TO_ID_COLUMN = "ticket_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "company_tickets",
             "TABLE_TYPE": "VIEW",
@@ -322,7 +322,7 @@ class CompanyTicketsTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "company_tickets",
@@ -359,7 +359,7 @@ class ContactCompaniesTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "contact_id"
     TO_ID_COLUMN = "company_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "contact_companies",
             "TABLE_TYPE": "VIEW",
@@ -367,7 +367,7 @@ class ContactCompaniesTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "contact_companies",
@@ -404,7 +404,7 @@ class ContactDealsTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "contact_id"
     TO_ID_COLUMN = "deal_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "contact_deals",
             "TABLE_TYPE": "VIEW",
@@ -412,7 +412,7 @@ class ContactDealsTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "contact_deals",
@@ -449,7 +449,7 @@ class ContactTicketsTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "contact_id"
     TO_ID_COLUMN = "ticket_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "contact_tickets",
             "TABLE_TYPE": "VIEW",
@@ -457,7 +457,7 @@ class ContactTicketsTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "contact_tickets",
@@ -494,7 +494,7 @@ class DealCompaniesTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "deal_id"
     TO_ID_COLUMN = "company_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "deal_companies",
             "TABLE_TYPE": "VIEW",
@@ -502,7 +502,7 @@ class DealCompaniesTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "deal_companies",
@@ -539,7 +539,7 @@ class DealContactsTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "deal_id"
     TO_ID_COLUMN = "contact_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "deal_contacts",
             "TABLE_TYPE": "VIEW",
@@ -547,7 +547,7 @@ class DealContactsTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "deal_contacts",
@@ -584,7 +584,7 @@ class TicketCompaniesTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "ticket_id"
     TO_ID_COLUMN = "company_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "ticket_companies",
             "TABLE_TYPE": "VIEW",
@@ -592,7 +592,7 @@ class TicketCompaniesTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "ticket_companies",
@@ -629,7 +629,7 @@ class TicketContactsTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "ticket_id"
     TO_ID_COLUMN = "contact_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "ticket_contacts",
             "TABLE_TYPE": "VIEW",
@@ -637,7 +637,7 @@ class TicketContactsTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "ticket_contacts",
@@ -674,7 +674,7 @@ class TicketDealsTable(HubSpotAssociationTable):
     FROM_ID_COLUMN = "ticket_id"
     TO_ID_COLUMN = "deal_id"
 
-    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+    def meta_get_tables(self, table_name: str) -> dict[str, Any]:
         return {
             "TABLE_NAME": "ticket_deals",
             "TABLE_TYPE": "VIEW",
@@ -682,7 +682,7 @@ class TicketDealsTable(HubSpotAssociationTable):
             "ROW_COUNT": None,
         }
 
-    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+    def meta_get_columns(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
                 "TABLE_NAME": "ticket_deals",

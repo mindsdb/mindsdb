@@ -1,7 +1,8 @@
-from mindsdb.integrations.libs.const import HANDLER_TYPE
+from mindsdb.integrations.libs.const import HANDLER_TYPE, HANDLER_SUPPORT_LEVEL
 
 try:
     from .mariadb_handler import MariaDBHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None
@@ -9,12 +10,20 @@ except Exception as e:
 from .__about__ import __version__ as version, __description__ as description
 
 
-title = 'MariaDB'
-name = 'mariadb'
+title = "MariaDB"
+name = "mariadb"
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
+support_level = HANDLER_SUPPORT_LEVEL.MINDSDB
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description',
-    'import_error', 'icon_path'
+    "Handler",
+    "version",
+    "name",
+    "type",
+    "title",
+    "description",
+    "import_error",
+    "icon_path",
+    "support_level",
 ]

@@ -8,12 +8,37 @@ import json
 pattern = "\=|~|>|<| |\n|#|\["  # noqa: W605
 
 
-def get_requirements_from_file(path):
+def get_requirements_from_file(path, with_snyk: bool = True):
     """Takes a requirements file path and extracts only the package names from it"""
 
     with open(path, "r") as main_f:
-        reqs = [re.split(pattern, line)[0] for line in main_f.readlines() if re.split(pattern, line)[0]]
+        reqs = []
+        for line in main_f.readlines():
+            if with_snyk is False and "pinned by Snyk to avoid a vulnerability" in line:
+                continue
+            parts = re.split(pattern, line)
+            if parts and parts[0]:
+                reqs.append(parts[0])
     return reqs
+
+
+def get_requirements_with_DEP002(path):
+    """Extract package names that have 'pinned by Snyk' comment from requirements file"""
+    no_check_packages = []
+
+    with open(path, "r") as f:
+        for line in f.readlines():
+            line = line.strip()
+            if (
+                line
+                and not line.startswith("#")
+                and ("pinned by Snyk to avoid a vulnerability" in line or "ignore-DEP002" in line)
+            ):
+                package_name = re.split(pattern, line)[0]
+                if package_name:
+                    no_check_packages.append(package_name)
+
+    return no_check_packages
 
 
 MAIN_REQS_PATH = "requirements/requirements.txt"
@@ -74,6 +99,8 @@ MAIN_RULE_IGNORES = {
         "openpyxl",
         "onnxruntime",
         "litellm",
+        "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
+        "urllib3",  # pinned by Snyk to avoid a vulnerability
     ],
 }
 
@@ -248,19 +275,35 @@ def print_errors(file, errors):
         print()
 
 
-def get_ignores_str(ignores_dict):
-    """Get a list of rule ignores for deptry"""
+def get_ignores_str(ignores_dict: dict, dep002_ignore: list[str] = None) -> str:
+    """Get a list of rule ignores for deptry
 
-    return ",".join([f"{k}={'|'.join(v)}" for k, v in ignores_dict.items()])
+    Args:
+        ignores_dict: A dictionary of rule ignores for deptry
+        dep002_ignore: Additional list of packages to ignore for DEP002
+
+    Returns:
+        A string of rule ignores for deptry
+    """
+
+    rules = []
+    for k, v in ignores_dict.items():
+        rules.append(f"{k}={'|'.join(v)}")
+        if k == "DEP002" and dep002_ignore:
+            rules[-1] += "|" + "|".join(dep002_ignore)
+
+    return ",".join(rules)
 
 
 def run_deptry(reqs, rule_ignores, path, extra_args=""):
     """Run a dependency check with deptry. Return a list of error messages"""
 
     errors = []
+    # Get the full path to deptry executable from the current Python environment
+    deptry_path = os.path.join(os.path.dirname(sys.executable), "deptry")
     try:
         result = subprocess.run(
-            f'deptry -o deptry.json --no-ansi --known-first-party mindsdb --requirements-files "{reqs}" --per-rule-ignores "{rule_ignores}" --package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" {extra_args} {path}',
+            f'{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb --requirements-files "{reqs}" --per-rule-ignores "{rule_ignores}" --package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" {extra_args} {path}',
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
@@ -289,10 +332,10 @@ def check_for_requirements_duplicates():
     """Checks that handler requirements.txt and the main requirements.txt don't contain any of the same packages"""
 
     global success
-    main_reqs = get_requirements_from_file(MAIN_REQS_PATH)
+    main_reqs = get_requirements_from_file(MAIN_REQS_PATH, with_snyk=False)
 
     for file in HANDLER_REQS_PATHS:
-        handler_reqs = get_requirements_from_file(file)
+        handler_reqs = get_requirements_from_file(file, with_snyk=False)
 
         for req in handler_reqs:
             if req in main_reqs:
@@ -416,9 +459,13 @@ def check_requirements_imports():
 
     # Run on each handler
     for file in HANDLER_REQS_PATHS:
+        handler_no_check = get_requirements_with_DEP002(file)
+
+        ignore_str = get_ignores_str(HANDLER_RULE_IGNORES, dep002_ignore=handler_no_check)
+
         errors = run_deptry(
             f"{file},{MAIN_REQS_PATH},{TEST_REQS_PATH}",
-            get_ignores_str(HANDLER_RULE_IGNORES),
+            ignore_str,
             os.path.dirname(file),
         )
         print_errors(file, errors)

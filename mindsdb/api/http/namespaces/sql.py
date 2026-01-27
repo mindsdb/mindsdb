@@ -216,7 +216,8 @@ class Charter(Resource):
         query = request.json.get("query")
         prompt = request.json.get("prompt")
         context = request.json.get("context", {})
-        params = request.json.get("params", {})
+        if "params" in request.json:
+            ctx.params = request.json["params"]
 
         if not isinstance(query, str):
             return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" as a string.')
@@ -229,7 +230,7 @@ class Charter(Resource):
         mysql_proxy = FakeMysqlProxy()
         mysql_proxy.set_context(context)
         try:
-            result: SQLAnswer = mysql_proxy.process_query(query, params=params)
+            result: SQLAnswer = mysql_proxy.process_query(query)
         except Exception as e:
             error_msg = self._extract_error_message(e, "query execution")
             logger.warning(f"Query error: {error_msg}")

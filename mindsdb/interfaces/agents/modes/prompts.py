@@ -2,6 +2,7 @@ sql_description = """
 MindsDB SQL is mostly compatible with DuckDB syntax.
 
 - When writing the SQL query, make sure the select explicit names for the columns accordingly to the question.
+- When composing JOIN queries, qualify every referenced column with its table (or table alias) (e.g., `movies.title`) so it is always clear which table provides each column.
 
 Example:
 SELECT movie_id, movie_description, age, name FROM someschema.movies WHERE whatever...;

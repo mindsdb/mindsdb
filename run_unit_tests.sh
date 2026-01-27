@@ -46,6 +46,9 @@ HANDLERS_TO_INSTALL=(
     statsforecast
     chromadb
     confluence
+    elasticsearch
+    agents
+    kb
 )
 
 print_header() {

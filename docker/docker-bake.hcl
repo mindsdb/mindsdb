@@ -121,12 +121,12 @@ target "images" {
       {
         # If you make any changes here, make them to cloud-cpu as well
         name = "cloud"
-        extras = ".[lightwood,mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
+        extras = ".[lightwood,mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
         target = ""
       },
       {
         name = "cloud-cpu"
-        extras = ".[lightwood,mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
+        extras = ".[lightwood,mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,agents,kb] darts datasetsforecast transformers"
         target = ""
       },
     ]

@@ -1,3 +1,4 @@
 elasticsearch==7.13.4
 elasticsearch-dbapi==0.2.11
-urllib3>=2.6.0 # not directly required, pinned by Snyk to avoid a vulnerability
+# TODO update elasticsearch to >=8.0
+# urllib3>=2.6.0 # not directly required, pinned by Snyk to avoid a vulnerability

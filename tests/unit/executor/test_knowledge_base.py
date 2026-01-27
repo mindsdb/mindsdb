@@ -1007,17 +1007,34 @@ class TestKB(BaseExecutorDummyML):
 
         df = pd.DataFrame(
             [
-                {
-                    "PRODUCT_ID": 1,
-                    "PRODUCT_NAME": 'Laptop Pro 15"',
-                    "DESCRIPTION": "High-performance laptop with 16GB RAM and 512GB SSD",
-                    "CATEGORY": "Electronics",
-                    "PRICE": 1299.99,
-                }
+                [1, 'Laptop Pro 15"', "High-performance laptop with 16GB RAM and 512GB SSD", "Electronics", 1299.99],
+                [2, "Table", "Dining table,  144 cm", "Home", 100],
             ],
-            columns=["PRODUCT_ID", "PRODUCT_NAME", "DESCRIPTION", "CATEGORY", "PRICE"],
+            columns=["Product_ID", "Product_Name", "Description", "Category", "Price"],
         )
 
+        self.save_file("oracle_products", df)
+
+        # -- mixed case source columns
+        self._create_kb(
+            "kb_oracle_mixedcase",
+            content_columns=["Product_Name", "Description"],
+            id_column="Product_ID",
+            metadata_columns=["Category", "Price"],
+        )
+        self.run_sql(
+            """
+            insert into kb_oracle_mixedcase
+            select * from files.oracle_products
+            """
+        )
+        ret = self.run_sql("select `Category` from kb_oracle_mixedcase  where `Category` = 'Home'")
+        assert len(ret) == 2
+        assert ret["Category"][0] == "Home"
+
+        # -- uppercase source columns
+        df.columns = df.columns.str.upper()
+        self.run_sql("drop table files.oracle_products")
         self.save_file("oracle_products", df)
 
         self._create_kb(
@@ -1030,14 +1047,18 @@ class TestKB(BaseExecutorDummyML):
             """
             insert into kb_oracle_uppercase
             select * from files.oracle_products
-        """
+            """
         )
 
-        ret = self.run_sql("select * from kb_oracle_uppercase")
-        assert isinstance(ret, pd.DataFrame)
+        ret = self.run_sql("select * from kb_oracle_uppercase where `CATEGORY` = 'Electronics'")
         assert len(ret) == 2
+        assert ret["CATEGORY"][0] == "Electronics"
 
         # -- lowercase source columns
+        df.columns = df.columns.str.lower()
+        self.run_sql("drop table files.oracle_products")
+        self.save_file("oracle_products", df)
+
         self._create_kb(
             "kb_oracle_lowercase",
             content_columns=["product_name", "description"],
@@ -1050,26 +1071,9 @@ class TestKB(BaseExecutorDummyML):
             select * from files.oracle_products
         """
         )
-        ret = self.run_sql("select * from kb_oracle_lowercase")
-        assert isinstance(ret, pd.DataFrame)
+        ret = self.run_sql("select category from kb_oracle_lowercase where category = 'Home'")
         assert len(ret) == 2
-
-        # -- mixed case source columns
-        self._create_kb(
-            "kb_oracle_mixedcase",
-            content_columns=["Product_Name", "DESCRIPTION"],
-            id_column="Product_ID",
-            metadata_columns=["Category", "price"],
-        )
-        self.run_sql(
-            """
-            insert into kb_oracle_mixedcase
-            select * from files.oracle_products
-        """
-        )
-        ret = self.run_sql("select * from kb_oracle_mixedcase")
-        assert isinstance(ret, pd.DataFrame)
-        assert len(ret) == 2
+        assert ret["category"][0] == "Home"
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_dimension_mismatch(self, mock_litellm_embedding):

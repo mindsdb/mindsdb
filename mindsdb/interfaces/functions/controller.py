@@ -29,7 +29,7 @@ def function_maker(n_args, other_function):
         lambda arg_0: other_function(arg_0),
         lambda arg_0, arg_1: other_function(arg_0, arg_1),
         lambda arg_0, arg_1, arg_2: other_function(arg_0, arg_1, arg_2),
-        lambda arg_0, arg_1, arg_2, arg_3: other_function(arg_0, arg_1, arg_2, arg_2),
+        lambda arg_0, arg_1, arg_2, arg_3: other_function(arg_0, arg_1, arg_2, arg_3),
     ][n_args]
 
 

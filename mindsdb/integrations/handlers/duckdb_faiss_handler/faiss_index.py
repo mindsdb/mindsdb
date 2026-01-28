@@ -7,6 +7,7 @@ from pathlib import Path
 import portalocker
 
 import faiss  # faiss or faiss-gpu
+from faiss.contrib.ondisk import merge_ondisk
 from pydantic import BaseModel
 
 
@@ -246,38 +247,16 @@ class FaissIVFIndex(FaissIndex):
 
         return batch_num
 
-    def _create_ifv_index_from_dump(self, path, train_count=10000, nlist=1024):
-        """
-        Build an IVF index (wrapped in IndexIDMap) from memmap batches
-        - Reads a single `ids.mmap` and multiple `batch_{i}_vecs.mmap` files from `path`.
-        - Accumulates up to `train_count` vectors to train the IVF quantizer.
-        - Creates IndexIVFFlat and adds all vectors with their ids to it.
 
-        :param path: Directory containing memmap files
-        :param train_count: Number of vectors to use for training
-        :param nlist: number of clusters for IVF
-        """
-
-        # Load ids
-        ids_path = path / "ids.mmap"
-        if not os.path.exists(ids_path):
-            raise FileNotFoundError(f"Missing ids memmap: {ids_path}")
-
-        ids = np.fromfile(ids_path, dtype="int64")
-
-        # Collect vector batch files and sort by batch index
-        vec_files = [f for f in os.listdir(path) if f.startswith("batch_")]
-        if not vec_files:
-            raise FileNotFoundError(f"No vector batch memmaps found in {path}")
-
-        vec_files.sort()
-
+    def _train_ivf(self, dump_path, train_count=10000, nlist=1024):
         # Accumulate training data up to train_count
         train_left = train_count
         train_chunks = []
 
+        vec_files = self._get_dump_vector_files(dump_path)
+
         for fname in vec_files:
-            fpath = path / fname
+            fpath = dump_path / fname
             batch_data = np.fromfile(fpath, dtype="float32")
             rows = int(batch_data.shape[0] / self.dim)
 
@@ -296,7 +275,38 @@ class FaissIVFIndex(FaissIndex):
         ivf = faiss.IndexIVFFlat(quantizer, self.dim, nlist, self.metric)
 
         ivf.train(train_data)
-        ivf_id_map = faiss.IndexIDMap(ivf)
+        return faiss.IndexIDMap(ivf)
+
+    def _get_dump_vector_files(self, dump_path):
+        # Collect vector batch files and sort by batch index
+        vec_files = [f for f in os.listdir(dump_path) if f.startswith("batch_")]
+        if not vec_files:
+            raise FileNotFoundError(f"No vector batch memmaps found in {dump_path}")
+
+        vec_files.sort()
+        return vec_files
+
+    def _create_ivf_index(self, path, train_count=10000, nlist=1024):
+        """
+        Build an IVF index (wrapped in IndexIDMap) from memmap batches
+        - Reads a single `ids.mmap` and multiple `batch_{i}_vecs.mmap` files from `path`.
+        - Accumulates up to `train_count` vectors to train the IVF quantizer.
+        - Creates IndexIVFFlat and adds all vectors with their ids to it.
+
+        :param path: Directory containing memmap files
+        :param train_count: Number of vectors to use for training
+        :param nlist: number of clusters for IVF
+        """
+
+        # Load ids
+        ids_path = path / "ids.mmap"
+        if not os.path.exists(ids_path):
+            raise FileNotFoundError(f"Missing ids memmap: {ids_path}")
+        ids = np.fromfile(ids_path, dtype="int64")
+
+        ivf_id_map = self._train_ivf(path, nlist, train_count)
+
+        vec_files = self._get_dump_vector_files(path)
 
         # load data
         start = 0
@@ -314,7 +324,47 @@ class FaissIVFIndex(FaissIndex):
 
         return ivf_id_map
 
-    def create_index(self, nlist=1024, train_count=10000):
+
+    def _create_ivf_file_index(self, path, train_count=10000, nlist=1024):
+        index_path = path.parent
+        trained_index = self._train_ivf(path, train_count, nlist)
+        # store trained index
+        trained_path = str(index_path / 'faiss_index.trained')
+        faiss.write_index(trained_index, trained_path)
+
+        ids_path = path / "ids.mmap"
+        if not os.path.exists(ids_path):
+            raise FileNotFoundError(f"Missing ids memmap: {ids_path}")
+        ids = np.fromfile(ids_path, dtype="int64")
+
+        vec_files = self._get_dump_vector_files(path)
+
+        start = 0
+        block_fnames = []
+        for num, fname in enumerate(vec_files):
+            index = faiss.read_index(trained_path)
+            fpath = path / fname
+
+            batch_data = np.fromfile(fpath, dtype="float32")
+            rows = int(batch_data.shape[0] / self.dim)
+
+            batch_vectors = batch_data.reshape([rows, self.dim])
+
+            ids_batch = np.asarray(ids[start : start + rows])
+            index.add_with_ids(batch_vectors, ids_batch)
+            block_fname = str(index_path / f'faiss_index_block.{num}')
+            block_fnames.append(block_fname)
+            faiss.write_index(index,block_fname)
+            start += rows
+
+        index = faiss.read_index(trained_path)
+
+        merge_ondisk(index, block_fnames, str(index_path / f'faiss_index_merged'))
+        os.unlink(trained_path)
+
+        return index
+
+    def create_index(self, index_type, nlist=1024, train_count=10000):
         # index might not fit into RAM, extract data to files
         dump_path = Path(self.path).parent / "dump"
 
@@ -340,7 +390,12 @@ class FaissIVFIndex(FaissIndex):
         self.close()
 
         # create ivf index
-        ivf_index = self._create_ifv_index_from_dump(dump_path, train_count=train_count, nlist=nlist)
+        if index_type == 'ivf':
+            ivf_index = self._create_ivf_index(dump_path, train_count=train_count, nlist=nlist)
+        elif index_type == 'ivf_file':
+            ivf_index = self._create_ivf_file_index(dump_path, train_count=train_count, nlist=nlist)
+        else:
+            raise ValueError(f"Unknown index type: {index_type}")
 
         self.index = ivf_index
         self.index_type = "ivf"

@@ -130,10 +130,10 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             self.faiss_index.drop()
 
     def create_index(self, table_name: str, type: str = "ivf", nlist: int = 1024, train_count: int = 10000):
-        if type != "ivf":
-            raise NotImplementedError("Only ivf index is supported")
+        if type not in ("ivf", "ivf_file"):
+            raise NotImplementedError("Only ivf or ivf_file indexes are supported")
 
-        self.faiss_index.create_index(nlist=nlist, train_count=train_count)
+        self.faiss_index.create_index(type, nlist=nlist, train_count=train_count)
 
     def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into both DuckDB and Faiss."""

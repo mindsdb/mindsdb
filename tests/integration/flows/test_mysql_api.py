@@ -406,7 +406,7 @@ class TestMySqlApi(BaseStuff):
         self.create_database("test_demo_mysql", db_details)
         self.validate_database_creation("test_demo_mysql")
 
-    @pytest.mark.skip(reason="Requires ML handler (lightwood removed). Install dummy_ml or another ML handler to enable.")
+    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     def test_create_predictor(self, use_binary):
         self.query(f"DROP MODEL IF EXISTS {self.predictor_name};")
         # add file lock here

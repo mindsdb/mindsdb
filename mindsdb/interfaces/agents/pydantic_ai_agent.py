@@ -522,7 +522,10 @@ class PydanticAIAgent:
                 error_context = None
 
                 try:
-                    yield self._add_chunk_metadata({"type": "status", "content": "Executing SQL query..."})
+                    query_type = "final" if output.type == ResponseType.FINAL_QUERY else "exploratory"
+                    yield self._add_chunk_metadata(
+                        {"type": "status", "content": f"Executing {query_type} SQL query: {sql_query}"}
+                    )
                     query_data = self.sql_toolkit.execute_sql(sql_query)
 
                 except Exception as e:
@@ -557,10 +560,16 @@ class PydanticAIAgent:
 
                 # is exploratory
                 exploratory_query_count += 1
-                DEBUG_LOGGER(f"Exploratory query {exploratory_query_count}/{MAX_EXPLORATORY_QUERIES} succeeded")
+                debug_message = f"Exploratory query {exploratory_query_count}/{MAX_EXPLORATORY_QUERIES} succeeded"
+                DEBUG_LOGGER(debug_message)
+                yield self._add_chunk_metadata({"type": "status", "content": debug_message})
 
                 # Format query result for prompt
-                query_result_str = f"Query: {sql_query}\nDescription: {output.short_description}\nResult:\n{dataframe_to_markdown(query_data)}"
+                markdown_table = dataframe_to_markdown(query_data)
+                query_result_str = (
+                    f"Query: {sql_query}\nDescription: {output.short_description}\nResult:\n{markdown_table}"
+                )
+                yield self._add_chunk_metadata({"type": "status", "content": f"Query result: {markdown_table}"})
                 exploratory_query_results.append(query_result_str)
 
         except Exception as e:

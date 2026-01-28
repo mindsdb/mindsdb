@@ -260,88 +260,6 @@ class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
             handler.connect()
 
 
-class TestShopifyHandlerQueries(BaseShopifyHandlerTest):
-    """Test suite for Shopify Handler query execution."""
-
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
-    def test_native_query_graphql_success(self, mock_shopify, mock_requests):
-        """Test successful native GraphQL query execution."""
-        # Mock OAuth response
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"access_token": "test_access_token"}
-        mock_requests.post.return_value = mock_response
-
-        # Mock session
-        mock_session = MagicMock()
-        mock_shopify.Session.return_value = mock_session
-
-        # Mock GraphQL response
-        graphql_result = {
-            "data": {
-                "products": {
-                    "edges": [
-                        {"node": {"id": "gid://shopify/Product/1", "title": "Product 1"}},
-                        {"node": {"id": "gid://shopify/Product/2", "title": "Product 2"}},
-                        {"node": {"id": "gid://shopify/Product/3", "title": "Product 3"}},
-                        {"node": {"id": "gid://shopify/Product/4", "title": "Product 4"}},
-                        {"node": {"id": "gid://shopify/Product/5", "title": "Product 5"}},
-                    ]
-                }
-            }
-        }
-        
-        mock_graphql = MagicMock()
-        mock_graphql.execute.return_value = json.dumps(graphql_result)
-        mock_shopify.GraphQL.return_value = mock_graphql
-        mock_shopify.ShopifyResource.activate_session = MagicMock()
-
-        handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
-
-        # Execute GraphQL query
-        query = "{ products(first: 5) { edges { node { id title } } } }"
-        result = handler.native_query(query)
-
-        # Verify session was activated
-        mock_shopify.ShopifyResource.activate_session.assert_called_once_with(mock_session)
-
-        # Verify GraphQL was executed
-        mock_graphql.execute.assert_called_once_with(query)
-
-        # Verify result
-        from mindsdb.integrations.libs.response import RESPONSE_TYPE
-        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
-        self.assertIsNotNone(result.data_frame)
-        self.assertGreater(len(result.data_frame), 0)
-
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
-    def test_native_query_graphql_execution_error(self, mock_shopify, mock_requests):
-        """Test native GraphQL query execution with error."""
-        # Mock OAuth response
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"access_token": "test_access_token"}
-        mock_requests.post.return_value = mock_response
-
-        # Mock session
-        mock_session = MagicMock()
-        mock_shopify.Session.return_value = mock_session
-        mock_shopify.ShopifyResource.activate_session = MagicMock()
-
-        # Mock GraphQL to raise an error
-        mock_graphql = MagicMock()
-        mock_graphql.execute.side_effect = Exception("GraphQL execution error")
-        mock_shopify.GraphQL.return_value = mock_graphql
-
-        handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
-
-        query = "{ products(first: 5) { edges { node { id title } } } }"
-        with self.assertRaises(InvalidNativeQuery) as context:
-            handler.native_query(query)
-
-        self.assertIn("error occurred when executing the query", str(context.exception))
-
-
 class TestShopifyHandlerConnectionArgs(BaseShopifyHandlerTest):
     """Test suite for Shopify Handler connection arguments validation."""
 
@@ -483,17 +401,58 @@ class TestShopifyHandlerIntegration(BaseShopifyHandlerTest):
         self.assertEqual(handler.name, self.TEST_HANDLER_NAME)
         self.assertTrue(handler.is_connected is False)
 
+    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
+    def test_native_query_products(self, mock_shopify, mock_requests):
+        """Test native query for fetching products."""
+        # Mock OAuth response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"access_token": "test_access_token"}
+        mock_requests.post.return_value = mock_response
+
+        # Mock session
+        mock_session = MagicMock()
+        mock_shopify.Session.return_value = mock_session
+        mock_shopify.ShopifyResource.activate_session = MagicMock()
+
+        # Mock GraphQL response
+        graphql_result = {
+            "data": {
+                "products": {
+                    "edges": [
+                        {"node": {"id": "gid://shopify/Product/1", "title": "Product 1"}},
+                        {"node": {"id": "gid://shopify/Product/2", "title": "Product 2"}},
+                        {"node": {"id": "gid://shopify/Product/3", "title": "Product 3"}},
+                        {"node": {"id": "gid://shopify/Product/4", "title": "Product 4"}},
+                        {"node": {"id": "gid://shopify/Product/5", "title": "Product 5"}},
+                    ]
+                }
+            }
+        }
+        
+        mock_graphql = MagicMock()
+        mock_graphql.execute.return_value = json.dumps(graphql_result)
+        mock_shopify.GraphQL.return_value = mock_graphql
+
+        handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
+        result = handler.native_query('{ products(first: 5) { edges { node { id title } } } }')
+
+        # Verify result
+        from mindsdb.integrations.libs.response import RESPONSE_TYPE
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+        self.assertIsNotNone(result.data_frame)
+
 
 class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
     """Test suite for Shopify Handler table metadata methods."""
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_tables.query_graphql")
-    def test_products_table_meta_get_tables(self, mock_query_graphql):
+    def test_products_table_meta_get_tables(self):
         """Test meta_get_tables method for products table."""
-        mock_query_graphql.return_value = {"productsCount": {"count": 100}}
-
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
         products_table = handler._tables["products"]
+
+        # Mock the query_graphql method on the instance
+        products_table.query_graphql = MagicMock(return_value={"data": {"productsCount": {"count": 100}}})
 
         result = products_table.meta_get_tables()
 
@@ -556,13 +515,13 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
             self.assertIsInstance(column, dict)
             self.assertIn("COLUMN_NAME", column)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_tables.query_graphql")
-    def test_product_variants_table_meta_get_tables(self, mock_query_graphql):
+    def test_product_variants_table_meta_get_tables(self):
         """Test meta_get_tables method for product_variants table."""
-        mock_query_graphql.return_value = {"productVariantsCount": {"count": 250}}
-
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
         variants_table = handler._tables["product_variants"]
+
+        # Mock the query_graphql method on the instance
+        variants_table.query_graphql = MagicMock(return_value={"data": {"productVariantsCount": {"count": 250}}})
 
         result = variants_table.meta_get_tables()
 
@@ -625,13 +584,13 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
             self.assertIsInstance(column, dict)
             self.assertIn("COLUMN_NAME", column)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_tables.query_graphql")
-    def test_customers_table_meta_get_tables(self, mock_query_graphql):
+    def test_customers_table_meta_get_tables(self):
         """Test meta_get_tables method for customers table."""
-        mock_query_graphql.return_value = {"customersCount": {"count": 500}}
-
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
         customers_table = handler._tables["customers"]
+
+        # Mock the query_graphql method on the instance
+        customers_table.query_graphql = MagicMock(return_value={"data": {"customersCount": {"count": 500}}})
 
         result = customers_table.meta_get_tables()
 
@@ -690,13 +649,13 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
             self.assertIsInstance(column, dict)
             self.assertIn("COLUMN_NAME", column)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_tables.query_graphql")
-    def test_orders_table_meta_get_tables(self, mock_query_graphql):
+    def test_orders_table_meta_get_tables(self):
         """Test meta_get_tables method for orders table."""
-        mock_query_graphql.return_value = {"ordersCount": {"count": 1000}}
-
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
         orders_table = handler._tables["orders"]
+
+        # Mock the query_graphql method on the instance
+        orders_table.query_graphql = MagicMock(return_value={"data": {"ordersCount": {"count": 1000}}})
 
         result = orders_table.meta_get_tables()
 

@@ -411,13 +411,6 @@ class ChromaDBHandler(VectorStoreHandler):
             raise Exception(f"Failed to insert/update data: {str(e)}")
         return Response(RESPONSE_TYPE.OK, affected_rows=len(df))
 
-    # def upsert(self, table_name: str, data: pd.DataFrame):
-    #     """
-    #     Alias for insert since insert handles upsert functionality
-    #     """
-    #     # upsert doesn't check existed origin_ids in metadata
-    #     return self.insert(table_name, data)
-
     def update(
         self,
         table_name: str,

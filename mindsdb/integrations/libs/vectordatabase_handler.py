@@ -321,45 +321,45 @@ class VectorStoreHandler(BaseHandler):
             self.upsert(table_name, df)
             return
 
-        origin_id_col = "_original_doc_id"
+        original_doc_id = "_original_doc_id"
 
-        def get_orig_ids(metadata):
-            return metadata.apply(lambda m: m.get(origin_id_col))
+        def get_original_ids(metadata):
+            return metadata.apply(lambda m: m.get(original_doc_id))
 
-        df["orig_id"] = get_orig_ids(df[metadata_col])
+        df["orig_id"] = get_original_ids(df[metadata_col])
 
-        df_orig_ids = df[~df["orig_id"].isna()]
+        df_original_ids = df[~df["orig_id"].isna()]
         df_chunk_ids = df[df["orig_id"].isna()]
 
-        if not df_orig_ids.empty:
+        if not df_original_ids.empty:
             # data has original ids - find all related records
 
-            all_ids = list(df_orig_ids["orig_id"])
+            all_ids = list(df_original_ids["orig_id"])
 
-            # find existing origin_ids
+            # find existing original_ids
             df_existed = self.select(
                 table_name,
                 columns=[id_col, metadata_col],
-                conditions=[FilterCondition(column=f"metadata.{origin_id_col}", op=FilterOperator.IN, value=all_ids)],
+                conditions=[FilterCondition(column=f"metadata.{original_doc_id}", op=FilterOperator.IN, value=all_ids)],
             )
 
             # split into groups:
-            # - to update: records that match by `chunk_id`+`origin_id` in `df_existed` and `df`
-            # - to delete: all chunk_ids from `df_existed` that don't match by `chunk_id`+`origin_id`
-            # - to insert: all records from `df` that  don't match by `chunk_id`+`origin_id`
+            # - to update: records that match by `chunk_id`+`original_id` in `df_existed` and `df`
+            # - to delete: all chunk_ids from `df_existed` that don't match by `chunk_id`+`original_id`
+            # - to insert: all records from `df` that  don't match by `chunk_id`+`original_id`
 
             if not df_existed.empty:
-                df_existed["orig_id"] = get_orig_ids(df_existed[metadata_col])
+                df_existed["orig_id"] = get_original_ids(df_existed[metadata_col])
                 df_existed["match"] = 1
 
-                df_common = df_orig_ids.merge(df_existed[["id", "orig_id", "match"]], on=["id", "orig_id"], how="left")
+                df_common = df_original_ids.merge(df_existed[["id", "orig_id", "match"]], on=["id", "orig_id"], how="left")
 
                 df_update = df_common[~df_common["match"].isna()].drop("orig_id", axis=1).drop("match", axis=1)
                 df_insert = df_common[df_common["match"].isna()]
 
                 ids_to_remove = set(df_existed["id"]) - set(df_update["id"])
             else:
-                df_insert = df_orig_ids
+                df_insert = df_original_ids
                 ids_to_remove = []
                 df_update = pd.DataFrame()
             df_insert = df_insert.drop("orig_id", axis=1)
@@ -387,7 +387,7 @@ class VectorStoreHandler(BaseHandler):
 
         id_col = TableField.ID.value
         metadata_col = TableField.METADATA.value
-        origin_id_col = "_original_doc_id"
+        original_doc_id = "_original_doc_id"
 
         if ids_to_remove:
             conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(ids_to_remove))]
@@ -400,15 +400,15 @@ class VectorStoreHandler(BaseHandler):
             for _, row in df_existed.iterrows():
                 chunk_id = row[id_col]
                 created_dates[chunk_id] = row[metadata_col].get("_created_at")
-                ids[chunk_id] = row[metadata_col].get(origin_id_col)
+                ids[chunk_id] = row[metadata_col].get(original_doc_id)
 
             def keep_created_at(row):
                 val = created_dates.get(row[id_col])
                 if val:
                     row[metadata_col]["_created_at"] = val
                 # keep id column
-                if origin_id_col not in row[metadata_col]:
-                    row[metadata_col][origin_id_col] = ids.get(row[id_col])
+                if original_doc_id not in row[metadata_col]:
+                    row[metadata_col][original_doc_id] = ids.get(row[id_col])
                 return row
 
             df_update = df_update

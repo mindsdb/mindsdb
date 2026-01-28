@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 import sys
+import json
 
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.libs.api_handler_exceptions import (
@@ -243,19 +244,20 @@ class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
 
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
 
-        with self.assertRaises(ConnectionFailed):
-            handler.check_connection()
+        response = handler.check_connection()
+        self.assertFalse(response.success)
 
     @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
     def test_check_connection_oauth_failure(self, mock_requests):
         """Test connection check failure during OAuth."""
-        error_message = "OAuth failed"
-        mock_requests.post.side_effect = Exception(error_message)
+        mock_response = MagicMock()
+        mock_response.json.return_value = {}
+        mock_requests.post.return_value = mock_response
 
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
 
         with self.assertRaises(ConnectionFailed):
-            handler.check_connection()
+            handler.connect()
 
 
 class TestShopifyHandlerQueries(BaseShopifyHandlerTest):
@@ -263,9 +265,8 @@ class TestShopifyHandlerQueries(BaseShopifyHandlerTest):
 
     @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
     @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.parse_sql")
-    def test_native_query_success(self, mock_parse_sql, mock_shopify, mock_requests):
-        """Test successful native query execution."""
+    def test_native_query_graphql_success(self, mock_shopify, mock_requests):
+        """Test successful native GraphQL query execution."""
         # Mock OAuth response
         mock_response = MagicMock()
         mock_response.json.return_value = {"access_token": "test_access_token"}
@@ -275,36 +276,70 @@ class TestShopifyHandlerQueries(BaseShopifyHandlerTest):
         mock_session = MagicMock()
         mock_shopify.Session.return_value = mock_session
 
-        # Mock parse_sql
-        mock_ast = MagicMock()
-        mock_parse_sql.return_value = mock_ast
+        # Mock GraphQL response
+        graphql_result = {
+            "data": {
+                "products": {
+                    "edges": [
+                        {"node": {"id": "gid://shopify/Product/1", "title": "Product 1"}},
+                        {"node": {"id": "gid://shopify/Product/2", "title": "Product 2"}},
+                        {"node": {"id": "gid://shopify/Product/3", "title": "Product 3"}},
+                        {"node": {"id": "gid://shopify/Product/4", "title": "Product 4"}},
+                        {"node": {"id": "gid://shopify/Product/5", "title": "Product 5"}},
+                    ]
+                }
+            }
+        }
+        
+        mock_graphql = MagicMock()
+        mock_graphql.execute.return_value = json.dumps(graphql_result)
+        mock_shopify.GraphQL.return_value = mock_graphql
+        mock_shopify.ShopifyResource.activate_session = MagicMock()
 
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
 
-        # Mock the query method to return a success response
-        handler.query = MagicMock()
-        mock_query_response = MagicMock()
-        handler.query.return_value = mock_query_response
-
-        query = "SELECT * FROM products"
+        # Execute GraphQL query
+        query = "{ products(first: 5) { edges { node { id title } } } }"
         result = handler.native_query(query)
 
-        mock_parse_sql.assert_called_once_with(query)
-        handler.query.assert_called_once_with(mock_ast)
-        self.assertEqual(result, mock_query_response)
+        # Verify session was activated
+        mock_shopify.ShopifyResource.activate_session.assert_called_once_with(mock_session)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.parse_sql")
-    def test_native_query_invalid_sql(self, mock_parse_sql):
-        """Test native query with invalid SQL."""
-        mock_parse_sql.side_effect = Exception("Invalid SQL")
+        # Verify GraphQL was executed
+        mock_graphql.execute.assert_called_once_with(query)
+
+        # Verify result
+        from mindsdb.integrations.libs.response import RESPONSE_TYPE
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+        self.assertIsNotNone(result.data_frame)
+        self.assertGreater(len(result.data_frame), 0)
+
+    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
+    def test_native_query_graphql_execution_error(self, mock_shopify, mock_requests):
+        """Test native GraphQL query execution with error."""
+        # Mock OAuth response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"access_token": "test_access_token"}
+        mock_requests.post.return_value = mock_response
+
+        # Mock session
+        mock_session = MagicMock()
+        mock_shopify.Session.return_value = mock_session
+        mock_shopify.ShopifyResource.activate_session = MagicMock()
+
+        # Mock GraphQL to raise an error
+        mock_graphql = MagicMock()
+        mock_graphql.execute.side_effect = Exception("GraphQL execution error")
+        mock_shopify.GraphQL.return_value = mock_graphql
 
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
 
-        query = "INVALID SQL QUERY"
+        query = "{ products(first: 5) { edges { node { id title } } } }"
         with self.assertRaises(InvalidNativeQuery) as context:
             handler.native_query(query)
 
-        self.assertIn("invalid", str(context.exception).lower())
+        self.assertIn("error occurred when executing the query", str(context.exception))
 
 
 class TestShopifyHandlerConnectionArgs(BaseShopifyHandlerTest):

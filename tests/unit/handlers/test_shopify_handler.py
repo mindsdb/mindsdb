@@ -7,7 +7,6 @@ from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusRe
 from mindsdb.integrations.libs.api_handler_exceptions import (
     MissingConnectionParams,
     ConnectionFailed,
-    InvalidNativeQuery,
 )
 
 # Mock shopify and requests modules before importing the handler
@@ -429,16 +428,17 @@ class TestShopifyHandlerIntegration(BaseShopifyHandlerTest):
                 }
             }
         }
-        
+
         mock_graphql = MagicMock()
         mock_graphql.execute.return_value = json.dumps(graphql_result)
         mock_shopify.GraphQL.return_value = mock_graphql
 
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
-        result = handler.native_query('{ products(first: 5) { edges { node { id title } } } }')
+        result = handler.native_query("{ products(first: 5) { edges { node { id title } } } }")
 
         # Verify result
         from mindsdb.integrations.libs.response import RESPONSE_TYPE
+
         self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
         self.assertIsNotNone(result.data_frame)
 

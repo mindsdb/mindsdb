@@ -146,10 +146,10 @@ class ShopifyHandler(MetaAPIHandler):
             result = shopify.GraphQL().execute(query)
         except Exception as e:
             raise InvalidNativeQuery(f"An error occurred when executing the query: {e}")
-        
+
         try:
             result = json.loads(result)
-            data = result.get('data')
+            data = result.get("data")
             df = pd.DataFrame(data)
         except Exception as e:
             raise InvalidNativeQuery(f"An error occurred when parsing the query result into a DataFrame: {e}")

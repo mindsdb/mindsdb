@@ -1281,16 +1281,11 @@ class KnowledgeBaseController:
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
                 params["default_vector_storage"] = vector_db_name
             else:
-                # raise ValueError(
-                #     f"Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
-                #     f"One of the options is to use pgvector: "
-                #     f"https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
-                # )
-                # create faiss db
-                vector_table_name = "default_collection"
-                vector_db_name = self._create_persistent_faiss(name)
-                # memorize to remove it later
-                params["default_vector_storage"] = vector_db_name
+                raise ValueError(
+                    f"Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
+                    f"One of the options is to use pgvector: "
+                    f"https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
+                )
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:
@@ -1481,18 +1476,6 @@ class KnowledgeBaseController:
             return vector_store_name
 
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
-        return vector_store_name
-
-    def _create_persistent_faiss(self, kb_name):
-        """Create default vector database for knowledge base, if not specified"""
-
-        vector_store_name = f"{kb_name}_faiss_db"
-
-        # check if exists
-        if self.session.integration_controller.get(vector_store_name):
-            return vector_store_name
-
-        self.session.integration_controller.add(vector_store_name, "duckdb_faiss", {})
         return vector_store_name
 
     def _check_embedding_model(self, project_name, params: dict = None, kb_name="") -> dict:

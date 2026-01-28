@@ -9,6 +9,9 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.config import config
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class FilterOperator(Enum):
@@ -394,8 +397,6 @@ def _get_date_columns_from_raw_condition(condition: ASTNode) -> list:
 
 
 def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, order_by=None):
-    import logging
-    logger = logging.getLogger("mindsdb")
     # convert list of conditions to ast.
     # assumes that list was got from extract_comparison_conditions
     where_query = None

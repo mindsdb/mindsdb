@@ -9,12 +9,23 @@ def test_update_kb_embeddings(mock_embedding, chroma, client):
     # for test of embeddings
     mock_embedding().data = [{"embedding": [0.1, 0.2]}]
 
+    integration_data = {
+        "database": {
+            "name": "kb_vector_db",
+            "engine": "chromadb",
+            "parameters": {"persist_directory": "kb_vector_db"},
+        }
+    }
+    response = client.post("/api/databases", json=integration_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.CREATED
+
     create_response = client.post(
         "/api/projects/mindsdb/knowledge_bases",
         follow_redirects=True,
         json={
             "knowledge_base": {
                 "name": "test_kb",
+                "storage": {"database": "kb_vector_db", "table": "default_collection"},
                 "params": {
                     "embedding_model": {
                         "provider": "gemini",

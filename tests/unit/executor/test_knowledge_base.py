@@ -107,6 +107,10 @@ class TestKB(BaseExecutorDummyML):
         if storage_table:
             kb_params["storage"] = storage_table
 
+        storage_table = self._get_storage_table(name)
+        if storage_table:
+            kb_params["storage"] = storage_table
+
         param_str = ""
         if kb_params:
             param_items = []
@@ -121,6 +125,10 @@ class TestKB(BaseExecutorDummyML):
                 {param_str}
         """
         )
+
+    def _get_storage_table(self, kb_name):
+        # default chromadb
+        return None
 
     def _get_storage_table(self, kb_name):
         # default chromadb

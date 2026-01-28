@@ -258,6 +258,7 @@ PACKAGE_NAME_MAP = {
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
     "sklearn": ["scikit-learn"],
+    "py-machineid": ["machineid"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

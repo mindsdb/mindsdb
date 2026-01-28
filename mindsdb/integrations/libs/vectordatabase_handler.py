@@ -352,7 +352,9 @@ class VectorStoreHandler(BaseHandler):
                 df_existed["orig_id"] = get_original_ids(df_existed[metadata_col])
                 df_existed["match"] = 1
 
-                df_common = df_original_ids.merge(df_existed[["id", "orig_id", "match"]], on=["id", "orig_id"], how="left")
+                df_common = df_original_ids.merge(
+                    df_existed[["id", "orig_id", "match"]], on=["id", "orig_id"], how="left"
+                )
 
                 df_update = df_common[~df_common["match"].isna()].drop("orig_id", axis=1).drop("match", axis=1)
                 df_insert = df_common[df_common["match"].isna()]

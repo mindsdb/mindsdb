@@ -4,12 +4,13 @@ import copy
 
 import pandas as pd
 from pandas.api import types as pd_types
-from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation, Function
+from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 from mindsdb_sql_parser.ast.select.constant import Constant
 
 from mindsdb.integrations.utilities.sql_utils import (
     extract_comparison_conditions,
+    has_aggregate_function,
     filter_dataframe,
     FilterCondition,
     FilterOperator,
@@ -17,12 +18,11 @@ from mindsdb.integrations.utilities.sql_utils import (
 )
 from mindsdb.integrations.libs.base import BaseHandler
 from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists, TableNotFound
-
 from mindsdb.integrations.libs.response import HandlerResponse as Response, RESPONSE_TYPE
 from mindsdb.utilities import log
 
 
-logger = log.getLogger("mindsdb")
+logger = log.getLogger(__name__)
 
 
 def _infer_data_type_from_value(value: Any) -> str:
@@ -294,9 +294,7 @@ class APIResource(APITable):
                 targets.append(col.parts[-1])
 
         # Check if query has aggregation functions (like COUNT, SUM, etc.)
-        has_aggregation = any(
-            isinstance(target, Function) for target in query.targets
-        )
+        has_aggregation = has_aggregate_function(query.targets)
         
         # If we have aggregation or GROUP BY without a LIMIT, we need all rows to compute correctly
         # Pass a very large limit instead of None, since many handlers default to a small limit (e.g., 20)
@@ -656,9 +654,7 @@ class APIHandler(BaseHandler):
             
             # Check if query has aggregations - if so, don't modify targets
             # Aggregations like COUNT(*) should be preserved and handled post-fetch
-            has_aggregation = any(
-                isinstance(target, Function) for target in query.targets
-            )
+            has_aggregation = has_aggregate_function(query.targets)
             
             if not list_method or (list_method and list_method.__func__ is APIResource.list):
                 # for back compatibility, targets wasn't passed in previous version

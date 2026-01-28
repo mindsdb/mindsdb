@@ -14,6 +14,42 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
+
+AGGREGATE_FUNCTIONS = {
+    'count', 'sum', 'avg', 'min', 'max', 'first', 'last', 'median'
+}
+
+
+def is_aggregate_function(node: ast.ASTNode) -> bool:
+    """Check if AST node is aggregate function
+
+    Args:
+        node: AST node to check
+
+    Returns:
+        bool: True if node is aggregate function
+    """
+    return (
+        isinstance(node, ast.Function)
+        and hasattr(node, 'op')
+        and node.op.lower() in AGGREGATE_FUNCTIONS
+    )
+
+
+def has_aggregate_function(targets: list[ast.ASTNode]) -> bool:
+    """Check if any of AST node in the list is aggregate function
+
+    Args:
+        targets: list of AST nodes to check
+
+    Returns:
+        bool: True if node is aggregate function
+    """
+    return any(
+        is_aggregate_function(target) for target in targets
+    )
+
+
 class FilterOperator(Enum):
     """
     Enum for filter operators.

@@ -19,6 +19,7 @@ from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.executor.exceptions import KeyColumnDoesNotExist
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.integrations.utilities.sql_utils import has_aggregate_function
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 from .base import BaseStepCall
@@ -69,7 +70,7 @@ class SubSelectStepCall(BaseStepCall):
         # If so, and the query is just selecting the aggregated columns, skip query_df
         # to avoid re-aggregating already aggregated data
         if isinstance(query, Select) and len(df) == 1:
-            has_aggregation = any(isinstance(target, Function) for target in query.targets)
+            has_aggregation = has_aggregate_function(query.targets)
             if has_aggregation and query.where is None and query.group_by is None and query.order_by is None and query.limit is None:
                 # Query is just aggregations with no WHERE, GROUP BY, ORDER BY, or LIMIT
                 # The result is already aggregated, so just return it as-is

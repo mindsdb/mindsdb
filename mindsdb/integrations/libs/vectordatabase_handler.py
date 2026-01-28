@@ -141,9 +141,7 @@ class VectorStoreHandler(BaseHandler):
                 # check restriction
                 if allowed_metadata_columns is not None:
                     # system columns are underscored, skip them
-                    if condition.column.lower() not in allowed_metadata_columns and not condition.column.startswith(
-                        "_"
-                    ):
+                    if condition.column not in allowed_metadata_columns and not condition.column.startswith("_"):
                         raise ValueError(f"Column is not found: {condition.column}")
 
                 # convert if required

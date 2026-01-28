@@ -467,10 +467,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             size_str = "16"  # 16 bytes of null-terminated string
             company_id = self.request.recv(size_str)
-            company_id = company_id.decode().strip("\x00") if len(company_id) > 0 else DEFAULT_COMPANY_ID
+            company_id = company_id.decode().strip("\x00")
+            if not company_id:
+                company_id = DEFAULT_COMPANY_ID
 
             user_id = self.request.recv(size_str)
-            user_id = user_id.decode().strip("\x00") if len(user_id) > 0 else DEFAULT_USER_ID
+            user_id = user_id.decode().strip("\x00")
+            if not user_id:
+                user_id = DEFAULT_USER_ID
 
             user_class = self.request.recv(1)
             user_class = struct.unpack("B", user_class)[0]

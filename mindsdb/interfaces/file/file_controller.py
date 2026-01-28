@@ -10,7 +10,6 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.constants import DEFAULT_USER_ID
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.integrations.utilities.files.file_reader import FileReader
@@ -27,23 +26,19 @@ class FileController:
 
     @staticmethod
     def _get_file_dir(file_record) -> str:
-        """Get the file directory path with hybrid naming for backwards compatibility.
+        """Get the file directory path from a file record.
 
-        - Old format (DEFAULT_USER_ID): file_{company_id}_{file_id}
-        - New format (real user_id): file_{company_id}_{user_id}_{file_id}
+        Format: file_{company_id}_{user_id}_{file_id}
         """
-        if file_record.user_id == DEFAULT_USER_ID:
-            return f"file_{file_record.company_id}_{file_record.id}"
-        else:
-            return f"file_{file_record.company_id}_{file_record.user_id}_{file_record.id}"
+        return f"file_{file_record.company_id}_{file_record.user_id}_{file_record.id}"
 
     @staticmethod
-    def _get_new_file_dir(file_id: int) -> str:
-        """Get the file directory path for new files using current context."""
-        if ctx.user_id == DEFAULT_USER_ID:
-            return f"file_{ctx.company_id}_{file_id}"
-        else:
-            return f"file_{ctx.company_id}_{ctx.user_id}_{file_id}"
+    def _get_file_dir_by_id(file_id: int) -> str:
+        """Get the file directory path for new files using current context.
+
+        Format: file_{company_id}_{user_id}_{file_id}
+        """
+        return f"file_{ctx.company_id}_{ctx.user_id}_{file_id}"
 
     def get_files_names(self, lower: bool = False):
         """return list of files names
@@ -131,7 +126,7 @@ class FileController:
             db.session.add(file_record)
             db.session.flush()
 
-            store_file_path = self._get_new_file_dir(file_record.id)
+            store_file_path = self._get_file_dir_by_id(file_record.id)
             file_record.file_path = store_file_path
 
             file_dir = Path(self.dir).joinpath(store_file_path)

@@ -28,7 +28,6 @@ from mindsdb.utilities.ml_task_queue.const import (
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
-from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -172,11 +171,6 @@ class MLTaskConsumer(BaseRedisQueue):
             payload = from_bytes(message_content[b"payload"])
             task_type = ML_TASK_TYPE(message_content[b"task_type"])
             model_id = int(message_content[b"model_id"])
-            company_id = message_content[b"company_id"]
-            user_id = message_content[b"user_id"]
-
-            company_id = company_id if len(company_id) > 0 else DEFAULT_COMPANY_ID
-            user_id = user_id if len(user_id) > 0 else DEFAULT_USER_ID
 
             redis_key = RedisKey(message_content.get(b"redis_key"))
 

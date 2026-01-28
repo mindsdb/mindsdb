@@ -406,6 +406,7 @@ class TestMySqlApi(BaseStuff):
         self.create_database("test_demo_mysql", db_details)
         self.validate_database_creation("test_demo_mysql")
 
+    @pytest.mark.skip(reason="Requires ML handler (lightwood removed). Install dummy_ml or another ML handler to enable.")
     def test_create_predictor(self, use_binary):
         self.query(f"DROP MODEL IF EXISTS {self.predictor_name};")
         # add file lock here
@@ -414,6 +415,7 @@ class TestMySqlApi(BaseStuff):
         )
         self.check_predictor_readiness(self.predictor_name)
 
+    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     def test_making_prediction(self, use_binary):
         _query = f"""
             SELECT rental_price, rental_price_explain
@@ -425,6 +427,7 @@ class TestMySqlApi(BaseStuff):
             f"error getting prediction from {self.predictor_name} - {res}"
         )
 
+    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     @pytest.mark.parametrize("describe_attr", ["model", "features", "ensemble"])
     def test_describe_predictor_attrs(self, describe_attr, use_binary):
         self.query(f"describe mindsdb.{self.predictor_name}.{describe_attr};")
@@ -479,6 +482,7 @@ class TestMySqlApi(BaseStuff):
         assert location_column["character_maximum_length"] is not None
         assert location_column["character_octet_length"] is not None
 
+    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     def test_train_model_from_files(self, use_binary):
         df = pd.DataFrame(
             {
@@ -506,6 +510,7 @@ class TestMySqlApi(BaseStuff):
         self.query(_query)
 
     @pytest.mark.slow
+    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     def test_ts_train_and_predict(self, subtests, use_binary):
         train_df = pd.DataFrame(
             {
@@ -575,6 +580,7 @@ class TestMySqlApi(BaseStuff):
                 assert len(res) == res_len, f"prediction result {res} contains more that {res_len} records"
 
     @pytest.mark.slow
+    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     def test_tableau_queries(self, subtests, use_binary):
         test_ds_name = self.file_datasource_name
         predictor_name = "predictor_from_file"

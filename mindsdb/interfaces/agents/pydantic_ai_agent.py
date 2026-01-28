@@ -475,7 +475,7 @@ class PydanticAIAgent:
 
         try:
             while True:
-                yield self._add_chunk_metadata({"type": "status", "content": "Generating SQL query..."})
+                yield self._add_chunk_metadata({"type": "status", "content": "Generating agent response..."})
 
                 current_prompt = base_prompt
                 if exploratory_query_results:
@@ -505,6 +505,8 @@ class PydanticAIAgent:
                     yield self._add_chunk_metadata({"type": "context", "content": output.short_description})
 
                 if output.type == ResponseType.FINAL_TEXT:
+                    yield self._add_chunk_metadata({"type": "status", "content": "Returning text response"})
+
                     # return text to user and exit
                     yield self._add_chunk_metadata({"type": "data", "content": pd.DataFrame([{"answer": output.text}])})
                     yield self._add_chunk_metadata({"type": "end"})

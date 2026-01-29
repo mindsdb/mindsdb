@@ -17,7 +17,7 @@ from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT, get_test_r
 # pymysql.connections.DEBUG = True
 
 
-def create_byom(name: str, target_column: str = 'test'):
+def create_byom(name: str, target_column: str = "test"):
     import io
     import requests
     from textwrap import dedent
@@ -36,21 +36,21 @@ def create_byom(name: str, target_column: str = 'test'):
                         return 'x'
             """).encode()
         )
-    
+
     response = requests.put(
         f"{HTTP_API_ROOT}/handlers/byom/{name}",
         files={
-            "code": ('test.py', get_file(), 'text/x-python'),
+            "code": ("test.py", get_file(), "text/x-python"),
         },
         data={
             "type": "inhouse",
         },
     )
     if response.status_code not in (200, 409):
-        raise Exception('Error creating BYOM engine')
+        raise Exception("Error creating BYOM engine")
 
 
-ML_ENGINE_NAME = 'my_byom_engine'
+ML_ENGINE_NAME = "my_byom_engine"
 
 
 class Dlist(list):
@@ -487,7 +487,7 @@ class TestMySqlApi(BaseStuff):
         self.validate_database_creation(self.MYSQL_DB_NAME)
 
     def test_create_predictor(self, use_binary):
-        create_byom(ML_ENGINE_NAME, target_column='rental_price')
+        create_byom(ML_ENGINE_NAME, target_column="rental_price")
 
         self.query(f"DROP MODEL IF EXISTS {self.predictor_name};")
         # add file lock here
@@ -506,9 +506,7 @@ class TestMySqlApi(BaseStuff):
             USING engine='{ML_ENGINE_NAME}';
         """
         res = self.query(_query)
-        assert "rental_price" in res, (
-            f"error getting prediction from {self.predictor_name} - {res}"
-        )
+        assert "rental_price" in res, f"error getting prediction from {self.predictor_name} - {res}"
 
     # @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     @pytest.mark.parametrize("describe_attr", ["model", "features", "ensemble"])

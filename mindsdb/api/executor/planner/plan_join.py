@@ -111,6 +111,7 @@ class PlanJoinTablesQuery:
         self.query_context = {}
 
         self.partition = None
+        self.has_ambiguous_columns = False
 
     def plan(self, query):
         self.tables_idx = {}
@@ -354,6 +355,8 @@ class PlanJoinTablesQuery:
                     col_parts = list(table_info.aliases[-1])
                     col_parts.append(node.parts[-1])
                     node.parts = col_parts
+                else:
+                    self.has_ambiguous_columns = True
 
         query_traversal(query, _check_identifiers)
 
@@ -509,6 +512,9 @@ class PlanJoinTablesQuery:
         # If this table is part of a join with a predictor: cannot prune
         # Predictors may need all columns from joined tables as input features
         if hasattr(self, "join_sequence") and self._join_has_predictor(self.join_sequence):
+            return False
+
+        if self.has_ambiguous_columns:
             return False
 
         # For subselects: can only prune if they have pure SELECT * (no other columns)

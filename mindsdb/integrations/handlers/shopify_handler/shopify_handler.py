@@ -1,5 +1,8 @@
-import requests
+import json
+
 import shopify
+import requests
+import pandas as pd
 
 from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     ProductsTable,
@@ -14,10 +17,11 @@ from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE,
 )
 
 from mindsdb.utilities import log
-from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.libs.api_handler_exceptions import (
     InvalidNativeQuery,
     ConnectionFailed,
@@ -128,19 +132,26 @@ class ShopifyHandler(MetaAPIHandler):
 
         return response
 
-    def native_query(self, query: str) -> StatusResponse:
-        """Receive and process a raw query.
-        Parameters
-        ----------
-        query : str
-            query in a native format
-        Returns
-        -------
-        StatusResponse
-            Request status
+    def native_query(self, query: str) -> Response:
+        """process a raw query
+
+        Args:
+            query (str): query in a native format (graphql)
+        Returns:
+            Response: The query result.
         """
+        api_session = self.connect()
+        shopify.ShopifyResource.activate_session(api_session)
         try:
-            ast = parse_sql(query)
-        except Exception:
-            raise InvalidNativeQuery(f"The query {query} is invalid.")
-        return self.query(ast)
+            result = shopify.GraphQL().execute(query)
+        except Exception as e:
+            raise InvalidNativeQuery(f"An error occurred when executing the query: {e}")
+
+        try:
+            result = json.loads(result)
+            data = result.get("data")
+            df = pd.DataFrame(data)
+        except Exception as e:
+            raise InvalidNativeQuery(f"An error occurred when parsing the query result into a DataFrame: {e}")
+
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)

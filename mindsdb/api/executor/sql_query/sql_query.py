@@ -27,7 +27,7 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.api.executor.planner import query_planner
 
 from mindsdb.api.executor.utilities.sql import get_query_models
-from mindsdb.interfaces.model.functions import get_model_record
+from mindsdb.interfaces.model.functions import get_model_record, get_project_record
 from mindsdb.api.executor.exceptions import (
     BadTableError,
     UnknownError,
@@ -114,10 +114,21 @@ class SQLQuery:
         databases = self.session.database_controller.get_list()
 
         predictor_metadata = []
+        kb_metadata = {}
 
         query_tables = get_query_models(self.query, default_database=self.database)
 
         for project_name, table_name, table_version in query_tables:
+            project = get_project_record(project_name)
+            if project is None:
+                continue
+
+            # check if KB
+            kb = self.session.kb_controller.get(table_name, project.id)
+            if kb is not None:
+                params = kb.params
+                kb_metadata[(project_name, table_name)] = params
+
             args = {"name": table_name, "project_name": project_name}
             if table_version is not None:
                 args["active"] = None
@@ -196,6 +207,7 @@ class SQLQuery:
             integrations=databases,
             predictor_metadata=predictor_metadata,
             default_namespace=database,
+            kb_metadata=kb_metadata,
         )
 
     def prepare_query(self):

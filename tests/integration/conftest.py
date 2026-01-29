@@ -194,7 +194,7 @@ def session_cleanup(resource_tracker):
     _cleanup_resources(resource_tracker)
 
 
-def create_byom(name: str, target_column: str = "test", company_id = None, user_id = None):
+def create_byom(name: str, target_column: str = "test", company_id=None, user_id=None):
     headers = {}
     if company_id is not None:
         headers["company-id"] = str(company_id)

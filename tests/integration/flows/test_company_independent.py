@@ -243,7 +243,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
         ]
 
         for cid, user_id, db_name, model_name in test_configs:
-            create_byom('test_ml_engine', target_column='rental_price', company_id=cid, user_id=user_id)
+            create_byom("test_ml_engine", target_column="rental_price", company_id=cid, user_id=user_id)
             with train_finetune_lock.acquire(timeout=600):
                 self.sql_via_http(
                     f"""

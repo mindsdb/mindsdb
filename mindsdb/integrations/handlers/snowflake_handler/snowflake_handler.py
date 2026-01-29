@@ -484,8 +484,9 @@ class SnowflakeHandler(MetaDatabaseHandler):
             query += f" AND TABLE_NAME IN ({table_names_str})"
 
         result = self.native_query(query)
-        result.data_frame["ROW_COUNT"] = result.data_frame["ROW_COUNT"].astype(int)
-
+        if result.data_frame is not None and "ROW_COUNT" in result.data_frame.columns:
+            # Snowflake can return NULL for ROW_COUNT (e.g., for views).
+            result.data_frame["ROW_COUNT"] = result.data_frame["ROW_COUNT"].fillna(0).astype(int)
         return result
 
     def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:

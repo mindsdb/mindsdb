@@ -278,7 +278,31 @@ class DatabricksHandler(MetaDatabaseHandler):
         """
         renderer = SqlalchemyRender(DatabricksDialect)
         query_str = renderer.get_string(query, with_failback=True)
+        query_str = self._transform_databricks_sql_intervals(query_str)
         return self.native_query(query_str)
+
+    def _transform_databricks_sql_intervals(self, query_str: str) -> str:
+        """
+        Transforms INTERVAL expressions in the SQL query to a format compatible with Databricks SQL.
+
+        Args:
+            query (str): The original SQL query string.
+        Returns:
+            str: The transformed SQL query string with compatible INTERVAL expressions.
+        """
+        query_str = re.sub(
+            r"DATE_ADD\s*\(\s*([^,]+),\s*INTERVAL\s+'?(\d+)'?\s+DAY\s*\)",
+            r"DATE_ADD(\1, \2)",
+            query_str,
+            flags=re.IGNORECASE,
+        )
+        query_str = re.sub(
+            r"DATE_SUB\s*\(\s*([^,]+),\s*INTERVAL\s+'?(\d+)'?\s+DAY\s*\)",
+            r"DATE_SUB(\1, \2)",
+            query_str,
+            flags=re.IGNORECASE,
+        )
+        return query_str
 
     def get_tables(self, all: bool = False) -> Response:
         """

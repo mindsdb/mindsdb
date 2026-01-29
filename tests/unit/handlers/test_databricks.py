@@ -356,5 +356,58 @@ class TestAdvancedQueries(unittest.TestCase):
         self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
 
 
+@pytest.mark.skipif(not DATABRICKS_AVAILABLE, reason="Databricks not installed")
+class TestDateTimeFunctions(unittest.TestCase):
+    dummy_connection_data = OrderedDict(
+        server_hostname="test.azuredatabricks.net",
+        http_path="sql/test",
+        access_token="test_token",
+        schema="default",
+    )
+
+    def setUp(self):
+        self.patcher = patch(CONNECT_PATCH_PATH)
+        self.mock_connect = self.patcher.start()
+        self.mock_conn = MagicMock()
+        self.mock_cursor = CursorContextManager()
+        self.mock_conn.cursor.return_value = self.mock_cursor
+        self.mock_connect.return_value = self.mock_conn
+        self.handler = DatabricksHandler("databricks", connection_data=self.dummy_connection_data)
+
+    def tearDown(self):
+        self.patcher.stop()
+
+    def test_current_timestamp(self):
+        """Test CURRENT_TIMESTAMP function."""
+        from datetime import datetime
+
+        now = datetime.now()
+        self.mock_cursor.set_results([(now,)], ["current_timestamp"])
+
+        result = self.handler.native_query("SELECT CURRENT_TIMESTAMP as current_timestamp")
+
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(result.data_frame.iloc[0]["current_timestamp"], now)
+
+    def test_interval_days(self):
+        """Test using INTERVAL with days."""
+        from datetime import datetime, timedelta
+
+        base_date = datetime(2023, 1, 1)
+        expected_date = base_date + timedelta(days=10)
+        self.mock_cursor.set_results([(expected_date,)], ["new_date"])
+
+        query = """ SELECT o_orderdate,
+                            EXTRACT(YEAR FROM o_orderdate) as order_year,
+                            DATE_ADD(o_orderdate, INTERVAL 30 DAY) as due_date
+                    FROM my_databricks.orders
+                    LIMIT 5;"""
+
+        result = self.handler.native_query(query)
+
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(result.data_frame.iloc[0]["new_date"], expected_date)
+
+
 if __name__ == "__main__":
     unittest.main()

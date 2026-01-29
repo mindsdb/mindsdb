@@ -1,6 +1,6 @@
-__title__ = "MindsDB LandeDB handler"
+__title__ = "MindsDB LanceDB handler"
 __package_name__ = "mindsdb_lancedb_handler"
-__version__ = "0.0.1"
+__version__ = "0.0.3"
 __description__ = "MindsDB handler for LanceDB"
 __author__ = "Biswadip Paul"
 __github__ = "https://github.com/mindsdb/mindsdb"

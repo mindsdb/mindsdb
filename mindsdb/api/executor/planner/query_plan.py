@@ -4,6 +4,8 @@ class QueryPlan:
         self.steps = []
         self.is_resumable = False
         self.is_async = False
+        self.probe_query = None
+        self.failback_plan = None
 
         if steps:
             for step in steps:

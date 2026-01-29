@@ -144,7 +144,7 @@ class QueryPlanner:
 
         self.projects = list(_projects)
         self.databases = list(self.integrations.keys()) + self.projects
-
+        self.kb_metadata = kb_metadata
         self.statement = None
 
         self.cte_results = {}
@@ -893,7 +893,69 @@ class QueryPlanner:
 
         plan = self.handle_partitioning(self.plan)
 
+        if not plan.is_resumable:
+            # optimizations for insert from selects
+            plan = self.check_insert_from_select(self.plan)
+
         return plan
+
+    def check_insert_from_select(self, plan: QueryPlan):
+        # special case: register insert from select (it is the same as mark resumable)
+        if not (len(plan.steps) == 2 and
+                isinstance(plan.steps[0], FetchDataframeStep) and
+                isinstance(plan.steps[1], InsertToTable)):
+            return plan
+
+        plan.is_resumable = True
+
+        select_step, insert_step = plan.steps
+
+        # -- to check if it is an insert into KB and to partition it --
+        # check if the first table is a KB
+        table = insert_step.table
+        kb_name = _resolve_identifier_part(table)
+        if len(table.parts > 1):
+            project_name = _resolve_identifier_part(table, 0)
+        else:
+            project_name = self.default_namespace
+
+        kb_info = self.kb_metadata.get((project_name, kb_name))
+        if kb_info is None:
+            return plan
+
+        # Knowledge base storage is not pgvector or pgvector is enabled in config
+        if kb_info['vector_db_engine'] == 'pgvector' and not config.enable_pgvector_autobatch:
+            return plan
+
+        if not isinstance(select_step.query, Select):
+            # we can't make probe select for this query
+            return plan
+
+        # convert
+        default_batch_size = 1000
+        track_column = kb_info.get('id_column', 'id')
+
+        probe_select = copy.deepcopy(select_step.query)
+        probe_select.limit = Constant(1)
+        probe_select.targets = [Identifier(parts=[track_column])]
+
+        fetch_step = FetchDataframeStepPartition(
+            step_num=0,
+            integration=select_step.integration,
+            query=select_step.query,
+            params={"batch_size": default_batch_size, "track_column": track_column},
+            steps=[insert_step],
+        )
+
+        plan = QueryPlan(
+            steps=[fetch_step],
+            is_resumable=True,
+            is_async = True,
+            probe_query = probe_select,
+            failback_plan = plan
+        )
+        return plan
+
 
     def handle_partitioning(self, plan: QueryPlan) -> QueryPlan:
         """
@@ -961,14 +1023,6 @@ class QueryPlanner:
 
         if plan.is_resumable and isinstance(step, InsertToTable):
             plan.is_async = True
-        else:
-            # special case: register insert from select (it is the same as mark resumable)
-            if (
-                len(steps_in) == 2
-                and isinstance(steps_in[0], FetchDataframeStep)
-                and isinstance(steps_in[1], InsertToTable)
-            ):
-                plan.is_resumable = True
 
         plan.steps = steps_out
         return plan

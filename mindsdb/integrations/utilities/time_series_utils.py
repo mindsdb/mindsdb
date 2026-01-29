@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from pandas.tseries.frequencies import to_offset
-from sklearn.metrics import r2_score
 
 # handle optional dependency
 try:
@@ -100,8 +99,14 @@ def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     return inferred_freq if inferred_freq is not None else default
 
 
-def get_model_accuracy_dict(nixtla_results_df, metric=r2_score):
+def get_model_accuracy_dict(nixtla_results_df, metric=None):
     """Calculates accuracy for each model in the nixtla results df."""
+    if metric is None:
+        try:
+            from sklearn.metrics import r2_score
+        except ImportError as e:
+            raise ImportError("sklearn is not installed, please install it with `pip install scikit-learn`") from e
+        metric = r2_score
     accuracy_dict = {}
     for column in nixtla_results_df.columns:
         if column in ["unique_id", "ds", "y", "cutoff"]:
@@ -111,10 +116,16 @@ def get_model_accuracy_dict(nixtla_results_df, metric=r2_score):
     return accuracy_dict
 
 
-def get_best_model_from_results_df(nixtla_results_df, metric=r2_score):
+def get_best_model_from_results_df(nixtla_results_df, metric=None):
     """Gets the best model based, on lowest error, from a results df
     with a column for each nixtla model.
     """
+    if metric is None:
+        try:
+            from sklearn.metrics import r2_score
+        except ImportError as e:
+            raise ImportError("sklearn is not installed, please install it with `pip install scikit-learn`") from e
+        metric = r2_score
     best_model, current_accuracy = None, 0
     accuracy_dict = get_model_accuracy_dict(nixtla_results_df, metric)
     for model, accuracy in accuracy_dict.items():

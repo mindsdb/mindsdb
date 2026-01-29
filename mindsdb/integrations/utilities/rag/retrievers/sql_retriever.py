@@ -16,7 +16,7 @@ from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.integrations.libs.response import HandlerResponse
+from mindsdb.integrations.libs.response import ErrorResponse, DataHandlerResponse
 from mindsdb.integrations.libs.vectordatabase_handler import (
     DistanceFunction,
     VectorStoreHandler,
@@ -650,7 +650,7 @@ Below is a description of the contents in this column in list format:
 
     def _generate_metadata_filters(
         self, query: str, ranked_database_schema
-    ) -> Union[List[AblativeMetadataFilter], HandlerResponse]:
+    ) -> Union[List[AblativeMetadataFilter], DataHandlerResponse]:
         parser = PydanticOutputParser(pydantic_object=MetadataFilter)
 
         metadata_filter_list = []
@@ -701,7 +701,7 @@ Below is a description of the contents in this column in list format:
                                     f"LLM failed to generate structured metadata filters: {e}",
                                     exc_info=logger.isEnabledFor(logging.DEBUG),
                                 )
-                                return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
+                                return ErrorResponse(error_message=str(e))
                         else:
                             metadata_filter = AblativeMetadataFilter(
                                 attribute=column_schema.column,
@@ -720,7 +720,7 @@ Below is a description of the contents in this column in list format:
         ranked_database_schema: DatabaseSchema,
         metadata_filters: List[AblativeMetadataFilter],
         embeddings_str: str,
-    ) -> HandlerResponse:
+    ) -> DataHandlerResponse:
         try:
             checked_sql_query = self._prepare_pgvector_query(ranked_database_schema, metadata_filters)
             checked_sql_query_with_embeddings = checked_sql_query.format(embeddings=embeddings_str)
@@ -730,7 +730,7 @@ Below is a description of the contents in this column in list format:
                 f"Failed to prepare and execute SQL query from structured metadata: {e}",
                 exc_info=logger.isEnabledFor(logging.DEBUG),
             )
-            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
+            return ErrorResponse(error_message=str(e))
 
     def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun) -> List[Document]:
         # Rewrite query to be suitable for retrieval.

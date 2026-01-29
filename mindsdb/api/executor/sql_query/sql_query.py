@@ -33,15 +33,15 @@ from mindsdb.api.executor.exceptions import (
     UnknownError,
     LogicError,
 )
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 from mindsdb.utilities.exception import EntityNotExistsError
-from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities.context import context as ctx
-
+from mindsdb.utilities.types.column import Column
 
 from . import steps
-from .result_set import ResultSet, Column
+from .result_set import ResultSet
 from .steps.base import BaseStepCall
 
 
@@ -259,7 +259,7 @@ class SQLQuery:
 
             ctx.run_query_id = self.run_query.record.id
 
-        step_result = None
+        step_result: list[ResultSet] = None
         process_mark = None
         try:
             steps_classes = (x.__class__ for x in steps)
@@ -294,10 +294,6 @@ class SQLQuery:
         self.fetched_data = step_result
 
         try:
-            if hasattr(self, "columns_list") is False:
-                # how it becomes False?
-                self.columns_list = self.fetched_data.columns
-
             if self.columns_list is None:
                 self.columns_list = self.fetched_data.columns
 

@@ -9,7 +9,8 @@ from numpy import dtype as np_dtype
 import pandas as pd
 from pandas.api import types as pd_types
 
-from mindsdb.api.executor.sql_query.result_set import ResultSet, get_mysql_data_type_from_series, Column
+from mindsdb.api.executor.sql_query.result_set import ResultSet, get_mysql_data_type_from_series
+from mindsdb.utilities.types.column import Column
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype as lightwood_dtype
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     MYSQL_DATA_TYPE,

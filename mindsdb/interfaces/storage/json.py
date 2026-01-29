@@ -23,6 +23,7 @@ class JsonStorage:
                 resource_group=self.resource_group,
                 resource_id=self.resource_id,
                 company_id=ctx.company_id,
+                user_id=ctx.user_id,
                 content=value,
             )
             db.session.add(record)
@@ -46,7 +47,11 @@ class JsonStorage:
         record = (
             db.session.query(db.JsonStorage)
             .filter_by(
-                name=key, resource_group=self.resource_group, resource_id=self.resource_id, company_id=ctx.company_id
+                name=key,
+                resource_group=self.resource_group,
+                resource_id=self.resource_id,
+                company_id=ctx.company_id,
+                user_id=ctx.user_id,
             )
             .first()
         )
@@ -55,7 +60,12 @@ class JsonStorage:
     def get_all_records(self):
         records = (
             db.session.query(db.JsonStorage)
-            .filter_by(resource_group=self.resource_group, resource_id=self.resource_id, company_id=ctx.company_id)
+            .filter_by(
+                resource_group=self.resource_group,
+                resource_id=self.resource_id,
+                company_id=ctx.company_id,
+                user_id=ctx.user_id,
+            )
             .all()
         )
         return records
@@ -111,6 +121,7 @@ class EncryptedJsonStorage(JsonStorage):
                 resource_group=self.resource_group,
                 resource_id=self.resource_id,
                 company_id=ctx.company_id,
+                user_id=ctx.user_id,
                 encrypted_content=encrypted_value,
             )
             db.session.add(record)
@@ -126,6 +137,7 @@ class EncryptedJsonStorage(JsonStorage):
                 resource_group=self.resource_group,
                 resource_id=self.resource_id,
                 company_id=ctx.company_id,
+                user_id=ctx.user_id,
                 encrypted_content=encrypted_value,
             )
             db.session.add(record)

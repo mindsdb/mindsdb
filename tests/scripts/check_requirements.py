@@ -77,7 +77,13 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # pyodbc is used in mssql but as optional dependency
 # litellm is used in KB but as optional dependency in case of using : snowflake,  bedrock, gemini llm providers
 MAIN_RULE_IGNORES = {
-    "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
+    "DEP003": [
+        "torch",
+        "pyarrow",
+        "langfuse",
+        "dataprep_ml",
+        "hierarchicalforecast", # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
+    ],
     "DEP001": [
         "torch",
         "pgvector",
@@ -88,6 +94,7 @@ MAIN_RULE_IGNORES = {
         "langfuse",
         "langchain_aws",
         "pyodbc",
+        "sklearn",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
     ],
     "DEP002": [
         "psycopg2-binary",

@@ -326,7 +326,7 @@ class ProcessCache:
             raise Exception(f"Unknown ML task type: {task_type}")
 
         ml_engine_name = payload["handler_meta"]["engine"]
-        model_marker = (model_id, payload["context"]["company_id"])
+        model_marker = (model_id, payload["context"]["company_id"], payload["context"]["user_id"])
         with self._lock:
             if ml_engine_name not in self.cache:
                 warm_process = WarmProcess(init_ml_handler, (handler_module_path,))

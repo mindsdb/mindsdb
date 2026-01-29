@@ -12,7 +12,7 @@ import pandas as pd
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE
 
-from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT
+from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT, get_test_resource_name
 
 # pymysql.connections.DEBUG = True
 
@@ -173,8 +173,52 @@ class BaseStuff:
         )
 
 
+@pytest.fixture(scope="class")
+def postgres_datasource(request):
+    """
+    Class-scoped fixture to create the postgres datasource once.
+    Ensures the database exists for all tests that need it.
+    """
+    helper = BaseStuff()
+    helper.use_binary = False
+    db_name = get_test_resource_name("test_demo_postgres")
+    db_details = {
+        "type": "postgres",
+        "connection_data": {
+            "host": "samples.mindsdb.com",
+            "port": "5432",
+            "user": "demo_user",
+            "password": "demo_password",
+            "database": "demo",
+            "schema": "demo",
+        },
+    }
+    helper.create_database(db_name, db_details)
+    helper.validate_database_creation(db_name)
+    request.cls.POSTGRES_DB_NAME = db_name
+    yield db_name
+    # Cleanup
+    try:
+        helper.query(f"DROP DATABASE IF EXISTS {db_name};")
+    except Exception:
+        pass
+
+
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
+@pytest.mark.usefixtures("postgres_datasource")
 class TestMySqlApi(BaseStuff):
+    # Unique resource names for this test session (initialized in setup_class)
+    POSTGRES_DB_NAME = None
+    MARIADB_DB_NAME = None
+    MYSQL_DB_NAME = None
+
+    @classmethod
+    def setup_class(cls):
+        """Initialize unique resource names for this test session."""
+        # Note: POSTGRES_DB_NAME is set by the postgres_datasource fixture
+        cls.MARIADB_DB_NAME = get_test_resource_name("test_demo_mariadb")
+        cls.MYSQL_DB_NAME = get_test_resource_name("test_demo_mysql")
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -191,8 +235,8 @@ class TestMySqlApi(BaseStuff):
                 "schema": "demo",
             },
         }
-        self.create_database("test_demo_postgres", db_details)
-        self.validate_database_creation("test_demo_postgres")
+        self.create_database(self.POSTGRES_DB_NAME, db_details)
+        self.validate_database_creation(self.POSTGRES_DB_NAME)
 
     @pytest.mark.parametrize("table_name", ["types_test_data", "types_test_data_with_nulls"])
     def test_response_types(self, use_binary, table_name):
@@ -302,7 +346,7 @@ class TestMySqlApi(BaseStuff):
                 dt_interval,
                 dt_timestamptz,
                 dt_timetz
-            FROM test_demo_postgres.{table_name} order by n_integer NULLS last;
+            FROM {self.POSTGRES_DB_NAME}.{table_name} order by n_integer NULLS last;
         """,
             with_description=True,
         )
@@ -424,8 +468,8 @@ class TestMySqlApi(BaseStuff):
                 "database": "test_data",
             },
         }
-        self.create_database("test_demo_mariadb", db_details)
-        self.validate_database_creation("test_demo_mariadb")
+        self.create_database(self.MARIADB_DB_NAME, db_details)
+        self.validate_database_creation(self.MARIADB_DB_NAME)
 
     def test_create_mysql_datasources(self, use_binary):
         db_details = {
@@ -439,8 +483,8 @@ class TestMySqlApi(BaseStuff):
                 "database": "public",
             },
         }
-        self.create_database("test_demo_mysql", db_details)
-        self.validate_database_creation("test_demo_mysql")
+        self.create_database(self.MYSQL_DB_NAME, db_details)
+        self.validate_database_creation(self.MYSQL_DB_NAME)
 
     def test_create_predictor(self, use_binary):
         create_byom(ML_ENGINE_NAME, target_column='rental_price')
@@ -449,7 +493,7 @@ class TestMySqlApi(BaseStuff):
         # add file lock here
         self.query(f"""
             CREATE MODEL {self.predictor_name}
-            from test_demo_postgres (select * from home_rentals limit 10)
+            from {self.POSTGRES_DB_NAME} (select * from home_rentals limit 10)
             PREDICT rental_price USING engine='{ML_ENGINE_NAME}'
         """)
         self.check_predictor_readiness(self.predictor_name)
@@ -497,11 +541,11 @@ class TestMySqlApi(BaseStuff):
         self.query(query)
 
     def test_show_columns(self, use_binary):
-        ret = self.query("""
+        ret = self.query(f"""
             SELECT
                 *
             FROM information_schema.columns
-            WHERE table_name = 'home_rentals' and table_schema='test_demo_postgres'
+            WHERE table_name = 'home_rentals' and table_schema='{self.POSTGRES_DB_NAME}'
         """)
         assert len(ret) == 8
         # TODO FIX STR->INT casting

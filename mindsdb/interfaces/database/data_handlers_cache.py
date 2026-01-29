@@ -134,6 +134,7 @@ class HandlersCache:
                 key = (
                     handler.name,
                     ctx.company_id,
+                    ctx.user_id,
                     0 if cache_thread_safe else threading.get_native_id(),
                 )
                 record = HandlersCacheRecord(handler=handler, expired_at=time.time() + self.ttl)
@@ -154,9 +155,9 @@ class HandlersCache:
             tuple[list[HandlersCacheRecord] | None, str]: cache records and key of the handler in cache
         """
         # If the handler is not thread safe, the thread ID will be assigned to the last element of the key.
-        key = (name, ctx.company_id, 0)
+        key = (name, ctx.company_id, ctx.user_id, 0)
         if key not in self.handlers:
-            key = (name, ctx.company_id, threading.get_native_id())
+            key = (name, ctx.company_id, ctx.user_id, threading.get_native_id())
         return self.handlers.get(key, []), key
 
     def get(self, name: str) -> DatabaseHandler | None:

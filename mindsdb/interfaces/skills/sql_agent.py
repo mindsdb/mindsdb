@@ -296,7 +296,7 @@ class SQLAgent:
         Returns:
             Iterable[str]: list with table names
         """
-        cache_key = f"{ctx.company_id}_{','.join(self._databases)}_tables"
+        cache_key = f"{ctx.company_id}_{','.join(sorted(self._tables_to_include.databases))}_tables"
 
         # first check cache and return if found
         if self._cache:

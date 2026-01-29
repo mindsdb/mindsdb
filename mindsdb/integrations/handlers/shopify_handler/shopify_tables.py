@@ -49,6 +49,14 @@ class ShopifyMetaAPIResource(MetaAPIResource):
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
 
+        # region Validate that all requested target fields exist in the table schema
+        if isinstance(targets, list):
+            for target in targets:
+                lower_names = [x.name.lower() for x in self.model]
+                if target.lower() not in lower_names:
+                    raise ValueError(f'Requested field "{target}" was not found in the table schema.')
+        # endregion
+
         columns = get_graphql_columns(self.model, targets)
         data = query_graphql_nodes(
             self.model_name,

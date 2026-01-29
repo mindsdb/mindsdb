@@ -267,9 +267,19 @@ class BaseExecutorTest(BaseUnitTest):
                 error = integration_controller.handlers_import_status["dummy_ml"]["import"]["error_message"]
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
-            r_dummy_ml = db.Integration(name="dummy_ml", data={}, engine="dummy_ml")
-            db.session.add(r_dummy_ml)
-            db.session.commit()
+            r_dummy_ml = db.Integration.query.filter_by(
+                name="dummy_ml", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+            ).first()
+            if r_dummy_ml is None:
+                r_dummy_ml = db.Integration(
+                    name="dummy_ml",
+                    data={},
+                    engine="dummy_ml",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(r_dummy_ml)
+                db.session.commit()
             self.dummy_ml_integration_id = r_dummy_ml.id
 
             test_handler_path = os.path.dirname(__file__)

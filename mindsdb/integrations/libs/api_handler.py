@@ -165,9 +165,9 @@ def extract_targets(targets: list[ASTNode]) -> list[str]:
     for target in targets:
         if isinstance(target, Identifier):
             result.append(target.parts[-1])
-        elif isinstance(target, Function):
+        elif isinstance(target, (Function, BinaryOperation)):
             result += extract_targets(target.args)
-    return result
+    return list(set(result))
 
 
 class APIResource(APITable):

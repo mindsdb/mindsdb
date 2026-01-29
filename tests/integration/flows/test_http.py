@@ -359,7 +359,7 @@ class TestHTTP(HTTPHelperMixin):
         self.sql_via_http("USE mindsdb;", RESPONSE_TYPE.OK)
         self.sql_via_http(f"DROP MODEL IF EXISTS {model_name};", RESPONSE_TYPE.OK)
 
-        create_byom('test_ml_engine', target_column='rental_price')
+        create_byom("test_ml_engine", target_column="rental_price")
         with train_finetune_lock.acquire(timeout=600):
             self.sql_via_http(
                 f"""

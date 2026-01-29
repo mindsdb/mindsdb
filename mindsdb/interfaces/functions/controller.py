@@ -29,7 +29,7 @@ def function_maker(n_args, other_function):
         lambda arg_0: other_function(arg_0),
         lambda arg_0, arg_1: other_function(arg_0, arg_1),
         lambda arg_0, arg_1, arg_2: other_function(arg_0, arg_1, arg_2),
-        lambda arg_0, arg_1, arg_2, arg_3: other_function(arg_0, arg_1, arg_2, arg_2),
+        lambda arg_0, arg_1, arg_2, arg_3: other_function(arg_0, arg_1, arg_2, arg_3),
     ][n_args]
 
 
@@ -111,8 +111,9 @@ class BYOMFunctionsController:
 
 
 class FunctionController(BYOMFunctionsController):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, session, *args, **kwargs):
+        self.session = session
+        super().__init__(session)
 
     def check_function(self, node):
         meta = super().check_function(node)
@@ -135,16 +136,15 @@ class FunctionController(BYOMFunctionsController):
         chat_model_params = self._parse_chat_model_params()
 
         try:
-            from langchain_core.messages import HumanMessage
-            from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+            from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
-            llm = create_chat_model(chat_model_params)
+            llm = LLMClient(chat_model_params, session=self.session)
         except Exception as e:
             raise RuntimeError(f"Unable to use LLM function, check ENV variables: {e}") from e
 
         def callback(question):
-            resp = llm([HumanMessage(question)])
-            return resp.content
+            resp = llm.completion([{"role": "user", "content": question}])
+            return resp[0]
 
         meta = {"name": name, "callback": callback, "input_types": ["str"], "output_type": "str"}
         self.callbacks[name] = meta

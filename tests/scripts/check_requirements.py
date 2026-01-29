@@ -56,7 +56,6 @@ UTILITIES_REQS_PATHS = [
 EXTRA_REQS_PATHS = [
     "requirements/requirements-agents.txt",
     "requirements/requirements-kb.txt",
-    "requirements/requirements-ml.txt",
 ]
 
 
@@ -115,7 +114,7 @@ MAIN_RULE_IGNORES = {
 # The `pyarrow` package used for DataFrame serialization.
 # It is not explicitly imported in the code and used as follows:
 # modules.append('pyarrow==19.0.0')
-BYOM_DEP002_IGNORE_HANLDER_DEPS = ["pyarrow"]
+BYOM_DEP002_IGNORE_HANLDER_DEPS = ["pyarrow", "scikit-learn"]
 
 # The `thrift-sasl` package is required establish a connection via to Hive via `pyhive`, but it is not explicitly imported in the code.
 HIVE_DEP002_IGNORE_HANDLER_DEPS = ["thrift-sasl"]

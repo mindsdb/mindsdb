@@ -327,7 +327,10 @@ class PydanticAIAgent:
                 #     sql_query = last_message.get("content")
 
                 if last_message.get("type") == "data":
-                    data = last_message.get("content")
+                    if "text" in last_message:
+                        data = pd.DataFrame([{"answer": last_message["text"]}])
+                    else:
+                        data = last_message.get("content")
 
             else:
                 error_message = f"Agent failed with model error: {last_message.get('content')}"
@@ -508,7 +511,7 @@ class PydanticAIAgent:
                     yield self._add_chunk_metadata({"type": "status", "content": "Returning text response"})
 
                     # return text to user and exit
-                    yield self._add_chunk_metadata({"type": "data", "content": pd.DataFrame([{"answer": output.text}])})
+                    yield self._add_chunk_metadata({"type": "data", "text": output.text})
                     yield self._add_chunk_metadata({"type": "end"})
                     return
 

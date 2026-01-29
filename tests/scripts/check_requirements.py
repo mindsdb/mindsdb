@@ -82,7 +82,7 @@ MAIN_RULE_IGNORES = {
         "pyarrow",
         "langfuse",
         "dataprep_ml",
-        "hierarchicalforecast", # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
+        "hierarchicalforecast",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
     ],
     "DEP001": [
         "torch",

@@ -95,6 +95,7 @@ MAIN_RULE_IGNORES = {
         "langchain_aws",
         "pyodbc",
         "sklearn",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
+        "hierarchicalforecast",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
     ],
     "DEP002": [
         "psycopg2-binary",

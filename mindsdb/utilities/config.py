@@ -216,6 +216,7 @@ class Config:
                 "enabled": False,
             },
             "pid_file_content": None,
+            "default_ml_engine": None,
         }
         # endregion
 

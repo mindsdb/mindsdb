@@ -184,7 +184,7 @@ class SQLQuery:
                     }
                 )
 
-            predictor["model_types"] = model_record.data.get("dtypes", {})
+            predictor["model_types"] = model_record.dtype_dict or {}
 
             predictor_metadata.append(predictor)
 

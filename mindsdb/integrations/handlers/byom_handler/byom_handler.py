@@ -331,7 +331,6 @@ class BYOMHandler(BaseMLEngine):
         engine_version = using_args.get("engine_version")
 
         model_storage = self.model_storage
-        # TODO: should probably refactor at some point, as a bit of the logic is shared with lightwood's finetune logic
         try:
             base_predictor_id = args["base_model_id"]
             base_predictor_record = db.Predictor.query.get(base_predictor_id)

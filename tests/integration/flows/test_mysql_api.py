@@ -17,6 +17,42 @@ from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT
 # pymysql.connections.DEBUG = True
 
 
+def create_byom(name: str, target_column: str = 'test'):
+    import io
+    import requests
+    from textwrap import dedent
+    from tests.integration.conftest import HTTP_API_ROOT
+
+    def get_file():
+        return io.BytesIO(
+            dedent(f"""
+                import pandas as pd
+                class CustomPredictor():
+                    def train(self, df, target_column, args=None):
+                        pass
+                    def predict(self, df, *args, **kwargs):
+                        return pd.DataFrame([[1]], columns=['{target_column}'])
+                    def describe(self, model_state, attribute):
+                        return 'x'
+            """).encode()
+        )
+    
+    response = requests.put(
+        f"{HTTP_API_ROOT}/handlers/byom/{name}",
+        files={
+            "code": ('test.py', get_file(), 'text/x-python'),
+        },
+        data={
+            "type": "inhouse",
+        },
+    )
+    if response.status_code not in (200, 409):
+        raise Exception('Error creating BYOM engine')
+
+
+ML_ENGINE_NAME = 'my_byom_engine'
+
+
 class Dlist(list):
     """Service class for convenient work with list of dicts(db response).
     Assumes keys are already normalized to lowercase."""
@@ -406,28 +442,31 @@ class TestMySqlApi(BaseStuff):
         self.create_database("test_demo_mysql", db_details)
         self.validate_database_creation("test_demo_mysql")
 
-    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     def test_create_predictor(self, use_binary):
+        create_byom(ML_ENGINE_NAME, target_column='rental_price')
+
         self.query(f"DROP MODEL IF EXISTS {self.predictor_name};")
         # add file lock here
-        self.query(
-            f"CREATE MODEL {self.predictor_name} from test_demo_postgres (select * from home_rentals) PREDICT rental_price;"
-        )
+        self.query(f"""
+            CREATE MODEL {self.predictor_name}
+            from test_demo_postgres (select * from home_rentals limit 10)
+            PREDICT rental_price USING engine='{ML_ENGINE_NAME}'
+        """)
         self.check_predictor_readiness(self.predictor_name)
 
-    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     def test_making_prediction(self, use_binary):
         _query = f"""
-            SELECT rental_price, rental_price_explain
+            SELECT rental_price
             FROM {self.predictor_name}
-            WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500;
+            WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500
+            USING engine='{ML_ENGINE_NAME}';
         """
         res = self.query(_query)
-        assert "rental_price" in res and "rental_price_explain" in res, (
+        assert "rental_price" in res, (
             f"error getting prediction from {self.predictor_name} - {res}"
         )
 
-    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
+    # @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     @pytest.mark.parametrize("describe_attr", ["model", "features", "ensemble"])
     def test_describe_predictor_attrs(self, describe_attr, use_binary):
         self.query(f"describe mindsdb.{self.predictor_name}.{describe_attr};")
@@ -482,7 +521,6 @@ class TestMySqlApi(BaseStuff):
         assert location_column["character_maximum_length"] is not None
         assert location_column["character_octet_length"] is not None
 
-    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     def test_train_model_from_files(self, use_binary):
         df = pd.DataFrame(
             {
@@ -500,7 +538,8 @@ class TestMySqlApi(BaseStuff):
         _query = f"""
             CREATE MODEL mindsdb.{file_predictor_name}
             from files (select * from {self.file_datasource_name})
-            predict y;
+            predict y
+            USING engine='{ML_ENGINE_NAME}';
         """
         self.query(_query)
         self.check_predictor_readiness(file_predictor_name)

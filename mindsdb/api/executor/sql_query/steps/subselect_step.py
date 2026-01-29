@@ -187,7 +187,7 @@ class QueryStepCall(BaseStepCall):
                     raise KeyColumnDoesNotExist(f"Table not found for column: {key}")
 
                 new_name = search_idx[key]
-                return Identifier(parts=[new_name], alias=node.alias)
+                return Identifier(parts=[new_name], alias=node.alias, with_rollup=node.with_rollup)
 
         # fill params
         fill_params = get_fill_param_fnc(self.steps_data)

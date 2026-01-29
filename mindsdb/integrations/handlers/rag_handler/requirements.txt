@@ -8,3 +8,4 @@ sentence-transformers # needed for HuggingFaceEmbeddings from langchain-communit
 langchain-community==0.3.27
 langchain-core==0.3.77
 langchain-text-splitters==0.3.9
+sentencepiece>=0.2.1 # not directly required, pinned by Snyk to avoid a vulnerability

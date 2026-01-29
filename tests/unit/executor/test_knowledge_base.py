@@ -1110,3 +1110,54 @@ class TestKB(BaseExecutorDummyML):
         self.run_sql("drop knowledge base kb1")
         self.run_sql("drop table my_chroma.table1")
         self.run_sql("drop database my_chroma")
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_duplicated_ids(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb("kb1")
+
+        # insert bug content
+        self.run_sql(f"insert into kb1 (id, content) values (1, '{'my content' * 1000}')")
+
+        # insert second id
+        self.run_sql("insert into kb1 (id, content) values (2, 'content2')")
+
+        # first was chunked
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) > 1
+
+        # second wasn't
+        ret = self.run_sql("select * from kb1 where id = 2")
+        assert len(ret) == 1
+
+        # insert short string
+        self.run_sql("insert into kb1 (id, content) values (1, 'content')")
+
+        # chunks were removed
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+        assert ret["chunk_content"][0] == "content"
+
+        # second id wasn't removed
+        ret = self.run_sql("select * from kb1 where id = 2")
+        assert len(ret) == 1
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_update(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb("kb1")
+
+        self.run_sql("insert into kb1 (id, content) values (1, 'cat')")
+
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+        chunk_id = ret["chunk_id"][0]
+
+        # update
+        self.run_sql(f"update kb1 set content = 'dog' where chunk_id = '{chunk_id}'")
+        # check
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+        assert ret["chunk_content"][0] == "dog"

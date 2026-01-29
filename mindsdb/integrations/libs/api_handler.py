@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 import ast as py_ast
 
 import pandas as pd
-from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation
+from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation, Function
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.utilities.sql_utils import (
@@ -152,6 +152,24 @@ class APITable:
         raise NotImplementedError()
 
 
+def extract_targets(targets: list[ASTNode]) -> list[str]:
+    """Recursive function to extract target column names from the query.
+
+    Args:
+        targets (list[ASTNode]): The list of AST nodes representing the targets.
+
+    Returns:
+        list[str]: The list of target column names.
+    """
+    result = []
+    for target in targets:
+        if isinstance(target, Identifier):
+            result.append(target.parts[-1])
+        elif isinstance(target, Function):
+            result += extract_targets(target.args)
+    return result
+
+
 class APIResource(APITable):
     def __init__(self, *args, table_name=None, **kwargs):
         self.table_name = table_name
@@ -180,10 +198,7 @@ class APIResource(APITable):
                 if isinstance(an_order.field, Identifier):
                     sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
 
-        targets = []
-        for col in query.targets:
-            if isinstance(col, Identifier):
-                targets.append(col.parts[-1])
+        targets = extract_targets(query.targets)
 
         kwargs = {"conditions": api_conditions, "limit": limit, "sort": sort, "targets": targets}
         if self.table_name is not None:

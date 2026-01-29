@@ -826,7 +826,14 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(result.data_frame.iloc[0]["TABLE_NAME"], "ORDERS")
 
     def test_meta_get_column_statistics_success(self):
-        columns_df = DataFrame({"TABLE_NAME": ["ORDERS", "ORDERS"], "COLUMN_NAME": ["ID", "AMOUNT"]})
+        columns_df = DataFrame(
+            {
+                "TABLE_SCHEMA": ["PUBLIC", "PUBLIC"],
+                "TABLE_NAME": ["ORDERS", "ORDERS"],
+                "COLUMN_NAME": ["ID", "AMOUNT"],
+                "DATA_TYPE": ["NUMBER", "NUMBER"],
+            }
+        )
         stats_df = DataFrame(
             [
                 {

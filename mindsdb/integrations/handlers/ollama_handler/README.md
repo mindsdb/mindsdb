@@ -28,17 +28,17 @@ Here are the recommended system specifications:
 Create an AI engine from the [Ollama handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ollama_handler).
 
 ```sql
-CREATE ML_ENGINE ollama_engine
+CREATE ML_ENGINE ollama
 FROM ollama;
 ```
 
-Create a model using `ollama_engine` as an engine.
+Create a model using `ollama` as an engine.
 
 ```sql
 CREATE MODEL ollama_model
 PREDICT completion
 USING
-   engine = 'ollama_engine',   -- engine name as created via CREATE ML_ENGINE
+   engine = 'ollama',   -- engine name as created via CREATE ML_ENGINE
    model_name = 'model-name',  -- model run with 'ollama run model-name'
    ollama_serve_url = 'http://localhost:11434';
 ```
@@ -51,7 +51,7 @@ You can find [available models here](https://github.com/ollama/ollama?tab=readme
 
 ## Usage
 
-The following usage examples utilize `ollama_engine` to create a model with the `CREATE MODEL` statement.
+The following usage examples utilize `ollama` to create a model with the `CREATE MODEL` statement.
 
 Deploy and use the `llama2` model.
 
@@ -63,7 +63,7 @@ Now deploy this model within MindsDB.
 CREATE MODEL llama2_model
 PREDICT completion
 USING
-   engine = 'ollama_engine',
+   engine = 'ollama',
    model_name = 'llama2';
 ```
 
@@ -129,7 +129,7 @@ If you want to use an embedding model (instead of text generation), then you wil
 CREATE MODEL nomic_embed_model
 PREDICT embeddings
 USING
-   engine = 'ollama_engine',
+   engine = 'ollama',
    model_name = 'nomic-embed-text',
    mode = 'embedding',
    prompt_template = '{{column}}, {{another_column}}';

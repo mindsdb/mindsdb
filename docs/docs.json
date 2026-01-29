@@ -88,6 +88,7 @@
                       "integrations/app-integrations/mediawiki",
                       "integrations/app-integrations/microsoft-onedrive",
                       "integrations/app-integrations/microsoft-teams",
+                      "integrations/app-integrations/netsuite",
                       "integrations/app-integrations/newsapi",
                       "integrations/app-integrations/paypal",
                       "integrations/app-integrations/plaid",

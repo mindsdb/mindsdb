@@ -1,11 +1,11 @@
 
 class QueryPlan:
-    def __init__(self, steps=None, **kwargs):
+    def __init__(self, steps=None, probe_query=None, failback_plan=None, **kwargs):
         self.steps = []
         self.is_resumable = False
         self.is_async = False
-        self.probe_query = None
-        self.failback_plan = None
+        self.probe_query = probe_query
+        self.failback_plan = failback_plan
 
         if steps:
             for step in steps:

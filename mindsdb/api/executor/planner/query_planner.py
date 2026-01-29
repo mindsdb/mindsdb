@@ -914,7 +914,7 @@ class QueryPlanner:
         # check if the first table is a KB
         table = insert_step.table
         kb_name = _resolve_identifier_part(table)
-        if len(table.parts > 1):
+        if len(table.parts) > 1:
             project_name = _resolve_identifier_part(table, 0)
         else:
             project_name = self.default_namespace
@@ -947,14 +947,14 @@ class QueryPlanner:
             steps=[insert_step],
         )
 
-        plan = QueryPlan(
+        new_plan = QueryPlan(
             steps=[fetch_step],
             is_resumable=True,
             is_async = True,
             probe_query = probe_select,
             failback_plan = plan
         )
-        return plan
+        return new_plan
 
 
     def handle_partitioning(self, plan: QueryPlan) -> QueryPlan:

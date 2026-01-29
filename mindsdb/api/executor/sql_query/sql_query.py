@@ -249,7 +249,7 @@ class SQLQuery:
         # -- a plan with failback --
         if self.planner.plan.probe_query is not None:
             try:
-                res = SQLQuery(self.planner.plan.probe_query, session=self.session, database=self.database_name)
+                res = SQLQuery(self.planner.plan.probe_query, session=self.session, database=self.database)
             except Exception:
                 # switch to failback plan
                 self.planner.plan = self.planner.plan.failback_plan

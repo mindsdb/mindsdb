@@ -1,7 +1,7 @@
 """del_lightwood_version_field
 
 Revision ID: 6c840e4668bd
-Revises: 86b172b78a5b
+Revises: f64112749455
 Create Date: 2026-01-20 18:05:30.706658
 
 """
@@ -12,7 +12,7 @@ import mindsdb.interfaces.storage.db  # noqa
 
 # revision identifiers, used by Alembic.
 revision = "6c840e4668bd"
-down_revision = "86b172b78a5b"
+down_revision = "f64112749455"
 branch_labels = None
 depends_on = None
 

@@ -128,3 +128,16 @@ class BedrockConfig(BaseLLMConfig):
     temperature: Optional[float] = Field(default=0.7)
     max_tokens: Optional[int] = Field(default=None)
     model_kwargs: Optional[Dict[str, Any]] = Field(default=None)
+
+
+# https://reference.langchain.com/python/integrations/langchain_openai/AzureChatOpenAI/?h=azure#langchain_openai.AzureChatOpenAI
+class AzureOpenAIConfig(BaseLLMConfig):
+    azure_endpoint: Optional[str] = Field(default=None)
+    azure_deployment: Optional[str] = Field(default=None)
+    api_version: Optional[str] = Field(default=None)
+    api_key: Optional[str] = Field(default=None)
+    model_name: Optional[str] = Field(default=None)
+    temperature: Optional[float] = Field(default=None)
+    max_tokens: Optional[int] = Field(default=None)
+    max_retries: Optional[int] = Field(default=None)
+    timeout: Optional[float] = Field(default=None)

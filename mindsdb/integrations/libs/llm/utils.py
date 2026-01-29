@@ -17,6 +17,7 @@ from mindsdb.integrations.libs.llm.config import (
     MindsdbConfig,
     WriterConfig,
     BedrockConfig,
+    AzureOpenAIConfig,
 )
 from mindsdb.utilities.config import config
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
@@ -236,6 +237,18 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
             region_name=args.get("aws_region_name", None),
             credentials_profile_name=args.get("credentials_profile_name", None),
             model_kwargs=args.get("model_kwargs", None),
+        )
+
+    if provider == "azure_openai":
+        return AzureOpenAIConfig(
+            azure_endpoint=args.get("azure_endpoint"),
+            azure_deployment=args.get("azure_deployment"),
+            api_version=args.get("api_version"),
+            model_name=args.get("model_name"),
+            temperature=temperature,
+            max_tokens=args.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
+            max_retries=args.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
+            timeout=args.get("request_timeout"),
         )
 
     raise ValueError(f"Provider {provider} is not supported.")

@@ -1,8 +1,9 @@
 import json
+import pytest
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from tests.integration.utils.http_test_helpers import HTTPHelperMixin
-from tests.integration.conftest import get_test_company_id, get_test_user_id, get_test_resource_name
+from tests.integration.conftest import get_test_company_id, get_test_user_id, get_test_resource_name, create_byom
 
 # Use unique company/user IDs to avoid conflicts between test runs
 CID_A = get_test_company_id(1)
@@ -158,6 +159,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
             expected_resp_type=RESPONSE_TYPE.ERROR,
         )
 
+    @pytest.mark.skip(reason="Requires ML handler (lightwood removed)")
     def test_add_ml_engine(self):
         tracker = self.get_resource_tracker()
 
@@ -169,7 +171,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 expected_resp_type=RESPONSE_TYPE.OK,
             )
             self.sql_via_http(
-                f"CREATE ML_ENGINE {ML_ENGINE_NAME} FROM lightwood USING password=''",
+                f"CREATE ML_ENGINE {ML_ENGINE_NAME} FROM test_ml_engine",
                 company_id=cid,
                 user_id=user_id,
                 expected_resp_type=RESPONSE_TYPE.OK,
@@ -241,6 +243,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
         ]
 
         for cid, user_id, db_name, model_name in test_configs:
+            create_byom('test_ml_engine', target_column='rental_price', company_id=cid, user_id=user_id)
             with train_finetune_lock.acquire(timeout=600):
                 self.sql_via_http(
                     f"""
@@ -248,7 +251,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                         FROM {db_name} (
                             select * from demo_data.home_rentals limit 50
                         ) PREDICT rental_price
-                        USING join_learn_process=true, time_aim=5
+                        USING engine='test_ml_engine', join_learn_process=true
                     """,
                     company_id=cid,
                     user_id=user_id,

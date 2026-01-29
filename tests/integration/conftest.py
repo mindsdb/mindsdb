@@ -1,6 +1,9 @@
-import pytest
+import io
 import os
 import uuid
+from textwrap import dedent
+
+import pytest
 import requests
 from filelock import FileLock
 
@@ -189,3 +192,38 @@ def session_cleanup(resource_tracker):
 
     # Cleanup after all tests
     _cleanup_resources(resource_tracker)
+
+
+def create_byom(name: str, target_column: str = "test", company_id = None, user_id = None):
+    headers = {}
+    if company_id is not None:
+        headers["company-id"] = str(company_id)
+    if user_id is not None:
+        headers["user-id"] = str(user_id)
+
+    def get_file():
+        return io.BytesIO(
+            dedent(f"""
+                import pandas as pd
+                class CustomPredictor():
+                    def train(self, df, target_column, args=None):
+                        pass
+                    def predict(self, df, *args, **kwargs):
+                        return pd.DataFrame([[1]], columns=['{target_column}'])
+                    def describe(self, model_state, attribute):
+                        return 'x'
+            """).encode()
+        )
+
+    response = requests.put(
+        f"{HTTP_API_ROOT}/handlers/byom/{name}",
+        files={
+            "code": ("test.py", get_file(), "text/x-python"),
+        },
+        data={
+            "type": "inhouse",
+        },
+        headers=headers,
+    )
+    if response.status_code not in (200, 409):
+        raise Exception("Error creating BYOM engine")

@@ -12,42 +12,9 @@ import pandas as pd
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE
 
-from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT, get_test_resource_name
+from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT, get_test_resource_name, create_byom
 
 # pymysql.connections.DEBUG = True
-
-
-def create_byom(name: str, target_column: str = "test"):
-    import io
-    import requests
-    from textwrap import dedent
-    from tests.integration.conftest import HTTP_API_ROOT
-
-    def get_file():
-        return io.BytesIO(
-            dedent(f"""
-                import pandas as pd
-                class CustomPredictor():
-                    def train(self, df, target_column, args=None):
-                        pass
-                    def predict(self, df, *args, **kwargs):
-                        return pd.DataFrame([[1]], columns=['{target_column}'])
-                    def describe(self, model_state, attribute):
-                        return 'x'
-            """).encode()
-        )
-
-    response = requests.put(
-        f"{HTTP_API_ROOT}/handlers/byom/{name}",
-        files={
-            "code": ("test.py", get_file(), "text/x-python"),
-        },
-        data={
-            "type": "inhouse",
-        },
-    )
-    if response.status_code not in (200, 409):
-        raise Exception("Error creating BYOM engine")
 
 
 ML_ENGINE_NAME = "my_byom_engine"

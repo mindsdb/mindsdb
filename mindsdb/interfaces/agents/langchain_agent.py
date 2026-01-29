@@ -317,9 +317,9 @@ class LangchainAgent:
                 "embedding_model_provider", get_embedding_model_provider(self.args)
             ),
             "skills": get_skills(self.agent),
-            "user_id": ctx.user_id,
             "session_id": ctx.session_id,
             "company_id": ctx.company_id,
+            "user_id": ctx.user_id,
             "user_class": ctx.user_class,
             "email_confirmed": ctx.email_confirmed,
         }

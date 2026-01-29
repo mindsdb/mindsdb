@@ -464,6 +464,7 @@ class ModelController:
             db.Predictor.project_id == model_record.project_id,
             db.Predictor.active == True,  # noqa
             db.Predictor.company_id == ctx.company_id,
+            db.Predictor.user_id == ctx.user_id,
             db.Predictor.id != model_record.id,
         )
         for p in model_records:

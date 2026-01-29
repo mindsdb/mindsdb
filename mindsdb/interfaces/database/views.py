@@ -19,13 +19,20 @@ class ViewController:
         project_id = project_databases_dict[project_name]["id"]
         view_record = (
             db.session.query(db.View.id)
-            .filter(db.View.name == name, db.View.company_id == ctx.company_id, db.View.project_id == project_id)
+            .filter(
+                db.View.name == name,
+                db.View.company_id == ctx.company_id,
+                db.View.user_id == ctx.user_id,
+                db.View.project_id == project_id,
+            )
             .first()
         )
         if view_record is not None:
             raise EntityExistsError("View already exists", name)
 
-        view_record = db.View(name=name, company_id=ctx.company_id, query=query, project_id=project_id)
+        view_record = db.View(
+            name=name, company_id=ctx.company_id, user_id=ctx.user_id, query=query, project_id=project_id
+        )
         db.session.add(view_record)
         db.session.commit()
 
@@ -47,7 +54,9 @@ class ViewController:
         project_record = get_project_record(project_name)
 
         q = db.session.query(db.View).filter(
-            db.View.company_id == ctx.company_id, db.View.project_id == project_record.id
+            db.View.company_id == ctx.company_id,
+            db.View.user_id == ctx.user_id,
+            db.View.project_id == project_record.id,
         )
         if strict_case:
             q = q.filter(db.View.name == name)
@@ -77,7 +86,9 @@ class ViewController:
         project_record = get_project_record(project_name)
 
         query = db.session.query(db.View).filter(
-            db.View.company_id == ctx.company_id, db.View.project_id == project_record.id
+            db.View.company_id == ctx.company_id,
+            db.View.user_id == ctx.user_id,
+            db.View.project_id == project_record.id,
         )
         if strict_case:
             query = query.filter(db.View.name == name)
@@ -100,7 +111,9 @@ class ViewController:
             project_names[project.id] = project.name
 
         query = db.session.query(db.View).filter(
-            db.View.company_id == ctx.company_id, db.View.project_id.in_(list(project_names.keys()))
+            db.View.company_id == ctx.company_id,
+            db.View.user_id == ctx.user_id,
+            db.View.project_id.in_(list(project_names.keys())),
         )
 
         data = []
@@ -126,7 +139,7 @@ class ViewController:
         if id is not None:
             records = (
                 db.session.query(db.View)
-                .filter_by(id=id, project_id=project_record.id, company_id=ctx.company_id)
+                .filter_by(id=id, project_id=project_record.id, company_id=ctx.company_id, user_id=ctx.user_id)
                 .all()
             )
         elif name is not None:
@@ -136,6 +149,7 @@ class ViewController:
                     func.lower(db.View.name) == name.lower(),
                     db.View.project_id == project_record.id,
                     db.View.company_id == ctx.company_id,
+                    db.View.user_id == ctx.user_id,
                 )
                 .all()
             )

@@ -1024,6 +1024,10 @@ class ExecuteCommands:
         if ctx.company_id is None:
             # bypass for tests
             return
+        if ctx.user_id is None:
+            # bypass for tests
+            return
+
         is_cloud = self.session.config.get("cloud", False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)

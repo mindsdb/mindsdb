@@ -296,7 +296,7 @@ class SQLAgent:
         Returns:
             Iterable[str]: list with table names
         """
-        cache_key = f"{ctx.company_id}_{','.join(self._databases)}_tables"
+        cache_key = f"{ctx.company_id}_{ctx.user_id}_{','.join(self._databases)}_tables"
 
         # first check cache and return if found
         if self._cache:
@@ -366,7 +366,7 @@ class SQLAgent:
         Returns:
             Iterable[str]: list with knowledge base names
         """
-        # cache_key = f"{ctx.company_id}_{self.knowledge_base_database}_knowledge_bases"
+        # cache_key = f"{ctx.company_id}_{ctx.user_id}_{self.knowledge_base_database}_knowledge_bases"
 
         # todo we need to fix the cache, file cache can potentially store out of data information
         # # first check cache and return if found
@@ -444,7 +444,7 @@ class SQLAgent:
 
         kbs_info = []
         for kb in kb_names:
-            key = f"{ctx.company_id}_{kb}_info"
+            key = f"{ctx.company_id}_{ctx.user_id}_{kb}_info"
             kb_info = self._cache.get(key) if self._cache else None
             if True or kb_info is None:
                 kb_info = self.get_kb_sample_rows(kb)
@@ -502,7 +502,7 @@ class SQLAgent:
 
             tables_info = []
             for table in all_tables:
-                key = f"{ctx.company_id}_{table}_info"
+                key = f"{ctx.company_id}_{ctx.user_id}_{table}_info"
                 table_info = self._cache.get(key) if self._cache else None
                 if True or table_info is None:
                     table_info = self._get_single_table_info(table)

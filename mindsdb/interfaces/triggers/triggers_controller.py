@@ -76,6 +76,7 @@ class TriggersController:
 
         task_record = db.Tasks(
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             user_class=ctx.user_class,
             object_type=self.OBJECT_TYPE,
             object_id=record.id,
@@ -94,6 +95,7 @@ class TriggersController:
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.object_id == trigger.id,
             db.Tasks.company_id == ctx.company_id,
+            db.Tasks.user_id == ctx.user_id,
         ).first()
 
         if task is not None:
@@ -115,6 +117,7 @@ class TriggersController:
                 db.Triggers.name == name,
                 db.Tasks.object_type == self.OBJECT_TYPE,
                 db.Tasks.company_id == ctx.company_id,
+                db.Tasks.user_id == ctx.user_id,
             )
         )
         return query.first()
@@ -136,6 +139,7 @@ class TriggersController:
             .filter(
                 db.Tasks.object_type == self.OBJECT_TYPE,
                 db.Tasks.company_id == ctx.company_id,
+                db.Tasks.user_id == ctx.user_id,
             )
         )
 

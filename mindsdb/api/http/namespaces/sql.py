@@ -114,6 +114,7 @@ class Query(Resource):
 
         hooks.after_api_query(
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             api="http",
             command=None,
             payload=query,

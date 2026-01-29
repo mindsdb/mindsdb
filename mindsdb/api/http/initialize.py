@@ -52,6 +52,7 @@ from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
 from mindsdb.api.common.middleware import verify_pat
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -348,17 +349,13 @@ def initialize_app(is_restart: bool = False):
         # endregion
 
         company_id = request.headers.get("company-id")
+        user_id = request.headers.get("user-id")
         user_class = request.headers.get("user-class")
 
         try:
             email_confirmed = int(request.headers.get("email-confirmed", 1))
         except Exception:
             email_confirmed = 1
-
-        try:
-            user_id = int(request.headers.get("user-id", 0))
-        except Exception:
-            user_id = 0
 
         if user_class is not None:
             try:
@@ -369,8 +366,8 @@ def initialize_app(is_restart: bool = False):
         else:
             user_class = 0
 
-        ctx.user_id = user_id
-        ctx.company_id = company_id
+        ctx.company_id = company_id if company_id is not None else DEFAULT_COMPANY_ID
+        ctx.user_id = user_id if user_id is not None else DEFAULT_USER_ID
         ctx.user_class = user_class
         ctx.email_confirmed = email_confirmed
 

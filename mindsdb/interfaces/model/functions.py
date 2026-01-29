@@ -24,22 +24,23 @@ class MultiplePredictorRecordsFound(Exception):
 @profiler.profile()
 def get_integration_record(name: str) -> db.Integration:
     company_id = ctx.company_id
-    if company_id is None:
-        company_id = null()
+    user_id = ctx.user_id
 
-    record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
+    record = db.session.query(db.Integration).filter_by(company_id=company_id, user_id=user_id, name=name).first()
     return record
 
 
 @profiler.profile()
 def get_project_record(name: str) -> db.Project:
-    company_id = ctx.company_id if ctx.company_id is not None else "0"
+    company_id = ctx.company_id
+    user_id = ctx.user_id
 
     project_record = (
         db.session.query(db.Project)
         .filter(
             (func.lower(db.Project.name) == name)
             & (db.Project.company_id == company_id)
+            & (db.Project.user_id == user_id)
             & (db.Project.deleted_at == null())
         )
         .first()
@@ -49,11 +50,14 @@ def get_project_record(name: str) -> db.Project:
 
 @profiler.profile()
 def get_project_records() -> List[db.Project]:
-    company_id = ctx.company_id if ctx.company_id is not None else "0"
+    company_id = ctx.company_id
+    user_id = ctx.user_id
 
     return (
         db.session.query(db.Project)
-        .filter((db.Project.company_id == company_id) & (db.Project.deleted_at == null()))
+        .filter(
+            (db.Project.company_id == company_id) & (db.Project.user_id == user_id) & (db.Project.deleted_at == null())
+        )
         .all()
     )
 
@@ -80,8 +84,7 @@ def get_model_records(
     **kwargs,
 ):
     kwargs["company_id"] = ctx.company_id
-    if kwargs["company_id"] is None:
-        kwargs["company_id"] = null()
+    kwargs["user_id"] = ctx.user_id
 
     if deleted_at is not None:
         kwargs["deleted_at"] = deleted_at
@@ -118,8 +121,7 @@ def get_model_record(
     **kwargs,
 ):
     kwargs["company_id"] = ctx.company_id
-    if kwargs["company_id"] is None:
-        kwargs["company_id"] = null()
+    kwargs["user_id"] = ctx.user_id
 
     kwargs["deleted_at"] = deleted_at
     if active is not None:

@@ -10,6 +10,13 @@ from tests.integration.utils.http_test_helpers import HTTPHelperMixin
 
 
 class TestHTTP(HTTPHelperMixin):
+    # Unique resource names for this test session
+    POSTGRES_DB_NAME = None
+    MARIADB_DB_NAME = None
+    MYSQL_DB_NAME = None
+    MODEL_NAME = None
+    FILE_NAME = None
+
     @staticmethod
     def get_files_list():
         response = requests.request("GET", f"{HTTP_API_ROOT}/files/")
@@ -21,6 +28,12 @@ class TestHTTP(HTTPHelperMixin):
     @classmethod
     def setup_class(cls):
         cls._sql_via_http_context = {}
+        # Initialize unique resource names for this test session
+        cls.POSTGRES_DB_NAME = cls.get_unique_name("test_http_postgres")
+        cls.MARIADB_DB_NAME = cls.get_unique_name("test_http_mariadb")
+        cls.MYSQL_DB_NAME = cls.get_unique_name("test_http_mysql")
+        cls.MODEL_NAME = cls.get_unique_name("p_test_http")
+        cls.FILE_NAME = cls.get_unique_name("movies")
 
     def create_database(self, name, db_data):
         db_type = db_data["type"]
@@ -135,35 +148,43 @@ class TestHTTP(HTTPHelperMixin):
         delete file
         upload file again
         """
-        self.sql_via_http("DROP TABLE IF EXISTS files.movies;", RESPONSE_TYPE.OK)
-        assert "movies" not in [file["name"] for file in self.get_files_list()]
+        file_name = self.FILE_NAME
+        self.sql_via_http(f"DROP TABLE IF EXISTS files.{file_name};", RESPONSE_TYPE.OK)
+        assert file_name not in [file["name"] for file in self.get_files_list()]
 
         with open("tests/data/movies.csv") as f:
-            files = {"file": ("movies.csv", f, "text/csv")}
+            files = {"file": (f"{file_name}.csv", f, "text/csv")}
 
-            response = requests.request("PUT", f"{HTTP_API_ROOT}/files/movies", files=files)
+            response = requests.request("PUT", f"{HTTP_API_ROOT}/files/{file_name}", files=files)
             assert response.status_code == 200, f"Error uploading file. Response content: {response.content}"
 
-        assert "movies" in [file["name"] for file in self.get_files_list()]
+        assert file_name in [file["name"] for file in self.get_files_list()]
+        # Track for cleanup
+        self.get_resource_tracker().track_file(file_name)
 
-        response = requests.delete(f"{HTTP_API_ROOT}/files/movies")
+        response = requests.delete(f"{HTTP_API_ROOT}/files/{file_name}")
         assert response.status_code == 200
-        assert "movies" not in [file["name"] for file in self.get_files_list()]
+        assert file_name not in [file["name"] for file in self.get_files_list()]
 
         # Upload the file again (to guard against bugs where we still think a deleted file exists)
         with open("tests/data/movies.csv") as f:
-            files = {"file": ("movies.csv", f, "text/csv")}
+            files = {"file": (f"{file_name}.csv", f, "text/csv")}
 
-            response = requests.request("PUT", f"{HTTP_API_ROOT}/files/movies", files=files)
+            response = requests.request("PUT", f"{HTTP_API_ROOT}/files/{file_name}", files=files)
             assert response.status_code == 200
+        # Track for cleanup again
+        self.get_resource_tracker().track_file(file_name)
 
     def test_sql_select_from_file(self):
+        file_name = self.FILE_NAME
         self.sql_via_http("use mindsdb", RESPONSE_TYPE.OK)
-        resp = self.sql_via_http("select * from files.movies", RESPONSE_TYPE.TABLE)
+        resp = self.sql_via_http(f"select * from files.{file_name}", RESPONSE_TYPE.TABLE)
         assert len(resp["data"]) == 10
         assert len(resp["column_names"]) == 3
 
-        resp = self.sql_via_http("select title, title as t1, title t2 from files.movies limit 10", RESPONSE_TYPE.TABLE)
+        resp = self.sql_via_http(
+            f"select title, title as t1, title t2 from files.{file_name} limit 10", RESPONSE_TYPE.TABLE
+        )
         assert len(resp["data"]) == 10
         assert resp["column_names"] == ["title", "t1", "t2"]
         assert resp["data"][0][0] == resp["data"][0][1] and resp["data"][0][0] == resp["data"][0][2]
@@ -221,12 +242,13 @@ class TestHTTP(HTTPHelperMixin):
                     raise
 
     def test_context_changing(self):
+        file_name = self.FILE_NAME
         resp = self.sql_via_http("use mindsdb", RESPONSE_TYPE.OK)
         assert resp["context"]["db"] == "mindsdb"
 
         resp_1 = self.sql_via_http("show tables", RESPONSE_TYPE.TABLE)
         table_names = [x[0] for x in resp_1["data"]]
-        assert "movies" not in table_names
+        assert file_name not in table_names
         assert "models" in table_names
 
         resp = self.sql_via_http("use files", RESPONSE_TYPE.OK)
@@ -234,7 +256,7 @@ class TestHTTP(HTTPHelperMixin):
 
         resp_4 = self.sql_via_http("show tables", RESPONSE_TYPE.TABLE)
         table_names = [x[0] for x in resp_4["data"]]
-        assert "movies" in table_names
+        assert file_name in table_names
         assert "models" not in table_names
 
     @pytest.mark.parametrize(
@@ -297,8 +319,8 @@ class TestHTTP(HTTPHelperMixin):
                 "database": "demo",
             },
         }
-        self.create_database("test_http_postgres", db_details)
-        self.validate_database_creation("test_http_postgres")
+        self.create_database(self.POSTGRES_DB_NAME, db_details)
+        self.validate_database_creation(self.POSTGRES_DB_NAME)
 
     def test_create_mariadb_datasources(self):
         db_details = {
@@ -312,8 +334,8 @@ class TestHTTP(HTTPHelperMixin):
                 "database": "test_data",
             },
         }
-        self.create_database("test_http_mariadb", db_details)
-        self.validate_database_creation("test_http_mariadb")
+        self.create_database(self.MARIADB_DB_NAME, db_details)
+        self.validate_database_creation(self.MARIADB_DB_NAME)
 
     def test_create_mysql_datasources(self):
         db_details = {
@@ -327,28 +349,33 @@ class TestHTTP(HTTPHelperMixin):
                 "database": "public",
             },
         }
-        self.create_database("test_http_mysql", db_details)
-        self.validate_database_creation("test_http_mysql")
+        self.create_database(self.MYSQL_DB_NAME, db_details)
+        self.validate_database_creation(self.MYSQL_DB_NAME)
 
     def test_sql_create_predictor(self, train_finetune_lock):
+        model_name = self.MODEL_NAME
+        postgres_db = self.POSTGRES_DB_NAME
+
         self.sql_via_http("USE mindsdb;", RESPONSE_TYPE.OK)
-        self.sql_via_http("DROP MODEL IF EXISTS p_test_http_1;", RESPONSE_TYPE.OK)
+        self.sql_via_http(f"DROP MODEL IF EXISTS {model_name};", RESPONSE_TYPE.OK)
 
         with train_finetune_lock.acquire(timeout=600):
             self.sql_via_http(
-                """
-                create predictor p_test_http_1
-                from test_http_postgres (select sqft, location, rental_price from demo_data.home_rentals limit 30)
+                f"""
+                create predictor {model_name}
+                from {postgres_db} (select sqft, location, rental_price from demo_data.home_rentals limit 30)
                 predict rental_price
             """,
                 RESPONSE_TYPE.TABLE,
             )
-            status = self.await_model("p_test_http_1", timeout=120)
+            # Track for cleanup
+            self.get_resource_tracker().track_model(model_name)
+            status = self.await_model(model_name, timeout=120)
         assert status == "complete"
 
         resp = self.sql_via_http(
-            """
-            select * from mindsdb.p_test_http_1 where sqft = 1000
+            f"""
+            select * from mindsdb.{model_name} where sqft = 1000
         """,
             RESPONSE_TYPE.TABLE,
         )
@@ -368,7 +395,7 @@ class TestHTTP(HTTPHelperMixin):
 
     def test_list_models(self):
         project_name = "mindsdb"
-        model_name = "p_test_http_1"
+        model_name = self.MODEL_NAME
         response = self.api_request("get", f"/projects/{project_name}/models")
         assert response.status_code == 200, "Error to get list of models"
         models = [i["name"] for i in response.json()]
@@ -376,7 +403,7 @@ class TestHTTP(HTTPHelperMixin):
 
     def test_make_prediction(self):
         project_name = "mindsdb"
-        model_name = "p_test_http_1"
+        model_name = self.MODEL_NAME
         payload = {"data": [{"sqft": "1000"}, {"sqft": "500"}]}
         response = self.api_request("post", f"/projects/{project_name}/models/{model_name}/predict", payload=payload)
         assert response.status_code == 200, "Error to make prediction"
@@ -391,13 +418,29 @@ class TestHTTP(HTTPHelperMixin):
         assert len(response.json()) == 2
 
     def test_tabs(self):
-        COMPANY_1_ID = 9999998
-        COMPANY_2_ID = 9999999
+        # Use unique company/user IDs to avoid conflicts with other test runs
+        COMPANY_1_ID = self.get_unique_company_id(1)
+        COMPANY_2_ID = self.get_unique_company_id(2)
+
+        USER_ID_1 = self.get_unique_user_id(1)
+        USER_ID_2 = self.get_unique_user_id(2)
+
+        tracker = self.get_resource_tracker()
 
         def tabs_requets(
-            method: str, url: str = "", payload: dict = {}, company_id: int = 1, expected_status: int = 200
+            method: str,
+            url: str = "",
+            payload: dict = {},
+            company_id: str = "0",
+            user_id: str = "0",
+            expected_status: int = 200,
         ):
-            resp = self.api_request(method, f"/tabs/{url}", payload=payload, headers={"company-id": str(company_id)})
+            resp = self.api_request(
+                method,
+                f"/tabs/{url}",
+                payload=payload,
+                headers={"company-id": str(company_id), "user-id": str(user_id)},
+            )
             assert resp.status_code == expected_status
             return resp
 
@@ -415,23 +458,29 @@ class TestHTTP(HTTPHelperMixin):
                     return False
             return True
 
-        def tab(company_id: int, tab_number: int):
-            return {"name": f"tab_name_{company_id}_{tab_number}", "content": f"tab_content_{company_id}_{tab_number}"}
+        def tab(company_id: str, user_id: str, tab_number: int):
+            return {
+                "name": f"tab_name_{company_id}_{user_id}_{tab_number}",
+                "content": f"tab_content_{company_id}_{user_id}_{tab_number}",
+            }
 
         # users has empty tabs list
-        for company_id in (COMPANY_1_ID, COMPANY_2_ID):
+        for company_id, user_id in ((COMPANY_1_ID, USER_ID_1), (COMPANY_2_ID, USER_ID_2)):
             resp = tabs_requets("get", "?mode=new", company_id=company_id)
             # Delete all tabs to begin with
             for t in resp.json():
-                tabs_requets("delete", str(t["id"]), company_id=company_id)
+                tabs_requets("delete", str(t["id"]), company_id=company_id, user_id=user_id)
             # Check that all tabs are deleted
-            resp = tabs_requets("get", company_id=company_id)
+            resp = tabs_requets("get", company_id=company_id, user_id=user_id)
             assert len(resp.json()) == 0
 
         # add tab and check fields
-        tab_1_1 = tab(COMPANY_1_ID, 1)
-        tabs_requets("post", "?mode=new", payload=tab_1_1, company_id=COMPANY_1_ID)
-        resp_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID).json()
+        tab_1_1 = tab(COMPANY_1_ID, USER_ID_1, 1)
+        tabs_requets("post", "?mode=new", payload=tab_1_1, company_id=COMPANY_1_ID, user_id=USER_ID_1)
+        resp_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID, user_id=USER_ID_1).json()
+        # Track tabs for cleanup
+        for t in resp_list:
+            tracker.track_tab(COMPANY_1_ID, USER_ID_1, t["id"])
         assert len(resp_list) == 1
         resp_1_1 = resp_list[0]
         assert resp_1_1["name"] == tab_1_1["name"]
@@ -442,40 +491,50 @@ class TestHTTP(HTTPHelperMixin):
         tab_1_1["index"] = resp_1_1["index"]
 
         # second list is empty
-        resp = tabs_requets("get", "?mode=new", company_id=COMPANY_2_ID).json()
+        resp = tabs_requets("get", "?mode=new", company_id=COMPANY_2_ID, user_id=USER_ID_2).json()
         assert len(resp) == 0
 
         # add tab to second user
-        tab_2_1 = tab(COMPANY_2_ID, 1)
-        tabs_requets("post", "?mode=new", payload=tab_2_1, company_id=COMPANY_2_ID)
-        resp_list = tabs_requets("get", "?mode=new", company_id=COMPANY_2_ID).json()
+        tab_2_1 = tab(COMPANY_2_ID, USER_ID_2, 1)
+        tabs_requets("post", "?mode=new", payload=tab_2_1, company_id=COMPANY_2_ID, user_id=USER_ID_2)
+        resp_list = tabs_requets("get", "?mode=new", company_id=COMPANY_2_ID, user_id=USER_ID_2).json()
         assert len(resp_list) == 1
         resp_2_1 = resp_list[0]
         assert resp_2_1["name"] == tab_2_1["name"]
         assert resp_2_1["content"] == tab_2_1["content"]
         tab_2_1["id"] = resp_2_1["id"]
         tab_2_1["index"] = resp_2_1["index"]
+        # Track tab for cleanup
+        tracker.track_tab(COMPANY_2_ID, USER_ID_2, tab_2_1["id"])
 
         # add few tabs for tests
-        tab_1_2 = tab(COMPANY_1_ID, 2)
-        tab_2_2 = tab(COMPANY_2_ID, 2)
-        for tab_dict, company_id in ((tab_1_2, COMPANY_1_ID), (tab_2_2, COMPANY_2_ID)):
-            tab_meta = tabs_requets("post", "?mode=new", payload=tab_dict, company_id=company_id).json()["tab_meta"]
+        tab_1_2 = tab(COMPANY_1_ID, USER_ID_1, 2)
+        tab_2_2 = tab(COMPANY_2_ID, USER_ID_2, 2)
+        for tab_dict, company_id, uid in ((tab_1_2, COMPANY_1_ID, USER_ID_1), (tab_2_2, COMPANY_2_ID, USER_ID_2)):
+            tab_meta = tabs_requets("post", "?mode=new", payload=tab_dict, company_id=company_id, user_id=uid).json()[
+                "tab_meta"
+            ]
             tab_dict["id"] = tab_meta["id"]
             tab_dict["index"] = tab_meta["index"]
+            # Track tab for cleanup
+            tracker.track_tab(company_id, uid, tab_meta["id"])
 
-        resp_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID).json()
+        resp_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID, user_id=USER_ID_1).json()
         assert compare_tabs_list(resp_list, [tab_1_1, tab_1_2])
 
-        resp_list = tabs_requets("get", "?mode=new", company_id=COMPANY_2_ID).json()
+        resp_list = tabs_requets("get", "?mode=new", company_id=COMPANY_2_ID, user_id=USER_ID_2).json()
         assert compare_tabs_list(resp_list, [tab_2_1, tab_2_2])
 
         # add tab to second index
-        tab_1_3 = tab(COMPANY_1_ID, 3)
+        tab_1_3 = tab(COMPANY_1_ID, USER_ID_1, 3)
         tab_1_3["index"] = tab_1_1["index"] + 1
-        tab_meta = tabs_requets("post", "?mode=new", payload=tab_1_3, company_id=COMPANY_1_ID).json()["tab_meta"]
+        tab_meta = tabs_requets(
+            "post", "?mode=new", payload=tab_1_3, company_id=COMPANY_1_ID, user_id=USER_ID_1
+        ).json()["tab_meta"]
         tab_1_3["id"] = tab_meta["id"]
-        tabs_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID).json()
+        # Track tab for cleanup
+        tracker.track_tab(COMPANY_1_ID, USER_ID_1, tab_meta["id"])
+        tabs_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID, user_id=USER_ID_1).json()
         assert len(tabs_list) == 3
         tab_1_1["index"] = tabs_list[0]["index"]
         tab_1_3["index"] = tabs_list[1]["index"]
@@ -491,11 +550,12 @@ class TestHTTP(HTTPHelperMixin):
             str(tab_1_2["id"]),
             payload={"index": tab_1_2["index"], "content": tab_1_2["content"]},
             company_id=COMPANY_1_ID,
+            user_id=USER_ID_1,
         ).json()["tab_meta"]
         assert tab_meta["index"] == tab_1_2["index"]
         assert tab_meta["name"] == tab_1_2["name"]
         assert tab_meta["id"] == tab_1_2["id"]
-        tabs_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID).json()
+        tabs_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID, user_id=USER_ID_1).json()
         tab_1_3["index"] = tab_1_2["index"] + 1
         assert compare_tabs_list(tabs_list, [tab_1_1, tab_1_2, tab_1_3])
 
@@ -507,25 +567,43 @@ class TestHTTP(HTTPHelperMixin):
             str(tab_1_2["id"]),
             payload={"name": tab_1_2["name"], "content": tab_1_2["content"]},
             company_id=COMPANY_1_ID,
+            user_id=USER_ID_1,
         )
-        tabs_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID).json()
+        tabs_list = tabs_requets("get", "?mode=new", company_id=COMPANY_1_ID, user_id=USER_ID_1).json()
         assert compare_tabs_list(tabs_list, [tab_1_1, tab_1_2, tab_1_3])
 
         # second list does not changed
-        tabs_list = tabs_requets("get", "?mode=new", company_id=COMPANY_2_ID).json()
+        tabs_list = tabs_requets("get", "?mode=new", company_id=COMPANY_2_ID, user_id=USER_ID_2).json()
         assert compare_tabs_list(tabs_list, [tab_2_1, tab_2_2])
 
         # get each tab one by one
-        for company_id, tabs in ((COMPANY_1_ID, [tab_1_1, tab_1_2, tab_1_3]), (COMPANY_2_ID, [tab_2_1, tab_2_2])):
+        for company_id, user_id, tabs in (
+            (COMPANY_1_ID, USER_ID_1, [tab_1_1, tab_1_2, tab_1_3]),
+            (COMPANY_2_ID, USER_ID_2, [tab_2_1, tab_2_2]),
+        ):
             for tab_dict in tabs:
-                tab_resp = tabs_requets("get", str(tab_dict["id"]), company_id=company_id).json()
+                tab_resp = tabs_requets("get", str(tab_dict["id"]), company_id=company_id, user_id=user_id).json()
                 assert compare_tabs(tab_resp, tab_dict)
 
         # check failures
-        tabs_requets("get", "99", company_id=COMPANY_1_ID, expected_status=404)
-        tabs_requets("delete", "99", company_id=COMPANY_1_ID, expected_status=404)
+        tabs_requets("get", "99", company_id=COMPANY_1_ID, user_id=USER_ID_1, expected_status=404)
+        tabs_requets("delete", "99", company_id=COMPANY_1_ID, user_id=USER_ID_1, expected_status=404)
         tabs_requets(
-            "post", "?mode=new", payload={"whaaat": "?", "name": "test"}, company_id=COMPANY_1_ID, expected_status=400
+            "post",
+            "?mode=new",
+            payload={"whaaat": "?", "name": "test"},
+            company_id=COMPANY_1_ID,
+            user_id=USER_ID_1,
+            expected_status=400,
         )
-        tabs_requets("put", "99", payload={"name": "test"}, company_id=COMPANY_1_ID, expected_status=404)
-        tabs_requets("put", str(tab_1_1["id"]), payload={"whaaat": "?"}, company_id=COMPANY_1_ID, expected_status=400)
+        tabs_requets(
+            "put", "99", payload={"name": "test"}, company_id=COMPANY_1_ID, user_id=USER_ID_1, expected_status=404
+        )
+        tabs_requets(
+            "put",
+            str(tab_1_1["id"]),
+            payload={"whaaat": "?"},
+            company_id=COMPANY_1_ID,
+            user_id=USER_ID_1,
+            expected_status=400,
+        )

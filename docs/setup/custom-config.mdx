@@ -202,7 +202,7 @@ Connection parameters for the MySQL API include:
     },
 ```
 
-The `cache` parameter controls how MindsDB stores the results of recent predictions to avoid recalculating them if the same query is run again. Note that recent predictions are cached for ML models, like Lightwood, but not in the case of large language models (LLMs), like OpenAI.
+The `cache` parameter controls how MindsDB stores the results of recent predictions to avoid recalculating them if the same query is run again. Note that recent predictions are cached for ML models, but not in the case of large language models (LLMs), like OpenAI.
 
 The `type` parameter specifies the type of caching mechanism to use for storing prediction results.
 

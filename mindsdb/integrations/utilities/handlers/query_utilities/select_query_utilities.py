@@ -48,6 +48,8 @@ class SELECTQueryParser(BaseQueryParser):
                 break
             elif isinstance(target, ast.Identifier):
                 selected_columns.append(target.parts[-1])
+            elif isinstance(target, ast.Function):
+                selected_columns += [arg.parts[-1] for arg in target.args if isinstance(arg, ast.Identifier)]
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
 

@@ -17,7 +17,7 @@ def to_dicts(data):
     return data
 
 
-@pytest.mark.skip(reason="Disabled due to ligthwood removed. Will be good to rewrite with BYOM engine")
+@pytest.mark.skip(reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted.")
 class TestHTTP(HTTPHelperMixin):
     # Unique resource names for this test session (initialized in setup_class)
     POSTGRES_DB_NAME = None

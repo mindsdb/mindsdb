@@ -352,6 +352,7 @@ class TestHTTP(HTTPHelperMixin):
         self.create_database(self.MYSQL_DB_NAME, db_details)
         self.validate_database_creation(self.MYSQL_DB_NAME)
 
+    @pytest.mark.skip(reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted.")
     def test_sql_create_predictor(self, train_finetune_lock):
         model_name = self.MODEL_NAME
         postgres_db = self.POSTGRES_DB_NAME
@@ -395,6 +396,7 @@ class TestHTTP(HTTPHelperMixin):
         projects = [i["name"] for i in response.json()]
         assert project_name in projects
 
+    @pytest.mark.skip(reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted.")
     def test_list_models(self):
         project_name = "mindsdb"
         model_name = self.MODEL_NAME
@@ -403,6 +405,7 @@ class TestHTTP(HTTPHelperMixin):
         models = [i["name"] for i in response.json()]
         assert model_name in models
 
+    @pytest.mark.skip(reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted.")
     def test_make_prediction(self):
         project_name = "mindsdb"
         model_name = self.MODEL_NAME

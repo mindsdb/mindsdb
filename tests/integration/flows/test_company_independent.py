@@ -233,6 +233,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 expected_resp_type=RESPONSE_TYPE.ERROR,
             )
 
+    @pytest.mark.skip(reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted.")
     def test_model(self, train_finetune_lock):
         tracker = self.get_resource_tracker()
 

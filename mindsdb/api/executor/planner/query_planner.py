@@ -86,7 +86,7 @@ class QueryPlanner:
         predictor_namespace=None,
         predictor_metadata: list = None,
         default_namespace: str = None,
-        kb_metadata: dict = None
+        kb_metadata: dict = None,
     ):
         self.query = query
         self.plan = QueryPlan()
@@ -897,13 +897,15 @@ class QueryPlanner:
             # optimizations for insert from selects
             plan = self.check_insert_from_select(self.plan)
 
-        return plan
+        self.plan = plan
 
     def check_insert_from_select(self, plan: QueryPlan):
         # special case: register insert from select (it is the same as mark resumable)
-        if not (len(plan.steps) == 2 and
-                isinstance(plan.steps[0], FetchDataframeStep) and
-                isinstance(plan.steps[1], InsertToTable)):
+        if not (
+            len(plan.steps) == 2
+            and isinstance(plan.steps[0], FetchDataframeStep)
+            and isinstance(plan.steps[1], InsertToTable)
+        ):
             return plan
 
         plan.is_resumable = True
@@ -924,7 +926,10 @@ class QueryPlanner:
             return plan
 
         # Knowledge base storage is not pgvector or pgvector is enabled in config
-        if kb_info['vector_db_engine'] == 'pgvector' and not config.enable_pgvector_autobatch:
+        if config["knowledge_bases"]["disable_autobatch"]:
+            return plan
+
+        if config["knowledge_bases"]["disable_pgvector_autobatch"] and kb_info["vector_db_engine"] == "pgvector":
             return plan
 
         if not isinstance(select_step.query, Select):
@@ -933,7 +938,7 @@ class QueryPlanner:
 
         # convert
         default_batch_size = 1000
-        track_column = kb_info.get('id_column', 'id')
+        track_column = kb_info.get("id_column", "id")
 
         probe_select = copy.deepcopy(select_step.query)
         probe_select.limit = Constant(1)
@@ -950,12 +955,11 @@ class QueryPlanner:
         new_plan = QueryPlan(
             steps=[fetch_step],
             is_resumable=True,
-            is_async = True,
-            probe_query = probe_select,
-            failback_plan = plan
+            is_async=True,
+            probe_query={"database": select_step.integration, "query": probe_select},
+            failback_plan=plan,
         )
         return new_plan
-
 
     def handle_partitioning(self, plan: QueryPlan) -> QueryPlan:
         """

@@ -128,7 +128,7 @@ class SQLQuery:
             if kb is not None:
                 params = kb.params.copy()
                 vector_db = self.session.integration_controller.get_by_id(kb.vector_database_id)
-                params['vector_db_engine'] = vector_db.get('engine') if vector_db is not None else None
+                params["vector_db_engine"] = vector_db.get("engine") if vector_db is not None else None
                 kb_metadata[(project_name, table_name)] = params
 
             args = {"name": table_name, "project_name": project_name}
@@ -246,18 +246,20 @@ class SQLQuery:
             # no need to execute
             return
 
-        # -- a plan with failback --
-        if self.planner.plan.probe_query is not None:
-            try:
-                res = SQLQuery(self.planner.plan.probe_query, session=self.session, database=self.database)
-            except Exception:
-                # switch to failback plan
-                self.planner.plan = self.planner.plan.failback_plan
-
         try:
             steps = list(self.planner.execute_steps())
         except PlanningException as e:
             raise LogicError(e) from e
+
+        # -- a plan with failback --
+        if self.planner.plan.probe_query is not None and self.planner.plan.probe_query is not None:
+            try:
+                probe_query = self.planner.plan.probe_query
+                SQLQuery(probe_query["query"], session=self.session, database=probe_query["database"])
+            except Exception:
+                # switch to failback plan
+                self.planner.plan = self.planner.plan.failback_plan
+                steps = self.planner.plan.steps
 
         if self.planner.plan.is_resumable:
             # create query

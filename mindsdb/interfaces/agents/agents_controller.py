@@ -94,6 +94,7 @@ class AgentsController:
             db.Agents.name == agent_name,
             db.Agents.project_id == project.id,
             db.Agents.company_id == ctx.company_id,
+            db.Agents.user_id == ctx.user_id,
             db.Agents.deleted_at == null(),
         ).first()
         return agent
@@ -115,6 +116,7 @@ class AgentsController:
             db.Agents.id == id,
             db.Agents.project_id == project.id,
             db.Agents.company_id == ctx.company_id,
+            db.Agents.user_id == ctx.user_id,
             db.Agents.deleted_at == null(),
         ).first()
         return agent
@@ -130,7 +132,9 @@ class AgentsController:
             all-agents (List[db.Agents]): List of database agent object
         """
 
-        all_agents = db.Agents.query.filter(db.Agents.company_id == ctx.company_id, db.Agents.deleted_at == null())
+        all_agents = db.Agents.query.filter(
+            db.Agents.company_id == ctx.company_id, db.Agents.user_id == ctx.user_id, db.Agents.deleted_at == null()
+        )
 
         if project_name is not None:
             project = self.project_controller.get(name=project_name)
@@ -249,6 +253,7 @@ class AgentsController:
             name=name,
             project_id=project.id,
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             user_class=ctx.user_class,
             model_name=model_name,
             provider=provider,

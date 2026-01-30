@@ -1015,6 +1015,10 @@ class ExecuteCommands:
         if ctx.company_id is None:
             # bypass for tests
             return
+        if ctx.user_id is None:
+            # bypass for tests
+            return
+
         is_cloud = self.session.config.get("cloud", False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
@@ -1532,12 +1536,15 @@ class ExecuteCommands:
         statement.name.parts = [integration_name, model_name]
         statement.name.is_quoted = [False, False]
 
-        ml_integration_name = "lightwood"  # default
+        ml_integration_name = self.session.config["default_ml_engine"]
         if statement.using is not None:
             # repack using with lower names
             statement.using = {k.lower(): v for k, v in statement.using.items()}
 
             ml_integration_name = statement.using.pop("engine", ml_integration_name)
+
+        if ml_integration_name is None:
+            raise ValueError("ML engine must be specified when creating a model")
 
         if statement.query_str is not None and statement.integration_name is None:
             # set to current project

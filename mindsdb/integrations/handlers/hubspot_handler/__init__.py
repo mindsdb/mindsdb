@@ -16,7 +16,7 @@ title = "Hubspot"
 name = "hubspot"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.svg"
-support_level = HANDLER_SUPPORT_LEVEL.MINDSDB
+support_level = HANDLER_SUPPORT_LEVEL.COMMUNITY
 
 __all__ = [
     "Handler",

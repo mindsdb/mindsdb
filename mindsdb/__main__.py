@@ -39,6 +39,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.api_status import set_api_status
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 try:
     import torch.multiprocessing as mp
@@ -225,14 +226,20 @@ def create_permanent_integrations():
     NOTE: this is intentional to avoid importing integration_controller
     """
     integration_name = "files"
-    existing = db.session.query(db.Integration).filter_by(name=integration_name, company_id=None).first()
+    existing = (
+        db.session.query(db.Integration)
+        .filter_by(name=integration_name, company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID)
+        .first()
+    )
     if existing is not None:
+        logger.info(f"Permanent integration '{integration_name}' already exists")
         return
     integration_record = db.Integration(
         name=integration_name,
         data={},
         engine=integration_name,
-        company_id=None,
+        company_id=DEFAULT_COMPANY_ID,
+        user_id=DEFAULT_USER_ID,
     )
     db.session.add(integration_record)
     try:
@@ -250,10 +257,12 @@ def validate_default_project() -> None:
     """
     new_default_project_name = config.get("default_project")
     logger.debug(f"Checking if default project {new_default_project_name} exists")
-    filter_company_id = ctx.company_id if ctx.company_id is not None else "0"
+    filter_company_id = ctx.company_id if ctx.company_id is not None else DEFAULT_COMPANY_ID
+    filter_user_id = ctx.user_id if ctx.user_id is not None else DEFAULT_USER_ID
 
     current_default_project: db.Project | None = db.Project.query.filter(
         db.Project.company_id == filter_company_id,
+        db.Project.user_id == filter_user_id,
         db.Project.metadata_["is_default"].as_boolean() == True,  # noqa
     ).first()
 
@@ -261,6 +270,7 @@ def validate_default_project() -> None:
         # Legacy: If the default project does not exist, mark the new one as default.
         existing_project = db.Project.query.filter(
             db.Project.company_id == filter_company_id,
+            db.Project.user_id == filter_user_id,
             func.lower(db.Project.name) == func.lower(new_default_project_name),
         ).first()
         if existing_project is None:
@@ -274,6 +284,7 @@ def validate_default_project() -> None:
         # If the default project exists, but the name is different, update the name.
         existing_project = db.Project.query.filter(
             db.Project.company_id == filter_company_id,
+            db.Project.user_id == filter_user_id,
             func.lower(db.Project.name) == func.lower(new_default_project_name),
         ).first()
         if existing_project is not None:

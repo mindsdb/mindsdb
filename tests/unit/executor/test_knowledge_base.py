@@ -77,6 +77,7 @@ class TestKB(BaseExecutorDummyML):
     def teardown_method(self):
         for db_name in self.storages:
             self._drop_storage_db(db_name)
+        super().teardown_method()
 
     def _create_kb(
         self,

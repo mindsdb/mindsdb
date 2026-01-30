@@ -85,6 +85,12 @@ def get_dataset_planets():
 
 
 class TestAgent(BaseExecutorDummyML):
+    def setup_method(self):
+        super().setup_method()
+        from mindsdb.utilities.config import config
+
+        config["knowledge_bases"]["disable_autobatch"] = True
+
     @pytest.mark.slow
     def test_mindsdb_provider(self):
         from mindsdb.api.executor.exceptions import ExecutorException

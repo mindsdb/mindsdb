@@ -1,11 +1,11 @@
-openai<1.100.0,>=1.58.1
+openai<3.0.0,>=2.9.0
 
 langchain==0.3.27
 langchain-community==0.3.27
-langchain-core==0.3.72
+langchain-core==0.3.77
 langchain-experimental==0.3.4
 langchain-nvidia-ai-endpoints==0.3.3
-langchain-openai==0.3.6
+langchain-openai==0.3.34
 langchain-anthropic==0.2.4
 langchain-text-splitters==0.3.9
 langchain-google-genai>=2.0.0
@@ -25,4 +25,4 @@ mcp~=1.10.1 # Required for MCP server
 # A2A requirements
 httpx==0.28.1
 jwcrypto==1.5.6
-typing-extensions==4.13.2
+typing-extensions==4.14.1

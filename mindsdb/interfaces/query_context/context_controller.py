@@ -18,6 +18,30 @@ from mindsdb.utilities.config import config
 from .last_query import LastQuery
 
 
+def get_column_case_insensitive(columns, name):
+    """Get the column name from a list of columns using case-insensitive search
+
+    Args:
+        columns: list of column names
+        name: name of the column to search for (case-insensitive)
+    Returns:
+        str: the actual column name from the list
+    Raises:
+        ValueError: if column is not found or multiple columns match
+    """
+    lower_names = [name.lower() for name in columns]
+    count = lower_names.count(name.lower())
+    if count == 0:
+        raise ValueError(f"Column '{name}' not found. Available columns: {columns}")
+    if count == 1:
+        return columns[lower_names.index(name.lower())]
+
+    raise ValueError(
+        f"Ambiguous column reference: multiple columns with name '{name}' found (case-insensitive match). "
+        f"Available columns: {columns}"
+    )
+
+
 class RunningQuery:
     """
     Query in progres
@@ -135,6 +159,7 @@ class RunningQuery:
     def add_to_task(self):
         task_record = db.Tasks(
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             user_class=ctx.user_class,
             object_type=self.OBJECT_TYPE,
             object_id=self.record.id,
@@ -147,6 +172,7 @@ class RunningQuery:
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.object_id == self.record.id,
             db.Tasks.company_id == ctx.company_id,
+            db.Tasks.user_id == ctx.user_id,
         ).first()
 
         if task is not None:
@@ -173,7 +199,7 @@ class RunningQuery:
         """
         if "track_column" in self.record.parameters:
             track_column = self.record.parameters["track_column"]
-            return df[track_column].max()
+            return df[get_column_case_insensitive(df.columns, track_column)].max()
         else:
             # stream mode
             return None
@@ -392,7 +418,9 @@ class QueryContextController:
 
         context_name = self.gen_context_name(object_type, object_id)
         for rec in (
-            db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id).all()
+            db.session.query(db.QueryContext)
+            .filter_by(context_name=context_name, company_id=ctx.company_id, user_id=ctx.user_id)
+            .all()
         ):
             db.session.delete(rec)
         db.session.commit()
@@ -492,7 +520,9 @@ class QueryContextController:
         """
         context_name = self.gen_context_name(object_type, object_id)
         vars = []
-        for rec in db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id):
+        for rec in db.session.query(db.QueryContext).filter_by(
+            context_name=context_name, company_id=ctx.company_id, user_id=ctx.user_id
+        ):
             if rec.values is not None:
                 vars.append(rec.values)
 
@@ -506,7 +536,7 @@ class QueryContextController:
 
         return (
             db.session.query(db.QueryContext)
-            .filter_by(query=query_str, context_name=context_name, company_id=ctx.company_id)
+            .filter_by(query=query_str, context_name=context_name, company_id=ctx.company_id, user_id=ctx.user_id)
             .first()
         )
 
@@ -514,7 +544,9 @@ class QueryContextController:
         """
         Creates record (for context and query string) with values and returns it
         """
-        rec = db.QueryContext(query=query_str, context_name=context_name, company_id=ctx.company_id, values=values)
+        rec = db.QueryContext(
+            query=query_str, context_name=context_name, company_id=ctx.company_id, user_id=ctx.user_id, values=values
+        )
         db.session.add(rec)
         return rec
 
@@ -531,7 +563,9 @@ class QueryContextController:
         Get running query by id
         """
 
-        rec = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id).first()
+        rec = db.Queries.query.filter(
+            db.Queries.id == query_id, db.Queries.company_id == ctx.company_id, db.Queries.user_id == ctx.user_id
+        ).first()
 
         if rec is None:
             raise RuntimeError(f"Query not found: {query_id}")
@@ -544,7 +578,9 @@ class QueryContextController:
 
         # remove old queries
         remove_query = db.session.query(db.Queries).filter(
-            db.Queries.company_id == ctx.company_id, db.Queries.finished_at < (dt.datetime.now() - dt.timedelta(days=1))
+            db.Queries.company_id == ctx.company_id,
+            db.Queries.user_id == ctx.user_id,
+            db.Queries.finished_at < (dt.datetime.now() - dt.timedelta(days=1)),
         )
         for rec in remove_query.all():
             self.get_query(rec.id).remove_from_task()
@@ -554,6 +590,7 @@ class QueryContextController:
             sql=str(query),
             database=database,
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
         )
 
         db.session.add(rec)
@@ -565,14 +602,18 @@ class QueryContextController:
         Get list of all running queries with metadata
         """
 
-        query = db.session.query(db.Queries).filter(db.Queries.company_id == ctx.company_id)
+        query = db.session.query(db.Queries).filter(
+            db.Queries.company_id == ctx.company_id, db.Queries.user_id == ctx.user_id
+        )
         return [RunningQuery(record).get_info() for record in query]
 
     def cancel_query(self, query_id: int):
         """
         Cancels running query by id
         """
-        rec = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id).first()
+        rec = db.Queries.query.filter(
+            db.Queries.id == query_id, db.Queries.company_id == ctx.company_id, db.Queries.user_id == ctx.user_id
+        ).first()
         if rec is None:
             raise RuntimeError(f"Query not found: {query_id}")
 

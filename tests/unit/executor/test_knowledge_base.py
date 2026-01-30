@@ -103,6 +103,14 @@ class TestKB(BaseExecutorDummyML):
         if storage is not None:
             kb_params["storage"] = storage
 
+        storage_table = self._get_storage_table(name)
+        if storage_table:
+            kb_params["storage"] = storage_table
+
+        storage_table = self._get_storage_table(name)
+        if storage_table:
+            kb_params["storage"] = storage_table
+
         param_str = ""
         if kb_params:
             param_items = []
@@ -117,6 +125,14 @@ class TestKB(BaseExecutorDummyML):
                 {param_str}
         """
         )
+
+    def _get_storage_table(self, kb_name):
+        # default chromadb
+        return None
+
+    def _get_storage_table(self, kb_name):
+        # default chromadb
+        return None
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb(self, mock_litellm_embedding):
@@ -508,8 +524,16 @@ class TestKB(BaseExecutorDummyML):
             # test iterate
             check_partition(
                 """
-                insert into kb_part SELECT id, english FROM  pg.ral
+                insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id
+            """
+            )
+
+            # test iterate (mix case of track_column)
+            check_partition(
+                """
+                insert into kb_part SELECT id, english FROM pg.ral
+                using batch_size=20, track_column=Id
             """
             )
 
@@ -524,7 +548,7 @@ class TestKB(BaseExecutorDummyML):
             # without track column
             check_partition(
                 """
-                insert into kb_part SELECT id, english FROM  pg.ral
+                insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20
             """
             )
@@ -562,16 +586,7 @@ class TestKB(BaseExecutorDummyML):
 
         self.save_file("items", df)
 
-        self.run_sql(
-            """
-            create knowledge base kb_alg
-            using
-                embedding_model = {
-                    "provider": "bedrock",
-                    "model_name": "titan"
-                }
-        """
-        )
+        self._create_kb("kb_alg", embedding_model={"provider": "bedrock", "model_name": "titan"})
 
         self.run_sql(
             """
@@ -866,7 +881,7 @@ class TestKB(BaseExecutorDummyML):
 
         mock_config_get.side_effect = config_get_side_effect
 
-        self.run_sql("create knowledge base kb1")
+        self._create_kb("kb1")
 
         ret = self.run_sql("describe  knowledge base kb1")
 
@@ -1000,17 +1015,34 @@ class TestKB(BaseExecutorDummyML):
 
         df = pd.DataFrame(
             [
-                {
-                    "PRODUCT_ID": 1,
-                    "PRODUCT_NAME": 'Laptop Pro 15"',
-                    "DESCRIPTION": "High-performance laptop with 16GB RAM and 512GB SSD",
-                    "CATEGORY": "Electronics",
-                    "PRICE": 1299.99,
-                }
+                [1, 'Laptop Pro 15"', "High-performance laptop with 16GB RAM and 512GB SSD", "Electronics", 1299.99],
+                [2, "Table", "Dining table,  144 cm", "Home", 100],
             ],
-            columns=["PRODUCT_ID", "PRODUCT_NAME", "DESCRIPTION", "CATEGORY", "PRICE"],
+            columns=["Product_ID", "Product_Name", "Description", "Category", "Price"],
         )
 
+        self.save_file("oracle_products", df)
+
+        # -- mixed case source columns
+        self._create_kb(
+            "kb_oracle_mixedcase",
+            content_columns=["Product_Name", "Description"],
+            id_column="Product_ID",
+            metadata_columns=["Category", "Price"],
+        )
+        self.run_sql(
+            """
+            insert into kb_oracle_mixedcase
+            select * from files.oracle_products
+            """
+        )
+        ret = self.run_sql("select `Category` from kb_oracle_mixedcase  where `Category` = 'Home'")
+        assert len(ret) == 2
+        assert ret["Category"][0] == "Home"
+
+        # -- uppercase source columns
+        df.columns = df.columns.str.upper()
+        self.run_sql("drop table files.oracle_products")
         self.save_file("oracle_products", df)
 
         self._create_kb(
@@ -1023,14 +1055,18 @@ class TestKB(BaseExecutorDummyML):
             """
             insert into kb_oracle_uppercase
             select * from files.oracle_products
-        """
+            """
         )
 
-        ret = self.run_sql("select * from kb_oracle_uppercase")
-        assert isinstance(ret, pd.DataFrame)
+        ret = self.run_sql("select * from kb_oracle_uppercase where `CATEGORY` = 'Electronics'")
         assert len(ret) == 2
+        assert ret["CATEGORY"][0] == "Electronics"
 
         # -- lowercase source columns
+        df.columns = df.columns.str.lower()
+        self.run_sql("drop table files.oracle_products")
+        self.save_file("oracle_products", df)
+
         self._create_kb(
             "kb_oracle_lowercase",
             content_columns=["product_name", "description"],
@@ -1043,26 +1079,9 @@ class TestKB(BaseExecutorDummyML):
             select * from files.oracle_products
         """
         )
-        ret = self.run_sql("select * from kb_oracle_lowercase")
-        assert isinstance(ret, pd.DataFrame)
+        ret = self.run_sql("select category from kb_oracle_lowercase where category = 'Home'")
         assert len(ret) == 2
-
-        # -- mixed case source columns
-        self._create_kb(
-            "kb_oracle_mixedcase",
-            content_columns=["Product_Name", "DESCRIPTION"],
-            id_column="Product_ID",
-            metadata_columns=["Category", "price"],
-        )
-        self.run_sql(
-            """
-            insert into kb_oracle_mixedcase
-            select * from files.oracle_products
-        """
-        )
-        ret = self.run_sql("select * from kb_oracle_mixedcase")
-        assert isinstance(ret, pd.DataFrame)
-        assert len(ret) == 2
+        assert ret["category"][0] == "Home"
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_dimension_mismatch(self, mock_litellm_embedding):
@@ -1091,3 +1110,54 @@ class TestKB(BaseExecutorDummyML):
         self.run_sql("drop knowledge base kb1")
         self.run_sql("drop table my_chroma.table1")
         self.run_sql("drop database my_chroma")
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_duplicated_ids(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb("kb1")
+
+        # insert bug content
+        self.run_sql(f"insert into kb1 (id, content) values (1, '{'my content' * 1000}')")
+
+        # insert second id
+        self.run_sql("insert into kb1 (id, content) values (2, 'content2')")
+
+        # first was chunked
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) > 1
+
+        # second wasn't
+        ret = self.run_sql("select * from kb1 where id = 2")
+        assert len(ret) == 1
+
+        # insert short string
+        self.run_sql("insert into kb1 (id, content) values (1, 'content')")
+
+        # chunks were removed
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+        assert ret["chunk_content"][0] == "content"
+
+        # second id wasn't removed
+        ret = self.run_sql("select * from kb1 where id = 2")
+        assert len(ret) == 1
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_update(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb("kb1")
+
+        self.run_sql("insert into kb1 (id, content) values (1, 'cat')")
+
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+        chunk_id = ret["chunk_id"][0]
+
+        # update
+        self.run_sql(f"update kb1 set content = 'dog' where chunk_id = '{chunk_id}'")
+        # check
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+        assert ret["chunk_content"][0] == "dog"

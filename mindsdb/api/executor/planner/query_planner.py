@@ -462,7 +462,8 @@ class QueryPlanner:
             limit = None
         else:
             targets = query.targets
-            order_by = query.order_b
+            order_by = query.order_by
+            limit = query.limit
 
         query2 = Select(
             targets=targets,

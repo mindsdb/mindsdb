@@ -25,4 +25,4 @@ mcp~=1.10.1 # Required for MCP server
 # A2A requirements
 httpx==0.28.1
 jwcrypto==1.5.6
-typing-extensions==4.13.2
+typing-extensions==4.14.1

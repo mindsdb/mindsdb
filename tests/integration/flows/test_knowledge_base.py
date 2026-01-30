@@ -204,6 +204,9 @@ class KBTestBase:
 
             param_str += f", storage = {db_name}.{table_name}"
 
+        # Clean up any existing KB with the same name before creating
+        self.run_sql(f"DROP KNOWLEDGE BASE IF EXISTS {name}")
+
         self.run_sql(f"""
             create knowledge base {name}
             using {param_str}

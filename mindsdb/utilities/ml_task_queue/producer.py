@@ -59,7 +59,8 @@ class MLTaskProducer(BaseRedisQueue):
             redis_key = RedisKey.new()
             message = {
                 "task_type": task_type.value,
-                "company_id": "" if ctx.company_id is None else ctx.company_id,  # None can not be dumped
+                "company_id": ctx.company_id,
+                "user_id": ctx.user_id,
                 "model_id": model_id,
                 "payload": payload,
                 "redis_key": redis_key.base,

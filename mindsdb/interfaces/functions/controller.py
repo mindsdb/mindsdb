@@ -2,7 +2,9 @@ import os
 import copy
 
 from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
+
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
+from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.utilities.config import config
 
 
@@ -138,6 +140,10 @@ class FunctionController(BYOMFunctionsController):
         try:
             from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
+            llm_config = get_llm_config(chat_model_params["provider"], chat_model_params)
+            chat_model_params = llm_config.model_dump(by_alias=True)
+            chat_model_params = {k: v for k, v in chat_model_params.items() if v is not None}
+
             llm = LLMClient(chat_model_params, session=self.session)
         except Exception as e:
             raise RuntimeError(f"Unable to use LLM function, check ENV variables: {e}") from e
@@ -205,6 +211,9 @@ class FunctionController(BYOMFunctionsController):
         if "api_key" in chat_model_params:
             # move to api_keys dict
             chat_model_params["api_keys"] = {chat_model_params["provider"]: chat_model_params["api_key"]}
+
+        if "api_keys" not in chat_model_params:
+            chat_model_params["api_keys"] = {}
 
         return chat_model_params
 

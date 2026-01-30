@@ -1,6 +1,8 @@
 import datetime
 import random
 
+import pytest
+
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from tests.integration.utils.http_test_helpers import HTTPHelperMixin
 from tests.integration.conftest import get_test_resource_name
@@ -15,6 +17,7 @@ def to_dicts(data):
     return data
 
 
+@pytest.mark.skip(reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted.")
 class TestHTTP(HTTPHelperMixin):
     # Unique resource names for this test session (initialized in setup_class)
     POSTGRES_DB_NAME = None

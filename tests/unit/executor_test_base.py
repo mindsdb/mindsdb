@@ -72,16 +72,6 @@ class BaseUnitTest:
         db.init()
         cls.db = db
 
-        from multiprocessing import dummy
-
-        # We might not have torch installed. So ignore any errors
-        try:
-            mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
-            mp_patcher.side_effect = lambda x: dummy
-        except Exception:
-            mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
-            mp_patcher.side_effect = lambda x: dummy
-
     @staticmethod
     def teardown_class(cls):
         # remove tmp db file
@@ -89,8 +79,9 @@ class BaseUnitTest:
         shutil.rmtree(cls.storage_dir, ignore_errors=True)
 
         # remove environ for next tests
-        if "MINDSDB_DB_CON" in os.environ:
-            del os.environ["MINDSDB_DB_CON"]
+        for env_var_name in ("MINDSDB_DB_CON", "MINDSDB_STORAGE_DIR", "MINDSDB_CONFIG_PATH"):
+            if env_var_name in os.environ:
+                del os.environ[env_var_name]
 
         # remove import of mindsdb for next tests
         unload_module("mindsdb")
@@ -134,30 +125,6 @@ class BaseUnitTest:
                 dummy_record = db.Integration.query.filter_by(
                     name="dummy_data", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
                 ).first()
-
-        # Lightwood should always be last (else tests break, why?)
-        # Insert lightwood if it doesn't exist (idempotent with race condition handling)
-        lw_record = db.Integration.query.filter_by(
-            name="lightwood", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
-        ).first()
-        if lw_record is None:
-            try:
-                lw_record = db.Integration(
-                    name="lightwood",
-                    data={},
-                    engine="lightwood",
-                    company_id=DEFAULT_COMPANY_ID,
-                    user_id=DEFAULT_USER_ID,
-                )
-                db.session.add(lw_record)
-                db.session.flush()
-            except SQLAlchemyIntegrityError:
-                db.session.rollback()
-                lw_record = db.Integration.query.filter_by(
-                    name="lightwood", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
-                ).first()
-
-        self.lw_integration_id = lw_record.id
 
         # default project (idempotent with race condition handling)
         project_record = db.Project.query.filter_by(
@@ -255,7 +222,7 @@ class BaseExecutorTest(BaseUnitTest):
 
     def set_executor(
         self,
-        mock_lightwood=False,
+        mock_predict=False,
         mock_model_controller=False,
         import_dummy_ml=False,
         import_dummy_llm=False,
@@ -276,6 +243,7 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
         from mindsdb.utilities.context import context as ctx
+        from mindsdb.interfaces.storage import db
 
         self.file_controller = FileController()
 
@@ -299,7 +267,21 @@ class BaseExecutorTest(BaseUnitTest):
                 error = integration_controller.handlers_import_status["dummy_ml"]["import"]["error_message"]
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
-        if import_dummy_llm:
+            r_dummy_ml = db.Integration.query.filter_by(
+                name="dummy_ml", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+            ).first()
+            if r_dummy_ml is None:
+                r_dummy_ml = db.Integration(
+                    name="dummy_ml",
+                    data={},
+                    engine="dummy_ml",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(r_dummy_ml)
+                db.session.commit()
+            self.dummy_ml_integration_id = r_dummy_ml.id
+
             test_handler_path = os.path.dirname(__file__)
             sys.path.append(test_handler_path)
 
@@ -310,12 +292,10 @@ class BaseExecutorTest(BaseUnitTest):
                 error = integration_controller.handlers_import_status["dummy_llm"]["import"]["error_message"]
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
-        if mock_lightwood:
+        if mock_predict:
             predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")
             self.mock_predict = predict_patcher.__enter__()
-
-            create_patcher = mock.patch("mindsdb.integrations.handlers.lightwood_handler.Handler.create")
-            self.mock_create = create_patcher.__enter__()
+            self.mock_create = mock.Mock()
 
         ctx.set_default()
         sql_session = SessionController()
@@ -503,7 +483,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
 
     def setup_method(self):
         super().setup_method()
-        self.set_executor(mock_lightwood=True, mock_model_controller=True)
+        self.set_executor(mock_predict=True, mock_model_controller=True, import_dummy_ml=True)
 
     def set_predictor(self, predictor):
         # fill model_interface mock with predictor data for test case
@@ -524,10 +504,11 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         # add predictor to table
         r = self.db.Predictor(
             name=predictor["name"],
-            data={"dtypes": predictor["dtypes"]},
+            data={},
+            dtype_dict=predictor["dtype_dict"],
             learn_args=predictor["problem_definition"],
             to_predict=predictor["predict"],
-            integration_id=self.lw_integration_id,
+            integration_id=self.dummy_ml_integration_id,
             project_id=1,
             status="complete",
             company_id=DEFAULT_COMPANY_ID,
@@ -591,7 +572,6 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
             "updated_at": dt.datetime(2022, 5, 12, 16, 40, 26),
             "created_at": dt.datetime(2022, 4, 4, 14, 48, 39),
         }
-        predictor["dtype_dict"] = predictor["dtypes"]
         predictor_record.update(predictor)
 
         def get_model_data_f(name, *args):

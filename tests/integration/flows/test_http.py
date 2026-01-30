@@ -5,7 +5,7 @@ import requests
 import pytest
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from tests.integration.conftest import HTTP_API_ROOT
+from tests.integration.conftest import HTTP_API_ROOT, create_byom
 from tests.integration.utils.http_test_helpers import HTTPHelperMixin
 
 
@@ -352,6 +352,9 @@ class TestHTTP(HTTPHelperMixin):
         self.create_database(self.MYSQL_DB_NAME, db_details)
         self.validate_database_creation(self.MYSQL_DB_NAME)
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_sql_create_predictor(self, train_finetune_lock):
         model_name = self.MODEL_NAME
         postgres_db = self.POSTGRES_DB_NAME
@@ -359,12 +362,14 @@ class TestHTTP(HTTPHelperMixin):
         self.sql_via_http("USE mindsdb;", RESPONSE_TYPE.OK)
         self.sql_via_http(f"DROP MODEL IF EXISTS {model_name};", RESPONSE_TYPE.OK)
 
+        create_byom("test_ml_engine", target_column="rental_price")
         with train_finetune_lock.acquire(timeout=600):
             self.sql_via_http(
                 f"""
                 create predictor {model_name}
                 from {postgres_db} (select sqft, location, rental_price from demo_data.home_rentals limit 30)
                 predict rental_price
+                using engine='test_ml_engine'
             """,
                 RESPONSE_TYPE.TABLE,
             )
@@ -393,6 +398,9 @@ class TestHTTP(HTTPHelperMixin):
         projects = [i["name"] for i in response.json()]
         assert project_name in projects
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_list_models(self):
         project_name = "mindsdb"
         model_name = self.MODEL_NAME
@@ -401,6 +409,9 @@ class TestHTTP(HTTPHelperMixin):
         models = [i["name"] for i in response.json()]
         assert model_name in models
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_make_prediction(self):
         project_name = "mindsdb"
         model_name = self.MODEL_NAME
@@ -408,14 +419,14 @@ class TestHTTP(HTTPHelperMixin):
         response = self.api_request("post", f"/projects/{project_name}/models/{model_name}/predict", payload=payload)
         assert response.status_code == 200, "Error to make prediction"
 
-        # 2 prediction result
-        assert len(response.json()) == 2
+        # 1 prediction result (test byom return always 1 row)
+        assert len(response.json()) == 1
 
         # 1st version of model
         response = self.api_request("post", f"/projects/{project_name}/models/{model_name}.1/predict", payload=payload)
         assert response.status_code == 200, "Error to make prediction"
 
-        assert len(response.json()) == 2
+        assert len(response.json()) == 1
 
     def test_tabs(self):
         # Use unique company/user IDs to avoid conflicts with other test runs

@@ -144,7 +144,7 @@ class QueryPlanner:
 
         self.projects = list(_projects)
         self.databases = list(self.integrations.keys()) + self.projects
-        self.kb_metadata = kb_metadata
+        self.kb_metadata = kb_metadata or {}
         self.statement = None
 
         self.cte_results = {}
@@ -898,6 +898,7 @@ class QueryPlanner:
             plan = self.check_insert_from_select(self.plan)
 
         self.plan = plan
+        return plan
 
     def check_insert_from_select(self, plan: QueryPlan):
         # special case: register insert from select (it is the same as mark resumable)

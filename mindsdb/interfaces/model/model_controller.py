@@ -42,10 +42,7 @@ class ModelController:
     def __init__(self) -> None:
         self.config = Config()
 
-    def get_model_data(self, name: str = None, predictor_record=None, ml_handler_name="lightwood") -> dict:
-        if predictor_record is None:
-            predictor_record = get_model_record(except_absent=True, name=name, ml_handler_name=ml_handler_name)
-
+    def get_model_data(self, predictor_record) -> dict:
         data = deepcopy(predictor_record.data)
         data["dtype_dict"] = predictor_record.dtype_dict
         data["created_at"] = str(parse_datetime(str(predictor_record.created_at).split(".")[0]))
@@ -72,10 +69,8 @@ class ModelController:
                 data["accuracy"] = float(np.mean(list(data["accuracies"].values())))
         return data
 
-    def get_reduced_model_data(self, name: str = None, predictor_record=None, ml_handler_name="lightwood") -> dict:
-        full_model_data = self.get_model_data(
-            name=name, predictor_record=predictor_record, ml_handler_name=ml_handler_name
-        )
+    def get_reduced_model_data(self, predictor_record) -> dict:
+        full_model_data = self.get_model_data(predictor_record=predictor_record)
         reduced_model_data = {}
         for k in [
             "id",
@@ -464,6 +459,7 @@ class ModelController:
             db.Predictor.project_id == model_record.project_id,
             db.Predictor.active == True,  # noqa
             db.Predictor.company_id == ctx.company_id,
+            db.Predictor.user_id == ctx.user_id,
             db.Predictor.id != model_record.id,
         )
         for p in model_records:

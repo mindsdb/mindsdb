@@ -12,38 +12,38 @@ from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 
 
 def to_bytes(obj: object) -> bytes:
-    """ dump object into bytes
+    """dump object into bytes
 
-        Args:
-            obj (object): object to convert
+    Args:
+        obj (object): object to convert
 
-        Returns:
-            bytes
+    Returns:
+        bytes
     """
     return pickle.dumps(obj, protocol=5)
 
 
 def from_bytes(b: bytes) -> object:
-    """ load object from bytes
+    """load object from bytes
 
-        Args:
-            b (bytes):
+    Args:
+        b (bytes):
 
-        Returns:
-            object
+    Returns:
+        object
     """
     return pickle.loads(b)
 
 
 def wait_redis_ping(db: Database, timeout: int = 30):
-    """ Wait when redis.ping return True
+    """Wait when redis.ping return True
 
-        Args:
-            db (Database): redis db object
-            timeout (int): seconds to wait for success ping
+    Args:
+        db (Database): redis db object
+        timeout (int): seconds to wait for success ping
 
-        Raises:
-            RedisConnectionError: if `ping` did not return `True` within `timeout` seconds
+    Raises:
+        RedisConnectionError: if `ping` did not return `True` within `timeout` seconds
     """
     end_time = time.time() + timeout
     while time.time() <= end_time:
@@ -58,16 +58,16 @@ def wait_redis_ping(db: Database, timeout: int = 30):
 
 
 class RedisKey:
-    """ The class responsible for unique task keys in redis
+    """The class responsible for unique task keys in redis
 
-        Attributes:
-            _base_key (bytes): prefix for keys
+    Attributes:
+        _base_key (bytes): prefix for keys
     """
 
     @staticmethod
-    def new() -> 'RedisKey':
-        timestamp = str(time.time()).replace('.', '')
-        return RedisKey(f"{timestamp}-{ctx.company_id}-{socket.gethostname()}".encode())
+    def new() -> "RedisKey":
+        timestamp = str(time.time()).replace(".", "")
+        return RedisKey(f"{timestamp}-{ctx.company_id}-{ctx.user_id}-{socket.gethostname()}".encode())
 
     def __init__(self, base_key: bytes) -> None:
         self._base_key = base_key
@@ -78,20 +78,19 @@ class RedisKey:
 
     @property
     def status(self) -> str:
-        return (self._base_key + b'-status').decode()
+        return (self._base_key + b"-status").decode()
 
     @property
     def dataframe(self) -> str:
-        return (self._base_key + b'-dataframe').decode()
+        return (self._base_key + b"-dataframe").decode()
 
     @property
     def exception(self) -> str:
-        return (self._base_key + b'-exception').decode()
+        return (self._base_key + b"-exception").decode()
 
 
 class StatusNotifier(threading.Thread):
-    """ Worker that updates task status in redis with fixed frequency
-    """
+    """Worker that updates task status in redis with fixed frequency"""
 
     def __init__(self, redis_key: RedisKey, ml_task_status: ML_TASK_STATUS, db, cache) -> None:
         threading.Thread.__init__(self)
@@ -102,21 +101,19 @@ class StatusNotifier(threading.Thread):
         self._stop_event = threading.Event()
 
     def set_status(self, ml_task_status: ML_TASK_STATUS):
-        """ change status
+        """change status
 
-            Args:
-                ml_task_status (ML_TASK_STATUS): new status
+        Args:
+            ml_task_status (ML_TASK_STATUS): new status
         """
         self.ml_task_status = ml_task_status
 
     def stop(self) -> None:
-        """ stop status updating
-        """
+        """stop status updating"""
         self._stop_event.set()
 
     def run(self):
-        """ start update status with fixed frequency
-        """
+        """start update status with fixed frequency"""
         while not self._stop_event.is_set():
             wait_redis_ping(self.db)
             self.db.publish(self.redis_key.status, self.ml_task_status.value)

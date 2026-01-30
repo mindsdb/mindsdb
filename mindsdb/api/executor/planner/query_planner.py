@@ -456,13 +456,22 @@ class QueryPlanner:
         # split to select from api database
         #     keep only limit and where
         #     the rest goes to outer select
+        if query.group_by is not None:
+            targets = [Star()]
+            order_by = None
+            limit = None
+        else:
+            targets = query.targets
+            order_by = query.order_b
+
         query2 = Select(
-            targets=query.targets,
+            targets=targets,
             from_table=query.from_table,
             where=query.where,
-            order_by=query.order_by,
-            limit=query.limit,
+            order_by=order_by,
+            limit=limit,
         )
+
         prev_step = self.plan_integration_select(query2)
 
         # clear limit and where

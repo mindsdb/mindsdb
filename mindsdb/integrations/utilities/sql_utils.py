@@ -14,10 +14,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-
-AGGREGATE_FUNCTIONS = {
-    'count', 'sum', 'avg', 'min', 'max', 'first', 'last', 'median'
-}
+AGGREGATE_FUNCTIONS = {"count", "sum", "avg", "min", "max", "first", "last", "median"}
 
 
 def is_aggregate_function(node: ast.ASTNode) -> bool:
@@ -29,11 +26,7 @@ def is_aggregate_function(node: ast.ASTNode) -> bool:
     Returns:
         bool: True if node is aggregate function
     """
-    return (
-        isinstance(node, ast.Function)
-        and hasattr(node, 'op')
-        and node.op.lower() in AGGREGATE_FUNCTIONS
-    )
+    return isinstance(node, ast.Function) and hasattr(node, "op") and node.op.lower() in AGGREGATE_FUNCTIONS
 
 
 def has_aggregate_function(targets: list[ast.ASTNode]) -> bool:
@@ -45,9 +38,7 @@ def has_aggregate_function(targets: list[ast.ASTNode]) -> bool:
     Returns:
         bool: True if node is aggregate function
     """
-    return any(
-        is_aggregate_function(target) for target in targets
-    )
+    return any(is_aggregate_function(target) for target in targets)
 
 
 class FilterOperator(Enum):
@@ -146,7 +137,7 @@ def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False, st
 
     def _extract_comparison_conditions(node: ASTNode, **kwargs):
         # Check if this node is a child of an already-captured node
-        callstack = kwargs.get('callstack', [])
+        callstack = kwargs.get("callstack", [])
         for parent in callstack:
             if id(parent) in captured_nodes:
                 # Skip processing children of captured nodes
@@ -252,17 +243,17 @@ def project_dataframe(df, targets, table_columns):
 
 def _evaluate_interval_expression(node: ASTNode) -> Optional[dt.date]:
     """Evaluate INTERVAL expressions to get actual date values.
-    
+
     Args:
         node: AST node that may contain INTERVAL expressions
-        
+
     Returns:
         date if the expression can be evaluated, None otherwise
     """
     if isinstance(node, ast.BinaryOperation):
         op = node.op.lower()
         arg1, arg2 = node.args
-        
+
         # Handle CURRENT_DATE - INTERVAL 'X day'
         if op == "-":
             # Check for CURRENT_DATE function
@@ -277,10 +268,11 @@ def _evaluate_interval_expression(node: ASTNode) -> Optional[dt.date]:
                             interval_str = interval_value.lower()
                         else:
                             interval_str = str(interval_value).lower()
-                        
+
                         # Parse interval like '90 day', '30 days', etc.
                         import re
-                        match = re.search(r'(\d+)\s*(day|days|d)', interval_str)
+
+                        match = re.search(r"(\d+)\s*(day|days|d)", interval_str)
                         if match:
                             days = int(match.group(1))
                             result = dt.date.today() - dt.timedelta(days=days)
@@ -297,14 +289,15 @@ def _evaluate_interval_expression(node: ASTNode) -> Optional[dt.date]:
                             interval_str = interval_value.lower()
                         else:
                             interval_str = str(interval_value).lower()
-                        
+
                         import re
-                        match = re.search(r'(\d+)\s*(day|days|d)', interval_str)
+
+                        match = re.search(r"(\d+)\s*(day|days|d)", interval_str)
                         if match:
                             days = int(match.group(1))
                             result = dt.date.today() - dt.timedelta(days=days)
                             return result
-        
+
         # Handle CURRENT_DATE + INTERVAL 'X day'
         elif op == "+":
             if isinstance(arg1, ast.Function) and arg1.op.upper() == "CURRENT_DATE":
@@ -313,7 +306,8 @@ def _evaluate_interval_expression(node: ASTNode) -> Optional[dt.date]:
                     if interval_value and isinstance(interval_value, ast.Constant):
                         interval_str = str(interval_value.value).lower()
                         import re
-                        match = re.search(r'(\d+)\s*(day|days|d)', interval_str)
+
+                        match = re.search(r"(\d+)\s*(day|days|d)", interval_str)
                         if match:
                             days = int(match.group(1))
                             return dt.date.today() + dt.timedelta(days=days)
@@ -323,27 +317,28 @@ def _evaluate_interval_expression(node: ASTNode) -> Optional[dt.date]:
                     if interval_value and isinstance(interval_value, ast.Constant):
                         interval_str = str(interval_value.value).lower()
                         import re
-                        match = re.search(r'(\d+)\s*(day|days|d)', interval_str)
+
+                        match = re.search(r"(\d+)\s*(day|days|d)", interval_str)
                         if match:
                             days = int(match.group(1))
                             return dt.date.today() + dt.timedelta(days=days)
-    
+
     return None
 
 
 def _extract_date_from_raw_condition(condition: ASTNode) -> Optional[tuple]:
     """Try to extract a date value and column from a raw condition for API pushdown.
-    
+
     Args:
         condition: Raw condition AST node
-        
+
     Returns:
         Tuple of (column_name, operator, date_value) if extractable, None otherwise
     """
     if isinstance(condition, ast.BinaryOperation):
         op = condition.op.lower()
         arg1, arg2 = condition.args
-        
+
         # Handle CAST(column AS DATE) >= CURRENT_DATE - INTERVAL 'X day'
         if isinstance(arg1, ast.TypeCast):
             # type_name might be Identifier or string, handle both
@@ -351,21 +346,21 @@ def _extract_date_from_raw_condition(condition: ASTNode) -> Optional[tuple]:
                 type_name_str = arg1.type_name.parts[-1].upper()
             else:
                 type_name_str = str(arg1.type_name).upper()
-            
+
             if type_name_str in ("DATE", "DATETIME", "TIMESTAMP"):
                 if isinstance(arg1.arg, ast.Identifier):
                     column_name = arg1.arg.parts[-1]
                     date_value = _evaluate_interval_expression(arg2)
                     if date_value:
                         return (column_name, op, date_value)
-        
+
         # Handle column >= CURRENT_DATE - INTERVAL 'X day'
         elif isinstance(arg1, ast.Identifier):
             column_name = arg1.parts[-1]
             date_value = _evaluate_interval_expression(arg2)
             if date_value:
                 return (column_name, op, date_value)
-    
+
     return None
 
 
@@ -376,7 +371,7 @@ def _is_date_expression_static(node):
     if isinstance(node, ast.BinaryOperation):
         op = node.op.lower()
         arg1, arg2 = node.args
-        
+
         # Check for CURRENT_DATE - INTERVAL or CURRENT_DATE + INTERVAL
         if op in ("-", "+"):
             # Check if one side is CURRENT_DATE (function or identifier)
@@ -385,13 +380,13 @@ def _is_date_expression_static(node):
                 is_current_date = True
             elif isinstance(arg1, ast.Identifier) and arg1.parts[-1].upper() == "CURRENT_DATE":
                 is_current_date = True
-            
+
             # Check if other side is INTERVAL
             is_interval = isinstance(arg2, ast.Interval)
-            
+
             if is_current_date and is_interval:
                 return True
-            
+
             # Also check if we can evaluate it (for validation)
             if _evaluate_interval_expression(node) is not None:
                 return True
@@ -404,22 +399,22 @@ def _is_date_expression_static(node):
 
 def _get_date_columns_from_raw_condition(condition: ASTNode) -> list:
     """Extract column names that should be cast to date/datetime from raw conditions.
-    
+
     Args:
         condition: Raw condition AST node
-        
+
     Returns:
         List of column names that need date casting
     """
     date_columns = []
-    
+
     def _traverse_for_date_columns(node):
         if isinstance(node, ast.BinaryOperation):
             arg1, arg2 = node.args
-            
+
             # Check if arg2 is a date expression using the same logic
             is_date_expr = _is_date_expression_static(arg2)
-            
+
             # If comparing to a date expression, the column needs casting
             if is_date_expr:
                 if isinstance(arg1, ast.Identifier):
@@ -427,7 +422,7 @@ def _get_date_columns_from_raw_condition(condition: ASTNode) -> list:
                 elif isinstance(arg1, ast.TypeCast) and isinstance(arg1.arg, ast.Identifier):
                     # Already has CAST, but ensure the column is cast in dataframe
                     date_columns.append(arg1.arg.parts[-1])
-    
+
     _traverse_for_date_columns(condition)
     return date_columns
 
@@ -437,7 +432,7 @@ def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, or
     # assumes that list was got from extract_comparison_conditions
     where_query = None
     date_columns_to_cast = set()
-    
+
     for op, arg1, arg2 in conditions:
         op = op.lower()
 
@@ -446,11 +441,11 @@ def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, or
         else:
             if isinstance(arg2, (tuple, list)):
                 arg2 = ast.Tuple(arg2)
-            
+
             # Check if arg2 is a date string (ISO format) and arg1 might be a date column
             # If so, we need to cast the column to timestamp for proper comparison
             arg1_identifier = ast.Identifier(arg1)
-            if isinstance(arg2, str) and len(arg2) >= 10 and arg2[4] == '-' and arg2[7] == '-':
+            if isinstance(arg2, str) and len(arg2) >= 10 and arg2[4] == "-" and arg2[7] == "-":
                 # Looks like a date string (YYYY-MM-DD format)
                 # Check if the column exists and might be a date column
                 if arg1 in df.columns:
@@ -464,7 +459,7 @@ def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, or
                     item = ast.BinaryOperation(op=op, args=[arg1_identifier, ast.Constant(arg2)])
             else:
                 item = ast.BinaryOperation(op=op, args=[arg1_identifier, ast.Constant(arg2)])
-        
+
         if where_query is None:
             where_query = item
         else:
@@ -473,45 +468,38 @@ def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, or
     # Process raw conditions - detect date columns and cast them, also add CAST to condition if needed
     processed_raw_conditions = []
     # date_columns_to_cast is already initialized above, continue using it
-    
-    
-    for condition in (raw_conditions or []):
+
+    for condition in raw_conditions or []:
         # Extract date columns that need casting
         date_cols = _get_date_columns_from_raw_condition(condition)
         date_columns_to_cast.update(date_cols)
-        
+
         # If condition has a column without CAST but comparing to date, add CAST
         if isinstance(condition, ast.BinaryOperation):
             arg1, arg2 = condition.args
-            
+
             # Check if arg2 is a date expression
             is_date_expr = _is_date_expression_static(arg2)
-            
+
             # If comparing to date expression and column doesn't have CAST, add it
             if is_date_expr and isinstance(arg1, ast.Identifier):
                 # Wrap column in CAST to TIMESTAMP
                 # TypeCast expects type_name as a string (not Identifier)
-                cast_column = ast.TypeCast(
-                    arg=arg1,
-                    type_name="TIMESTAMP"
-                )
-                condition = ast.BinaryOperation(
-                    op=condition.op,
-                    args=[cast_column, arg2]
-                )
-        
+                cast_column = ast.TypeCast(arg=arg1, type_name="TIMESTAMP")
+                condition = ast.BinaryOperation(op=condition.op, args=[cast_column, arg2])
+
         processed_raw_conditions.append(condition)
-    
+
     # Cast date columns in dataframe (from both raw conditions and regular conditions)
     for col_name in date_columns_to_cast:
         if col_name in df.columns:
             if not pd.api.types.is_datetime64_any_dtype(df[col_name]):
                 try:
-                    df[col_name] = pd.to_datetime(df[col_name], errors='coerce')
+                    df[col_name] = pd.to_datetime(df[col_name], errors="coerce")
                 except Exception as e:
                     logger.warning(f"[SQL Utils] Failed to cast column {col_name} to datetime: {e}")
                     pass  # If casting fails, let DuckDB handle it via CAST in query
-    
+
     if processed_raw_conditions:
         for condition in processed_raw_conditions:
             if where_query is None:
@@ -526,7 +514,9 @@ def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, or
 
     result = query_df(df, query)
     if len(result) == 0 and len(df) > 0:
-        logger.warning(f"[SQL Utils] Filter returned 0 rows from {len(df)} input rows - this might indicate a filtering issue")
+        logger.warning(
+            f"[SQL Utils] Filter returned 0 rows from {len(df)} input rows - this might indicate a filtering issue"
+        )
     return result
 
 

@@ -65,18 +65,24 @@ class SubSelectStepCall(BaseStepCall):
             query_traversal(query, fill_params)
 
         df = result.to_df()
-        
+
         # Check if query has aggregations and result is already aggregated (single row)
         # If so, and the query is just selecting the aggregated columns, skip query_df
         # to avoid re-aggregating already aggregated data
         if isinstance(query, Select) and len(df) == 1:
             has_aggregation = has_aggregate_function(query.targets)
-            if has_aggregation and query.where is None and query.group_by is None and query.order_by is None and query.limit is None:
+            if (
+                has_aggregation
+                and query.where is None
+                and query.group_by is None
+                and query.order_by is None
+                and query.limit is None
+            ):
                 # Query is just aggregations with no WHERE, GROUP BY, ORDER BY, or LIMIT
                 # The result is already aggregated, so just return it as-is
                 database = result.columns[0].database if result.columns else None
                 return ResultSet.from_df(df, database, table_name)
-        
+
         res = query_df(df, query, session=self.session)
 
         # get database from first column

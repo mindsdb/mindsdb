@@ -226,4 +226,4 @@ def create_byom(name: str, target_column: str = "test", company_id=None, user_id
         headers=headers,
     )
     if response.status_code not in (200, 409):
-        raise Exception("Error creating BYOM engine")
+        raise Exception(f"Error creating BYOM engine: {response.body}")

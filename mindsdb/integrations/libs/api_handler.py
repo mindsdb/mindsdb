@@ -356,8 +356,12 @@ class APIResource(APITable):
             # Simple projection - use project_dataframe
             from mindsdb.integrations.utilities.sql_utils import project_dataframe
 
-            table_columns = self.get_columns()
-            result = project_dataframe(result, query.targets, table_columns)
+            try:
+                table_columns = self.get_columns()
+                result = project_dataframe(result, query.targets, table_columns)
+            except NotImplementedError:
+                # keep result as is
+                pass
 
         if limit is not None and len(result) > limit:
             result = result[: int(limit)]

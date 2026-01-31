@@ -5,3 +5,4 @@ chromadb # Knowledge bases.
 dspy-ai==2.4.12
 dspy==0.1.4
 
+protobuf>=6.33.5 # not directly required, pinned by Snyk to avoid a vulnerability

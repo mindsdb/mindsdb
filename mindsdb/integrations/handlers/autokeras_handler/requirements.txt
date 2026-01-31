@@ -1,3 +1,4 @@
 tensorflow
 autokeras
 scikit-learn==1.5.2
+protobuf>=6.33.5 # not directly required, pinned by Snyk to avoid a vulnerability

@@ -54,7 +54,6 @@ from mindsdb_sql_parser.ast.mindsdb import (
     AlterKnowledgeBase,
     CreateMLEngine,
     CreatePredictor,
-    CreateSkill,
     CreateTrigger,
     CreateView,
     CreateKnowledgeBaseIndex,
@@ -66,14 +65,12 @@ from mindsdb_sql_parser.ast.mindsdb import (
     DropKnowledgeBase,
     DropMLEngine,
     DropPredictor,
-    DropSkill,
     DropTrigger,
     Evaluate,
     FinetunePredictor,
     RetrainPredictor,
     UpdateAgent,
     UpdateChatBot,
-    UpdateSkill,
 )
 
 import mindsdb.utilities.profiler as profiler
@@ -682,12 +679,6 @@ class ExecuteCommands:
             return self.answer_alter_kb(statement, database_name)
         elif statement_type is DropKnowledgeBase:
             return self.answer_drop_kb(statement, database_name)
-        elif statement_type is CreateSkill:
-            return self.answer_create_skill(statement, database_name)
-        elif statement_type is DropSkill:
-            return self.answer_drop_skill(statement, database_name)
-        elif statement_type is UpdateSkill:
-            return self.answer_update_skill(statement, database_name)
         elif statement_type is CreateAgent:
             return self.answer_create_agent(statement, database_name)
         elif statement_type is DropAgent:
@@ -1489,53 +1480,15 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_create_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        try:
-            _ = self.session.skills_controller.add_skill(name, project_name, statement.type, statement.params)
-        except ValueError as e:
-            # Project does not exist or skill already exists.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
-    def answer_drop_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        try:
-            self.session.skills_controller.delete_skill(name, project_name, strict_case=True)
-        except ValueError as e:
-            # Project does not exist or skill does not exist.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
-    def answer_update_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        type = statement.params.pop("type", None)
-        try:
-            _ = self.session.skills_controller.update_skill(
-                name, project_name=project_name, type=type, params=statement.params
-            )
-        except ValueError as e:
-            # Project does not exist or skill does not exist.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
     def answer_create_agent(self, statement, database_name):
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        skills = statement.params.pop("skills", [])
         provider = statement.params.pop("provider", None)
         try:
             _ = self.session.agents_controller.add_agent(
                 name=name,
                 project_name=project_name,
                 model_name=statement.model,
-                skills=skills,
                 provider=provider,
                 params=variables_controller.fill_parameters(statement.params),
             )
@@ -1563,15 +1516,11 @@ class ExecuteCommands:
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         model = statement.params.pop("model", None)
-        skills_to_add = statement.params.pop("skills_to_add", [])
-        skills_to_remove = statement.params.pop("skills_to_remove", [])
         try:
             _ = self.session.agents_controller.update_agent(
                 name,
                 project_name=project_name,
                 model_name=model,
-                skills_to_add=skills_to_add,
-                skills_to_remove=skills_to_remove,
                 params=variables_controller.fill_parameters(statement.params),
             )
         except (EntityExistsError, EntityNotExistsError, ValueError) as e:

@@ -16,6 +16,9 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
     INF_SCHEMA_COLUMNS_NAMES_SET,
 )
+from mindsdb_sql_parser import ast
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+
 from mindsdb.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
@@ -46,6 +49,127 @@ def _validate_identifier(identifier: str) -> str:
     if not re.match(r"^[\w\s\-]+$", identifier):
         raise ValueError(f"Identifier contains invalid characters: {identifier}")
     return identifier
+
+
+def _parse_interval_value(value: Any) -> Optional[int]:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        return int(value)
+    return None
+
+
+def _parse_interval_unit(unit: Any) -> Optional[str]:
+    if isinstance(unit, str):
+        unit_upper = unit.upper()
+        valid_units = {"YEAR", "MONTH", "DAY", "HOUR", "MINUTE", "SECOND", "WEEK", "QUARTER"}
+        if unit_upper in valid_units:
+            return unit_upper
+    return None
+
+
+def _get_interval_parts(node: ASTNode) -> Optional[Dict[str, int]]:
+    """Extract interval parts from an ASTNode representing an INTERVAL literal.
+
+    Args:
+        node (ASTNode): The ASTNode representing the INTERVAL literal.
+    Returns:
+        Optional[Dict[str, int]]: A dictionary with interval parts if successful, None otherwise.
+    """
+    if not isinstance(node, ast.Interval):
+        return None
+
+    parts = node.args or []
+
+    if len(parts) != 2:
+        value = parts[0].value if isinstance(parts[0], ast.Constant) else parts[0]
+        result = _parse_interval_value(value)
+        interval_type = parts[0].value if isinstance(parts[1], ast.Constant) else parts[1]
+        unit = _parse_interval_unit(interval_type)
+        if result is not None and unit is not None:
+            return {unit: result}
+        if len(parts) == 1:
+            raw = str(parts[0])
+            if isinstance(raw, str):
+                tokens = raw.replace("'", "").replace('"', "").split()
+                if tokens and tokens[0].lower() == "interval":
+                    tokens = tokens[1:]
+                if len(tokens) >= 2:
+                    value = _parse_interval_value(tokens[0])
+                    unit = _parse_interval_unit(tokens[1])
+                    if value is not None and unit is not None:
+                        return {unit: value}
+
+        return None
+
+
+def _transform_databricks_sql_intervals(node: ASTNode) -> ASTNode | None:
+    """Transform INTERVAL literals in the SQL query to be compatible with Databricks SQL syntax.
+
+    Args:
+        query (ASTNode): The SQL query represented as an ASTNode.
+
+    Returns:
+        ASTNode: The transformed SQL query with compatible INTERVAL syntax.
+    """
+    if not isinstance(node, ast.Function):
+        return None
+
+    function_name = str(node.op).lower()
+    if function_name not in {"date_add", "date_sub"} or len(node.args) != 2:
+        return None
+
+    interval_parts = _get_interval_parts(node.args[1])
+    if interval_parts is None:
+        return None
+    value, unit = interval_parts
+
+    if function_name == "date_sub":
+        value = -value
+
+    date = node.args[0]
+
+    if unit == "day":
+        if function_name == "date_sub":
+            node.args[1] = ast.Constant(abs(value))
+        else:
+            node.args[1] = ast.Constant(value)
+        return None
+
+    if unit == "week":
+        days_value = value * 7
+        if function_name == "date_sub":
+            node.args[1] = ast.Constant(abs(days_value))
+        else:
+            node.args[1] = ast.Constant(days_value)
+        return None
+
+    if unit in {"month", "year", "quarter"}:
+        if unit == "quarter":
+            value = value * 3
+            unit = "month"
+        new_function_name = "add_months"
+        if function_name == "date_sub":
+            value = -value
+        new_node = ast.Function(
+            op=ast.Identifier(new_function_name),
+            args=[date, ast.Constant(value)],
+        )
+        return new_node
+
+    if unit in {"hour", "minute", "second"}:
+        new_function_name = "timestampadd"
+        if function_name == "date_sub":
+            value = -value
+        new_node = ast.Function(
+            op=ast.Identifier(new_function_name),
+            args=[
+                ast.Identifier(unit),
+                ast.Constant(value),
+                date,
+            ],
+        )
+        return new_node
 
 
 def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
@@ -276,33 +400,12 @@ class DatabricksHandler(MetaDatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
+        transformed_query = _transform_databricks_sql_intervals(query)
+        if transformed_query is not None:
+            query = transformed_query
         renderer = SqlalchemyRender(DatabricksDialect)
         query_str = renderer.get_string(query, with_failback=True)
-        query_str = self._transform_databricks_sql_intervals(query_str)
         return self.native_query(query_str)
-
-    def _transform_databricks_sql_intervals(self, query_str: str) -> str:
-        """
-        Transforms INTERVAL expressions in the SQL query to a format compatible with Databricks SQL.
-
-        Args:
-            query (str): The original SQL query string.
-        Returns:
-            str: The transformed SQL query string with compatible INTERVAL expressions.
-        """
-        query_str = re.sub(
-            r"DATE_ADD\s*\(\s*([^,]+),\s*INTERVAL\s+'?(\d+)'?\s+DAY\s*\)",
-            r"DATE_ADD(\1, \2)",
-            query_str,
-            flags=re.IGNORECASE,
-        )
-        query_str = re.sub(
-            r"DATE_SUB\s*\(\s*([^,]+),\s*INTERVAL\s+'?(\d+)'?\s+DAY\s*\)",
-            r"DATE_SUB(\1, \2)",
-            query_str,
-            flags=re.IGNORECASE,
-        )
-        return query_str
 
     def get_tables(self, all: bool = False) -> Response:
         """

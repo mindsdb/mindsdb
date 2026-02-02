@@ -196,8 +196,7 @@ class FileController:
         file_record = self._file_record_by_name(name)
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
-        file_id = file_record.id
-        file_path = file_record.file_path or f"file_{ctx.company_id}_{file_id}"
+        file_path = file_record.file_path or self._get_file_dir(file_record)
         db.session.delete(file_record)
         db.session.commit()
         self.fs_store.delete(file_path)
@@ -209,7 +208,7 @@ class FileController:
             raise FileNotFoundError(f"File '{name}' does not exists")
         file_dir = file_record.file_path
         if not file_dir:
-            file_dir = f"file_{ctx.company_id}_{file_record.id}"
+            file_dir = self._get_file_dir(file_record)
         self.fs_store.get(file_dir, base_dir=self.dir)
         return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))
 
@@ -227,7 +226,7 @@ class FileController:
 
         file_dir = file_record.file_path
         if not file_dir:
-            file_dir = f"file_{ctx.company_id}_{file_record.id}"
+            file_dir = self._get_file_dir(file_record)
         self.fs_store.get(file_dir, base_dir=self.dir)
 
         metadata = file_record.metadata_ or {}
@@ -270,7 +269,7 @@ class FileController:
 
         file_dir = file_record.file_path
         if not file_dir:
-            file_dir = f"file_{ctx.company_id}_{file_record.id}"
+            file_dir = self._get_file_dir(file_record)
         self.fs_store.get(file_dir, base_dir=self.dir)
 
         num = 0

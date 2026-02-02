@@ -532,7 +532,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         TODO:  Add most_common_values and most_common_frequencies
         """
         columns_query = """
-            SELECT TABLE_NAME, COLUMN_NAME
+            SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = current_schema()
         """
@@ -549,25 +549,32 @@ class SnowflakeHandler(MetaDatabaseHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message="No columns found.")
 
         columns_df = columns_result.data_frame
-        grouped = columns_df.groupby("TABLE_NAME")
+        grouped = columns_df.groupby(["TABLE_SCHEMA", "TABLE_NAME"])
         all_stats = []
 
-        for table_name, group in grouped:
+        for (table_schema, table_name), group in grouped:
             select_parts = []
             for _, row in group.iterrows():
                 col = row["COLUMN_NAME"]
+                data_type = row["DATA_TYPE"]
                 # Ensure column names in the query are properly quoted if they contain special characters or are case-sensitive
                 quoted_col = f'"{col}"'
                 select_parts.extend(
                     [
                         f'COUNT_IF({quoted_col} IS NULL) AS "nulls_{col}"',
                         f'APPROX_COUNT_DISTINCT({quoted_col}) AS "distincts_{col}"',
-                        f'MIN({quoted_col}) AS "min_{col}"',
-                        f'MAX({quoted_col}) AS "max_{col}"',
                     ]
                 )
+                # We can sort and find min/max for array but is expensive for large tables, avoid for now
+                if data_type not in {"ARRAY", "OBJECT", "VARIANT"}:
+                    select_parts.extend(
+                        [
+                            f'MIN({quoted_col}) AS "min_{col}"',
+                            f'MAX({quoted_col}) AS "max_{col}"',
+                        ]
+                    )
 
-            quoted_table_name = f'"{table_name}"'
+            quoted_table_name = f'"{table_schema}"."{table_name}"'
             stats_query = f"""
             SELECT COUNT(*) AS "total_rows", {", ".join(select_parts)}
             FROM {quoted_table_name}

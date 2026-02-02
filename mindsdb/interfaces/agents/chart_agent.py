@@ -1,5 +1,6 @@
 """Chart generation agent using Pydantic AI"""
 
+import re
 from typing import Optional, Dict, Any
 import copy
 import pandas as pd
@@ -16,6 +17,15 @@ from mindsdb.api.executor.utilities.sql import query_df
 
 
 logger = log.getLogger(__name__)
+
+
+def _sanitize_order_by_identifiers(sql: str) -> str:
+    """Replace ORDER BY '...' (single-quoted literals) with ORDER BY "..." (identifiers).
+    DuckDB rejects ORDER BY non-integer literals; the LLM often generates column aliases
+    with single quotes instead of double quotes. This fixes that before execution.
+    """
+    # Match (ORDER BY or comma) then optional whitespace, then single-quoted string; replace with double quotes
+    return re.sub(r"((?:ORDER BY|,\s*)\s*)'([^']+)'", r'\1"\2"', sql, flags=re.IGNORECASE)
 
 
 class ChartAgent:
@@ -225,10 +235,11 @@ SQL Query:
                 query, df, prompt, error_context=error_context, retry_count=retry_count if retry_count > 0 else None
             )
             try:
+                data_query = _sanitize_order_by_identifiers(chart_config.data_query_string)
                 logger.debug(
-                    f"ChartAgent.generate_chart_with_data: Executing transformed query on provided dataframe: {chart_config.data_query_string[:100]}..."
+                    f"ChartAgent.generate_chart_with_data: Executing transformed query on provided dataframe: {data_query[:100]}..."
                 )
-                data_df = query_df(df, chart_config.data_query_string)
+                data_df = query_df(df, data_query)
 
                 if data_df.empty:
                     raise ValueError(

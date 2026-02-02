@@ -76,6 +76,7 @@ SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE CAST(datetime AS
 - ALWAYS: When writing queries that involve time, use the time functions in MindsDB SQL, or duckdb functions.
 - ALWAYS:Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE..`;
 - ALWAYS: When columns contain spaces, special characters or are reserved words, use double quotes `"` to quote the column name, for example, "column name" instead of [column name].
+- ALWAYS: In ORDER BY clauses, reference column names or aliases with double quotes when they contain spaces or special characters (e.g. ORDER BY "Number of Reviews" DESC). Never use single quotes in ORDER BY—single quotes denote string literals and will cause a DuckDB error (order_by_non_integer_literal).
 """
 
 sql_with_kb_description = """
@@ -253,7 +254,7 @@ Guidelines:
 - For line and bar charts: First column = x-axis labels, other columns = y-axis data series
 - For pie and doughnut charts: First column = labels, second column = values (single dataset)
 - Apply appropriate transformations, aggregations, and filters to the original query as needed
-- Include ORDER BY clauses when appropriate (e.g., for time series data)
+- Include ORDER BY clauses when appropriate (e.g., for time series data). When ordering by a column alias that contains spaces or special characters, use double quotes: ORDER BY "Column Alias" DESC (never single quotes).
 - The data query should be valid MindsDB SQL that can be executed directly
 
 Example for a line chart:
@@ -265,6 +266,11 @@ Example for a pie chart:
 If the original query is: SELECT category, COUNT(*) FROM db.products
 The data query might be:
 SELECT category AS labels, COUNT(*) AS value FROM (SELECT category, COUNT(*) FROM db.products GROUP BY category)
+
+Example with column alias containing spaces (use double quotes in ORDER BY):
+If the original query is: SELECT product_name, count(*) AS "Number of Reviews" FROM df GROUP BY product_name
+The data query must use double quotes in ORDER BY: SELECT product_name AS labels, count(*) AS "Number of Reviews" FROM df GROUP BY product_name ORDER BY "Number of Reviews" DESC LIMIT 10
+Never write ORDER BY 'Number of Reviews' (single quotes)—that is a string literal and will fail in DuckDB.
 
 Remember:
 - Chart.js config MUST ALWAYS include the 'type' field - this is REQUIRED and cannot be omitted

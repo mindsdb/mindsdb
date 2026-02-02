@@ -356,7 +356,7 @@ class TestShopifyHandlerEdgeCases(BaseShopifyHandlerTest):
 
         self.assertEqual(
             str(context.exception),
-            'Requested field "__not_a_real_column__" was not found in the table schema.',
+            'The specified fields were not found in the table schema: __not_a_real_column__',
         )
 
     def test_empty_connection_data(self):

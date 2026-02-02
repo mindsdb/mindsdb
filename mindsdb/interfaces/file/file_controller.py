@@ -24,6 +24,22 @@ class FileController:
         self.fs_store = FsStore()
         self.dir = os.path.join(self.config.paths["content"], "file")
 
+    @staticmethod
+    def _get_file_dir(file_record) -> str:
+        """Get the file directory path from a file record.
+
+        Format: file_{company_id}_{user_id}_{file_id}
+        """
+        return f"file_{file_record.company_id}_{file_record.user_id}_{file_record.id}"
+
+    @staticmethod
+    def _get_file_dir_by_id(file_id: int) -> str:
+        """Get the file directory path for new files using current context.
+
+        Format: file_{company_id}_{user_id}_{file_id}
+        """
+        return f"file_{ctx.company_id}_{ctx.user_id}_{file_id}"
+
     def get_files_names(self, lower: bool = False):
         """return list of files names
 
@@ -33,13 +49,18 @@ class FileController:
         Returns:
             list[str]: list of files names
         """
-        names = [record[0] for record in db.session.query(db.File.name).filter_by(company_id=ctx.company_id)]
+        names = [
+            record[0]
+            for record in db.session.query(db.File.name).filter_by(company_id=ctx.company_id, user_id=ctx.user_id)
+        ]
         if lower:
             names = [name.lower() for name in names]
         return names
 
     def get_file_meta(self, name):
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             return None
         columns = file_record.columns
@@ -57,7 +78,7 @@ class FileController:
         Returns:
             list[dict]: files metadata
         """
-        file_records = db.session.query(db.File).filter_by(company_id=ctx.company_id).all()
+        file_records = db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id).all()
         files_metadata = [
             {
                 "name": record.name,
@@ -95,6 +116,7 @@ class FileController:
             file_record = db.File(
                 name=name,
                 company_id=ctx.company_id,
+                user_id=ctx.user_id,
                 source_file_path=file_name,
                 file_path="",
                 row_count=len(df),
@@ -104,7 +126,7 @@ class FileController:
             db.session.add(file_record)
             db.session.flush()
 
-            store_file_path = f"file_{ctx.company_id}_{file_record.id}"
+            store_file_path = self._get_file_dir_by_id(file_record.id)
             file_record.file_path = store_file_path
 
             file_dir = Path(self.dir).joinpath(store_file_path)
@@ -159,7 +181,9 @@ class FileController:
             df.to_feather(str(dest))
 
     def delete_file(self, name):
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
         file_id = file_record.id
@@ -170,7 +194,9 @@ class FileController:
         return True
 
     def get_file_path(self, name):
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
         file_dir = file_record.file_path
@@ -187,7 +213,9 @@ class FileController:
         :param page_name: page name, optional
         :return: Page or file content
         """
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
 
@@ -230,7 +258,9 @@ class FileController:
         :param page_name: name of page, optional
         """
 
-        file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
+        file_record = (
+            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
+        )
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
 

@@ -257,7 +257,7 @@ class SQLQuery:
             raise LogicError(e) from e
 
         # -- a plan with failback --
-        if self.planner.plan.probe_query is not None and self.planner.plan.probe_query is not None:
+        if self.planner.plan.probe_query is not None:
             try:
                 probe_query = self.planner.plan.probe_query
                 SQLQuery(probe_query["query"], session=self.session, database=probe_query["database"])

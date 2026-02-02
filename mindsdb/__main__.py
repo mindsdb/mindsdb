@@ -352,23 +352,11 @@ if __name__ == "__main__":
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)
 
-    if config.cmd_args.update_gui or config.cmd_args.load_tokenizer:
-        if config.cmd_args.update_gui:
-            from mindsdb.api.http.initialize import initialize_static
+    if config.cmd_args.update_gui:
+        from mindsdb.api.http.initialize import initialize_static
 
-            logger.info("Updating the GUI version")
-            initialize_static()
-
-        if config.cmd_args.load_tokenizer:
-            try:
-                from langchain_core.language_models import get_tokenizer
-
-                get_tokenizer()
-                logger.info("Tokenizer successfully loaded")
-            except ImportError:
-                logger.info("Failed to load tokenizer due to an import error")
-            except Exception:
-                logger.info("Failed to load tokenizer: ", exc_info=True)
+        logger.info("Updating the GUI version")
+        initialize_static()
 
         sys.exit(0)
 

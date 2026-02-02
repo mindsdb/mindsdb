@@ -51,10 +51,10 @@ class ShopifyMetaAPIResource(MetaAPIResource):
 
         # region Validate that all requested target fields exist in the table schema
         if isinstance(targets, list):
-            for target in targets:
-                lower_names = [x.name.lower() for x in self.model]
-                if target.lower() not in lower_names:
-                    raise ValueError(f'Requested field "{target}" was not found in the table schema.')
+            lower_names = [name.name.lower() for name in self.model]
+            missed_targets = [t for t in targets if t.lower() not in lower_names]
+            if len(missed_targets) > 0:
+                raise ValueError(f'The specified fields were not found in the table schema: {", ".join(missed_targets)}')
         # endregion
 
         columns = get_graphql_columns(self.model, targets)

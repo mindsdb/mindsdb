@@ -595,7 +595,7 @@ class IntegrationController:
         if hasattr(module, "permanent"):
             handler_meta["permanent"] = module.permanent
         else:
-            if handler_meta.get("name") in ("files", "views", "lightwood"):
+            if handler_meta.get("name") in ("files", "views"):
                 handler_meta["permanent"] = True
             else:
                 handler_meta["permanent"] = False
@@ -672,7 +672,7 @@ class IntegrationController:
         :return: extracted connection arguments
         """
 
-        code = ast.parse(args_file.read_text())
+        code = ast.parse(args_file.read_text(encoding="utf-8"))
 
         args = {}
         for item in code.body:
@@ -728,7 +728,7 @@ class IntegrationController:
 
         if not path.exists():
             return
-        code = ast.parse(path.read_text())
+        code = ast.parse(path.read_text(encoding="utf-8"))
         # find base class of handler.
         #  TODO trace inheritance (is used only for sql handler)
         for item in code.body:
@@ -750,7 +750,7 @@ class IntegrationController:
         init_file = handler_dir / "__init__.py"
         if not init_file.exists():
             return {}
-        code = ast.parse(init_file.read_text())
+        code = ast.parse(init_file.read_text(encoding="utf-8"))
 
         info = {
             "support_level": HANDLER_SUPPORT_LEVEL.COMMUNITY,

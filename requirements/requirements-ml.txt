@@ -1,4 +1,0 @@
-# Requieremtnts used mostly in the ML utils, this will be depricated with Lightwood deprecation
-scikit-learn==1.5.2
-hierarchicalforecast~=0.4.0
-numba >=0.60.0  # for hierarchicalforecast

@@ -355,7 +355,7 @@ class VectorStoreHandler(BaseHandler):
                 )
 
                 df_update = df_common[~df_common["match"].isna()].drop("orig_id", axis=1).drop("match", axis=1)
-                df_insert = df_common[df_common["match"].isna()]
+                df_insert = df_common[df_common["match"].isna()].drop("match", axis=1)
 
                 ids_to_remove = set(df_existed["id"]) - set(df_update["id"])
             else:

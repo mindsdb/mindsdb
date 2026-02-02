@@ -7,7 +7,7 @@ import numpy as np
 import orjson
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant, OrderBy
+from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log
@@ -157,21 +157,8 @@ def get_duckdb_functions_and_kw_list() -> list[str] | None:
     return _duckdb_functions_and_kw_list
 
 
-def _replace_table_refs_with_df(query_ast: ASTNode) -> None:
-    """Replace all table references in the query AST with the identifier 'df' (in-place).
-    Used when running a query with subqueries against a single dataframe.
-    """
-
-    def replace_table(node, is_table, **kwargs):
-        if is_table and isinstance(node, Identifier):
-            node.parts = ["df"]
-
-    query_traversal(query_ast, replace_table)
-
-
 def query_df(df, query, session=None):
-    """Perform query on DataFrame. Supports simple 'SELECT from TABLE' and SELECT from (subquery)
-    where all table references are resolved to the single dataframe 'df'.
+    """Perform simple query ('select' from one table, without subqueries and joins) on DataFrame.
 
     Args:
         df (pandas.DataFrame): data
@@ -188,7 +175,7 @@ def query_df(df, query, session=None):
         query_ast = copy.deepcopy(query)
         query_str = str(query)
 
-    if not isinstance(query_ast, Select):
+    if isinstance(query_ast, Select) is False or isinstance(query_ast.from_table, Identifier) is False:
         raise QueryError(
             db_type="DuckDB",
             db_error_msg="Only 'SELECT from TABLE' statements supported for internal query",
@@ -197,34 +184,9 @@ def query_df(df, query, session=None):
             is_expected=False,
         )
 
-    from_table = query_ast.from_table
-    if isinstance(from_table, Identifier):
-        query_ast.from_table.parts = ["df"]
-    elif isinstance(from_table, Select):
-        _replace_table_refs_with_df(query_ast)
-    else:
-        raise QueryError(
-            db_type="DuckDB",
-            db_error_msg="Only 'SELECT from TABLE' statements supported for internal query",
-            failed_query=query_str,
-            is_external=False,
-            is_expected=False,
-        )
+    query_ast.from_table.parts = ["df"]
 
     return query_dfs({"df": df}, query_ast, session=session)
-
-
-def _fix_order_by_string_literals(query_ast: ASTNode) -> None:
-    """Replace ORDER BY string literals (Constant) with column identifiers (Identifier) in-place.
-    DuckDB rejects ORDER BY non-integer literals; LLM-generated queries often use ORDER BY 'col'.
-    Converting to Identifier ensures the renderer outputs ORDER BY "col" (valid identifier).
-    """
-
-    def fix_order_by(node, **kwargs):
-        if isinstance(node, OrderBy) and node.field is not None and isinstance(node.field, Constant):
-            node.field = Identifier(parts=[str(node.field.value)])
-
-    query_traversal(query_ast, fix_order_by)
 
 
 def query_dfs(dataframes, query_ast, session=None):
@@ -234,8 +196,6 @@ def query_dfs(dataframes, query_ast, session=None):
         user_functions = session.function_controller.create_function_set()
     else:
         user_functions = None
-
-    _fix_order_by_string_literals(query_ast)
 
     def adapt_query(node, is_table, **kwargs):
         if is_table:

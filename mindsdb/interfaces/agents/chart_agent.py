@@ -1,31 +1,57 @@
 """Chart generation agent using Pydantic AI"""
 
-import re
 from typing import Optional, Dict, Any
 import copy
 import pandas as pd
 
 from pydantic_ai import Agent
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Identifier, Constant, OrderBy
 
 from mindsdb.utilities import log
 from mindsdb.interfaces.agents.utils.chart_toolkit import ChartConfig
 from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_model_instance_from_kwargs
 from mindsdb.interfaces.agents.modes import prompts
 from mindsdb.utilities.exception import QueryError
-
-from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.api.executor.utilities.sql import query_dfs
 
 
 logger = log.getLogger(__name__)
 
 
-def _sanitize_order_by_identifiers(sql: str) -> str:
-    """Replace ORDER BY '...' (single-quoted literals) with ORDER BY "..." (identifiers).
-    DuckDB rejects ORDER BY non-integer literals; the LLM often generates column aliases
-    with single quotes instead of double quotes. This fixes that before execution.
+def _replace_table_refs_with_df(query_ast):
+    """Replace all table references in the query AST with the identifier 'df' (in-place).
+    Chart-generated queries may use subqueries and reference the original table; we run
+    against a single dataframe, so all table refs must point to 'df'.
     """
-    # Match (ORDER BY or comma) then optional whitespace, then single-quoted string; replace with double quotes
-    return re.sub(r"((?:ORDER BY|,\s*)\s*)'([^']+)'", r'\1"\2"', sql, flags=re.IGNORECASE)
+
+    def replace_table(node, is_table, **kwargs):
+        if is_table and isinstance(node, Identifier):
+            node.parts = ["df"]
+
+    query_traversal(query_ast, replace_table)
+
+
+def _fix_order_by_string_literals(query_ast):
+    """Replace ORDER BY string literals (Constant) with column identifiers (Identifier) in-place.
+    DuckDB rejects ORDER BY non-integer literals; the LLM often generates ORDER BY 'column alias'.
+    Converting to Identifier ensures the rendered SQL uses ORDER BY "column alias" (valid).
+    """
+
+    def fix_order_by(node, **kwargs):
+        if isinstance(node, OrderBy) and node.field is not None and isinstance(node.field, Constant):
+            node.field = Identifier(parts=[str(node.field.value)])
+
+    query_traversal(query_ast, fix_order_by)
+
+
+def _prepare_chart_data_query(data_query_string: str, df: pd.DataFrame):
+    """Parse chart-generated SQL, fix common LLM mistakes (table refs, ORDER BY literals), run on df."""
+    query_ast = parse_sql(data_query_string)
+    _replace_table_refs_with_df(query_ast)
+    _fix_order_by_string_literals(query_ast)
+    return query_dfs({"df": df}, query_ast, session=None)
 
 
 class ChartAgent:
@@ -235,11 +261,10 @@ SQL Query:
                 query, df, prompt, error_context=error_context, retry_count=retry_count if retry_count > 0 else None
             )
             try:
-                data_query = _sanitize_order_by_identifiers(chart_config.data_query_string)
                 logger.debug(
-                    f"ChartAgent.generate_chart_with_data: Executing transformed query on provided dataframe: {data_query[:100]}..."
+                    f"ChartAgent.generate_chart_with_data: Executing transformed query on provided dataframe: {chart_config.data_query_string[:100]}..."
                 )
-                data_df = query_df(df, data_query)
+                data_df = _prepare_chart_data_query(chart_config.data_query_string, df)
 
                 if data_df.empty:
                     raise ValueError(

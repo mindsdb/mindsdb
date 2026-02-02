@@ -500,7 +500,7 @@ class Project:
                     company_id=ctx.company_id, user_id=ctx.user_id, project_id=self.id, name=table_name
                 ).first()
                 if agent is not None:
-                    from mindsdb.interfaces.agents.constants import ASSISTANT_COLUMN, USER_COLUMN
+                    from mindsdb.interfaces.agents.utils.constants import ASSISTANT_COLUMN, USER_COLUMN
 
                     columns = [ASSISTANT_COLUMN, USER_COLUMN]
             case "KNOWLEDGE_BASE":

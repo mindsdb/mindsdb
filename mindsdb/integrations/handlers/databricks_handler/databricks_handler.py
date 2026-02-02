@@ -1,4 +1,4 @@
-from typing import Text, Dict, Any, Optional, List
+from typing import Text, Dict, Any, Optional, List, Tuple
 
 import pandas as pd
 import re
@@ -24,6 +24,9 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 logger = log.getLogger(__name__)
+
+
+_INTERVAL_RE = re.compile(r"(?is)^\s*(?:interval\s+)?'?(?P<value>[+-]?\d+)'?\s+(?P<unit>[a-zA-Z]+)\s*$")
 
 
 def _escape_literal(value: str) -> str:
@@ -52,58 +55,84 @@ def _validate_identifier(identifier: str) -> str:
 
 
 def _parse_interval_value(value: Any) -> Optional[int]:
+    if isinstance(value, bool):
+        return None
     if isinstance(value, int):
         return value
     if isinstance(value, str):
-        return int(value)
+        value = value.strip().strip("'").strip('"')
+        if re.fullmatch(r"[+-]?\d+", value):
+            return int(value)
     return None
 
 
 def _parse_interval_unit(unit: Any) -> Optional[str]:
     if isinstance(unit, str):
-        unit_upper = unit.upper()
+        unit_upper = unit.strip().upper()
+        if unit_upper.endswith("S"):
+            unit_upper = unit_upper[:-1]
         valid_units = {"YEAR", "MONTH", "DAY", "HOUR", "MINUTE", "SECOND", "WEEK", "QUARTER"}
         if unit_upper in valid_units:
             return unit_upper
     return None
 
 
-def _get_interval_parts(node: ASTNode) -> Optional[Dict[str, int]]:
+def _parse_interval_literal(value: Any) -> Optional[Tuple[int, str]]:
+    if value is None:
+        return None
+
+    match = _INTERVAL_RE.match(str(value))
+    if not match:
+        return None
+
+    parsed_value = _parse_interval_value(match.group("value"))
+    parsed_unit = _parse_interval_unit(match.group("unit"))
+    if parsed_value is None or parsed_unit is None:
+        return None
+    return parsed_value, parsed_unit
+
+
+def _get_interval_parts(node: ASTNode) -> Optional[Tuple[int, str]]:
     """Extract interval parts from an ASTNode representing an INTERVAL literal.
 
     Args:
         node (ASTNode): The ASTNode representing the INTERVAL literal.
     Returns:
-        Optional[Dict[str, int]]: A dictionary with interval parts if successful, None otherwise.
+        Optional[Tuple[int, str]]: A tuple with (value, unit) if successful, None otherwise.
     """
+    if isinstance(node, ast.UnaryOperation):
+        if node.op == "-" and node.args:
+            parts = _get_interval_parts(node.args[0])
+            if parts is None:
+                return None
+            # Negate the value part
+            return -parts[0], parts[1]
+        return None
+
+    if isinstance(node, ast.Constant):
+        return _parse_interval_literal(node.value)
+
     if not isinstance(node, ast.Interval):
         return None
 
     parts = node.args or []
 
-    if len(parts) != 2:
+    if len(parts) >= 2:
         value = parts[0].value if isinstance(parts[0], ast.Constant) else parts[0]
-        result = _parse_interval_value(value)
-        interval_type = parts[0].value if isinstance(parts[1], ast.Constant) else parts[1]
-        unit = _parse_interval_unit(interval_type)
-        if result is not None and unit is not None:
-            return {unit: result}
-        if len(parts) == 1:
-            raw = str(parts[0])
-            if isinstance(raw, str):
-                tokens = raw.replace("'", "").replace('"', "").split()
-                if tokens and tokens[0].lower() == "interval":
-                    tokens = tokens[1:]
-                if len(tokens) >= 2:
-                    value = _parse_interval_value(tokens[0])
-                    unit = _parse_interval_unit(tokens[1])
-                    if value is not None and unit is not None:
-                        return {unit: value}
+        unit = parts[1].value if isinstance(parts[1], ast.Constant) else parts[1]
+        parsed_value = _parse_interval_value(value)
+        parsed_unit = _parse_interval_unit(unit)
+        if parsed_value is not None and parsed_unit is not None:
+            return parsed_value, parsed_unit
 
-        return None
+    if len(parts) == 1:
+        raw = parts[0].value if isinstance(parts[0], ast.Constant) else parts[0]
+        return _parse_interval_literal(raw)
+
+    return None
 
 
-def _transform_databricks_sql_intervals(node: ASTNode) -> ASTNode | None:
+def _transform_databricks_sql_intervals(node: ASTNode, **kwargs: Any) -> ASTNode | None:
     """Transform INTERVAL literals in the SQL query to be compatible with Databricks SQL syntax.
 
     Args:
@@ -124,47 +153,44 @@ def _transform_databricks_sql_intervals(node: ASTNode) -> ASTNode | None:
         return None
     value, unit = interval_parts
 
-    if function_name == "date_sub":
-        value = -value
-
     date = node.args[0]
 
-    if unit == "day":
-        if function_name == "date_sub":
-            node.args[1] = ast.Constant(abs(value))
-        else:
+    if unit == "DAY":
+        if function_name == "date_add":
             node.args[1] = ast.Constant(value)
-        return None
-
-    if unit == "week":
-        days_value = value * 7
-        if function_name == "date_sub":
-            node.args[1] = ast.Constant(abs(days_value))
         else:
-            node.args[1] = ast.Constant(days_value)
+            node.args[1] = ast.Constant(abs(value))
         return None
 
-    if unit in {"month", "year", "quarter"}:
-        if unit == "quarter":
-            value = value * 3
-            unit = "month"
-        new_function_name = "add_months"
+    if unit == "WEEK":
+        days_value = value * 7
+        if function_name == "date_add":
+            node.args[1] = ast.Constant(days_value)
+        else:
+            node.args[1] = ast.Constant(abs(days_value))
+        return None
+
+    if unit in {"MONTH", "YEAR", "QUARTER"}:
+        month_value = value
+        if unit == "YEAR":
+            month_value = value * 12
+        elif unit == "QUARTER":
+            month_value = value * 3
         if function_name == "date_sub":
-            value = -value
+            month_value = -month_value
         new_node = ast.Function(
-            op=ast.Identifier(new_function_name),
-            args=[date, ast.Constant(value)],
+            op="add_months",
+            args=[date, ast.Constant(month_value)],
         )
         return new_node
 
-    if unit in {"hour", "minute", "second"}:
-        new_function_name = "timestampadd"
+    if unit in {"HOUR", "MINUTE", "SECOND"}:
         if function_name == "date_sub":
             value = -value
         new_node = ast.Function(
-            op=ast.Identifier(new_function_name),
+            op="timestampadd",
             args=[
-                ast.Identifier(unit),
+                ast.Identifier(unit.lower()),
                 ast.Constant(value),
                 date,
             ],
@@ -400,7 +426,7 @@ class DatabricksHandler(MetaDatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        transformed_query = _transform_databricks_sql_intervals(query)
+        transformed_query = query_traversal(query, _transform_databricks_sql_intervals)
         if transformed_query is not None:
             query = transformed_query
         renderer = SqlalchemyRender(DatabricksDialect)

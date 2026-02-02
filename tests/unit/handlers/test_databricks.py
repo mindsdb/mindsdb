@@ -8,6 +8,7 @@ import pandas as pd
 
 try:
     from databricks.sql import RequestError, ServerOperationError
+    from mindsdb_sql_parser import parse_sql
     from mindsdb.integrations.handlers.databricks_handler.databricks_handler import (
         DatabricksHandler,
     )
@@ -407,6 +408,46 @@ class TestDateTimeFunctions(unittest.TestCase):
 
         self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
         self.assertEqual(result.data_frame.iloc[0]["new_date"], expected_date)
+
+    def test_query_rewrites_date_add_day_interval(self):
+        query = parse_sql("SELECT date_add(o_orderdate, INTERVAL '30' DAY) AS date_add_0 FROM orders LIMIT 1")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("date_add(o_orderdate, 30)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_rewrites_date_sub_week_interval(self):
+        query = parse_sql("SELECT date_sub(o_orderdate, INTERVAL '2' WEEK) AS date_sub_0 FROM orders LIMIT 1")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("date_sub(o_orderdate, 14)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_rewrites_date_add_month_interval(self):
+        query = parse_sql("SELECT date_add(o_orderdate, INTERVAL '2' MONTH) AS date_add_0 FROM orders LIMIT 1")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("add_months(o_orderdate, 2)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_rewrites_date_sub_hour_interval(self):
+        query = parse_sql("SELECT date_sub(o_orderdate, INTERVAL '3' HOUR) AS date_sub_0 FROM orders LIMIT 1")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("timestampadd(hour, -3, o_orderdate)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
 
 
 if __name__ == "__main__":

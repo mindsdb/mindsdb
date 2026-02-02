@@ -71,7 +71,12 @@ class SQLQuery:
         else:
             self.database = session.database
 
-        self.context = {"database": None if self.database == "" else self.database.lower(), "row_id": 0}
+        # Handle None or empty database - convert to None for context
+        if self.database is None or self.database == "":
+            db_context = None
+        else:
+            db_context = self.database.lower()
+        self.context = {"database": db_context, "row_id": 0}
 
         self.columns_list = None
         self.steps_data: Dict[int, ResultSet] = {}

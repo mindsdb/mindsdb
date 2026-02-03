@@ -1,5 +1,5 @@
 from .common import AliasesEnum, Count, MailingAddress, OrderCancellation, MoneyBag
-from .utils import Extract
+from .utils import Extract, DeepExtract
 
 
 class Orders(AliasesEnum):
@@ -123,6 +123,10 @@ class Orders(AliasesEnum):
     totalDiscountsSet = MoneyBag
     totalOutstandingSet = MoneyBag
     totalPriceSet = MoneyBag
+    totalPriceSet_presentmentMoney_amount = DeepExtract(["totalPriceSet", "presentmentMoney", "amount"], 'DECIMAL')
+    totalPriceSet_presentmentMoney_currencyCode = DeepExtract(["totalPriceSet", "presentmentMoney", "currencyCode"], 'TEXT')
+    totalPriceSet_shopMoney_amount = DeepExtract(["totalPriceSet", "shopMoney", "amount"], 'DECIMAL')
+    totalPriceSet_shopMoney_currencyCode = DeepExtract(["totalPriceSet", "shopMoney", "currencyCode"], 'TEXT')
     totalReceivedSet = MoneyBag
     totalRefundedSet = MoneyBag
     totalRefundedShippingSet = MoneyBag
@@ -1020,3 +1024,15 @@ columns = [
         "IS_NULLABLE": False,
     },
 ]
+
+# region add fields flattened from JSON
+for field_name, field in Orders.aliases():
+    if isinstance(field, DeepExtract):
+        columns.append({
+            "TABLE_NAME": "orders",
+            "COLUMN_NAME": field_name,
+            "DATA_TYPE": field.mysql_data_type,
+            "COLUMN_DESCRIPTION": field.description,
+            "IS_NULLABLE": None,
+        })
+# endregion

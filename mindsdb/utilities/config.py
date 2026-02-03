@@ -217,6 +217,10 @@ class Config:
             },
             "pid_file_content": None,
             "default_ml_engine": None,
+            "knowledge_bases": {
+                "disable_autobatch": False,
+                "disable_pgvector_autobatch": True,
+            },
         }
         # endregion
 

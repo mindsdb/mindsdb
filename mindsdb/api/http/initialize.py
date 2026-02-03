@@ -351,11 +351,6 @@ def initialize_app(is_restart: bool = False):
         user_class = request.headers.get("user-class")
 
         try:
-            email_confirmed = int(request.headers.get("email-confirmed", 1))
-        except Exception:
-            email_confirmed = 1
-
-        try:
             user_id = int(request.headers.get("user-id", 0))
         except Exception:
             user_id = 0
@@ -372,7 +367,6 @@ def initialize_app(is_restart: bool = False):
         ctx.user_id = user_id
         ctx.company_id = company_id
         ctx.user_class = user_class
-        ctx.email_confirmed = email_confirmed
 
     logger.debug("Done initializing app.")
     return app

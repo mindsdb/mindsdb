@@ -31,7 +31,6 @@ from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.knowledge_bases import ns_conf as knowledge_bases_ns
 from mindsdb.api.http.namespaces.models import ns_conf as models_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
-from mindsdb.api.http.namespaces.skills import ns_conf as skills_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
@@ -278,7 +277,6 @@ def initialize_app(is_restart: bool = False):
         views_ns,
         models_ns,
         chatbots_ns,
-        skills_ns,
         agents_ns,
         jobs_ns,
         knowledge_bases_ns,

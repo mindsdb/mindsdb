@@ -13,11 +13,10 @@ from mindsdb_sql_parser.ast import (
     Insert,
 )
 from mindsdb_sql_parser import parse_sql
-
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 
-class TestRender:
+class TestMysqlRender:
     def test_create_table(self):
         query = CreateTable(
             name="tbl1",
@@ -78,6 +77,8 @@ class TestRender:
         assert sql == """INSERT INTO tbl1 (a, b) VALUES (%s, %s)"""
         assert params == values
 
+
+class TestPostgresRender:
     def test_alias_in_case(self):
         sql = """
            select case mean when 0 then null else stdev/mean end cov from table1
@@ -218,3 +219,19 @@ class TestRender:
         rendered = SqlalchemyRender("postgres").get_string(ast, with_failback=False)
         expected = "SELECT * FROM tbl1 GROUP BY ROLLUP(a, b) LIMIT 100"
         assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()
+
+
+class TestMSSQLRender:
+    def test_mixed_join(self):
+        sql = """
+            select * from car_info order by year limit 10 offset 1
+        """
+        query = parse_sql(sql)
+        rendered = SqlalchemyRender("mssql").get_string(query, with_failback=False)
+
+        expected = dedent("""
+           SELECT * FROM car_info ORDER BY year
+           OFFSET 1 ROWS FETCH FIRST 10 ROWS ONLY
+        """).strip()
+
+        assert rendered.replace("\n", "") == expected.replace("\n", " ")

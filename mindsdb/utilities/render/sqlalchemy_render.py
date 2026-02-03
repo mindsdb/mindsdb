@@ -145,8 +145,8 @@ class SqlalchemyRender:
         self.selects_stack = []
 
         if dialect_name == "mssql":
-            # update version to MS_2008_VERSION for supports_multivalues_insert
-            self.dialect.server_version_info = (10,)
+            # update version to MS_2012_VERSION for supports_multivalues_insert and offset
+            self.dialect.server_version_info = (12,)
             self.dialect._setup_version_attributes()
         elif dialect_name == "mysql":
             # update version for support float cast

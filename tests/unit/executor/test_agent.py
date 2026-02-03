@@ -98,6 +98,12 @@ def get_dataset_planets():
 
 
 class TestAgent(BaseExecutorDummyML):
+    def setup_method(self):
+        super().setup_method()
+        from mindsdb.utilities.config import config
+
+        config["knowledge_bases"]["disable_autobatch"] = True
+
     @pytest.mark.slow
     def unused_test_mindsdb_provider(self):
         # pydantic agent doesn't support using mindsdb model
@@ -331,18 +337,39 @@ class TestAgent(BaseExecutorDummyML):
         if not found:
             raise AttributeError("Agent response is not found")
 
+    def _create_kb_storage(self, kb_name):
+        self.run_sql(f"""
+          create database db_{kb_name} 
+           with 
+           engine='chromadb',
+           PARAMETERS = {{
+               'persist_directory': '{kb_name}'
+           }}
+        """)
+        return f"db_{kb_name}.default_collection"
+
+    def _drop_kb_storage(self, vector_table_name):
+        self.run_sql(f"drop table {vector_table_name}")
+
+        db_name = vector_table_name.split(".")[0]
+
+        self.run_sql(f"drop database {db_name}")
+
     @patch("litellm.embedding")
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
     def test_agent_retrieval(self, mock_openai, mock_litellm_embedding):
         set_litellm_embedding(mock_litellm_embedding)
-        self.run_sql("""
+
+        vector_table_name = self._create_kb_storage("kb_review")
+        self.run_sql(f"""
             create knowledge base kb_review
             using
-                embedding_model = {
+                storage={vector_table_name},
+                embedding_model = {{
                     "provider": "bedrock",
                     "model_name": "dummy_model",
                     "api_key": "dummy_key"
-                }
+                }}
         """)
 
         os.environ["OPENAI_API_KEY"] = "--"
@@ -385,6 +412,9 @@ class TestAgent(BaseExecutorDummyML):
             # check kb input
             args, _ = kb_select.call_args
             assert user_question in args[0].where.args[1].value
+
+        self.run_sql("drop knowledge base kb_review")
+        self._drop_kb_storage(vector_table_name)
 
     # should not be possible to drop demo agent
     def test_drop_demo_agent(self):
@@ -442,9 +472,13 @@ class TestAgent(BaseExecutorDummyML):
     def test_agent_permissions(self, mock_litellm_embedding, mock_openai):
         set_litellm_embedding(mock_litellm_embedding)
 
-        kb_sql = """
+        vector_table_name = self._create_kb_storage("kb_show")
+
+        kb_sql = f"""
             create knowledge base %s
-            using embedding_model = {"provider": "bedrock", "model_name": "titan"}
+            using 
+            storage={vector_table_name},
+            embedding_model = {{"provider": "bedrock", "model_name": "titan"}}
         """
         self.run_sql(kb_sql % "kb_show1")
         self.run_sql(kb_sql % "kb_show2")
@@ -545,17 +579,24 @@ class TestAgent(BaseExecutorDummyML):
         # result of query
         assert "Jupiter" in mock_openai.agent_calls[2]
 
+        self.run_sql("drop knowledge base kb_show1")
+        self.run_sql("drop knowledge base kb_show2")
+        self.run_sql("drop knowledge base kb_hide")
+        self._drop_kb_storage(vector_table_name)
+
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_agent_new_syntax(self, mock_litellm_embedding, mock_openai):
         set_litellm_embedding(mock_litellm_embedding)
-
+        vector_table_name = self._create_kb_storage("kb")
         df = get_dataset_planets()
         # create 2 files and KBs
         for i in (1, 2):
             self.run_sql(f"""
-                create knowledge base kb{i}
-                using embedding_model = {{"provider": "bedrock", "model_name": "titan"}}
+                create knowledge base kb{i}                
+                using 
+                storage={vector_table_name},
+                embedding_model = {{"provider": "bedrock", "model_name": "titan"}}
             """)
             self.save_file(f"file{i}", df)
 
@@ -667,13 +708,20 @@ class TestAgent(BaseExecutorDummyML):
         # check prompt template
         assert "important system prompt №37" in mock_openai.agent_calls[0]
 
+        self.run_sql("drop knowledge base kb1")
+        self.run_sql("drop knowledge base kb2")
+        self._drop_kb_storage(vector_table_name)
+
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_agent_accept_wrong_quoting(self, mock_litellm_embedding, mock_openai):
         set_litellm_embedding(mock_litellm_embedding)
-        self.run_sql("""
+        vector_table_name = self._create_kb_storage("kb1")
+        self.run_sql(f"""
             create knowledge base kb1
-            using embedding_model = {"provider": "bedrock", "model_name": "titan"}
+            using             
+            storage={vector_table_name},
+            embedding_model = {{"provider": "bedrock", "model_name": "titan"}}
         """)
         df = get_dataset_planets()
 
@@ -707,6 +755,9 @@ class TestAgent(BaseExecutorDummyML):
 
         assert "Jupiter" in mock_openai.agent_calls[2]
         assert "Venus" in mock_openai.agent_calls[3]
+
+        self.run_sql("drop knowledge base kb1")
+        self._drop_kb_storage(vector_table_name)
 
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")

@@ -133,24 +133,13 @@ GCS_DEP002_IGNORE_HANDLER_DEPS = ["gcsfs"]
 
 LINDORM_DEP002_IGNORE_HANDLER_DEPS = ["protobuf"]
 
-HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS = ["torch"]
-
-DSPY_DEP002_IGNORE_HANDLER_DEPS = ["wikipedia", "dspy-ai", "chromadb", "tiktoken"]
-
 RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers", "faiss-cpu"]
 
 SOLR_DEP002_IGNORE_HANDLER_DEPS = ["sqlalchemy-solr"]
 
-LANGCHAIN_DEP002_IGNORE_HANDLER_DEPS = ["litellm", "chromadb", "tiktoken"]
-
-LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
-
 OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
-
-# upper version of numba is fixed in statsforecast handler to prevent installing numba==0.62.0 (its import fails on windows)
-STATSFORECAST_EP002_IGNORE_HANDLER_DEPS = ["numba"]
 
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
@@ -162,15 +151,10 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + HIVE_DEP002_IGNORE_HANDLER_DEPS
         + GCS_DEP002_IGNORE_HANDLER_DEPS
         + LINDORM_DEP002_IGNORE_HANDLER_DEPS
-        + HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS
-        + DSPY_DEP002_IGNORE_HANDLER_DEPS
         + RAG_DEP002_IGNORE_HANDLER_DEPS
         + SOLR_DEP002_IGNORE_HANDLER_DEPS
-        + LANGCHAIN_DEP002_IGNORE_HANDLER_DEPS
-        + LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
-        + STATSFORECAST_EP002_IGNORE_HANDLER_DEPS
     )
 )
 

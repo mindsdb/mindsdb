@@ -69,7 +69,7 @@ def set_litellm_embedding(mock_litellm_embedding, dimension=None):
     mock_litellm_embedding.side_effect = resp_f
 
 
-class TestKB(BaseExecutorDummyML):
+class BaseTestKB(BaseExecutorDummyML):
     def _create_kb(
         self,
         name,
@@ -107,10 +107,6 @@ class TestKB(BaseExecutorDummyML):
         if storage_table:
             kb_params["storage"] = storage_table
 
-        storage_table = self._get_storage_table(name)
-        if storage_table:
-            kb_params["storage"] = storage_table
-
         param_str = ""
         if kb_params:
             param_items = []
@@ -130,9 +126,23 @@ class TestKB(BaseExecutorDummyML):
         # default chromadb
         return None
 
-    def _get_storage_table(self, kb_name):
-        # default chromadb
-        return None
+    def _get_ral_table(self):
+        data = [
+            ["1000", "Green beige", "Beige verdastro"],
+            ["1004", "Golden yellow", "Giallo oro"],
+            ["9016", "Traffic white", "Bianco traffico"],
+            ["9023", "Pearl dark grey", "Grigio scuro perlato"],
+        ]
+
+        return pd.DataFrame(data, columns=["ral", "english", "italian"])
+
+
+class TestKB(BaseTestKB):
+    def setup_method(self):
+        super().setup_method()
+        from mindsdb.utilities.config import config
+
+        config["knowledge_bases"]["disable_autobatch"] = True
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb(self, mock_litellm_embedding):
@@ -366,16 +376,6 @@ class TestKB(BaseExecutorDummyML):
         assert len(scores) == 3
         # Fallback pattern should be descending
         assert scores[0] > scores[1] > scores[2]
-
-    def _get_ral_table(self):
-        data = [
-            ["1000", "Green beige", "Beige verdastro"],
-            ["1004", "Golden yellow", "Giallo oro"],
-            ["9016", "Traffic white", "Bianco traffico"],
-            ["9023", "Pearl dark grey", "Grigio scuro perlato"],
-        ]
-
-        return pd.DataFrame(data, columns=["ral", "english", "italian"])
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_join_kb_table(self, mock_litellm_embedding):
@@ -1161,3 +1161,57 @@ class TestKB(BaseExecutorDummyML):
         ret = self.run_sql("select * from kb1 where id = 1")
         assert len(ret) == 1
         assert ret["chunk_content"][0] == "dog"
+
+
+class TestKBAutoBatch(BaseTestKB):
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_no_autobatch(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+        df = self._get_ral_table()
+        self.save_file("ral", df)
+
+        # -- sync plan --
+        # default id column is `id`, but dataset doesn't have it:
+        # query should be switched to a sync plan
+        self._create_kb("kb_ral", content_columns=["english"])
+
+        ret = self.run_sql(
+            """
+                insert into kb_ral
+                select * from files.ral
+            """
+        )
+        # no response from insert
+        assert ret is None or len(ret) == 0
+        ret = self.run_sql("select * from kb_ral limit 1")
+        assert len(ret) == 1
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_autobatch(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+        df = self._get_ral_table()
+        self.save_file("ral", df)
+
+        # -- async plan --
+        with task_monitor():
+            self._create_kb("kb_ral_async", id_column="ral", content_columns=["english"])
+
+            ret = self.run_sql(
+                """
+                    insert into kb_ral_async
+                    select * content from files.ral
+                """
+            )
+            # result is the record from `queries`
+            assert len(ret) == 1
+            query_id = ret["ID"][0]
+            for i in range(1000):
+                time.sleep(0.2)
+                ret = self.run_sql(f"select * from information_schema.queries where id = {query_id}")
+                if ret["ERROR"][0] is not None:
+                    raise RuntimeError(ret["ERROR"][0])
+                if ret["FINISHED_AT"][0] is not None:
+                    break
+
+            ret = self.run_sql("select * from kb_ral_async where id = '1000'")
+            assert ret["id"][0] == "1000"

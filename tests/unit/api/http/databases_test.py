@@ -167,10 +167,10 @@ def test_update_database_check_connection_with_invalid_parameters(client):
                 "port": 5432,
                 "user": "invalid_user",
                 "password": "invalid_password",
-                "database": "invalid_db"
-            }
+                "database": "invalid_db",
+            },
         },
-        "check_connection": True
+        "check_connection": True,
     }
 
     response = client.put("/api/databases/test_invalid_connection", json=database_data, follow_redirects=True)

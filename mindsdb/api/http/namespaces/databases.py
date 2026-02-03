@@ -208,7 +208,9 @@ class DatabaseResource(Resource):
                     "If you want to create a project instead, use the POST /api/projects endpoint.",
                 )
             try:
-                new_integration_id = session.integration_controller.add(database_name, database["engine"], parameters, check_connection=check_connection)
+                new_integration_id = session.integration_controller.add(
+                    database_name, database["engine"], parameters, check_connection=check_connection
+                )
             except Exception as e:
                 return http_error(HTTPStatus.BAD_REQUEST, "Connection error", str(e) or "Connection error")
             new_integration = session.database_controller.get_integration(new_integration_id)

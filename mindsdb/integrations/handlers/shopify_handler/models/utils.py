@@ -19,7 +19,7 @@ class DeepExtract:
         self.path = path
         self.mysql_data_type = mysql_data_type
         if description is None:
-            path_str = path[0] + ''.join(f'["{p}"]' for p in path[1:])
-            self.description = f'Value is extracted from {path_str}'
+            path_str = path[0] + "".join(f'["{p}"]' for p in path[1:])
+            self.description = f"Value is extracted from {path_str}"
         else:
             self.description = description

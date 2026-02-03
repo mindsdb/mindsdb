@@ -344,6 +344,21 @@ class TestShopifyHandlerEdgeCases(BaseShopifyHandlerTest):
         self.assertEqual(handler.connection_data["client_id"], self.TEST_CLIENT_ID)
         self.assertEqual(handler.connection_data["client_secret"], self.TEST_CLIENT_SECRET)
 
+    def test_table_list_raises_for_unknown_target(self):
+        """Test that table list() fails fast when a requested target field is unknown."""
+        handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
+        handler.connect = MagicMock(return_value=MagicMock())
+
+        products_table = handler._tables["products"]
+
+        with self.assertRaises(ValueError) as context:
+            products_table.list(targets=["__not_a_real_column__"])
+
+        self.assertEqual(
+            str(context.exception),
+            "The specified fields were not found in the table schema: __not_a_real_column__",
+        )
+
     def test_empty_connection_data(self):
         """Test handler initialization with empty connection_data."""
         with self.assertRaises(MissingConnectionParams):

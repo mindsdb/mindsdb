@@ -1,39 +1,9 @@
 from enum import Enum
-from functools import lru_cache
-from typing import List, Union, Any, Optional, Dict, OrderedDict, TYPE_CHECKING
+from typing import List, Union, Any, Optional, Dict, OrderedDict
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-
-if TYPE_CHECKING:  # pragma: no cover - import only for type hints
-    from langchain_core.documents import Document
-    from langchain_core.embeddings import Embeddings
-    from langchain_core.language_models import BaseChatModel
-    from langchain_core.vectorstores import VectorStore
-    from langchain_core.stores import BaseStore
-    from langchain_text_splitters import TextSplitter
-else:  # Avoid importing heavy optional dependencies at runtime
-    Document = Embeddings = BaseChatModel = VectorStore = BaseStore = TextSplitter = Any
-
-
-def _require_kb_dependency(feature: str, exc: ModuleNotFoundError):
-    missing = exc.name or "langchain dependency"
-    raise ImportError(
-        f"{feature} requires the optional knowledge base dependencies (missing {missing}). "
-        "Install them via `pip install mindsdb[kb]`."
-    ) from exc
-
-
-@lru_cache(maxsize=1)
-def _load_vector_store_classes():
-    try:
-        from langchain_community.vectorstores.chroma import Chroma
-        from langchain_community.vectorstores.pgvector import PGVector
-    except ModuleNotFoundError as exc:  # pragma: no cover - runtime guard
-        if getattr(exc, "name", "").startswith("langchain") or "langchain" in str(exc):
-            _require_kb_dependency("Vector store configuration", exc)
-        raise
-    return {"chromadb": Chroma, "pgvector": PGVector}
-
+from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter as TextSplitter
+from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.base_vector_store import VectorStore
 
 DEFAULT_COLLECTION_NAME = "default_collection"
 
@@ -418,19 +388,6 @@ class VectorStoreType(Enum):
     PGVECTOR = "pgvector"
 
 
-def get_vector_store_map():
-    """Return available vector store classes, importing on demand."""
-    classes = _load_vector_store_classes()
-    return {
-        VectorStoreType.CHROMA: classes["chromadb"],
-        VectorStoreType.PGVECTOR: classes["pgvector"],
-    }
-
-
-def get_vector_store_class(store_type: "VectorStoreType"):
-    return get_vector_store_map()[store_type]
-
-
 class VectorStoreConfig(BaseModel):
     vector_store_type: VectorStoreType = VectorStoreType.CHROMA
     persist_directory: str = None
@@ -443,11 +400,6 @@ class VectorStoreConfig(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         extra = "forbid"
-
-
-def _default_vector_store_factory():
-    config = VectorStoreConfig()
-    return get_vector_store_class(config.vector_store_type)
 
 
 class RetrieverType(str, Enum):
@@ -783,17 +735,17 @@ class MultiHopRetrieverConfig(BaseModel):
 
 
 class RAGPipelineModel(BaseModel):
-    documents: Optional[List[Document]] = Field(default=None, description="List of documents")
+    documents: Optional[List[Any]] = Field(default=None, description="List of documents")
 
     vector_store_config: VectorStoreConfig = Field(
         default_factory=VectorStoreConfig, description="Vector store configuration"
     )
 
-    llm: Optional[BaseChatModel] = Field(default=None, description="Language model")
+    llm: Optional[Any] = Field(default=None, description="Language model")
     llm_model_name: str = Field(default=DEFAULT_LLM_MODEL, description="Language model name")
     llm_provider: Optional[str] = Field(default=None, description="Language model provider")
-    vector_store: VectorStore = Field(
-        default_factory=_default_vector_store_factory,
+    vector_store: Optional[VectorStore] = Field(
+        default=None,
         description="Vector store",
     )
     db_connection_string: Optional[str] = Field(default=None, description="Database connection string")
@@ -801,7 +753,7 @@ class RAGPipelineModel(BaseModel):
         default=None, description="Configuration for metadata to be used for retrieval"
     )
     table_name: str = Field(default=DEFAULT_TEST_TABLE_NAME, description="Table name")
-    embedding_model: Optional[Embeddings] = Field(default=None, description="Embedding model")
+    embedding_model: Optional[Any] = Field(default=None, description="Embedding model")
     rag_prompt_template: str = Field(default=DEFAULT_RAG_PROMPT_TEMPLATE, description="RAG prompt template")
     retriever_prompt_template: Optional[Union[str, dict]] = Field(default=None, description="Retriever prompt template")
     retriever_type: RetrieverType = Field(default=RetrieverType.VECTOR_STORE, description="Retriever type")
@@ -826,7 +778,7 @@ class RAGPipelineModel(BaseModel):
     )
     max_concurrency: int = Field(default=DEFAULT_MAX_CONCURRENCY, description="Maximum concurrency")
     id_key: int = Field(default=DEFAULT_ID_KEY, description="ID key")
-    parent_store: Optional[BaseStore] = Field(default=None, description="Parent store")
+    parent_store: Optional[Any] = Field(default=None, description="Parent store")
     text_splitter: Optional[TextSplitter] = Field(default=None, description="Text splitter")
     chunk_size: int = Field(default=DEFAULT_CHUNK_SIZE, description="Chunk size")
     chunk_overlap: int = Field(default=DEFAULT_CHUNK_OVERLAP, description="Chunk overlap")

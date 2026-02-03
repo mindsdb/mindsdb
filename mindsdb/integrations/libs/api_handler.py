@@ -1,12 +1,16 @@
 from typing import Any, List, Optional
 import ast as py_ast
+import copy
 
 import pandas as pd
-from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation
+from pandas.api import types as pd_types
+from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation, Function
 from mindsdb_sql_parser.ast.select.identifier import Identifier
+from mindsdb_sql_parser.ast.select.constant import Constant
 
 from mindsdb.integrations.utilities.sql_utils import (
     extract_comparison_conditions,
+    has_aggregate_function,
     filter_dataframe,
     FilterCondition,
     FilterOperator,
@@ -14,12 +18,116 @@ from mindsdb.integrations.utilities.sql_utils import (
 )
 from mindsdb.integrations.libs.base import BaseHandler
 from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists, TableNotFound
-
 from mindsdb.integrations.libs.response import HandlerResponse as Response, RESPONSE_TYPE
 from mindsdb.utilities import log
 
 
-logger = log.getLogger("mindsdb")
+logger = log.getLogger(__name__)
+
+
+def _infer_data_type_from_value(value: Any) -> str:
+    """Infer SQL data type from Python value.
+
+    Args:
+        value: Python value to infer type from
+
+    Returns:
+        str: SQL data type string (varchar, integer, decimal, date, datetime, etc.)
+             Uses lowercase to match infer_mysql_type expectations
+    """
+    if value is None or pd.isna(value):
+        return "varchar"
+    elif isinstance(value, bool):
+        return "boolean"
+    elif isinstance(value, int):
+        return "integer"
+    elif isinstance(value, float):
+        return "decimal"
+    elif isinstance(value, str):
+        # Check if it looks like a timestamp (ISO format with T and timezone)
+        if "T" in value and ("Z" in value or "+" in value or "-" in value[-6:]):
+            return "timestamp"
+        # Check if it looks like a date/datetime
+        try:
+            pd.to_datetime(value)
+            if len(value) == 10:  # Just date, no time (YYYY-MM-DD)
+                return "date"
+            return "datetime"
+        except (ValueError, TypeError):
+            pass
+        return "varchar"
+    elif pd_types.is_datetime64_any_dtype(type(value)) or isinstance(value, pd.Timestamp):
+        return "datetime"
+    else:
+        return "varchar"
+
+
+def _infer_data_type_from_samples(values: List[Any]) -> str:
+    """Infer data type from multiple sample values for better accuracy.
+
+    Args:
+        values: List of sample values from a column
+
+    Returns:
+        str: SQL data type string (lowercase to match infer_mysql_type expectations)
+    """
+    non_null_values = [v for v in values if v is not None and pd.notna(v)]
+
+    if not non_null_values:
+        return "varchar"
+
+    # Analyze types across all samples
+    type_counts = {}
+    for value in non_null_values:
+        inferred_type = _infer_data_type_from_value(value)
+        type_counts[inferred_type] = type_counts.get(inferred_type, 0) + 1
+
+    # Return the most common type, but prefer more specific types over varchar
+    if type_counts:
+        # If we have a specific type (not varchar), prefer it
+        specific_types = {k: v for k, v in type_counts.items() if k != "varchar"}
+        if specific_types:
+            return max(specific_types.items(), key=lambda x: x[1])[0]
+        return max(type_counts.items(), key=lambda x: x[1])[0]
+
+    return "varchar"
+
+
+def _pandas_dtype_to_sql_type(dtype) -> str:
+    """Convert pandas dtype to SQL data type string.
+
+    Args:
+        dtype: pandas dtype object
+
+    Returns:
+        str: SQL data type string (lowercase to match infer_mysql_type expectations)
+    """
+    # Handle string dtypes
+    if pd_types.is_string_dtype(dtype):
+        return "varchar"
+
+    # Handle integer dtypes
+    if pd_types.is_integer_dtype(dtype):
+        return "integer"
+
+    # Handle float/numeric dtypes
+    if pd_types.is_float_dtype(dtype) or pd_types.is_numeric_dtype(dtype):
+        return "decimal"
+
+    # Handle boolean dtypes
+    if pd_types.is_bool_dtype(dtype):
+        return "boolean"
+
+    # Handle datetime dtypes
+    if pd_types.is_datetime64_any_dtype(dtype):
+        return "datetime"
+
+    # Handle date dtypes
+    if pd_types.is_date_dtype(dtype):
+        return "date"
+
+    # Default to varchar for object and unknown types
+    return "varchar"
 
 
 class FuncParser:
@@ -152,6 +260,24 @@ class APITable:
         raise NotImplementedError()
 
 
+def extract_targets(targets: list[ASTNode]) -> list[str]:
+    """Recursive function to extract target column names from the query.
+
+    Args:
+        targets (list[ASTNode]): The list of AST nodes representing the targets.
+
+    Returns:
+        list[str]: The list of target column names.
+    """
+    result = []
+    for target in targets:
+        if isinstance(target, Identifier):
+            result.append(target.parts[-1])
+        elif isinstance(target, (Function, BinaryOperation)):
+            result += extract_targets(target.args)
+    return list(set(result))
+
+
 class APIResource(APITable):
     def __init__(self, *args, table_name=None, **kwargs):
         self.table_name = table_name
@@ -180,12 +306,26 @@ class APIResource(APITable):
                 if isinstance(an_order.field, Identifier):
                     sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
 
-        targets = []
-        for col in query.targets:
-            if isinstance(col, Identifier):
-                targets.append(col.parts[-1])
+        targets = extract_targets(query.targets)
 
-        kwargs = {"conditions": api_conditions, "limit": limit, "sort": sort, "targets": targets}
+        # Check if query has aggregation functions (like COUNT, SUM, etc.)
+        has_aggregation = has_aggregate_function(query.targets)
+
+        # If we have aggregation or GROUP BY without a LIMIT, we need all rows to compute correctly
+        # Pass a very large limit instead of None, since many handlers default to a small limit (e.g., 20)
+        # when limit is None, which would cause incorrect aggregation results
+        # However, if there's a LIMIT in the query, use it to limit the input rows before aggregation
+        if has_aggregation or query.group_by:
+            if limit is not None:
+                # LIMIT applies to input rows before aggregation
+                list_limit = limit
+            else:
+                # No LIMIT, fetch all rows for aggregation
+                list_limit = 999999  # Very large number to fetch all rows
+        else:
+            list_limit = limit
+
+        kwargs = {"conditions": api_conditions, "limit": list_limit, "sort": sort, "targets": targets}
         if self.table_name is not None:
             kwargs["table_name"] = self.table_name
 
@@ -197,6 +337,46 @@ class APIResource(APITable):
                 filters.append([cond.op.value, cond.column, cond.value])
 
         result = filter_dataframe(result, filters, raw_conditions=raw_conditions)
+
+        # Handle SELECT projection - support computed columns, aliases, etc.
+        # Aggregations (COUNT, SUM, etc.) and complex expressions should always be handled post-fetch using DuckDB
+        # This ensures they operate on the filtered data, not on API-pushed-down operations
+        has_complex_targets = any(
+            not isinstance(target, Identifier) and not isinstance(target, Star) for target in query.targets
+        )
+
+        # Always use query_df for aggregations, complex targets, GROUP BY, or ORDER BY
+        # This ensures operations like COUNT(*) are performed post-fetch on the filtered dataframe using DuckDB
+        # Aggregations cannot be pushed down to APIs, so they must be computed post-fetch
+        use_query_df = (
+            has_aggregation or has_complex_targets or query.group_by or (query.order_by and len(query.order_by) > 0)
+        )
+
+        if use_query_df:
+            # Use query_df to handle complex SELECT, GROUP BY, ORDER BY, and aggregations
+            from mindsdb.api.executor.utilities.sql import query_df
+
+            # Create a copy of the query and remove WHERE clause since we've already filtered
+            # This prevents applying the WHERE clause twice (once via filter_dataframe, once via query_df)
+            # For aggregations with LIMIT, the LIMIT was already applied when fetching rows (list_limit)
+            # So we remove it from query_copy to avoid applying it again
+            query_copy = copy.deepcopy(query)
+            query_copy.where = None
+            if has_aggregation or query.group_by:
+                # LIMIT was already applied to input rows, remove it from the aggregation query
+                query_copy.limit = None
+            # The FROM table will be renamed to "df" by query_df automatically
+            result = query_df(result, query_copy)
+        else:
+            # Simple projection - use project_dataframe
+            from mindsdb.integrations.utilities.sql_utils import project_dataframe
+
+            try:
+                table_columns = self.get_columns()
+                result = project_dataframe(result, query.targets, table_columns)
+            except NotImplementedError:
+                # keep result as is
+                pass
 
         if limit is not None and len(result) > limit:
             result = result[: int(limit)]
@@ -313,10 +493,47 @@ class APIResource(APITable):
         raise NotImplementedError()
 
     def _extract_conditions(self, where: ASTNode, strict=True):
+        from mindsdb.integrations.utilities.sql_utils import _extract_date_from_raw_condition
+        import datetime as dt
+
         api_conditions, raw_conditions = [], []
         for item in extract_comparison_conditions(where, strict=strict):
             if isinstance(item, BinaryOperation):
-                # is it a raw condition
+                # Try to extract date value from INTERVAL expressions for API pushdown
+                date_info = _extract_date_from_raw_condition(item)
+                if date_info:
+                    column_name, op, date_value = date_info
+                    logger.info(
+                        f"[API Handler] Extracted date from INTERVAL: column={column_name}, op={op}, original_date_value={date_value} (type={type(date_value).__name__})"
+                    )
+
+                    # Format date value as string for API compatibility
+                    if isinstance(date_value, dt.date):
+                        date_value_str = date_value.isoformat()
+                    elif isinstance(date_value, dt.datetime):
+                        date_value_str = date_value.isoformat()
+                    else:
+                        date_value_str = str(date_value)
+
+                    logger.info(f"[API Handler] Converted date to string: {date_value_str}")
+
+                    # Convert to FilterCondition for API pushdown
+                    try:
+                        filter_op = FilterOperator(op.upper())
+                        filter_condition = FilterCondition(column_name, filter_op, date_value_str)
+                        api_conditions.append(filter_condition)
+                        logger.info(
+                            f"[API Handler] Created FilterCondition: column={column_name}, op={filter_op}, value={date_value_str}"
+                        )
+                        # Don't add to raw_conditions - let FilterCondition handle it
+                        # If it can't be pushed down, it will be filtered in-memory via filter_dataframe
+                        continue
+                    except (ValueError, KeyError) as e:
+                        # If operator not supported, fall through to raw condition
+                        logger.warning(f"[API Handler] Failed to create FilterCondition: {e}")
+                        pass
+
+                # Keep as raw condition if we couldn't extract date value
                 raw_conditions.append(item)
             else:
                 api_conditions.append(FilterCondition(item[1], FilterOperator(item[0].upper()), item[2]))
@@ -460,9 +677,16 @@ class APIHandler(BaseHandler):
             # The APIResource class could be used as a base class by overriding the select method, but not the list method.
             table = self._get_table(query.from_table)
             list_method = getattr(table, "list", None)
+
+            # Check if query has aggregations - if so, don't modify targets
+            # Aggregations like COUNT(*) should be preserved and handled post-fetch
+            has_aggregation = has_aggregate_function(query.targets)
+
             if not list_method or (list_method and list_method.__func__ is APIResource.list):
                 # for back compatibility, targets wasn't passed in previous version
-                query.targets = [Star()]
+                # BUT: don't modify targets if we have aggregations - they need to be preserved
+                if not has_aggregation:
+                    query.targets = [Star()]
             result = self._get_table(query.from_table).select(query)
         elif isinstance(query, Update):
             result = self._get_table(query.table).update(query)
@@ -482,17 +706,57 @@ class APIHandler(BaseHandler):
 
     def get_columns(self, table_name: str) -> Response:
         """
-        Returns a list of entity columns
+        Returns a list of entity columns with inferred types from sampled data.
         Args:
             table_name (str): the table name
         Returns:
             RESPONSE_TYPE.TABLE
         """
 
-        result = self._get_table(Identifier(table_name)).get_columns()
+        table = self._get_table(Identifier(table_name))
+        column_names = table.get_columns()
 
-        df = pd.DataFrame(result, columns=["Field"])
-        df["Type"] = "str"
+        # Sample data to infer types (sample up to 50 rows for better accuracy)
+        column_types = {}
+        try:
+            # Create a SELECT query to sample data
+            sample_query = Select(targets=[Star()], from_table=Identifier(table_name), limit=Constant(50))
+
+            # Execute the query to get sample data
+            sample_df = table.select(sample_query)
+
+            if not sample_df.empty and len(sample_df) > 0:
+                # Infer types from sampled data for each column
+                for col_name in column_names:
+                    if col_name in sample_df.columns:
+                        column_values = sample_df[col_name].tolist()
+                        inferred_type = _infer_data_type_from_samples(column_values)
+                        column_types[col_name] = inferred_type
+                    else:
+                        # Column not in sample, default to varchar
+                        column_types[col_name] = "varchar"
+            else:
+                # No data available, try to infer from pandas dtypes if possible
+                if hasattr(sample_df, "dtypes"):
+                    for col_name in column_names:
+                        if col_name in sample_df.columns:
+                            dtype = sample_df[col_name].dtype
+                            column_types[col_name] = _pandas_dtype_to_sql_type(dtype)
+                        else:
+                            column_types[col_name] = "varchar"
+                else:
+                    # Fallback: all varchar
+                    column_types = {col: "varchar" for col in column_names}
+        except Exception as e:
+            # If sampling fails, log and fallback to varchar for all columns
+            logger.warning(
+                f"Failed to sample data for type inference in table '{table_name}': {e}. Using varchar for all columns."
+            )
+            column_types = {col: "varchar" for col in column_names}
+
+        # Build response DataFrame
+        df = pd.DataFrame(column_names, columns=["Field"])
+        df["Type"] = df["Field"].map(lambda x: column_types.get(x, "varchar"))
 
         return Response(RESPONSE_TYPE.TABLE, df)
 

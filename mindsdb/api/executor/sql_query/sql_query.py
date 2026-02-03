@@ -27,7 +27,7 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.api.executor.planner import query_planner
 
 from mindsdb.api.executor.utilities.sql import get_query_models
-from mindsdb.interfaces.model.functions import get_model_record
+from mindsdb.interfaces.model.functions import get_model_record, get_project_record
 from mindsdb.api.executor.exceptions import (
     BadTableError,
     UnknownError,
@@ -71,7 +71,12 @@ class SQLQuery:
         else:
             self.database = session.database
 
-        self.context = {"database": None if self.database == "" else self.database.lower(), "row_id": 0}
+        # Handle None or empty database - convert to None for context
+        if self.database is None or self.database == "":
+            db_context = None
+        else:
+            db_context = self.database.lower()
+        self.context = {"database": db_context, "row_id": 0}
 
         self.columns_list = None
         self.steps_data: Dict[int, ResultSet] = {}
@@ -114,10 +119,23 @@ class SQLQuery:
         databases = self.session.database_controller.get_list()
 
         predictor_metadata = []
+        kb_metadata = {}
 
         query_tables = get_query_models(self.query, default_database=self.database)
 
         for project_name, table_name, table_version in query_tables:
+            project = get_project_record(project_name)
+            if project is None:
+                continue
+
+            # check if KB
+            kb = self.session.kb_controller.get(table_name, project.id)
+            if kb is not None:
+                params = kb.params.copy()
+                vector_db = self.session.integration_controller.get_by_id(kb.vector_database_id)
+                params["vector_db_engine"] = vector_db.get("engine") if vector_db is not None else None
+                kb_metadata[(project_name, table_name)] = params
+
             args = {"name": table_name, "project_name": project_name}
             if table_version is not None:
                 args["active"] = None
@@ -196,6 +214,7 @@ class SQLQuery:
             integrations=databases,
             predictor_metadata=predictor_metadata,
             default_namespace=database,
+            kb_metadata=kb_metadata,
         )
 
     def prepare_query(self):
@@ -236,6 +255,16 @@ class SQLQuery:
             steps = list(self.planner.execute_steps())
         except PlanningException as e:
             raise LogicError(e) from e
+
+        # -- a plan with failback --
+        if self.planner.plan.probe_query is not None:
+            try:
+                probe_query = self.planner.plan.probe_query
+                SQLQuery(probe_query["query"], session=self.session, database=probe_query["database"])
+            except Exception:
+                # switch to failback plan
+                self.planner.plan = self.planner.plan.failback_plan
+                steps = self.planner.plan.steps
 
         if self.planner.plan.is_resumable:
             # create query

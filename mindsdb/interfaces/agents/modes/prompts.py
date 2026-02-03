@@ -2,27 +2,24 @@ sql_description = """
 MindsDB SQL is mostly compatible with DuckDB syntax.
 
 - When writing the SQL query, make sure the select explicit names for the columns accordingly to the question.
-- When composing JOIN queries, qualify every referenced column with its table (or table alias) (e.g., `movies.title`) so it is always clear which table provides each column.
 
 Example:
 SELECT movie_id, movie_description, age, name FROM someschema.movies WHERE whatever...;
 Instead of:
 SELECT * FROM somedb.movies WHERE whatever...;
 
+- When composing JOIN queries, qualify every referenced column with its table (or table alias) (e.g., `movies.title`) so it is always clear which table provides each column.
 
 - Date math & windows
 
-Prefer simple interval arithmetic over dialect-specific functions.
+Prefer simple interval arithmetic over dialect-specific functions. 
+To subtract months: max_ts - INTERVAL 8 MONTH
+To subtract days: max_ts - INTERVAL 30 DAY
 
-To subtract months:
-max_ts - INTERVAL 8 MONTH
-
-To subtract days:
-max_ts - INTERVAL 30 DAY
+Date types might be stored in string format, if you have error related to it (e.g. `No operator matches the given name and argument types`), use explicit type cast:  
+cast (max_ts as timestamp)  - INTERVAL 30 DAY
 
 Use DATE_TRUNC('month', timestamp_expression) for month bucketing.
-
-Avoid using DATEADD, DATE_ADD, or other guessed function names unless they already appear in a working example for this connection.
 
 - Monthly aggregation pattern
 
@@ -53,7 +50,7 @@ If you change the SELECT list, update GROUP BY accordingly (or use GROUP BY 1, 2
 
 - Error handling behavior
 
-When you see an error like “function X does not exist”, do not try random alternative names (e.g., dateadd → DATE_ADD → DATE_ADDD).
+When you see an error like “function X does not exist”, do not try random alternative names (e.g., dateadd → DATE_ADD → DATE_ADD.
 
 Instead, rewrite the logic using:
 
@@ -63,19 +60,12 @@ Simpler built-ins that you know are valid (e.g., just DATE_TRUNC with interval a
 
 - If an error says “requires 2 positional arguments, but 3 were provided”, remove the extra argument rather than reshuffling parameter order.
 - If a MySQL function is not supported by MindsDB, try the DuckDB equivalent function.
-- If you are unsusre of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
+- If you are unsure of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
 - If Metadata about a table is unknown, assume that all columns are of type varchar. 
 - When casting varchars to something else simply use the CAST function, for example: CAST(year AS INTEGER), or CAST(year AS FLOAT), or CAST(year AS DATE), or CAST(year AS BOOLEAN), etc.
-- When a column has been casted and renamed, the new name can and should be used in the query, for example:
-do:
-SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE ndate >= something
-instead of:
-SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE CAST(datetime AS DATE) >= something
-
- if you cast the column year CAST(year AS INTEGER) AS year_int, you can use year_int in the query such as WHERE year_int > 2000. 
 - ALWAYS: When writing queries that involve time, use the time functions in MindsDB SQL, or duckdb functions.
 - ALWAYS:Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE..`;
-- ALWAYS: When columns contain spaces, special characters or are reserved words, use double quotes `"` to quote the column name, for example, "column name" instead of [column name].
+- ALWAYS: When columns contain spaces, special characters or are reserved words, use backticks '`' to quote the column name, for example, `column name` instead of [column name].
 """
 
 sql_with_kb_description = """

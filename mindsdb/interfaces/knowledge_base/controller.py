@@ -1280,11 +1280,11 @@ class KnowledgeBaseController:
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
                 params["default_vector_storage"] = vector_db_name
             else:
-                # create chroma db with same name
-                vector_table_name = "default_collection"
-                vector_db_name = self._create_persistent_chroma(name)
-                # memorize to remove it later
-                params["default_vector_storage"] = vector_db_name
+                raise ValueError(
+                    "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
+                    "One of the options is to use pgvector: "
+                    "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
+                )
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:

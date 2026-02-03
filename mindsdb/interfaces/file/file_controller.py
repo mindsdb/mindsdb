@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from sqlalchemy import func
+
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities import log
@@ -40,6 +42,18 @@ class FileController:
         """
         return f"file_{ctx.company_id}_{ctx.user_id}_{file_id}"
 
+    @staticmethod
+    def _file_record_by_name(name: str):
+        """Get file record by name with case-insensitive match (unquoted = lowercase)."""
+        if not name:
+            return None
+        return (
+            db.session.query(db.File)
+            .filter_by(company_id=ctx.company_id, user_id=ctx.user_id)
+            .filter(func.lower(db.File.name) == name.lower())
+            .first()
+        )
+
     def get_files_names(self, lower: bool = False):
         """return list of files names
 
@@ -58,9 +72,7 @@ class FileController:
         return names
 
     def get_file_meta(self, name):
-        file_record = (
-            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
-        )
+        file_record = self._file_record_by_name(name)
         if file_record is None:
             return None
         columns = file_record.columns
@@ -101,7 +113,7 @@ class FileController:
             int: id of 'file' record in db
         """
         files_metadata = self.get_files()
-        if name in [x["name"] for x in files_metadata]:
+        if any(x["name"].lower() == name.lower() for x in files_metadata):
             raise Exception(f"File already exists: {name}")
 
         if file_name is None:
@@ -181,24 +193,22 @@ class FileController:
             df.to_feather(str(dest))
 
     def delete_file(self, name):
-        file_record = (
-            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
-        )
+        file_record = self._file_record_by_name(name)
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
-        file_dir = self._get_file_dir(file_record)
+        file_path = file_record.file_path or self._get_file_dir(file_record)
         db.session.delete(file_record)
         db.session.commit()
-        self.fs_store.delete(file_dir)
+        self.fs_store.delete(file_path)
         return True
 
     def get_file_path(self, name):
-        file_record = (
-            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
-        )
+        file_record = self._file_record_by_name(name)
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
-        file_dir = self._get_file_dir(file_record)
+        file_dir = file_record.file_path
+        if not file_dir:
+            file_dir = self._get_file_dir(file_record)
         self.fs_store.get(file_dir, base_dir=self.dir)
         return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))
 
@@ -210,13 +220,13 @@ class FileController:
         :param page_name: page name, optional
         :return: Page or file content
         """
-        file_record = (
-            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
-        )
+        file_record = self._file_record_by_name(name)
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
 
-        file_dir = self._get_file_dir(file_record)
+        file_dir = file_record.file_path
+        if not file_dir:
+            file_dir = self._get_file_dir(file_record)
         self.fs_store.get(file_dir, base_dir=self.dir)
 
         metadata = file_record.metadata_ or {}
@@ -253,13 +263,13 @@ class FileController:
         :param page_name: name of page, optional
         """
 
-        file_record = (
-            db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name).first()
-        )
+        file_record = self._file_record_by_name(name)
         if file_record is None:
             raise FileNotFoundError(f"File '{name}' does not exists")
 
-        file_dir = self._get_file_dir(file_record)
+        file_dir = file_record.file_path
+        if not file_dir:
+            file_dir = self._get_file_dir(file_record)
         self.fs_store.get(file_dir, base_dir=self.dir)
 
         num = 0

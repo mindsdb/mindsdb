@@ -70,6 +70,15 @@ def set_litellm_embedding(mock_litellm_embedding, dimension=None):
 
 
 class BaseTestKB(BaseExecutorDummyML):
+    def setup_method(self):
+        super().setup_method()
+        self.storages = []
+
+    def teardown_method(self):
+        for db_name in self.storages:
+            self._drop_storage_db(db_name)
+        super().teardown_method()
+
     def _create_kb(
         self,
         name,
@@ -79,6 +88,7 @@ class BaseTestKB(BaseExecutorDummyML):
         id_column=None,
         metadata_columns=None,
         storage=None,
+        params=None,
     ):
         self.run_sql(f"drop knowledge base if exists {name}")
 
@@ -100,12 +110,12 @@ class BaseTestKB(BaseExecutorDummyML):
             kb_params["id_column"] = id_column
         if metadata_columns is not None:
             kb_params["metadata_columns"] = metadata_columns
-        if storage is not None:
-            kb_params["storage"] = storage
+        if params is not None:
+            kb_params.update(params)
 
-        storage_table = self._get_storage_table(name)
-        if storage_table:
-            kb_params["storage"] = storage_table
+        if storage is None:
+            storage = self._get_storage_table(name)
+        kb_params["storage"] = storage
 
         param_str = ""
         if kb_params:
@@ -124,7 +134,32 @@ class BaseTestKB(BaseExecutorDummyML):
 
     def _get_storage_table(self, kb_name):
         # default chromadb
-        return None
+        db_name = f"db_{kb_name}"
+
+        self._drop_storage_db(db_name)
+
+        self.run_sql(f"""
+          create database {db_name} 
+           with 
+           engine='chromadb',
+           PARAMETERS = {{
+               'persist_directory': '{kb_name}'
+           }}
+        """)
+        self.storages.append(db_name)
+
+        return f"{db_name}.default_collection"
+
+    def _drop_storage_db(self, db_name):
+        try:
+            self.run_sql(f"drop table {db_name}.default_collection")
+        except Exception:
+            ...
+
+        try:
+            self.run_sql(f"drop database {db_name}")
+        except Exception:
+            ...
 
     def _get_ral_table(self):
         data = [
@@ -890,7 +925,7 @@ class TestKB(BaseTestKB):
         assert "openai_model" in ret["RERANKING_MODEL"][0]
 
         # disable default reranking
-        self.run_sql("create knowledge base kb2 using reranking_model=false")
+        self._create_kb("kb2", params={"reranking_model": False})
 
         ret = self.run_sql("describe knowledge base kb2")
 
@@ -995,13 +1030,10 @@ class TestKB(BaseTestKB):
         # reranking result
         mock_get_scores.side_effect = lambda query, docs: [0.8 for _ in docs]
 
-        self.run_sql(
-            """
-          create knowledge base kb1
-          USING 
-             reranking_model={'provider': 'ollama', 'model_name': 'mistral', "base_url": "http://localhost:11434/v1"},
-             embedding_model={'provider': 'ollama', 'model_name': 'nomic', "base_url": "http://localhost:11434/v1"}
-        """
+        self._create_kb(
+            "kb1",
+            reranking_model={"provider": "ollama", "model_name": "mistral", "base_url": "http://localhost:11434/v1"},
+            embedding_model={"provider": "ollama", "model_name": "nomic", "base_url": "http://localhost:11434/v1"},
         )
 
         ret = self.run_sql("describe  knowledge base kb1")

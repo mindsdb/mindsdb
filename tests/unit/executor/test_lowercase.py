@@ -209,12 +209,22 @@ class TestLowercase(BaseExecutorDummyML):
     def test_knowledgebase_name_lowercase(self, mock_openai, mock_litellm_embedding):
         set_litellm_embedding(mock_litellm_embedding)
 
+        self.run_sql("""
+          create database my_kb_storage 
+           with 
+           engine='chromadb',
+           PARAMETERS = {
+               'persist_directory': 'my_kb_storage'
+           }
+        """)
+
         kb_params = """
             using embedding_model = {
                 "provider": "bedrock",
                 "model_name": "dummy_model",
-                "api_key": "dummy_key"
-            }
+                "api_key": "dummy_key"                
+            },
+            storage = my_kb_storage.default_collection
         """
 
         # mixed case
@@ -240,6 +250,10 @@ class TestLowercase(BaseExecutorDummyML):
             with pytest.raises(Exception):
                 self.run_sql(f"DROP KNOWLEDGE BASE `{another_kb_name}`")
             self.run_sql(f"DROP KNOWLEDGE BASE {another_kb_name}")
+
+        self.run_sql("drop table my_kb_storage.default_collection")
+
+        self.run_sql("drop database my_kb_storage")
 
     def test_job_name_lowercase(self):
         # mixed case

@@ -78,7 +78,7 @@ def test_put_file_url_with_file_param(client, monkeypatch):
     data = {
         "source_type": "url",
         "source": "http://example.com/file.txt",
-        "file": "../path/test.txt"  # forbidden param if source_type!=file
+        "file": "../path/test.txt",  # forbidden param if source_type!=file
     }
     response = client.put(
         "/api/files/remote.txt",
@@ -109,6 +109,7 @@ def test_put_file_no_source_type_with_file_param(client, monkeypatch):
     assert response.status_code == 400
     data = response.get_json()
     assert "Invalid request parameters" == data["title"]
+
 
 def test_put_file_url_upload_disabled(client, monkeypatch):
     """Test uploading from URL when URL upload is disabled"""
@@ -192,7 +193,7 @@ def test_put_file_with_path_in_filename_multipart(client):
 def test_put_file_with_invalid_parameters_multipart(client):
     """Test uploading a file with invalid/unexpected parameters via multipart form data"""
     file = io.BytesIO(b"Hello, World!")
-    
+
     data = {
         "file": (file, "test.txt"),
         "source_type": "file",

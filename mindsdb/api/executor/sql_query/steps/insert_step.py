@@ -1,6 +1,4 @@
-from mindsdb_sql_parser.ast import (
-    Identifier,
-)
+from mindsdb_sql_parser.ast import Identifier, Function
 
 from mindsdb.api.executor.planner.steps import SaveToTable, InsertToTable, CreateTableStep
 from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
@@ -59,7 +57,10 @@ class InsertToTableCall(BaseStepCall):
                         # Allow explicitly inserting NULL values.
                         record.append(None)
                         continue
-                    # Value is a constant
+                    # Value is a fucntion
+                    if isinstance(v, Function):
+                        record.append(v)
+                        continue
                     record.append(v.value)
                 records.append(record)
 

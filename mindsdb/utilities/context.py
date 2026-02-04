@@ -23,7 +23,6 @@ class Context:
                 "task_id": None,
                 "user_class": 0,
                 "profiling": {"level": 0, "enabled": False, "pointer": None, "tree": None},
-                "email_confirmed": 0,
                 "used_handlers": set(),
                 "params": {},
             }

@@ -478,9 +478,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             user_class = self.request.recv(1)
             user_class = struct.unpack("B", user_class)[0]
-            email_confirmed = 1
-            if user_class > 1:
-                email_confirmed = (user_class >> 2) & 1
             user_class = user_class & 3
 
             database_name_len = self.request.recv(2)
@@ -497,7 +494,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 "user_id": user_id,
                 "user_class": user_class,
                 "database": database_name,
-                "email_confirmed": email_confirmed,
             }
 
         return {"is_cloud": False}
@@ -656,7 +652,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
         else:
             ctx.user_class = cloud_connection["user_class"]
-            ctx.email_confirmed = cloud_connection["email_confirmed"]
             self.client_capabilities = ClentCapabilities(cloud_connection["client_capabilities"])
             self.session.database = cloud_connection["database"]
             self.session.username = "cloud"

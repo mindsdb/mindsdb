@@ -73,7 +73,8 @@ class File(Resource):
             file_name = file.file_name.decode()
             data["file"] = file_name
             if Path(file_name).name != file_name:
-                file_object.close()
+                if file_object is not None and not file_object.closed:
+                    file_object.close()
                 raise ValueError(f"Wrong file name: {file_name}")
             file_object = file.file_object
 
@@ -117,6 +118,13 @@ class File(Resource):
         else:
             data = request.json
             allowed_keys = {"source_type", "source", "original_file_name"}
+
+        if isinstance(data, dict) is False:
+            return http_error(
+                400,
+                "Invalid request parameters",
+                "Unexpected parameters in request",
+            )
 
         if len(set(data.keys()) - allowed_keys) > 0:
             unexpected_keys = set(data.keys()) - allowed_keys

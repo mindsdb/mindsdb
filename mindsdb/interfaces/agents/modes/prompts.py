@@ -17,8 +17,8 @@ Prefer simple interval arithmetic over dialect-specific functions.
 To subtract months: max_ts - INTERVAL 8 MONTH
 To subtract days: max_ts - INTERVAL 30 DAY
 
-Date types might be stored in string format, if you have error related to it (e.g. `No operator matches the given name and argument types`), use explicit type cast:  
-cast (max_ts as timestamp)  - INTERVAL 30 DAY
+Date types might be stored in string format, if you an have error related to it (e.g. `No operator matches the given name and argument types`), use explicit type cast:  
+CAST(max_ts AS TIMESTAMP)  - INTERVAL 30 DAY
 
 Use DATE_TRUNC('month', timestamp_expression) for month bucketing.
 
@@ -51,7 +51,7 @@ If you change the SELECT list, update GROUP BY accordingly (or use GROUP BY 1, 2
 
 - Error handling behavior
 
-When you see an error like “function X does not exist”, do not try random alternative names (e.g., dateadd → DATE_ADD → DATE_ADD.
+When you see an error like “function X does not exist”, do not try random alternative names (e.g., dateadd → DATE_ADD).
 
 Instead, rewrite the logic using:
 
@@ -65,9 +65,8 @@ Simpler built-ins that you know are valid (e.g., just DATE_TRUNC with interval a
 - If Metadata about a table is unknown, assume that all columns are of type varchar. 
 - When casting varchars to something else simply use the CAST function, for example: CAST(year AS INTEGER), or CAST(year AS FLOAT), or CAST(year AS DATE), or CAST(year AS BOOLEAN), etc.
 - ALWAYS: When writing queries that involve time, use the time functions in MindsDB SQL, or duckdb functions.
-- ALWAYS:Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE..`;
-- ALWAYS: When columns contain spaces, special characters or are reserved words, use backticks '`' to quote the column name, for example, `column name` instead of [column name].
-- ALWAYS: In ORDER BY clauses, reference column names or aliases with backticks when they contain spaces or special characters (MindsDB uses MySQL-like quoting; e.g. ORDER BY `Number of Reviews` DESC). Never use single quotes in ORDER BY—single quotes denote string literals and will cause a DuckDB error (order_by_non_integer_literal).
+- ALWAYS:Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE ...`;
+- ALWAYS: When columns contain spaces, special characters or are reserved words, use backticks (`) to quote the column name, for example, `column name` instead of [column name].
 - `ILIKE` is only supported with some data sources; for portable case-insensitive matching use LOWER(column) LIKE LOWER('%pattern%') instead of column ILIKE '%pattern%'.
 """
 
@@ -76,7 +75,7 @@ sql_with_kb_description = """
 MindsDB SQL is compatible with MySQL and DuckDB syntax, with additional features for knowledge bases.
 
 When the question requires to filter by something semantically, use the knowledge bases available when possible.
-You can determine what knowledge bases are relevant given teh data catalog.
+You can determine what knowledge bases are relevant given the data catalog.
 
 Example:
 Knowledge Base Metadata:
@@ -99,13 +98,13 @@ Example queries:
   `SELECT * FROM mindsdb.kb_name WHERE content LIKE 'your semantic search query' AND metadata_column = 'value' AND relevance >= 0.5`
 
 Where output columns will be: id,chunk_id,chunk_content,<one or more metadata columns>,relevance,distance
-use relevance >0.5 to filter for relevant results.
+use `relevance > 0.5` to filter for relevant results.
 
 From the knowledge base, you can identify where id came from, and what content comes from, so when you SELECT, you can rename columns accordingly.
 
 For example, to find up to 10,000 movies that are excellent, not horror, and have an age group of PG-13 or higher (assuming a metadata column named "age"):
-instead of searching the movies table seamantically SELECT * FROM somedb.movies WHERE age >= 13 AND description LIKE '%excellent%' LIMIT 10000;
-which is prone to missing results as it is likely to miss results where people write similar things to exellent and horror, but in a different way.
+instead of searching the movies table semantically SELECT * FROM somedb.movies WHERE age >= 13 AND description LIKE '%excellent%' LIMIT 10000;
+which is prone to missing results as it is likely to miss results where people write similar things to excellent and horror, but in a different way.
 as such, you can search the knowledge base, which does not require any exact matches, it will filter by most relevant results. 
 ```
 SELECT 

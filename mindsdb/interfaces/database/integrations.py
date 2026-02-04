@@ -59,7 +59,7 @@ class IntegrationController:
         db.session.commit()
         return integration_record.id
 
-    def add(self, name: str, engine, connection_args):
+    def add(self, name: str, engine, connection_args, check_connection: bool = False):
         logger.debug(
             "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s, user_id=%s",
             self.__class__.__name__,
@@ -70,6 +70,9 @@ class IntegrationController:
             ctx.user_id,
         )
         handler_meta = self.get_handler_meta(engine)
+
+        if check_connection:
+            self.check_connection(engine, connection_args)
 
         accept_connection_args = handler_meta.get("connection_args")
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
@@ -96,6 +99,17 @@ class IntegrationController:
 
         return integration_id
 
+    def check_connection(self, engine: str, data: dict):
+        try:
+            temp_name = f"temp_integration_{time.time()}".replace(".", "")
+            handler = self.create_tmp_handler(temp_name, engine, data)
+            status = handler.check_connection()
+        except ImportError:
+            raise
+
+        if status.success is not True:
+            raise Exception(f"Connection test failed: {status.error_message}")
+
     def modify(self, name, data, check_connection=False):
         self.handlers_cache.delete(name)
         integration_record = self._get_integration_record(name)
@@ -108,15 +122,7 @@ class IntegrationController:
 
         # Test the new connection data before applying
         if check_connection:
-            try:
-                temp_name = f"{integration_record.name}_update_{time.time()}".replace(".", "")
-                handler = self.create_tmp_handler(temp_name, integration_record.engine, data)
-                status = handler.check_connection()
-            except ImportError:
-                raise
-
-            if status.success is not True:
-                raise Exception(f"Connection test failed: {status.error_message}")
+            self.check_connection(integration_record.engine, data)
 
         integration_record.data = data
         db.session.commit()

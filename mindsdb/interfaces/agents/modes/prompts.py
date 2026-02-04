@@ -1,6 +1,7 @@
 sql_description = """
 MindsDB SQL is mostly compatible with DuckDB syntax.
 
+- ONLY use tables, views, and predictors that appear in the Data Catalog provided to you. Never reference a table or model (e.g. mindsdb.sentiment_analyzer) that is not listed in the catalog—referencing a non-existent table causes "X not found. Available tables: [...]". If you need sentiment or other analysis, use only the tables from the catalog and express the logic in SQL.
 - When writing the SQL query, make sure the select explicit names for the columns accordingly to the question.
 - When composing JOIN queries, qualify every referenced column with its table (or table alias) (e.g., `movies.title`) so it is always clear which table provides each column.
 
@@ -76,6 +77,8 @@ SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE CAST(datetime AS
 - ALWAYS: When writing queries that involve time, use the time functions in MindsDB SQL, or duckdb functions.
 - ALWAYS:Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE..`;
 - ALWAYS: When columns contain spaces, special characters or are reserved words, use double quotes `"` to quote the column name, for example, "column name" instead of [column name].
+- ALWAYS: In ORDER BY clauses, reference column names or aliases with backticks when they contain spaces or special characters (MindsDB uses MySQL-like quoting; e.g. ORDER BY `Number of Reviews` DESC). Never use single quotes in ORDER BY—single quotes denote string literals and will cause a DuckDB error (order_by_non_integer_literal).
+- `ILIKE` is only supported with some data sources; for portable case-insensitive matching use LOWER(column) LIKE LOWER('%pattern%') instead of column ILIKE '%pattern%'.
 """
 
 sql_with_kb_description = """
@@ -247,13 +250,17 @@ This means:
        <select TRANSFORMATION QUERY> from (<ORIGINAL QUERY>) <where filters plus other transformations/aggregations,limits, etc>
    )
 
+CRITICAL - COLUMNS AVAILABLE FOR THE DATA QUERY:
+The data query runs on a dataframe "df" that contains ONLY the columns from the Sample Data Catalog (the columns returned by the original query). You MUST NOT reference any column that is not listed in "Column Analysis" / the catalog. Referencing a missing column causes: Binder Error "Referenced column X not found in FROM clause! Candidate bindings: Y".
+Example: If the catalog only lists "answer", then "question" does NOT exist in df. WRONG: SELECT answer FROM df WHERE question = '...' (uses "question", which is not in df). RIGHT: SELECT answer AS labels, count(*) AS value FROM df GROUP BY answer (only uses "answer").
+
 Guidelines:
 - The first column in the data query should be named 'labels' (this will be used for x-axis labels or pie chart labels)
 - Subsequent columns should be named descriptively and will become dataset labels
 - For line and bar charts: First column = x-axis labels, other columns = y-axis data series
 - For pie and doughnut charts: First column = labels, second column = values (single dataset)
 - Apply appropriate transformations, aggregations, and filters to the original query as needed
-- Include ORDER BY clauses when appropriate (e.g., for time series data)
+- Include ORDER BY clauses when appropriate (e.g., for time series data). When ordering by a column alias that contains spaces or special characters, use backticks (MindsDB uses MySQL-like quoting): ORDER BY `Column Alias` DESC (never single quotes).
 - The data query should be valid MindsDB SQL that can be executed directly
 
 Example for a line chart:
@@ -266,10 +273,16 @@ If the original query is: SELECT category, COUNT(*) FROM db.products
 The data query might be:
 SELECT category AS labels, COUNT(*) AS value FROM (SELECT category, COUNT(*) FROM db.products GROUP BY category)
 
+Example with column alias containing spaces (use backticks in ORDER BY):
+If the original query is: SELECT product_name, count(*) AS `Number of Reviews` FROM df GROUP BY product_name
+The data query must use backticks in ORDER BY: SELECT product_name AS labels, count(*) AS `Number of Reviews` FROM df GROUP BY product_name ORDER BY `Number of Reviews` DESC LIMIT 10
+Never write ORDER BY 'Number of Reviews' (single quotes)—that is a string literal and will fail in DuckDB.
+
 Remember:
 - Chart.js config MUST ALWAYS include the 'type' field - this is REQUIRED and cannot be omitted
 - Chart.js config should have empty arrays for labels and datasets[].data
 - The data_query_string should be a complete, executable SQL query
+- Only reference columns that appear in the Sample Data Catalog; never use columns (e.g. "question") that are not in the catalog—df only has the columns from the original query result
 - Choose chart types appropriately: line/bar for time series or comparisons, pie/doughnut for proportions
 - The 'type' field must be one of: 'line', 'bar', 'pie', or 'doughnut' - always include it in your response
 """

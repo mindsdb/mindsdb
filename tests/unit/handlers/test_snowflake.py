@@ -38,6 +38,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             user="example_user",
             password="example_pass",
             database="example_db",
+            schema="example_schema",
             auth_type="password",
         )
 
@@ -107,6 +108,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key_path=private_key_path,
             auth_type="key_pair",
         )
@@ -488,6 +490,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key="-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----",
             auth_type="key_pair",
         )
@@ -526,6 +529,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key="-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----",
             private_key_passphrase="inline-pass",
             auth_type="key_pair",
@@ -561,6 +565,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key_path="/nonexistent/path/to/key.pem",
             auth_type="key_pair",
         )
@@ -584,6 +589,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 account="tvuibdy-vm85921",
                 user="example_user",
                 database="example_db",
+                schema="example_schema",
                 private_key_path=temp_key_path,
                 auth_type="key_pair",
             )

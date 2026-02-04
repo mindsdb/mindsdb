@@ -232,6 +232,9 @@ def query_traversal(node, callback, is_table=False, is_target=False, parent_quer
         default = query_traversal(node.default, callback, parent_query=parent_query, stack=stack2)
         if default is not None:
             node.default = default
+        arg = query_traversal(node.arg, callback, parent_query=parent_query, stack=stack2)
+        if arg is not None:
+            node.arg = arg
 
     elif isinstance(node, list):
         array = []

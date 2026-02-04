@@ -134,6 +134,14 @@ def _get_interval_parts(node: ASTNode) -> Optional[Tuple[int, str]]:
 
 def _transform_databricks_sql_intervals(node: ASTNode, **kwargs: Any) -> ASTNode | None:
     """Transform INTERVAL literals in the SQL query to be compatible with Databricks SQL syntax.
+    Transformation examples:
+        DATE_ADD(col, INTERVAL 5 HOUR)    -> TIMESTAMPADD(hour, 5, col)
+        DATE_SUB(col, INTERVAL 30 MINUTE)  -> TIMESTAMPADD(minute, -30, col)
+        DATE_ADD(col, INTERVAL 10 DAY)    -> DATE_ADD(col, 10)
+        DATE_SUB(col, INTERVAL 2 WEEK)    -> DATE_SUB(col, 14)
+        DATE_ADD(col, INTERVAL 3 MONTH)   -> ADD_MONTHS(col, 3)
+        DATE_SUB(col, INTERVAL 1 YEAR)    -> ADD_MONTHS(col, -12)
+
 
     Args:
         query (ASTNode): The SQL query represented as an ASTNode.

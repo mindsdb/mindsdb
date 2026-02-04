@@ -31,7 +31,6 @@ from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.knowledge_bases import ns_conf as knowledge_bases_ns
 from mindsdb.api.http.namespaces.models import ns_conf as models_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
-from mindsdb.api.http.namespaces.skills import ns_conf as skills_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
@@ -52,6 +51,7 @@ from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
 from mindsdb.api.common.middleware import verify_pat
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -277,7 +277,6 @@ def initialize_app(is_restart: bool = False):
         views_ns,
         models_ns,
         chatbots_ns,
-        skills_ns,
         agents_ns,
         jobs_ns,
         knowledge_bases_ns,
@@ -348,12 +347,8 @@ def initialize_app(is_restart: bool = False):
         # endregion
 
         company_id = request.headers.get("company-id")
+        user_id = request.headers.get("user-id")
         user_class = request.headers.get("user-class")
-
-        try:
-            user_id = int(request.headers.get("user-id", 0))
-        except Exception:
-            user_id = 0
 
         if user_class is not None:
             try:
@@ -364,8 +359,8 @@ def initialize_app(is_restart: bool = False):
         else:
             user_class = 0
 
-        ctx.user_id = user_id
-        ctx.company_id = company_id
+        ctx.company_id = company_id if company_id is not None else DEFAULT_COMPANY_ID
+        ctx.user_id = user_id if user_id is not None else DEFAULT_USER_ID
         ctx.user_class = user_class
 
     logger.debug("Done initializing app.")

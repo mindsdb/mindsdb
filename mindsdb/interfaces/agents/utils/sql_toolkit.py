@@ -212,6 +212,10 @@ class MindsDBQuery:
         if not isinstance(ast_query, (Select, Show, Describe, Explain, Union, Intersect, Except)):
             raise ValueError(f"Query is not allowed: {ast_query.to_string()}")
 
+        cte_names = []
+        if isinstance(ast_query, Select) and ast_query.cte is not None:
+            cte_names = [expr.name.parts[-1] for expr in ast_query.cte]
+
         def _check_f(node, is_table=None, **kwargs):
             if not (is_table and isinstance(node, Identifier)):
                 return
@@ -221,6 +225,10 @@ class MindsDBQuery:
 
             if self.tables.match(node):
                 return
+
+            if len(node.parts) == 1:
+                if node.parts[0] in cte_names:
+                    return
 
             if "." in node.parts[0]:
                 # extract quoted parts (with dots) to sub-parts

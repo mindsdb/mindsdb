@@ -414,6 +414,7 @@ class TestDateTimeFunctions(unittest.TestCase):
     def test_query_transforms_date_add_day_interval(self):
         """Test DATE_ADD with INTERVAL DAY is transformed to integer argument."""
         query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL '30' DAY) AS due_date FROM orders LIMIT 1")
+        # breakpoint()
         self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
 
         self.handler.query(query)

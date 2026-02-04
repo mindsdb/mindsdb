@@ -434,7 +434,8 @@ class DatabricksHandler(MetaDatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        query = query_traversal(query, _transform_databricks_sql_intervals)
+        # Transform the query to be compatible with Databricks SQL syntax
+        query_traversal(query, _transform_databricks_sql_intervals)
         renderer = SqlalchemyRender(DatabricksDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)

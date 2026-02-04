@@ -24,7 +24,7 @@ from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE, HANDLER_SUPPORT_LEVEL
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
@@ -32,6 +32,7 @@ from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
 from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
+from mindsdb.utilities.constants import DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -48,7 +49,11 @@ class IntegrationController:
 
     def _add_integration_record(self, name, engine, connection_args):
         integration_record = db.Integration(
-            name=name, engine=engine, data=connection_args or {}, company_id=ctx.company_id
+            name=name,
+            engine=engine,
+            data=connection_args or {},
+            company_id=ctx.company_id,
+            user_id=ctx.user_id,
         )
         db.session.add(integration_record)
         db.session.commit()
@@ -56,12 +61,13 @@ class IntegrationController:
 
     def add(self, name: str, engine, connection_args, check_connection: bool = False):
         logger.debug(
-            "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
+            "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s, user_id=%s",
             self.__class__.__name__,
             name,
             engine,
             connection_args,
             ctx.company_id,
+            ctx.user_id,
         )
         handler_meta = self.get_handler_meta(engine)
 
@@ -205,7 +211,13 @@ class IntegrationController:
         ):
             fs_store = FsStore()
             integrations_dir = Config()["paths"]["integrations"]
-            folder_name = f"integration_files_{integration_record.company_id}_{integration_record.id}"
+            # Hybrid folder naming for backwards compatibility:
+            # - Old format (DEFAULT_USER_ID): integration_files_{company_id}_{id}
+            # - New format (real user_id): integration_files_{company_id}_{user_id}_{id}
+            if integration_record.user_id == DEFAULT_USER_ID:
+                folder_name = f"integration_files_{integration_record.company_id}_{integration_record.id}"
+            else:
+                folder_name = f"integration_files_{integration_record.company_id}_{integration_record.user_id}_{integration_record.id}"
             fs_store.get(folder_name, base_dir=integrations_dir)
 
         handler_meta = self.get_handler_metadata(integration_record.engine)
@@ -259,7 +271,9 @@ class IntegrationController:
 
     def get_by_id(self, integration_id, show_secrets=True):
         integration_record = (
-            db.session.query(db.Integration).filter_by(company_id=ctx.company_id, id=integration_id).first()
+            db.session.query(db.Integration)
+            .filter_by(company_id=ctx.company_id, user_id=ctx.user_id, id=integration_id)
+            .first()
         )
         return self._get_integration_record_data(integration_record, show_secrets)
 
@@ -282,7 +296,11 @@ class IntegrationController:
             db.Integration
         """
         if case_sensitive:
-            integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).all()
+            integration_records = (
+                db.session.query(db.Integration)
+                .filter_by(company_id=ctx.company_id, user_id=ctx.user_id, name=name)
+                .all()
+            )
             if len(integration_records) > 1:
                 raise Exception(f"There is {len(integration_records)} integrations with name '{name}'")
             if len(integration_records) == 0:
@@ -293,6 +311,7 @@ class IntegrationController:
                 db.session.query(db.Integration)
                 .filter(
                     (db.Integration.company_id == ctx.company_id)
+                    & (db.Integration.user_id == ctx.user_id)
                     & (func.lower(db.Integration.name) == func.lower(name))
                 )
                 .first()
@@ -303,7 +322,9 @@ class IntegrationController:
         return integration_record
 
     def get_all(self, show_secrets=True):
-        integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id).all()
+        integration_records = (
+            db.session.query(db.Integration).filter_by(company_id=ctx.company_id, user_id=ctx.user_id).all()
+        )
         integration_dict = {}
         for record in integration_records:
             if record is None or record.data is None:
@@ -333,6 +354,7 @@ class IntegrationController:
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
             handler_args["handler_controller"] = self
             handler_args["company_id"] = ctx.company_id
+            handler_args["user_id"] = ctx.user_id
 
         return handler_args
 
@@ -579,7 +601,7 @@ class IntegrationController:
         if hasattr(module, "permanent"):
             handler_meta["permanent"] = module.permanent
         else:
-            if handler_meta.get("name") in ("files", "views", "lightwood"):
+            if handler_meta.get("name") in ("files", "views"):
                 handler_meta["permanent"] = True
             else:
                 handler_meta["permanent"] = False
@@ -639,6 +661,7 @@ class IntegrationController:
                 "connection_args": handler_info.get("connection_args", None),
                 "class_type": handler_info.get("class_type", None),
                 "type": handler_info.get("type"),
+                "support_level": handler_info.get("support_level"),
             }
             if "icon_path" in handler_info:
                 icon = self._get_handler_icon(handler_dir, handler_info["icon_path"])
@@ -655,7 +678,7 @@ class IntegrationController:
         :return: extracted connection arguments
         """
 
-        code = ast.parse(args_file.read_text())
+        code = ast.parse(args_file.read_text(encoding="utf-8"))
 
         args = {}
         for item in code.body:
@@ -711,7 +734,7 @@ class IntegrationController:
 
         if not path.exists():
             return
-        code = ast.parse(path.read_text())
+        code = ast.parse(path.read_text(encoding="utf-8"))
         # find base class of handler.
         #  TODO trace inheritance (is used only for sql handler)
         for item in code.body:
@@ -733,23 +756,29 @@ class IntegrationController:
         init_file = handler_dir / "__init__.py"
         if not init_file.exists():
             return {}
-        code = ast.parse(init_file.read_text())
+        code = ast.parse(init_file.read_text(encoding="utf-8"))
 
-        info = {}
+        info = {
+            "support_level": HANDLER_SUPPORT_LEVEL.COMMUNITY,
+        }
         for item in code.body:
             if not isinstance(item, ast.Assign):
                 continue
             if isinstance(item.targets[0], ast.Name):
                 name = item.targets[0].id
-                if isinstance(item.value, ast.Constant):
-                    info[name] = item.value.value
-                if isinstance(item.value, ast.Attribute) and name == "type":
-                    if item.value.attr == "ML":
+                match name, item.value:
+                    case _, ast.Constant():
+                        info[name] = item.value.value
+                    case "type", ast.Attribute(attr="ML"):
                         info[name] = HANDLER_TYPE.ML
                         info["class_type"] = "ml"
-                    else:
+                    case "type", ast.Attribute(attr="DATA"):
                         info[name] = HANDLER_TYPE.DATA
                         info["class_type"] = self._get_base_class_type(code, handler_dir) or "sql"
+                    case "support_level", ast.Attribute(attr="MINDSDB"):
+                        info["support_level"] = HANDLER_SUPPORT_LEVEL.MINDSDB
+                    case "support_level", ast.Attribute(attr="COMMUNITY"):
+                        info["support_level"] = HANDLER_SUPPORT_LEVEL.COMMUNITY
 
         # connection args
         if info["type"] == HANDLER_TYPE.ML:
@@ -837,7 +866,8 @@ class IntegrationController:
                         name=integration_name,
                         data={},
                         engine=integration_name,
-                        company_id=None,
+                        company_id=ctx.company_id,
+                        user_id=ctx.user_id,
                     )
                     db.session.add(integration_record)
         db.session.commit()

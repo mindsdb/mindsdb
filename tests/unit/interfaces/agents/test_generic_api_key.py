@@ -106,7 +106,6 @@ class TestGenericApiKeyHandling(unittest.TestCase):
                 name="test_agent",
                 project_name="mindsdb",
                 model_name="gpt-4",
-                skills=[],
                 provider="openai",
                 params=params,
             )
@@ -153,7 +152,6 @@ class TestGenericApiKeyHandling(unittest.TestCase):
                 name="test_agent",
                 project_name="mindsdb",
                 model_name="gpt-4",
-                skills=[],
                 provider="openai",
                 params=params,
             )
@@ -163,14 +161,9 @@ class TestGenericApiKeyHandling(unittest.TestCase):
         self.assertEqual(agent.params["openai_api_key"], "test-specific-agent-api-key")
 
         # Test that get_api_key returns the provider-specific key when both are present
-        with patch("mindsdb.interfaces.agents.langchain_agent.get_api_key") as mock_get_api_key:
-            mock_get_api_key.return_value = "test-specific-agent-api-key"
+        api_key = get_api_key("openai", {"params": params})
 
-            # Call the function that would use get_api_key
-            api_key = get_api_key("openai", {"params": params})
-
-            # Verify that the provider-specific key was returned
-            self.assertEqual(api_key, "test-specific-agent-api-key")
+        self.assertEqual(api_key, "test-specific-agent-api-key")
 
 
 if __name__ == "__main__":

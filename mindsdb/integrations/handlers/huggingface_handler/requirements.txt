@@ -1,0 +1,7 @@
+# NOTE: Any changes made here need to be made to requirements_cpu.txt as well
+datasets==2.16.1
+evaluate==0.4.3
+nltk==3.9.1
+huggingface-hub==0.29.3
+torch==2.8.0
+transformers >= 4.42.4

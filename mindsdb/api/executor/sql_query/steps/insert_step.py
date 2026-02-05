@@ -57,7 +57,7 @@ class InsertToTableCall(BaseStepCall):
                         # Allow explicitly inserting NULL values.
                         record.append(None)
                         continue
-                    # Value is a fucntion
+                    # Value is a function
                     if isinstance(v, Function):
                         record.append(v)
                         continue

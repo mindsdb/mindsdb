@@ -777,7 +777,7 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
             "data": {
                 "products": {
                     "nodes": [{"id": str(i), "title": f"Product {i}"} for i in range(MAX_PAGE_LIMIT)],
-                    "pageInfo": {"hasNextPage": True, "endCursor": "cursor"}
+                    "pageInfo": {"hasNextPage": True, "endCursor": "cursor"},
                 }
             }
         }
@@ -786,7 +786,7 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
             "data": {
                 "products": {
                     "nodes": [{"id": str(i), "title": f"Product {i}"} for i in range(MAX_PAGE_LIMIT, 300)],
-                    "pageInfo": {"hasNextPage": False, "endCursor": None}
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
                 }
             }
         }
@@ -804,11 +804,11 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
 
         # Verify that two requests were made
         self.assertEqual(mock_shopify_query.call_count, 2)
-        
+
         # First call should request min(300, 250) = 250
         first_call_kwargs = mock_shopify_query.call_args_list[0][1]
         self.assertEqual(first_call_kwargs["limit"], MAX_PAGE_LIMIT)
-        
+
         # Second call should request min(max(300-250, 1), 250) = 50
         second_call_kwargs = mock_shopify_query.call_args_list[1][1]
         self.assertEqual(second_call_kwargs["limit"], 50)

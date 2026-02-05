@@ -37,7 +37,6 @@ class ChromaDBHandler(VectorStoreHandler):
         self.persist_directory = None
         self.is_connected = False
         self._use_handler_storage = False
-        self._insert_lock = threading.Lock()
 
         config = self.validate_connection_parameters(name, **kwargs)
 
@@ -400,7 +399,10 @@ class ChromaDBHandler(VectorStoreHandler):
         # Extract data from DataFrame
         data_dict = df.to_dict(orient="list")
 
-        with self._insert_lock:
+        if not hasattr(self._client, "_insert_lock"):
+            self._client._insert_lock = threading.Lock()
+
+        with self._client._insert_lock:
             try:
                 collection.upsert(
                     ids=data_dict[TableField.ID.value],

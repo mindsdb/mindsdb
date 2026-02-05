@@ -350,7 +350,7 @@ class PydanticAIAgent:
                         if col not in data.columns:
                             # try to find case independent
                             if col.lower() in cols_map:
-                                data[col] = data[col] = data[cols_map[col.lower()]]
+                                data[col] = data[cols_map[col.lower()]]
                             else:
                                 data[col] = None
                     # Reorder columns to match select_targets order

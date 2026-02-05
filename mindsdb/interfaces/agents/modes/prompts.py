@@ -17,7 +17,7 @@ Prefer simple interval arithmetic over dialect-specific functions.
 To subtract months: max_ts - INTERVAL 8 MONTH
 To subtract days: max_ts - INTERVAL 30 DAY
 
-Date types might be stored in string format, if you have error related to it (e.g. `No operator matches the given name and argument types`), use explicit type cast:  
+Date types might be stored in string format, if you have an error related to it (e.g. `No operator matches the given name and argument types`), use explicit type cast:  
 CAST(max_ts AS TIMESTAMP)  - INTERVAL 30 DAY
 
 Use DATE_TRUNC('month', timestamp_expression) for month bucketing.

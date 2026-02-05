@@ -7,6 +7,8 @@ between HubSpot CRM objects (companies, contacts, deals, tickets, etc.).
 Reference: https://developers.hubspot.com/docs/api/crm/associations
 """
 
+from __future__ import annotations
+
 from typing import Any
 import pandas as pd
 

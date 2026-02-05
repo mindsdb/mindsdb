@@ -8,6 +8,7 @@ import pandas as pd
 
 try:
     from databricks.sql import RequestError, ServerOperationError
+    from mindsdb_sql_parser import parse_sql
     from mindsdb.integrations.handlers.databricks_handler.databricks_handler import (
         DatabricksHandler,
     )
@@ -354,6 +355,260 @@ class TestAdvancedQueries(unittest.TestCase):
         result = self.handler.native_query(query)
 
         self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+
+
+@pytest.mark.skipif(not DATABRICKS_AVAILABLE, reason="Databricks not installed")
+class TestDateTimeFunctions(unittest.TestCase):
+    """Test date/time functions and INTERVAL transformations."""
+
+    dummy_connection_data = OrderedDict(
+        server_hostname="test.azuredatabricks.net",
+        http_path="sql/test",
+        access_token="test_token",
+        schema="default",
+    )
+
+    def setUp(self):
+        self.patcher = patch(CONNECT_PATCH_PATH)
+        self.mock_connect = self.patcher.start()
+        self.mock_conn = MagicMock()
+        self.mock_cursor = CursorContextManager()
+        self.mock_conn.cursor.return_value = self.mock_cursor
+        self.mock_connect.return_value = self.mock_conn
+        self.handler = DatabricksHandler("databricks", connection_data=self.dummy_connection_data)
+
+    def tearDown(self):
+        self.patcher.stop()
+
+    def test_current_timestamp(self):
+        """Test CURRENT_TIMESTAMP function."""
+        from datetime import datetime
+
+        now = datetime.now()
+        self.mock_cursor.set_results([(now,)], ["current_timestamp"])
+
+        result = self.handler.native_query("SELECT CURRENT_TIMESTAMP as current_timestamp")
+
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(result.data_frame.iloc[0]["current_timestamp"], now)
+
+    def test_date_add_interval_days_native_query(self):
+        """Test DATE_ADD with INTERVAL days via native_query."""
+        from datetime import datetime, timedelta
+
+        base_date = datetime(2023, 1, 1)
+        expected_date = base_date + timedelta(days=30)
+        self.mock_cursor.set_results([(expected_date,)], ["due_date"])
+
+        query = """
+            SELECT DATE_ADD(o_orderdate, 30) as due_date
+            FROM orders
+            LIMIT 5
+        """
+
+        result = self.handler.native_query(query)
+
+        self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(result.data_frame.iloc[0]["due_date"], expected_date)
+
+    def test_query_transforms_date_add_day_interval(self):
+        """Test DATE_ADD with INTERVAL DAY is transformed to integer argument."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL '30' DAY) AS due_date FROM orders LIMIT 1")
+        # breakpoint()
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("date_add(o_orderdate, 30)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_add_days_plural(self):
+        """Test DATE_ADD with INTERVAL DAYS (plural) is transformed correctly."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL 7 DAYS) AS due_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("date_add(o_orderdate, 7)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_sub_day_interval(self):
+        """Test DATE_SUB with INTERVAL DAY is transformed to integer argument."""
+        query = parse_sql("SELECT DATE_SUB(o_orderdate, INTERVAL '5' DAY) AS past_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("date_sub(o_orderdate, 5)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_add_week_interval(self):
+        """Test DATE_ADD with INTERVAL WEEK is converted to days."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL '2' WEEK) AS future_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("date_add(o_orderdate, 14)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_sub_week_interval(self):
+        """Test DATE_SUB with INTERVAL WEEK is converted to days."""
+        query = parse_sql("SELECT DATE_SUB(o_orderdate, INTERVAL '2' WEEK) AS past_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("date_sub(o_orderdate, 14)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_add_month_interval(self):
+        """Test DATE_ADD with INTERVAL MONTH uses ADD_MONTHS function."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL '2' MONTH) AS future_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("add_months(o_orderdate, 2)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_sub_month_interval(self):
+        """Test DATE_SUB with INTERVAL MONTH uses ADD_MONTHS with negative value."""
+        query = parse_sql("SELECT DATE_SUB(o_orderdate, INTERVAL '3' MONTH) AS past_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("add_months(o_orderdate, -3)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_add_year_interval(self):
+        """Test DATE_ADD with INTERVAL YEAR uses ADD_MONTHS with 12x multiplier."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL '1' YEAR) AS future_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("add_months(o_orderdate, 12)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_sub_year_interval(self):
+        """Test DATE_SUB with INTERVAL YEAR uses ADD_MONTHS with negative 12x value."""
+        query = parse_sql("SELECT DATE_SUB(o_orderdate, INTERVAL '2' YEAR) AS past_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("add_months(o_orderdate, -24)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_add_hour_interval(self):
+        """Test DATE_ADD with INTERVAL HOUR uses TIMESTAMPADD function."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL '6' HOUR) AS future_time FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("timestampadd(hour, 6, o_orderdate)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_sub_hour_interval(self):
+        """Test DATE_SUB with INTERVAL HOUR uses TIMESTAMPADD with negative value."""
+        query = parse_sql("SELECT DATE_SUB(o_orderdate, INTERVAL '3' HOUR) AS past_time FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("timestampadd(hour, -3, o_orderdate)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_add_minute_interval(self):
+        """Test DATE_ADD with INTERVAL MINUTE uses TIMESTAMPADD function."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL '30' MINUTE) AS future_time FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("timestampadd(minute, 30, o_orderdate)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_add_second_interval(self):
+        """Test DATE_ADD with INTERVAL SECOND uses TIMESTAMPADD function."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL '45' SECOND) AS future_time FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("timestampadd(second, 45, o_orderdate)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_without_interval_unchanged(self):
+        """Test that queries without INTERVAL pass through unchanged."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, 10) AS future_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("date_add(o_orderdate, 10)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_add_quarter_interval(self):
+        """Test DATE_ADD with INTERVAL QUARTER uses ADD_MONTHS with 3x multiplier."""
+        query = parse_sql("SELECT DATE_ADD(o_orderdate, INTERVAL '2' QUARTER) AS future_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("add_months(o_orderdate, 6)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_sub_quarter_interval(self):
+        """Test DATE_SUB with INTERVAL QUARTER uses ADD_MONTHS with negative 3x value."""
+        query = parse_sql("SELECT DATE_SUB(o_orderdate, INTERVAL '1' QUARTER) AS past_date FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("add_months(o_orderdate, -3)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_sub_minute_interval(self):
+        """Test DATE_SUB with INTERVAL MINUTE uses TIMESTAMPADD with negative value."""
+        query = parse_sql("SELECT DATE_SUB(o_orderdate, INTERVAL '15' MINUTE) AS past_time FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("timestampadd(minute, -15, o_orderdate)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
+
+    def test_query_transforms_date_sub_second_interval(self):
+        """Test DATE_SUB with INTERVAL SECOND uses TIMESTAMPADD with negative value."""
+        query = parse_sql("SELECT DATE_SUB(o_orderdate, INTERVAL '30' SECOND) AS past_time FROM orders")
+        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.OK))
+
+        self.handler.query(query)
+
+        transformed_sql = self.handler.native_query.call_args[0][0].lower()
+        self.assertIn("timestampadd(second, -30, o_orderdate)", transformed_sql)
+        self.assertNotIn("interval", transformed_sql)
 
 
 if __name__ == "__main__":

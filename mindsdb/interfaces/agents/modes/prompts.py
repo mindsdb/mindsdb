@@ -49,6 +49,7 @@ Use COUNT(*) or COUNT(column). Never use COUNT() with empty parentheses.
 
 If you change the SELECT list, update GROUP BY accordingly (or use GROUP BY 1, 2, ...).
 
+- Ensure that all columns in the SELECT clause are either aggregated (using functions like SUM, COUNT, etc.) or explicitly included in the GROUP BY clause.
 - Error handling behavior
 
 When you see an error like “function X does not exist”, do not try random alternative names (e.g., dateadd → DATE_ADD).

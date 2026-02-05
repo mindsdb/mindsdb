@@ -3,6 +3,7 @@ import ast
 import shutil
 import hashlib
 from typing import Dict, List, Optional, Union
+import threading
 
 import pandas as pd
 import chromadb
@@ -36,6 +37,7 @@ class ChromaDBHandler(VectorStoreHandler):
         self.persist_directory = None
         self.is_connected = False
         self._use_handler_storage = False
+        self._insert_lock = threading.Lock()
 
         config = self.validate_connection_parameters(name, **kwargs)
 
@@ -398,18 +400,19 @@ class ChromaDBHandler(VectorStoreHandler):
         # Extract data from DataFrame
         data_dict = df.to_dict(orient="list")
 
-        try:
-            collection.upsert(
-                ids=data_dict[TableField.ID.value],
-                documents=data_dict[TableField.CONTENT.value],
-                embeddings=data_dict.get(TableField.EMBEDDINGS.value, None),
-                metadatas=data_dict.get(TableField.METADATA.value, None),
-            )
-            self._sync()
-        except Exception as e:
-            logger.error(f"Error during upsert operation: {str(e)}")
-            raise Exception(f"Failed to insert/update data: {str(e)}")
-        return Response(RESPONSE_TYPE.OK, affected_rows=len(df))
+        with self._insert_lock:
+            try:
+                collection.upsert(
+                    ids=data_dict[TableField.ID.value],
+                    documents=data_dict[TableField.CONTENT.value],
+                    embeddings=data_dict.get(TableField.EMBEDDINGS.value, None),
+                    metadatas=data_dict.get(TableField.METADATA.value, None),
+                )
+                self._sync()
+            except Exception as e:
+                logger.error(f"Error during upsert operation: {str(e)}")
+                raise Exception(f"Failed to insert/update data: {str(e)}")
+            return Response(RESPONSE_TYPE.OK, affected_rows=len(df))
 
     def update(
         self,

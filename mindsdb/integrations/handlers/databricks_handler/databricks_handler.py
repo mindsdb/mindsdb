@@ -1,4 +1,4 @@
-from typing import Text, Dict, Any, Optional, List
+from typing import Text, Dict, Any, Optional, List, Tuple
 
 import pandas as pd
 import re
@@ -16,11 +16,17 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
     INF_SCHEMA_COLUMNS_NAMES_SET,
 )
+from mindsdb_sql_parser import ast
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+
 from mindsdb.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 logger = log.getLogger(__name__)
+
+
+_INTERVAL_RE = re.compile(r"(?is)^\s*(?:interval\s+)?'?(?P<value>[+-]?\d+)'?\s+(?P<unit>[a-zA-Z]+)\s*$")
 
 
 def _escape_literal(value: str) -> str:
@@ -46,6 +52,158 @@ def _validate_identifier(identifier: str) -> str:
     if not re.match(r"^[\w\s\-]+$", identifier):
         raise ValueError(f"Identifier contains invalid characters: {identifier}")
     return identifier
+
+
+def _parse_interval_value(value: Any) -> Optional[int]:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        value = value.strip().strip("'").strip('"')
+        if re.fullmatch(r"[+-]?\d+", value):
+            return int(value)
+    return None
+
+
+def _parse_interval_unit(unit: Any) -> Optional[str]:
+    if isinstance(unit, str):
+        unit_upper = unit.strip().upper()
+        if unit_upper.endswith("S"):
+            unit_upper = unit_upper[:-1]
+        valid_units = {"YEAR", "MONTH", "DAY", "HOUR", "MINUTE", "SECOND", "WEEK", "QUARTER"}
+        if unit_upper in valid_units:
+            return unit_upper
+    return None
+
+
+def _parse_interval_literal(value: Any) -> Optional[Tuple[int, str]]:
+    if value is None:
+        return None
+
+    match = _INTERVAL_RE.match(str(value))
+    if not match:
+        return None
+
+    parsed_value = _parse_interval_value(match.group("value"))
+    parsed_unit = _parse_interval_unit(match.group("unit"))
+    if parsed_value is None or parsed_unit is None:
+        return None
+    return parsed_value, parsed_unit
+
+
+def _get_interval_parts(node: ASTNode) -> Optional[Tuple[int, str]]:
+    """Extract interval parts from an ASTNode representing an INTERVAL literal.
+
+    Args:
+        node (ASTNode): The ASTNode representing the INTERVAL literal.
+    Returns:
+        Optional[Tuple[int, str]]: A tuple with (value, unit) if successful, None otherwise.
+    """
+    if isinstance(node, ast.UnaryOperation):
+        if node.op == "-" and node.args:
+            parts = _get_interval_parts(node.args[0])
+            if parts is None:
+                return None
+            # Negate the value part
+            return -parts[0], parts[1]
+        return None
+
+    if isinstance(node, ast.Constant):
+        return _parse_interval_literal(node.value)
+
+    if not isinstance(node, ast.Interval):
+        return None
+
+    parts = node.args or []
+
+    if len(parts) >= 2:
+        value = parts[0].value if isinstance(parts[0], ast.Constant) else parts[0]
+        unit = parts[1].value if isinstance(parts[1], ast.Constant) else parts[1]
+        parsed_value = _parse_interval_value(value)
+        parsed_unit = _parse_interval_unit(unit)
+        if parsed_value is not None and parsed_unit is not None:
+            return parsed_value, parsed_unit
+
+    if len(parts) == 1:
+        raw = parts[0].value if isinstance(parts[0], ast.Constant) else parts[0]
+        return _parse_interval_literal(raw)
+
+    return None
+
+
+def _transform_databricks_sql_intervals(node: ASTNode, **kwargs: Any) -> ASTNode | None:
+    """Transform INTERVAL literals in the SQL query to be compatible with Databricks SQL syntax.
+    Transformation examples:
+        DATE_ADD(col, INTERVAL 5 HOUR)    -> TIMESTAMPADD(hour, 5, col)
+        DATE_SUB(col, INTERVAL 30 MINUTE)  -> TIMESTAMPADD(minute, -30, col)
+        DATE_ADD(col, INTERVAL 10 DAY)    -> DATE_ADD(col, 10)
+        DATE_SUB(col, INTERVAL 2 WEEK)    -> DATE_SUB(col, 14)
+        DATE_ADD(col, INTERVAL 3 MONTH)   -> ADD_MONTHS(col, 3)
+        DATE_SUB(col, INTERVAL 1 YEAR)    -> ADD_MONTHS(col, -12)
+
+
+    Args:
+        query (ASTNode): The SQL query represented as an ASTNode.
+
+    Returns:
+        ASTNode: The transformed SQL query with compatible INTERVAL syntax.
+    """
+    if not isinstance(node, ast.Function):
+        return None
+
+    function_name = str(node.op).lower()
+    if function_name not in {"date_add", "date_sub"} or len(node.args) != 2:
+        return None
+
+    interval_parts = _get_interval_parts(node.args[1])
+    if interval_parts is None:
+        return None
+    value, unit = interval_parts
+
+    date = node.args[0]
+
+    if unit == "DAY":
+        if function_name == "date_add":
+            node.args[1] = ast.Constant(value)
+        else:
+            node.args[1] = ast.Constant(abs(value))
+        return None
+
+    if unit == "WEEK":
+        days_value = value * 7
+        if function_name == "date_add":
+            node.args[1] = ast.Constant(days_value)
+        else:
+            node.args[1] = ast.Constant(abs(days_value))
+        return None
+
+    if unit in {"MONTH", "YEAR", "QUARTER"}:
+        month_value = value
+        if unit == "YEAR":
+            month_value = value * 12
+        elif unit == "QUARTER":
+            month_value = value * 3
+        if function_name == "date_sub":
+            month_value = -month_value
+        new_node = ast.Function(
+            op="add_months",
+            args=[date, ast.Constant(month_value)],
+        )
+        return new_node
+
+    if unit in {"HOUR", "MINUTE", "SECOND"}:
+        if function_name == "date_sub":
+            value = -value
+        new_node = ast.Function(
+            op="timestampadd",
+            args=[
+                ast.Identifier(unit.lower()),
+                ast.Constant(value),
+                date,
+            ],
+        )
+        return new_node
 
 
 def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
@@ -276,6 +434,8 @@ class DatabricksHandler(MetaDatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
+        # Transform the query to be compatible with Databricks SQL syntax
+        query_traversal(query, _transform_databricks_sql_intervals)
         renderer = SqlalchemyRender(DatabricksDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)

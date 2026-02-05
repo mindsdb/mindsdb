@@ -543,7 +543,7 @@ class PydanticAIAgent:
 
                     accumulated_errors.append(f"Query: {sql_query}\nError: {query_error}")
                     retry_count += 1
-                    if retry_count <= MAX_RETRIES:
+                    if retry_count >= MAX_RETRIES:
                         error_context = "\n\nPrevious query errors:\n" + "\n---\n".join(accumulated_errors[-3:])
                         if output.type == ResponseType.FINAL_QUERY:
                             raise RuntimeError(f"Problem with final query: {query_error}")

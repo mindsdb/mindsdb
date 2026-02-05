@@ -222,7 +222,13 @@ class IntegrationController:
         ):
             fs_store = FsStore()
             integrations_dir = Config()["paths"]["integrations"]
-            folder_name = f"integration_files_{integration_record.company_id}_{integration_record.user_id}_{integration_record.id}"
+            # Hybrid folder naming for backwards compatibility:
+            # - Old format (DEFAULT_USER_ID): integration_files_{company_id}_{id}
+            # - New format (real user_id): integration_files_{company_id}_{user_id}_{id}
+            if integration_record.user_id == DEFAULT_USER_ID:
+                folder_name = f"integration_files_{integration_record.company_id}_{integration_record.id}"
+            else:
+                folder_name = f"integration_files_{integration_record.company_id}_{integration_record.user_id}_{integration_record.id}"
             fs_store.get(folder_name, base_dir=integrations_dir)
 
         handler_meta = self.get_handler_metadata(integration_record.engine)

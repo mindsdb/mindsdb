@@ -1,6 +1,5 @@
 from typing import Any, List, Optional
 import ast as py_ast
-import copy
 
 import pandas as pd
 from pandas.api import types as pd_types

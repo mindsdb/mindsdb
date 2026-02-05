@@ -36,6 +36,7 @@ from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
 from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
+from mindsdb.utilities.constants import DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 

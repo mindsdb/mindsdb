@@ -344,9 +344,15 @@ class PydanticAIAgent:
                     data = pd.DataFrame({col: [None] for col in self.select_targets})
                 else:
                     # Ensure all expected columns exist, add missing ones with null values
+                    cols_map = {c.lower(): c for c in data.columns}
+
                     for col in self.select_targets:
                         if col not in data.columns:
-                            data[col] = None
+                            # try to find case independent
+                            if col.lower() in cols_map:
+                                data[col] = data[col] = data[cols_map[col.lower()]]
+                            else:
+                                data[col] = None
                     # Reorder columns to match select_targets order
                     data = data[self.select_targets]
 

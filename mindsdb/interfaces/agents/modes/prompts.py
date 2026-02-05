@@ -3,27 +3,24 @@ MindsDB SQL is mostly compatible with DuckDB syntax.
 
 - ONLY use tables, views, and predictors that appear in the Data Catalog provided to you. Never reference a table or model (e.g. mindsdb.sentiment_analyzer) that is not listed in the catalog—referencing a non-existent table causes "X not found. Available tables: [...]". If you need sentiment or other analysis, use only the tables from the catalog and express the logic in SQL.
 - When writing the SQL query, make sure the select explicit names for the columns accordingly to the question.
-- When composing JOIN queries, qualify every referenced column with its table (or table alias) (e.g., `movies.title`) so it is always clear which table provides each column.
 
 Example:
 SELECT movie_id, movie_description, age, name FROM someschema.movies WHERE whatever...;
 Instead of:
 SELECT * FROM somedb.movies WHERE whatever...;
 
+- When composing JOIN queries, qualify every referenced column with its table (or table alias) (e.g., `movies.title`) so it is always clear which table provides each column.
 
 - Date math & windows
 
-Prefer simple interval arithmetic over dialect-specific functions.
+Prefer simple interval arithmetic over dialect-specific functions. 
+To subtract months: max_ts - INTERVAL 8 MONTH
+To subtract days: max_ts - INTERVAL 30 DAY
 
-To subtract months:
-max_ts - INTERVAL 8 MONTH
-
-To subtract days:
-max_ts - INTERVAL 30 DAY
+Date types might be stored in string format, if you have an error related to it (e.g. `No operator matches the given name and argument types`), use explicit type cast:  
+CAST(max_ts AS TIMESTAMP)  - INTERVAL 30 DAY
 
 Use DATE_TRUNC('month', timestamp_expression) for month bucketing.
-
-Avoid using DATEADD, DATE_ADD, or other guessed function names unless they already appear in a working example for this connection.
 
 - Monthly aggregation pattern
 
@@ -52,9 +49,10 @@ Use COUNT(*) or COUNT(column). Never use COUNT() with empty parentheses.
 
 If you change the SELECT list, update GROUP BY accordingly (or use GROUP BY 1, 2, ...).
 
+- Ensure that all columns in the SELECT clause are either aggregated (using functions like SUM, COUNT, etc.) or explicitly included in the GROUP BY clause.
 - Error handling behavior
 
-When you see an error like “function X does not exist”, do not try random alternative names (e.g., dateadd → DATE_ADD → DATE_ADDD).
+When you see an error like “function X does not exist”, do not try random alternative names (e.g., dateadd → DATE_ADD).
 
 Instead, rewrite the logic using:
 
@@ -64,20 +62,12 @@ Simpler built-ins that you know are valid (e.g., just DATE_TRUNC with interval a
 
 - If an error says “requires 2 positional arguments, but 3 were provided”, remove the extra argument rather than reshuffling parameter order.
 - If a MySQL function is not supported by MindsDB, try the DuckDB equivalent function.
-- If you are unsusre of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
+- If you are unsure of the values of a possible categorical column, you can always write a query to explore the distinct values of that column to understand the data.
 - If Metadata about a table is unknown, assume that all columns are of type varchar. 
 - When casting varchars to something else simply use the CAST function, for example: CAST(year AS INTEGER), or CAST(year AS FLOAT), or CAST(year AS DATE), or CAST(year AS BOOLEAN), etc.
-- When a column has been casted and renamed, the new name can and should be used in the query, for example:
-do:
-SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE ndate >= something
-instead of:
-SELECT CAST(datetime AS DATE) as ndate FROM somedb.movies WHERE CAST(datetime AS DATE) >= something
-
- if you cast the column year CAST(year AS INTEGER) AS year_int, you can use year_int in the query such as WHERE year_int > 2000. 
 - ALWAYS: When writing queries that involve time, use the time functions in MindsDB SQL, or duckdb functions.
-- ALWAYS:Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE..`;
-- ALWAYS: When columns contain spaces, special characters or are reserved words, use double quotes `"` to quote the column name, for example, "column name" instead of [column name].
-- ALWAYS: In ORDER BY clauses, reference column names or aliases with backticks when they contain spaces or special characters (MindsDB uses MySQL-like quoting; e.g. ORDER BY `Number of Reviews` DESC). Never use single quotes in ORDER BY—single quotes denote string literals and will cause a DuckDB error (order_by_non_integer_literal).
+- ALWAYS: Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE ...`;
+- ALWAYS: When columns contain spaces, special characters or are reserved words, use backticks (`) to quote the column name, for example, `column name` instead of [column name].
 - `ILIKE` is only supported with some data sources; for portable case-insensitive matching use LOWER(column) LIKE LOWER('%pattern%') instead of column ILIKE '%pattern%'.
 """
 
@@ -86,7 +76,7 @@ sql_with_kb_description = """
 MindsDB SQL is compatible with MySQL and DuckDB syntax, with additional features for knowledge bases.
 
 When the question requires to filter by something semantically, use the knowledge bases available when possible.
-You can determine what knowledge bases are relevant given teh data catalog.
+You can determine what knowledge bases are relevant given the data catalog.
 
 Example:
 Knowledge Base Metadata:
@@ -109,13 +99,13 @@ Example queries:
   `SELECT * FROM mindsdb.kb_name WHERE content LIKE 'your semantic search query' AND metadata_column = 'value' AND relevance >= 0.5`
 
 Where output columns will be: id,chunk_id,chunk_content,<one or more metadata columns>,relevance,distance
-use relevance >0.5 to filter for relevant results.
+use `relevance > 0.5` to filter for relevant results.
 
 From the knowledge base, you can identify where id came from, and what content comes from, so when you SELECT, you can rename columns accordingly.
 
 For example, to find up to 10,000 movies that are excellent, not horror, and have an age group of PG-13 or higher (assuming a metadata column named "age"):
-instead of searching the movies table seamantically SELECT * FROM somedb.movies WHERE age >= 13 AND description LIKE '%excellent%' LIMIT 10000;
-which is prone to missing results as it is likely to miss results where people write similar things to exellent and horror, but in a different way.
+instead of searching the movies table semantically SELECT * FROM somedb.movies WHERE age >= 13 AND description LIKE '%excellent%' LIMIT 10000;
+which is prone to missing results as it is likely to miss results where people write similar things to excellent and horror, but in a different way.
 as such, you can search the knowledge base, which does not require any exact matches, it will filter by most relevant results. 
 ```
 SELECT 

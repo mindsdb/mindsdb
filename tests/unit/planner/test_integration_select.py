@@ -619,7 +619,7 @@ class TestPlanIntegrationSelect:
                         limit=Constant(1),
                     ),
                 ),
-                SubSelectStep(dataframe=Result(2), query=parse_sql("select x"), table_name="tab2"),
+                SubSelectStep(dataframe=Result(2), query=parse_sql("select x limit 1"), table_name="tab2"),
             ],
         )
 

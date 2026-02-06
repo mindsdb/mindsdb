@@ -154,7 +154,8 @@ GROUP BY release_year;
 
 - AVOID direct joins between tables and knowledge bases. Instead, use `WHERE <IDCOLUMN> IN (SELECT DISTINCT id FROM knowledge_base) ...`
 OR use the knowledge base as a subquery and join on that, for example:
-`SELECT * FROM <TABLE> JOIN (SELECT id, LIST(chunk_content) FROM knowledge_base WHERE content LIKE 'your semantic search query' AND metadata_col=something ... GROUP BY id LIMIT 10000 ) AS kb ON <TABLE>.<IDCOLUMN> = kb.id ...`
+`SELECT * FROM <TABLE> t JOIN (SELECT id, LIST(chunk_content) FROM knowledge_base WHERE content LIKE 'your semantic search query' AND metadata_col=something ... GROUP BY id LIMIT 10000 ) AS kb ON t.<IDCOLUMN> = kb.id WHERE <CONDITIONS FOR TABLE> ... `
+The WHERE clause for the tables conditions must come AFTER all JOINs are completed
 
 - ALWAYS: It is important to set an appropriate LIMIT on knowledge base queries to avoid missing results; the default limit is 10, so if you need more than 10, set it accordingly. When unsure LIMIT 10000 is recommended.
 

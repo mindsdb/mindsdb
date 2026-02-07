@@ -41,7 +41,7 @@ from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS_P
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
-_PARSING_ERROR_PREFIXES = ["An output parsing error occured", "Could not parse LLM output"]
+_PARSING_ERROR_PREFIXES = ["An output parsing error occurred", "Could not parse LLM output"]
 
 logger = log.getLogger(__name__)
 

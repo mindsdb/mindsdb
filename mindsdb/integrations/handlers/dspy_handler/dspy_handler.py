@@ -21,7 +21,7 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.utilities import log
 
 
-_PARSING_ERROR_PREFIX = 'An output parsing error occured'
+_PARSING_ERROR_PREFIX = 'An output parsing error occurred'
 
 logger = log.getLogger(__name__)
 

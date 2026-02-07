@@ -476,8 +476,7 @@ class QueryPlanner:
 
         prev_step = self.plan_integration_select(query2)
 
-        # clear limit and where
-        query.limit = None
+        # clear where
         query.where = None
         return self.plan_sub_select(query, prev_step)
 

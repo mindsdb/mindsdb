@@ -40,7 +40,7 @@ connection_args = OrderedDict(
     },
     schema={
         'type': ARG_TYPE.STR,
-        'description': '(OPTIONAL) comma seperated value of schema to be considered while querying',
+        'description': '(OPTIONAL) comma separated value of schema to be considered while querying',
     },
     sslmode={
         'type': ARG_TYPE.STR,

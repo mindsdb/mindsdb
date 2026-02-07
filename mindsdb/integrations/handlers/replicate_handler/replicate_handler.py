@@ -33,7 +33,7 @@ class ReplicateHandler(BaseMLEngine):
                 raise Exception("Provided api_key is Incorrect. Get your api_key here: https://replicate.com/account/api-tokens")
 
             else:
-                raise Exception("Error occured.", e)
+                raise Exception("Error occurred.", e)
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """Saves model details in storage to access it later

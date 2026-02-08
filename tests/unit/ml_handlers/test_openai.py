@@ -305,7 +305,7 @@ class TestOpenAI(unittest.TestCase):
         # Mock the json_get method of the model storage
         self.handler.model_storage.json_get.return_value = {
             "target": "answer",
-            "mode": "default",
+            "mode": "legacy",
             "model_name": "babbage-002",
             "question_column": "question",
         }
@@ -342,7 +342,9 @@ class TestOpenAI(unittest.TestCase):
 
         # Mock the completions.create method of the OpenAI client
         mock_openai_client = MagicMock()
-        mock_openai_client.completions.create.return_value = MagicMock(choices=[MagicMock(text="Sweden")])
+        mock_openai_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Sweden"))]
+        )
 
         mock_openai_handler_openai_client.return_value = mock_openai_client
 

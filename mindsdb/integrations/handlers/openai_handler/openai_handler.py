@@ -6,6 +6,7 @@ import tempfile
 import datetime
 import textwrap
 import subprocess
+from enum import Enum
 import concurrent.futures
 from typing import Text, Tuple, Dict, List, Optional, Any
 import openai
@@ -38,6 +39,19 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 logger = log.getLogger(__name__)
 
 
+class Mode(Enum):
+    default = "default"
+    conversational = "conversational"
+    conversational_full = "conversational-full"
+    image = "image"
+    embedding = "embedding"
+    legacy = "legacy"
+
+    @classmethod
+    def _missing_(cls, value):
+        raise ValueError(f"Invalid operation mode '{value}'. Please use one of: {[val.name for val in cls]}")
+
+
 class OpenAIHandler(BaseMLEngine):
     """
     This handler handles connection and inference with the OpenAI API.
@@ -51,14 +65,7 @@ class OpenAIHandler(BaseMLEngine):
         self.default_model = DEFAULT_CHAT_MODEL
         self.default_embedding_model = DEFAULT_EMBEDDING_MODEL
         self.default_image_model = DEFAULT_IMAGE_MODEL
-        self.default_mode = "default"  # can also be 'conversational' or 'conversational-full'
-        self.supported_modes = [
-            "default",
-            "conversational",
-            "conversational-full",
-            "image",
-            "embedding",
-        ]
+        self.default_mode = Mode.default  # can also be 'conversational' or 'conversational-full'
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
@@ -242,19 +249,20 @@ class OpenAIHandler(BaseMLEngine):
             client = self._get_client(api_key=api_key, base_url=api_base, org=args.get("api_organization"), args=args)
             available_models = get_available_models(client)
 
-            if not args.get("mode"):
-                args["mode"] = self.default_mode
-            elif args["mode"] not in self.supported_modes:
-                raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}")
+            mode = args.get("mode")
+            if mode is not None:
+                mode = Mode(mode)
+            else:
+                mode = self.default_mode
 
             if not args.get("model_name"):
-                if args["mode"] == "embedding":
+                if mode is Mode.embedding:
                     args["model_name"] = self.default_embedding_model
-                elif args["mode"] == "image":
+                elif mode is Mode.image:
                     args["model_name"] = self.default_image_model
                 else:
                     args["model_name"] = self.default_model
-            elif (args["model_name"] not in available_models) and (args["mode"] != "embedding"):
+            elif (args["model_name"] not in available_models) and (mode is not Mode.embedding):
                 raise Exception(f"Invalid model name. Please use one of {available_models}")
         finally:
             self.model_storage.json_set("args", args)
@@ -292,10 +300,12 @@ class OpenAIHandler(BaseMLEngine):
         df = df.reset_index(drop=True)
 
         if pred_args.get("mode"):
-            if pred_args["mode"] in self.supported_modes:
-                args["mode"] = pred_args["mode"]
-            else:
-                raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}.")  # noqa
+            mode = Mode(pred_args["mode"])
+            args["mode"] = mode.value
+        elif args.get("mode"):
+            mode = Mode(args["mode"])
+        else:
+            mode = Mode(self.default_mode)
 
         strict_prompt_template = True
         if pred_args.get("prompt_template", False):
@@ -307,7 +317,7 @@ class OpenAIHandler(BaseMLEngine):
             base_template = None
 
         # Embedding mode
-        if args.get("mode", self.default_mode) == "embedding":
+        if mode is Mode.embedding:
             api_args = {
                 "question_column": pred_args.get("question_column", None),
                 "model": pred_args.get("model_name") or args.get("model_name"),
@@ -320,7 +330,7 @@ class OpenAIHandler(BaseMLEngine):
                 raise Exception("Embedding mode needs a question_column")
 
         # Image mode
-        elif args.get("mode", self.default_mode) == "image":
+        elif mode is Mode.image:
             api_args = {
                 "n": pred_args.get("n", None),
                 "size": pred_args.get("size", None),
@@ -519,14 +529,26 @@ class OpenAIHandler(BaseMLEngine):
             kwargs = {
                 "model": model_name,
             }
-            if model_name in IMAGE_MODELS:
-                return _submit_image_completion(kwargs, prompts, api_args)
-            elif model_name == "embedding":
-                return _submit_embedding_completion(kwargs, prompts, api_args)
-            elif self.is_chat_model(model_name):
-                if model_name == "gpt-3.5-turbo-instruct":
-                    return _submit_normal_completion(kwargs, prompts, api_args)
+            try:
+                mode = Mode(args.get("mode"))
+            except ValueError:
+                if model_name in IMAGE_MODELS:
+                    mode = Mode.image
+                elif model_name == "embedding":
+                    mode = Mode.embedding
+                elif self.is_chat_model(model_name) and model_name != "gpt-3.5-turbo-instruct":
+                    mode = Mode.conversational
+                elif model_name == "gpt-3.5-turbo-instruct":
+                    mode = Mode.legacy
                 else:
+                    mode = Mode.default
+
+            match mode:
+                case Mode.image:
+                    return _submit_image_completion(kwargs, prompts, api_args)
+                case Mode.embedding:
+                    return _submit_embedding_completion(kwargs, prompts, api_args)
+                case Mode.conversational | Mode.conversational_full | Mode.default:
                     return _submit_chat_completion(
                         kwargs,
                         prompts,
@@ -534,8 +556,8 @@ class OpenAIHandler(BaseMLEngine):
                         df,
                         mode=args.get("mode", "conversational"),
                     )
-            else:
-                return _submit_normal_completion(kwargs, prompts, api_args)
+                case Mode.legacy:
+                    return _submit_normal_completion(kwargs, prompts, api_args)
 
         def _log_api_call(params: Dict, response: Any) -> None:
             """
@@ -672,8 +694,9 @@ class OpenAIHandler(BaseMLEngine):
                         tidy_comps.append(c.message.content.strip("\n").strip(""))
                 return tidy_comps
 
+            mode = Mode(mode)
             completions = []
-            if mode != "conversational" or "prompt" not in args:
+            if mode is not Mode.conversational or "prompt" not in args:
                 initial_prompt = {
                     "role": "system",
                     "content": "You are a helpful assistant. Your task is to continue the chat.",
@@ -686,7 +709,7 @@ class OpenAIHandler(BaseMLEngine):
             last_completion_content = None
 
             for pidx in range(len(prompts)):
-                if mode != "conversational":
+                if mode is not Mode.conversational:
                     kwargs["messages"].append({"role": "user", "content": prompts[pidx]})
                 else:
                     question = prompts[pidx]
@@ -701,7 +724,7 @@ class OpenAIHandler(BaseMLEngine):
                     if answer:
                         kwargs["messages"].append({"role": "assistant", "content": answer})
 
-                if mode == "conversational-full" or (mode == "conversational" and pidx == len(prompts) - 1):
+                if mode is Mode.conversational_full or (mode is Mode.conversational and pidx == len(prompts) - 1):
                     kwargs["messages"] = truncate_msgs_for_token_limit(
                         kwargs["messages"], kwargs["model"], api_args["max_tokens"]
                     )
@@ -712,7 +735,7 @@ class OpenAIHandler(BaseMLEngine):
                     _log_api_call(pkwargs, resp)
 
                     completions.extend(resp)
-                elif mode == "default":
+                elif mode is Mode.default:
                     kwargs["messages"] = [initial_prompt] + [kwargs["messages"][-1]]
                     pkwargs = {**kwargs, **api_args}
 
@@ -798,9 +821,7 @@ class OpenAIHandler(BaseMLEngine):
                 if not completion:
                     completion = partial
                 else:
-                    completion["choices"].extend(partial["choices"])
-                    for field in ("prompt_tokens", "completion_tokens", "total_tokens"):
-                        completion["usage"][field] += partial["usage"][field]
+                    completion.extend(partial)
         else:
             promises = []
             with concurrent.futures.ThreadPoolExecutor() as executor:

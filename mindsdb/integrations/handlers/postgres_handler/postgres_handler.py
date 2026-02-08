@@ -147,7 +147,7 @@ class PostgresHandler(MetaDatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.cache_thread_safe = True
 
     def __del__(self):
         if self.is_connected:
@@ -176,9 +176,6 @@ class PostgresHandler(MetaDatabaseHandler):
         if self.connection_args.get("autocommit"):
             config["autocommit"] = self.connection_args.get("autocommit")
 
-        # If schema is not provided set public as default one
-        if self.connection_args.get("schema"):
-            config["options"] = f"-c search_path={self.connection_args.get('schema')},public"
         return config
 
     @profiler.profile()
@@ -199,6 +196,12 @@ class PostgresHandler(MetaDatabaseHandler):
         try:
             self.connection = psycopg.connect(**config)
             self.is_connected = True
+
+            schema = self.connection_args.get("schema")
+            if schema:
+                with self.connection.cursor() as cur:
+                    cur.execute(f'SET search_path TO "{schema}", public;')
+                self.connection.commit()
             return self.connection
         except psycopg.Error as e:
             logger.error(f"Error connecting to PostgreSQL {self.database}, {e}!")
@@ -698,7 +701,16 @@ class PostgresHandler(MetaDatabaseHandler):
             df["MINIMUM_VALUE"] = min_max_values.apply(lambda x: x[0])
             df["MAXIMUM_VALUE"] = min_max_values.apply(lambda x: x[1])
 
-        result.data_frame = df.drop(columns=["histogram_bounds"])
+            # Convert most_common_values and most_common_freqs to arrays.
+            df["MOST_COMMON_VALUES"] = df["most_common_values"].apply(
+                lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
+            )
+            df["MOST_COMMON_FREQUENCIES"] = df["most_common_frequencies"].apply(
+                lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
+            )
+
+        result.data_frame = df.drop(columns=["histogram_bounds", "most_common_values", "most_common_frequencies"])
+
         return result
 
     def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:

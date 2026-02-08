@@ -36,7 +36,8 @@
                   "pages": [
                     "setup/custom-config",
                     "setup/environment-vars",
-                    "setup/mindsdb-apis"
+                    "setup/mindsdb-apis",
+                    "setup/system-defaults"
                   ]
                 },
                 {
@@ -79,6 +80,7 @@
                       "integrations/app-integrations/gmail",
                       "integrations/app-integrations/google-calendar",
                       "integrations/app-integrations/google-analytics",
+                      "integrations/app-integrations/gong",
                       "integrations/app-integrations/hackernews",
                       "integrations/app-integrations/instatus",
                       "integrations/app-integrations/intercom",
@@ -264,6 +266,7 @@
                     "pages": [
                       "mindsdb_sql/knowledge_bases/overview",
                       "mindsdb_sql/knowledge_bases/create",
+                      "mindsdb_sql/knowledge_bases/alter",
                       "mindsdb_sql/knowledge_bases/insert_data",
                       "mindsdb_sql/knowledge_bases/query",
                       "mindsdb_sql/knowledge_bases/hybrid_search",
@@ -422,8 +425,8 @@
                       "group": "Connect",
                       "icon": "link",
                       "pages": [
-                        "rest/usage",
                         "rest/authentication",
+                        "rest/usage",
                         {
                           "group": "Data Sources",
                           "pages": [
@@ -451,6 +454,7 @@
                           "group": "Knowledge Bases",
                           "pages": [
                             "rest/knowledge_bases/create",
+                            "rest/knowledge_bases/alter",
                             "rest/knowledge_bases/insert",
                             "rest/knowledge_bases/query",
                             "rest/knowledge_bases/list",

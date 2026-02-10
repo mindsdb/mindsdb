@@ -94,7 +94,7 @@ class HanaHandler(DatabaseHandler):
             logger.error(f'Error connecting to SAP HANA, {known_error}!')
             raise
         except Exception as unknown_error:
-            logger.error(f'Unknown error connecting to Teradata, {unknown_error}!')
+            logger.error(f'Unknown error connecting to SAP HANA, {unknown_error}!')
             raise
 
     def disconnect(self) -> None:
@@ -163,7 +163,7 @@ class HanaHandler(DatabaseHandler):
                     )
                 connection.commit()
             except ProgrammingError as programming_error:
-                logger.error(f'Error running query: {query} on {self.address}!')
+                logger.error(f'Error running query: {query} on {self.connection_data.get("address", "unknown")}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,
@@ -171,7 +171,7 @@ class HanaHandler(DatabaseHandler):
                 )
                 connection.rollback()
             except Exception as unknown_error:
-                logger.error(f'Unknown error running query: {query} on {self.address}!')
+                logger.error(f'Unknown error running query: {query} on {self.connection_data.get("address", "unknown")}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,

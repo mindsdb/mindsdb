@@ -38,6 +38,7 @@ warnings.filterwarnings("ignore", message=".*Task exception was never retrieved.
 
 def langfuse_traced_stream(trace_name="api-completion", span_name="run-completion"):
     """Decorator that wraps a generator method with Langfuse trace/span lifecycle."""
+
     def decorator(method):
         @functools.wraps(method)
         def wrapper(self, messages, *args, **kwargs):
@@ -51,13 +52,16 @@ def langfuse_traced_stream(trace_name="api-completion", span_name="run-completio
                 session_id=ctx.session_id,
             )
             self.run_completion_span = self.langfuse_client_wrapper.start_span(
-                name=span_name, input=messages,
+                name=span_name,
+                input=messages,
             )
             try:
                 yield from method(self, messages, *args, **kwargs)
             finally:
                 self.langfuse_client_wrapper.end_span(self.run_completion_span)
+
         return wrapper
+
     return decorator
 
 
@@ -498,7 +502,7 @@ class PydanticAIAgent:
                         exploratory_query_results
                     )
 
-                if exploratory_query_count == (MAX_EXPLORATORY_QUERIES - 1):
+                if exploratory_query_count == MAX_EXPLORATORY_QUERIES:
                     current_prompt += f"\n\nIMPORTANT: You have reached the maximum number of exploratory queries ({MAX_EXPLORATORY_QUERIES}). The next query you generate MUST be a final_query or final_text."
 
                 result = agent.run_sync(

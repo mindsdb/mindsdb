@@ -28,7 +28,7 @@ from mindsdb.interfaces.agents.modes import sql as sql_mode, text_sql as text_sq
 from mindsdb.interfaces.agents.modes.base import ResponseType, PlanResponse
 
 logger = log.getLogger(__name__)
-DEBUG_LOGGER = logger.info
+DEBUG_LOGGER = logger.debug
 
 
 # Suppress asyncio warnings about unretrieved task exceptions from httpx cleanup

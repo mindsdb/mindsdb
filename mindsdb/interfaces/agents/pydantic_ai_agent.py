@@ -551,6 +551,9 @@ class PydanticAIAgent:
                     retry_count += 1
                     if retry_count >= MAX_RETRIES:
                         error_context = "\n\nPrevious query errors:\n" + "\n---\n".join(accumulated_errors[-3:])
+                        DEBUG_LOGGER(
+                            f"PydanticAIAgent._get_completion_stream: retry ({retry_count}/{MAX_RETRIES}) after error: {query_error}"
+                        )
                         if output.type == ResponseType.FINAL_QUERY:
                             raise RuntimeError(f"Problem with final query: {query_error}")
                     else:

@@ -261,10 +261,13 @@ class KnowledgeBaseTable:
                 meta_data = pd.json_normalize(df["metadata"])
                 # exclude absent columns and used colunns
                 df_columns = list(df.columns)
-                meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
+                existed_meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
 
-                # add columns
-                df = df.join(meta_data[meta_columns])
+                # add existed columns
+                df = df.join(meta_data[existed_meta_columns])
+                # add absent columns
+                for col in set(meta_columns).difference(existed_meta_columns):
+                    df[col] = None
 
                 # put metadata in the end
                 df_columns.remove("metadata")

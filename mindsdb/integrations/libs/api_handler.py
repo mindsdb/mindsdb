@@ -1,6 +1,5 @@
 from typing import Any, List, Optional
 import ast as py_ast
-import copy
 
 import pandas as pd
 from pandas.api import types as pd_types
@@ -296,7 +295,7 @@ class APIResource(APITable):
         api_conditions, raw_conditions = self._extract_conditions(query.where, strict=False)
 
         limit = None
-        if query.limit:
+        if query.limit is not None:
             limit = query.limit.value
 
         sort = None
@@ -337,46 +336,6 @@ class APIResource(APITable):
                 filters.append([cond.op.value, cond.column, cond.value])
 
         result = filter_dataframe(result, filters, raw_conditions=raw_conditions)
-
-        # Handle SELECT projection - support computed columns, aliases, etc.
-        # Aggregations (COUNT, SUM, etc.) and complex expressions should always be handled post-fetch using DuckDB
-        # This ensures they operate on the filtered data, not on API-pushed-down operations
-        has_complex_targets = any(
-            not isinstance(target, Identifier) and not isinstance(target, Star) for target in query.targets
-        )
-
-        # Always use query_df for aggregations, complex targets, GROUP BY, or ORDER BY
-        # This ensures operations like COUNT(*) are performed post-fetch on the filtered dataframe using DuckDB
-        # Aggregations cannot be pushed down to APIs, so they must be computed post-fetch
-        use_query_df = (
-            has_aggregation or has_complex_targets or query.group_by or (query.order_by and len(query.order_by) > 0)
-        )
-
-        if use_query_df:
-            # Use query_df to handle complex SELECT, GROUP BY, ORDER BY, and aggregations
-            from mindsdb.api.executor.utilities.sql import query_df
-
-            # Create a copy of the query and remove WHERE clause since we've already filtered
-            # This prevents applying the WHERE clause twice (once via filter_dataframe, once via query_df)
-            # For aggregations with LIMIT, the LIMIT was already applied when fetching rows (list_limit)
-            # So we remove it from query_copy to avoid applying it again
-            query_copy = copy.deepcopy(query)
-            query_copy.where = None
-            if has_aggregation or query.group_by:
-                # LIMIT was already applied to input rows, remove it from the aggregation query
-                query_copy.limit = None
-            # The FROM table will be renamed to "df" by query_df automatically
-            result = query_df(result, query_copy)
-        else:
-            # Simple projection - use project_dataframe
-            from mindsdb.integrations.utilities.sql_utils import project_dataframe
-
-            try:
-                table_columns = self.get_columns()
-                result = project_dataframe(result, query.targets, table_columns)
-            except NotImplementedError:
-                # keep result as is
-                pass
 
         if limit is not None and len(result) > limit:
             result = result[: int(limit)]

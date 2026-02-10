@@ -1,6 +1,7 @@
 from contextvars import ContextVar
 from typing import Any
 from copy import deepcopy
+from contextlib import contextmanager
 
 from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
@@ -19,14 +20,33 @@ class Context:
             {
                 "company_id": DEFAULT_COMPANY_ID,
                 "user_id": DEFAULT_USER_ID,
+                # When True, DB queries should be scoped by ctx.user_id (in addition to company_id).
+                # Services can intentionally disable this to perform company-wide reads and apply
+                # their own permissioning layer on top.
+                "enforce_user_id": True,
                 "session_id": "",
                 "task_id": None,
                 "user_class": 0,
-                "profiling": {"level": 0, "enabled": False, "pointer": None, "tree": None},
+                "profiling": {
+                    "level": 0,
+                    "enabled": False,
+                    "pointer": None,
+                    "tree": None,
+                },
                 "used_handlers": set(),
                 "params": {},
             }
         )
+
+    @contextmanager
+    def without_user_id_scope(self):
+        """Temporarily disable user_id scoping in this context."""
+        previous = getattr(self, "enforce_user_id", True)
+        self.enforce_user_id = False
+        try:
+            yield
+        finally:
+            self.enforce_user_id = previous
 
     def __getattr__(self, name: str) -> Any:
         storage = self._storage.get({})
@@ -43,7 +63,7 @@ class Context:
         storage = deepcopy(self._storage.get({}))
         if name not in storage:
             raise AttributeError(name)
-        del storage["name"]
+        del storage[name]
         self._storage.set(storage)
 
     def dump(self) -> dict:

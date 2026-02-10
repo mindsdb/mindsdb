@@ -19,7 +19,9 @@ class TriggersController:
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
-        from mindsdb.api.executor.controllers.session_controller import SessionController
+        from mindsdb.api.executor.controllers.session_controller import (
+            SessionController,
+        )
 
         session = SessionController()
 
@@ -91,12 +93,14 @@ class TriggersController:
         if trigger is None:
             raise Exception(f"Trigger doesn't exist: {name}")
 
-        task = db.Tasks.query.filter(
+        task_query = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.object_id == trigger.id,
             db.Tasks.company_id == ctx.company_id,
-            db.Tasks.user_id == ctx.user_id,
-        ).first()
+        )
+        if ctx.enforce_user_id:
+            task_query = task_query.filter(db.Tasks.user_id == ctx.user_id)
+        task = task_query.first()
 
         if task is not None:
             db.session.delete(task)
@@ -109,22 +113,26 @@ class TriggersController:
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
-        query = (
-            db.session.query(db.Triggers)
-            .join(db.Tasks, db.Triggers.id == db.Tasks.object_id)
-            .filter(
-                db.Triggers.project_id == project.id,
-                db.Triggers.name == name,
-                db.Tasks.object_type == self.OBJECT_TYPE,
-                db.Tasks.company_id == ctx.company_id,
-                db.Tasks.user_id == ctx.user_id,
-            )
-        )
+        filters = [
+            db.Triggers.project_id == project.id,
+            db.Triggers.name == name,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        ]
+        if ctx.enforce_user_id:
+            filters.append(db.Tasks.user_id == ctx.user_id)
+        query = db.session.query(db.Triggers).join(db.Tasks, db.Triggers.id == db.Tasks.object_id).filter(*filters)
         return query.first()
 
     def get_list(self, project_name=None):
         session = SessionController()
 
+        filters = [
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        ]
+        if ctx.enforce_user_id:
+            filters.append(db.Tasks.user_id == ctx.user_id)
         query = (
             db.session.query(
                 db.Tasks.object_id,
@@ -136,11 +144,7 @@ class TriggersController:
                 db.Tasks.last_error,
             )
             .join(db.Triggers, db.Triggers.id == db.Tasks.object_id)
-            .filter(
-                db.Tasks.object_type == self.OBJECT_TYPE,
-                db.Tasks.company_id == ctx.company_id,
-                db.Tasks.user_id == ctx.user_id,
-            )
+            .filter(*filters)
         )
 
         project_controller = ProjectController()

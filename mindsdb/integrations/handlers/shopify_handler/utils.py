@@ -156,10 +156,15 @@ def query_graphql_nodes(
     result_data = []
     hasNextPage = True
     while hasNextPage:
+        if limit is None:
+            query_limit = MAX_PAGE_LIMIT
+        else:
+            remaining = limit - len(result_data)
+            query_limit = min(max(remaining, 1), MAX_PAGE_LIMIT)
         result = ShopifyQuery(
             operation_name=root_name,
             columns=columns,
-            limit=max(MAX_PAGE_LIMIT if limit is None else limit - len(result_data), 0),
+            limit=query_limit,
             cursor=cursor,
             sort_key=sort_key,
             reverse=sort_reverse,
@@ -170,6 +175,8 @@ def query_graphql_nodes(
         hasNextPage = result["data"][root_name]["pageInfo"]["hasNextPage"]
         cursor = result["data"][root_name]["pageInfo"]["endCursor"]
         result_data += result["data"][root_name]["nodes"]
+        if limit is not None and len(result_data) >= limit:
+            break
 
     fetched_fields = []
     if len(result_data) > 0:

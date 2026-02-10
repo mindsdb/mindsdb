@@ -48,7 +48,7 @@ class FileController:
         if not name:
             return None
         query = db.session.query(db.File).filter_by(company_id=ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.File.user_id == ctx.user_id)
         return query.filter(func.lower(db.File.name) == name.lower()).first()
 
@@ -62,7 +62,7 @@ class FileController:
             list[str]: list of files names
         """
         query = db.session.query(db.File.name).filter_by(company_id=ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.File.user_id == ctx.user_id)
         names = [record[0] for record in query]
         if lower:
@@ -89,7 +89,7 @@ class FileController:
             list[dict]: files metadata
         """
         query = db.session.query(db.File).filter_by(company_id=ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.File.user_id == ctx.user_id)
         file_records = query.all()
         files_metadata = [

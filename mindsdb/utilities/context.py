@@ -38,19 +38,6 @@ class Context:
             }
         )
 
-    def should_filter_by_user_id(self) -> bool:
-        """Whether queries should be scoped by ctx.user_id.
-
-        Best practice: always scope by company_id; scope by user_id only when the caller is
-        operating in a user context. For service-to-service/company-wide operations, set
-        `ctx.enforce_user_id = False` (ideally within `ctx.without_user_id_scope()`).
-        """
-        storage = self._storage.get({})
-        enforce = storage.get("enforce_user_id", True)
-        # If user_id is not present (or explicitly set to None), treat it as "no user scoping".
-        user_id = storage.get("user_id")
-        return bool(enforce) and user_id is not None
-
     @contextmanager
     def without_user_id_scope(self):
         """Temporarily disable user_id scoping in this context."""

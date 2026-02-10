@@ -180,7 +180,7 @@ class RunningQuery:
             db.Tasks.object_id == self.record.id,
             db.Tasks.company_id == ctx.company_id,
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             task_query = task_query.filter(db.Tasks.user_id == ctx.user_id)
         task = task_query.first()
 
@@ -432,7 +432,7 @@ class QueryContextController:
 
         context_name = self.gen_context_name(object_type, object_id)
         query = db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.QueryContext.user_id == ctx.user_id)
         for rec in query.all():
             db.session.delete(rec)
@@ -534,7 +534,7 @@ class QueryContextController:
         context_name = self.gen_context_name(object_type, object_id)
         vars = []
         query = db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.QueryContext.user_id == ctx.user_id)
         for rec in query:
             if rec.values is not None:
@@ -553,7 +553,7 @@ class QueryContextController:
             context_name=context_name,
             company_id=ctx.company_id,
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.QueryContext.user_id == ctx.user_id)
         return query.first()
 
@@ -585,7 +585,7 @@ class QueryContextController:
         """
 
         query = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Queries.user_id == ctx.user_id)
         rec = query.first()
 
@@ -603,7 +603,7 @@ class QueryContextController:
             db.Queries.company_id == ctx.company_id,
             db.Queries.finished_at < (dt.datetime.now() - dt.timedelta(days=1)),
         ]
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             filters.append(db.Queries.user_id == ctx.user_id)
         remove_query = db.session.query(db.Queries).filter(*filters)
         for rec in remove_query.all():
@@ -627,7 +627,7 @@ class QueryContextController:
         """
 
         query = db.session.query(db.Queries).filter(db.Queries.company_id == ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Queries.user_id == ctx.user_id)
         return [RunningQuery(record).get_info() for record in query]
 
@@ -636,7 +636,7 @@ class QueryContextController:
         Cancels running query by id
         """
         query = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Queries.user_id == ctx.user_id)
         rec = query.first()
         if rec is None:

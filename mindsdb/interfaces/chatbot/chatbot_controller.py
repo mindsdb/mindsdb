@@ -51,7 +51,7 @@ class ChatBotController:
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.company_id == ctx.company_id,
         ]
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             filters.append(db.Tasks.user_id == ctx.user_id)
         query = (
             db.session.query(db.ChatBots, db.Tasks)
@@ -82,7 +82,7 @@ class ChatBotController:
             )
         )
 
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Tasks.user_id == ctx.user_id)
 
         return self._get_chatbot(query)
@@ -152,7 +152,7 @@ class ChatBotController:
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.company_id == ctx.company_id,
         ]
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             filters.append(db.Tasks.user_id == ctx.user_id)
         query = (
             db.session.query(db.ChatBots, db.Tasks)
@@ -329,7 +329,7 @@ class ChatBotController:
             db.Tasks.object_id == existing_chatbot_rec.id,
             db.Tasks.company_id == ctx.company_id,
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             task_query = task_query.filter(db.Tasks.user_id == ctx.user_id)
         task = task_query.first()
 
@@ -373,7 +373,7 @@ class ChatBotController:
             db.Tasks.object_id == bot_rec.id,
             db.Tasks.company_id == ctx.company_id,
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             task_query = task_query.filter(db.Tasks.user_id == ctx.user_id)
         task = task_query.first()
 
@@ -399,7 +399,7 @@ class ChatBotController:
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.company_id == ctx.company_id,
         ]
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             filters.append(db.Tasks.user_id == ctx.user_id)
         query = (
             db.session.query(db.ChatBots, db.Tasks)

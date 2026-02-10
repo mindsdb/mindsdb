@@ -36,7 +36,6 @@ from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
 from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
-from mindsdb.utilities.constants import DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -223,13 +222,7 @@ class IntegrationController:
         ):
             fs_store = FsStore()
             integrations_dir = Config()["paths"]["integrations"]
-            # Hybrid folder naming for backwards compatibility:
-            # - Old format (DEFAULT_USER_ID): integration_files_{company_id}_{id}
-            # - New format (real user_id): integration_files_{company_id}_{user_id}_{id}
-            if integration_record.user_id == DEFAULT_USER_ID:
-                folder_name = f"integration_files_{integration_record.company_id}_{integration_record.id}"
-            else:
-                folder_name = f"integration_files_{integration_record.company_id}_{integration_record.user_id}_{integration_record.id}"
+            folder_name = f"integration_files_{integration_record.company_id}_{integration_record.user_id}_{integration_record.id}"
             fs_store.get(folder_name, base_dir=integrations_dir)
 
         handler_meta = self.get_handler_metadata(integration_record.engine)
@@ -283,7 +276,7 @@ class IntegrationController:
 
     def get_by_id(self, integration_id, show_secrets=True):
         query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, id=integration_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Integration.user_id == ctx.user_id)
         integration_record = query.first()
         return self._get_integration_record_data(integration_record, show_secrets)
@@ -308,7 +301,7 @@ class IntegrationController:
         """
         if case_sensitive:
             query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name)
-            if ctx.should_filter_by_user_id():
+            if ctx.enforce_user_id:
                 query = query.filter(db.Integration.user_id == ctx.user_id)
             integration_records = query.all()
             if len(integration_records) > 1:
@@ -320,7 +313,7 @@ class IntegrationController:
             query = db.session.query(db.Integration).filter(
                 (db.Integration.company_id == ctx.company_id) & (func.lower(db.Integration.name) == func.lower(name))
             )
-            if ctx.should_filter_by_user_id():
+            if ctx.enforce_user_id:
                 query = query.filter(db.Integration.user_id == ctx.user_id)
             integration_record = query.first()
             if integration_record is None:
@@ -330,7 +323,7 @@ class IntegrationController:
 
     def get_all(self, show_secrets=True):
         query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Integration.user_id == ctx.user_id)
         integration_records = query.all()
         integration_dict = {}

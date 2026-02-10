@@ -123,27 +123,27 @@ def list_databases() -> list[str]:
     try:
         result = mysql_proxy.process_query(LISTING_QUERY)
         if result.type == SQL_RESPONSE_TYPE.ERROR:
-            return {
-                "type": "error",
-                "error_code": result.error_code,
-                "error_message": result.error_message,
-            }
+            raise RuntimeError(
+                f"Failed to list databases: {result.error_message} "
+                f"(error code: {result.error_code})"
+            )
 
         elif result.type == SQL_RESPONSE_TYPE.OK:
-            return {"type": "ok"}
+            return []
 
         elif result.type == SQL_RESPONSE_TYPE.TABLE:
             data = result.result_set.to_lists(json_types=True)
             data = [val[0] for val in data]
             return data
 
+        raise RuntimeError(f"Unexpected response type: {result.type}")
+
+    except RuntimeError:
+        raise
+
     except Exception as e:
         logger.exception("Error while retrieving list of databases")
-        return {
-            "type": "error",
-            "error_code": 0,
-            "error_message": str(e),
-        }
+        raise RuntimeError(f"Error while retrieving list of databases: {e}") from e
 
 
 def _get_status(request: Request) -> JSONResponse:

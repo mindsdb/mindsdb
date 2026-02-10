@@ -497,7 +497,7 @@ class ModelController:
             db.Predictor.company_id == ctx.company_id,
             db.Predictor.id != model_record.id,
         ]
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             filters.append(db.Predictor.user_id == ctx.user_id)
         model_records = db.Predictor.query.filter(*filters)
         for p in model_records:

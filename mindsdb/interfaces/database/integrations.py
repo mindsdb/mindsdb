@@ -276,7 +276,7 @@ class IntegrationController:
 
     def get_by_id(self, integration_id, show_secrets=True):
         query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, id=integration_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Integration.user_id == ctx.user_id)
         integration_record = query.first()
         return self._get_integration_record_data(integration_record, show_secrets)
@@ -301,7 +301,7 @@ class IntegrationController:
         """
         if case_sensitive:
             query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name)
-            if ctx.should_filter_by_user_id():
+            if ctx.enforce_user_id:
                 query = query.filter(db.Integration.user_id == ctx.user_id)
             integration_records = query.all()
             if len(integration_records) > 1:
@@ -313,7 +313,7 @@ class IntegrationController:
             query = db.session.query(db.Integration).filter(
                 (db.Integration.company_id == ctx.company_id) & (func.lower(db.Integration.name) == func.lower(name))
             )
-            if ctx.should_filter_by_user_id():
+            if ctx.enforce_user_id:
                 query = query.filter(db.Integration.user_id == ctx.user_id)
             integration_record = query.first()
             if integration_record is None:
@@ -323,7 +323,7 @@ class IntegrationController:
 
     def get_all(self, show_secrets=True):
         query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Integration.user_id == ctx.user_id)
         integration_records = query.all()
         integration_dict = {}

@@ -96,7 +96,7 @@ class AgentsController:
             db.Agents.company_id == ctx.company_id,
             db.Agents.deleted_at == null(),
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             agent_query = agent_query.filter(db.Agents.user_id == ctx.user_id)
         return agent_query.first()
 
@@ -119,7 +119,7 @@ class AgentsController:
             db.Agents.company_id == ctx.company_id,
             db.Agents.deleted_at == null(),
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             agent_query = agent_query.filter(db.Agents.user_id == ctx.user_id)
         return agent_query.first()
 
@@ -135,7 +135,7 @@ class AgentsController:
         """
 
         all_agents = db.Agents.query.filter(db.Agents.company_id == ctx.company_id, db.Agents.deleted_at == null())
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             all_agents = all_agents.filter(db.Agents.user_id == ctx.user_id)
 
         if project_name is not None:

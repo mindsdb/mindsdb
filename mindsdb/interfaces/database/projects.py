@@ -345,7 +345,7 @@ class Project:
             deleted_at=sa.null(),
             company_id=ctx.company_id,
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Predictor.user_id == ctx.user_id)
         record = (
             query.join(db.Integration, db.Integration.id == db.Predictor.integration_id)
@@ -362,7 +362,7 @@ class Project:
             deleted_at=sa.null(),
             company_id=ctx.company_id,
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Predictor.user_id == ctx.user_id)
         if isinstance(active, bool):
             query = query.filter_by(active=active)
@@ -384,7 +384,7 @@ class Project:
             db.Agents.company_id == ctx.company_id,
             db.Agents.deleted_at == sa.null(),
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.Agents.user_id == ctx.user_id)
         records = query.order_by(db.Agents.name).all()
         data = [
@@ -411,7 +411,7 @@ class Project:
 
     def get_views(self):
         query = db.session.query(db.View).filter_by(project_id=self.id, company_id=ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.View.user_id == ctx.user_id)
         records = query.order_by(db.View.name, db.View.id).all()
         data = [
@@ -435,7 +435,7 @@ class Project:
             dict | None: A dictionary with view information if found, otherwise None.
         """
         query = db.session.query(db.View).filter(db.View.project_id == self.id, db.View.company_id == ctx.company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             query = query.filter(db.View.user_id == ctx.user_id)
         if strict_case:
             query = query.filter(db.View.name == name)
@@ -488,7 +488,7 @@ class Project:
         match str(table["type"]).upper():
             case "MODEL":
                 query = db.Predictor.query.filter_by(company_id=ctx.company_id, project_id=self.id, name=table_name)
-                if ctx.should_filter_by_user_id():
+                if ctx.enforce_user_id:
                     query = query.filter(db.Predictor.user_id == ctx.user_id)
                 predictor_record = query.first()
                 columns = []
@@ -517,7 +517,7 @@ class Project:
                 columns = df.columns
             case "AGENT":
                 query = db.Agents.query.filter_by(company_id=ctx.company_id, project_id=self.id, name=table_name)
-                if ctx.should_filter_by_user_id():
+                if ctx.enforce_user_id:
                     query = query.filter(db.Agents.user_id == ctx.user_id)
                 agent = query.first()
                 if agent is not None:
@@ -557,7 +557,7 @@ class ProjectController:
             (db.Project.company_id == company_id),
             (db.Project.deleted_at == sa.null()),
         ]
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             filters.append(db.Project.user_id == user_id)
         records = db.Project.query.filter(*filters).order_by(db.Project.name)
 
@@ -593,7 +593,7 @@ class ProjectController:
         company_id = ctx.company_id if ctx.company_id is not None else DEFAULT_COMPANY_ID
         user_id = ctx.user_id if ctx.user_id is not None else DEFAULT_USER_ID
         q = db.Project.query.filter_by(company_id=company_id)
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             q = q.filter(db.Project.user_id == user_id)
 
         if id is not None:

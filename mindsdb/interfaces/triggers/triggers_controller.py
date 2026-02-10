@@ -98,7 +98,7 @@ class TriggersController:
             db.Tasks.object_id == trigger.id,
             db.Tasks.company_id == ctx.company_id,
         )
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             task_query = task_query.filter(db.Tasks.user_id == ctx.user_id)
         task = task_query.first()
 
@@ -119,7 +119,7 @@ class TriggersController:
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.company_id == ctx.company_id,
         ]
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             filters.append(db.Tasks.user_id == ctx.user_id)
         query = db.session.query(db.Triggers).join(db.Tasks, db.Triggers.id == db.Tasks.object_id).filter(*filters)
         return query.first()
@@ -131,7 +131,7 @@ class TriggersController:
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.company_id == ctx.company_id,
         ]
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             filters.append(db.Tasks.user_id == ctx.user_id)
         query = (
             db.session.query(

@@ -361,7 +361,7 @@ class JobsExecutor:
             db.Jobs.active == True,  # noqa
             db.Jobs.company_id == ctx.company_id,
         ]
-        if ctx.should_filter_by_user_id():
+        if ctx.enforce_user_id:
             filters.append(db.Jobs.user_id == ctx.user_id)
         query = db.session.query(db.Jobs).filter(*filters).order_by(db.Jobs.next_run_at)
 

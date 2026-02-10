@@ -25,7 +25,7 @@ class MultiplePredictorRecordsFound(Exception):
 def get_integration_record(name: str) -> db.Integration:
     company_id = ctx.company_id
     query = db.session.query(db.Integration).filter_by(company_id=company_id, name=name)
-    if ctx.should_filter_by_user_id():
+    if ctx.enforce_user_id:
         query = query.filter(db.Integration.user_id == ctx.user_id)
     record = query.first()
     return record
@@ -39,7 +39,7 @@ def get_project_record(name: str) -> db.Project:
         (db.Project.company_id == company_id),
         (db.Project.deleted_at == null()),
     ]
-    if ctx.should_filter_by_user_id():
+    if ctx.enforce_user_id:
         filters.append(db.Project.user_id == ctx.user_id)
 
     project_record = db.session.query(db.Project).filter(*filters).first()
@@ -50,7 +50,7 @@ def get_project_record(name: str) -> db.Project:
 def get_project_records() -> List[db.Project]:
     company_id = ctx.company_id
     filters = [(db.Project.company_id == company_id), (db.Project.deleted_at == null())]
-    if ctx.should_filter_by_user_id():
+    if ctx.enforce_user_id:
         filters.append(db.Project.user_id == ctx.user_id)
     return db.session.query(db.Project).filter(*filters).all()
 
@@ -77,7 +77,7 @@ def get_model_records(
     **kwargs,
 ):
     kwargs["company_id"] = ctx.company_id
-    if ctx.should_filter_by_user_id():
+    if ctx.enforce_user_id:
         kwargs["user_id"] = ctx.user_id
 
     if deleted_at is not None:
@@ -115,7 +115,7 @@ def get_model_record(
     **kwargs,
 ):
     kwargs["company_id"] = ctx.company_id
-    if ctx.should_filter_by_user_id():
+    if ctx.enforce_user_id:
         kwargs["user_id"] = ctx.user_id
 
     kwargs["deleted_at"] = deleted_at

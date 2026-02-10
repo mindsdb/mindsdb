@@ -7,7 +7,14 @@ import pandas as pd
 
 from mindsdb_sql_parser import Select, Star, OrderBy
 
-from mindsdb_sql_parser.ast import Identifier, BinaryOperation, Last, Constant, ASTNode, Function
+from mindsdb_sql_parser.ast import (
+    Identifier,
+    BinaryOperation,
+    Last,
+    Constant,
+    ASTNode,
+    Function,
+)
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.cache import get_cache
 
@@ -168,12 +175,14 @@ class RunningQuery:
         db.session.commit()
 
     def remove_from_task(self):
-        task = db.Tasks.query.filter(
+        task_query = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.object_id == self.record.id,
             db.Tasks.company_id == ctx.company_id,
-            db.Tasks.user_id == ctx.user_id,
-        ).first()
+        )
+        if ctx.should_filter_by_user_id():
+            task_query = task_query.filter(db.Tasks.user_id == ctx.user_id)
+        task = task_query.first()
 
         if task is not None:
             db.session.delete(task)
@@ -359,7 +368,12 @@ class QueryContextController:
         return query
 
     def _result_callback(
-        self, l_query: LastQuery, context_name: str, query_str: str, df: pd.DataFrame, columns_info: list
+        self,
+        l_query: LastQuery,
+        context_name: str,
+        query_str: str,
+        df: pd.DataFrame,
+        columns_info: list,
     ):
         """
         This function handlers result from executed query and updates context variables with new values
@@ -417,11 +431,10 @@ class QueryContextController:
         """
 
         context_name = self.gen_context_name(object_type, object_id)
-        for rec in (
-            db.session.query(db.QueryContext)
-            .filter_by(context_name=context_name, company_id=ctx.company_id, user_id=ctx.user_id)
-            .all()
-        ):
+        query = db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id)
+        if ctx.should_filter_by_user_id():
+            query = query.filter(db.QueryContext.user_id == ctx.user_id)
+        for rec in query.all():
             db.session.delete(rec)
         db.session.commit()
 
@@ -520,9 +533,10 @@ class QueryContextController:
         """
         context_name = self.gen_context_name(object_type, object_id)
         vars = []
-        for rec in db.session.query(db.QueryContext).filter_by(
-            context_name=context_name, company_id=ctx.company_id, user_id=ctx.user_id
-        ):
+        query = db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id)
+        if ctx.should_filter_by_user_id():
+            query = query.filter(db.QueryContext.user_id == ctx.user_id)
+        for rec in query:
             if rec.values is not None:
                 vars.append(rec.values)
 
@@ -534,18 +548,25 @@ class QueryContextController:
         Find and return record for context and query string
         """
 
-        return (
-            db.session.query(db.QueryContext)
-            .filter_by(query=query_str, context_name=context_name, company_id=ctx.company_id, user_id=ctx.user_id)
-            .first()
+        query = db.session.query(db.QueryContext).filter_by(
+            query=query_str,
+            context_name=context_name,
+            company_id=ctx.company_id,
         )
+        if ctx.should_filter_by_user_id():
+            query = query.filter(db.QueryContext.user_id == ctx.user_id)
+        return query.first()
 
     def __add_context_record(self, context_name: str, query_str: str, values: dict) -> db.QueryContext:
         """
         Creates record (for context and query string) with values and returns it
         """
         rec = db.QueryContext(
-            query=query_str, context_name=context_name, company_id=ctx.company_id, user_id=ctx.user_id, values=values
+            query=query_str,
+            context_name=context_name,
+            company_id=ctx.company_id,
+            user_id=ctx.user_id,
+            values=values,
         )
         db.session.add(rec)
         return rec
@@ -563,9 +584,10 @@ class QueryContextController:
         Get running query by id
         """
 
-        rec = db.Queries.query.filter(
-            db.Queries.id == query_id, db.Queries.company_id == ctx.company_id, db.Queries.user_id == ctx.user_id
-        ).first()
+        query = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id)
+        if ctx.should_filter_by_user_id():
+            query = query.filter(db.Queries.user_id == ctx.user_id)
+        rec = query.first()
 
         if rec is None:
             raise RuntimeError(f"Query not found: {query_id}")
@@ -577,11 +599,13 @@ class QueryContextController:
         """
 
         # remove old queries
-        remove_query = db.session.query(db.Queries).filter(
+        filters = [
             db.Queries.company_id == ctx.company_id,
-            db.Queries.user_id == ctx.user_id,
             db.Queries.finished_at < (dt.datetime.now() - dt.timedelta(days=1)),
-        )
+        ]
+        if ctx.should_filter_by_user_id():
+            filters.append(db.Queries.user_id == ctx.user_id)
+        remove_query = db.session.query(db.Queries).filter(*filters)
         for rec in remove_query.all():
             self.get_query(rec.id).remove_from_task()
             db.session.delete(rec)
@@ -602,18 +626,19 @@ class QueryContextController:
         Get list of all running queries with metadata
         """
 
-        query = db.session.query(db.Queries).filter(
-            db.Queries.company_id == ctx.company_id, db.Queries.user_id == ctx.user_id
-        )
+        query = db.session.query(db.Queries).filter(db.Queries.company_id == ctx.company_id)
+        if ctx.should_filter_by_user_id():
+            query = query.filter(db.Queries.user_id == ctx.user_id)
         return [RunningQuery(record).get_info() for record in query]
 
     def cancel_query(self, query_id: int):
         """
         Cancels running query by id
         """
-        rec = db.Queries.query.filter(
-            db.Queries.id == query_id, db.Queries.company_id == ctx.company_id, db.Queries.user_id == ctx.user_id
-        ).first()
+        query = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id)
+        if ctx.should_filter_by_user_id():
+            query = query.filter(db.Queries.user_id == ctx.user_id)
+        rec = query.first()
         if rec is None:
             raise RuntimeError(f"Query not found: {query_id}")
 

@@ -90,14 +90,15 @@ class AgentsController:
         """
 
         project = self.project_controller.get(name=project_name)
-        agent = db.Agents.query.filter(
+        agent_query = db.Agents.query.filter(
             db.Agents.name == agent_name,
             db.Agents.project_id == project.id,
             db.Agents.company_id == ctx.company_id,
-            db.Agents.user_id == ctx.user_id,
             db.Agents.deleted_at == null(),
-        ).first()
-        return agent
+        )
+        if ctx.should_filter_by_user_id():
+            agent_query = agent_query.filter(db.Agents.user_id == ctx.user_id)
+        return agent_query.first()
 
     def get_agent_by_id(self, id: int, project_name: str = default_project) -> db.Agents:
         """
@@ -112,14 +113,15 @@ class AgentsController:
         """
 
         project = self.project_controller.get(name=project_name)
-        agent = db.Agents.query.filter(
+        agent_query = db.Agents.query.filter(
             db.Agents.id == id,
             db.Agents.project_id == project.id,
             db.Agents.company_id == ctx.company_id,
-            db.Agents.user_id == ctx.user_id,
             db.Agents.deleted_at == null(),
-        ).first()
-        return agent
+        )
+        if ctx.should_filter_by_user_id():
+            agent_query = agent_query.filter(db.Agents.user_id == ctx.user_id)
+        return agent_query.first()
 
     def get_agents(self, project_name: str) -> List[dict]:
         """
@@ -132,9 +134,9 @@ class AgentsController:
             all-agents (List[db.Agents]): List of database agent object
         """
 
-        all_agents = db.Agents.query.filter(
-            db.Agents.company_id == ctx.company_id, db.Agents.user_id == ctx.user_id, db.Agents.deleted_at == null()
-        )
+        all_agents = db.Agents.query.filter(db.Agents.company_id == ctx.company_id, db.Agents.deleted_at == null())
+        if ctx.should_filter_by_user_id():
+            all_agents = all_agents.filter(db.Agents.user_id == ctx.user_id)
 
         if project_name is not None:
             project = self.project_controller.get(name=project_name)

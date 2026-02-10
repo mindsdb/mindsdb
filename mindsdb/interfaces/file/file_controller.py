@@ -47,12 +47,10 @@ class FileController:
         """Get file record by name with case-insensitive match (unquoted = lowercase)."""
         if not name:
             return None
-        return (
-            db.session.query(db.File)
-            .filter_by(company_id=ctx.company_id, user_id=ctx.user_id)
-            .filter(func.lower(db.File.name) == name.lower())
-            .first()
-        )
+        query = db.session.query(db.File).filter_by(company_id=ctx.company_id)
+        if ctx.should_filter_by_user_id():
+            query = query.filter(db.File.user_id == ctx.user_id)
+        return query.filter(func.lower(db.File.name) == name.lower()).first()
 
     def get_files_names(self, lower: bool = False):
         """return list of files names
@@ -63,10 +61,10 @@ class FileController:
         Returns:
             list[str]: list of files names
         """
-        names = [
-            record[0]
-            for record in db.session.query(db.File.name).filter_by(company_id=ctx.company_id, user_id=ctx.user_id)
-        ]
+        query = db.session.query(db.File.name).filter_by(company_id=ctx.company_id)
+        if ctx.should_filter_by_user_id():
+            query = query.filter(db.File.user_id == ctx.user_id)
+        names = [record[0] for record in query]
         if lower:
             names = [name.lower() for name in names]
         return names
@@ -90,7 +88,10 @@ class FileController:
         Returns:
             list[dict]: files metadata
         """
-        file_records = db.session.query(db.File).filter_by(company_id=ctx.company_id, user_id=ctx.user_id).all()
+        query = db.session.query(db.File).filter_by(company_id=ctx.company_id)
+        if ctx.should_filter_by_user_id():
+            query = query.filter(db.File.user_id == ctx.user_id)
+        file_records = query.all()
         files_metadata = [
             {
                 "name": record.name,

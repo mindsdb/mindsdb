@@ -282,7 +282,7 @@ def query_dfs(dataframes, query_ast, session=None):
                         f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
                         "Please use DuckDB-supported functions instead."
                     ),
-                    failed_query=query_str,
+                    failed_query=str(query_ast),
                     is_external=False,
                     is_expected=False,
                 )

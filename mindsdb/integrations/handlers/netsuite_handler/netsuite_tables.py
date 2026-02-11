@@ -4,7 +4,7 @@ import json
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import MetaAPIResource
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, filter_dataframe
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -319,13 +319,13 @@ class NetSuiteRecordTable(MetaAPIResource):
                     return str(href)
                 links = obj.get("links")
                 if isinstance(links, list):
-                    for l in links:
-                        if isinstance(l, dict) and l.get("rel") == "self" and l.get("href"):
-                            return str(l.get("href"))
+                    for link in links:
+                        if isinstance(link, dict) and link.get("rel") == "self" and link.get("href"):
+                            return str(link.get("href"))
             if isinstance(obj, list):
-                for l in obj:
-                    if isinstance(l, dict) and l.get("rel") == "self" and l.get("href"):
-                        return str(l.get("href"))
+                for link in obj:
+                    if isinstance(link, dict) and link.get("rel") == "self" and link.get("href"):
+                        return str(link.get("href"))
             return None
 
         def normalize_cell(v: Any) -> Any:

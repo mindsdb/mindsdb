@@ -239,10 +239,8 @@ class NetSuiteRecordTable(MetaAPIResource):
             order_by_sql=order_by_sql,
         )
 
-        # Parse payload -> DataFrame (handles both items(dicts) and items(values)+columnMetadata formats)
         df = self._payload_to_dataframe(payload, targets=targets)
 
-        # Ensure at least one column on empty result sets
         if df.empty:
             if targets:
                 return pd.DataFrame(columns=targets)
@@ -251,7 +249,6 @@ class NetSuiteRecordTable(MetaAPIResource):
         # Pretty / stable cell parsing
         df = self._prettify_dataframe(df)
 
-        # Keep projection last
         if targets:
             df = df.reindex(columns=targets)
 
@@ -260,10 +257,6 @@ class NetSuiteRecordTable(MetaAPIResource):
     def _payload_to_dataframe(self, payload: Any, targets: Optional[List[str]] = None) -> pd.DataFrame:
         """
         Convert SuiteQL response payload into a DataFrame.
-
-        SuiteQL can return:
-        - items = list[dict]  (your "subsidiary" test did this)
-        - items = list[{"values":[...]}] + columnMetadata
         """
         if not isinstance(payload, dict):
             return pd.DataFrame(columns=targets or [])
@@ -274,7 +267,6 @@ class NetSuiteRecordTable(MetaAPIResource):
 
         first = items[0]
 
-        # Format A: values + column metadata
         if isinstance(first, dict) and "values" in first:
             col_meta = payload.get("columnMetadata") or payload.get("columns") or []
             cols: List[str] = []
@@ -295,7 +287,6 @@ class NetSuiteRecordTable(MetaAPIResource):
             if len(cols) < max_len:
                 cols.extend([f"col_{i}" for i in range(len(cols), max_len)])
 
-            # pad
             padded = []
             for r in rows:
                 r = list(r)
@@ -305,7 +296,6 @@ class NetSuiteRecordTable(MetaAPIResource):
                     r = r[: len(cols)]
                 padded.append(r)
 
-            # dedupe columns
             seen = {}
             deduped = []
             for name in cols:
@@ -315,19 +305,14 @@ class NetSuiteRecordTable(MetaAPIResource):
 
             return pd.DataFrame(padded, columns=deduped)
 
-        # Format B: items is list[dict]
         if isinstance(first, dict):
             return pd.DataFrame(items)
 
-        # Unknown
         return pd.DataFrame(columns=targets or [])
 
     def _prettify_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Make SuiteQL/REST-ish nested values readable:
-        - dicts like {"id":"1","refName":"USA","links":[...]} become "USA" (or id if no refName)
-        - links lists become href string when possible
-        - other dict/list become JSON strings (stable)
+        Make SuiteQL/REST-ish nested values readable
         """
 
         def pick_href(obj: Any) -> Optional[str]:
@@ -369,7 +354,6 @@ class NetSuiteRecordTable(MetaAPIResource):
                 except Exception:
                     return str(v)
 
-            # links arrays etc.
             if isinstance(v, list):
                 href = pick_href(v)
                 if href:

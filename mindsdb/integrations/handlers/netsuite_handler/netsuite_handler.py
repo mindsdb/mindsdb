@@ -304,7 +304,6 @@ class NetSuiteHandler(MetaAPIHandler):
         """
         record_types = self.connection_data.get("record_types")
 
-
         # Explicit config always wins
         if isinstance(record_types, str):
             self._record_types_source = "config"

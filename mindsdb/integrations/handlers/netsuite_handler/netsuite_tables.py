@@ -158,7 +158,6 @@ class NetSuiteRecordTable(MetaAPIResource):
 
         return fields_metadata
 
-
     def list(
         self,
         conditions: List[FilterCondition] = None,

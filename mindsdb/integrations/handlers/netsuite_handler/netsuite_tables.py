@@ -158,9 +158,6 @@ class NetSuiteRecordTable(MetaAPIResource):
 
         return fields_metadata
 
-    # @property
-    # def _base_path(self) -> str:
-    #     return f"/services/rest/record/v1/{self.record_type}"
 
     def list(
         self,

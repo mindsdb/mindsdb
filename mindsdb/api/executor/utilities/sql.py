@@ -84,6 +84,10 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
             exception = None
             for sample_size in [1000, 10000, 1000000]:
                 try:
+                    # 80% from free RAM
+                    available_ram_mb = int(psutil.virtual_memory().available * 0.8 / 1024**2)
+                    con.execute(f"SET memory_limit = '{available_ram_mb}MB';")
+
                     con.execute(f"set global pandas_analyze_sample={sample_size};")
                     if not prevent_oom:
                         result_df = con.execute(query_str).fetchdf()

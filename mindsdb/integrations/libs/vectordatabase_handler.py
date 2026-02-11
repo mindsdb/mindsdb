@@ -17,6 +17,8 @@ from mindsdb_sql_parser.ast import (
     Star,
     Tuple,
     Update,
+    Function,
+    Identifier,
 )
 from mindsdb_sql_parser.ast.base import ASTNode
 
@@ -111,18 +113,30 @@ class VectorStoreHandler(BaseHandler):
                     if node.op.upper() == "AND":
                         return
                     op = FilterOperator(node.op.upper())
+
+                    arg1, arg2 = node.args
+                    if isinstance(arg1, Function):
+                        if arg1.op.lower() in ("lower", "lower") and len(arg1.args) == 1:
+                            func_arg = arg1.args[0]
+                            if isinstance(func_arg, Identifier) and len(func_arg.parts) == 1:
+                                if func_arg.parts[0].lower() in ("chunk_content", "content"):
+                                    arg1 = func_arg
+
+                    if not isinstance(arg1, Identifier):
+                        raise ValueError(f"Not supported condition: {node}")
+
                     # unquote the left hand side
-                    left_hand = node.args[0].parts[-1].strip("`")
-                    if isinstance(node.args[1], Constant):
+                    left_hand = arg1.parts[-1].strip("`")
+                    if isinstance(arg2, Constant):
                         if left_hand == TableField.SEARCH_VECTOR.value:
-                            right_hand = ast.literal_eval(node.args[1].value)
+                            right_hand = ast.literal_eval(arg2.value)
                         else:
-                            right_hand = node.args[1].value
-                    elif isinstance(node.args[1], Tuple):
+                            right_hand = arg2.value
+                    elif isinstance(arg2, Tuple):
                         # Constant could be actually a list i.e. [1.2, 3.2]
-                        right_hand = [item.value for item in node.args[1].items]
+                        right_hand = [item.value for item in arg2.items]
                     else:
-                        raise Exception(f"Unsupported right hand side: {node.args[1]}")
+                        raise Exception(f"Unsupported right hand side: {arg2}")
                     conditions.append(FilterCondition(column=left_hand, op=op, value=right_hand))
 
             query_traversal(where_statement, _extract_comparison_conditions)

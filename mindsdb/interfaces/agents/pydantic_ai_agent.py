@@ -553,6 +553,9 @@ class PydanticAIAgent:
 
                     retry_count += 1
                     if retry_count >= MAX_RETRIES:
+                        DEBUG_LOGGER(
+                            f"PydanticAIAgent._get_completion_stream: retry ({retry_count}/{MAX_RETRIES}) after error: {query_error}"
+                        )
                         raise RuntimeError(
                             f"Failed to execute {query_type} SQL query after {retry_count} consecutive unsuccessful SQL queries. "
                             f"Last error: {query_error}\nSQL:\n{sql_query}"

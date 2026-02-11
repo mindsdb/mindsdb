@@ -12,7 +12,7 @@ except ImportError:  # pragma: no cover - handled at runtime by __init__.py
 
 from mindsdb.integrations.handlers.netsuite_handler.netsuite_tables import NetSuiteRecordTable
 from mindsdb.integrations.handlers.netsuite_handler.__about__ import __version__ as handler_version
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import HandlerResponse as Response, HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.utilities import log
@@ -20,7 +20,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class NetSuiteHandler(APIHandler):
+class NetSuiteHandler(MetaAPIHandler):
     """
     This handler manages connections and queries for the Oracle NetSuite REST APIs.
     """
@@ -166,10 +166,111 @@ class NetSuiteHandler(APIHandler):
         self.session: Optional[requests.Session] = None
         self.is_connected: bool = False
         self.base_url = self._build_base_url()
+        self._record_types_source: str = "default"
         self.record_types = self._get_record_types()
+        self._metadata_catalog: Optional[List[dict]] = None
+        self._metadata_catalog_failed: bool = False
+        self._record_metadata_cache: dict[str, dict] = {}
+        self._unsupported_record_types: set[str] = set()
+        self._accessible_record_types: Optional[set[str]] = None
+        self._accessible_record_types_loaded: bool = False
 
         for record_type in self.record_types:
             self._register_table(record_type, NetSuiteRecordTable(self, record_type))
+
+    def _get_metadata_catalog(self, table_names: Optional[List[str]] = None) -> List[dict]:
+        """
+        Retrieves NetSuite record metadata catalog.
+
+        Args:
+            table_names (Optional[List[str]]): Optional list of record types to fetch individually.
+
+        Returns:
+            List[dict]: Metadata entries for record types.
+        """
+        if table_names:
+            metadata_list = []
+            for table_name in table_names:
+                record_metadata = self._get_record_metadata(table_name)
+                if isinstance(record_metadata, dict):
+                    entry = dict(record_metadata)
+                    entry.setdefault("recordType", table_name)
+                    entry.setdefault("name", table_name)
+                    metadata_list.append(entry)
+            return metadata_list
+
+        if self._metadata_catalog is not None:
+            return self._metadata_catalog
+
+        try:
+            payload = self._request("GET", "/services/rest/record/v1/metadata-catalog")
+        except Exception as exc:
+            logger.warning("Failed to fetch NetSuite metadata catalog: %s", exc)
+            self._metadata_catalog = []
+            self._metadata_catalog_failed = True
+            return self._metadata_catalog
+
+        if isinstance(payload, dict):
+            items = (
+                payload.get("items") or payload.get("records") or payload.get("data") or payload.get("results") or []
+            )
+        elif isinstance(payload, list):
+            items = payload
+        else:
+            items = []
+
+        self._metadata_catalog = items if isinstance(items, list) else []
+        return self._metadata_catalog
+
+    def _get_accessible_record_types(self) -> Optional[set[str]]:
+        """
+        Returns a cached set of accessible record types based on the metadata catalog.
+        """
+        if self._accessible_record_types_loaded:
+            return self._accessible_record_types or None
+
+        catalog = self._get_metadata_catalog()
+        if not catalog:
+            self._accessible_record_types_loaded = True
+            self._accessible_record_types = set()
+            return None
+
+        record_types = set()
+        for item in catalog:
+            if not isinstance(item, dict):
+                continue
+            name = item.get("recordType") or item.get("name") or item.get("id")
+            if name:
+                record_types.add(str(name).lower())
+
+        self._accessible_record_types_loaded = True
+        self._accessible_record_types = record_types
+        return record_types or None
+
+    def _get_record_metadata(self, record_type: str) -> Optional[dict]:
+        """
+        Retrieves metadata for a specific NetSuite record type.
+
+        Args:
+            record_type (str): NetSuite record type.
+
+        Returns:
+            Optional[dict]: Metadata dictionary if available.
+        """
+        normalized = str(record_type).lower()
+        if normalized in self._record_metadata_cache:
+            return self._record_metadata_cache[normalized]
+
+        try:
+            payload = self._request("GET", f"/services/rest/record/v1/metadata-catalog/{normalized}")
+        except Exception as exc:
+            logger.warning("Failed to fetch NetSuite metadata for %s: %s", normalized, exc)
+            return None
+
+        if isinstance(payload, dict):
+            self._record_metadata_cache[normalized] = payload
+            return payload
+        return None
 
     def _build_base_url(self) -> str:
         """
@@ -200,11 +301,15 @@ class NetSuiteHandler(APIHandler):
         """
         record_types = self.connection_data.get("record_types")
         if record_types is None:
+            self._record_types_source = "default"
             return self.DEFAULT_TABLES
         if isinstance(record_types, str):
-            return [value.strip() for value in record_types.split(",") if value.strip()]
+            self._record_types_source = "config"
+            return [value.strip().lower() for value in record_types.split(",") if value.strip()]
         if isinstance(record_types, list):
-            return [value for value in record_types if isinstance(value, str) and value]
+            self._record_types_source = "config"
+            return [value.strip().lower() for value in record_types if isinstance(value, str) and value.strip()]
+        self._record_types_source = "default"
         return self.DEFAULT_TABLES
 
     def connect(self) -> requests.Session:
@@ -275,6 +380,97 @@ class NetSuiteHandler(APIHandler):
             self.is_connected = False
 
         return response
+
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (Optional[List[str]]): Optional list of table names.
+
+        Returns:
+            Response: A response object containing the table metadata.
+        """
+        allowed = set(self._tables.keys())
+        accessible = self._get_accessible_record_types()
+        if accessible is not None:
+            allowed = allowed & accessible
+
+        if self._unsupported_record_types:
+            allowed = allowed - {name.lower() for name in self._unsupported_record_types}
+
+        if table_names is not None:
+            allowed = allowed & {name.lower() for name in table_names}
+
+        df = pd.DataFrame()
+        for table_name, table_class in self._tables.items():
+            if table_name not in allowed:
+                continue
+            try:
+                if hasattr(table_class, "meta_get_tables"):
+                    table_metadata = table_class.meta_get_tables(table_name)
+                    df = pd.concat([df, pd.DataFrame([table_metadata])], ignore_index=True)
+            except Exception:
+                logger.exception(f"Error retrieving metadata for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "TABLE_TYPE",
+                    "TABLE_SCHEMA",
+                    "TABLE_DESCRIPTION",
+                    "ROW_COUNT",
+                ]
+            )
+
+        return Response(RESPONSE_TYPE.TABLE, df)
+
+    def meta_get_columns(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
+        """
+        Retrieves column metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (List): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            Response: A response object containing the column metadata.
+        """
+        allowed = set(self._tables.keys())
+        accessible = self._get_accessible_record_types()
+        if accessible is not None:
+            allowed = allowed & accessible
+
+        if self._unsupported_record_types:
+            allowed = allowed - {name.lower() for name in self._unsupported_record_types}
+
+        if table_names is not None:
+            allowed = allowed & {name.lower() for name in table_names}
+
+        df = pd.DataFrame()
+        for table_name, table_class in self._tables.items():
+            if table_name not in allowed:
+                continue
+            try:
+                if hasattr(table_class, "meta_get_columns"):
+                    column_metadata = table_class.meta_get_columns(table_name, **kwargs)
+                    df = pd.concat([df, pd.DataFrame(column_metadata)], ignore_index=True)
+            except Exception:
+                logger.exception(f"Error retrieving column metadata for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "COLUMN_NAME",
+                    "DATA_TYPE",
+                    "COLUMN_DESCRIPTION",
+                    "IS_NULLABLE",
+                    "COLUMN_DEFAULT",
+                ]
+            )
+
+        return Response(RESPONSE_TYPE.TABLE, df)
 
     def native_query(self, query: Any) -> Response:
         """

@@ -63,6 +63,7 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
         query_str (str): query to execute
         dataframes (dict): dataframes
         user_functions: functions controller which register new functions in connection
+        prevent_oom: get results if the safe way. Raise exception before memory overflow and application is killed
 
     Returns:
         pandas.DataFrame

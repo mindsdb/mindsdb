@@ -349,6 +349,7 @@ def initialize_app(is_restart: bool = False):
         company_id = request.headers.get("company-id")
         user_id = request.headers.get("user-id")
         user_class = request.headers.get("user-class")
+        enforce_user_id = request.headers.get("enforce-user-id")
 
         if user_class is not None:
             try:
@@ -362,6 +363,8 @@ def initialize_app(is_restart: bool = False):
         ctx.company_id = company_id if company_id is not None else DEFAULT_COMPANY_ID
         ctx.user_id = user_id if user_id is not None else DEFAULT_USER_ID
         ctx.user_class = user_class
+        if enforce_user_id is not None:
+            ctx.enforce_user_id = enforce_user_id.lower() not in ("false", "0", "no", "")
 
     logger.debug("Done initializing app.")
     return app

@@ -2,12 +2,11 @@
 
 import json
 import warnings
+import functools
 from typing import Dict, List, Optional, Any, Iterable
+
 import pandas as pd
-
-
 from mindsdb_sql_parser import parse_sql, ast
-
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelRequest, ModelResponse, ModelMessage, TextPart
 
@@ -29,12 +28,41 @@ from mindsdb.interfaces.agents.modes import sql as sql_mode, text_sql as text_sq
 from mindsdb.interfaces.agents.modes.base import ResponseType, PlanResponse
 
 logger = log.getLogger(__name__)
-DEBUG_LOGGER = logger.info
+DEBUG_LOGGER = logger.debug
 
 
 # Suppress asyncio warnings about unretrieved task exceptions from httpx cleanup
 # This is a known issue where httpx.AsyncClient tries to close connections after the event loop is closed
 warnings.filterwarnings("ignore", message=".*Task exception was never retrieved.*", category=RuntimeWarning)
+
+
+def langfuse_traced_stream(trace_name="api-completion", span_name="run-completion"):
+    """Decorator that wraps a generator method with Langfuse trace/span lifecycle."""
+
+    def decorator(method):
+        @functools.wraps(method)
+        def wrapper(self, messages, *args, **kwargs):
+            # Setup trace & span
+            self.langfuse_client_wrapper.setup_trace(
+                name=trace_name,
+                input=messages,
+                tags=self.get_tags(),
+                metadata=self.get_metadata(),
+                user_id=ctx.user_id,
+                session_id=ctx.session_id,
+            )
+            self.run_completion_span = self.langfuse_client_wrapper.start_span(
+                name=span_name,
+                input=messages,
+            )
+            try:
+                yield from method(self, messages, *args, **kwargs)
+            finally:
+                self.langfuse_client_wrapper.end_span(self.run_completion_span)
+
+        return wrapper
+
+    return decorator
 
 
 class PydanticAIAgent:
@@ -368,6 +396,7 @@ class PydanticAIAgent:
             response_data[CONTEXT_COLUMN] = [json.dumps([])]
         return pd.DataFrame(response_data)
 
+    @langfuse_traced_stream(trace_name="api-completion", span_name="run-completion")
     def _get_completion_stream(self, messages: List[dict], params) -> Iterable[Dict]:
         """
         Get completion as a stream of chunks.
@@ -378,22 +407,6 @@ class PydanticAIAgent:
         Returns:
             Iterator of chunk dictionaries
         """
-
-        # Set up trace
-        metadata = self.get_metadata()
-        tags = self.get_tags()
-
-        self.langfuse_client_wrapper.setup_trace(
-            name="api-completion",
-            input=messages,
-            tags=tags,
-            metadata=metadata,
-            user_id=ctx.user_id,
-            session_id=ctx.session_id,
-        )
-
-        self.run_completion_span = self.langfuse_client_wrapper.start_span(name="run-completion", input=messages)
-
         DEBUG_LOGGER(f"PydanticAIAgent._get_completion_stream: Messages: {messages}")
 
         # Extract current prompt and message history from messages
@@ -421,10 +434,9 @@ class PydanticAIAgent:
 
         # Initialize counters and accumulators
         exploratory_query_count = 0
+        exploratory_query_results = []
         MAX_EXPLORATORY_QUERIES = 20
         MAX_RETRIES = 3
-        accumulated_errors = []
-        exploratory_query_results = []
 
         # Planning step: Create a plan before generating queries
         yield self._add_chunk_metadata({"type": "status", "content": "Creating execution plan..."})
@@ -465,10 +477,10 @@ class PydanticAIAgent:
         )
 
         # Build base prompt with plan included
-        base_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{sql_instructions}\n\nProposedExecution Plan:\n{plan.plan}\n\nEstimated steps: {plan.estimated_steps} (maximum allowed: {MAX_EXPLORATORY_QUERIES})\n\nPlease follow this plan and write Mindsdb SQL queries to answer the question:\n{current_prompt}"
+        base_prompt = f"\n\nTake into account the following Data Catalog:\n{data_catalog}\nMindsDB SQL instructions:\n{sql_instructions}\n\nProposed Execution Plan:\n{plan.plan}\n\nEstimated steps: {plan.estimated_steps} (maximum allowed: {MAX_EXPLORATORY_QUERIES})\n\nPlease follow this plan and write Mindsdb SQL queries to answer the question:\n{current_prompt}"
 
         if select_targets_str is not None:
-            base_prompt += f"\n\nFor the final query the user expects to have a table such that this query is valid:SELECT {select_targets_str} FROM (<generated query>); when generating the SQL query make sure to include those columns, do not fix grammar on columns. Keep them as the user wants them"
+            base_prompt += f"\n\nFor the final query the user expects to have a table such that this query is valid: SELECT {select_targets_str} FROM (<generated query>); when generating the SQL query make sure to include those columns, do not fix grammar on columns. Keep them as the user wants them"
 
         DEBUG_LOGGER(
             f"PydanticAIAgent._get_completion_stream: Sending LLM request with Current prompt: {current_prompt}"
@@ -478,7 +490,6 @@ class PydanticAIAgent:
         # Create agent
         agent = Agent(self.model_instance, system_prompt=self.system_prompt, output_type=AgentResponse)
 
-        error_context = None
         retry_count = 0
 
         try:
@@ -491,14 +502,8 @@ class PydanticAIAgent:
                         exploratory_query_results
                     )
 
-                if exploratory_query_count >= MAX_EXPLORATORY_QUERIES:
+                if exploratory_query_count == MAX_EXPLORATORY_QUERIES:
                     current_prompt += f"\n\nIMPORTANT: You have reached the maximum number of exploratory queries ({MAX_EXPLORATORY_QUERIES}). The next query you generate MUST be a final_query or final_text."
-
-                if error_context:
-                    current_prompt += error_context
-                    current_prompt += (
-                        f"\n\nPlease fix the query and try again. This is retry attempt {retry_count} of {MAX_RETRIES}."
-                    )
 
                 result = agent.run_sync(
                     current_prompt,
@@ -519,17 +524,17 @@ class PydanticAIAgent:
                     yield self._add_chunk_metadata({"type": "data", "text": output.text})
                     yield self._add_chunk_metadata({"type": "end"})
                     return
+                elif output.type == ResponseType.EXPLORATORY and exploratory_query_count == MAX_EXPLORATORY_QUERIES:
+                    raise RuntimeError(
+                        "Agent exceeded the maximum number of exploratory queries "
+                        f"({MAX_EXPLORATORY_QUERIES}) but result still not returned. "
+                        f"output.type='{output.type}', expected 'final_query' or 'final_text'."
+                    )
 
                 sql_query = output.sql_query
                 DEBUG_LOGGER(
                     f"PydanticAIAgent._get_completion_stream: Received LLM response: sql: {sql_query}, query_type: {output.type}, description: {output.short_description}"
                 )
-
-                # Initialize retry counter for this query
-
-                # Retry loop for this query (up to MAX_RETRIES)
-
-                error_context = None
 
                 try:
                     query_type = "final" if output.type == ResponseType.FINAL_QUERY else "exploratory"
@@ -544,18 +549,20 @@ class PydanticAIAgent:
 
                     # Yield descriptive error message
                     error_message = f"Error executing SQL query: {query_error}"
-
                     yield self._add_chunk_metadata({"type": "status", "content": error_message})
 
-                    accumulated_errors.append(f"Query: {sql_query}\nError: {query_error}")
                     retry_count += 1
                     if retry_count >= MAX_RETRIES:
-                        error_context = "\n\nPrevious query errors:\n" + "\n---\n".join(accumulated_errors[-3:])
-                        if output.type == ResponseType.FINAL_QUERY:
-                            raise RuntimeError(f"Problem with final query: {query_error}")
-                    else:
-                        query_result_str = f"Query: {sql_query}\nError: {query_error}"
-                        exploratory_query_results.append(query_result_str)
+                        DEBUG_LOGGER(
+                            f"PydanticAIAgent._get_completion_stream: retry ({retry_count}/{MAX_RETRIES}) after error: {query_error}"
+                        )
+                        raise RuntimeError(
+                            f"Failed to execute {query_type} SQL query after {retry_count} consecutive unsuccessful SQL queries. "
+                            f"Last error: {query_error}\nSQL:\n{sql_query}"
+                        )
+
+                    query_result_str = f"Query: {sql_query}\nError: {query_error}"
+                    exploratory_query_results.append(query_result_str)
 
                     continue
 

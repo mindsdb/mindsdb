@@ -19,7 +19,11 @@ class ChatBotController:
 
     OBJECT_TYPE = "chatbot"
 
-    def __init__(self, project_controller: ProjectController = None, agents_controller: AgentsController = None):
+    def __init__(
+        self,
+        project_controller: ProjectController = None,
+        agents_controller: AgentsController = None,
+    ):
         if project_controller is None:
             project_controller = ProjectController()
         if agents_controller is None:
@@ -41,16 +45,18 @@ class ChatBotController:
 
         project = self.project_controller.get(name=project_name)
 
+        filters = [
+            db.ChatBots.name == chatbot_name,
+            db.ChatBots.project_id == project.id,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        ]
+        if ctx.enforce_user_id:
+            filters.append(db.Tasks.user_id == ctx.user_id)
         query = (
             db.session.query(db.ChatBots, db.Tasks)
             .join(db.Tasks, db.ChatBots.id == db.Tasks.object_id)
-            .filter(
-                db.ChatBots.name == chatbot_name,
-                db.ChatBots.project_id == project.id,
-                db.Tasks.object_type == self.OBJECT_TYPE,
-                db.Tasks.company_id == ctx.company_id,
-                db.Tasks.user_id == ctx.user_id,
-            )
+            .filter(*filters)
         )
 
         return self._get_chatbot(query, project)
@@ -73,9 +79,11 @@ class ChatBotController:
                 db.ChatBots.id == chatbot_id,
                 db.Tasks.object_type == self.OBJECT_TYPE,
                 db.Tasks.company_id == ctx.company_id,
-                db.Tasks.user_id == ctx.user_id,
             )
         )
+
+        if ctx.enforce_user_id:
+            query = query.filter(db.Tasks.user_id == ctx.user_id)
 
         return self._get_chatbot(query)
 
@@ -139,15 +147,17 @@ class ChatBotController:
         if project_name is not None and project_name not in project_names.values():
             raise EntityNotExistsError(f"Project {project_name} not found")
 
+        filters = [
+            db.ChatBots.project_id.in_(list(project_names.keys())),
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        ]
+        if ctx.enforce_user_id:
+            filters.append(db.Tasks.user_id == ctx.user_id)
         query = (
             db.session.query(db.ChatBots, db.Tasks)
             .join(db.Tasks, db.ChatBots.id == db.Tasks.object_id)
-            .filter(
-                db.ChatBots.project_id.in_(list(project_names.keys())),
-                db.Tasks.object_type == self.OBJECT_TYPE,
-                db.Tasks.company_id == ctx.company_id,
-                db.Tasks.user_id == ctx.user_id,
-            )
+            .filter(*filters)
         )
 
         session = SessionController()
@@ -314,12 +324,14 @@ class ChatBotController:
             # TODO check database_id
             existing_chatbot_rec.database_id = database_id
 
-        task = db.Tasks.query.filter(
+        task_query = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.object_id == existing_chatbot_rec.id,
             db.Tasks.company_id == ctx.company_id,
-            db.Tasks.user_id == ctx.user_id,
-        ).first()
+        )
+        if ctx.enforce_user_id:
+            task_query = task_query.filter(db.Tasks.user_id == ctx.user_id)
+        task = task_query.first()
 
         if task is not None:
             if is_running is not None:
@@ -356,12 +368,14 @@ class ChatBotController:
 
         bot_rec = db.ChatBots.query.get(bot["id"])
 
-        task = db.Tasks.query.filter(
+        task_query = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.object_id == bot_rec.id,
             db.Tasks.company_id == ctx.company_id,
-            db.Tasks.user_id == ctx.user_id,
-        ).first()
+        )
+        if ctx.enforce_user_id:
+            task_query = task_query.filter(db.Tasks.user_id == ctx.user_id)
+        task = task_query.first()
 
         if task is not None:
             db.session.delete(task)
@@ -380,15 +394,17 @@ class ChatBotController:
             request (dict): The incoming webhook request.
             chat_bot_memory (dict): The memory of the various chat-bots mapped by their webhook tokens.
         """
+        filters = [
+            db.ChatBots.webhook_token == webhook_token,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        ]
+        if ctx.enforce_user_id:
+            filters.append(db.Tasks.user_id == ctx.user_id)
         query = (
             db.session.query(db.ChatBots, db.Tasks)
             .join(db.Tasks, db.ChatBots.id == db.Tasks.object_id)
-            .filter(
-                db.ChatBots.webhook_token == webhook_token,
-                db.Tasks.object_type == self.OBJECT_TYPE,
-                db.Tasks.company_id == ctx.company_id,
-                db.Tasks.user_id == ctx.user_id,
-            )
+            .filter(*filters)
         )
         result = query.first()
 

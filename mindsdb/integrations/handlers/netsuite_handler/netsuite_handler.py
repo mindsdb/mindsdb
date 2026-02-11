@@ -149,6 +149,7 @@ class NetSuiteHandler(MetaAPIHandler):
         "emailtemplate",
         "notetype",
     ]
+    ACCESSIBLE_TABLES = {"contact", "customer", "item", "message", "subsidiary", "task", "transaction"}
 
     def __init__(self, name: str, **kwargs):
         """
@@ -296,21 +297,29 @@ class NetSuiteHandler(MetaAPIHandler):
         """
         Resolves the record types to register as tables.
 
-        Returns:
-            List[str]: List of record types.
+        - If connection_data.record_types is provided: use that (as before).
+        - If not provided: use only ACCESSIBLE_TABLES (allowed tables) to avoid
+          registering tables you can't query under current role.
+        - DEFAULT_TABLES remains as reference for future / broader roles.
         """
         record_types = self.connection_data.get("record_types")
-        if record_types is None:
-            self._record_types_source = "default"
-            return self.DEFAULT_TABLES
+
+        print("******************************")
+        print(record_types)
+        print("******************************")
+
+        # Explicit config always wins
         if isinstance(record_types, str):
             self._record_types_source = "config"
             return [value.strip().lower() for value in record_types.split(",") if value.strip()]
+
         if isinstance(record_types, list):
             self._record_types_source = "config"
             return [value.strip().lower() for value in record_types if isinstance(value, str) and value.strip()]
-        self._record_types_source = "default"
-        return self.DEFAULT_TABLES
+
+        # Default behavior (no record_types provided): register ONLY allowed tables
+        self._record_types_source = "default_allowed"
+        return sorted({name.strip().lower() for name in self.ACCESSIBLE_TABLES if name and name.strip()})
 
     def connect(self) -> requests.Session:
         """
@@ -525,6 +534,31 @@ class NetSuiteHandler(MetaAPIHandler):
                 df = pd.DataFrame(items)
 
         return Response(RESPONSE_TYPE.TABLE, df)
+
+    def _suiteql_select(
+        self,
+        table: str,
+        where_sql: str = "",
+        limit: Optional[int] = None,
+        targets: Optional[List[str]] = None,
+        order_by_sql: str = "",
+    ) -> dict:
+        """
+        Executes a SuiteQL SELECT and returns raw payload dict.
+        """
+        select_cols = "*"
+        if targets:
+            select_cols = ", ".join(targets)
+
+        limit_sql = ""
+        if limit is not None:
+            n = int(limit)
+            if n < 0:
+                n = 0
+            limit_sql = f" FETCH FIRST {n} ROWS ONLY"
+
+        sql = f"SELECT {select_cols} FROM {table}{where_sql}{order_by_sql}{limit_sql}"
+        return self._request("POST", "/services/rest/query/v1/suiteql", json={"q": sql})
 
     def _request(self, method: str, path: str, **kwargs):
         """

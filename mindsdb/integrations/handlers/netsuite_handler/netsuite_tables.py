@@ -1,5 +1,6 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
+import json
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import MetaAPIResource
@@ -157,9 +158,9 @@ class NetSuiteRecordTable(MetaAPIResource):
 
         return fields_metadata
 
-    @property
-    def _base_path(self) -> str:
-        return f"/services/rest/record/v1/{self.record_type}"
+    # @property
+    # def _base_path(self) -> str:
+    #     return f"/services/rest/record/v1/{self.record_type}"
 
     def list(
         self,
@@ -170,163 +171,220 @@ class NetSuiteRecordTable(MetaAPIResource):
         **kwargs,
     ) -> pd.DataFrame:
         """
-        Fetches records from NetSuite.
+        Fetches records using SuiteQL ALWAYS (for reads).
 
-        Args:
-            conditions (List[FilterCondition]): Optional filter conditions.
-            limit (Optional[int]): Optional maximum number of records.
-            sort (Optional[list]): Optional sort columns.
-            targets (Optional[List[str]]): Optional target columns.
-            **kwargs: Additional arguments.
-
-        Returns:
-            pd.DataFrame: Records from NetSuite.
+        We do NOT call REST record endpoints here anymore.
+        REST is still used by add/modify/remove and can remain elsewhere.
         """
         limit = int(limit) if limit is not None else None
-        items = []
-        next_url = self._base_path
-        remaining = limit
 
+        # Guard for tables we already marked unsupported
         if (
             hasattr(self.handler, "_unsupported_record_types")
             and self.record_type in self.handler._unsupported_record_types
         ):
             if targets:
                 return pd.DataFrame(columns=targets)
-            return pd.DataFrame(columns=["internalId"])
+            return pd.DataFrame(columns=["id"])
 
-        # If filtering on a specific id/internalId, fetch the full record directly.
-        record_id = None
-        record_id_cond = None
-        for cond in conditions or []:
-            if cond.op == FilterOperator.EQUAL and cond.column.lower() in ("id", "internalid"):
-                record_id = cond.value
-                record_id_cond = cond
-                break
-        if record_id is not None:
-            record_url = f"{self._base_path}/{record_id}"
-            try:
-                payload = self.handler._request("GET", record_url)
-            except RuntimeError as exc:
-                if self._should_skip_record_type(exc):
-                    self._mark_record_type_unsupported()
-                    if targets:
-                        return pd.DataFrame(columns=targets)
-                    return pd.DataFrame(columns=["internalId"])
-                if targets:
-                    return pd.DataFrame(columns=targets)
-                return pd.DataFrame(columns=["internalId"])
-            df = pd.DataFrame([payload]) if isinstance(payload, dict) else pd.DataFrame()
-            if targets:
-                df = df.reindex(columns=targets) if not df.empty else pd.DataFrame(columns=targets)
-            else:
-                df = df if not df.empty else pd.DataFrame(columns=["internalId"])
-
-            remaining_conditions = [
-                cond for cond in conditions or [] if cond.column.lower() not in ("id", "internalid")
-            ]
-            if remaining_conditions:
-                filters = [[cond.op.value, cond.column, cond.value] for cond in remaining_conditions]
-                df = filter_dataframe(df, filters)
-
-            if record_id_cond is not None:
-                record_id_cond.applied = True
-            for cond in remaining_conditions:
-                cond.applied = True
-
-            return df
-
-        def _format_q_value(value):
+        def _sql_quote(value) -> str:
             if value is None:
                 return "NULL"
             if isinstance(value, bool):
-                return "true" if value else "false"
+                # NetSuite often uses 'T'/'F' in some contexts, but SuiteQL generally accepts TRUE/FALSE too.
+                # We'll use string T/F to be safe with record fields.
+                return "'T'" if value else "'F'"
             if isinstance(value, (int, float)):
                 return str(value)
-            escaped = str(value).replace("'", "''")
-            return f"'{escaped}'"
+            s = str(value).replace("'", "''")
+            return f"'{s}'"
 
-        def _normalize_column(column: str) -> str:
-            return "internalId" if column.lower() == "id" else column
+        def _normalize_col(col: str) -> str:
+            # Your users might filter by internalId; SuiteQL base tables typically expose 'id'
+            if col.lower() in ("internalid",):
+                return "id"
+            return col
 
-        q_filters = []
+        # Build WHERE (push down only EQUAL for now – predictable)
+        where_parts = []
         for cond in conditions or []:
             if cond.op == FilterOperator.EQUAL:
-                column = _normalize_column(cond.column)
+                col = _normalize_col(cond.column)
                 if cond.value is None:
-                    q_filters.append(f"{column} IS NULL")
+                    where_parts.append(f"{col} IS NULL")
                 else:
-                    q_filters.append(f"{column} = {_format_q_value(cond.value)}")
+                    where_parts.append(f"{col} = {_sql_quote(cond.value)}")
                 cond.applied = True
 
-        while next_url:
-            if remaining is not None and remaining <= 0:
-                break
-            page_limit = remaining if remaining is not None else None
-            params = {}
-            if page_limit is not None:
-                params["limit"] = page_limit if page_limit > 0 else 1
-            if q_filters:
-                params["q"] = " AND ".join(q_filters)
-            order_by = None
-            if sort:
-                order_by = ",".join([f"{col.column}:{'asc' if col.ascending else 'desc'}" for col in sort])
-                params["orderBy"] = order_by
+        where_sql = ""
+        if where_parts:
+            where_sql = " WHERE " + " AND ".join(where_parts)
 
-            try:
-                payload = self.handler._request("GET", next_url, params=params)
-            except RuntimeError as exc:
-                if self._should_skip_record_type(exc):
-                    self._mark_record_type_unsupported()
-                    if targets:
-                        return pd.DataFrame(columns=targets)
-                    return pd.DataFrame(columns=["internalId"])
-                if order_by and "orderBy" in params:
-                    params.pop("orderBy", None)
-                    payload = self.handler._request("GET", next_url, params=params)
-                else:
-                    raise exc
+        # ORDER BY
+        order_by_sql = ""
+        if sort:
+            parts = []
+            for s in sort:
+                direction = "ASC" if s.ascending else "DESC"
+                parts.append(f"{s.column} {direction}")
+            if parts:
+                order_by_sql = " ORDER BY " + ", ".join(parts)
 
-            if isinstance(payload, dict):
-                page_items = payload.get("items") or payload.get("data") or payload.get("results") or []
-                links = payload.get("links") or []
-                next_url = None
-                for link in links:
-                    if isinstance(link, dict) and link.get("rel") == "next":
-                        next_url = link.get("href")
-                        break
-            elif isinstance(payload, list):
-                page_items = payload
-                next_url = None
-            else:
-                page_items = []
-                next_url = None
+        # Execute SuiteQL
+        payload = self.handler._suiteql_select(
+            table=self.record_type,
+            where_sql=where_sql,
+            limit=limit,
+            targets=targets,
+            order_by_sql=order_by_sql,
+        )
 
-            if remaining is not None:
-                if len(page_items) > remaining:
-                    page_items = page_items[:remaining]
-                remaining -= len(page_items)
+        # Parse payload -> DataFrame (handles both items(dicts) and items(values)+columnMetadata formats)
+        df = self._payload_to_dataframe(payload, targets=targets)
 
-            items.extend(page_items)
-
-            if remaining is not None and remaining <= 0:
-                break
-
-            if not page_items:
-                break
-
-        df = pd.DataFrame(items)
-
-        # DuckDB fails on SELECT * from a DataFrame with zero columns; ensure at least one column exists on empty result sets.
+        # Ensure at least one column on empty result sets
         if df.empty:
             if targets:
-                df = pd.DataFrame(columns=targets)
-            else:
-                df = pd.DataFrame(columns=["internalId"])
+                return pd.DataFrame(columns=targets)
+            return pd.DataFrame(columns=["id"])
 
+        # Pretty / stable cell parsing
+        df = self._prettify_dataframe(df)
+
+        # Keep projection last
         if targets:
-            df = df.reindex(columns=targets) if not df.empty else pd.DataFrame(columns=targets)
+            df = df.reindex(columns=targets)
+
         return df
+
+    def _payload_to_dataframe(self, payload: Any, targets: Optional[List[str]] = None) -> pd.DataFrame:
+        """
+        Convert SuiteQL response payload into a DataFrame.
+
+        SuiteQL can return:
+        - items = list[dict]  (your "subsidiary" test did this)
+        - items = list[{"values":[...]}] + columnMetadata
+        """
+        if not isinstance(payload, dict):
+            return pd.DataFrame(columns=targets or [])
+
+        items = payload.get("items") or []
+        if not isinstance(items, list) or not items:
+            return pd.DataFrame(columns=targets or [])
+
+        first = items[0]
+
+        # Format A: values + column metadata
+        if isinstance(first, dict) and "values" in first:
+            col_meta = payload.get("columnMetadata") or payload.get("columns") or []
+            cols: List[str] = []
+            for idx, c in enumerate(col_meta):
+                if isinstance(c, dict):
+                    cols.append(c.get("name") or c.get("label") or f"col_{idx}")
+                else:
+                    cols.append(str(c))
+
+            rows = []
+            for it in items:
+                if isinstance(it, dict):
+                    rows.append(it.get("values") or [])
+                else:
+                    rows.append([])
+
+            max_len = max((len(r) for r in rows), default=0)
+            if len(cols) < max_len:
+                cols.extend([f"col_{i}" for i in range(len(cols), max_len)])
+
+            # pad
+            padded = []
+            for r in rows:
+                r = list(r)
+                if len(r) < len(cols):
+                    r = r + [None] * (len(cols) - len(r))
+                else:
+                    r = r[: len(cols)]
+                padded.append(r)
+
+            # dedupe columns
+            seen = {}
+            deduped = []
+            for name in cols:
+                count = seen.get(name, 0) + 1
+                seen[name] = count
+                deduped.append(name if count == 1 else f"{name}_{count}")
+
+            return pd.DataFrame(padded, columns=deduped)
+
+        # Format B: items is list[dict]
+        if isinstance(first, dict):
+            return pd.DataFrame(items)
+
+        # Unknown
+        return pd.DataFrame(columns=targets or [])
+
+    def _prettify_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Make SuiteQL/REST-ish nested values readable:
+        - dicts like {"id":"1","refName":"USA","links":[...]} become "USA" (or id if no refName)
+        - links lists become href string when possible
+        - other dict/list become JSON strings (stable)
+        """
+
+        def pick_href(obj: Any) -> Optional[str]:
+            if isinstance(obj, dict):
+                href = obj.get("href")
+                if href:
+                    return str(href)
+                links = obj.get("links")
+                if isinstance(links, list):
+                    for l in links:
+                        if isinstance(l, dict) and l.get("rel") == "self" and l.get("href"):
+                            return str(l.get("href"))
+            if isinstance(obj, list):
+                for l in obj:
+                    if isinstance(l, dict) and l.get("rel") == "self" and l.get("href"):
+                        return str(l.get("href"))
+            return None
+
+        def normalize_cell(v: Any) -> Any:
+            if v is None:
+                return None
+
+            # Most common NetSuite ref objects
+            if isinstance(v, dict):
+                # prefer refName for readability
+                if "refName" in v and v.get("refName") is not None:
+                    return v.get("refName")
+                if "name" in v and v.get("name") is not None:
+                    return v.get("name")
+                if "id" in v and v.get("id") is not None and len(v.keys()) <= 3:
+                    # small dict with id-ish fields
+                    return v.get("id")
+                href = pick_href(v)
+                if href:
+                    return href
+                # fallback to stable JSON
+                try:
+                    return json.dumps(v, ensure_ascii=False, sort_keys=True)
+                except Exception:
+                    return str(v)
+
+            # links arrays etc.
+            if isinstance(v, list):
+                href = pick_href(v)
+                if href:
+                    return href
+                try:
+                    return json.dumps(v, ensure_ascii=False, sort_keys=True)
+                except Exception:
+                    return str(v)
+
+            return v
+
+        out = df.copy()
+        for col in out.columns:
+            out[col] = out[col].map(normalize_cell)
+        return out
 
     @staticmethod
     def _should_skip_record_type(exc: RuntimeError) -> bool:

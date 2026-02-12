@@ -877,6 +877,14 @@ class TestSelect(BaseExecutorDummyML):
         assert res["NAME"][0] == "test_db"
         assert res["CONNECTION_DATA"][0] == '{"key": 2}'
 
+    def test_unknown_duckdb_function(self):
+        with pytest.raises(Exception) as exc_info:
+            self.run_sql("""
+                select unknown_function_asdf(1)
+            """)
+
+        assert "Unknown function" in str(exc_info.value)
+
 
 class TestSet(BaseExecutorTest):
     @pytest.mark.parametrize("var", ["var", "@@var", "@@session.var", "session var"])

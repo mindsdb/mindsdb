@@ -8,7 +8,7 @@ import fnmatch
 import re
 
 import pandas as pd
-from mindsdb_sql_parser.ast import Identifier
+from mindsdb_sql_parser.ast import Identifier, ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
@@ -80,6 +80,23 @@ def split_table_name(table_name: str) -> List[str]:
         result.append(current.strip("`"))
 
     return result
+
+
+def _escape_identifiers(node: ASTNode, **kwargs) -> None:
+    """Escape identifier and alias if possible
+
+    Args:
+        node: The AST node to escape
+        **kwargs: Additional keyword arguments
+
+    Returns:
+        None
+    """
+    if isinstance(getattr(node, 'alias'), Identifier):
+        node.alias.is_quoted = [True] * len(node.alias.parts)
+    if not isinstance(node, Identifier):
+        return
+    node.is_quoted = [True] * len(node.parts)
 
 
 class TablesCollection:
@@ -182,9 +199,11 @@ class MindsDBQuery:
         cmd = re.sub(r"```(sql)?", "", query)
         return cmd
 
-    def execute_sql(self, sql: str, check_permissions=True):
+    def execute_sql(self, sql: str, check_permissions=True, escape_identifiers: bool = False):
         sql = self._clean_query(sql)
         ast_query = parse_sql(sql.strip("`"))
+        if escape_identifiers:
+            query_traversal(ast_query, _escape_identifiers)
         if check_permissions:
             self._check_permissions(ast_query)
 

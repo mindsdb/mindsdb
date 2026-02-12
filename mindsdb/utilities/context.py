@@ -78,6 +78,7 @@ class Context:
             "company_id": self.company_id if self.company_id else DEFAULT_COMPANY_ID,
             "user_id": self.user_id if self.user_id else DEFAULT_USER_ID,
             "session_id": self.session_id,
+            "enforce_user_id": self.enforce_user_id,
             "user_class": self.user_class,
             **kwargs,
         }

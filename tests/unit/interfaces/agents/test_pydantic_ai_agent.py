@@ -54,8 +54,10 @@ class TestPydanticAIAgent:
 
     @contextmanager
     def _patched_agents(self, main_agent, catalog="Catalog"):
-        with patch("mindsdb.interfaces.agents.pydantic_ai_agent.Agent") as MockAgent, \
-             patch("mindsdb.interfaces.agents.pydantic_ai_agent.DataCatalogBuilder") as MockDataCatalog:
+        with (
+            patch("mindsdb.interfaces.agents.pydantic_ai_agent.Agent") as MockAgent,
+            patch("mindsdb.interfaces.agents.pydantic_ai_agent.DataCatalogBuilder") as MockDataCatalog,
+        ):
             MockAgent.side_effect = [self._make_planning_agent(), main_agent]
             mock_catalog = Mock()
             mock_catalog.build_data_catalog.return_value = catalog
@@ -132,5 +134,3 @@ class TestPydanticAIAgent:
         assert len(history) == 2
         assert isinstance(history[0], ModelRequest)
         assert isinstance(history[1], ModelResponse)
-
-    

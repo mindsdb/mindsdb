@@ -27,6 +27,11 @@ class NetSuiteRecordTable(MetaAPIResource):
         self._resource_metadata = None
         super().__init__(handler, table_name=record_type)
 
+    # Would be used for any REST calls outside of SuiteQL, but we keep REST usage limited to add/modify/remove now.
+    @property
+    def _base_path(self) -> str:
+        return f"/record/v1/{self.record_type}"
+
     def _get_resource_metadata(self) -> dict:
         """
         Retrieves record metadata for this NetSuite record type.

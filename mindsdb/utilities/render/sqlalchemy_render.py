@@ -409,7 +409,7 @@ class SqlalchemyRender:
             if t.alias:
                 raise RenderError("Parameter aliases are not supported in the renderer")
         elif isinstance(t, ast.Tuple):
-            col = [self.to_expression(i) for i in t.items]
+            col = sa.tuple_(*[self.to_expression(i) for i in t.items])
         elif isinstance(t, ast.Variable):
             col = sa.column(t.to_string(), is_literal=True)
         elif isinstance(t, ast.Latest):
@@ -870,7 +870,7 @@ class SqlalchemyRender:
 
             return sql, params
 
-        except (SQLAlchemyError, NotImplementedError) as e:
+        except (SQLAlchemyError, NotImplementedError, AttributeError) as e:
             if not with_failback:
                 raise e
 

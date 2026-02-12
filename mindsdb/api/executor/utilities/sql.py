@@ -113,8 +113,9 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
 
                                     available_ram = psutil.virtual_memory().available
 
-                                # pd.concat required up to twice ram, +1GB should be free after it
-                                if total_rows * ram_per_row * 2 + 1024**3 > available_ram:
+                                # reserve *2.4 more memory that object occupies because it might be required in subsequent
+                                #  usage of result (pd.concat and in next steps of planner). +1GB as free reserve
+                                if total_rows * ram_per_row * 2.4 + 1024**3 > available_ram:
                                     raise RuntimeError(
                                         f"DuckDB query result doesn't fit into RAM. Total rows in result exceeds {total_rows}. "
                                         f"If you're joining across databases: try to add WHERE conditions to tables to reduce amount of data before the join"
@@ -128,6 +129,7 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
                             result_df = all_chunks[0]
                         else:
                             result_df = pd.concat(all_chunks)
+                            del all_chunks
 
                 except InvalidInputException as e:
                     exception = e

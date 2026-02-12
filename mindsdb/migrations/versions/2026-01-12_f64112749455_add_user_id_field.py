@@ -27,7 +27,7 @@ depends_on = None
 
 # Old company_id patterns that need to be migrated to DEFAULT_COMPANY_ID
 # These patterns represent legacy company_id values that should now use the default
-OLD_COMPANY_ID_PATTERNS = ["None", "0"]
+OLD_COMPANY_ID_PATTERNS = ["0", "None"]
 
 # Resource groups that have folders on disk that may need renaming
 RESOURCE_GROUPS_WITH_FOLDERS = ["file", "tab", "predictor", "integration", "system"]
@@ -158,21 +158,23 @@ def _migrate_file_paths():
         if connection.dialect.name == "sqlite":
             # SQLite: Use substr to extract file_id and construct new path
             old_prefix = f"file_{pattern}_"
+            old_prefix_filter = old_prefix.replace("_", "\\_")
             new_prefix = f"file_{DEFAULT_COMPANY_ID}_{DEFAULT_USER_ID}_"
             connection.execute(
                 sa.text(
                     f"UPDATE file SET file_path = '{new_prefix}' || substr(file_path, {len(old_prefix) + 1}) "
-                    f"WHERE file_path LIKE '{old_prefix}%'"
+                    f"WHERE file_path LIKE '{old_prefix_filter}%'"
                 )
             )
         else:
             # PostgreSQL/MySQL: Use CONCAT and SUBSTRING
             old_prefix = f"file_{pattern}_"
+            old_prefix_filter = old_prefix.replace("_", "\\_")
             new_prefix = f"file_{DEFAULT_COMPANY_ID}_{DEFAULT_USER_ID}_"
             connection.execute(
                 sa.text(
                     f"UPDATE file SET file_path = CONCAT('{new_prefix}', SUBSTRING(file_path, {len(old_prefix) + 1})) "
-                    f"WHERE file_path LIKE '{old_prefix}%'"
+                    f"WHERE file_path LIKE '{old_prefix_filter}%'"
                 )
             )
 

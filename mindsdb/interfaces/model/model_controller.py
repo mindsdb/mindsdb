@@ -11,7 +11,11 @@ import numpy as np
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.model.functions import get_model_record, get_model_records, get_project_record
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records,
+    get_project_record,
+)
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage
 from mindsdb.utilities.config import config
@@ -109,7 +113,12 @@ class ModelController:
         return reduced_model_data
 
     def describe_model(self, session, project_name, model_name, attribute, version=None):
-        args = {"name": model_name, "version": version, "project_name": project_name, "except_absent": True}
+        args = {
+            "name": model_name,
+            "version": version,
+            "project_name": project_name,
+            "except_absent": True,
+        }
         if version is not None:
             args["active"] = None
 
@@ -138,7 +147,13 @@ class ModelController:
             data["engine_name"] = integration_record.name
         return data
 
-    def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None, project_name=None):
+    def get_models(
+        self,
+        with_versions=False,
+        ml_handler_name=None,
+        integration_id=None,
+        project_name=None,
+    ):
         models = []
         show_active = True if with_versions is False else None
         for model_record in get_model_records(
@@ -202,7 +217,10 @@ class ModelController:
         if len(predictors_records) > 1:
             ctx_dump = ctx.dump()
             with ThreadPool(min(len(predictors_records), 100)) as pool:
-                pool.starmap(delete_model_storage, [(record.id, ctx_dump) for record in predictors_records])
+                pool.starmap(
+                    delete_model_storage,
+                    [(record.id, ctx_dump) for record in predictors_records],
+                )
         else:
             modelStorage = ModelStorage(predictors_records[0].id)
             modelStorage.delete()
@@ -236,7 +254,10 @@ class ModelController:
             elif data_integration_meta["type"] == "system":
                 data_integration_ref = {"type": "system"}
             else:
-                data_integration_ref = {"type": "integration", "id": data_integration_meta["id"]}
+                data_integration_ref = {
+                    "type": "integration",
+                    "id": data_integration_meta["id"],
+                }
         return data_integration_ref, fetch_data_query
 
     def prepare_create_statement(self, statement, database_controller):
@@ -296,7 +317,10 @@ class ModelController:
         project = ml_handler.database_controller.get_project(name=params["project_name"], strict_case=True)
         project_tables = project.get_tables()
         if params["model_name"] in project_tables:
-            raise EntityExistsError("Model already exists", f"{params['project_name']}.{params['model_name']}")
+            raise EntityExistsError(
+                "Model already exists",
+                f"{params['project_name']}.{params['model_name']}",
+            )
         predictor_record = ml_handler.learn(**params)
 
         return ModelController.get_model_info(predictor_record)
@@ -384,8 +408,20 @@ class ModelController:
         predictor_record = ml_handler.finetune(**params)
         return ModelController.get_model_info(predictor_record)
 
-    def update_model(self, session, project_name: str, model_name: str, problem_definition, version=None):
-        model_record = get_model_record(name=model_name, version=version, project_name=project_name, except_absent=True)
+    def update_model(
+        self,
+        session,
+        project_name: str,
+        model_name: str,
+        problem_definition,
+        version=None,
+    ):
+        model_record = get_model_record(
+            name=model_name,
+            version=version,
+            project_name=project_name,
+            except_absent=True,
+        )
         integration_record = db.Integration.query.get(model_record.integration_id)
 
         ml_handler_base = session.integration_controller.get_ml_handler(integration_record.name)
@@ -454,14 +490,16 @@ class ModelController:
         model_record.active = True
 
         # deactivate current active version
-        model_records = db.Predictor.query.filter(
+        filters = [
             db.Predictor.name == model_record.name,
             db.Predictor.project_id == model_record.project_id,
             db.Predictor.active == True,  # noqa
             db.Predictor.company_id == ctx.company_id,
-            db.Predictor.user_id == ctx.user_id,
             db.Predictor.id != model_record.id,
-        )
+        ]
+        if ctx.enforce_user_id:
+            filters.append(db.Predictor.user_id == ctx.user_id)
+        model_records = db.Predictor.query.filter(*filters)
         for p in model_records:
             p.active = False
 

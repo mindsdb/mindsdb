@@ -20,6 +20,8 @@ if "requests" not in sys.modules:
     sys.modules["requests"] = MagicMock()
 
 from mindsdb.integrations.handlers.shopify_handler.shopify_handler import ShopifyHandler
+from mindsdb.integrations.handlers.shopify_handler.utils import query_graphql_nodes, MAX_PAGE_LIMIT
+from mindsdb.integrations.handlers.shopify_handler.models.products import Products
 
 
 class BaseShopifyHandlerTest(unittest.TestCase):
@@ -766,6 +768,53 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
                 self.assertTrue(callable(table.meta_get_foreign_keys))
                 self.assertTrue(callable(table.get_columns))
                 self.assertTrue(callable(table.meta_get_columns))
+
+    @patch("mindsdb.integrations.handlers.shopify_handler.utils.ShopifyQuery")
+    def test_limit_large_than_max_page_limit(self, mock_shopify_query):
+        """Test pagination when limit exceeds MAX_PAGE_LIMIT."""
+        # First request returns MAX_PAGE_LIMIT items
+        first_result = {
+            "data": {
+                "products": {
+                    "nodes": [{"id": str(i), "title": f"Product {i}"} for i in range(MAX_PAGE_LIMIT)],
+                    "pageInfo": {"hasNextPage": True, "endCursor": "cursor"},
+                }
+            }
+        }
+        # Second request returns remaining items
+        second_result = {
+            "data": {
+                "products": {
+                    "nodes": [{"id": str(i), "title": f"Product {i}"} for i in range(MAX_PAGE_LIMIT, 300)],
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                }
+            }
+        }
+
+        mock_query_instance = MagicMock()
+        mock_query_instance.execute.side_effect = [first_result, second_result]
+        mock_shopify_query.return_value = mock_query_instance
+
+        result = query_graphql_nodes(
+            root_name="products",
+            root_class=Products,
+            columns="id title",
+            limit=300,
+        )
+
+        # Verify that two requests were made
+        self.assertEqual(mock_shopify_query.call_count, 2)
+
+        # First call should request min(300, 250) = 250
+        first_call_kwargs = mock_shopify_query.call_args_list[0][1]
+        self.assertEqual(first_call_kwargs["limit"], MAX_PAGE_LIMIT)
+
+        # Second call should request min(max(300-250, 1), 250) = 50
+        second_call_kwargs = mock_shopify_query.call_args_list[1][1]
+        self.assertEqual(second_call_kwargs["limit"], 50)
+
+        # Result should be exactly 300 items
+        self.assertEqual(len(result), 300)
 
 
 if __name__ == "__main__":

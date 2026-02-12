@@ -92,7 +92,7 @@ def _escape_identifiers(node: ASTNode, **kwargs) -> None:
     Returns:
         None
     """
-    if isinstance(getattr(node, "alias"), Identifier):
+    if isinstance(getattr(node, "alias", None), Identifier):
         node.alias.is_quoted = [True] * len(node.alias.parts)
     if not isinstance(node, Identifier):
         return

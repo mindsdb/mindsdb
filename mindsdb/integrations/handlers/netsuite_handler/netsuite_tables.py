@@ -24,30 +24,80 @@ class NetSuiteRecordTable(MetaAPIResource):
             record_type (str): NetSuite record type.
         """
         self.record_type = str(record_type).lower()
-        self._resource_metadata = None
+        self._column_metadata_cache = None
         super().__init__(handler, table_name=record_type)
 
-    # Would be used for any REST calls outside of SuiteQL, but we keep REST usage limited to add/modify/remove now.
-    @property
-    def _base_path(self) -> str:
-        return f"/record/v1/{self.record_type}"
-
-    def _get_resource_metadata(self) -> dict:
+    def _get_resource_metadata(self) -> List[dict]:
         """
-        Retrieves record metadata for this NetSuite record type.
+        Retrieves SuiteQL column metadata for this NetSuite record type.
 
         Returns:
-            dict: Metadata dictionary when available, otherwise an empty dict.
+            List[dict]: Column metadata entries when available.
         """
-        if self._resource_metadata is not None:
-            return self._resource_metadata
+        if self._column_metadata_cache is not None:
+            return self._column_metadata_cache
 
-        metadata = None
-        if hasattr(self.handler, "_get_record_metadata"):
-            metadata = self.handler._get_record_metadata(self.record_type)
+        try:
+            payload = self.handler._suiteql_select(table=self.record_type, limit=1)
+        except RuntimeError as exc:
+            if self._should_skip_record_type(exc):
+                self._mark_record_type_unsupported()
+            self._column_metadata_cache = []
+            return self._column_metadata_cache
 
-        self._resource_metadata = metadata or {}
-        return self._resource_metadata
+        self._column_metadata_cache = self._payload_to_column_metadata(payload)
+        return self._column_metadata_cache
+
+    def _payload_to_column_metadata(self, payload: Any) -> List[dict]:
+        """
+        Converts SuiteQL payload column metadata into a normalized list.
+        """
+        if not isinstance(payload, dict):
+            return []
+
+        columns: List[dict] = []
+        metadata = payload.get("columnMetadata") or payload.get("columns") or []
+        if isinstance(metadata, list) and metadata:
+            for idx, col in enumerate(metadata):
+                if isinstance(col, dict):
+                    name = col.get("name") or col.get("label") or col.get("id") or f"col_{idx}"
+                    data_type = col.get("type") or col.get("dataType") or col.get("sqlType") or col.get("fieldType")
+                    description = col.get("description") or col.get("label") or ""
+                    is_nullable = col.get("nullable") if "nullable" in col else None
+                    default_value = col.get("defaultValue") or col.get("default") or ""
+                else:
+                    name = str(col)
+                    data_type = None
+                    description = ""
+                    is_nullable = None
+                    default_value = ""
+                columns.append(
+                    {
+                        "column_name": name,
+                        "data_type": self._normalize_metadata_type(data_type),
+                        "column_description": description,
+                        "is_nullable": is_nullable,
+                        "column_default": default_value,
+                    }
+                )
+
+        if columns:
+            return columns
+
+        items = payload.get("items") or []
+        if isinstance(items, list) and items and isinstance(items[0], dict):
+            for name, value in items[0].items():
+                columns.append(
+                    {
+                        "column_name": name,
+                        "data_type": self._infer_column_type(value),
+                        "column_description": "",
+                        "is_nullable": None,
+                        "column_default": "",
+                    }
+                )
+
+        return columns
 
     @staticmethod
     def _normalize_metadata_type(value) -> str:
@@ -67,99 +117,28 @@ class NetSuiteRecordTable(MetaAPIResource):
 
     def _extract_field_metadata(self) -> List[dict]:
         """
-        Extracts column metadata from the NetSuite metadata catalog response.
+        Extracts column metadata from SuiteQL responses.
 
         Returns:
             List[dict]: Column metadata entries with table_name, column_name, data_type,
             column_description, is_nullable, and column_default.
         """
         metadata = self._get_resource_metadata()
-        if not isinstance(metadata, dict) or not metadata:
+        if not metadata:
             return []
 
         fields_metadata = []
-
-        fields = metadata.get("fields")
-        if isinstance(fields, list):
-            for field in fields:
-                if not isinstance(field, dict):
-                    continue
-                name = (
-                    field.get("id")
-                    or field.get("name")
-                    or field.get("fieldId")
-                    or field.get("key")
-                    or field.get("scriptId")
-                )
-                if not name:
-                    continue
-                data_type = (
-                    field.get("type") or field.get("dataType") or field.get("fieldType") or field.get("valueType")
-                )
-                description = (
-                    field.get("description")
-                    or field.get("label")
-                    or field.get("help")
-                    or field.get("hint")
-                    or field.get("displayName")
-                    or field.get("summary")
-                    or ""
-                )
-
-                is_nullable = None
-                if "mandatory" in field:
-                    is_nullable = not bool(field.get("mandatory"))
-                elif "isMandatory" in field:
-                    is_nullable = not bool(field.get("isMandatory"))
-                elif "required" in field:
-                    is_nullable = not bool(field.get("required"))
-                elif "nullable" in field:
-                    is_nullable = bool(field.get("nullable"))
-
-                fields_metadata.append(
-                    {
-                        "table_name": self.record_type,
-                        "column_name": name,
-                        "data_type": self._normalize_metadata_type(data_type),
-                        "column_description": description,
-                        "is_nullable": is_nullable,
-                        "column_default": field.get("defaultValue") or field.get("default") or "",
-                    }
-                )
-            if fields_metadata:
-                return fields_metadata
-
-        properties = metadata.get("properties")
-        required = set(metadata.get("required") or [])
-        if isinstance(properties, dict):
-            for name, info in properties.items():
-                if not isinstance(info, dict):
-                    info = {}
-                data_type = info.get("type") or info.get("format") or info.get("$ref")
-                description = (
-                    info.get("description")
-                    or info.get("title")
-                    or info.get("label")
-                    or info.get("displayName")
-                    or info.get("summary")
-                    or ""
-                )
-                if "nullable" in info:
-                    is_nullable = bool(info.get("nullable"))
-                elif required:
-                    is_nullable = name not in required
-                else:
-                    is_nullable = None
-                fields_metadata.append(
-                    {
-                        "table_name": self.record_type,
-                        "column_name": name,
-                        "data_type": self._normalize_metadata_type(data_type),
-                        "column_description": description,
-                        "is_nullable": is_nullable,
-                        "column_default": info.get("default") or "",
-                    }
-                )
+        for field in metadata:
+            fields_metadata.append(
+                {
+                    "table_name": self.record_type,
+                    "column_name": field.get("column_name"),
+                    "data_type": field.get("data_type"),
+                    "column_description": field.get("column_description"),
+                    "is_nullable": field.get("is_nullable"),
+                    "column_default": field.get("column_default"),
+                }
+            )
 
         return fields_metadata
 
@@ -172,10 +151,7 @@ class NetSuiteRecordTable(MetaAPIResource):
         **kwargs,
     ) -> pd.DataFrame:
         """
-        Fetches records using SuiteQL ALWAYS (for reads).
-
-        We do NOT call REST record endpoints here anymore.
-        REST is still used by add/modify/remove and can remain elsewhere.
+        Fetches records using SuiteQL.
         """
         limit = int(limit) if limit is not None else None
 
@@ -393,8 +369,7 @@ class NetSuiteRecordTable(MetaAPIResource):
         Args:
             row (List[dict]): Records to add.
         """
-        for payload in row:
-            self.handler._request("POST", self._base_path, json=payload)
+        raise NotImplementedError("NetSuite handler is read-only via SuiteQL.")
 
     def modify(self, conditions: List[FilterCondition], values: dict):
         """
@@ -404,25 +379,7 @@ class NetSuiteRecordTable(MetaAPIResource):
             conditions (List[FilterCondition]): Conditions to select records.
             values (dict): Updated values.
         """
-        record_ids = [
-            cond.value
-            for cond in conditions or []
-            if cond.op == FilterOperator.EQUAL and cond.column.lower() in ("id", "internalid")
-        ]
-        if not record_ids:
-            raise ValueError("Update requires an equality condition on 'id' or 'internalId'.")
-
-        failures = []
-        for record_id in record_ids:
-            path = f"{self._base_path}/{record_id}"
-            try:
-                self.handler._request("PATCH", path, json=values)
-            except RuntimeError as exc:
-                failures.append((record_id, str(exc)))
-
-        if failures:
-            details = "; ".join([f"{record_id}: {message}" for record_id, message in failures])
-            raise RuntimeError(f"Failed to update {len(failures)} record(s): {details}")
+        raise NotImplementedError("NetSuite handler is read-only via SuiteQL.")
 
     def remove(self, conditions: List[FilterCondition]):
         """
@@ -431,17 +388,7 @@ class NetSuiteRecordTable(MetaAPIResource):
         Args:
             conditions (List[FilterCondition]): Conditions to select records.
         """
-        record_ids = [
-            cond.value
-            for cond in conditions or []
-            if cond.op == FilterOperator.EQUAL and cond.column.lower() in ("id", "internalid")
-        ]
-        if not record_ids:
-            raise ValueError("Delete requires an equality condition on 'id' or 'internalId'.")
-
-        for record_id in record_ids:
-            path = f"{self._base_path}/{record_id}"
-            self.handler._request("DELETE", path)
+        raise NotImplementedError("NetSuite handler is read-only via SuiteQL.")
 
     def get_columns(self) -> list:
         """
@@ -553,25 +500,28 @@ class NetSuiteRecordTable(MetaAPIResource):
         if not isinstance(record, dict):
             return record
 
-        links = record.get("links") or []
-        if isinstance(links, list):
-            for link in links:
-                if not isinstance(link, dict):
-                    continue
-                if link.get("rel") == "self" and link.get("href"):
-                    try:
-                        payload = self.handler._request("GET", link.get("href"))
-                        return payload if isinstance(payload, dict) else record
-                    except RuntimeError:
-                        return record
-
         record_id = record.get("internalId") or record.get("id")
         if record_id is None:
             return record
 
         try:
-            payload = self.handler._request("GET", f"{self._base_path}/{record_id}")
-            return payload if isinstance(payload, dict) else record
+
+            def _sql_quote(value) -> str:
+                if value is None:
+                    return "NULL"
+                if isinstance(value, bool):
+                    return "'T'" if value else "'F'"
+                if isinstance(value, (int, float)):
+                    return str(value)
+                s = str(value).replace("'", "''")
+                return f"'{s}'"
+
+            where_sql = f" WHERE id = {_sql_quote(record_id)}"
+            payload = self.handler._suiteql_select(table=self.record_type, where_sql=where_sql, limit=1)
+            df = self._payload_to_dataframe(payload)
+            if df.empty:
+                return record
+            return df.iloc[0].to_dict()
         except RuntimeError:
             return record
 
@@ -623,70 +573,4 @@ class NetSuiteRecordTable(MetaAPIResource):
         Returns:
             List[dict]: Foreign key metadata entries with parent/child table and column names.
         """
-        metadata = self._get_resource_metadata()
-        if not isinstance(metadata, dict):
-            return []
-
-        all_tables_lower = {table.lower() for table in all_tables}
-        parent_candidates = []
-
-        fields = metadata.get("fields")
-        if isinstance(fields, list):
-            for field in fields:
-                if not isinstance(field, dict):
-                    continue
-                field_type = field.get("type") or field.get("fieldType")
-                if str(field_type).lower() not in ("recordref", "recordreference", "reference"):
-                    continue
-                target = (
-                    field.get("recordType")
-                    or field.get("referenceType")
-                    or field.get("referenceRecordType")
-                    or field.get("targetRecordType")
-                    or field.get("refType")
-                )
-                if not target or str(target).lower() not in all_tables_lower:
-                    continue
-                parent_candidates.append((str(target), field.get("id") or field.get("name")))
-
-        properties = metadata.get("properties")
-        if isinstance(properties, dict):
-            for name, info in properties.items():
-                if not isinstance(info, dict):
-                    continue
-                info_type = info.get("type") or info.get("format")
-                if str(info_type).lower() not in ("recordref", "recordreference", "reference"):
-                    continue
-                target = (
-                    info.get("recordType")
-                    or info.get("referenceType")
-                    or info.get("referenceRecordType")
-                    or info.get("targetRecordType")
-                    or info.get("$ref")
-                )
-                if isinstance(target, str) and "/" in target:
-                    target = target.split("/")[-1]
-                if not target or str(target).lower() not in all_tables_lower:
-                    continue
-                parent_candidates.append((str(target), name))
-
-        if not parent_candidates:
-            return []
-
-        columns = {col.get("column_name") for col in self.meta_get_columns() if col.get("column_name")}
-        parent_key = "internalId" if "internalId" in columns else ("id" if "id" in columns else None)
-
-        foreign_keys = []
-        for parent_table, column_name in parent_candidates:
-            if not column_name:
-                continue
-            foreign_keys.append(
-                {
-                    "parent_table_name": parent_table,
-                    "parent_column_name": parent_key or "id",
-                    "child_table_name": table_name,
-                    "child_column_name": column_name,
-                }
-            )
-
-        return foreign_keys
+        return []

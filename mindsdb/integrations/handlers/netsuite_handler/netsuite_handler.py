@@ -4,6 +4,7 @@ import uuid
 import pandas as pd
 import requests
 from mindsdb_sql_parser import parse_sql
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 try:
     from requests_oauthlib import OAuth1
@@ -20,9 +21,50 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
+def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
+    """
+    Map SuiteQL type names to MySQL types.
+    """
+    fallback_type = MYSQL_DATA_TYPE.VARCHAR
+
+    if not internal_type_name:
+        return fallback_type
+
+    name = str(internal_type_name).lower()
+
+    if "bool" in name:
+        return MYSQL_DATA_TYPE.BOOL
+    if "timestamp" in name or ("date" in name and "time" in name):
+        return MYSQL_DATA_TYPE.DATETIME
+    if name == "date" or name.endswith("date"):
+        return MYSQL_DATA_TYPE.DATE
+    if "time" in name:
+        return MYSQL_DATA_TYPE.TIME
+    if "double" in name:
+        return MYSQL_DATA_TYPE.DOUBLE
+    if "float" in name:
+        return MYSQL_DATA_TYPE.FLOAT
+    if any(token in name for token in ("decimal", "numeric", "currency", "percent", "number")):
+        return MYSQL_DATA_TYPE.DECIMAL
+    if "bigint" in name or ("big" in name and "int" in name):
+        return MYSQL_DATA_TYPE.BIGINT
+    if "smallint" in name or ("small" in name and "int" in name):
+        return MYSQL_DATA_TYPE.SMALLINT
+    if "int" in name:
+        return MYSQL_DATA_TYPE.INT
+    if "json" in name:
+        return MYSQL_DATA_TYPE.JSON
+    if "binary" in name or "blob" in name:
+        return MYSQL_DATA_TYPE.BLOB
+    if any(token in name for token in ("text", "char", "string", "clob")):
+        return MYSQL_DATA_TYPE.TEXT
+
+    return fallback_type
+
+
 class NetSuiteHandler(MetaAPIHandler):
     """
-    This handler manages connections and queries for the Oracle NetSuite REST APIs.
+    This handler manages connections and queries for the Oracle NetSuite SuiteQL API.
     """
 
     name = "netsuite"
@@ -169,109 +211,10 @@ class NetSuiteHandler(MetaAPIHandler):
         self.base_url = self._build_base_url()
         self._record_types_source: str = "default"
         self.record_types = self._get_record_types()
-        self._metadata_catalog: Optional[List[dict]] = None
-        self._metadata_catalog_failed: bool = False
-        self._record_metadata_cache: dict[str, dict] = {}
         self._unsupported_record_types: set[str] = set()
-        self._accessible_record_types: Optional[set[str]] = None
-        self._accessible_record_types_loaded: bool = False
 
         for record_type in self.record_types:
             self._register_table(record_type, NetSuiteRecordTable(self, record_type))
-
-    def _get_metadata_catalog(self, table_names: Optional[List[str]] = None) -> List[dict]:
-        """
-        Retrieves NetSuite record metadata catalog.
-
-        Args:
-            table_names (Optional[List[str]]): Optional list of record types to fetch individually.
-
-        Returns:
-            List[dict]: Metadata entries for record types.
-        """
-        if table_names:
-            metadata_list = []
-            for table_name in table_names:
-                record_metadata = self._get_record_metadata(table_name)
-                if isinstance(record_metadata, dict):
-                    entry = dict(record_metadata)
-                    entry.setdefault("recordType", table_name)
-                    entry.setdefault("name", table_name)
-                    metadata_list.append(entry)
-            return metadata_list
-
-        if self._metadata_catalog is not None:
-            return self._metadata_catalog
-
-        try:
-            payload = self._request("GET", "/services/rest/record/v1/metadata-catalog")
-        except Exception as exc:
-            logger.warning("Failed to fetch NetSuite metadata catalog: %s", exc)
-            self._metadata_catalog = []
-            self._metadata_catalog_failed = True
-            return self._metadata_catalog
-
-        if isinstance(payload, dict):
-            items = (
-                payload.get("items") or payload.get("records") or payload.get("data") or payload.get("results") or []
-            )
-        elif isinstance(payload, list):
-            items = payload
-        else:
-            items = []
-
-        self._metadata_catalog = items if isinstance(items, list) else []
-        return self._metadata_catalog
-
-    def _get_accessible_record_types(self) -> Optional[set[str]]:
-        """
-        Returns a cached set of accessible record types based on the metadata catalog.
-        """
-        if self._accessible_record_types_loaded:
-            return self._accessible_record_types or None
-
-        catalog = self._get_metadata_catalog()
-        if not catalog:
-            self._accessible_record_types_loaded = True
-            self._accessible_record_types = set()
-            return None
-
-        record_types = set()
-        for item in catalog:
-            if not isinstance(item, dict):
-                continue
-            name = item.get("recordType") or item.get("name") or item.get("id")
-            if name:
-                record_types.add(str(name).lower())
-
-        self._accessible_record_types_loaded = True
-        self._accessible_record_types = record_types
-        return record_types or None
-
-    def _get_record_metadata(self, record_type: str) -> Optional[dict]:
-        """
-        Retrieves metadata for a specific NetSuite record type.
-
-        Args:
-            record_type (str): NetSuite record type.
-
-        Returns:
-            Optional[dict]: Metadata dictionary if available.
-        """
-        normalized = str(record_type).lower()
-        if normalized in self._record_metadata_cache:
-            return self._record_metadata_cache[normalized]
-
-        try:
-            payload = self._request("GET", f"/services/rest/record/v1/metadata-catalog/{normalized}")
-        except Exception as exc:
-            logger.warning("Failed to fetch NetSuite metadata for %s: %s", normalized, exc)
-            return None
-
-        if isinstance(payload, dict):
-            self._record_metadata_cache[normalized] = payload
-            return payload
-        return None
 
     def _build_base_url(self) -> str:
         """
@@ -397,10 +340,6 @@ class NetSuiteHandler(MetaAPIHandler):
             Response: A response object containing the table metadata.
         """
         allowed = set(self._tables.keys())
-        accessible = self._get_accessible_record_types()
-        if accessible is not None:
-            allowed = allowed & accessible
-
         if self._unsupported_record_types:
             allowed = allowed - {name.lower() for name in self._unsupported_record_types}
 
@@ -442,10 +381,6 @@ class NetSuiteHandler(MetaAPIHandler):
             Response: A response object containing the column metadata.
         """
         allowed = set(self._tables.keys())
-        accessible = self._get_accessible_record_types()
-        if accessible is not None:
-            allowed = allowed & accessible
-
         if self._unsupported_record_types:
             allowed = allowed - {name.lower() for name in self._unsupported_record_types}
 
@@ -476,6 +411,76 @@ class NetSuiteHandler(MetaAPIHandler):
             )
 
         return Response(RESPONSE_TYPE.TABLE, df)
+
+    def get_tables(self) -> Response:
+        """
+        Retrieves the list of registered NetSuite tables.
+        """
+        allowed = set(self._tables.keys())
+        if self._unsupported_record_types:
+            allowed = allowed - {name.lower() for name in self._unsupported_record_types}
+
+        data = [{"TABLE_NAME": name, "TABLE_TYPE": "BASE TABLE"} for name in sorted(allowed)]
+        return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(data))
+
+    def get_columns(self, table_name: str) -> Response:
+        """
+        Retrieves column details for a specified NetSuite table using SuiteQL metadata.
+        """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
+
+        normalized = table_name.lower()
+        table = self._tables.get(normalized)
+        if table is None:
+            raise ValueError(f"Table not found: {table_name}")
+
+        columns = table.meta_get_columns(normalized)
+        rows = []
+        for idx, column in enumerate(columns, start=1):
+            nullable = column.get("is_nullable")
+            if isinstance(nullable, bool):
+                nullable = "YES" if nullable else "NO"
+            else:
+                nullable = None
+            rows.append(
+                {
+                    "COLUMN_NAME": column.get("column_name"),
+                    "DATA_TYPE": column.get("data_type") or "varchar",
+                    "ORDINAL_POSITION": idx,
+                    "COLUMN_DEFAULT": column.get("column_default"),
+                    "IS_NULLABLE": nullable,
+                    "CHARACTER_MAXIMUM_LENGTH": None,
+                    "CHARACTER_OCTET_LENGTH": None,
+                    "NUMERIC_PRECISION": None,
+                    "NUMERIC_SCALE": None,
+                    "DATETIME_PRECISION": None,
+                    "CHARACTER_SET_NAME": None,
+                    "COLLATION_NAME": None,
+                }
+            )
+
+        df = pd.DataFrame(
+            rows,
+            columns=[
+                "COLUMN_NAME",
+                "DATA_TYPE",
+                "ORDINAL_POSITION",
+                "COLUMN_DEFAULT",
+                "IS_NULLABLE",
+                "CHARACTER_MAXIMUM_LENGTH",
+                "CHARACTER_OCTET_LENGTH",
+                "NUMERIC_PRECISION",
+                "NUMERIC_SCALE",
+                "DATETIME_PRECISION",
+                "CHARACTER_SET_NAME",
+                "COLLATION_NAME",
+            ],
+        )
+
+        result = Response(RESPONSE_TYPE.TABLE, df)
+        result.to_columns_table_response(map_type_fn=_map_type)
+        return result
 
     def native_query(self, query: Any) -> Response:
         """
@@ -538,7 +543,7 @@ class NetSuiteHandler(MetaAPIHandler):
         limit: Optional[int] = None,
         targets: Optional[List[str]] = None,
         order_by_sql: str = "",
-    ) -> dict:
+    ) -> Any:
         """
         Executes a SuiteQL SELECT and returns raw payload dict.
         """

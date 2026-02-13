@@ -541,8 +541,7 @@ class PydanticAIAgent:
                     yield self._add_chunk_metadata(
                         {"type": "status", "content": f"Executing {query_type} SQL query: {sql_query}"}
                     )
-                    query_data = self.sql_toolkit.execute_sql(sql_query)
-
+                    query_data = self.sql_toolkit.execute_sql(sql_query, escape_identifiers=True)
                 except Exception as e:
                     # Extract error message - prefer db_error_msg for QueryError, otherwise use str(e)
                     query_error = str(e)

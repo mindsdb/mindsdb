@@ -695,8 +695,8 @@ class TestAgent(BaseExecutorDummyML):
             ],
         )
         ret = self.run_sql("select * from my_agent where question = 'test'")
-        assert "kb1 not found" in mock_openai.agent_calls[2]
-        assert "file1 not found" in mock_openai.agent_calls[3]
+        assert "`kb1` not found" in mock_openai.agent_calls[2]
+        assert "`file1` not found" in mock_openai.agent_calls[3]
 
         # check model params
         assert mock_openai.call_args_list[-1][1]["api_key"] == "-almost secret-"

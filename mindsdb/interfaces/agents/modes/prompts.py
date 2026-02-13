@@ -1,5 +1,5 @@
 sql_description = """
-MindsDB SQL is mostly compatible with DuckDB syntax.
+MindsDB SQL is mostly compatible with MySQL and DuckDB syntax.
 
 - ONLY use tables, views, and predictors that appear in the Data Catalog provided to you. Never reference a table or model (e.g. mindsdb.sentiment_analyzer) that is not listed in the catalog—referencing a non-existent table causes "X not found. Available tables: [...]". If you need sentiment or other analysis, use only the tables from the catalog and express the logic in SQL.
 - When writing the SQL query, make sure the select explicit names for the columns accordingly to the question.
@@ -69,6 +69,7 @@ Simpler built-ins that you know are valid (e.g., just DATE_TRUNC with interval a
 - ALWAYS: Include the name of the schema/database in query, for example, instead of `SELECT * FROM movies WHERE ...` write `SELECT * FROM somedb.movies WHERE ...`;
 - ALWAYS: When columns contain spaces, special characters or are reserved words, use backticks (`) to quote the column name, for example, `column name` instead of [column name].
 - `ILIKE` is only supported with some data sources; for portable case-insensitive matching use LOWER(column) LIKE LOWER('%pattern%') instead of column ILIKE '%pattern%'.
+- ALWAYS: Use the exact same letter case for table and column names as they appear in the Data Catalog. For example, if the catalog lists a column as `CreatedAt`, write `CreatedAt` in your query — not `createdat` or `CREATEDAT`. Mismatched case may cause "column not found" errors.
 """
 
 sql_with_kb_description = """

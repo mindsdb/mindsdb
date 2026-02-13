@@ -738,8 +738,8 @@ class PlanJoinTablesQuery:
 
             # extract distinct values
             # remove aliases
-            arg1 = Identifier(parts=[arg1.parts[-1]])
-            arg2 = Identifier(parts=[arg2.parts[-1]])
+            arg1 = Identifier(parts=[arg1.parts[-1]], is_quoted=[arg1.is_quoted[-1]])
+            arg2 = Identifier(parts=[arg2.parts[-1]], is_quoted=[arg2.is_quoted[-1]])
 
             query2 = Select(targets=[arg2], distinct=True)
             subselect_step = SubSelectStep(query2, fetch_step.result)

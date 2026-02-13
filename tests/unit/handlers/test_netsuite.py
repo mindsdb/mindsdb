@@ -47,8 +47,9 @@ class TestNetSuiteHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_connect_missing_required_params_raises(self):
         handler = NetSuiteHandler("netsuite", connection_data={"account_id": "123"})
-        with self.assertRaises(ValueError):
-            handler.connect()
+        with patch("mindsdb.integrations.handlers.netsuite_handler.netsuite_handler.OAuth1"):
+            with self.assertRaises(ValueError):
+                handler.connect()
 
     def test_check_connection_success(self):
         with patch("mindsdb.integrations.handlers.netsuite_handler.netsuite_handler.OAuth1"):
@@ -85,7 +86,7 @@ class TestNetSuiteHandler(BaseHandlerTestSetup, unittest.TestCase):
 class TestNetSuiteRecordTable(unittest.TestCase):
     def test_list_builds_q_filters(self):
         handler = MagicMock()
-        handler._request.return_value = {"items": [], "links": []}
+        handler._suiteql_select.return_value = {"items": [], "columnMetadata": []}
 
         table = NetSuiteRecordTable(handler, "customer")
         conditions = [
@@ -95,10 +96,11 @@ class TestNetSuiteRecordTable(unittest.TestCase):
 
         table.list(conditions=conditions, limit=10)
 
-        args, kwargs = handler._request.call_args
-        self.assertEqual(args[0], "GET")
-        self.assertIn("params", kwargs)
-        self.assertEqual(
-            kwargs["params"]["q"],
-            "email = 'user@example.com' AND foo IS NULL",
+        handler._suiteql_select.assert_called_once_with(
+            table="customer",
+            where_sql=" WHERE email = 'user@example.com' AND foo IS NULL",
+            limit=10,
+            targets=None,
+            order_by_sql="",
         )
+        self.assertTrue(all(condition.applied for condition in conditions))

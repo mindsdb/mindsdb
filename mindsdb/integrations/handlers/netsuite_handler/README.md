@@ -3,7 +3,7 @@ title: Oracle NetSuite
 sidebarTitle: NetSuite
 ---
 
-This documentation describes the integration of MindsDB with Oracle NetSuite using the REST Record API and SuiteQL.
+This documentation describes the integration of MindsDB with Oracle NetSuite using the REST Query (SuiteQL) API.
 It lets you query NetSuite data in SQL and run SuiteQL directly when you need full control over filtering and joins.
 
 ## Prerequisites
@@ -28,7 +28,9 @@ WITH
         "consumer_key": "ck_...",
         "consumer_secret": "cs_...",
         "token_id": "token_...",
-        "token_secret": "token_secret_..."
+        "token_secret": "token_secret_...",
+        "rest_domain": "https://123456-sb1.suitetalk.api.netsuite.com",
+        "record_types": "customer,transaction,inventoryitem"
     };
 ```
 
@@ -42,8 +44,11 @@ Required connection parameters include the following:
 
 Optional connection parameters include the following:
 
-- `rest_domain`: Override REST domain from Company Information (REST Web Services URL)
-- `record_types`: Comma-separated record types to expose as tables (defaults to  [this list]())
+- `rest_domain`: Override REST domain (defaults to `https://<account_id>.suitetalk.api.netsuite.com`, with underscores converted to dashes)
+- `record_types`: Record types to expose as tables, either a comma-separated string (`"customer,transaction"`) or a JSON array (`["customer", "transaction"]`)
+
+If `record_types` is not provided, the handler registers only a small set of tables that are commonly accessible:
+`contact`, `customer`, `item`, `message`, `subsidiary`, `task`, `transaction`.
 
 ## Token-Based Authentication setup
 
@@ -60,17 +65,17 @@ To create the required credentials in NetSuite:
 
 ## Usage
 
-Retrieve data from a record table:
+Retrieve data from a record table (SuiteQL base table names, lowercased):
 
 ```sql
 SELECT *
-FROM netsuite_datasource.salesOrder
+FROM netsuite_datasource.salesorder
 WHERE id = 48;
 ```
 
-REST record tables:
-- Use `WHERE id = ...` (or `internalId`) to fetch a full record directly.
-- Other filters are pushed down as `q` where possible; remaining filters are applied locally.
+Record tables:
+- Use `WHERE id = ...` (or `internalId`) to fetch a record directly.
+- Equality filters are pushed down to SuiteQL; other filters are applied locally.
 
 Run SuiteQL directly using the native query syntax (recommended for complex filters):
 
@@ -83,11 +88,31 @@ SELECT * FROM netsuite_datasource (
 );
 ```
 
+Limit the registered tables to what your role can access:
+
+```sql
+CREATE DATABASE netsuite_limited
+WITH
+    ENGINE = 'netsuite',
+    PARAMETERS = {
+        "account_id": "123456_SB1",
+        "consumer_key": "ck_...",
+        "consumer_secret": "cs_...",
+        "token_id": "token_...",
+        "token_secret": "token_secret_...",
+        "record_types": ["customer", "salesorder", "invoice"]
+    };
+```
+
 <Note>
 Use the `rest_domain` parameter if your account uses a REST domain that differs from the default derived from `account_id`.
 </Note>
 
 <Note>
-Access to both REST record tables and SuiteQL depends on the NetSuite role tied to your access token.
+Access to record tables and SuiteQL depends on the NetSuite role tied to your access token.
 If a query fails with 403/permission errors, ensure the role includes REST Web Services, User Access Tokens, and record-specific permissions for the tables you are querying (plus SuiteAnalytics permissions for SuiteQL).
+</Note>
+
+<Note>
+The NetSuite handler is read-only. `INSERT`, `UPDATE`, and `DELETE` are not supported.
 </Note>

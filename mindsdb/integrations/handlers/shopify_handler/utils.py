@@ -7,7 +7,7 @@ import shopify
 
 from mindsdb.utilities import log
 
-from .models.utils import Nodes, Extract
+from .models.utils import Nodes, Extract, DeepExtract
 from .models.common import AliasesEnum
 
 logger = log.getLogger(__name__)
@@ -33,6 +33,20 @@ def _format_error(errors_list: list[dict]) -> str:
     return f"Error occurred when executing the query:\n{errors_text}"
 
 
+def _build_nested_graphql(path: list[str]) -> str:
+    """Build a nested GraphQL query from a path.
+
+    Args:
+        path: The path to build the query from (e.g., ["totalPriceSet", "presentmentMoney", "amount"]).
+
+    Returns:
+        str: The nested GraphQL query (e.g., "totalPriceSet { presentmentMoney { amount } }").
+    """
+    if len(path) == 1:
+        return path[0]
+    return f"{path[0]} {{ {_build_nested_graphql(path[1:])} }}"
+
+
 def get_graphql_columns(root: AliasesEnum, targets: list[str] | None = None) -> str:
     """Get the GraphQL columns for a given object.
 
@@ -54,6 +68,9 @@ def get_graphql_columns(root: AliasesEnum, targets: list[str] | None = None) -> 
             acc.append(f"{name}(first: {MAX_PAGE_LIMIT}) {{ nodes {{{sub_fields}}} {PAGE_INFO} }}")
         elif isinstance(value, Extract):
             acc.append(f"{name}:{value.obj} {{ {value.key} }}")
+        elif isinstance(value, DeepExtract):
+            nested_query = _build_nested_graphql(value.path)
+            acc.append(f"{name}:{nested_query}")
         elif inspect.isclass(value) and issubclass(value, Enum):
             sub_fields = get_graphql_columns(value)
             acc.append(f"{name} {{{sub_fields}}}")
@@ -139,10 +156,15 @@ def query_graphql_nodes(
     result_data = []
     hasNextPage = True
     while hasNextPage:
+        if limit is None:
+            query_limit = MAX_PAGE_LIMIT
+        else:
+            remaining = limit - len(result_data)
+            query_limit = min(max(remaining, 1), MAX_PAGE_LIMIT)
         result = ShopifyQuery(
             operation_name=root_name,
             columns=columns,
-            limit=max(MAX_PAGE_LIMIT if limit is None else limit - len(result_data), 0),
+            limit=query_limit,
             cursor=cursor,
             sort_key=sort_key,
             reverse=sort_reverse,
@@ -153,6 +175,8 @@ def query_graphql_nodes(
         hasNextPage = result["data"][root_name]["pageInfo"]["hasNextPage"]
         cursor = result["data"][root_name]["pageInfo"]["endCursor"]
         result_data += result["data"][root_name]["nodes"]
+        if limit is not None and len(result_data) >= limit:
+            break
 
     fetched_fields = []
     if len(result_data) > 0:
@@ -163,6 +187,9 @@ def query_graphql_nodes(
     ]
     extracts_names = [
         name for name, value in root_class.aliases() if isinstance(value, Extract) if name.lower() in fetched_fields
+    ]
+    deep_extracts_names = [
+        name for name, value in root_class.aliases() if isinstance(value, DeepExtract) if name.lower() in fetched_fields
     ]
 
     for row in result_data:
@@ -184,6 +211,13 @@ def query_graphql_nodes(
         for name in extracts_names:
             value = root_class[name].value
             row[name] = (row[name] or {}).get(value.key)
+        for name in deep_extracts_names:
+            # Extract value by traversing the path (skip first element as it is the top-level key)
+            value = root_class[name].value
+            data = row[name]
+            for key in value.path[1:]:
+                data = (data or {}).get(key)
+            row[name] = data
 
     if limit:
         result_data = result_data[:limit]

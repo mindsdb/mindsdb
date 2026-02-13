@@ -1,10 +1,13 @@
 import os
 import json
+import hashlib
+from collections import OrderedDict
 from typing import Dict, List, Literal, Tuple
 from urllib.parse import urlparse
 
 import pandas as pd
 import psycopg
+from psycopg import sql
 from mindsdb_sql_parser.ast import (
     Parameter,
     Identifier,
@@ -47,6 +50,11 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
     """This handler handles connection and execution of the PostgreSQL with pgvector extension statements."""
 
     name = "pgvector"
+
+    # LRU cache to track which legacy tables have been checked for migration.
+    # This prevents repeated database existence checks on every table access.
+    _migration_checked_cache: OrderedDict = OrderedDict()
+    _MIGRATION_CACHE_MAXSIZE = 1024
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name=name, **kwargs)
@@ -180,7 +188,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
             Response: Response object indicating success or failure.
         """
         table_name = self._check_table(table_name)
-        query = f"CREATE INDEX IF NOT EXISTS {table_name}_{column_name}_fts_idx ON {table_name} USING gin(to_tsvector('english', {column_name}))"
+        # Quote table name for PostgreSQL - table names may contain special chars like hyphens
+        query = f'CREATE INDEX IF NOT EXISTS "{table_name}_{column_name}_fts_idx" ON "{table_name}" USING gin(to_tsvector(\'english\', {column_name}))'
         self.raw_query(query)
         return Response(RESPONSE_TYPE.OK)
 
@@ -395,11 +404,78 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         return query
 
     def _check_table(self, table_name: str):
-        # Apply namespace for a user
+        # Apply namespace for a user if the database is shared
         if self._is_shared_db:
-            company_id = ctx.company_id or "x"
-            return f"t_{company_id}_{table_name}"
+            company_id = ctx.company_id
+            user_id = ctx.user_id
+
+            # PostgreSQL has a 63-character limit for identifiers.
+            # Using full UUIDs (36 chars each) would exceed this limit.
+            # We use a SHA-256 hash of company_id + user_id to create a shorter, unique prefix.
+            namespace_hash = hashlib.sha256(f"{company_id}_{user_id}".encode()).hexdigest()[:16]
+            new_table_name = f"t_{namespace_hash}_{table_name}"
+
+            # Backwards compatibility: migrate old tables to the new hashed format
+            # Old format: t_{company_id}_{table_name} (without user_id)
+            old_table_name = f"t_{company_id}_{table_name}"
+            self._migrate_legacy_table(old_table_name, new_table_name)
+
+            return new_table_name
         return table_name
+
+    def _migrate_legacy_table(self, old_name: str, new_name: str):
+        """
+        Rename legacy tables from t_{company_id}_{name} to t_{company_id}_{user_id}_{name}.
+
+        Uses an LRU cache to ensure migration is only attempted once per table pair per process,
+        avoiding repeated database existence checks on every table access.
+
+        Args:
+            old_name (str): The name of the old table.
+            new_name (str): The name of the new table.
+
+        Raises:
+            RuntimeError: If the table rename fails.
+        """
+        cache_key = (old_name, new_name)
+
+        # Check LRU cache - if already checked, return early
+        if cache_key in PgVectorHandler._migration_checked_cache:
+            # Move to end (mark as recently used)
+            PgVectorHandler._migration_checked_cache.move_to_end(cache_key)
+            return
+
+        # Check if old table exists
+        # Note: Use %s without quotes - psycopg handles proper escaping for string values
+        old_exists_df = self.raw_query(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = %s)", [[old_name]]
+        )
+        old_exists = old_exists_df.iloc[0, 0] if old_exists_df is not None and not old_exists_df.empty else False
+
+        try:
+            if old_exists:
+                # Check if new table already exists
+                new_exists_df = self.raw_query(
+                    "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = %s)", [[new_name]]
+                )
+                new_exists = (
+                    new_exists_df.iloc[0, 0] if new_exists_df is not None and not new_exists_df.empty else False
+                )
+
+                if not new_exists:
+                    logger.info(f"Migrating legacy pgvector table {old_name} to {new_name}")
+                    rename_query = sql.SQL("ALTER TABLE {} RENAME TO {}").format(
+                        sql.Identifier(f'"{old_name}"'), sql.Identifier(f'"{new_name}"')
+                    )
+                    self.raw_query(rename_query.as_string(self.connection))
+        except Exception:
+            logger.exception(f"Failed to migrate legacy pgvector table {old_name} to {new_name}")
+            raise
+
+        # Add to LRU cache with eviction if at capacity
+        if len(PgVectorHandler._migration_checked_cache) >= PgVectorHandler._MIGRATION_CACHE_MAXSIZE:
+            PgVectorHandler._migration_checked_cache.popitem(last=False)  # Remove oldest
+        PgVectorHandler._migration_checked_cache[cache_key] = True
 
     def select(
         self,
@@ -526,7 +602,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         semantic_search_cte = f"""WITH semantic_search AS (
     SELECT {id_column_name}, {content_column_name}, {embeddings_column_name},
     RANK () OVER (ORDER BY {embeddings_column_name} {distance_function.value} '{str(embeddings)}') AS rank
-    FROM {table_name}{where_clause}
+    FROM "{table_name}" {where_clause}
     ORDER BY {embeddings_column_name} {distance_function.value} '{str(embeddings)}'::vector
     )"""
 
@@ -543,7 +619,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
     full_text_search AS (
     SELECT {id_column_name}, {content_column_name}, {embeddings_column_name},
     RANK () OVER (ORDER BY ts_rank(to_tsvector('english', {content_column_name}), plainto_tsquery('english', '{query}')) DESC) AS rank
-    FROM {table_name}{where_clause}
+    FROM "{table_name}" {where_clause}
     {ts_vector_clause}
     ORDER BY ts_rank(to_tsvector('english', {content_column_name}), plainto_tsquery('english', '{query}')) DESC
     )"""
@@ -582,7 +658,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
                 size_spec = ""
 
             cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {table_name} (
+                CREATE TABLE IF NOT EXISTS "{table_name}" (
                     id TEXT PRIMARY KEY,
                     embeddings {vector_column_type}{size_spec},
                     content TEXT,
@@ -664,7 +740,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         Run a drop table query on the pgvector database.
         """
         table_name = self._check_table(table_name)
-        self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
+        self.raw_query(f'DROP TABLE IF EXISTS "{table_name}"')
 
     def create_index(
         self,
@@ -688,16 +764,17 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
             raise ValueError("Invalid index type. Supported types are 'ivfflat' and 'hnsw'.")
         table_name = self._check_table(table_name)
         # first we make sure embedding dimension is set
-        embedding_dim_size_df = self.raw_query(f"SELECT vector_dims({column_name}) FROM {table_name} LIMIT 1")
+        # Quote table name for PostgreSQL - table names may contain special chars like hyphens
+        embedding_dim_size_df = self.raw_query(f'SELECT vector_dims({column_name}) FROM "{table_name}" LIMIT 1')
         # check if answer is empty
         if embedding_dim_size_df.empty:
             raise ValueError("Could not determine embedding dimension size. Make sure that knowledge base isn't empty")
         try:
             embedding_dim = int(embedding_dim_size_df.iloc[0, 0])
             # alter table to add dimension
-            self.raw_query(f"ALTER TABLE {table_name} ALTER COLUMN {column_name} TYPE vector({embedding_dim})")
+            self.raw_query(f'ALTER TABLE "{table_name}" ALTER COLUMN {column_name} TYPE vector({embedding_dim})')
         except Exception:
             raise ValueError("Could not determine embedding dimension size. Make sure that knowledge base isn't empty")
 
         # Create the index
-        self.raw_query(f"CREATE INDEX ON {table_name} USING {index_type} ({column_name} {metric_type})")
+        self.raw_query(f'CREATE INDEX ON "{table_name}" USING {index_type} ({column_name} {metric_type})')

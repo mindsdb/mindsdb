@@ -1080,10 +1080,6 @@
       "destination": "/integrations/ai-engines/mlflow"
     },
     {
-      "source": "/ml-engines/automl/lightwood",
-      "destination": "/integrations/ai-engines/lightwood"
-    },
-    {
       "source": "/nixtla/statsforecast",
       "destination": "/integrations/ai-engines/statsforecast"
     },

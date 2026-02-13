@@ -15,7 +15,6 @@ with patch.dict(
     "sys.modules",
     {
         "mindsdb.interfaces.agents.langchain_agent": Mock(),
-        "mindsdb.interfaces.agents.mindsdb_chat_model": Mock(),
         "mindsdb.interfaces.agents.constants": Mock(),
         "langchain_openai": Mock(),
     },

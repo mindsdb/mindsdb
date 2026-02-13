@@ -17,6 +17,8 @@ from mindsdb_sql_parser.ast import (
     Star,
     Tuple,
     Update,
+    Function,
+    Identifier,
 )
 from mindsdb_sql_parser.ast.base import ASTNode
 
@@ -111,18 +113,30 @@ class VectorStoreHandler(BaseHandler):
                     if node.op.upper() == "AND":
                         return
                     op = FilterOperator(node.op.upper())
+
+                    arg1, arg2 = node.args
+                    if isinstance(arg1, Function):
+                        if arg1.op.lower() in ("lower", "lower") and len(arg1.args) == 1:
+                            func_arg = arg1.args[0]
+                            if isinstance(func_arg, Identifier) and len(func_arg.parts) == 1:
+                                if func_arg.parts[0].lower() in ("chunk_content", "content"):
+                                    arg1 = func_arg
+
+                    if not isinstance(arg1, Identifier):
+                        raise ValueError(f"Not supported condition: {node}")
+
                     # unquote the left hand side
-                    left_hand = node.args[0].parts[-1].strip("`")
-                    if isinstance(node.args[1], Constant):
+                    left_hand = arg1.parts[-1].strip("`")
+                    if isinstance(arg2, Constant):
                         if left_hand == TableField.SEARCH_VECTOR.value:
-                            right_hand = ast.literal_eval(node.args[1].value)
+                            right_hand = ast.literal_eval(arg2.value)
                         else:
-                            right_hand = node.args[1].value
-                    elif isinstance(node.args[1], Tuple):
+                            right_hand = arg2.value
+                    elif isinstance(arg2, Tuple):
                         # Constant could be actually a list i.e. [1.2, 3.2]
-                        right_hand = [item.value for item in node.args[1].items]
+                        right_hand = [item.value for item in arg2.items]
                     else:
-                        raise Exception(f"Unsupported right hand side: {node.args[1]}")
+                        raise Exception(f"Unsupported right hand side: {arg2}")
                     conditions.append(FilterCondition(column=left_hand, op=op, value=right_hand))
 
             query_traversal(where_statement, _extract_comparison_conditions)
@@ -141,9 +155,7 @@ class VectorStoreHandler(BaseHandler):
                 # check restriction
                 if allowed_metadata_columns is not None:
                     # system columns are underscored, skip them
-                    if condition.column.lower() not in allowed_metadata_columns and not condition.column.startswith(
-                        "_"
-                    ):
+                    if condition.column not in allowed_metadata_columns and not condition.column.startswith("_"):
                         raise ValueError(f"Column is not found: {condition.column}")
 
                 # convert if required
@@ -321,50 +333,114 @@ class VectorStoreHandler(BaseHandler):
             self.upsert(table_name, df)
             return
 
-        # find existing ids
-        df_existed = self.select(
-            table_name,
-            columns=[id_col, metadata_col],
-            conditions=[FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))],
-        )
-        existed_ids = list(df_existed[id_col])
+        original_doc_id = "_original_doc_id"
 
-        # update existed
-        df_update = df[df[id_col].isin(existed_ids)]
-        df_insert = df[~df[id_col].isin(existed_ids)]
+        def get_original_ids(metadata):
+            return metadata.apply(lambda m: m.get(original_doc_id))
+
+        df["orig_id"] = get_original_ids(df[metadata_col])
+
+        df_original_ids = df[~df["orig_id"].isna()]
+        df_chunk_ids = df[df["orig_id"].isna()]
+
+        if not df_original_ids.empty:
+            # data has original ids - find all related records
+
+            all_ids = list(df_original_ids["orig_id"])
+
+            # find existing original_ids
+            df_existed = self.select(
+                table_name,
+                columns=[id_col, metadata_col],
+                conditions=[FilterCondition(column=f"metadata.{original_doc_id}", op=FilterOperator.IN, value=all_ids)],
+            )
+
+            # split into groups:
+            # - to update: records that match by `chunk_id`+`original_id` in `df_existed` and `df`
+            # - to delete: all chunk_ids from `df_existed` that don't match by `chunk_id`+`original_id`
+            # - to insert: all records from `df` that  don't match by `chunk_id`+`original_id`
+
+            if not df_existed.empty:
+                df_existed["orig_id"] = get_original_ids(df_existed[metadata_col])
+                df_existed["match"] = 1
+
+                df_common = df_original_ids.merge(
+                    df_existed[["id", "orig_id", "match"]], on=["id", "orig_id"], how="left"
+                )
+
+                df_update = df_common[~df_common["match"].isna()].drop("orig_id", axis=1).drop("match", axis=1)
+                df_insert = df_common[df_common["match"].isna()].drop("match", axis=1)
+
+                ids_to_remove = set(df_existed["id"]) - set(df_update["id"])
+            else:
+                df_insert = df_original_ids
+                ids_to_remove = []
+                df_update = pd.DataFrame()
+            df_insert = df_insert.drop("orig_id", axis=1)
+            self._apply_diff_changes(table_name, ids_to_remove, df_update, df_insert, df_existed)
+
+        if not df_chunk_ids.empty:
+            df_chunk_ids = df_chunk_ids.drop("orig_id", axis=1)
+
+            # records have only chunk_ids - update/insert only them
+            df_existed = self.select(
+                table_name,
+                columns=[id_col, metadata_col],
+                conditions=[FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df_chunk_ids[id_col]))],
+            )
+            existed_ids = list(df_existed[id_col])
+
+            # update existed
+            df_update = df_chunk_ids[df_chunk_ids[id_col].isin(existed_ids)]
+            df_insert = df_chunk_ids[~df_chunk_ids[id_col].isin(existed_ids)]
+
+            self._apply_diff_changes(table_name, [], df_update, df_insert, df_existed)
+
+    def _apply_diff_changes(self, table_name, ids_to_remove, df_update, df_insert, df_existed):
+        # -- apply changes --
+
+        id_col = TableField.ID.value
+        metadata_col = TableField.METADATA.value
+        original_doc_id = "_original_doc_id"
+
+        if ids_to_remove:
+            conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(ids_to_remove))]
+            self.delete(table_name, conditions)
 
         if not df_update.empty:
             # get values of existed `created_at` and return them to metadata
-            origin_id_col = "_original_doc_id"
 
             created_dates, ids = {}, {}
             for _, row in df_existed.iterrows():
                 chunk_id = row[id_col]
                 created_dates[chunk_id] = row[metadata_col].get("_created_at")
-                ids[chunk_id] = row[metadata_col].get(origin_id_col)
+                ids[chunk_id] = row[metadata_col].get(original_doc_id)
 
             def keep_created_at(row):
                 val = created_dates.get(row[id_col])
                 if val:
                     row[metadata_col]["_created_at"] = val
                 # keep id column
-                if origin_id_col not in row[metadata_col]:
-                    row[metadata_col][origin_id_col] = ids.get(row[id_col])
+                if original_doc_id not in row[metadata_col]:
+                    row[metadata_col][original_doc_id] = ids.get(row[id_col])
                 return row
 
+            df_update = df_update
             df_update.apply(keep_created_at, axis=1)
 
-            try:
+            if hasattr(self, "update"):
                 self.update(table_name, df_update, [id_col])
-            except NotImplementedError:
-                # not implemented? do it with delete and insert
-                conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))]
+            else:
+                # no update method in vector db: just remove old records before insert
+
+                ids_to_remove = df_update[id_col]
+                conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(ids_to_remove))]
                 self.delete(table_name, conditions)
                 self.insert(table_name, df_update)
         if not df_insert.empty:
             # set created_at
             self.set_metadata_cur_time(df_insert, "_created_at")
-
+            df_insert = df_insert
             self.insert(table_name, df_insert)
 
     def dispatch_delete(self, query: Delete, conditions: List[FilterCondition] = None):
@@ -511,19 +587,6 @@ class VectorStoreHandler(BaseHandler):
             table_name (str): table name
             data (pd.DataFrame): data to insert
             columns (List[str]): columns to insert
-
-        Returns:
-            HandlerResponse
-        """
-        raise NotImplementedError()
-
-    def update(self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None):
-        """Update data in table
-
-        Args:
-            table_name (str): table name
-            data (pd.DataFrame): data to update
-            key_columns (List[str]): key to  to update
 
         Returns:
             HandlerResponse

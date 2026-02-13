@@ -248,7 +248,7 @@ class FaissIVFIndex(FaissIndex):
         return batch_num
 
 
-    def _train_ivf(self, dump_path, train_count=10000, nlist=1024):
+    def _train_ivf(self, dump_path, train_count, nlist):
         # Accumulate training data up to train_count
         train_left = train_count
         train_chunks = []
@@ -275,7 +275,7 @@ class FaissIVFIndex(FaissIndex):
         ivf = faiss.IndexIVFFlat(quantizer, self.dim, nlist, self.metric)
 
         ivf.train(train_data)
-        return faiss.IndexIDMap(ivf)
+        return ivf
 
     def _get_dump_vector_files(self, dump_path):
         # Collect vector batch files and sort by batch index
@@ -286,7 +286,7 @@ class FaissIVFIndex(FaissIndex):
         vec_files.sort()
         return vec_files
 
-    def _create_ivf_index(self, path, train_count=10000, nlist=1024):
+    def _create_ivf_index(self, path, train_count, nlist):
         """
         Build an IVF index (wrapped in IndexIDMap) from memmap batches
         - Reads a single `ids.mmap` and multiple `batch_{i}_vecs.mmap` files from `path`.
@@ -304,7 +304,8 @@ class FaissIVFIndex(FaissIndex):
             raise FileNotFoundError(f"Missing ids memmap: {ids_path}")
         ids = np.fromfile(ids_path, dtype="int64")
 
-        ivf_id_map = self._train_ivf(path, nlist, train_count)
+        ivf = self._train_ivf(path, nlist, train_count)
+        ivf_id_map = faiss.IndexIDMap(ivf)
 
         vec_files = self._get_dump_vector_files(path)
 
@@ -324,8 +325,7 @@ class FaissIVFIndex(FaissIndex):
 
         return ivf_id_map
 
-
-    def _create_ivf_file_index(self, path, train_count=10000, nlist=1024):
+    def _create_ivf_file_index(self, path, train_count, nlist):
         index_path = path.parent
         trained_index = self._train_ivf(path, train_count, nlist)
         # store trained index
@@ -343,6 +343,7 @@ class FaissIVFIndex(FaissIndex):
         block_fnames = []
         for num, fname in enumerate(vec_files):
             index = faiss.read_index(trained_path)
+            index = faiss.IndexIDMap(index)
             fpath = path / fname
 
             batch_data = np.fromfile(fpath, dtype="float32")
@@ -354,7 +355,7 @@ class FaissIVFIndex(FaissIndex):
             index.add_with_ids(batch_vectors, ids_batch)
             block_fname = str(index_path / f'faiss_index_block.{num}')
             block_fnames.append(block_fname)
-            faiss.write_index(index,block_fname)
+            faiss.write_index(index, block_fname)
             start += rows
 
         index = faiss.read_index(trained_path)
@@ -364,19 +365,30 @@ class FaissIVFIndex(FaissIndex):
 
         return index
 
-    def create_index(self, index_type, nlist=1024, train_count=10000):
+    def create_index(self, index_type, nlist=None, train_count=None):
         # index might not fit into RAM, extract data to files
         dump_path = Path(self.path).parent / "dump"
 
         # if self.index_type != 'flat':
         #     raise ValueError('Index was already created')
 
+        # check params, apply defaults
+        if nlist is None:
+            nlist = self.config.nlist
+
+        nlist_k = 39
+        if train_count is not None:
+            if train_count < nlist * nlist_k:
+                raise ValueError(f"Train_count can't be less than nlist * {nlist_k} (is {nlist * nlist_k})")
+        else:
+            train_count = nlist * nlist_k
+
         if self.index is None:
             ntotal = 0
         else:
             ntotal = self.index.ntotal
-        if nlist > ntotal:
-            raise ValueError(f"Not enough data to create: {ntotal}, required at lease {nlist} records")
+        if train_count > ntotal:
+            raise ValueError(f"Not enough data to create index: {ntotal}, at least {train_count} records are required ")
 
         dump_path.mkdir(exist_ok=True)
 

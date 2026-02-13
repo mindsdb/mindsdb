@@ -3,8 +3,6 @@ title: How to Create Knowledge Bases
 sidebarTitle: Create KB
 ---
 
-TODO: add info on storage: default pgvector for docker, and no default for pypi
-
 A knowledge base is an advanced system that organizes information based on semantic meaning rather than simple keyword matching. It integrates embedding models, reranking models, and vector stores to enable context-aware data retrieval.
 
 <Tip>
@@ -326,15 +324,13 @@ The `binary` reranking method simplifies classification by determining whether a
 
 The vector store is a required component of the knowledge base. It stores data in the form of embeddings.
 
-It is optional for users to provide the `storage` parameter. If not provided, the default ChromaDB is created when creating a knowledge base.
+<Note>
+When using [MindsDB via Docker](/setup/self-hosted/docker-desktop), the `storage` parameter is optional. The default storage is PGVector that is integrated into the MindsDB's Docker image.
 
-The available options include either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb).
+When using [MindsDB via PyPI](/contribute/install), the `storage` parameter is required. Users need to connect their vector storage, such as PGVector, using the `CREATE DATABASE` command and then use it for the storage of the knowledge bases.
+</Note>
 
-<Tip>
-It is recommended to use PGVector version 0.8.0 or higher for a better performance.
-</Tip>
-
-If the `storage` parameter is not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default table called `default_collection` that stores the embedded data. This default ChromaDB vector database is stored in MindsDB's storage.
+The recommended vector store for knowledge bases is [PGVector](/integrations/vector-db-integrations/pgvector), specifically, version 0.8.0 or higher for a better performance.
 
 In order to provide the storage vector database, it is required to connect it to MindsDB beforehand.
 
@@ -343,7 +339,7 @@ Here is an example for [PGVector](/integrations/vector-db-integrations/pgvector)
 ```python
 my_kb = server.knowledge_bases.create(
     ...
-    storage=server.databases.my_pgvector.tables.my_table,
+    storage=server.databases.my_pgvector.tables.storage_table,
     ...
 )
 ```

@@ -518,7 +518,7 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("select * from my_agent where question = 'test'")
 
         # result of query
-        assert "kb_hide not found" in mock_openai.agent_calls[2]
+        assert "`kb_hide` not found" in mock_openai.agent_calls[2]
         # it shows available KBs
         assert "kb_show*" in mock_openai.agent_calls[2]
 

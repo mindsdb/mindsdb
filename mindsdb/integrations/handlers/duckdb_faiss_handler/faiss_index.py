@@ -1,5 +1,6 @@
 import os
-from typing import Iterable, List
+import pathlib
+from typing import Iterable, List, Callable
 import numpy as np
 import psutil
 from pathlib import Path
@@ -80,8 +81,10 @@ class FaissIndex:
         self.index = faiss.read_index(self.path)
         self.dim = self.index.d
 
-        sub_index = faiss.downcast_index(self.index.index)
-        if isinstance(sub_index, faiss.IndexIVFFlat):
+        index = self.index
+        if hasattr(index, "index"):
+            index = faiss.downcast_index(index.index)
+        if isinstance(index, faiss.IndexIVFFlat):
             self.index_type = "ivf"
 
     def close(self):
@@ -197,47 +200,49 @@ class FaissIndex:
 
 
 class FaissIVFIndex(FaissIndex):
-    def _dump_vectors(self, index, path, batch_size: int = 10000):
-        """
-        Save vectors from a Faiss IndexIDMap to disk in batches using numpy memmap.
+    def _dump_vectors(self, index, path: pathlib.Path, batch_size: int = 20000):
 
-        - Writes the one memmap for ids and batches for vectors
+        if hasattr(index, "id_map"):
 
-        :param  index: Faiss IndexIDMap
-        :param  path: Output directory where batch files will be written
-        :param  batch_size: Number of vectors per batch file
-        """
+            ids = faiss.vector_to_array(index.id_map).astype(np.int64, copy=False)
+            inner = index.index
+            def get_batch_vectors(start, size):
+                return inner.reconstruct_n(start, size).astype(np.float32, copy=False)
 
-        if self.index_type == "flat":
-            return self._dump_vectors_id_map(index, path, batch_size)
+            return self._dump_vectors_to_file(ids, path, index.ntotal, batch_size, get_batch_vectors)
         else:
-            return self._dump_vectors_invlist(index, path, batch_size)
+            invlists = index.invlists
 
-    def _dump_vectors_id_map(self, index, path, batch_size: int = 10000):
-        """
-        Save vectors from a Faiss IndexIDMap to disk in batches using numpy memmap.
+            index.set_direct_map_type(faiss.DirectMap.Hashtable)
 
-        - Writes the one memmap for ids and batches for vectors
+            ids_list = []
+            for list_no in range(index.nlist):
+                list_size = invlists.list_size(list_no)
+                if list_size == 0:
+                    continue
 
-        :param  index: Faiss IndexIDMap
-        :param  path: Output directory where batch files will be written
-        :param  batch_size: Number of vectors per batch file
-        """
+                # Get IDs stored in this inverted list
+                id_array = faiss.rev_swig_ptr(invlists.get_ids(list_no), list_size)
+                ids_list.append(id_array)
 
-        if not hasattr(index, "id_map") or not hasattr(index, "index"):
-            raise ValueError("Expected a Faiss IndexIDMap-like object with 'id_map' and 'index' attributes")
+            ids = np.hstack(ids_list).astype(np.int64)
 
-        ntotal = index.ntotal
+            # to train index first batches will be used. shuffle ids to prevent using the same lists
+            # TODO shuffle only part of data?
+            np.random.shuffle(ids)
 
-        ids = faiss.vector_to_array(index.id_map).astype(np.int64, copy=False)
+            def get_batch_vectors(start, size):
+                ids_batch = ids[start: start + size]
+                return index.reconstruct_batch(ids_batch).astype(np.float32, copy=False)
+
+            return self._dump_vectors_to_file(ids, path, index.ntotal, batch_size, get_batch_vectors)
+
+    def _dump_vectors_to_file(self, ids: np.array, path: pathlib.Path, ntotal:int, batch_size:int, get_batch_f: Callable):
 
         # Write all ids once to a single memmap file
         ids_path = path / "ids.mmap"
         mmap_ids = np.memmap(ids_path, dtype=np.int64, mode="w+", shape=(ntotal,))
         mmap_ids[:] = ids
-        del mmap_ids  # flush
-
-        inner = index.index
 
         batch_num = 0
         while True:
@@ -250,8 +255,7 @@ class FaissIVFIndex(FaissIndex):
             ntotal -= size
             batch_num += 1
 
-            # Reconstruct a contiguous block when possible
-            vecs = inner.reconstruct_n(start, size).astype(np.float32, copy=False)
+            vecs = get_batch_f(start, size)
 
             vecs_path = path / f"batch_{batch_num:05d}_vecs.mmap"
 
@@ -261,58 +265,7 @@ class FaissIVFIndex(FaissIndex):
             mmap_vecs.flush()
             del mmap_vecs
 
-        return batch_num
-
-    def _dump_vectors_invlist(self, index, path, batch_size: int = 10000):
-
-        invlists = index.invlists
-        ntotal = index.ntotal
-
-        index.set_direct_map_type(faiss.DirectMap.Hashtable)
-
-        ids_list = []
-        for list_no in range(index.nlist):
-            list_size = invlists.list_size(list_no)
-            if list_size == 0:
-                continue
-
-            # Get IDs stored in this inverted list
-            id_array = faiss.rev_swig_ptr(invlists.get_ids(list_no), list_size)
-            ids_list.append(id_array)
-
-        ids = np.hstack(ids_list).astype(np.int64)
-
-        # to train index first batches will be used. shuffle ids to prevent using the same lists
-        # TODO shuffle only part of data?
-        np.random.shuffle(ids)
-
-        ids_path = path / "ids.mmap"
-        mmap_ids = np.memmap(ids_path, dtype=np.int64, mode="w+", shape=(ntotal,))
-        mmap_ids[:] = ids
-
-        # save vectors
-        batch_num = 0
-        while True:
-            if ntotal <= 0:
-                break
-
-            start = batch_num * batch_size
-            size = min(ntotal, batch_size)
-
-            ntotal -= size
-            batch_num += 1
-
-            ids_batch = ids[start: start + size]
-            vecs = index.reconstruct_batch(ids_batch).astype(np.float32, copy=False)
-
-            vecs_path = path / f"batch_{batch_num:05d}_vecs.mmap"
-
-            # Create memmap for vectors and write
-            mmap_vecs = np.memmap(vecs_path, dtype=np.float32, mode="w+", shape=(size, self.dim))
-            mmap_vecs[:] = vecs
-            mmap_vecs.flush()
-            del mmap_vecs
-
+        del mmap_ids
         return batch_num
 
 
@@ -354,7 +307,7 @@ class FaissIVFIndex(FaissIndex):
 
     def _create_ivf_index(self, path, train_count, nlist):
         """
-        Build an IVF index (wrapped in IndexIDMap) from memmap batches
+        Build an IVF index from memmap batches
         - Reads a single `ids.mmap` and multiple `batch_{i}_vecs.mmap` files from `path`.
         - Accumulates up to `train_count` vectors to train the IVF quantizer.
         - Creates IndexIVFFlat and adds all vectors with their ids to it.
@@ -371,7 +324,6 @@ class FaissIVFIndex(FaissIndex):
         ids = np.fromfile(ids_path, dtype="int64")
 
         ivf = self._train_ivf(path, nlist=nlist, train_count=train_count)
-        ivf_id_map = faiss.IndexIDMap(ivf)
 
         vec_files = self._get_dump_vector_files(path)
 
@@ -386,10 +338,10 @@ class FaissIVFIndex(FaissIndex):
             batch_vectors = batch_data.reshape([rows, self.dim])
 
             ids_batch = np.asarray(ids[start : start + rows])
-            ivf_id_map.add_with_ids(batch_vectors, ids_batch)
+            ivf.add_with_ids(batch_vectors, ids_batch)
             start += rows
 
-        return ivf_id_map
+        return ivf
 
     def _create_ivf_file_index(self, path, train_count, nlist):
         index_path = path.parent
@@ -409,7 +361,6 @@ class FaissIVFIndex(FaissIndex):
         block_fnames = []
         for num, fname in enumerate(vec_files):
             index = faiss.read_index(trained_path)
-            # index = faiss.IndexIDMap(index)
             fpath = path / fname
 
             batch_data = np.fromfile(fpath, dtype="float32")
@@ -425,7 +376,6 @@ class FaissIVFIndex(FaissIndex):
             start += rows
 
         index = faiss.read_index(trained_path)
-        # index = faiss.IndexIDMap(index)
 
         merge_ondisk(index, block_fnames, str(index_path / f'faiss_index_merged'))
         os.unlink(trained_path)
@@ -468,9 +418,15 @@ class FaissIVFIndex(FaissIndex):
         # unload flat index from RAM
         self.close()
 
+        # clean index dir
+        for item in dump_path.parent.iterdir():
+            if not item.is_dir():
+                item.unlink()
+
         # create ivf index
         if index_type == 'ivf':
             ivf_index = self._create_ivf_index(dump_path, train_count=train_count, nlist=nlist)
+
         elif index_type == 'ivf_file':
             ivf_index = self._create_ivf_file_index(dump_path, train_count=train_count, nlist=nlist)
         else:

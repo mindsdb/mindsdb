@@ -135,7 +135,7 @@ class FaissIndex:
     def insert(
         self,
         vectors: Iterable[Iterable[float]],
-        ids: Iterable[float],
+        ids: Iterable[int],
     ) -> None:
         if len(vectors) == 0:
             return
@@ -179,7 +179,7 @@ class FaissIndex:
 
     def search(
         self,
-        query: Iterable[Iterable[float]],
+        query: Iterable[float],
         limit: int = 10,
         # allowed_ids: Optional[Sequence[int]] = None,
     ):
@@ -201,6 +201,9 @@ class FaissIndex:
 
 class FaissIVFIndex(FaissIndex):
     def _dump_vectors(self, index, path: pathlib.Path, batch_size: int = 20000):
+        """
+          Extract and dump vectors and ids from index. Method is dependent on index type
+        """
 
         if hasattr(index, "id_map"):
 
@@ -237,7 +240,25 @@ class FaissIVFIndex(FaissIndex):
 
             return self._dump_vectors_to_file(ids, path, index.ntotal, batch_size, get_batch_vectors)
 
-    def _dump_vectors_to_file(self, ids: np.array, path: pathlib.Path, ntotal:int, batch_size:int, get_batch_f: Callable):
+    def _dump_vectors_to_file(
+        self,
+        ids: np.ndarray,
+        path: pathlib.Path,
+        ntotal: int,
+        batch_size: int,
+        get_batch_f: Callable[[int, int], np.ndarray],
+    ) -> int:
+        """
+
+        Write ids and vectors to memmap files in batches.
+
+        :param ids: vector IDs in the same order as vectors will be dumped.
+        :param path: directory to store dumps.
+        :param ntotal: total number of vectors.
+        :param batch_size: number of vectors per batch file.
+        :param get_batch_f: function to get a batch content
+
+        """
 
         # Write all ids once to a single memmap file
         ids_path = path / "ids.mmap"
@@ -307,10 +328,7 @@ class FaissIVFIndex(FaissIndex):
 
     def _create_ivf_index(self, path, train_count, nlist):
         """
-        Build an IVF index from memmap batches
-        - Reads a single `ids.mmap` and multiple `batch_{i}_vecs.mmap` files from `path`.
-        - Accumulates up to `train_count` vectors to train the IVF quantizer.
-        - Creates IndexIVFFlat and adds all vectors with their ids to it.
+        Build an in-memory IVF index
 
         :param path: Directory containing memmap files
         :param train_count: Number of vectors to use for training
@@ -344,6 +362,8 @@ class FaissIVFIndex(FaissIndex):
         return ivf
 
     def _create_ivf_file_index(self, path, train_count, nlist):
+        """Build an IVF on disk index"""
+
         index_path = path.parent
         trained_index = self._train_ivf(path, train_count=train_count, nlist=nlist)
         # store trained index
@@ -383,6 +403,15 @@ class FaissIVFIndex(FaissIndex):
         return index
 
     def create_index(self, index_type, nlist=None, train_count=None):
+        """
+        Create or recreate IVF index
+
+        :param index_type: options are: 'ivf' (in RAM) or 'ivf_file' (on disk)
+        :param nlist: number of inverted lists
+        :param train_count: count of vectors to use for training.
+
+        """
+
         # index might not fit into RAM, extract data to files
         dump_path = Path(self.path).parent / "dump"
 

@@ -202,13 +202,13 @@ class FaissIndex:
 class FaissIVFIndex(FaissIndex):
     def _dump_vectors(self, index, path: pathlib.Path, batch_size: int = 20000):
         """
-          Extract and dump vectors and ids from index. Method is dependent on index type
+        Extract and dump vectors and ids from index. Method is dependent on index type
         """
 
         if hasattr(index, "id_map"):
-
             ids = faiss.vector_to_array(index.id_map).astype(np.int64, copy=False)
             inner = index.index
+
             def get_batch_vectors(start, size):
                 return inner.reconstruct_n(start, size).astype(np.float32, copy=False)
 
@@ -235,7 +235,7 @@ class FaissIVFIndex(FaissIndex):
             np.random.shuffle(ids)
 
             def get_batch_vectors(start, size):
-                ids_batch = ids[start: start + size]
+                ids_batch = ids[start : start + size]
                 return index.reconstruct_batch(ids_batch).astype(np.float32, copy=False)
 
             return self._dump_vectors_to_file(ids, path, index.ntotal, batch_size, get_batch_vectors)
@@ -288,7 +288,6 @@ class FaissIVFIndex(FaissIndex):
 
         del mmap_ids
         return batch_num
-
 
     def _train_ivf(self, dump_path, train_count, nlist):
         # Accumulate training data up to train_count
@@ -367,7 +366,7 @@ class FaissIVFIndex(FaissIndex):
         index_path = path.parent
         trained_index = self._train_ivf(path, train_count=train_count, nlist=nlist)
         # store trained index
-        trained_path = str(index_path / 'faiss_index.trained')
+        trained_path = str(index_path / "faiss_index.trained")
         faiss.write_index(trained_index, trained_path)
 
         ids_path = path / "ids.mmap"
@@ -390,14 +389,14 @@ class FaissIVFIndex(FaissIndex):
 
             ids_batch = np.asarray(ids[start : start + rows])
             index.add_with_ids(batch_vectors, ids_batch)
-            block_fname = str(index_path / f'faiss_index_block.{num}')
+            block_fname = str(index_path / f"faiss_index_block.{num}")
             block_fnames.append(block_fname)
             faiss.write_index(index, block_fname)
             start += rows
 
         index = faiss.read_index(trained_path)
 
-        merge_ondisk(index, block_fnames, str(index_path / f'faiss_index_merged'))
+        merge_ondisk(index, block_fnames, str(index_path / "faiss_index_merged"))
         os.unlink(trained_path)
 
         return index
@@ -453,10 +452,10 @@ class FaissIVFIndex(FaissIndex):
                 item.unlink()
 
         # create ivf index
-        if index_type == 'ivf':
+        if index_type == "ivf":
             ivf_index = self._create_ivf_index(dump_path, train_count=train_count, nlist=nlist)
 
-        elif index_type == 'ivf_file':
+        elif index_type == "ivf_file":
             ivf_index = self._create_ivf_file_index(dump_path, train_count=train_count, nlist=nlist)
         else:
             raise ValueError(f"Unknown index type: {index_type}")

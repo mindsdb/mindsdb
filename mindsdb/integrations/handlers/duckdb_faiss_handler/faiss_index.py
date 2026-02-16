@@ -200,7 +200,7 @@ class FaissIndex:
 
 
 class FaissIVFIndex(FaissIndex):
-    def _dump_vectors(self, index, path: pathlib.Path, batch_size: int = 20000):
+    def _dump_vectors(self, index, path: pathlib.Path, batch_size: int = 30000):
         """
         Extract and dump vectors and ids from index. Method is dependent on index type
         """
@@ -433,7 +433,7 @@ class FaissIVFIndex(FaissIndex):
         else:
             ntotal = self.index.ntotal
         if train_count > ntotal:
-            raise ValueError(f"Not enough data to create index: {ntotal}, at least {train_count} records are required ")
+            raise ValueError(f"Not enough data to create index: {ntotal}, at least {train_count} records are required")
 
         dump_path.mkdir(exist_ok=True)
 

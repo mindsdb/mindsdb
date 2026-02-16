@@ -26,19 +26,7 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get
 
 from mindsdb.integrations.utilities.rag.settings import RerankerMode
 
-from mindsdb.interfaces.agents.constants import get_default_embeddings_model_class, MAX_INSERT_BATCH_SIZE
-from mindsdb.interfaces.agents.provider_utils import get_llm_provider
-
-try:
-    from mindsdb.interfaces.agents.langchain_agent import create_chat_model
-except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
-    if getattr(exc, "name", "") and "langchain" in exc.name:
-        create_chat_model = None
-        _LANGCHAIN_IMPORT_ERROR = exc
-    else:  # Unknown import error, surface it
-        raise
-else:
-    _LANGCHAIN_IMPORT_ERROR = None
+from mindsdb.interfaces.agents.utils.constants import DEFAULT_EMBEDDINGS_MODEL_PROVIDER, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
@@ -49,6 +37,8 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
+from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
@@ -63,7 +53,7 @@ def _require_agent_extra(feature: str):
     if create_chat_model is None:
         raise ImportError(
             f"{feature} requires the optional agent dependencies. Install them via `pip install mindsdb[kb]`."
-        ) from _LANGCHAIN_IMPORT_ERROR
+        )
 
 
 class KnowledgeBaseInputParams(BaseModel):
@@ -271,10 +261,13 @@ class KnowledgeBaseTable:
                 meta_data = pd.json_normalize(df["metadata"])
                 # exclude absent columns and used colunns
                 df_columns = list(df.columns)
-                meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
+                existed_meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
 
-                # add columns
-                df = df.join(meta_data[meta_columns])
+                # add existed columns
+                df = df.join(meta_data[existed_meta_columns])
+                # add absent columns
+                for col in set(meta_columns).difference(existed_meta_columns):
+                    df[col] = None
 
                 # put metadata in the end
                 df_columns.remove("metadata")
@@ -1059,9 +1052,7 @@ class KnowledgeBaseTable:
             ValueError: If the configuration is invalid or required components are missing
         """
         # Get embedding model from knowledge base
-        from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
-            construct_model_from_args,
-        )
+        from mindsdb.interfaces.knowledge_base.embedding_model_utils import construct_embedding_model_from_args
         from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
         from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 
@@ -1070,15 +1061,26 @@ class KnowledgeBaseTable:
             # Extract embedding model args from knowledge base table
             embedding_args = self._kb.embedding_model.learn_args.get("using", {})
             # Construct the embedding model directly
-            embeddings_model = construct_model_from_args(embedding_args)
+            embeddings_model = construct_embedding_model_from_args(embedding_args, session=self.session)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         elif embedding_model_params:
-            embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
+            embeddings_model = construct_embedding_model_from_args(
+                adapt_embedding_model_params(embedding_model_params), session=self.session
+            )
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
-            embeddings_model_class = get_default_embeddings_model_class()
-            embeddings_model = embeddings_model_class()
-            logger.debug("Using default embedding model as knowledge base has no embedding model")
+            # Use default embedding model with default provider
+            # Default to OpenAI's text-embedding-3-small for OpenAI provider, otherwise let the provider choose
+            default_model_name = "text-embedding-3-small" if DEFAULT_EMBEDDINGS_MODEL_PROVIDER == "openai" else None
+            default_embedding_args = {
+                "provider": DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
+            }
+            if default_model_name:
+                default_embedding_args["model_name"] = default_model_name
+            embeddings_model = construct_embedding_model_from_args(default_embedding_args, session=self.session)
+            logger.debug(
+                f"Using default embedding model ({DEFAULT_EMBEDDINGS_MODEL_PROVIDER}) as knowledge base has no embedding model"
+            )
 
         # Update retrieval config with knowledge base parameters
         kb_params = {"vector_store_config": {"kb_table": self}}
@@ -1281,11 +1283,11 @@ class KnowledgeBaseController:
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
                 params["default_vector_storage"] = vector_db_name
             else:
-                # create chroma db with same name
-                vector_table_name = "default_collection"
-                vector_db_name = self._create_persistent_chroma(name)
-                # memorize to remove it later
-                params["default_vector_storage"] = vector_db_name
+                raise ValueError(
+                    "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
+                    "One of the options is to use pgvector: "
+                    "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
+                )
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:

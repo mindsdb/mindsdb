@@ -56,7 +56,6 @@ UTILITIES_REQS_PATHS = [
 EXTRA_REQS_PATHS = [
     "requirements/requirements-agents.txt",
     "requirements/requirements-kb.txt",
-    "requirements/requirements-ml.txt",
 ]
 
 
@@ -78,7 +77,13 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # pyodbc is used in mssql but as optional dependency
 # litellm is used in KB but as optional dependency in case of using : snowflake,  bedrock, gemini llm providers
 MAIN_RULE_IGNORES = {
-    "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
+    "DEP003": [
+        "torch",
+        "pyarrow",
+        "langfuse",
+        "dataprep_ml",
+        "hierarchicalforecast",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
+    ],
     "DEP001": [
         "torch",
         "pgvector",
@@ -89,6 +94,8 @@ MAIN_RULE_IGNORES = {
         "langfuse",
         "langchain_aws",
         "pyodbc",
+        "sklearn",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
+        "hierarchicalforecast",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
     ],
     "DEP002": [
         "psycopg2-binary",
@@ -116,7 +123,7 @@ MAIN_RULE_IGNORES = {
 # The `pyarrow` package used for DataFrame serialization.
 # It is not explicitly imported in the code and used as follows:
 # modules.append('pyarrow==19.0.0')
-BYOM_DEP002_IGNORE_HANLDER_DEPS = ["pyarrow"]
+BYOM_DEP002_IGNORE_HANLDER_DEPS = ["pyarrow", "scikit-learn"]
 
 # The `thrift-sasl` package is required establish a connection via to Hive via `pyhive`, but it is not explicitly imported in the code.
 HIVE_DEP002_IGNORE_HANDLER_DEPS = ["thrift-sasl"]
@@ -128,22 +135,13 @@ LINDORM_DEP002_IGNORE_HANDLER_DEPS = ["protobuf"]
 
 HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS = ["torch"]
 
-DSPY_DEP002_IGNORE_HANDLER_DEPS = ["wikipedia", "dspy-ai", "chromadb", "tiktoken"]
-
 RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers", "faiss-cpu"]
 
 SOLR_DEP002_IGNORE_HANDLER_DEPS = ["sqlalchemy-solr"]
 
-LANGCHAIN_DEP002_IGNORE_HANDLER_DEPS = ["litellm", "chromadb", "tiktoken"]
-
-LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
-
 OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
-
-# upper version of numba is fixed in statsforecast handler to prevent installing numba==0.62.0 (its import fails on windows)
-STATSFORECAST_EP002_IGNORE_HANDLER_DEPS = ["numba"]
 
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
@@ -156,14 +154,10 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + GCS_DEP002_IGNORE_HANDLER_DEPS
         + LINDORM_DEP002_IGNORE_HANDLER_DEPS
         + HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS
-        + DSPY_DEP002_IGNORE_HANDLER_DEPS
         + RAG_DEP002_IGNORE_HANDLER_DEPS
         + SOLR_DEP002_IGNORE_HANDLER_DEPS
-        + LANGCHAIN_DEP002_IGNORE_HANDLER_DEPS
-        + LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
-        + STATSFORECAST_EP002_IGNORE_HANDLER_DEPS
     )
 )
 

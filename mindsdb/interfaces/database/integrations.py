@@ -24,7 +24,11 @@ from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE, HANDLER_SUPPORT_LEVEL
+from mindsdb.integrations.libs.const import (
+    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE,
+    HANDLER_TYPE,
+    HANDLER_SUPPORT_LEVEL,
+)
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
@@ -48,25 +52,37 @@ class IntegrationController:
 
     def _add_integration_record(self, name, engine, connection_args):
         integration_record = db.Integration(
-            name=name, engine=engine, data=connection_args or {}, company_id=ctx.company_id
+            name=name,
+            engine=engine,
+            data=connection_args or {},
+            company_id=ctx.company_id,
+            user_id=ctx.user_id,
         )
         db.session.add(integration_record)
         db.session.commit()
         return integration_record.id
 
-    def add(self, name: str, engine, connection_args):
+    def add(self, name: str, engine, connection_args, check_connection: bool = False):
         logger.debug(
-            "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
+            "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s, user_id=%s",
             self.__class__.__name__,
             name,
             engine,
             connection_args,
             ctx.company_id,
+            ctx.user_id,
         )
         handler_meta = self.get_handler_meta(engine)
 
+        if check_connection:
+            self.check_connection(engine, connection_args)
+
         accept_connection_args = handler_meta.get("connection_args")
-        logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
+        logger.debug(
+            "%s: accept_connection_args - %s",
+            self.__class__.__name__,
+            accept_connection_args,
+        )
 
         files_dir = None
         if accept_connection_args is not None and connection_args is not None:
@@ -80,7 +96,11 @@ class IntegrationController:
         integration_id = self._add_integration_record(name, engine, connection_args)
 
         if files_dir is not None:
-            store = FileStorage(resource_group=RESOURCE_GROUP.INTEGRATION, resource_id=integration_id, sync=False)
+            store = FileStorage(
+                resource_group=RESOURCE_GROUP.INTEGRATION,
+                resource_id=integration_id,
+                sync=False,
+            )
             store.add(files_dir, "")
             store.push()
 
@@ -89,6 +109,17 @@ class IntegrationController:
             ml_handler.create_engine(connection_args, integration_id)
 
         return integration_id
+
+    def check_connection(self, engine: str, data: dict):
+        try:
+            temp_name = f"temp_integration_{time.time()}".replace(".", "")
+            handler = self.create_tmp_handler(temp_name, engine, data)
+            status = handler.check_connection()
+        except ImportError:
+            raise
+
+        if status.success is not True:
+            raise Exception(f"Connection test failed: {status.error_message}")
 
     def modify(self, name, data, check_connection=False):
         self.handlers_cache.delete(name)
@@ -102,15 +133,7 @@ class IntegrationController:
 
         # Test the new connection data before applying
         if check_connection:
-            try:
-                temp_name = f"{integration_record.name}_update_{time.time()}".replace(".", "")
-                handler = self.create_tmp_handler(temp_name, integration_record.engine, data)
-                status = handler.check_connection()
-            except ImportError:
-                raise
-
-            if status.success is not True:
-                raise Exception(f"Connection test failed: {status.error_message}")
+            self.check_connection(integration_record.engine, data)
 
         integration_record.data = data
         db.session.commit()
@@ -199,7 +222,7 @@ class IntegrationController:
         ):
             fs_store = FsStore()
             integrations_dir = Config()["paths"]["integrations"]
-            folder_name = f"integration_files_{integration_record.company_id}_{integration_record.id}"
+            folder_name = f"integration_files_{integration_record.company_id}_{integration_record.user_id}_{integration_record.id}"
             fs_store.get(folder_name, base_dir=integrations_dir)
 
         handler_meta = self.get_handler_metadata(integration_record.engine)
@@ -252,9 +275,10 @@ class IntegrationController:
         }
 
     def get_by_id(self, integration_id, show_secrets=True):
-        integration_record = (
-            db.session.query(db.Integration).filter_by(company_id=ctx.company_id, id=integration_id).first()
-        )
+        query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, id=integration_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.Integration.user_id == ctx.user_id)
+        integration_record = query.first()
         return self._get_integration_record_data(integration_record, show_secrets)
 
     def get(self, name, show_secrets=True, case_sensitive=False):
@@ -276,28 +300,32 @@ class IntegrationController:
             db.Integration
         """
         if case_sensitive:
-            integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).all()
+            query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name)
+            if ctx.enforce_user_id:
+                query = query.filter(db.Integration.user_id == ctx.user_id)
+            integration_records = query.all()
             if len(integration_records) > 1:
                 raise Exception(f"There is {len(integration_records)} integrations with name '{name}'")
             if len(integration_records) == 0:
                 raise EntityNotExistsError(f"There is no integration with name '{name}'")
             integration_record = integration_records[0]
         else:
-            integration_record = (
-                db.session.query(db.Integration)
-                .filter(
-                    (db.Integration.company_id == ctx.company_id)
-                    & (func.lower(db.Integration.name) == func.lower(name))
-                )
-                .first()
+            query = db.session.query(db.Integration).filter(
+                (db.Integration.company_id == ctx.company_id) & (func.lower(db.Integration.name) == func.lower(name))
             )
+            if ctx.enforce_user_id:
+                query = query.filter(db.Integration.user_id == ctx.user_id)
+            integration_record = query.first()
             if integration_record is None:
                 raise EntityNotExistsError(f"There is no integration with name '{name}'")
 
         return integration_record
 
     def get_all(self, show_secrets=True):
-        integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id).all()
+        query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.Integration.user_id == ctx.user_id)
+        integration_records = query.all()
         integration_dict = {}
         for record in integration_records:
             if record is None or record.data is None:
@@ -327,6 +355,7 @@ class IntegrationController:
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
             handler_args["handler_controller"] = self
             handler_args["company_id"] = ctx.company_id
+            handler_args["user_id"] = ctx.user_id
 
         return handler_args
 
@@ -344,7 +373,10 @@ class IntegrationController:
         integration_id = int(time.time() * 10000)
 
         file_storage = FileStorage(
-            resource_group=RESOURCE_GROUP.INTEGRATION, resource_id=integration_id, root_dir="tmp", sync=False
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            resource_id=integration_id,
+            root_dir="tmp",
+            sync=False,
         )
         handler_storage = HandlerStorage(integration_id, root_dir="tmp", is_temporal=True)
 
@@ -465,7 +497,11 @@ class IntegrationController:
             raise Exception(msg)
 
         connection_args = integration_meta.get("connection_args")
-        logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
+        logger.debug(
+            "%s.get_handler: connection args - %s",
+            self.__class__.__name__,
+            connection_args,
+        )
 
         file_storage = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -553,16 +589,29 @@ class IntegrationController:
                 try:
                     prediction_args = handler_class.prediction_args()
                     creation_args = getattr(module, "creation_args", handler_class.creation_args())
-                    connection_args = {"prediction": prediction_args, "creation_args": creation_args}
+                    connection_args = {
+                        "prediction": prediction_args,
+                        "creation_args": creation_args,
+                    }
                     setattr(module, "connection_args", connection_args)
                     logger.debug("Patched connection_args for %s", handler_folder_name)
                 except Exception as e:
                     # do nothing
-                    logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
+                    logger.debug(
+                        "Failed to patch connection_args for %s, reason: %s",
+                        handler_folder_name,
+                        str(e),
+                    )
 
         module_attrs = [
             attr
-            for attr in ["connection_args_example", "connection_args", "description", "type", "title"]
+            for attr in [
+                "connection_args_example",
+                "connection_args",
+                "description",
+                "type",
+                "title",
+            ]
             if hasattr(module, attr)
         ]
 
@@ -573,7 +622,7 @@ class IntegrationController:
         if hasattr(module, "permanent"):
             handler_meta["permanent"] = module.permanent
         else:
-            if handler_meta.get("name") in ("files", "views", "lightwood"):
+            if handler_meta.get("name") in ("files", "views"):
                 handler_meta["permanent"] = True
             else:
                 handler_meta["permanent"] = False
@@ -650,7 +699,7 @@ class IntegrationController:
         :return: extracted connection arguments
         """
 
-        code = ast.parse(args_file.read_text())
+        code = ast.parse(args_file.read_text(encoding="utf-8"))
 
         args = {}
         for item in code.body:
@@ -706,7 +755,7 @@ class IntegrationController:
 
         if not path.exists():
             return
-        code = ast.parse(path.read_text())
+        code = ast.parse(path.read_text(encoding="utf-8"))
         # find base class of handler.
         #  TODO trace inheritance (is used only for sql handler)
         for item in code.body:
@@ -728,7 +777,7 @@ class IntegrationController:
         init_file = handler_dir / "__init__.py"
         if not init_file.exists():
             return {}
-        code = ast.parse(init_file.read_text())
+        code = ast.parse(init_file.read_text(encoding="utf-8"))
 
         info = {
             "support_level": HANDLER_SUPPORT_LEVEL.COMMUNITY,
@@ -838,7 +887,8 @@ class IntegrationController:
                         name=integration_name,
                         data={},
                         engine=integration_name,
-                        company_id=None,
+                        company_id=ctx.company_id,
+                        user_id=ctx.user_id,
                     )
                     db.session.add(integration_record)
         db.session.commit()

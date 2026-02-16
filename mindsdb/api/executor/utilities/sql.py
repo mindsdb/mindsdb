@@ -5,6 +5,8 @@ import duckdb
 from duckdb import InvalidInputException
 import numpy as np
 import orjson
+import psutil
+import pandas as pd
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant
@@ -52,7 +54,7 @@ def get_query_models(query: ASTNode, default_database: str = None) -> List[tuple
     return _get_query_tables(query, resolve_model_identifier, default_database)
 
 
-def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_functions=None):
+def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_functions=None, prevent_oom=True):
     """Duckdb need to infer column types if column.dtype == object. By default it take 1000 rows,
     but that may be not sufficient for some cases. This func try to run query multiple times
     increasing butch size for type infer
@@ -61,6 +63,7 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
         query_str (str): query to execute
         dataframes (dict): dataframes
         user_functions: functions controller which register new functions in connection
+        prevent_oom: get results if the safe way. Raise exception before memory overflow and application is killed
 
     Returns:
         pandas.DataFrame
@@ -81,8 +84,53 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
             exception = None
             for sample_size in [1000, 10000, 1000000]:
                 try:
+                    # 80% from free RAM
+                    available_ram_mb = int(psutil.virtual_memory().available * 0.8 / 1024**2)
+                    con.execute(f"SET memory_limit = '{available_ram_mb}MB';")
+
                     con.execute(f"set global pandas_analyze_sample={sample_size};")
-                    result_df = con.execute(query_str).fetchdf()
+                    if not prevent_oom:
+                        result_df = con.execute(query_str).fetchdf()
+                    else:
+                        con.execute(query_str)
+                        all_chunks = []
+                        total_rows = 0
+                        ram_per_row = None
+                        available_ram = None
+                        while True:
+                            # get ~4M rows
+                            chunk = con.fetch_df_chunk(2000)
+                            if len(chunk) == 0:
+                                break
+
+                            total_rows += len(chunk)
+
+                            if len(all_chunks) > 0:
+                                # start to check only from second iteration, to skip the cases when result is less 4M rows
+                                if ram_per_row is None:
+                                    # probe ram usage on first 100 rows
+                                    ram_per_row = chunk[:100].memory_usage(deep=True).sum() / 100
+
+                                    available_ram = psutil.virtual_memory().available
+
+                                # reserve *2.4 more memory that object occupies because it might be required in subsequent
+                                #  usage of result (pd.concat and in next steps of planner). +1GB as free reserve
+                                if total_rows * ram_per_row * 2.4 + 1024**3 > available_ram:
+                                    raise RuntimeError(
+                                        f"DuckDB query result doesn't fit into RAM. Total rows in result exceeds {total_rows}. "
+                                        f"If you're joining across databases: try to add WHERE conditions to tables to reduce amount of data before the join"
+                                    )
+
+                            all_chunks.append(chunk)
+                        if len(all_chunks) == 0:
+                            # if no data, we need an empty dataframe with columns
+                            result_df = chunk
+                        elif len(all_chunks) == 1:
+                            result_df = all_chunks[0]
+                        else:
+                            result_df = pd.concat(all_chunks)
+                            del all_chunks
+
                 except InvalidInputException as e:
                     exception = e
                 else:
@@ -241,7 +289,7 @@ def query_dfs(dataframes, query_ast, session=None):
                         f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
                         "Please use DuckDB-supported functions instead."
                     ),
-                    failed_query=query_str,
+                    failed_query=str(query_ast),
                     is_external=False,
                     is_expected=False,
                 )

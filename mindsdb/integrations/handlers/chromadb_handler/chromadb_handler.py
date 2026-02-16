@@ -3,6 +3,7 @@ import ast
 import shutil
 import hashlib
 from typing import Dict, List, Optional, Union
+import threading
 
 import pandas as pd
 import chromadb
@@ -398,24 +399,22 @@ class ChromaDBHandler(VectorStoreHandler):
         # Extract data from DataFrame
         data_dict = df.to_dict(orient="list")
 
-        try:
-            collection.upsert(
-                ids=data_dict[TableField.ID.value],
-                documents=data_dict[TableField.CONTENT.value],
-                embeddings=data_dict.get(TableField.EMBEDDINGS.value, None),
-                metadatas=data_dict.get(TableField.METADATA.value, None),
-            )
-            self._sync()
-        except Exception as e:
-            logger.error(f"Error during upsert operation: {str(e)}")
-            raise Exception(f"Failed to insert/update data: {str(e)}")
-        return Response(RESPONSE_TYPE.OK, affected_rows=len(df))
+        if not hasattr(self._client, "_insert_lock"):
+            self._client._insert_lock = threading.Lock()
 
-    def upsert(self, table_name: str, data: pd.DataFrame):
-        """
-        Alias for insert since insert handles upsert functionality
-        """
-        return self.insert(table_name, data)
+        with self._client._insert_lock:
+            try:
+                collection.upsert(
+                    ids=data_dict[TableField.ID.value],
+                    documents=data_dict[TableField.CONTENT.value],
+                    embeddings=data_dict.get(TableField.EMBEDDINGS.value, None),
+                    metadatas=data_dict.get(TableField.METADATA.value, None),
+                )
+                self._sync()
+            except Exception as e:
+                logger.error(f"Error during upsert operation: {str(e)}")
+                raise Exception(f"Failed to insert/update data: {str(e)}")
+            return Response(RESPONSE_TYPE.OK, affected_rows=len(df))
 
     def update(
         self,
@@ -447,12 +446,20 @@ class ChromaDBHandler(VectorStoreHandler):
         self.connect()
         filters = self._translate_metadata_condition(conditions)
         # get id filters
-        id_filters = [condition.value for condition in conditions if condition.column == TableField.ID.value] or None
+        id_filters = []
+        for condition in conditions:
+            if condition.column != TableField.ID.value:
+                continue
+            value = condition.value
+            if isinstance(value, list):
+                id_filters.extend(value)
+            else:
+                id_filters.append(value)
 
-        if filters is None and id_filters is None:
+        if filters is None and len(id_filters) == 0:
             raise Exception("Delete query must have at least one condition!")
         collection = self._client.get_collection(table_name)
-        collection.delete(ids=id_filters, where=filters)
+        collection.delete(ids=id_filters or None, where=filters)
         self._sync()
 
     def create_table(self, table_name: str, if_not_exists=True):

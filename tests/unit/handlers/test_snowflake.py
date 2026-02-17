@@ -409,7 +409,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             response = self.handler.native_query("SELECT * FROM big_table")
 
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
-        self.assertIn("Not enought memory", response.error_message)
+        self.assertIn("query result is too large", response.error_message)
 
     def test_key_pair_authentication_success(self):
         """

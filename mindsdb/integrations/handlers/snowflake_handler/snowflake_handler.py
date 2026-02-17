@@ -296,7 +296,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
                     batches = []
                     memory_estimation_check_done = False
                     batches_rowcount = 0
-                    total_rowcount = cur.rowcount
+                    total_rowcount = cur.rowcount or 0
                     for batch_df in batches_iter:
                         batches.append(batch_df)
                         # region check the size of first batch (if it is big enough) to get an estimate of the full

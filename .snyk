@@ -1,0 +1,22 @@
+# Snyk policy file.
+# Docs: https://docs.snyk.io/manage-risk/policies/the-.snyk-file
+version: v1.25.0
+
+# Code scan exclusions.
+exclude:
+  global:
+    # Test fixtures and tests.
+    - tests/fixtures/**
+    - "*.test.py"
+    - "*.spec.py"
+
+
+# Runtime language settings.
+language-settings:
+  python: "3.10"
+
+# Known issue ignores (empty by default).
+ignore: {}
+
+# Patched vulnerabilities (none).
+patch: {}

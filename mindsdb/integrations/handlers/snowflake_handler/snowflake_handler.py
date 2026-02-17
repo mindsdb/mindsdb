@@ -1,24 +1,27 @@
-import psutil
+from typing import Any, Optional, List, Generator
+
 import pandas
 from pandas import DataFrame
-from pandas.api import types as pd_types
 from snowflake.sqlalchemy import snowdialect
 from snowflake import connector
 from snowflake.connector.errors import NotSupportedError
-from snowflake.connector.cursor import SnowflakeCursor, ResultMetadata
-from typing import Any, Optional, List
+from snowflake.connector.cursor import ResultMetadata
 
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier
 
-from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
+from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.types.column import Column
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE,
+    TableResponse,
+    OkResponse,
+    ErrorResponse,
+    DataHandlerResponse,
 )
+
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 from .auth_types import (
@@ -50,9 +53,9 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     types_map = {
         ("NUMBER", "DECIMAL", "DEC", "NUMERIC"): MYSQL_DATA_TYPE.DECIMAL,
         ("INT , INTEGER , BIGINT , SMALLINT , TINYINT , BYTEINT"): MYSQL_DATA_TYPE.INT,
-        ("FLOAT", "FLOAT4", "FLOAT8"): MYSQL_DATA_TYPE.FLOAT,
+        ("FLOAT", "FLOAT4", "FLOAT8", "FIXED"): MYSQL_DATA_TYPE.FLOAT,
         ("DOUBLE", "DOUBLE PRECISION", "REAL"): MYSQL_DATA_TYPE.DOUBLE,
-        ("VARCHAR"): MYSQL_DATA_TYPE.VARCHAR,
+        ("VARCHAR",): MYSQL_DATA_TYPE.VARCHAR,
         ("CHAR", "CHARACTER", "NCHAR"): MYSQL_DATA_TYPE.CHAR,
         ("STRING", "TEXT", "NVARCHAR"): MYSQL_DATA_TYPE.TEXT,
         ("NVARCHAR2", "CHAR VARYING", "NCHAR VARYING"): MYSQL_DATA_TYPE.VARCHAR,
@@ -61,9 +64,11 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
         ("TIMESTAMP_NTZ", "DATETIME"): MYSQL_DATA_TYPE.DATETIME,
         ("DATE",): MYSQL_DATA_TYPE.DATE,
         ("TIME",): MYSQL_DATA_TYPE.TIME,
-        ("TIMESTAMP_LTZ"): MYSQL_DATA_TYPE.DATETIME,
-        ("TIMESTAMP_TZ"): MYSQL_DATA_TYPE.DATETIME,
-        ("VARIANT", "OBJECT", "ARRAY", "MAP", "GEOGRAPHY", "GEOMETRY", "VECTOR"): MYSQL_DATA_TYPE.VARCHAR,
+        ("TIMESTAMP_LTZ",): MYSQL_DATA_TYPE.DATETIME,
+        ("TIMESTAMP_TZ",): MYSQL_DATA_TYPE.DATETIME,
+        ("OBJECT", "ARRAY"): MYSQL_DATA_TYPE.JSON,
+        ("VECTOR",): MYSQL_DATA_TYPE.VECTOR,
+        ("VARIANT", "MAP", "GEOGRAPHY", "GEOMETRY", "VECTOR"): MYSQL_DATA_TYPE.VARCHAR,
     }
 
     for db_types_list, mysql_data_type in types_map.items():
@@ -73,101 +78,35 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     logger.debug(f"Snowflake handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
     return MYSQL_DATA_TYPE.VARCHAR
 
-
-def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response:
-    """Build response from result and cursor.
-    NOTE: Snowflake return only 'general' type in description, so look on result's
-          DF types and use types from description only if DF type is 'object'
+def _get_columns(description: list[ResultMetadata]) -> list[Column]:
+    """Get columns from Snowflake cursor description.
 
     Args:
-        result (DataFrame): result of the query.
-        cursor (SnowflakeCursor): cursor object.
+        description (list[ResultMetadata]): cursor description metadata.
 
     Returns:
-        Response: response object.
+        list[Column]: list of columns with mapped MySQL types.
     """
-    description: list[ResultMetadata] = cursor.description
-    mysql_types: list[MYSQL_DATA_TYPE] = []
+    result = []
     for column in description:
-        column_dtype = result[column.name].dtype
-        description_column_type = connector.constants.FIELD_ID_TO_NAME.get(column.type_code)
-        if description_column_type in ("OBJECT", "ARRAY"):
-            mysql_types.append(MYSQL_DATA_TYPE.JSON)
-            continue
-        if description_column_type == "VECTOR":
-            mysql_types.append(MYSQL_DATA_TYPE.VECTOR)
-            continue
-        if pd_types.is_integer_dtype(column_dtype):
-            column_dtype_name = column_dtype.name
-            if column_dtype_name in ("int8", "Int8"):
-                mysql_types.append(MYSQL_DATA_TYPE.TINYINT)
-            elif column_dtype in ("int16", "Int16"):
-                mysql_types.append(MYSQL_DATA_TYPE.SMALLINT)
-            elif column_dtype in ("int32", "Int32"):
-                mysql_types.append(MYSQL_DATA_TYPE.MEDIUMINT)
-            elif column_dtype in ("int64", "Int64"):
-                mysql_types.append(MYSQL_DATA_TYPE.BIGINT)
+        sf_type_name = connector.constants.FIELD_ID_TO_NAME.get(column.type_code)
+        if sf_type_name is None:
+            logger.warning(f"Snowflake handler: unknown type code: {column.type_code}")
+            mysql_type = MYSQL_DATA_TYPE.VARCHAR
+        else:
+            if sf_type_name == 'FIXED':
+                if column.scale == 0:
+                    mysql_type = MYSQL_DATA_TYPE.INT
+                else:
+                    # It is NUMBER, DECIMAL or NUMERIC with scale > 0
+                    mysql_type = MYSQL_DATA_TYPE.FLOAT
             else:
-                mysql_types.append(MYSQL_DATA_TYPE.INT)
-            continue
-        if pd_types.is_float_dtype(column_dtype):
-            column_dtype_name = column_dtype.name
-            if column_dtype_name in ("float16", "Float16"):  # Float16 does not exists so far
-                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
-            elif column_dtype_name in ("float32", "Float32"):
-                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
-            elif column_dtype_name in ("float64", "Float64"):
-                mysql_types.append(MYSQL_DATA_TYPE.DOUBLE)
-            else:
-                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
-            continue
-        if pd_types.is_bool_dtype(column_dtype):
-            mysql_types.append(MYSQL_DATA_TYPE.BOOLEAN)
-            continue
-        if pd_types.is_datetime64_any_dtype(column_dtype):
-            mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
-            series = result[column.name]
-            # snowflake use pytz.timezone
-            if series.dt.tz is not None and getattr(series.dt.tz, "zone", "UTC") != "UTC":
-                series = series.dt.tz_convert("UTC")
-                result[column.name] = series.dt.tz_localize(None)
-            continue
+                mysql_type = _map_type(sf_type_name)
 
-        if pd_types.is_object_dtype(column_dtype):
-            if description_column_type == "TEXT":
-                # we can also check column.internal_size, if == 16777216 then it is TEXT, else VARCHAR(internal_size)
-                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
-                continue
-            elif description_column_type == "BINARY":
-                # if column.internal_size == 8388608 then BINARY, else VARBINARY(internal_size)
-                mysql_types.append(MYSQL_DATA_TYPE.BINARY)
-                continue
-            elif description_column_type == "DATE":
-                mysql_types.append(MYSQL_DATA_TYPE.DATE)
-                continue
-            elif description_column_type == "TIME":
-                mysql_types.append(MYSQL_DATA_TYPE.TIME)
-                continue
-
-        if description_column_type == "FIXED":
-            if column.scale == 0:
-                mysql_types.append(MYSQL_DATA_TYPE.INT)
-            else:
-                # It is NUMBER, DECIMAL or NUMERIC with scale > 0
-                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
-            continue
-        elif description_column_type == "REAL":
-            mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
-            continue
-
-        mysql_types.append(MYSQL_DATA_TYPE.TEXT)
-
-    df = DataFrame(
-        result,
-        columns=[column.name for column in description],
-    )
-
-    return Response(RESPONSE_TYPE.TABLE, data_frame=df, affected_rows=None, mysql_types=mysql_types)
+        result.append(
+            Column(name=column.name, type=mysql_type, original_type=sf_type_name)
+        )
+    return result
 
 
 class SnowflakeHandler(MetaDatabaseHandler):
@@ -269,88 +208,78 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> Response:
-        """
-        Executes a SQL query on the Snowflake account and returns the result.
+    def native_query(self, query: str, stream: bool = True, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
+        """Executes a SQL query on the Snowflake account and returns the result.
 
         Args:
             query (str): The SQL query to be executed.
+            stream (bool): If True - return TableResponse with generator inside.
 
         Returns:
-            Response: A response object containing the result of the query or an error message.
+            DataHandlerResponse: A response object containing the result of the query or an error message.
         """
+        generator = self._execute_fetch_batches(query)
+        try:
+            response: TableResponse = next(generator)
+            response.data_generator = generator
+            if stream is False:
+                response.fetchall()
+        except StopIteration as e:
+            response = e.value
+            if isinstance(response, DataHandlerResponse) is False:
+                raise
 
-        need_to_close = self.is_connected is False
+        return response
 
+    def _execute_fetch_batches(self, query: str) -> Generator[TableResponse | pandas.DataFrame, None, OkResponse | ErrorResponse]:
+        """Execute a SQL query and yield results in batches.
+
+        Args:
+            query (str): The SQL query to execute.
+
+        Yields:
+            TableResponse: First yield — response with column metadata and affected row count.
+            pandas.DataFrame: Subsequent yields — batches of query results.
+
+        Returns:
+            OkResponse: For DML statements (INSERT/DELETE/UPDATE) with affected row count.
+            ErrorResponse: If an exception occurs during query execution.
+        """
         connection = self.connect()
-        with connection.cursor(connector.DictCursor) as cur:
+        with connection.cursor(connector.DictCursor) as cursor:
             try:
-                cur.execute(query)
+                cursor.execute(query)
                 try:
                     try:
-                        batches_iter = cur.fetch_pandas_batches()
+                        batches_iter = cursor.fetch_pandas_batches()
                     except ValueError:
                         # duplicated columns raises ValueError
                         raise NotSupportedError()
-
-                    batches = []
-                    memory_estimation_check_done = False
-
+                    columns = _get_columns(cursor.description)
+                    yield TableResponse(affected_rows=cursor.rowcount, columns=columns)
                     for batch_df in batches_iter:
-                        batches.append(batch_df)
-                        # region check the size of first batch (if it is big enough) to get an estimate of the full
-                        # dataset size. If i does not fit in memory - raise an error.
-                        # NOTE batch size cannot be set on client side. Also, Snowflake will download
-                        # 'CLIENT_PREFETCH_THREADS' count of chunks in parallel (by default 4), therefore this check
-                        # can not work in some cases.
-                        batches_rowcount = sum([len(x) for x in batches])
-                        if memory_estimation_check_done is False and batches_rowcount > 1000:
-                            memory_estimation_check_done = True
-                            available_memory_kb = psutil.virtual_memory().available >> 10
-                            batches_size_kb = sum(
-                                [(x.memory_usage(index=True, deep=True).sum() >> 10) for x in batches]
-                            )
-                            total_rowcount = cur.rowcount
-                            rest_rowcount = total_rowcount - batches_rowcount
-                            rest_estimated_size_kb = int((rest_rowcount / batches_rowcount) * batches_size_kb)
-                            if (available_memory_kb * 0.9) < rest_estimated_size_kb:
-                                logger.error(
-                                    "Attempt to get too large dataset:\n"
-                                    f"batches_rowcount={batches_rowcount}, size_kb={batches_size_kb}\n"
-                                    f"total_rowcount={total_rowcount}, estimated_size_kb={rest_estimated_size_kb}\n"
-                                    f"available_memory_kb={available_memory_kb}"
-                                )
-                                raise MemoryError("Not enought memory")
-                        # endregion
-                    if len(batches) > 0:
-                        response = _make_table_response(result=pandas.concat(batches, ignore_index=True), cursor=cur)
-                    else:
-                        response = Response(RESPONSE_TYPE.TABLE, DataFrame([], columns=[x[0] for x in cur.description]))
+                        yield batch_df
                 except NotSupportedError:
                     # Fallback for CREATE/DELETE/UPDATE. These commands returns table with single column,
                     # but it cannot be retrieved as pandas DataFrame.
-                    result = cur.fetchall()
+                    result = cursor.fetchall()
                     match result:
                         case (
                             [{"number of rows inserted": affected_rows}]
                             | [{"number of rows deleted": affected_rows}]
                             | [{"number of rows updated": affected_rows, "number of multi-joined rows updated": _}]
                         ):
-                            response = Response(RESPONSE_TYPE.OK, affected_rows=affected_rows)
+                            response = OkResponse(affected_rows=affected_rows)
                         case list():
-                            response = Response(
-                                RESPONSE_TYPE.TABLE, DataFrame(result, columns=[x[0] for x in cur.description])
-                            )
+                            response = TableResponse(data=DataFrame(result, columns=[x[0] for x in cursor.description]))
                         case _:
                             # Looks like SnowFlake always returns something in response, so this is suspicious
                             logger.warning("Snowflake did not return any data in response.")
-                            response = Response(RESPONSE_TYPE.OK)
+                            response = OkResponse()
+                    return response
             except Exception as e:
                 logger.error(f"Error running query: {query} on {self.connection_data.get('database')}, {e}!")
-                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
-
-        if need_to_close is True:
-            self.disconnect()
+                return ErrorResponse(error_code=0, error_message=str(e))
 
         if memory_pool is not None and memory_pool.backend_name == "jemalloc":
             # This reduce memory consumption, but will slow down next query slightly.
@@ -358,9 +287,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             # and next query processing time may be even lower.
             memory_pool.release_unused()
 
-        return response
-
-    def query(self, query: ASTNode) -> Response:
+    def query(self, query: ASTNode) -> DataHandlerResponse:
         """
         Executes a SQL query represented by an ASTNode and retrieves the data.
 
@@ -368,7 +295,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             query (ASTNode): An ASTNode representing the SQL query to be executed.
 
         Returns:
-            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+            DataHandlerResponse: The response from the `native_query` method, containing the result of the SQL query execution.
         """
 
         query_str = self.renderer.get_string(query, with_failback=True)
@@ -398,12 +325,12 @@ class SnowflakeHandler(MetaDatabaseHandler):
             result.data_frame = result.data_frame.rename(columns=rename_columns)
         return result
 
-    def get_tables(self) -> Response:
+    def get_tables(self) -> DataHandlerResponse:
         """
         Retrieves a list of all non-system tables and views in the current schema of the Snowflake account.
 
         Returns:
-            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
+            DataHandlerResponse: A response object containing the list of tables and views.
         """
 
         query = """
@@ -414,7 +341,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         """
         return self.native_query(query)
 
-    def get_columns(self, table_name) -> Response:
+    def get_columns(self, table_name) -> DataHandlerResponse:
         """
         Retrieves column details for a specified table in the Snowflake account.
 
@@ -422,7 +349,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             table_name (str): The name of the table for which to retrieve column information.
 
         Returns:
-            Response: A response object containing the column details, formatted as per the `Response` class.
+            DataHandlerResponse: A response object containing the column details.
 
         Raises:
             ValueError: If the 'table_name' is not a valid string.
@@ -454,7 +381,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
         return result
 
-    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> DataHandlerResponse:
         """
         Retrieves metadata information about the tables in the Snowflake database to be stored in the data catalog.
 
@@ -462,7 +389,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             table_names (list): A list of table names for which to retrieve metadata information.
 
         Returns:
-            Response: A response object containing the metadata information, formatted as per the `Response` class.
+            DataHandlerResponse: A response object containing the metadata information.
         """
         query = """
             SELECT
@@ -488,7 +415,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
         return result
 
-    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> DataHandlerResponse:
         """
         Retrieves column metadata for the specified tables (or all tables if no list is provided).
 
@@ -496,7 +423,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             table_names (list): A list of table names for which to retrieve column metadata.
 
         Returns:
-            Response: A response object containing the column metadata.
+            DataHandlerResponse: A response object containing the column metadata.
         """
         query = """
             SELECT
@@ -524,7 +451,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> DataHandlerResponse:
         """
         Retrieves basic column statistics: null %, distinct count.
         Due to Snowflake limitations, this runs per-table not per-column.
@@ -541,11 +468,11 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
         columns_result = self.native_query(columns_query)
         if (
-            columns_result.type == RESPONSE_TYPE.ERROR
+            isinstance(columns_result, ErrorResponse)
             or columns_result.data_frame is None
             or columns_result.data_frame.empty
         ):
-            return Response(RESPONSE_TYPE.ERROR, error_message="No columns found.")
+            return ErrorResponse(error_message="No columns found.")
 
         columns_df = columns_result.data_frame
         grouped = columns_df.groupby("TABLE_NAME")
@@ -573,9 +500,9 @@ class SnowflakeHandler(MetaDatabaseHandler):
             """
             try:
                 stats_res = self.native_query(stats_query)
-                if stats_res.type != RESPONSE_TYPE.TABLE or stats_res.data_frame is None or stats_res.data_frame.empty:
+                if not isinstance(stats_res, TableResponse) or stats_res.data_frame is None or stats_res.data_frame.empty:
                     logger.warning(
-                        f"Could not retrieve stats for table {table_name}. Query returned no data or an error: {stats_res.error_message if stats_res.type == RESPONSE_TYPE.ERROR else 'No data'}"
+                        f"Could not retrieve stats for table {table_name}. Query returned no data or an error: {stats_res.error_message if isinstance(stats_res, ErrorResponse) else 'No data'}"
                     )
                     # Add placeholder stats if query fails or returns empty
                     for _, row in group.iterrows():
@@ -634,11 +561,11 @@ class SnowflakeHandler(MetaDatabaseHandler):
                     )
 
         if not all_stats:
-            return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame())
+            return TableResponse(data=pandas.DataFrame())
 
-        return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame(all_stats))
+        return TableResponse(data=pandas.DataFrame(all_stats))
 
-    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> DataHandlerResponse:
         """
         Retrieves primary key information for the specified tables (or all tables if no list is provided).
 
@@ -646,7 +573,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             table_names (list): A list of table names for which to retrieve primary key information.
 
         Returns:
-            Response: A response object containing the primary key information.
+            DataHandlerResponse: A response object containing the primary key information.
         """
         try:
             query = """
@@ -654,7 +581,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             """
 
             response = self.native_query(query)
-            if response.type == RESPONSE_TYPE.ERROR and response.error_message:
+            if isinstance(response, ErrorResponse):
                 logger.error(f"Query error in meta_get_primary_keys: {response.error_message}\nQuery:\n{query}")
 
             df = response.data_frame
@@ -671,9 +598,9 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
         except Exception as e:
             logger.error(f"Exception in meta_get_primary_keys: {e!r}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=f"Exception querying primary keys: {e!r}")
+            return ErrorResponse(error_message=f"Exception querying primary keys: {e!r}")
 
-    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> DataHandlerResponse:
         """
         Retrieves foreign key information for the specified tables (or all tables if no list is provided).
 
@@ -681,7 +608,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             table_names (list): A list of table names for which to retrieve foreign key information.
 
         Returns:
-            Response: A response object containing the foreign key information.
+            DataHandlerResponse: A response object containing the foreign key information.
         """
         try:
             query = """
@@ -689,7 +616,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             """
 
             response = self.native_query(query)
-            if response.type == RESPONSE_TYPE.ERROR and response.error_message:
+            if isinstance(response, ErrorResponse):
                 logger.error(f"Query error in meta_get_primary_keys: {response.error_message}\nQuery:\n{query}")
 
             df = response.data_frame
@@ -713,7 +640,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
         except Exception as e:
             logger.error(f"Exception in meta_get_primary_keys: {e!r}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=f"Exception querying primary keys: {e!r}")
+            return ErrorResponse(error_message=f"Exception querying primary keys: {e!r}")
 
     def meta_get_handler_info(self, **kwargs: Any) -> str:
         """

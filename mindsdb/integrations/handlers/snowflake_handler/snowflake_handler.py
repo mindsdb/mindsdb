@@ -78,6 +78,7 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     logger.debug(f"Snowflake handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
     return MYSQL_DATA_TYPE.VARCHAR
 
+
 def _get_columns(description: list[ResultMetadata]) -> list[Column]:
     """Get columns from Snowflake cursor description.
 
@@ -94,7 +95,7 @@ def _get_columns(description: list[ResultMetadata]) -> list[Column]:
             logger.warning(f"Snowflake handler: unknown type code: {column.type_code}")
             mysql_type = MYSQL_DATA_TYPE.VARCHAR
         else:
-            if sf_type_name == 'FIXED':
+            if sf_type_name == "FIXED":
                 if column.scale == 0:
                     mysql_type = MYSQL_DATA_TYPE.INT
                 else:
@@ -103,9 +104,7 @@ def _get_columns(description: list[ResultMetadata]) -> list[Column]:
             else:
                 mysql_type = _map_type(sf_type_name)
 
-        result.append(
-            Column(name=column.name, type=mysql_type, original_type=sf_type_name)
-        )
+        result.append(Column(name=column.name, type=mysql_type, original_type=sf_type_name))
     return result
 
 
@@ -231,7 +230,9 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
         return response
 
-    def _execute_fetch_batches(self, query: str) -> Generator[TableResponse | pandas.DataFrame, None, OkResponse | ErrorResponse]:
+    def _execute_fetch_batches(
+        self, query: str
+    ) -> Generator[TableResponse | pandas.DataFrame, None, OkResponse | ErrorResponse]:
         """Execute a SQL query and yield results in batches.
 
         Args:
@@ -500,7 +501,11 @@ class SnowflakeHandler(MetaDatabaseHandler):
             """
             try:
                 stats_res = self.native_query(stats_query)
-                if not isinstance(stats_res, TableResponse) or stats_res.data_frame is None or stats_res.data_frame.empty:
+                if (
+                    not isinstance(stats_res, TableResponse)
+                    or stats_res.data_frame is None
+                    or stats_res.data_frame.empty
+                ):
                     logger.warning(
                         f"Could not retrieve stats for table {table_name}. Query returned no data or an error: {stats_res.error_message if isinstance(stats_res, ErrorResponse) else 'No data'}"
                     )

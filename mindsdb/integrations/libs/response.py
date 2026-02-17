@@ -147,9 +147,7 @@ def _safe_pandas_concat(pieces: list[pandas.DataFrame]) -> pandas.DataFrame:
         MemoryError: If there is insufficient memory to perform the concatenation safely.
     """
     available_memory_kb = psutil.virtual_memory().available >> 10
-    pieces_size_kb = sum(
-        [(x.memory_usage(index=True, deep=True).sum() >> 10) for x in pieces]
-    )
+    pieces_size_kb = sum([(x.memory_usage(index=True, deep=True).sum() >> 10) for x in pieces])
     if pieces_size_kb * 2.5 < available_memory_kb:
         raise MemoryError()
     return pandas.concat(pieces)

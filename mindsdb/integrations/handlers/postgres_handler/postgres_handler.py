@@ -76,7 +76,7 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     return fallback_type
 
 
-def _get_colums(cursor: Cursor) -> list[Column]:
+def _get_columns(cursor: Cursor) -> list[Column]:
     """Get columns from cursor.
 
     Args:
@@ -354,7 +354,7 @@ class PostgresHandler(MetaDatabaseHandler):
                     response = OkResponse(affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
-                    columns: list[Column] = _get_colums(cur)
+                    columns: list[Column] = _get_columns(cur)
                     response = TableResponse(
                         affected_rows=cur.rowcount, columns=columns, data=_make_df(result, columns)
                     )
@@ -397,7 +397,7 @@ class PostgresHandler(MetaDatabaseHandler):
                     connection.commit()
                     return OkResponse(affected_rows=cursor.rowcount)
 
-                columns: list[Column] = _get_colums(cursor)
+                columns: list[Column] = _get_columns(cursor)
                 yield TableResponse(affected_rows=cursor.rowcount, columns=columns)
                 while result := cursor.fetchmany(size=mindsdb_config["data_stream"]["fetch_size"]):
                     yield _make_df(result, columns)

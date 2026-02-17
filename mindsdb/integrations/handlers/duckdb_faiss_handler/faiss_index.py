@@ -421,17 +421,19 @@ class FaissIVFIndex(FaissIndex):
         if nlist is None:
             nlist = self.config.nlist
 
+        if self.index is None:
+            ntotal = 0
+        else:
+            ntotal = self.index.ntotal
+
         nlist_k = 39
         if train_count is not None:
             if train_count < nlist * nlist_k:
                 raise ValueError(f"Train_count can't be less than nlist * {nlist_k} (is {nlist * nlist_k})")
         else:
-            train_count = nlist * nlist_k
+            # get 10k if possible but not less than nlist * k
+            train_count = max(nlist * nlist_k, min(ntotal, 10000))
 
-        if self.index is None:
-            ntotal = 0
-        else:
-            ntotal = self.index.ntotal
         if train_count > ntotal:
             raise ValueError(f"Not enough data to create index: {ntotal}, at least {train_count} records are required")
 

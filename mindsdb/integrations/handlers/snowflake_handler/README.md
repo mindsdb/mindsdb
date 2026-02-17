@@ -126,6 +126,7 @@ Required parameters:
 * `user`: The username for the Snowflake account.
 * `database`: The name of the Snowflake database to connect to.
 * `auth_type`: The authentication type to use. Options: `"password"` or `"key_pair"`.
+* `schema`: The database schema to use within the Snowflake database.
 
 Authentication parameters (one method required):
 

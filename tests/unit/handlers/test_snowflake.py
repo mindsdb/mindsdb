@@ -38,6 +38,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             user="example_user",
             password="example_pass",
             database="example_db",
+            schema="example_schema",
             auth_type="password",
         )
 
@@ -107,6 +108,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key_path=private_key_path,
             auth_type="key_pair",
         )
@@ -407,7 +409,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             response = self.handler.native_query("SELECT * FROM big_table")
 
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
-        self.assertIn("Not enought memory", response.error_message)
+        self.assertIn("query result is too large", response.error_message)
 
     def test_key_pair_authentication_success(self):
         """
@@ -488,6 +490,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key="-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----",
             auth_type="key_pair",
         )
@@ -526,6 +529,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key="-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----",
             private_key_passphrase="inline-pass",
             auth_type="key_pair",
@@ -561,6 +565,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key_path="/nonexistent/path/to/key.pem",
             auth_type="key_pair",
         )
@@ -584,6 +589,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 account="tvuibdy-vm85921",
                 user="example_user",
                 database="example_db",
+                schema="example_schema",
                 private_key_path=temp_key_path,
                 auth_type="key_pair",
             )
@@ -826,7 +832,14 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(result.data_frame.iloc[0]["TABLE_NAME"], "ORDERS")
 
     def test_meta_get_column_statistics_success(self):
-        columns_df = DataFrame({"TABLE_NAME": ["ORDERS", "ORDERS"], "COLUMN_NAME": ["ID", "AMOUNT"]})
+        columns_df = DataFrame(
+            {
+                "TABLE_SCHEMA": ["PUBLIC", "PUBLIC"],
+                "TABLE_NAME": ["ORDERS", "ORDERS"],
+                "COLUMN_NAME": ["ID", "AMOUNT"],
+                "DATA_TYPE": ["NUMBER", "NUMBER"],
+            }
+        )
         stats_df = DataFrame(
             [
                 {

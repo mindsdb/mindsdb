@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.impala_handler.impala_handler import ImpalaHandler
+from mindsdb.integrations.handlers.community.impala_handler.impala_handler import ImpalaHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

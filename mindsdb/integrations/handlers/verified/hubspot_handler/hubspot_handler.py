@@ -3,7 +3,7 @@ import pandas as pd
 from pandas.api import types as pd_types
 from hubspot import HubSpot
 
-from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
+from mindsdb.integrations.handlers.verified.hubspot_handler.hubspot_tables import (
     ContactsTable,
     CompaniesTable,
     DealsTable,
@@ -19,7 +19,7 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     to_internal_property,
     HUBSPOT_TABLE_COLUMN_DEFINITIONS,
 )
-from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_tables import (
+from mindsdb.integrations.handlers.verified.hubspot_handler.hubspot_association_tables import (
     ASSOCIATION_TABLE_CLASSES,
 )
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler

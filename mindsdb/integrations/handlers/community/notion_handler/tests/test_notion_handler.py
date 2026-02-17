@@ -2,8 +2,8 @@ import unittest
 
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.notion_handler.notion_handler import NotionHandler
-from mindsdb.integrations.handlers.notion_handler.notion_table import (
+from mindsdb.integrations.handlers.community.notion_handler.notion_handler import NotionHandler
+from mindsdb.integrations.handlers.community.notion_handler.notion_table import (
     NotionDatabaseTable,
     NotionBlocksTable,
     NotionCommentsTable,

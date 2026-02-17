@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.instatus_handler.instatus_tables import StatusPages, Components
+from mindsdb.integrations.handlers.community.instatus_handler.instatus_tables import StatusPages, Components
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log

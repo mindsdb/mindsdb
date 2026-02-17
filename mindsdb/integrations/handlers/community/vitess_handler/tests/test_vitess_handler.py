@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.vitess_handler.vitess_handler import VitessHandler
+from mindsdb.integrations.handlers.community.vitess_handler.vitess_handler import VitessHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
 

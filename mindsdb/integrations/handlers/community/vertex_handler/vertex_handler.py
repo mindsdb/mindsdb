@@ -1,6 +1,6 @@
 import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.handlers.vertex_handler.vertex_client import VertexClient
+from mindsdb.integrations.handlers.community.vertex_handler.vertex_client import VertexClient
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

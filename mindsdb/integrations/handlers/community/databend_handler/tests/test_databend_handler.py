@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.databend_handler.databend_handler import DatabendHandler
+from mindsdb.integrations.handlers.community.databend_handler.databend_handler import DatabendHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

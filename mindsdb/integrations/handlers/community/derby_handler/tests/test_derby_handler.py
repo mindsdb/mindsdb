@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.derby_handler.derby_handler import DerbyHandler
+from mindsdb.integrations.handlers.community.derby_handler.derby_handler import DerbyHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

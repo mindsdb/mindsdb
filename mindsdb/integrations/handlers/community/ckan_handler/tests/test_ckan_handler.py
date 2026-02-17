@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from mindsdb.integrations.handlers.ckan_handler.ckan_handler import CkanHandler
+from mindsdb.integrations.handlers.community.ckan_handler.ckan_handler import CkanHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb_sql_parser import ast
 
@@ -11,7 +11,7 @@ class CkanHandlerTest(unittest.TestCase):
             "url": "http://mock-ckan-url.com",
             "api_key": "mock_api_key"
         })
-        self.patcher = patch('mindsdb.integrations.handlers.ckan_handler.ckan_handler.RemoteCKAN')
+        self.patcher = patch('mindsdb.integrations.handlers.community.ckan_handler.ckan_handler.RemoteCKAN')
         self.mock_ckan = self.patcher.start()
         self.mock_ckan_instance = MagicMock()
         self.mock_ckan.return_value = self.mock_ckan_instance

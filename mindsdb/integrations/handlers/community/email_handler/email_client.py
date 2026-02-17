@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 
 import pandas as pd
-from mindsdb.integrations.handlers.email_handler.settings import EmailSearchOptions, EmailConnectionDetails
+from mindsdb.integrations.handlers.community.email_handler.settings import EmailSearchOptions, EmailConnectionDetails
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

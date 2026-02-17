@@ -1,9 +1,9 @@
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_api import (
+from mindsdb.integrations.handlers.community.sharepoint_handler.sharepoint_api import (
     SharepointAPI,
 )
-from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_tables import (
+from mindsdb.integrations.handlers.community.sharepoint_handler.sharepoint_tables import (
     ListsTable,
     SitesTable,
     ListItemsTable,

@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.intercom_handler.intercom_tables import Articles
+from mindsdb.integrations.handlers.community.intercom_handler.intercom_tables import Articles
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb_sql_parser import parse_sql

@@ -1,5 +1,5 @@
 import symbl
-from mindsdb.integrations.handlers.symbl_handler.symbl_tables import (
+from mindsdb.integrations.handlers.community.symbl_handler.symbl_tables import (
     GetConversationTable,
     GetMessagesTable,
     GetTopicsTable,

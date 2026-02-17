@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.ibm_cos_handler.ibm_cos_handler import (
+from mindsdb.integrations.handlers.community.ibm_cos_handler.ibm_cos_handler import (
     IBMCloudObjectStorageHandler,
 )
 

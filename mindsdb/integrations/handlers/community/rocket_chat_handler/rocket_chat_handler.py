@@ -2,7 +2,7 @@ import pandas as pd
 
 from rocketchat_API.rocketchat import RocketChat
 
-from mindsdb.integrations.handlers.rocket_chat_handler.rocket_chat_tables import (
+from mindsdb.integrations.handlers.community.rocket_chat_handler.rocket_chat_tables import (
     ChannelMessagesTable, ChannelsTable, DirectsTable, DirectMessagesTable, UsersTable)
 from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.integrations.libs.response import (

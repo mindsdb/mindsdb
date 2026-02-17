@@ -2,8 +2,8 @@ from collections import OrderedDict
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from mindsdb.integrations.handlers.sap_erp_handler.api import SAPERP
-from mindsdb.integrations.handlers.sap_erp_handler.sap_erp_tables import (
+from mindsdb.integrations.handlers.community.sap_erp_handler.api import SAPERP
+from mindsdb.integrations.handlers.community.sap_erp_handler.sap_erp_tables import (
     AddressEmailAddressTable,
     AddressFaxNumberTable,
     AddressHomePageURLTable,

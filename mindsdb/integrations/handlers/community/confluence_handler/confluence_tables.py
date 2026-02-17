@@ -2,7 +2,7 @@ from typing import List
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
+from mindsdb.integrations.handlers.community.confluence_handler.confluence_api_client import ConfluenceAPIClient
 from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 from mindsdb.utilities import log

@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.gmail_handler.gmail_handler import GmailHandler
+from mindsdb.integrations.handlers.community.gmail_handler.gmail_handler import GmailHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 import unittest
 

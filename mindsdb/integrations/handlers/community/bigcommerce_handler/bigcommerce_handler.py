@@ -1,7 +1,7 @@
 from typing import Any
 
-from mindsdb.integrations.handlers.bigcommerce_handler.bigcommerce_api_client import BigCommerceAPIClient
-from mindsdb.integrations.handlers.bigcommerce_handler.bigcommerce_tables import (
+from mindsdb.integrations.handlers.community.bigcommerce_handler.bigcommerce_api_client import BigCommerceAPIClient
+from mindsdb.integrations.handlers.community.bigcommerce_handler.bigcommerce_tables import (
     BigCommerceOrdersTable,
     BigCommerceProductsTable,
     BigCommerceCustomersTable,

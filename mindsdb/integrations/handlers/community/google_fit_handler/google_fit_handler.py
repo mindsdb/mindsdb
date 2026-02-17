@@ -14,7 +14,7 @@ from googleapiclient.errors import HttpError
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.utilities import log
-from mindsdb.integrations.handlers.google_fit_handler.google_fit_tables import GoogleFitTable
+from mindsdb.integrations.handlers.community.google_fit_handler.google_fit_tables import GoogleFitTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

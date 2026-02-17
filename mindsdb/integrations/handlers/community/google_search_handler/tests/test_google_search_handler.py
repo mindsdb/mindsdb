@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.google_search_handler.google_search_handler import GoogleSearchConsoleHandler
+from mindsdb.integrations.handlers.community.google_search_handler.google_search_handler import GoogleSearchConsoleHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

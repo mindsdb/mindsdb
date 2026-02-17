@@ -6,8 +6,8 @@ import chardet
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.email_handler.email_client import EmailClient
-from mindsdb.integrations.handlers.email_handler.settings import EmailSearchOptions
+from mindsdb.integrations.handlers.community.email_handler.email_client import EmailClient
+from mindsdb.integrations.handlers.community.email_handler.settings import EmailSearchOptions
 
 
 class EmailIngestor:

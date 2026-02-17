@@ -1,12 +1,12 @@
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.aqicn_handler.aqicn_tables import (
+from mindsdb.integrations.handlers.community.aqicn_handler.aqicn_tables import (
     AQByUserLocationTable,
     AQByCityTable,
     AQByLatLngTable,
     AQByNetworkStationTable
 )
-from mindsdb.integrations.handlers.aqicn_handler.aqicn import AQIClient
+from mindsdb.integrations.handlers.community.aqicn_handler.aqicn import AQIClient
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

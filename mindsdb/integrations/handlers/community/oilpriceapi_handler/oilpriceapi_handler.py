@@ -1,8 +1,8 @@
-from mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi_tables import (
+from mindsdb.integrations.handlers.community.oilpriceapi_handler.oilpriceapi_tables import (
     OilPriceLatestTable,
     OilPricePastDayPriceTable
 )
-from mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi import OilPriceAPIClient
+from mindsdb.integrations.handlers.community.oilpriceapi_handler.oilpriceapi import OilPriceAPIClient
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

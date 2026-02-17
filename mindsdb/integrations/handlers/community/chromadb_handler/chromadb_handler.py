@@ -9,7 +9,7 @@ import pandas as pd
 import chromadb
 from chromadb.api.shared_system_client import SharedSystemClient
 
-from mindsdb.integrations.handlers.chromadb_handler.settings import ChromaHandlerConfig
+from mindsdb.integrations.handlers.community.chromadb_handler.settings import ChromaHandlerConfig
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response

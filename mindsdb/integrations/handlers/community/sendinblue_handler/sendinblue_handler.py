@@ -1,6 +1,6 @@
 import sib_api_v3_sdk
 
-from mindsdb.integrations.handlers.sendinblue_handler.sendinblue_tables import EmailCampaignsTable
+from mindsdb.integrations.handlers.community.sendinblue_handler.sendinblue_tables import EmailCampaignsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

@@ -1,6 +1,6 @@
 import unittest
 
-from mindsdb.integrations.handlers.d0lt_handler.d0lt_handler import D0ltHandler
+from mindsdb.integrations.handlers.community.d0lt_handler.d0lt_handler import D0ltHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

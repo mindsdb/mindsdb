@@ -4,7 +4,7 @@ import shopify
 import requests
 import pandas as pd
 
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
+from mindsdb.integrations.handlers.verified.shopify_handler.shopify_tables import (
     ProductsTable,
     ProductVariantsTable,
     CustomersTable,

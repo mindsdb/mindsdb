@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.youtube_handler.youtube_tables import (
+from mindsdb.integrations.handlers.community.youtube_handler.youtube_tables import (
     YoutubeCommentsTable,
     YoutubeChannelsTable,
     YoutubeVideosTable,

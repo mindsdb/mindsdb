@@ -4,7 +4,7 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.handlers.faunadb_handler.faunadb_handler import (
+from mindsdb.integrations.handlers.community.faunadb_handler.faunadb_handler import (
     FaunaDBHandler,
 )
 

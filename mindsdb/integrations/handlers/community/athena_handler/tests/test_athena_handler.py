@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 from collections import OrderedDict
-from mindsdb.integrations.handlers.athena_handler.athena_handler import AthenaHandler
+from mindsdb.integrations.handlers.community.athena_handler.athena_handler import AthenaHandler
 
 
 class CursorContextManager(Mock):

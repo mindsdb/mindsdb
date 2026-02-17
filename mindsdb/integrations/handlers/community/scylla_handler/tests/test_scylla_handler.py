@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.scylla_handler.scylla_handler import ScyllaHandler
+from mindsdb.integrations.handlers.community.scylla_handler.scylla_handler import ScyllaHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

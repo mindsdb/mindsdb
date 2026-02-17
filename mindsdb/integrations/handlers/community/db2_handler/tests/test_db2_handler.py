@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.db2_handler.db2_handler import DB2Handler
+from mindsdb.integrations.handlers.community.db2_handler.db2_handler import DB2Handler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.sheets_handler.sheets_handler import SheetsHandler
+from mindsdb.integrations.handlers.community.sheets_handler.sheets_handler import SheetsHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

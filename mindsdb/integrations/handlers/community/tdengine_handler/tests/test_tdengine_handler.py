@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.tdengine_handler.tdengine_handler import TDEngineHandler
+from mindsdb.integrations.handlers.community.tdengine_handler.tdengine_handler import TDEngineHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

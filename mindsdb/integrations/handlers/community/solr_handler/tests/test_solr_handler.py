@@ -1,6 +1,6 @@
 import unittest
 
-from mindsdb.integrations.handlers.solr_handler.solr_handler import SolrHandler
+from mindsdb.integrations.handlers.community.solr_handler.solr_handler import SolrHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

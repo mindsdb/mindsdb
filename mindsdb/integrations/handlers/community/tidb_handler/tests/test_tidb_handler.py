@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.tidb_handler.tidb_handler import TiDBHandler
+from mindsdb.integrations.handlers.community.tidb_handler.tidb_handler import TiDBHandler
 
 
 class TiDBHandlerTest(unittest.TestCase):

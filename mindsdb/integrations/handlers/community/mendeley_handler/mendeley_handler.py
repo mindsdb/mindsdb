@@ -3,7 +3,7 @@ import pandas as pd
 from mendeley import Mendeley
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mendeley.session import MendeleySession
-from mindsdb.integrations.handlers.mendeley_handler.mendeley_tables import CatalogSearchTable
+from mindsdb.integrations.handlers.community.mendeley_handler.mendeley_tables import CatalogSearchTable
 from mindsdb.utilities import log
 from typing import Dict
 from mindsdb.integrations.libs.response import (

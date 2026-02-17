@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.integrations.handlers.cassandra_handler.cassandra_handler import CassandraHandler
+from mindsdb.integrations.handlers.community.cassandra_handler.cassandra_handler import CassandraHandler
 
 
 class CassandraHandlerTest(unittest.TestCase):

@@ -30,7 +30,7 @@ class TestFAISS(BaseTestKB):
 
         return f"faiss_{kb_name}.kb_faiss"
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    @patch("mindsdb.integrations.handlers.community.litellm_handler.litellm_handler.embedding")
     def test_ivf_index(self, mock_litellm_embedding):
         set_litellm_embedding(mock_litellm_embedding)
 

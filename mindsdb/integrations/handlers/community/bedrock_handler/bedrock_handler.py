@@ -7,8 +7,8 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
-from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_client
-from mindsdb.integrations.handlers.bedrock_handler.settings import AmazonBedrockHandlerEngineConfig, AmazonBedrockHandlerModelConfig
+from mindsdb.integrations.handlers.community.bedrock_handler.utilities import create_amazon_bedrock_client
+from mindsdb.integrations.handlers.community.bedrock_handler.settings import AmazonBedrockHandlerEngineConfig, AmazonBedrockHandlerModelConfig
 
 
 logger = log.getLogger(__name__)

@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.questdb_handler.questdb_handler import QuestDBHandler
+from mindsdb.integrations.handlers.community.questdb_handler.questdb_handler import QuestDBHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

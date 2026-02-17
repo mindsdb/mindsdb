@@ -7,9 +7,9 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.email_handler.email_tables import EmailsTable
-from mindsdb.integrations.handlers.email_handler.email_client import EmailClient
-from mindsdb.integrations.handlers.email_handler.settings import EmailConnectionDetails
+from mindsdb.integrations.handlers.community.email_handler.email_tables import EmailsTable
+from mindsdb.integrations.handlers.community.email_handler.email_client import EmailClient
+from mindsdb.integrations.handlers.community.email_handler.settings import EmailConnectionDetails
 
 
 logger = log.getLogger(__name__)

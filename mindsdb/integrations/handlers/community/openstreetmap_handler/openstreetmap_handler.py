@@ -1,6 +1,6 @@
 import overpy
 
-from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_tables import (OpenStreetMapNodeTable,
+from mindsdb.integrations.handlers.community.openstreetmap_handler.openstreetmap_tables import (OpenStreetMapNodeTable,
                                                                                       OpenStreetMapWayTable, OpenStreetMapRelationTable)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (

@@ -1,5 +1,5 @@
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.integrations.handlers.google_analytics_handler.google_analytics_handler import GoogleAnalyticsHandler
+from mindsdb.integrations.handlers.community.google_analytics_handler.google_analytics_handler import GoogleAnalyticsHandler
 
 import unittest
 

@@ -3,8 +3,8 @@ import pandas as pd
 import datetime as dt
 from typing import Dict
 
-from mindsdb.integrations.handlers.frappe_handler.frappe_tables import FrappeDocumentsTable
-from mindsdb.integrations.handlers.frappe_handler.frappe_client import FrappeClient
+from mindsdb.integrations.handlers.community.frappe_handler.frappe_tables import FrappeDocumentsTable
+from mindsdb.integrations.handlers.community.frappe_handler.frappe_client import FrappeClient
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

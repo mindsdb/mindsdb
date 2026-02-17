@@ -3,7 +3,7 @@ from typing import Any, Dict
 from atlassian import Jira
 from requests.exceptions import HTTPError
 
-from mindsdb.integrations.handlers.jira_handler.jira_tables import (
+from mindsdb.integrations.handlers.community.jira_handler.jira_tables import (
     JiraProjectsTable,
     JiraIssuesTable,
     JiraUsersTable,

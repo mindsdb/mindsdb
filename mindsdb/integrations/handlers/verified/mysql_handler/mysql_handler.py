@@ -14,7 +14,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.handlers.mysql_handler.settings import ConnectionConfig
+from mindsdb.integrations.handlers.verified.mysql_handler.settings import ConnectionConfig
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import C_TYPES, DATA_C_TYPE_MAP
 

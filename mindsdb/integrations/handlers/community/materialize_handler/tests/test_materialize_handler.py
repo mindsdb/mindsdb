@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.materialize_handler.materialize_handler import MaterializeHandler
+from mindsdb.integrations.handlers.community.materialize_handler.materialize_handler import MaterializeHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
 

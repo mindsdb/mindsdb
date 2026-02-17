@@ -1,6 +1,6 @@
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.zendesk_handler.zendesk_tables import (
+from mindsdb.integrations.handlers.community.zendesk_handler.zendesk_tables import (
     ZendeskUsersTable,
     ZendeskTicketsTable,
     ZendeskTriggersTable,

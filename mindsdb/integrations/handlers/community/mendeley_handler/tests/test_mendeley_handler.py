@@ -1,6 +1,6 @@
 import unittest
 
-from mindsdb.integrations.handlers.mendeley_handler.mendeley_handler import MendeleyHandler
+from mindsdb.integrations.handlers.community.mendeley_handler.mendeley_handler import MendeleyHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

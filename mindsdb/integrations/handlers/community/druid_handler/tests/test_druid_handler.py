@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.druid_handler.druid_handler import DruidHandler
+from mindsdb.integrations.handlers.community.druid_handler.druid_handler import DruidHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

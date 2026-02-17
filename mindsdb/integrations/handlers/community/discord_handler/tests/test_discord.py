@@ -4,7 +4,7 @@ from unittest.mock import patch
 from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast import BinaryOperation, Identifier, Constant
 from mindsdb_sql_parser.ast.select.star import Star
-from mindsdb.integrations.handlers.discord_handler.discord_handler import DiscordHandler
+from mindsdb.integrations.handlers.community.discord_handler.discord_handler import DiscordHandler
 
 
 class DiscordHandlerTest(unittest.TestCase):
@@ -17,7 +17,7 @@ class DiscordHandlerTest(unittest.TestCase):
     def test_0_check_connection(self):
         assert self.handler.check_connection()
 
-    @patch('mindsdb.integrations.handlers.discord_handler.discord_handler.requests.get')
+    @patch('mindsdb.integrations.handlers.community.discord_handler.discord_handler.requests.get')
     def test_1_read_messages(self, mock_get):
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = [{'content': 'Test message'}]
@@ -40,7 +40,7 @@ class DiscordHandlerTest(unittest.TestCase):
         )
 
     @patch(
-        'mindsdb.integrations.handlers.discord_handler.discord_handler.requests.post'
+        'mindsdb.integrations.handlers.community.discord_handler.discord_handler.requests.post'
     )
     def test_2_send_message(self, mock_post):
         mock_post.return_value.status_code = 200

@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.crate_handler.crate_handler import CrateHandler
+from mindsdb.integrations.handlers.community.crate_handler.crate_handler import CrateHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

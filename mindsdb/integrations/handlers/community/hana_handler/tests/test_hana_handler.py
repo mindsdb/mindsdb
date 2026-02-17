@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from mindsdb.integrations.handlers.hana_handler.hana_handler import HanaHandler
+from mindsdb.integrations.handlers.community.hana_handler.hana_handler import HanaHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

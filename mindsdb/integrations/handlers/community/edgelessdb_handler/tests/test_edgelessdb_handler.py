@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.edgelessdb_handler.edgelessdb_handler import EdgelessDBHandler
+from mindsdb.integrations.handlers.community.edgelessdb_handler.edgelessdb_handler import EdgelessDBHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

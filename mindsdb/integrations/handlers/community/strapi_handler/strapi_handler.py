@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.strapi_handler.strapi_tables import StrapiTable
+from mindsdb.integrations.handlers.community.strapi_handler.strapi_tables import StrapiTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb_sql_parser import parse_sql

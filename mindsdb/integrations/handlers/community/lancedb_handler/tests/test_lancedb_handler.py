@@ -2,7 +2,7 @@ import unittest
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.handlers.lancedb_handler.lancedb_handler import (
+from mindsdb.integrations.handlers.community.lancedb_handler.lancedb_handler import (
     LanceDBHandler,
 )
 from mindsdb.integrations.libs.vectordatabase_handler import (

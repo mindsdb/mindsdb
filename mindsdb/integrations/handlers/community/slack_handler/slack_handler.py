@@ -11,7 +11,7 @@ from slack_sdk.socket_mode import SocketModeClient
 from slack_sdk.socket_mode.response import SocketModeResponse
 from slack_sdk.socket_mode.request import SocketModeRequest
 
-from mindsdb.integrations.handlers.slack_handler.slack_tables import (
+from mindsdb.integrations.handlers.community.slack_handler.slack_tables import (
     SlackConversationsTable,
     SlackMessagesTable,
     SlackThreadsTable,

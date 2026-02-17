@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from mindsdb.integrations.handlers.bigcommerce_handler.bigcommerce_handler import BigCommerceHandler
+from mindsdb.integrations.handlers.community.bigcommerce_handler.bigcommerce_handler import BigCommerceHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb_sql_parser import ast
 
@@ -15,7 +15,7 @@ class BigCommerceHandlerTest(unittest.TestCase):
             },
         )
         self.patcher = patch(
-            "mindsdb.integrations.handlers.bigcommerce_handler.bigcommerce_handler.BigCommerceAPIClient"
+            "mindsdb.integrations.handlers.community.bigcommerce_handler.bigcommerce_handler.BigCommerceAPIClient"
         )
         self.mock_client = self.patcher.start()
         self.mock_client_instance = MagicMock()

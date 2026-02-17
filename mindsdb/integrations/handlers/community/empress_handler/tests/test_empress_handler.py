@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.empress_handler.empress_handler import EmpressHandler
+from mindsdb.integrations.handlers.community.empress_handler.empress_handler import EmpressHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

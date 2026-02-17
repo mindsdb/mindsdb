@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 
-from mindsdb.integrations.handlers.mongodb_handler import Handler as MongoDBHandler
+from mindsdb.integrations.handlers.community.mongodb_handler import Handler as MongoDBHandler
 
 
 class DocumentDBHandler(MongoDBHandler):

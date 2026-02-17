@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.informix_handler.informix_handler import (
+from mindsdb.integrations.handlers.community.informix_handler.informix_handler import (
     InformixHandler,
 )
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE

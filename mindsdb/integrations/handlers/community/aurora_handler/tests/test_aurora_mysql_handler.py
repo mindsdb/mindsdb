@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.aurora_handler.aurora_handler import AuroraHandler
+from mindsdb.integrations.handlers.community.aurora_handler.aurora_handler import AuroraHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

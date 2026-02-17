@@ -1,9 +1,9 @@
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.luma_handler.luma_tables import (
+from mindsdb.integrations.handlers.community.luma_handler.luma_tables import (
     LumaEventsTable
 )
-from mindsdb.integrations.handlers.luma_handler.luma import LumaClient
+from mindsdb.integrations.handlers.community.luma_handler.luma import LumaClient
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

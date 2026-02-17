@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.cloud_sql_handler.cloud_sql_handler import CloudSQLHandler
+from mindsdb.integrations.handlers.community.cloud_sql_handler.cloud_sql_handler import CloudSQLHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

@@ -2,7 +2,7 @@ import unittest
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.handlers.duckdb_handler.duckdb_handler import (
+from mindsdb.integrations.handlers.community.duckdb_handler.duckdb_handler import (
     DuckDBHandler,
 )
 

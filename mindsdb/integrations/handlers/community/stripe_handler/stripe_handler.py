@@ -1,5 +1,5 @@
 import stripe
-from mindsdb.integrations.handlers.stripe_handler.stripe_tables import CustomersTable, ProductsTable, PaymentIntentsTable, RefundsTable, PayoutsTable
+from mindsdb.integrations.handlers.community.stripe_handler.stripe_tables import CustomersTable, ProductsTable, PaymentIntentsTable, RefundsTable, PayoutsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

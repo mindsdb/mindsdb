@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.opengauss_handler.opengauss_handler import OpenGaussHandler
+from mindsdb.integrations.handlers.community.opengauss_handler.opengauss_handler import OpenGaussHandler
 
 
 class OpenGaussHandlerTest(unittest.TestCase):

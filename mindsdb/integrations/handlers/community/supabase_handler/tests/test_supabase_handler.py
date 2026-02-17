@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.supabase_handler.supabase_handler import SupabaseHandler
+from mindsdb.integrations.handlers.community.supabase_handler.supabase_handler import SupabaseHandler
 
 
 class SupabaseHandlerTest(unittest.TestCase):

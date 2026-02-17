@@ -1,7 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
-from mindsdb.integrations.handlers.ray_serve_handler.__about__ import __version__ as version, __description__ as description
+from mindsdb.integrations.handlers.community.ray_serve_handler.__about__ import __version__ as version, __description__ as description
 try:
-    from mindsdb.integrations.handlers.ray_serve_handler.ray_serve_handler import RayServeHandler as Handler
+    from mindsdb.integrations.handlers.community.ray_serve_handler.ray_serve_handler import RayServeHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None

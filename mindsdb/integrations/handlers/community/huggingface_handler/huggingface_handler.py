@@ -4,7 +4,7 @@ import pandas as pd
 import transformers
 from huggingface_hub import HfApi
 
-from mindsdb.integrations.handlers.huggingface_handler.settings import FINETUNE_MAP
+from mindsdb.integrations.handlers.community.huggingface_handler.settings import FINETUNE_MAP
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 

@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.dropbox_handler.dropbox_handler import DropboxHandler
+from mindsdb.integrations.handlers.community.dropbox_handler.dropbox_handler import DropboxHandler
 
 
 class DropboxHandlerTest(unittest.TestCase):

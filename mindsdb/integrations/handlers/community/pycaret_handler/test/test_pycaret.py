@@ -41,7 +41,7 @@ class TestPyCaret(BaseExecutorTest):
         if ret.data is not None:
             return ret.data.to_df()
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    @patch('mindsdb.integrations.handlers.verified.postgres_handler.Handler')
     def test_classifier(self, mock_handler):
         df = pd.DataFrame({
             'sepal_length': [5.1, 4.9, 4.7, 4.6, 6.4, 6.9, 5.5, 6.5, 7.7, 6.3, 6.7, 7.2],
@@ -79,7 +79,7 @@ class TestPyCaret(BaseExecutorTest):
 
         assert ret['prediction_label'].iloc[0] == 'Iris-setosa'
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    @patch('mindsdb.integrations.handlers.verified.postgres_handler.Handler')
     def test_regression(self, mock_handler):
         df = pd.DataFrame({
             'age': [19, 18, 28, 33, 32, 31, 46, 37],
@@ -120,7 +120,7 @@ class TestPyCaret(BaseExecutorTest):
 
         assert int(ret['prediction_label'].iloc[0]) == 3822
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    @patch('mindsdb.integrations.handlers.verified.postgres_handler.Handler')
     @pytest.mark.skip(reason="MindsDB recognizes 'Anomaly' as a keyword so it fails to fetch Anomaly column")
     def test_anomaly(self, mock_handler):
         df = pd.DataFrame({
@@ -166,7 +166,7 @@ class TestPyCaret(BaseExecutorTest):
 
         assert int(ret['Anomaly'].iloc[0]) == 0
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    @patch('mindsdb.integrations.handlers.verified.postgres_handler.Handler')
     def test_cluster(self, mock_handler):
         df = pd.DataFrame({
             'Age': [58, 59, 62, 59, 87, 29, 54, 87],
@@ -203,7 +203,7 @@ class TestPyCaret(BaseExecutorTest):
 
         assert ret['Cluster'].iloc[0] == "Cluster 0"
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    @patch('mindsdb.integrations.handlers.verified.postgres_handler.Handler')
     def test_timeseries(self, mock_handler):
         df = pd.DataFrame({
             'Year': [1949, 1949, 1949, 1949, 1949, 1949, 1949, 1949, 1949, 1949, 1949, 1949, 1950, 1950, 1950, 1950, 1950, 1950, 1950, 1950],

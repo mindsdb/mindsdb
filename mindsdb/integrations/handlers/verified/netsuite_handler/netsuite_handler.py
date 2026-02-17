@@ -11,8 +11,8 @@ try:
 except ImportError:  # pragma: no cover - handled at runtime by __init__.py
     OAuth1 = None
 
-from mindsdb.integrations.handlers.netsuite_handler.netsuite_tables import NetSuiteRecordTable
-from mindsdb.integrations.handlers.netsuite_handler.__about__ import __version__ as handler_version
+from mindsdb.integrations.handlers.verified.netsuite_handler.netsuite_tables import NetSuiteRecordTable
+from mindsdb.integrations.handlers.verified.netsuite_handler.__about__ import __version__ as handler_version
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import HandlerResponse as Response, HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.libs.response import RESPONSE_TYPE

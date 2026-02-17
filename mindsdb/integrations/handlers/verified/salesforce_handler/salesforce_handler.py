@@ -10,8 +10,8 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
-from mindsdb.integrations.handlers.salesforce_handler.constants import get_soql_instructions
+from mindsdb.integrations.handlers.verified.salesforce_handler.salesforce_tables import create_table_class
+from mindsdb.integrations.handlers.verified.salesforce_handler.constants import get_soql_instructions
 from mindsdb.utilities import log
 
 

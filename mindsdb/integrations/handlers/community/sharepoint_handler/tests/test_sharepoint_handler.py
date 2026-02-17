@@ -1,6 +1,6 @@
 import os
 import unittest
-from mindsdb.integrations.handlers.sharepoint_handler import Handler as SharepointHandler
+from mindsdb.integrations.handlers.community.sharepoint_handler import Handler as SharepointHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

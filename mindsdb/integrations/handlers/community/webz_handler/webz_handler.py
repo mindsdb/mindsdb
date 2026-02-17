@@ -7,7 +7,7 @@ import webzio
 from dotty_dict import dotty
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.webz_handler.webz_tables import (
+from mindsdb.integrations.handlers.community.webz_handler.webz_tables import (
     WebzPostsTable,
     WebzReviewsTable,
 )

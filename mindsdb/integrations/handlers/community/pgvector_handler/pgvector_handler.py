@@ -25,7 +25,7 @@ from mindsdb_sql_parser.ast import (
 from mindsdb_sql_parser.ast.base import ASTNode
 from pgvector.psycopg import register_vector
 
-from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
+from mindsdb.integrations.handlers.verified.postgres_handler.postgres_handler import (
     PostgresHandler,
 )
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse as Response

@@ -3,13 +3,13 @@ from typing import Any, Dict, List, Optional
 
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.gong_handler.gong_tables import (
+from mindsdb.integrations.handlers.community.gong_handler.gong_tables import (
     GongCallsTable,
     GongUsersTable,
     GongAnalyticsTable,
     GongTranscriptsTable,
 )
-from mindsdb.integrations.handlers.gong_handler.constants import (
+from mindsdb.integrations.handlers.community.gong_handler.constants import (
     get_gong_api_info,
     GONG_TABLES_METADATA,
     GONG_PRIMARY_KEYS,

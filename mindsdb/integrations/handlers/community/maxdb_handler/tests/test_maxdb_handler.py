@@ -1,6 +1,6 @@
 import unittest
 
-from mindsdb.integrations.handlers.maxdb_handler.maxdb_handler import MaxDBHandler
+from mindsdb.integrations.handlers.community.maxdb_handler.maxdb_handler import MaxDBHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

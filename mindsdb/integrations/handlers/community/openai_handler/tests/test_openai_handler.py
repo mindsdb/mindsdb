@@ -71,7 +71,7 @@ class TestOpenAI(BaseMLAPITest):
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    @patch("mindsdb.integrations.handlers.verified.postgres_handler.Handler")
     def test_full_flow_in_default_mode_with_question_column_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in default mode with a question column for bulk predictions.
@@ -130,7 +130,7 @@ class TestOpenAI(BaseMLAPITest):
         assert "stockholm" in result_df["answer"].iloc[0].lower()
         assert "boom!" in result_df["answer"].iloc[0].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    @patch("mindsdb.integrations.handlers.verified.postgres_handler.Handler")
     def test_full_flow_in_default_mode_with_prompt_template_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in default mode with a prompt template for bulk predictions.
@@ -193,7 +193,7 @@ class TestOpenAI(BaseMLAPITest):
         assert type(result_df["answer"].iloc[0]) == list
         assert type(result_df["answer"].iloc[0][0]) == float
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    @patch("mindsdb.integrations.handlers.verified.postgres_handler.Handler")
     def test_full_flow_in_embedding_mode_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in embedding mode for bulk predictions.
@@ -256,7 +256,7 @@ class TestOpenAI(BaseMLAPITest):
         )
         assert type(result_df["answer"].iloc[0]) == str
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    @patch("mindsdb.integrations.handlers.verified.postgres_handler.Handler")
     def test_full_flow_in_image_mode_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in image mode for bulk predictions.
@@ -318,7 +318,7 @@ class TestOpenAI(BaseMLAPITest):
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    @patch("mindsdb.integrations.handlers.verified.postgres_handler.Handler")
     def test_full_flow_in_conversational_mode_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in conversational mode for bulk predictions.
@@ -382,7 +382,7 @@ class TestOpenAI(BaseMLAPITest):
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    @patch("mindsdb.integrations.handlers.verified.postgres_handler.Handler")
     def test_full_flow_in_conversational_full_mode_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in conversational-full mode for bulk predictions.
@@ -419,7 +419,7 @@ class TestOpenAI(BaseMLAPITest):
         assert "gamla stan" in result_df["answer"].iloc[1].lower()
 
     # TODO: Fix this test for fine-tuning
-    # @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    # @patch("mindsdb.integrations.handlers.verified.postgres_handler.Handler")
     # def test_full_flow_finetune_runs_no_errors(self, mock_handler):
     #     """
     #     Test the full flow for finetuning a model and making a prediction.

@@ -1,7 +1,7 @@
 from typing import Any, Dict
 
-from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
-from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
+from mindsdb.integrations.handlers.community.confluence_handler.confluence_api_client import ConfluenceAPIClient
+from mindsdb.integrations.handlers.community.confluence_handler.confluence_tables import (
     ConfluenceBlogPostsTable,
     ConfluenceDatabasesTable,
     ConfluencePagesTable,

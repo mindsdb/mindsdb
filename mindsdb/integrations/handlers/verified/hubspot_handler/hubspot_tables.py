@@ -22,7 +22,7 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn, extract_comparison_conditions
 from mindsdb.utilities import log
-from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_utils import (
+from mindsdb.integrations.handlers.verified.hubspot_handler.hubspot_association_utils import (
     get_association_targets_for_object,
     get_primary_association_columns,
     enrich_object_with_associations,

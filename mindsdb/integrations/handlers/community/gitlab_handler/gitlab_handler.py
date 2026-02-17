@@ -1,6 +1,6 @@
 import gitlab
 
-from mindsdb.integrations.handlers.gitlab_handler.gitlab_tables import GitlabIssuesTable, GitlabMergeRequestsTable
+from mindsdb.integrations.handlers.community.gitlab_handler.gitlab_tables import GitlabIssuesTable, GitlabMergeRequestsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

@@ -2,7 +2,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_modeling_tables import HistoricalPriceTable
+from mindsdb.integrations.handlers.community.financial_modeling_prep_handler.financial_modeling_tables import HistoricalPriceTable
 
 from mindsdb.utilities import log
 import requests

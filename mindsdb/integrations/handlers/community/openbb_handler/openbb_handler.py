@@ -1,11 +1,11 @@
 from functools import reduce
 from openbb_core.app.static.app_factory import create_app
 
-from mindsdb.integrations.handlers.openbb_handler.openbb_tables import create_table_class
+from mindsdb.integrations.handlers.community.openbb_handler.openbb_tables import create_table_class
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
-from mindsdb.integrations.handlers.openbb_handler.openbb_tables import OpenBBtable
+from mindsdb.integrations.handlers.community.openbb_handler.openbb_tables import OpenBBtable
 
 logger = log.getLogger(__name__)
 

@@ -1,5 +1,5 @@
 from influxdb_client_3 import InfluxDBClient3
-from mindsdb.integrations.handlers.influxdb_handler.influxdb_tables import InfluxDBTables
+from mindsdb.integrations.handlers.community.influxdb_handler.influxdb_tables import InfluxDBTables
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

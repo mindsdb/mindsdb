@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.lindorm_handler.lindorm_handler import LindormHandler
+from mindsdb.integrations.handlers.community.lindorm_handler.lindorm_handler import LindormHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

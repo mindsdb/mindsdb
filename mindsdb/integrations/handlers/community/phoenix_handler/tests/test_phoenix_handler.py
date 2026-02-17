@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.phoenix_handler.phoenix_handler import PhoenixHandler
+from mindsdb.integrations.handlers.community.phoenix_handler.phoenix_handler import PhoenixHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

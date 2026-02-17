@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.strapi_handler.strapi_handler import StrapiHandler
+from mindsdb.integrations.handlers.community.strapi_handler.strapi_handler import StrapiHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

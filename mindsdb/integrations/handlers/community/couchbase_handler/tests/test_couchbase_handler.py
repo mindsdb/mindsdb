@@ -1,6 +1,6 @@
 import unittest
 
-from mindsdb.integrations.handlers.couchbase_handler.couchbase_handler import (
+from mindsdb.integrations.handlers.community.couchbase_handler.couchbase_handler import (
     CouchbaseHandler,
 )
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE

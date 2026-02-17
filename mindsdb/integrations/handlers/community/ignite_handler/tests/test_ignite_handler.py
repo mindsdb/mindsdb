@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.ignite_handler.ignite_handler import IgniteHandler
+from mindsdb.integrations.handlers.community.ignite_handler.ignite_handler import IgniteHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

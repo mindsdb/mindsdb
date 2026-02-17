@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.ingres_handler.ingres_handler import IngresHandler
+from mindsdb.integrations.handlers.community.ingres_handler.ingres_handler import IngresHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

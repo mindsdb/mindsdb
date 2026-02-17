@@ -7,7 +7,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
+from mindsdb.integrations.handlers.verified.postgres_handler.postgres_handler import PostgresHandler
 
 logger = log.getLogger(__name__)
 os.environ["PGCLIENTENCODING"] = "utf-8"

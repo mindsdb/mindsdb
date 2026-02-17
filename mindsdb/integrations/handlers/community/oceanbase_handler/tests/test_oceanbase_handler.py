@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.oceanbase_handler.oceanbase_handler import OceanBaseHandler
+from mindsdb.integrations.handlers.community.oceanbase_handler.oceanbase_handler import OceanBaseHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
 

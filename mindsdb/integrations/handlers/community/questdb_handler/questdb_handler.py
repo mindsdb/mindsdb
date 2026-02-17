@@ -3,7 +3,7 @@ import numpy as np
 
 from questdb.ingress import Sender
 
-from mindsdb.integrations.handlers.postgres_handler import Handler as PostgresHandler
+from mindsdb.integrations.handlers.verified.postgres_handler import Handler as PostgresHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE

@@ -2,7 +2,7 @@ import ast
 from datetime import datetime, timezone
 from typing import Text, List, Dict, Any
 
-from mindsdb.integrations.handlers.sharepoint_handler.utils import (
+from mindsdb.integrations.handlers.community.sharepoint_handler.utils import (
     bearer_token_request,
     get_an_entity,
     delete_an_entity,

@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.bigcommerce_handler.bigcommerce_api_client import BigCommerceAPIClient
+from mindsdb.integrations.handlers.community.bigcommerce_handler.bigcommerce_api_client import BigCommerceAPIClient
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 from mindsdb.integrations.libs.api_handler import MetaAPIResource
 from mindsdb.utilities import log

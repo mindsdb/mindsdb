@@ -1,5 +1,5 @@
-from mindsdb.integrations.handlers.strava_handler.strava_tables import StravaAllClubsTable
-from mindsdb.integrations.handlers.strava_handler.strava_tables import StravaClubActivitesTable
+from mindsdb.integrations.handlers.community.strava_handler.strava_tables import StravaAllClubsTable
+from mindsdb.integrations.handlers.community.strava_handler.strava_tables import StravaClubActivitesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

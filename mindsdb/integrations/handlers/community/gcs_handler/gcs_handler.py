@@ -9,7 +9,7 @@ from google.cloud import storage
 from typing import Text, Dict, Optional, List
 from duckdb import DuckDBPyConnection
 
-from mindsdb.integrations.handlers.gcs_handler.gcs_tables import (
+from mindsdb.integrations.handlers.community.gcs_handler.gcs_tables import (
     ListFilesTable,
     FileTable
 )

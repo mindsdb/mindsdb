@@ -4,7 +4,7 @@ from botocore.exceptions import ClientError
 from typing import Text, List, Dict, Optional, Any, ClassVar
 from pydantic import BaseModel, Field, model_validator, field_validator
 
-from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_client
+from mindsdb.integrations.handlers.community.bedrock_handler.utilities import create_amazon_bedrock_client
 from mindsdb.integrations.utilities.handlers.validation_utilities import ParameterValidationUtilities
 
 

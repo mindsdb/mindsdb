@@ -9,7 +9,7 @@ import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 
-from mindsdb.integrations.handlers.litellm_handler.settings import CompletionParameters
+from mindsdb.integrations.handlers.community.litellm_handler.settings import CompletionParameters
 
 
 logger = log.getLogger(__name__)

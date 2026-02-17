@@ -1,7 +1,7 @@
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.npm_handler.api import NPM
-from mindsdb.integrations.handlers.npm_handler.npm_tables import (
+from mindsdb.integrations.handlers.community.npm_handler.api import NPM
+from mindsdb.integrations.handlers.community.npm_handler.npm_tables import (
     NPMMetadataTable,
     NPMMaintainersTable,
     NPMKeywordsTable,

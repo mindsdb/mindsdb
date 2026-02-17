@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 
-from mindsdb.integrations.handlers.discord_handler.discord_tables import MessagesTable
+from mindsdb.integrations.handlers.community.discord_handler.discord_tables import MessagesTable
 
 from mindsdb.utilities import log
 

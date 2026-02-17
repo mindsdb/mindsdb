@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.sqreamdb_handler.sqreamdb_handler import SQreamDBHandler
+from mindsdb.integrations.handlers.community.sqreamdb_handler.sqreamdb_handler import SQreamDBHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

@@ -3,7 +3,7 @@ from typing import Dict
 
 from binance.spot import Spot
 
-from mindsdb.integrations.handlers.binance_handler.binance_tables import BinanceAggregatedTradesTable
+from mindsdb.integrations.handlers.community.binance_handler.binance_tables import BinanceAggregatedTradesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

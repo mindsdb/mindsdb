@@ -13,7 +13,7 @@ from llama_index.core import Settings
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.security import validate_urls
-from mindsdb.integrations.handlers.llama_index_handler.settings import llama_index_config, LlamaIndexModel
+from mindsdb.integrations.handlers.community.llama_index_handler.settings import llama_index_config, LlamaIndexModel
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 

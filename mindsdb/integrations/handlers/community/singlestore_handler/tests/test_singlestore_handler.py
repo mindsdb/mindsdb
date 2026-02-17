@@ -1,6 +1,6 @@
 import unittest
 
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.handlers.verified.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

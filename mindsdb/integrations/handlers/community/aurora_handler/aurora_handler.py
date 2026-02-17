@@ -9,8 +9,8 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse
 )
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
+from mindsdb.integrations.handlers.verified.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.handlers.verified.postgres_handler.postgres_handler import PostgresHandler
 
 logger = log.getLogger(__name__)
 

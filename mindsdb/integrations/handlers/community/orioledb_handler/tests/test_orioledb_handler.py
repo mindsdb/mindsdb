@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.orioledb_handler.orioledb_handler import OrioleDBHandler
+from mindsdb.integrations.handlers.community.orioledb_handler.orioledb_handler import OrioleDBHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
 

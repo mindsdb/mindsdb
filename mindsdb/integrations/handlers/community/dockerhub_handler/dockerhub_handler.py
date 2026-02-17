@@ -1,11 +1,11 @@
-from mindsdb.integrations.handlers.dockerhub_handler.dockerhub_tables import (
+from mindsdb.integrations.handlers.community.dockerhub_handler.dockerhub_tables import (
     DockerHubRepoImagesSummaryTable,
     DockerHubRepoImagesTable,
     DockerHubRepoTagTable,
     DockerHubRepoTagsTable,
     DockerHubOrgSettingsTable
 )
-from mindsdb.integrations.handlers.dockerhub_handler.dockerhub import DockerHubClient
+from mindsdb.integrations.handlers.community.dockerhub_handler.dockerhub import DockerHubClient
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

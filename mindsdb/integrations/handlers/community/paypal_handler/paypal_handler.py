@@ -1,6 +1,6 @@
 import paypalrestsdk
 
-from mindsdb.integrations.handlers.paypal_handler.paypal_tables import (
+from mindsdb.integrations.handlers.community.paypal_handler.paypal_tables import (
     InvoicesTable,
     PaymentsTable,
     SubscriptionsTable,

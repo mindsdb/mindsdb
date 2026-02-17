@@ -1,6 +1,6 @@
 from mediawikiapi import MediaWikiAPI
 
-from mindsdb.integrations.handlers.mediawiki_handler.mediawiki_tables import PagesTable
+from mindsdb.integrations.handlers.community.mediawiki_handler.mediawiki_tables import PagesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

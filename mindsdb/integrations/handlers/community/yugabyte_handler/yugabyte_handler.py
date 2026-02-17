@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
+from mindsdb.integrations.handlers.verified.postgres_handler.postgres_handler import (
     PostgresHandler,
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE

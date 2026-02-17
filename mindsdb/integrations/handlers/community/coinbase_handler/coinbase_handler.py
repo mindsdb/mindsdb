@@ -8,7 +8,7 @@ from typing import Dict
 import pandas as pd
 import requests
 
-from mindsdb.integrations.handlers.coinbase_handler.coinbase_tables import CoinBaseAggregatedTradesTable
+from mindsdb.integrations.handlers.community.coinbase_handler.coinbase_tables import CoinBaseAggregatedTradesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

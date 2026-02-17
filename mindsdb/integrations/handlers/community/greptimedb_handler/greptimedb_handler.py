@@ -6,7 +6,7 @@ Because GreptimeDB has built-in MySQL wire protocol support, this handler is sim
  a subclass of mindsdb's MySQL handler
 """
 
-from mindsdb.integrations.handlers.mysql_handler import Handler as MySQLHandler
+from mindsdb.integrations.handlers.verified.mysql_handler import Handler as MySQLHandler
 
 
 class GreptimeDBHandler(MySQLHandler):

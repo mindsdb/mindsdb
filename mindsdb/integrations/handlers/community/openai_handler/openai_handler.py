@@ -18,13 +18,13 @@ import pandas as pd
 from mindsdb.utilities.hooks import before_openai_query, after_openai_query
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.handlers.openai_handler.helpers import (
+from mindsdb.integrations.handlers.community.openai_handler.helpers import (
     retry_with_exponential_backoff,
     truncate_msgs_for_token_limit,
     get_available_models,
     PendingFT,
 )
-from mindsdb.integrations.handlers.openai_handler.constants import (
+from mindsdb.integrations.handlers.community.openai_handler.constants import (
     CHAT_MODELS_PREFIXES,
     IMAGE_MODELS,
     FINETUNING_MODELS,

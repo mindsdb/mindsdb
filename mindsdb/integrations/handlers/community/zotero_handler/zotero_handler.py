@@ -4,7 +4,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 
-from mindsdb.integrations.handlers.zotero_handler.zotero_tables import AnnotationsTable
+from mindsdb.integrations.handlers.community.zotero_handler.zotero_tables import AnnotationsTable
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

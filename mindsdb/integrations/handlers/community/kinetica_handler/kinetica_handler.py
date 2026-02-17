@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.postgres_handler import Handler as PostgresHandler
+from mindsdb.integrations.handlers.verified.postgres_handler import Handler as PostgresHandler
 
 
 class KineticaHandler(PostgresHandler):

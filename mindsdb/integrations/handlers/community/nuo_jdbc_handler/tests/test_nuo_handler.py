@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.nuo_jdbc_handler.nuo_jdbc_handler import NuoHandler
+from mindsdb.integrations.handlers.community.nuo_jdbc_handler.nuo_jdbc_handler import NuoHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.matrixone_handler.matrixone_handler import MatrixOneHandler
+from mindsdb.integrations.handlers.community.matrixone_handler.matrixone_handler import MatrixOneHandler
 
 
 class D0ltHandler(MatrixOneHandler):

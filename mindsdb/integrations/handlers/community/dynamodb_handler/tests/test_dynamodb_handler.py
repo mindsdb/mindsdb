@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.dynamodb_handler.dynamodb_handler import DyanmoDBHandler
+from mindsdb.integrations.handlers.community.dynamodb_handler.dynamodb_handler import DyanmoDBHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

@@ -7,8 +7,8 @@ from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from requests.exceptions import RequestException
 
-from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
-from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
+from mindsdb.integrations.handlers.community.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
+from mindsdb.integrations.handlers.community.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
 from mindsdb.integrations.utilities.handlers.auth_utilities.microsoft import MSGraphAPIDelegatedPermissionsManager
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.integrations.libs.response import (

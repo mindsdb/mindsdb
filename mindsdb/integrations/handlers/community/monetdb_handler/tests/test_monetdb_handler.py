@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.monetdb_handler.monetdb_handler import MonetDBHandler
+from mindsdb.integrations.handlers.community.monetdb_handler.monetdb_handler import MonetDBHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

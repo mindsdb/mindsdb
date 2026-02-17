@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.firebird_handler.firebird_handler import FirebirdHandler
+from mindsdb.integrations.handlers.community.firebird_handler.firebird_handler import FirebirdHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

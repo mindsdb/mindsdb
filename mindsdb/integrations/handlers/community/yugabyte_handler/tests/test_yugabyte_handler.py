@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.yugabyte_handler.yugabyte_handler import YugabyteHandler
+from mindsdb.integrations.handlers.community.yugabyte_handler.yugabyte_handler import YugabyteHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

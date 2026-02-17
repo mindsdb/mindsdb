@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from mindsdb.integrations.handlers.teradata_handler.teradata_handler import TeradataHandler
+from mindsdb.integrations.handlers.community.teradata_handler.teradata_handler import TeradataHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

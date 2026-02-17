@@ -5,12 +5,12 @@ import pandas as pd
 
 from mindsdb_sql_parser import ast
 
-from mindsdb.integrations.handlers.email_handler.email_ingestor import EmailIngestor
+from mindsdb.integrations.handlers.community.email_handler.email_ingestor import EmailIngestor
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.utilities.handlers.query_utilities.insert_query_utilities import INSERTQueryParser
-from mindsdb.integrations.handlers.email_handler.settings import EmailSearchOptions
+from mindsdb.integrations.handlers.community.email_handler.settings import EmailSearchOptions
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

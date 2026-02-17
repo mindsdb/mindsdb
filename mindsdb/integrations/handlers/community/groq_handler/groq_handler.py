@@ -3,9 +3,9 @@ import pandas as pd
 import openai
 from openai import OpenAI, NotFoundError, AuthenticationError
 from typing import Dict, Optional
-from mindsdb.integrations.handlers.openai_handler import Handler as OpenAIHandler
+from mindsdb.integrations.handlers.community.openai_handler import Handler as OpenAIHandler
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.groq_handler.settings import groq_handler_config
+from mindsdb.integrations.handlers.community.groq_handler.settings import groq_handler_config
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

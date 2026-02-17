@@ -2,11 +2,11 @@ import github
 
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.github_handler.github_tables import (
+from mindsdb.integrations.handlers.community.github_handler.github_tables import (
     GithubIssuesTable,
     GithubFilesTable
 )
-from mindsdb.integrations.handlers.github_handler.generate_api import get_github_types, get_github_methods, GHTable
+from mindsdb.integrations.handlers.community.github_handler.generate_api import get_github_types, get_github_methods, GHTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

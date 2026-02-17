@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.sqlite_handler.sqlite_handler import SQLiteHandler
+from mindsdb.integrations.handlers.community.sqlite_handler.sqlite_handler import SQLiteHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

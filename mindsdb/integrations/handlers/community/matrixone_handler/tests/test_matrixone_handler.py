@@ -1,6 +1,6 @@
 import unittest
 
-from mindsdb.integrations.handlers.matrixone_handler.matrixone_handler import MatrixOneHandler
+from mindsdb.integrations.handlers.community.matrixone_handler.matrixone_handler import MatrixOneHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

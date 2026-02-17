@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.databricks_handler.databricks_handler import (
+from mindsdb.integrations.handlers.verified.databricks_handler.databricks_handler import (
     DatabricksHandler,
 )
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE

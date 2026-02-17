@@ -10,8 +10,8 @@ from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError, OperationFailure, ConfigurationError, InvalidURI
 from typing import Text, List, Dict, Any, Union
 
-from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_query import MongoQuery
-from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_parser import MongodbParser
+from mindsdb.integrations.handlers.community.mongodb_handler.utils.mongodb_query import MongoQuery
+from mindsdb.integrations.handlers.community.mongodb_handler.utils.mongodb_parser import MongodbParser
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.pinot_handler.pinot_handler import PinotHandler
+from mindsdb.integrations.handlers.community.pinot_handler.pinot_handler import PinotHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 

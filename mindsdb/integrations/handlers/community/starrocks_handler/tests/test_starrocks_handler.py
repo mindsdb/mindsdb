@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.starrocks_handler.starrocks_handler import StarRocksHandler
+from mindsdb.integrations.handlers.community.starrocks_handler.starrocks_handler import StarRocksHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
 

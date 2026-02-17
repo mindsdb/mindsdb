@@ -7,12 +7,12 @@ from botframework.connector.auth import MicrosoftAppCredentials
 import msal
 from requests.exceptions import RequestException
 
-from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import (
+from mindsdb.integrations.handlers.community.ms_teams_handler.ms_graph_api_teams_client import (
     MSGraphAPIBaseClient,
     MSGraphAPITeamsApplicationPermissionsClient,
     MSGraphAPITeamsDelegatedPermissionsClient
 )
-from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
+from mindsdb.integrations.handlers.community.ms_teams_handler.ms_teams_tables import (
     ChannelsTable, ChannelMessagesTable, ChatsTable, ChatMessagesTable, TeamsTable
 )
 from mindsdb.integrations.libs.response import (

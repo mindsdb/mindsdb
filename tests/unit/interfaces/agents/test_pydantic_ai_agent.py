@@ -4,7 +4,6 @@ import pandas as pd
 from pydantic_ai.messages import ModelRequest, ModelResponse
 
 from mindsdb.interfaces.agents.pydantic_ai_agent import PydanticAIAgent
-from mindsdb.interfaces.agents.utils.constants import ASSISTANT_COLUMN, CONTEXT_COLUMN, TRACE_ID_COLUMN
 
 
 class TestPydanticAIAgent:

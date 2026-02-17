@@ -6,6 +6,7 @@ version: v1.25.0
 exclude:
   global:
     # Test fixtures and tests.
+    - mindsdb/integrations/handlers/community/**
     - tests/fixtures/**
     - "*.test.py"
     - "*.spec.py"

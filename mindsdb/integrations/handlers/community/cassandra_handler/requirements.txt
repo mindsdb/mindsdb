@@ -1,1 +1,1 @@
--r mindsdb/integrations/handlers/scylla_handler/requirements.txt
+-r mindsdb/integrations/handlers/community/scylla_handler/requirements.txt

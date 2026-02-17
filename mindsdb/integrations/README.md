@@ -19,6 +19,9 @@ Datasources in MindsDB refer to the different data storage and management system
 ## Directory Overview
 
 * `/handlers`: Contains code for each integration, organized by handler names.
+  Handlers are divided into verified and community categores, with verified handlers being those that have been tested and approved by the MindsDB team, while community handlers are contributed by the wider community and may not have undergone the same level of scrutiny.
+    * `verified`: Contains handlers that have been tested and approved by the MindsDB team.
+    * `community`: Contains handlers contributed by the wider community, which may not have undergone the same level of scrutiny as verified handlers.
 * `/utilities`: Utilities for tasks like parsing dates, filtering SQL, and managing dependencies.
 * `/libs`: Libraries used across various handlers.
 

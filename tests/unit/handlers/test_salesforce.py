@@ -5,9 +5,9 @@ from unittest.mock import patch, MagicMock
 
 try:
     from salesforce_api.exceptions import AuthenticationError, RestRequestCouldNotBeUnderstoodError
-    from mindsdb.integrations.handlers.salesforce_handler.salesforce_handler import SalesforceHandler
-    from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
-    from mindsdb.integrations.handlers.salesforce_handler.constants import get_soql_instructions
+    from mindsdb.integrations.handlers.verified.salesforce_handler.salesforce_handler import SalesforceHandler
+    from mindsdb.integrations.handlers.verified.salesforce_handler.salesforce_tables import create_table_class
+    from mindsdb.integrations.handlers.verified.salesforce_handler.constants import get_soql_instructions
 except ImportError:
     pytestmark = pytest.mark.skip("Salesforce handler not installed")
 
@@ -39,7 +39,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         return patch("salesforce_api.Salesforce")
 
     def test_salesforce_init_success(self):
-        import mindsdb.integrations.handlers.salesforce_handler as m
+        import mindsdb.integrations.handlers.verified.salesforce_handler as m
 
         assert m.import_error is None
         assert m.Handler is not None
@@ -434,7 +434,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.mock_connect.return_value = mock_connection
 
         with patch(
-            "mindsdb.integrations.handlers.salesforce_handler.salesforce_handler.MetaAPIHandler.meta_get_tables",
+            "mindsdb.integrations.handlers.verified.salesforce_handler.salesforce_handler.MetaAPIHandler.meta_get_tables",
             return_value=Response(RESPONSE_TYPE.TABLE, None),
         ) as mock_meta:
             response = self.handler.meta_get_tables(table_names=["contact"])

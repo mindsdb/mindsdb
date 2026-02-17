@@ -16,7 +16,7 @@ from pandas import DataFrame
 from pandas.api import types as pd_types
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
-from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler, _map_type
+from mindsdb.integrations.handlers.verified.postgres_handler.postgres_handler import PostgresHandler, _map_type
 from mindsdb.integrations.libs.response import HandlerResponse as Response, RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 

@@ -7,8 +7,8 @@ from unittest.mock import patch, MagicMock
 import pandas as pd
 
 try:
-    from mindsdb.integrations.handlers.jira_handler.jira_handler import JiraHandler
-    from mindsdb.integrations.handlers.jira_handler.jira_tables import (
+    from mindsdb.integrations.handlers.community.jira_handler.jira_handler import JiraHandler
+    from mindsdb.integrations.handlers.community.jira_handler.jira_tables import (
         JiraIssuesTable,
         JiraUsersTable,
         JiraProjectsTable,
@@ -43,7 +43,7 @@ class TestJiraHandler(BaseAPIHandlerTest, unittest.TestCase):
         return JiraHandler("test_jira", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch("mindsdb.integrations.handlers.jira_handler.jira_handler.Jira")
+        return patch("mindsdb.integrations.handlers.community.jira_handler.jira_handler.Jira")
 
     def test_issues_table_missing_assignee(self):
         """Test that issues without assignee are handled correctly."""

@@ -5,10 +5,10 @@ from unittest.mock import patch, MagicMock
 
 try:
     from hubspot.crm.objects import SimplePublicObject
-    from mindsdb.integrations.handlers.hubspot_handler.hubspot_handler import (
+    from mindsdb.integrations.handlers.verified.hubspot_handler.hubspot_handler import (
         HubspotHandler,
     )
-    from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
+    from mindsdb.integrations.handlers.verified.hubspot_handler.hubspot_tables import (
         DealsTable,
         canonical_op,
         to_hubspot_property,
@@ -63,7 +63,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def create_patcher(self):
         """Create patch for HubSpot client connection."""
-        return patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpot")
+        return patch("mindsdb.integrations.handlers.verified.hubspot_handler.hubspot_handler.HubSpot")
 
     def test_initialization(self):
         """Test if the handler initializes correctly with proper values."""
@@ -616,7 +616,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         mock_hubspot_client = MagicMock()
 
-        with patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpot") as mock_hubspot:
+        with patch("mindsdb.integrations.handlers.verified.hubspot_handler.hubspot_handler.HubSpot") as mock_hubspot:
             mock_hubspot.return_value = mock_hubspot_client
 
             connection = handler.connect()
@@ -627,7 +627,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_comprehensive_error_handling(self):
         """Test comprehensive error handling in various scenarios."""
-        with patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpot") as mock_hubspot:
+        with patch("mindsdb.integrations.handlers.verified.hubspot_handler.hubspot_handler.HubSpot") as mock_hubspot:
             mock_hubspot.side_effect = Exception("API Error")
 
             with self.assertRaises(ValueError) as context:

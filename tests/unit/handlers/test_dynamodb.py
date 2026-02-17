@@ -13,7 +13,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.handlers.dynamodb_handler.dynamodb_handler import DynamoDBHandler
+from mindsdb.integrations.handlers.community.dynamodb_handler.dynamodb_handler import DynamoDBHandler
 
 
 class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):

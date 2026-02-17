@@ -19,9 +19,9 @@ if "shopify" not in sys.modules:
 if "requests" not in sys.modules:
     sys.modules["requests"] = MagicMock()
 
-from mindsdb.integrations.handlers.shopify_handler.shopify_handler import ShopifyHandler
-from mindsdb.integrations.handlers.shopify_handler.utils import query_graphql_nodes, MAX_PAGE_LIMIT
-from mindsdb.integrations.handlers.shopify_handler.models.products import Products
+from mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler import ShopifyHandler
+from mindsdb.integrations.handlers.verified.shopify_handler.utils import query_graphql_nodes, MAX_PAGE_LIMIT
+from mindsdb.integrations.handlers.verified.shopify_handler.models.products import Products
 
 
 class BaseShopifyHandlerTest(unittest.TestCase):
@@ -123,8 +123,8 @@ class TestShopifyHandlerInitialization(BaseShopifyHandlerTest):
 class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
     """Test suite for Shopify Handler connection management."""
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.shopify")
     def test_connect_success(self, mock_shopify, mock_requests):
         """Test successful connection to Shopify API."""
         # Mock the OAuth response
@@ -152,8 +152,8 @@ class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
         self.assertTrue(handler.is_connected)
         self.assertEqual(result, mock_session)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.shopify")
     def test_connect_when_already_connected(self, mock_shopify, mock_requests):
         """Test that connect returns existing connection when already connected."""
         mock_session = MagicMock()
@@ -170,7 +170,7 @@ class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
 
         self.assertEqual(result, mock_session)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
     def test_connect_oauth_failure(self, mock_requests):
         """Test connection failure when OAuth request fails."""
         error_msg = "Invalid credentials"
@@ -184,7 +184,7 @@ class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
         self.assertIn(error_msg, str(context.exception))
         self.assertFalse(handler.is_connected)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
     def test_connect_missing_access_token(self, mock_requests):
         """Test connection failure when access token is missing from response."""
         mock_response = MagicMock()
@@ -199,8 +199,8 @@ class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
         self.assertIn("Unable to get an access token", str(context.exception))
         self.assertFalse(handler.is_connected)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.shopify")
     def test_check_connection_success(self, mock_shopify, mock_requests):
         """Test successful connection check."""
         # Mock OAuth response
@@ -225,8 +225,8 @@ class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
         mock_shopify.ShopifyResource.activate_session.assert_called_once_with(mock_session)
         mock_shopify.Shop.current.assert_called_once()
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.shopify")
     def test_check_connection_failure(self, mock_shopify, mock_requests):
         """Test connection check failure."""
         # Mock OAuth response
@@ -248,7 +248,7 @@ class TestShopifyHandlerConnection(BaseShopifyHandlerTest):
         response = handler.check_connection()
         self.assertFalse(response.success)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
     def test_check_connection_oauth_failure(self, mock_requests):
         """Test connection check failure during OAuth."""
         mock_response = MagicMock()
@@ -266,7 +266,7 @@ class TestShopifyHandlerConnectionArgs(BaseShopifyHandlerTest):
 
     def test_connection_args_structure(self):
         """Test that connection_args has the correct structure."""
-        from mindsdb.integrations.handlers.shopify_handler.connection_args import connection_args
+        from mindsdb.integrations.handlers.verified.shopify_handler.connection_args import connection_args
 
         required_fields = ["type", "description", "required", "label"]
 
@@ -291,7 +291,7 @@ class TestShopifyHandlerConnectionArgs(BaseShopifyHandlerTest):
 
     def test_connection_args_example_structure(self):
         """Test that connection_args_example has the correct structure."""
-        from mindsdb.integrations.handlers.shopify_handler.connection_args import (
+        from mindsdb.integrations.handlers.verified.shopify_handler.connection_args import (
             connection_args_example,
         )
 
@@ -312,8 +312,8 @@ class TestShopifyHandlerEdgeCases(BaseShopifyHandlerTest):
         handler = ShopifyHandler(self.TEST_HANDLER_NAME, connection_data=self.connection_data)
         self.assertEqual(handler.name, self.TEST_HANDLER_NAME)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.shopify")
     def test_multiple_connections(self, mock_shopify, mock_requests):
         """Test multiple connection attempts."""
         # Mock OAuth response
@@ -381,8 +381,8 @@ class TestShopifyHandlerEdgeCases(BaseShopifyHandlerTest):
 class TestShopifyHandlerIntegration(BaseShopifyHandlerTest):
     """Test suite for Shopify Handler integration scenarios."""
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.shopify")
     def test_connection_and_check(self, mock_shopify, mock_requests):
         """Test connection followed by check_connection."""
         # Mock OAuth response
@@ -417,8 +417,8 @@ class TestShopifyHandlerIntegration(BaseShopifyHandlerTest):
         self.assertEqual(handler.name, self.TEST_HANDLER_NAME)
         self.assertTrue(handler.is_connected is False)
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.requests")
-    @patch("mindsdb.integrations.handlers.shopify_handler.shopify_handler.shopify")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.requests")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.shopify_handler.shopify")
     def test_native_query_products(self, mock_shopify, mock_requests):
         """Test native query for fetching products."""
         # Mock OAuth response
@@ -769,7 +769,7 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
                 self.assertTrue(callable(table.get_columns))
                 self.assertTrue(callable(table.meta_get_columns))
 
-    @patch("mindsdb.integrations.handlers.shopify_handler.utils.ShopifyQuery")
+    @patch("mindsdb.integrations.handlers.verified.shopify_handler.utils.ShopifyQuery")
     def test_limit_large_than_max_page_limit(self, mock_shopify_query):
         """Test pagination when limit exceeds MAX_PAGE_LIMIT."""
         # First request returns MAX_PAGE_LIMIT items

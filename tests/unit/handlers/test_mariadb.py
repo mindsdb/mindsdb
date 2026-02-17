@@ -5,7 +5,7 @@ from collections import OrderedDict
 from mysql.connector import Error as MySQLError
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
-from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
+from mindsdb.integrations.handlers.verified.mariadb_handler.mariadb_handler import MariaDBHandler
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 
 

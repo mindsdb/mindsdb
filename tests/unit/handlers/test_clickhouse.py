@@ -9,7 +9,7 @@ from mindsdb_sql_parser import parse_sql
 from base_handler_test import BaseDatabaseHandlerTest
 
 try:
-    from mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler import ClickHouseHandler
+    from mindsdb.integrations.handlers.community.clickhouse_handler.clickhouse_handler import ClickHouseHandler
 except ImportError:
     pytestmark = pytest.mark.skip("Clickhouse handler not installed")
 
@@ -43,7 +43,7 @@ class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_patcher(self):
         return patch(
-            "mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler.create_engine",
+            "mindsdb.integrations.handlers.community.clickhouse_handler.clickhouse_handler.create_engine",
             return_value=MagicMock(),
         )
 

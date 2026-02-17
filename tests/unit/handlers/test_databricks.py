@@ -9,7 +9,7 @@ import pandas as pd
 try:
     from databricks.sql import RequestError, ServerOperationError
     from mindsdb_sql_parser import parse_sql
-    from mindsdb.integrations.handlers.databricks_handler.databricks_handler import (
+    from mindsdb.integrations.handlers.verified.databricks_handler.databricks_handler import (
         DatabricksHandler,
     )
 
@@ -49,7 +49,7 @@ class CursorContextManager:
         self.fetchone = MagicMock(return_value=results[0] if results else None)
 
 
-CONNECT_PATCH_PATH = "mindsdb.integrations.handlers.databricks_handler.databricks_handler.connect"
+CONNECT_PATCH_PATH = "mindsdb.integrations.handlers.verified.databricks_handler.databricks_handler.connect"
 
 
 @pytest.mark.skipif(not DATABRICKS_AVAILABLE, reason="Databricks not installed")
@@ -58,7 +58,7 @@ class TestInstallationCheck(unittest.TestCase):
 
     def test_handler_import(self):
         """Verify handler is properly installed and can be imported."""
-        from mindsdb.integrations.handlers.databricks_handler import databricks_handler
+        from mindsdb.integrations.handlers.verified.databricks_handler import databricks_handler
 
         self.assertTrue(hasattr(databricks_handler, "DatabricksHandler"))
 

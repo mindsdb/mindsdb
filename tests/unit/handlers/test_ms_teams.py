@@ -7,8 +7,8 @@ import pandas as pd
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
 
 try:
-    from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_handler import MSTeamsHandler
-    from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
+    from mindsdb.integrations.handlers.community.ms_teams_handler.ms_teams_handler import MSTeamsHandler
+    from mindsdb.integrations.handlers.community.ms_teams_handler.ms_teams_tables import (
         TeamsTable,
         ChannelsTable,
         ChannelMessagesTable,

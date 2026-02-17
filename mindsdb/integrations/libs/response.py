@@ -5,6 +5,7 @@ from dataclasses import dataclass, fields
 
 import numpy
 import pandas
+import psutil
 
 from mindsdb.utilities import log
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
@@ -131,6 +132,29 @@ class OkResponse(DataHandlerResponse):
         self.affected_rows = affected_rows
 
 
+def _safe_pandas_concat(pieces: list[pandas.DataFrame]) -> pandas.DataFrame:
+    """Safely concatenates multiple pandas DataFrames while checking available memory.
+    If the estimated memory required for concatenation (with a safety multiplier of 2.5x)
+    exceeds the available memory, it raises a MemoryError.
+
+    Args:
+        pieces (list[pandas.DataFrame]): A list of pandas DataFrames to concatenate.
+
+    Returns:
+        pandas.DataFrame: The concatenated DataFrame.
+
+    Raises:
+        MemoryError: If there is insufficient memory to perform the concatenation safely.
+    """
+    available_memory_kb = psutil.virtual_memory().available >> 10
+    pieces_size_kb = sum(
+        [(x.memory_usage(index=True, deep=True).sum() >> 10) for x in pieces]
+    )
+    if pieces_size_kb * 2.5 < available_memory_kb:
+        raise MemoryError()
+    return pandas.concat(pieces)
+
+
 class TableResponse(DataHandlerResponse):
     """Response for successful cases with data (e.g. SELECT, SHOW, etc.).
 
@@ -194,11 +218,16 @@ class TableResponse(DataHandlerResponse):
         if self._data_generator is None or self._fetched:
             return self._data
 
-        for el in self._data_generator:
-            if self._data is None:
-                self._data = el
+        pieces = list(self._data_generator)
+        if self._data is None:
+            if len(pieces) == 1:
+                self._data = pieces[0]
+            elif len(pieces) == 0:
+                self._data = pandas.DataFrame([], columns=[column.name for column in self._columns])
             else:
-                self._data = pandas.concat([self._data, el])
+                self._data = _safe_pandas_concat(pieces)
+        elif len(pieces) > 0:
+            self._data = _safe_pandas_concat([self._data, *pieces])
 
         self._fetched = True
         self._data_generator = None
@@ -214,7 +243,7 @@ class TableResponse(DataHandlerResponse):
         self._raise_if_invalid()
         try:
             piece = next(self._data_generator)
-            self._data = pandas.concat([self._data, piece])
+            self._data = _safe_pandas_concat([self._data, piece])
         except StopIteration:
             self._fetched = True
             self._data_generator = None

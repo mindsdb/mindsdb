@@ -1,5 +1,4 @@
 import os
-import sys
 import base64
 import shutil
 import ast
@@ -25,122 +24,20 @@ from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
+from mindsdb.integrations.libs.const import (
+    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE,
+    HANDLER_TYPE,
+    HANDLER_SUPPORT_LEVEL,
+)
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
-from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
+from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
 
 logger = log.getLogger(__name__)
-
-
-class HandlersCache:
-    """Cache for data handlers that keep connections opened during ttl time from handler last use"""
-
-    def __init__(self, ttl: int = 60):
-        """init cache
-
-        Args:
-            ttl (int): time to live (in seconds) for record in cache
-        """
-        self.ttl = ttl
-        self.handlers = {}
-        self._lock = threading.RLock()
-        self._stop_event = threading.Event()
-        self.cleaner_thread = None
-
-    def __del__(self):
-        self._stop_clean()
-
-    def _start_clean(self) -> None:
-        """start worker that close connections after ttl expired"""
-        if isinstance(self.cleaner_thread, threading.Thread) and self.cleaner_thread.is_alive():
-            return
-        self._stop_event.clear()
-        self.cleaner_thread = threading.Thread(target=self._clean, name="HandlersCache.clean")
-        self.cleaner_thread.daemon = True
-        self.cleaner_thread.start()
-
-    def _stop_clean(self) -> None:
-        """stop clean worker"""
-        self._stop_event.set()
-
-    def set(self, handler: DatabaseHandler):
-        """add (or replace) handler in cache
-
-        Args:
-            handler (DatabaseHandler)
-        """
-        with self._lock:
-            try:
-                # If the handler is defined to be thread safe, set 0 as the last element of the key, otherwise set the thrad ID.
-                key = (
-                    handler.name,
-                    ctx.company_id,
-                    0 if getattr(handler, "thread_safe", False) else threading.get_native_id(),
-                )
-                handler.connect()
-                self.handlers[key] = {"handler": handler, "expired_at": time.time() + self.ttl}
-            except Exception:
-                pass
-            self._start_clean()
-
-    def get(self, name: str) -> Optional[DatabaseHandler]:
-        """get handler from cache by name
-
-        Args:
-            name (str): handler name
-
-        Returns:
-            DatabaseHandler
-        """
-        with self._lock:
-            # If the handler is not thread safe, the thread ID will be assigned to the last element of the key.
-            key = (name, ctx.company_id, threading.get_native_id())
-            if key not in self.handlers:
-                # If the handler is thread safe, a 0 will be assigned to the last element of the key.
-                key = (name, ctx.company_id, 0)
-            if key not in self.handlers or self.handlers[key]["expired_at"] < time.time():
-                return None
-            self.handlers[key]["expired_at"] = time.time() + self.ttl
-            return self.handlers[key]["handler"]
-
-    def delete(self, name: str) -> None:
-        """delete handler from cache
-
-        Args:
-            name (str): handler name
-        """
-        with self._lock:
-            key = (name, ctx.company_id, threading.get_native_id())
-            if key in self.handlers:
-                try:
-                    self.handlers[key].disconnect()
-                except Exception:
-                    pass
-                del self.handlers[key]
-            if len(self.handlers) == 0:
-                self._stop_clean()
-
-    def _clean(self) -> None:
-        """worker that delete from cache handlers that was not in use for ttl"""
-        while self._stop_event.wait(timeout=3) is False:
-            with self._lock:
-                for key in list(self.handlers.keys()):
-                    if (
-                        self.handlers[key]["expired_at"] < time.time()
-                        and sys.getrefcount(self.handlers[key]) == 2  # returned ref count is always 1 higher
-                    ):
-                        try:
-                            self.handlers[key].disconnect()
-                        except Exception:
-                            pass
-                        del self.handlers[key]
-                if len(self.handlers) == 0:
-                    self._stop_event.set()
 
 
 class IntegrationController:
@@ -155,28 +52,37 @@ class IntegrationController:
 
     def _add_integration_record(self, name, engine, connection_args):
         integration_record = db.Integration(
-            name=name, engine=engine, data=connection_args or {}, company_id=ctx.company_id
+            name=name,
+            engine=engine,
+            data=connection_args or {},
+            company_id=ctx.company_id,
+            user_id=ctx.user_id,
         )
         db.session.add(integration_record)
         db.session.commit()
         return integration_record.id
 
-    def add(self, name: str, engine, connection_args):
+    def add(self, name: str, engine, connection_args, check_connection: bool = False):
         logger.debug(
-            "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
+            "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s, user_id=%s",
             self.__class__.__name__,
             name,
             engine,
             connection_args,
             ctx.company_id,
+            ctx.user_id,
         )
         handler_meta = self.get_handler_meta(engine)
 
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
+        if check_connection:
+            self.check_connection(engine, connection_args)
 
         accept_connection_args = handler_meta.get("connection_args")
-        logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
+        logger.debug(
+            "%s: accept_connection_args - %s",
+            self.__class__.__name__,
+            accept_connection_args,
+        )
 
         files_dir = None
         if accept_connection_args is not None and connection_args is not None:
@@ -190,7 +96,11 @@ class IntegrationController:
         integration_id = self._add_integration_record(name, engine, connection_args)
 
         if files_dir is not None:
-            store = FileStorage(resource_group=RESOURCE_GROUP.INTEGRATION, resource_id=integration_id, sync=False)
+            store = FileStorage(
+                resource_group=RESOURCE_GROUP.INTEGRATION,
+                resource_id=integration_id,
+                sync=False,
+            )
             store.add(files_dir, "")
             store.push()
 
@@ -200,7 +110,18 @@ class IntegrationController:
 
         return integration_id
 
-    def modify(self, name, data):
+    def check_connection(self, engine: str, data: dict):
+        try:
+            temp_name = f"temp_integration_{time.time()}".replace(".", "")
+            handler = self.create_tmp_handler(temp_name, engine, data)
+            status = handler.check_connection()
+        except ImportError:
+            raise
+
+        if status.success is not True:
+            raise Exception(f"Connection test failed: {status.error_message}")
+
+    def modify(self, name, data, check_connection=False):
         self.handlers_cache.delete(name)
         integration_record = self._get_integration_record(name)
         if isinstance(integration_record.data, dict) and integration_record.data.get("is_demo") is True:
@@ -209,6 +130,10 @@ class IntegrationController:
         for k in old_data:
             if k not in data:
                 data[k] = old_data[k]
+
+        # Test the new connection data before applying
+        if check_connection:
+            self.check_connection(integration_record.engine, data)
 
         integration_record.data = data
         db.session.commit()
@@ -269,14 +194,6 @@ class IntegrationController:
             if model.deleted_at is not None:
                 model.integration_id = None
 
-        # Remove the integration metadata from the data catalog (if enabled).
-        # TODO: Can this be handled via cascading delete in the database?
-        if self.get_handler_meta(integration_record.engine).get("type") == HANDLER_TYPE.DATA and Config().get(
-            "data_catalog", {}
-        ).get("enabled", False):
-            data_catalog_reader = DataCatalogLoader(database_name=name)
-            data_catalog_reader.unload_metadata()
-
         db.session.delete(integration_record)
         db.session.commit()
 
@@ -305,7 +222,7 @@ class IntegrationController:
         ):
             fs_store = FsStore()
             integrations_dir = Config()["paths"]["integrations"]
-            folder_name = f"integration_files_{integration_record.company_id}_{integration_record.id}"
+            folder_name = f"integration_files_{integration_record.company_id}_{integration_record.user_id}_{integration_record.id}"
             fs_store.get(folder_name, base_dir=integrations_dir)
 
         handler_meta = self.get_handler_metadata(integration_record.engine)
@@ -358,9 +275,10 @@ class IntegrationController:
         }
 
     def get_by_id(self, integration_id, show_secrets=True):
-        integration_record = (
-            db.session.query(db.Integration).filter_by(company_id=ctx.company_id, id=integration_id).first()
-        )
+        query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, id=integration_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.Integration.user_id == ctx.user_id)
+        integration_record = query.first()
         return self._get_integration_record_data(integration_record, show_secrets)
 
     def get(self, name, show_secrets=True, case_sensitive=False):
@@ -382,28 +300,32 @@ class IntegrationController:
             db.Integration
         """
         if case_sensitive:
-            integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).all()
+            query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name)
+            if ctx.enforce_user_id:
+                query = query.filter(db.Integration.user_id == ctx.user_id)
+            integration_records = query.all()
             if len(integration_records) > 1:
                 raise Exception(f"There is {len(integration_records)} integrations with name '{name}'")
             if len(integration_records) == 0:
                 raise EntityNotExistsError(f"There is no integration with name '{name}'")
             integration_record = integration_records[0]
         else:
-            integration_record = (
-                db.session.query(db.Integration)
-                .filter(
-                    (db.Integration.company_id == ctx.company_id)
-                    & (func.lower(db.Integration.name) == func.lower(name))
-                )
-                .first()
+            query = db.session.query(db.Integration).filter(
+                (db.Integration.company_id == ctx.company_id) & (func.lower(db.Integration.name) == func.lower(name))
             )
+            if ctx.enforce_user_id:
+                query = query.filter(db.Integration.user_id == ctx.user_id)
+            integration_record = query.first()
             if integration_record is None:
                 raise EntityNotExistsError(f"There is no integration with name '{name}'")
 
         return integration_record
 
     def get_all(self, show_secrets=True):
-        integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id).all()
+        query = db.session.query(db.Integration).filter_by(company_id=ctx.company_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.Integration.user_id == ctx.user_id)
+        integration_records = query.all()
         integration_dict = {}
         for record in integration_records:
             if record is None or record.data is None:
@@ -433,6 +355,7 @@ class IntegrationController:
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
             handler_args["handler_controller"] = self
             handler_args["company_id"] = ctx.company_id
+            handler_args["user_id"] = ctx.user_id
 
         return handler_args
 
@@ -450,7 +373,10 @@ class IntegrationController:
         integration_id = int(time.time() * 10000)
 
         file_storage = FileStorage(
-            resource_group=RESOURCE_GROUP.INTEGRATION, resource_id=integration_id, root_dir="tmp", sync=False
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            resource_id=integration_id,
+            root_dir="tmp",
+            sync=False,
         )
         handler_storage = HandlerStorage(integration_id, root_dir="tmp", is_temporal=True)
 
@@ -530,6 +456,7 @@ class IntegrationController:
         """
         handler = self.handlers_cache.get(name)
         if handler is not None:
+            ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
             return handler
 
         integration_record = self._get_integration_record(name, case_sensitive)
@@ -570,7 +497,11 @@ class IntegrationController:
             raise Exception(msg)
 
         connection_args = integration_meta.get("connection_args")
-        logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
+        logger.debug(
+            "%s.get_handler: connection args - %s",
+            self.__class__.__name__,
+            connection_args,
+        )
 
         file_storage = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -603,6 +534,7 @@ class IntegrationController:
         if connect:
             self.handlers_cache.set(handler)
 
+        ctx.used_handlers.add(getattr(handler.__class__, "name", handler.__class__.__name__))
         return handler
 
     def reload_handler_module(self, handler_name):
@@ -635,7 +567,7 @@ class IntegrationController:
         handler_meta = self.handlers_import_status[handler_name]
         handler_meta["import"]["success"] = import_error is None
         handler_meta["version"] = module.version
-        handler_meta["thread_safe"] = getattr(module, "thread_safe", False)
+        handler_meta["thread_safe"] = getattr(module, "cache_thread_safe", False)
 
         if import_error is not None:
             handler_meta["import"]["error_message"] = str(import_error)
@@ -657,16 +589,29 @@ class IntegrationController:
                 try:
                     prediction_args = handler_class.prediction_args()
                     creation_args = getattr(module, "creation_args", handler_class.creation_args())
-                    connection_args = {"prediction": prediction_args, "creation_args": creation_args}
+                    connection_args = {
+                        "prediction": prediction_args,
+                        "creation_args": creation_args,
+                    }
                     setattr(module, "connection_args", connection_args)
                     logger.debug("Patched connection_args for %s", handler_folder_name)
                 except Exception as e:
                     # do nothing
-                    logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
+                    logger.debug(
+                        "Failed to patch connection_args for %s, reason: %s",
+                        handler_folder_name,
+                        str(e),
+                    )
 
         module_attrs = [
             attr
-            for attr in ["connection_args_example", "connection_args", "description", "type", "title"]
+            for attr in [
+                "connection_args_example",
+                "connection_args",
+                "description",
+                "type",
+                "title",
+            ]
             if hasattr(module, attr)
         ]
 
@@ -677,7 +622,7 @@ class IntegrationController:
         if hasattr(module, "permanent"):
             handler_meta["permanent"] = module.permanent
         else:
-            if handler_meta.get("name") in ("files", "views", "lightwood"):
+            if handler_meta.get("name") in ("files", "views"):
                 handler_meta["permanent"] = True
             else:
                 handler_meta["permanent"] = False
@@ -737,6 +682,7 @@ class IntegrationController:
                 "connection_args": handler_info.get("connection_args", None),
                 "class_type": handler_info.get("class_type", None),
                 "type": handler_info.get("type"),
+                "support_level": handler_info.get("support_level"),
             }
             if "icon_path" in handler_info:
                 icon = self._get_handler_icon(handler_dir, handler_info["icon_path"])
@@ -753,7 +699,7 @@ class IntegrationController:
         :return: extracted connection arguments
         """
 
-        code = ast.parse(args_file.read_text())
+        code = ast.parse(args_file.read_text(encoding="utf-8"))
 
         args = {}
         for item in code.body:
@@ -809,7 +755,7 @@ class IntegrationController:
 
         if not path.exists():
             return
-        code = ast.parse(path.read_text())
+        code = ast.parse(path.read_text(encoding="utf-8"))
         # find base class of handler.
         #  TODO trace inheritance (is used only for sql handler)
         for item in code.body:
@@ -831,23 +777,29 @@ class IntegrationController:
         init_file = handler_dir / "__init__.py"
         if not init_file.exists():
             return {}
-        code = ast.parse(init_file.read_text())
+        code = ast.parse(init_file.read_text(encoding="utf-8"))
 
-        info = {}
+        info = {
+            "support_level": HANDLER_SUPPORT_LEVEL.COMMUNITY,
+        }
         for item in code.body:
             if not isinstance(item, ast.Assign):
                 continue
             if isinstance(item.targets[0], ast.Name):
                 name = item.targets[0].id
-                if isinstance(item.value, ast.Constant):
-                    info[name] = item.value.value
-                if isinstance(item.value, ast.Attribute) and name == "type":
-                    if item.value.attr == "ML":
+                match name, item.value:
+                    case _, ast.Constant():
+                        info[name] = item.value.value
+                    case "type", ast.Attribute(attr="ML"):
                         info[name] = HANDLER_TYPE.ML
                         info["class_type"] = "ml"
-                    else:
+                    case "type", ast.Attribute(attr="DATA"):
                         info[name] = HANDLER_TYPE.DATA
                         info["class_type"] = self._get_base_class_type(code, handler_dir) or "sql"
+                    case "support_level", ast.Attribute(attr="MINDSDB"):
+                        info["support_level"] = HANDLER_SUPPORT_LEVEL.MINDSDB
+                    case "support_level", ast.Attribute(attr="COMMUNITY"):
+                        info["support_level"] = HANDLER_SUPPORT_LEVEL.COMMUNITY
 
         # connection args
         if info["type"] == HANDLER_TYPE.ML:
@@ -866,6 +818,8 @@ class IntegrationController:
 
     def import_handler(self, handler_name: str, base_import: str = None):
         with self._import_lock:
+            time_before_import = time.perf_counter()
+            logger.debug(f"Importing handler '{handler_name}'")
             handler_meta = self.handlers_import_status[handler_name]
             handler_dir = handler_meta["path"]
 
@@ -877,9 +831,13 @@ class IntegrationController:
                 handler_module = importlib.import_module(f"{base_import}{handler_folder_name}")
                 self.handler_modules[handler_name] = handler_module
                 handler_meta = self._get_handler_meta(handler_name)
+                logger.debug(
+                    f"Handler '{handler_name}' imported successfully in {(time.perf_counter() - time_before_import):.3f} seconds"
+                )
             except Exception as e:
                 handler_meta["import"]["success"] = False
                 handler_meta["import"]["error_message"] = str(e)
+                logger.debug(f"Failed to import handler '{handler_name}': {e}")
 
             self.handlers_import_status[handler_meta["name"]] = handler_meta
             return handler_meta
@@ -929,7 +887,8 @@ class IntegrationController:
                         name=integration_name,
                         data={},
                         engine=integration_name,
-                        company_id=None,
+                        company_id=ctx.company_id,
+                        user_id=ctx.user_id,
                     )
                     db.session.add(integration_record)
         db.session.commit()

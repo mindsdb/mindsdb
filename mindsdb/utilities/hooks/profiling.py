@@ -46,28 +46,32 @@ def send_profiling_results(profiling_data: dict):
             user=MINDSDB_PROFILING_DB_USER,
             password=MINDSDB_PROFILING_DB_PASSWORD,
             dbname="postgres",
-            connect_timeout=5
+            connect_timeout=5,
         )
     except Exception:
-        logger.error('cant get acceess to profiling database')
+        logger.warning("cant get acceess to profiling database")
         return
     cur = connection.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         insert into profiling
-            (data, query, time, hostname, environment, api, total_time, company_id, instance_id)
+            (data, query, time, hostname, environment, api, total_time, company_id, user_id, instance_id)
         values
-            (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """, (
-        json.dumps(profiling["tree"]),
-        profiling.get("query", "?"),
-        time_start_at,
-        profiling["hostname"],
-        profiling.get("environment", "?"),
-        profiling.get("api", "?"),
-        profiling["tree"]["value"],
-        profiling["company_id"],
-        profiling["instance_id"]
-    ))
+            (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """,
+        (
+            json.dumps(profiling["tree"]),
+            profiling.get("query", "?"),
+            time_start_at,
+            profiling["hostname"],
+            profiling.get("environment", "?"),
+            profiling.get("api", "?"),
+            profiling["tree"]["value"],
+            profiling["company_id"],
+            profiling["user_id"],
+            profiling["instance_id"],
+        ),
+    )
 
     connection.commit()
     cur.close()

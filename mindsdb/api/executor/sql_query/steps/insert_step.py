@@ -1,9 +1,8 @@
-from mindsdb_sql_parser.ast import (
-    Identifier,
-)
+from mindsdb_sql_parser.ast import Identifier, Function
 
 from mindsdb.api.executor.planner.steps import SaveToTable, InsertToTable, CreateTableStep
 from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
+from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.exceptions import NotSupportedYet, LogicError
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 
@@ -58,7 +57,10 @@ class InsertToTableCall(BaseStepCall):
                         # Allow explicitly inserting NULL values.
                         record.append(None)
                         continue
-                    # Value is a constant
+                    # Value is a function
+                    if isinstance(v, Function):
+                        record.append(v)
+                        continue
                     record.append(v.value)
                 records.append(record)
 
@@ -114,6 +116,8 @@ class CreateTableCall(BaseStepCall):
             table_name = step.table
 
         dn = self.session.datahub.get(integration_name)
+        if dn is None:
+            raise EntityNotExistsError("Database not found", integration_name)
 
         dn.create_table(table_name=table_name, columns=step.columns, is_replace=step.is_replace, is_create=True)
         return ResultSet()

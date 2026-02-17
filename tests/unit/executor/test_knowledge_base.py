@@ -1,5 +1,6 @@
 import time
 import json
+import tempfile
 
 from unittest.mock import patch, MagicMock
 import threading
@@ -10,6 +11,9 @@ import pytest
 import sys
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
+from mindsdb.integrations.utilities.rag.rerankers.base_reranker import (
+    ListwiseLLMReranker,
+)
 
 
 @contextmanager
@@ -28,10 +32,11 @@ def task_monitor():
     worker.join()
 
 
-def dummy_embeddings(string):
+def dummy_embeddings(string, dimension=None):
     # Imitates embedding generation: create vectors which are similar for similar words in inputs
-
-    embeds = [0] * 25**2
+    if dimension is None:
+        dimension = 25**2
+    embeds = [0] * dimension
     base = 25
 
     string = string.lower().replace(",", " ").replace(".", " ")
@@ -55,16 +60,25 @@ def dummy_embeddings(string):
     return embeds
 
 
-def set_litellm_embedding(mock_litellm_embedding):
+def set_litellm_embedding(mock_litellm_embedding, dimension=None):
     def resp_f(input, *args, **kwargs):
         mock_response = MagicMock()
-        mock_response.data = [{"embedding": dummy_embeddings(s)} for s in input]
+        mock_response.data = [{"embedding": dummy_embeddings(s, dimension)} for s in input]
         return mock_response
 
     mock_litellm_embedding.side_effect = resp_f
 
 
-class TestKB(BaseExecutorDummyML):
+class BaseTestKB(BaseExecutorDummyML):
+    def setup_method(self):
+        super().setup_method()
+        self.storages = []
+
+    def teardown_method(self):
+        for db_name in self.storages:
+            self._drop_storage_db(db_name)
+        super().teardown_method()
+
     def _create_kb(
         self,
         name,
@@ -73,6 +87,8 @@ class TestKB(BaseExecutorDummyML):
         content_columns=None,
         id_column=None,
         metadata_columns=None,
+        storage=None,
+        params=None,
     ):
         self.run_sql(f"drop knowledge base if exists {name}")
 
@@ -94,6 +110,12 @@ class TestKB(BaseExecutorDummyML):
             kb_params["id_column"] = id_column
         if metadata_columns is not None:
             kb_params["metadata_columns"] = metadata_columns
+        if params is not None:
+            kb_params.update(params)
+
+        if storage is None:
+            storage = self._get_storage_table(name)
+        kb_params["storage"] = storage
 
         param_str = ""
         if kb_params:
@@ -102,17 +124,67 @@ class TestKB(BaseExecutorDummyML):
                 param_items.append(f"{k}={json.dumps(v)}")
             param_str = ",".join(param_items)
 
-        self.run_sql(f"""
+        self.run_sql(
+            f"""
             create knowledge base {name}
             using
                 {param_str}
+        """
+        )
+
+    def _get_storage_table(self, kb_name):
+        # default chromadb
+        db_name = f"db_{kb_name}"
+
+        self._drop_storage_db(db_name)
+
+        self.run_sql(f"""
+          create database {db_name} 
+           with 
+           engine='chromadb',
+           PARAMETERS = {{
+               'persist_directory': '{kb_name}'
+           }}
         """)
+        self.storages.append(db_name)
+
+        return f"{db_name}.default_collection"
+
+    def _drop_storage_db(self, db_name):
+        try:
+            self.run_sql(f"drop table {db_name}.default_collection")
+        except Exception:
+            ...
+
+        try:
+            self.run_sql(f"drop database {db_name}")
+        except Exception:
+            ...
+
+    def _get_ral_table(self):
+        data = [
+            ["1000", "Green beige", "Beige verdastro"],
+            ["1004", "Golden yellow", "Giallo oro"],
+            ["9016", "Traffic white", "Bianco traffico"],
+            ["9023", "Pearl dark grey", "Grigio scuro perlato"],
+        ]
+
+        return pd.DataFrame(data, columns=["ral", "english", "italian"])
+
+
+class TestKB(BaseTestKB):
+    def setup_method(self):
+        super().setup_method()
+        from mindsdb.utilities.config import config
+
+        config["knowledge_bases"]["disable_autobatch"] = True
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         self._create_kb("kb_review")
 
-        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("insert into kb_review (content) values ('review')")
 
         # selectable
@@ -129,6 +201,8 @@ class TestKB(BaseExecutorDummyML):
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb_metadata(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         record = {
             "review": "all is good, haven't used yet",
             "url": "https://laptops.com/123",
@@ -142,12 +216,12 @@ class TestKB(BaseExecutorDummyML):
         # ---  case 1: kb with default columns settings ---
         self._create_kb("kb_review")
 
-        set_litellm_embedding(mock_litellm_embedding)
-
-        self.run_sql("""
+        self.run_sql(
+            """
             insert into kb_review
             select review as content, id from files.reviews
-        """)
+        """
+        )
 
         ret = self.run_sql("select * from kb_review where _original_doc_id = 123")
         assert len(ret) == 1
@@ -159,10 +233,12 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 0
 
         # insert without id
-        self.run_sql("""
+        self.run_sql(
+            """
             insert into kb_review
             select review as content, product, url from files.reviews
-        """)
+        """
+        )
 
         # id column wasn't used
         ret = self.run_sql("select * from kb_review where _original_doc_id = 123")
@@ -176,16 +252,29 @@ class TestKB(BaseExecutorDummyML):
         assert ret["product"][0] == record["product"]
         assert ret["url"][0] == record["url"]
 
+        # using json operator in filter
+        ret = self.run_sql(
+            "select metadata->>'product' as product, metadata->>'url' as url "
+            "from kb_review where metadata->>'product' = 'probook'"
+        )
+        assert len(ret) == 1
+        assert ret["product"][0] == record["product"]
+        assert ret["url"][0] == record["url"]
+
         # ---  case 2: kb with defined columns ---
         self._create_kb(
-            "kb_review", content_columns=["review", "product"], id_column="url", metadata_columns=["specs", "id"]
+            "kb_review",
+            content_columns=["review", "product"],
+            id_column="url",
+            metadata_columns=["specs", "id"],
         )
 
-        set_litellm_embedding(mock_litellm_embedding)
-        self.run_sql("""
+        self.run_sql(
+            """
             insert into kb_review
             select * from files.reviews
-        """)
+        """
+        )
 
         ret = self.run_sql(
             "select chunk_content, metadata->>'specs' as specs, metadata->>'id' as id from kb_review"
@@ -205,18 +294,21 @@ class TestKB(BaseExecutorDummyML):
         # ---  case 3: content is defined, id is id, the rest goes to metadata ---
         self._create_kb("kb_review", content_columns=["review"])
 
-        set_litellm_embedding(mock_litellm_embedding)
-        self.run_sql("""
+        self.run_sql(
+            """
             insert into kb_review
             select * from files.reviews
-        """)
+        """
+        )
 
-        ret = self.run_sql("""
-                select chunk_content,
-                 metadata->>'specs' as specs, metadata->>'product' as product, metadata->>'url' as url
+        # metadata as columns
+        ret = self.run_sql(
+            """
+                select chunk_content, specs, product, url
                 from kb_review 
                 where _original_doc_id = 123 -- id is id
-        """)
+        """
+        )
         assert len(ret) == 1
         # review in content
         assert ret["chunk_content"][0] == record["review"]
@@ -226,35 +318,124 @@ class TestKB(BaseExecutorDummyML):
         assert ret["url"][0] == record["url"]
         assert ret["product"][0] == record["product"]
 
-    def _get_ral_table(self):
-        data = [
-            ["1000", "Green beige", "Beige verdastro"],
-            ["1004", "Golden yellow", "Giallo oro"],
-            ["9016", "Traffic white", "Bianco traffico"],
-            ["9023", "Pearl dark grey", "Grigio scuro perlato"],
-        ]
+    def test_listwise_reranker_parses_valid_json(self):
+        reranker = ListwiseLLMReranker(api_key="-", model="gpt-4o")
 
-        return pd.DataFrame(data, columns=["ral", "english", "italian"])
+        # Fake async LLM response
+        class _Msg:
+            def __init__(self, content):
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content):
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content):
+                self.choices = [_Choice(content)]
+
+        async def _fake_call_llm(messages):
+            content = '{"ranking": [{"doc_index": 2, "score": 0.9}, {"doc_index": 1, "score": 0.6}, {"doc_index": 3, "score": 0.1}]}'
+            return _Resp(content)
+
+        # Bind the async method to this reranker instance
+        reranker._call_llm = _fake_call_llm  # type: ignore
+
+        docs = ["A", "B", "C"]
+        scores = reranker.get_scores("q", docs)
+
+        assert len(scores) == 3
+        # doc_index 2 (B) highest, then A, then C
+        assert scores[1] > scores[0] > scores[2]
+        # scores are clamped to [0,1]
+        assert all(0.0 <= s <= 1.0 for s in scores)
+
+    def test_listwise_reranker_handles_code_fence_and_missing_docs(self):
+        reranker = ListwiseLLMReranker(api_key="-", model="gpt-4o")
+
+        class _Msg:
+            def __init__(self, content):
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content):
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content):
+                self.choices = [_Choice(content)]
+
+        async def _fake_call_llm(messages):
+            # Returns code-fenced JSON, includes only two entries, one without score
+            content = """```json
+            {"ranking": [1, {"doc_index": 3, "score": 0.8}]}
+            ```"""
+            return _Resp(content)
+
+        reranker._call_llm = _fake_call_llm  # type: ignore
+
+        docs = ["D0", "D1", "D2", "D3"]
+        scores = reranker.get_scores("q", docs)
+
+        assert len(scores) == 4
+        # All scores within [0,1]
+        assert all(0.0 <= s <= 1.0 for s in scores)
+        # At least doc_index 3 (zero-based 2) should have a relatively high score
+        assert scores[2] >= 0.5
+
+    def test_listwise_reranker_json_error_fallback(self):
+        reranker = ListwiseLLMReranker(api_key="-", model="gpt-4o")
+
+        class _Msg:
+            def __init__(self, content):
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content):
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content):
+                self.choices = [_Choice(content)]
+
+        async def _fake_call_llm(messages):
+            # Invalid JSON forces fallback
+            content = "not-json"
+            return _Resp(content)
+
+        reranker._call_llm = _fake_call_llm  # type: ignore
+
+        docs = ["X", "Y", "Z"]
+        scores = reranker.get_scores("q", docs)
+
+        assert len(scores) == 3
+        # Fallback pattern should be descending
+        assert scores[0] > scores[1] > scores[2]
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_join_kb_table(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         df = self._get_ral_table()
         self.save_file("ral", df)
 
         self._create_kb("kb_ral")
 
-        set_litellm_embedding(mock_litellm_embedding)
-        self.run_sql("""
+        self.run_sql(
+            """
             insert into kb_ral
             select ral id, english content from files.ral
-        """)
+        """
+        )
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
             select t.italian, k.id, t.ral from kb_ral k
             join files.ral t on t.ral = k.id
             where k.content = 'white'
             limit 2
-        """)
+        """
+        )
 
         assert len(ret) == 2
         # values are matched
@@ -262,39 +443,50 @@ class TestKB(BaseExecutorDummyML):
         assert len(diff) == 0
 
         # =================   operators  =================
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
             select * from kb_ral
             where id = '1000'
-        """)
+        """
+        )
         assert len(ret) == 1
         assert ret["id"][0] == "1000"
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
             select * from kb_ral
             where id != '1000'
-        """)
+        """
+        )
         assert len(ret) == 3
         assert "1000" not in ret["id"]
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
             select * from kb_ral
             where id in ('1000', '1004')
-        """)
+        """
+        )
         assert len(ret) == 2
         assert set(ret["id"]) == {"1000", "1004"}
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
             select * from kb_ral
             where id not in ('1000', '1004')
-        """)
+        """
+        )
         assert len(ret) == 2
         assert set(ret["id"]) == {"9016", "9023"}
 
     @pytest.mark.slow
     @pytest.mark.skipif(sys.platform == "win32", reason="Causes hard crash on windows.")
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Causes hard crash on mac.")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_kb_partitions(self, mock_handler, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
         df = self._get_ral_table()
         self.save_file("ral", df)
 
@@ -308,7 +500,6 @@ class TestKB(BaseExecutorDummyML):
             self._create_kb("kb_part", content_columns=["english"])
 
             # load kb
-            set_litellm_embedding(mock_litellm_embedding)
             ret = self.run_sql(insert_sql)
             # inserts returns query
             query_id = ret["ID"][0]
@@ -367,37 +558,55 @@ class TestKB(BaseExecutorDummyML):
             mock_handler().query_stream.side_effect = stream_f
 
             # test iterate
-            check_partition("""
-                insert into kb_part SELECT id, english FROM  pg.ral
+            check_partition(
+                """
+                insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id
-            """)
+            """
+            )
+
+            # test iterate (mix case of track_column)
+            check_partition(
+                """
+                insert into kb_part SELECT id, english FROM pg.ral
+                using batch_size=20, track_column=Id
+            """
+            )
 
             # test threads
-            check_partition("""
+            check_partition(
+                """
                 insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id, threads = 3
-            """)
+            """
+            )
 
             # without track column
-            check_partition("""
-                insert into kb_part SELECT id, english FROM  pg.ral
+            check_partition(
+                """
+                insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20
-            """)
+            """
+            )
 
             # --- general mode ---
             mock_handler().query_stream = None
 
             # test iterate
-            check_partition("""
+            check_partition(
+                """
                 insert into kb_part SELECT id, english FROM  pg.ral
                 using batch_size=20, track_column=id
-            """)
+            """
+            )
 
             # test threads
-            check_partition("""
+            check_partition(
+                """
                 insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id, threads = 3
-            """)
+            """
+            )
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb_algebra(self, mock_litellm_embedding):
@@ -413,29 +622,26 @@ class TestKB(BaseExecutorDummyML):
 
         self.save_file("items", df)
 
-        self.run_sql("""
-            create knowledge base kb_alg
-            using
-                embedding_model = {
-                    "provider": "bedrock",
-                    "model_name": "titan"
-                }
-        """)
+        self._create_kb("kb_alg", embedding_model={"provider": "bedrock", "model_name": "titan"})
 
-        self.run_sql("""
+        self.run_sql(
+            """
         insert into kb_alg
             select * from files.items
-        """)
+        """
+        )
 
         # --- search value excluding others
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
            select * from kb_alg where
             content = 'green'
             and content not IN ('square', 'triangle')
             and content is not null
            limit 3
-        """)
+        """
+        )
 
         # check 3 most relative records
         for content in ret["chunk_content"]:
@@ -445,13 +651,15 @@ class TestKB(BaseExecutorDummyML):
 
         # --- search value excluding other and metadata
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
            select * from kb_alg where
             content = 'green'
             and content != 'square'
             and shape != 'triangle'
            limit 3
-        """)
+        """
+        )
 
         for content in ret["chunk_content"]:
             assert "green" in content
@@ -460,24 +668,28 @@ class TestKB(BaseExecutorDummyML):
 
         # -- searching value in list with excluding
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
            select * from kb_alg where
             content in ('green', 'white')
             and content not like 'green'
            limit 3
-        """)
+        """
+        )
         for content in ret["chunk_content"]:
             assert "white" in content
 
         # -- using OR
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
            select * from kb_alg where
                (content like 'green' and size='big') 
             or (content like 'white' and size='small') 
             or (content is null)
            limit 3
-        """)
+        """
+        )
         for content in ret["chunk_content"]:
             if "green" in content:
                 assert "big" in content
@@ -486,16 +698,34 @@ class TestKB(BaseExecutorDummyML):
 
         # -- using between and less than
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
            select * from kb_alg where
             content like 'white' and num between 3 and 6 and num < 5
            limit 3
-        """)
+        """
+        )
         assert len(ret) == 2
 
         for _, item in ret.iterrows():
             assert "white" in item["chunk_content"]
             assert item["metadata"]["num"] in (3, 4)
+
+        # -- chunk_content and '%'
+        ret = self.run_sql(
+            """
+           select * from kb_alg where
+               (chunk_content like '%green%' and size='big') 
+            or (chunk_content like '%white%' and size='small') 
+            or (chunk_content is null)
+           limit 3
+        """
+        )
+        for content in ret["chunk_content"]:
+            if "green" in content:
+                assert "big" in content
+            else:
+                assert "small" in content
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_select_allowed_columns(self, mock_litellm_embedding):
@@ -562,12 +792,20 @@ class TestKB(BaseExecutorDummyML):
         df = df.rename(columns={"english": "content", "ral": "id"})
         self.save_file("ral", df)
 
-        self._create_kb("kb1", reranking_model={"provider": "openai", "model_name": "gpt-3", "api_key": "-"})
+        self._create_kb(
+            "kb1",
+            reranking_model={
+                "provider": "openai",
+                "model_name": "gpt-3",
+                "api_key": "-",
+            },
+        )
         self.run_sql("insert into kb1 SELECT id, content FROM files.ral")
 
         # --- case 1: use table as source, reranker llm, no evaluate
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
             Evaluate knowledge base kb1
             using
               test_table = files.eval_test,
@@ -576,7 +814,8 @@ class TestKB(BaseExecutorDummyML):
                  'count': 3 
               }, 
               evaluate=false
-        """)
+        """
+        )
 
         # reranker model is used
         assert mock_openai().chat.completions.create.call_args_list[0][1]["model"] == "gpt-3"
@@ -594,14 +833,16 @@ class TestKB(BaseExecutorDummyML):
         mock_openai.reset_mock()
         self.run_sql("drop table files.eval_test")
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
             Evaluate knowledge base kb1
             using
               test_table = files.eval_test,
               generate_data = true,
               llm={'provider': 'openai', 'api_key':'-', 'model_name':'gpt-4'},
               save_to = files.eval_res 
-        """)
+        """
+        )
 
         # custom model is used
         assert mock_openai().chat.completions.create.call_args_list[0][1]["model"] == "gpt-4"
@@ -625,11 +866,13 @@ class TestKB(BaseExecutorDummyML):
 
         # --- case 3: evaluate without generation and saving
 
-        ret = self.run_sql("""
+        ret = self.run_sql(
+            """
             Evaluate knowledge base kb1
             using
               test_table = files.eval_test
-        """)
+        """
+        )
 
         # eval resul in response
         assert len(ret) == 1
@@ -647,3 +890,361 @@ class TestKB(BaseExecutorDummyML):
         df = self.run_sql("select * from kb1 where content='test' and reranking =false")
         mock_get_scores.assert_not_called()
         assert len(df) > 0
+
+    @patch("mindsdb.utilities.config.Config.get")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    def test_save_default_params(self, mock_get_scores, mock_litellm_embedding, mock_config_get):
+        # reranking result
+        mock_get_scores.side_effect = lambda query, docs: [0.8 for _ in docs]
+
+        set_litellm_embedding(mock_litellm_embedding)
+
+        def config_get_side_effect(key, default=None):
+            if key == "default_embedding_model":
+                return {
+                    "provider": "bedrock",
+                    "model_name": "dummy_model",
+                    "api_key": "dummy_key",
+                }
+            if key == "default_reranking_model":
+                return {
+                    "provider": "openai",
+                    "model_name": "openai_model",
+                    "api_key": "openai_key",
+                }
+            return default
+
+        mock_config_get.side_effect = config_get_side_effect
+
+        self._create_kb("kb1")
+
+        ret = self.run_sql("describe  knowledge base kb1")
+
+        # default model was saved
+        assert "dummy_model" in ret["EMBEDDING_MODEL"][0]
+        assert "openai_model" in ret["RERANKING_MODEL"][0]
+
+        # disable default reranking
+        self._create_kb("kb2", params={"reranking_model": False})
+
+        ret = self.run_sql("describe knowledge base kb2")
+
+        assert "openai_model" not in ret["RERANKING_MODEL"][0]
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_relevance_filtering_gt_operator(self, mock_litellm_embedding):
+        """Test relevance filtering with GREATER_THAN operator"""
+        set_litellm_embedding(mock_litellm_embedding)
+
+        test_data = [
+            {"id": "1", "content": "This is about machine learning and AI"},
+            {"id": "2", "content": "This is about cooking recipes"},
+            {
+                "id": "3",
+                "content": "This is about artificial intelligence and neural networks",
+            },
+            {"id": "4", "content": "This is about gardening tips"},
+        ]
+        df = pd.DataFrame(test_data)
+        self.save_file("test_docs", df)
+        self._create_kb("kb_relevance_test")
+        self.run_sql(
+            """
+            insert into kb_relevance_test
+            select id, content from files.test_docs
+        """
+        )
+
+        ret = self.run_sql(
+            """
+            select * from kb_relevance_test
+            where content = 'machine learning'
+            and relevance > 0.5
+        """
+        )
+        assert isinstance(ret, pd.DataFrame)
+
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_alter_kb(self, mock_litellm_embedding, mock_get_scores):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb(
+            "kb1",
+            embedding_model={
+                "provider": "bedrock",
+                "model_name": "dummy_model",
+                "api_key": "embed-key-1",
+            },
+            reranking_model={
+                "provider": "openai",
+                "model_name": "gpt-3",
+                "api_key": "rerank-key-1",
+            },
+        )
+
+        # update KB
+        self.run_sql(
+            """
+            ALTER KNOWLEDGE BASE kb1
+            USING 
+                reranking_model={'api_key': 'rerank-key-2'},
+                embedding_model={'api_key': 'embed-key-2'},
+                id_column='my_id',
+                content_columns=['my_content'],                
+                metadata_columns=['my_meta']
+        """
+        )
+
+        # check updated values in database
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+        assert kb.params["id_column"] == "my_id"
+        assert kb.params["content_columns"] == ["my_content"]
+        assert kb.params["metadata_columns"] == ["my_meta"]
+
+        assert kb.params["reranking_model"]["model_name"] == "gpt-3"
+        assert kb.params["reranking_model"]["api_key"] == "rerank-key-2"
+
+        assert kb.params["embedding_model"]["api_key"] == "embed-key-2"
+
+        # update embedding fails
+        with pytest.raises(ValueError):
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'model_name': 'my_model'}")
+
+        with pytest.raises(ValueError):
+            self.run_sql("ALTER KNOWLEDGE BASE kb1 USING embedding_model={'provider': 'ollama'}")
+
+        # different provider: params are replaced
+        self.run_sql("ALTER KNOWLEDGE BASE kb1 USING reranking_model={'provider': 'ollama', 'model_name': 'mistral'}")
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+
+        assert kb.params["reranking_model"]["provider"] == "ollama"
+        assert "api_key" not in kb.params["reranking_model"]
+
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
+    def test_ollama(self, mock_openai, mock_get_scores):
+        mock_emb = MagicMock(data=[MagicMock(embedding=[0.1] * 10)])
+        mock_openai().embeddings.create.return_value = mock_emb
+
+        # reranking result
+        mock_get_scores.side_effect = lambda query, docs: [0.8 for _ in docs]
+
+        self._create_kb(
+            "kb1",
+            reranking_model={"provider": "ollama", "model_name": "mistral", "base_url": "http://localhost:11434/v1"},
+            embedding_model={"provider": "ollama", "model_name": "nomic", "base_url": "http://localhost:11434/v1"},
+        )
+
+        ret = self.run_sql("describe  knowledge base kb1")
+
+        assert "api_key" not in ret["EMBEDDING_MODEL"][0]
+        assert "api_key" not in ret["RERANKING_MODEL"][0]
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_kb_uppercase_source_columns(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        df = pd.DataFrame(
+            [
+                [1, 'Laptop Pro 15"', "High-performance laptop with 16GB RAM and 512GB SSD", "Electronics", 1299.99],
+                [2, "Table", "Dining table,  144 cm", "Home", 100],
+            ],
+            columns=["Product_ID", "Product_Name", "Description", "Category", "Price"],
+        )
+
+        self.save_file("oracle_products", df)
+
+        # -- mixed case source columns
+        self._create_kb(
+            "kb_oracle_mixedcase",
+            content_columns=["Product_Name", "Description"],
+            id_column="Product_ID",
+            metadata_columns=["Category", "Price"],
+        )
+        self.run_sql(
+            """
+            insert into kb_oracle_mixedcase
+            select * from files.oracle_products
+            """
+        )
+        ret = self.run_sql("select `Category` from kb_oracle_mixedcase  where `Category` = 'Home'")
+        assert len(ret) == 2
+        assert ret["Category"][0] == "Home"
+
+        # -- uppercase source columns
+        df.columns = df.columns.str.upper()
+        self.run_sql("drop table files.oracle_products")
+        self.save_file("oracle_products", df)
+
+        self._create_kb(
+            "kb_oracle_uppercase",
+            content_columns=["PRODUCT_NAME", "DESCRIPTION"],
+            id_column="PRODUCT_ID",
+            metadata_columns=["CATEGORY", "PRICE"],
+        )
+        self.run_sql(
+            """
+            insert into kb_oracle_uppercase
+            select * from files.oracle_products
+            """
+        )
+
+        ret = self.run_sql("select * from kb_oracle_uppercase where `CATEGORY` = 'Electronics'")
+        assert len(ret) == 2
+        assert ret["CATEGORY"][0] == "Electronics"
+
+        # -- lowercase source columns
+        df.columns = df.columns.str.lower()
+        self.run_sql("drop table files.oracle_products")
+        self.save_file("oracle_products", df)
+
+        self._create_kb(
+            "kb_oracle_lowercase",
+            content_columns=["product_name", "description"],
+            id_column="product_id",
+            metadata_columns=["category", "price"],
+        )
+        self.run_sql(
+            """
+            insert into kb_oracle_lowercase
+            select * from files.oracle_products
+        """
+        )
+        ret = self.run_sql("select category from kb_oracle_lowercase where category = 'Home'")
+        assert len(ret) == 2
+        assert ret["category"][0] == "Home"
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_dimension_mismatch(self, mock_litellm_embedding):
+        temp_dir = tempfile.mkdtemp()
+
+        self.run_sql(f"""
+        create database my_chroma 
+          with 
+           engine='chromadb',
+           PARAMETERS = {{
+               'persist_directory': '{temp_dir}'
+           }}
+        """)
+
+        set_litellm_embedding(mock_litellm_embedding, dimension=1000)
+        self._create_kb("kb1", storage="my_chroma.table1")
+
+        self.run_sql("insert into kb1 (content) values ('review')")
+
+        # change dimension
+        set_litellm_embedding(mock_litellm_embedding, dimension=1500)
+
+        with pytest.raises(ValueError):
+            self._create_kb("kb2", storage="my_chroma.table1")
+
+        self.run_sql("drop knowledge base kb1")
+        self.run_sql("drop table my_chroma.table1")
+        self.run_sql("drop database my_chroma")
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_duplicated_ids(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb("kb1")
+
+        # insert bug content
+        self.run_sql(f"insert into kb1 (id, content) values (1, '{'my content' * 1000}')")
+
+        # insert second id
+        self.run_sql("insert into kb1 (id, content) values (2, 'content2')")
+
+        # first was chunked
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) > 1
+
+        # second wasn't
+        ret = self.run_sql("select * from kb1 where id = 2")
+        assert len(ret) == 1
+
+        # insert short string
+        self.run_sql("insert into kb1 (id, content) values (1, 'content')")
+
+        # chunks were removed
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+        assert ret["chunk_content"][0] == "content"
+
+        # second id wasn't removed
+        ret = self.run_sql("select * from kb1 where id = 2")
+        assert len(ret) == 1
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_update(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb("kb1")
+
+        self.run_sql("insert into kb1 (id, content) values (1, 'cat')")
+
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+        chunk_id = ret["chunk_id"][0]
+
+        # update
+        self.run_sql(f"update kb1 set content = 'dog' where chunk_id = '{chunk_id}'")
+        # check
+        ret = self.run_sql("select * from kb1 where id = 1")
+        assert len(ret) == 1
+        assert ret["chunk_content"][0] == "dog"
+
+
+class TestKBAutoBatch(BaseTestKB):
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_no_autobatch(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+        df = self._get_ral_table()
+        self.save_file("ral", df)
+
+        # -- sync plan --
+        # default id column is `id`, but dataset doesn't have it:
+        # query should be switched to a sync plan
+        self._create_kb("kb_ral", content_columns=["english"])
+
+        ret = self.run_sql(
+            """
+                insert into kb_ral
+                select * from files.ral
+            """
+        )
+        # no response from insert
+        assert ret is None or len(ret) == 0
+        ret = self.run_sql("select * from kb_ral limit 1")
+        assert len(ret) == 1
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_autobatch(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+        df = self._get_ral_table()
+        self.save_file("ral", df)
+
+        # -- async plan --
+        with task_monitor():
+            self._create_kb("kb_ral_async", id_column="ral", content_columns=["english"])
+
+            ret = self.run_sql(
+                """
+                    insert into kb_ral_async
+                    select * content from files.ral
+                """
+            )
+            # result is the record from `queries`
+            assert len(ret) == 1
+            query_id = ret["ID"][0]
+            for i in range(1000):
+                time.sleep(0.2)
+                ret = self.run_sql(f"select * from information_schema.queries where id = {query_id}")
+                if ret["ERROR"][0] is not None:
+                    raise RuntimeError(ret["ERROR"][0])
+                if ret["FINISHED_AT"][0] is not None:
+                    break
+
+            ret = self.run_sql("select * from kb_ral_async where id = '1000'")
+            assert ret["id"][0] == "1000"

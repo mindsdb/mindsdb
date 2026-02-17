@@ -61,6 +61,23 @@ default_project = config.get("default_project")
 MINDSDB_SQL_FUNCTIONS = {"llm", "to_markdown", "hash"}
 
 
+def _resolve_identifier_part(identifier: Identifier, part: int = -1) -> str:
+    """Resolve a part of an identifier.
+
+    Args:
+        identifier (Identifier): The identifier to resolve the part of.
+        part (int): The part number to resolve.
+
+    Returns:
+        str: part of the identifier in lowercase if not quoted, otherwise the part itself.
+    """
+    name = identifier.parts[part]
+    is_quoted = identifier.is_quoted[part]
+    if not is_quoted:
+        name = name.lower()
+    return name
+
+
 class QueryPlanner:
     def __init__(
         self,
@@ -69,6 +86,7 @@ class QueryPlanner:
         predictor_namespace=None,
         predictor_metadata: list = None,
         default_namespace: str = None,
+        kb_metadata: dict = None,
     ):
         self.query = query
         self.plan = QueryPlan()
@@ -78,13 +96,13 @@ class QueryPlanner:
         if integrations is not None:
             for integration in integrations:
                 if isinstance(integration, dict):
-                    integration_name = integration["name"].lower()
+                    integration_name = integration["name"]
                     # it is project of system database
                     if integration["type"] != "data":
                         _projects.add(integration_name)
                         continue
                 else:
-                    integration_name = integration.lower()
+                    integration_name = integration
                     integration = {"name": integration}
                 self.integrations[integration_name] = integration
 
@@ -126,7 +144,7 @@ class QueryPlanner:
 
         self.projects = list(_projects)
         self.databases = list(self.integrations.keys()) + self.projects
-
+        self.kb_metadata = kb_metadata or {}
         self.statement = None
 
         self.cte_results = {}
@@ -175,9 +193,12 @@ class QueryPlanner:
                 return
 
             # cut integration part
-            if len(node.parts) > 1 and node.parts[0].lower() == database:
-                node.parts.pop(0)
-                node.is_quoted.pop(0)
+            if len(node.parts) > 1:
+                if (node.is_quoted[0] and node.parts[0] == database) or (
+                    not node.is_quoted[0] and node.parts[0].lower() == database.lower()
+                ):
+                    node.parts.pop(0)
+                    node.is_quoted.pop(0)
 
             if not hasattr(parent_query, "from_table"):
                 return
@@ -209,9 +230,9 @@ class QueryPlanner:
             integration_name, table = self.resolve_database_table(select.from_table)
 
             # is it CTE?
-            table_name = table_alias = table.parts[-1]
+            table_name = table_alias = _resolve_identifier_part(table)
             if table.alias is not None:
-                table_alias = table.alias.parts[-1]
+                table_alias = _resolve_identifier_part(table.alias)
 
             if integration_name == self.default_namespace and table_name in self.cte_results:
                 select.from_table = None
@@ -258,8 +279,14 @@ class QueryPlanner:
 
         err_msg_suffix = ""
         if len(parts) > 1:
-            if parts[0].lower() in self.databases:
-                database = parts.pop(0).lower()
+            # if not quoted  check in lower case
+            part = parts[0]
+            if part not in self.databases and not node.is_quoted[0]:
+                part = part.lower()
+
+            if part in self.databases:
+                database = part
+                parts.pop(0)
             else:
                 err_msg_suffix = f"'{parts[0].lower()}' is not valid database name."
 
@@ -430,17 +457,26 @@ class QueryPlanner:
         # split to select from api database
         #     keep only limit and where
         #     the rest goes to outer select
+        if query.group_by is not None:
+            targets = [Star()]
+            order_by = None
+            limit = None
+        else:
+            targets = query.targets
+            order_by = query.order_by
+            limit = query.limit
+
         query2 = Select(
-            targets=query.targets,
+            targets=targets,
             from_table=query.from_table,
             where=query.where,
-            order_by=query.order_by,
-            limit=query.limit,
+            order_by=order_by,
+            limit=limit,
         )
+
         prev_step = self.plan_integration_select(query2)
 
-        # clear limit and where
-        query.limit = None
+        # clear where
         query.where = None
         return self.plan_sub_select(query, prev_step)
 
@@ -745,7 +781,7 @@ class QueryPlanner:
     def plan_cte(self, query):
         for cte in query.cte:
             step = self.plan_select(cte.query)
-            name = cte.name.parts[-1]
+            name = _resolve_identifier_part(cte.name)
             self.cte_results[name] = step.result
 
     def check_single_integration(self, query):
@@ -866,7 +902,74 @@ class QueryPlanner:
 
         plan = self.handle_partitioning(self.plan)
 
+        if not plan.is_resumable:
+            # optimizations for insert from selects
+            plan = self.check_insert_from_select(self.plan)
+
+        self.plan = plan
         return plan
+
+    def check_insert_from_select(self, plan: QueryPlan):
+        # special case: register insert from select (it is the same as mark resumable)
+        if not (
+            len(plan.steps) == 2
+            and isinstance(plan.steps[0], FetchDataframeStep)
+            and isinstance(plan.steps[1], InsertToTable)
+        ):
+            return plan
+
+        plan.is_resumable = True
+
+        select_step, insert_step = plan.steps
+
+        # -- to check if it is an insert into KB and to partition it --
+        # check if the first table is a KB
+        table = insert_step.table
+        kb_name = _resolve_identifier_part(table)
+        if len(table.parts) > 1:
+            project_name = _resolve_identifier_part(table, 0)
+        else:
+            project_name = self.default_namespace
+
+        kb_info = self.kb_metadata.get((project_name, kb_name))
+        if kb_info is None:
+            return plan
+
+        # Knowledge base storage is not pgvector or pgvector is enabled in config
+        if config["knowledge_bases"]["disable_autobatch"]:
+            return plan
+
+        if config["knowledge_bases"]["disable_pgvector_autobatch"] and kb_info["vector_db_engine"] == "pgvector":
+            return plan
+
+        if not isinstance(select_step.query, Select):
+            # we can't make probe select for this query
+            return plan
+
+        # convert
+        default_batch_size = 1000
+        track_column = kb_info.get("id_column", "id")
+
+        probe_select = copy.deepcopy(select_step.query)
+        probe_select.limit = Constant(1)
+        probe_select.targets = [Identifier(parts=[track_column])]
+
+        fetch_step = FetchDataframeStepPartition(
+            step_num=0,
+            integration=select_step.integration,
+            query=select_step.query,
+            params={"batch_size": default_batch_size, "track_column": track_column},
+            steps=[insert_step],
+        )
+
+        new_plan = QueryPlan(
+            steps=[fetch_step],
+            is_resumable=True,
+            is_async=True,
+            probe_query={"database": select_step.integration, "query": probe_select},
+            failback_plan=plan,
+        )
+        return new_plan
 
     def handle_partitioning(self, plan: QueryPlan) -> QueryPlan:
         """
@@ -934,14 +1037,6 @@ class QueryPlanner:
 
         if plan.is_resumable and isinstance(step, InsertToTable):
             plan.is_async = True
-        else:
-            # special case: register insert from select (it is the same as mark resumable)
-            if (
-                len(steps_in) == 2
-                and isinstance(steps_in[0], FetchDataframeStep)
-                and isinstance(steps_in[1], InsertToTable)
-            ):
-                plan.is_resumable = True
 
         plan.steps = steps_out
         return plan

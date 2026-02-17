@@ -17,8 +17,8 @@ services:
     image: mindsdb/mindsdb:devel
 
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 #     Uncomment the following lines if you want to use the local version of otel-collector and langfuse
 #      otel-collector:
 #        condition: service_started
@@ -33,19 +33,15 @@ services:
     ports:
       - '47334:47334'
       - '47335:47335'
-      - '47336:47336'
-      - '47337:47337'
-      - '47338:47338'  # A2A server port
     environment:
       MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
+      KB_PGVECTOR_URL: "postgresql://postgres:postgres@postgres/kb"  # Use pgvector as the default store for knowledge bases
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level
       SENTRY_IO_DSN: ""
       SENTRY_IO_ENVIRONMENT: "local"
-      MINDSDB_APIS: "http,a2a,mcp"  # Explicitly set the APIs to enable
-      MINDSDB_A2A_HOST: "0.0.0.0"   # Force A2A to bind to all interfaces
-      MINDSDB_A2A_PORT: "47338"     # Force A2A to use port 47338
+      #MINDSDB_APIS: "http"  # Explicitly set the APIs to enable
       # SENTRY_IO_FORCE_RUN: "true" # Uncomment me to force-start sentry on local development. Good for profiling, but may annoy other devs on sentry.io with the "noise"
       # MINDSDB_LOG_LEVEL: "DEBUG"
       # OPENAI_API_KEY: "..."
@@ -106,8 +102,8 @@ services:
     image: langfuse/langfuse:2.87.0
     restart: always
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "3000:3000"
     healthcheck:
@@ -133,7 +129,7 @@ services:
 
   postgres:
     <<: *autoRestartOnFailure
-    image: postgres:16.4
+    image: pgvector/pgvector:pg17
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -147,9 +143,39 @@ services:
     ports:
       - "15432:5432" # Expose the port to the host. Use 15432 to avoid conflicts with local postgres installations
     volumes:
-      - db_data:/var/lib/postgresql/data
-      - ./scripts/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
+      - data_pg17:/var/lib/postgresql/data
+
+  # Uncomment if you need to upgrade from Postgres 16 to 17
+  # Follow the upgrade proceedure in the MindsDB 25.11.1 release notes
+  # 
+  # postgres16:
+  #   <<: *autoRestartOnFailure
+  #   image: pgvector/pgvector:pg16
+  #   restart: always
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_DB=postgres
+  #   volumes:
+  #     - db_data:/var/lib/postgresql/data
+
+  # Ensures the required databases and extensions are created before other services start
+  migrate:
+    image: pgvector/pgvector:pg17
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - ./scripts/init-dbs.sh:/init-dbs.sh:ro
+    entrypoint: ["/bin/bash", "/init-dbs.sh"]
 
 volumes:
   db_data:
+    driver: local
+  data_pg17:
     driver: local

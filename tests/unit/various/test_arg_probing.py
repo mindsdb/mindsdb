@@ -1,9 +1,6 @@
 import pytest
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
-    StatsForecastHandler,
-)
 from mindsdb.integrations.libs.base import ArgProbeMixin
 
 """
@@ -14,8 +11,7 @@ Tests for the arg probing mixin
 @pytest.fixture
 def mock_handler_class():
     class MockHandler(ArgProbeMixin):
-        def __init__(self, **kwargs):
-            ...
+        def __init__(self, **kwargs): ...
 
         def create(self, args):
             args["test_required"]
@@ -48,8 +44,7 @@ def mock_handler_class():
 def mock_openai_handler_class():
     # let the openai handler use the arg probing mixin
     class MockOpenAIHandler(OpenAIHandler, ArgProbeMixin):
-        def __init__(self, **kwargs):
-            ...
+        def __init__(self, **kwargs): ...
 
     return MockOpenAIHandler
 
@@ -92,7 +87,7 @@ def test_arg_probing(mock_handler_class):
         {
             "name": "test_optional2",
             "required": False,
-        }
+        },
     ]
 
 
@@ -125,13 +120,3 @@ def test_openai_handler_probing(mock_openai_handler_class):
         "name": "enigne",
         "required": False,
     } not in handler.prediction_args()
-
-
-def test_statsforecast_handler_probing():
-    class MockClass(StatsForecastHandler, ArgProbeMixin):
-        def __init__(self, **kwargs):
-            ...
-
-    handler = MockClass
-    assert len(handler.prediction_args()) == 0
-    assert len(handler.creation_args()) == 0

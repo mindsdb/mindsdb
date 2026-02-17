@@ -1,13 +1,14 @@
 import os
 import json
-import traceback
 from http import HTTPStatus
 from typing import Dict, Iterable, List
 
+import pandas as pd
 from flask import request, Response
 from flask_restx import Resource
 
 from mindsdb.interfaces.agents.agents_controller import AgentsController
+from mindsdb.interfaces.agents.utils.data_catalog_builder import dataframe_to_markdown
 from mindsdb.interfaces.storage import db
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
@@ -27,12 +28,8 @@ def create_agent(project_name, name, agent):
     if name is None:
         return http_error(HTTPStatus.BAD_REQUEST, "Missing field", 'Missing "name" field for agent')
 
-    if not name.islower():
-        return http_error(HTTPStatus.BAD_REQUEST, "Wrong name", f"The name must be in lower case: {name}")
-
     model_name = agent.get("model_name")
     provider = agent.get("provider")
-    skills = agent.get("skills", [])
 
     params = agent.get("params", {})
     if agent.get("data"):
@@ -58,22 +55,22 @@ def create_agent(project_name, name, agent):
 
     try:
         created_agent = agents_controller.add_agent(
-            name=name, project_name=project_name, model_name=model_name, skills=skills, provider=provider, params=params
+            name=name, project_name=project_name, model_name=model_name, provider=provider, params=params
         )
         return created_agent.as_dict(), HTTPStatus.CREATED
     except (ValueError, EntityExistsError):
-        # Model or skill doesn't exist.
+        # Model doesn't exist.
         return http_error(
             HTTPStatus.NOT_FOUND,
             "Resource not found",
-            f'The model "{model_name}" or skills "{skills}" do not exist. Please ensure that the names are correct and try again.',
+            f'The model "{model_name}" does not exist. Please ensure that the name is correct and try again.',
         )
     except NotImplementedError:
         # Free users trying to create agent.
         return http_error(
             HTTPStatus.UNAUTHORIZED,
             "Unavailable to free users",
-            f'The model "{model_name}" or skills "{skills}" do not exist. Please ensure that the names are correct and try again.',
+            f'The model "{model_name}" does not exist. Please ensure that the name is correct and try again.',
         )
 
 
@@ -178,9 +175,6 @@ class AgentResource(Resource):
         # Update
         try:
             model_name = agent.get("model_name", None)
-            skills_to_add = agent.get("skills_to_add", [])
-            skills_to_remove = agent.get("skills_to_remove", [])
-            skills_to_rewrite = agent.get("skills", [])
             provider = agent.get("provider")
             params = agent.get("params", {})
             if agent.get("data"):
@@ -190,35 +184,11 @@ class AgentResource(Resource):
             if agent.get("prompt_template"):
                 params["prompt_template"] = agent["prompt_template"]
 
-            # Check if any of the skills to be added is of type 'retrieval'
-            session = SessionController()
-            skills_controller = session.skills_controller
-            retrieval_skill_added = False
-            if len(skills_to_add) > 0:
-                skills_names = [x["name"] if isinstance(x, dict) else x for x in skills_to_add]
-                retrieval_skill_added = any(
-                    skills_controller.get_skill(skill_name).type == "retrieval"
-                    for skill_name in skills_names
-                    if skills_controller.get_skill(skill_name) is not None
-                )
-            elif len(skills_to_rewrite) > 0:
-                retrieval_skill_added = any(
-                    skills_controller.get_skill(skill_meta["name"]).type == "retrieval"
-                    for skill_meta in skills_to_rewrite
-                    if skills_controller.get_skill(skill_meta["name"]) is not None
-                )
-
-            if retrieval_skill_added and "mode" not in params:
-                params["mode"] = "retrieval"
-
             updated_agent = agents_controller.update_agent(
                 agent_name,
                 project_name=project_name,
                 name=name,
                 model_name=model_name,
-                skills_to_add=skills_to_add,
-                skills_to_remove=skills_to_remove,
-                skills_to_rewrite=skills_to_rewrite,
                 provider=provider,
                 params=params,
             )
@@ -227,7 +197,7 @@ class AgentResource(Resource):
         except EntityExistsError as e:
             return http_error(HTTPStatus.NOT_FOUND, "Resource should not exists", str(e))
         except EntityNotExistsError as e:
-            # Agent or skill doesn't exist.
+            # Agent doesn't exist.
             return http_error(HTTPStatus.NOT_FOUND, "Resource not found", str(e))
         except ValueError as e:
             return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", str(e))
@@ -272,10 +242,7 @@ def _completion_event_generator(agent_name: str, messages: List[Dict], project_n
         # Have to commit/flush here so DB isn't locked while streaming.
         db.session.commit()
 
-        if "mode" not in existing_agent.params and any(
-            rel.skill.type == "retrieval" for rel in existing_agent.skills_relationships
-        ):
-            existing_agent.params["mode"] = "retrieval"
+        # Skills are no longer used - mode parameter handling removed
 
         completion_stream = session.agents_controller.get_completion(
             existing_agent, messages, project_name=project_name, tools=[], stream=True
@@ -286,6 +253,12 @@ def _completion_event_generator(agent_name: str, messages: List[Dict], project_n
                 # The chunk is already formatted correctly, yield it as is
                 yield chunk
             elif isinstance(chunk, dict):
+                # Convert DataFrame content to JSON-serializable format
+                if chunk.get("type") == "data" and isinstance(chunk.get("content"), pd.DataFrame):
+                    df = chunk["content"]
+                    # Convert DataFrame to markdown format
+                    chunk["content"] = dataframe_to_markdown(df)
+
                 if "error" in chunk:
                     # Handle error chunks
                     logger.error(f"Error in completion stream: {chunk['error']}")
@@ -296,6 +269,9 @@ def _completion_event_generator(agent_name: str, messages: List[Dict], project_n
                 elif chunk.get("type") == "sql":
                     # Handle SQL query message
                     yield json_serialize({"type": "sql", "content": chunk.get("content")})
+                elif chunk.get("type") == "status":
+                    # Handle status message
+                    yield json_serialize({"type": "context", "content": chunk.get("content")})
                 else:
                     # Chunk should already be formatted by agent stream.
                     yield json_serialize(chunk)
@@ -307,10 +283,10 @@ def _completion_event_generator(agent_name: str, messages: List[Dict], project_n
 
         logger.info("Completion stream finished")
 
-    except Exception as e:
-        logger.error(f"Error in completion event generator: {e}")
-        logger.error(traceback.format_exc())
-        yield json_serialize({"error": "error in completion event generator"})
+    except Exception:
+        error_message = "Error in completion event generator"
+        logger.exception(error_message)
+        yield json_serialize({"error": error_message})
 
     finally:
         yield json_serialize({"type": "end"})
@@ -323,40 +299,38 @@ class AgentCompletionsStream(Resource):
     @ns_conf.doc("agent_completions_stream")
     @api_endpoint_metrics("POST", "/agents/agent/completions/stream")
     def post(self, project_name, agent_name):
-        logger.info(f"Received streaming request for agent {agent_name} in project {project_name}")
-
-        # Check for required parameters.
+        # Extract messages from request (HTTP format only)
         if "messages" not in request.json:
-            logger.error("Missing 'messages' parameter in request body")
             return http_error(
-                HTTPStatus.BAD_REQUEST, "Missing parameter", 'Must provide "messages" parameter in POST body'
+                HTTPStatus.BAD_REQUEST,
+                "Missing parameter",
+                'Must provide "messages" parameter in POST body',
             )
+
+        messages = request.json["messages"]
 
         session = SessionController()
         try:
             existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
-                logger.error(f"Agent {agent_name} not found in project {project_name}")
+                logger.warning(f"Agent {agent_name} not found in project {project_name}")
                 return http_error(
                     HTTPStatus.NOT_FOUND, "Agent not found", f"Agent with name {agent_name} does not exist"
                 )
         except ValueError as e:
-            logger.error(f"Project {project_name} not found: {str(e)}")
+            logger.warning(f"Project {project_name} not found: {e}")
             return http_error(
                 HTTPStatus.NOT_FOUND, "Project not found", f"Project with name {project_name} does not exist"
             )
-
-        messages = request.json["messages"]
 
         try:
             gen = _completion_event_generator(agent_name, messages, project_name)
             logger.info(f"Starting streaming response for agent {agent_name}")
             return Response(gen, mimetype="text/event-stream")
         except Exception as e:
-            logger.error(f"Error during streaming for agent {agent_name}: {str(e)}")
-            logger.error(traceback.format_exc())
+            logger.exception(f"Error during streaming for agent {agent_name}:")
             return http_error(
-                HTTPStatus.INTERNAL_SERVER_ERROR, "Streaming error", f"An error occurred during streaming: {str(e)}"
+                HTTPStatus.INTERNAL_SERVER_ERROR, "Streaming error", f"An error occurred during streaming: {e}"
             )
 
 
@@ -387,11 +361,7 @@ class AgentCompletions(Resource):
                 HTTPStatus.NOT_FOUND, "Project not found", f"Project with name {project_name} does not exist"
             )
 
-        # set mode to `retrieval` if agent has a skill of type `retrieval` and mode is not set
-        if "mode" not in existing_agent.params and any(
-            rel.skill.type == "retrieval" for rel in existing_agent.skills_relationships
-        ):
-            existing_agent.params["mode"] = "retrieval"
+        # Skills are no longer used - mode parameter handling removed
 
         messages = request.json["messages"]
 
@@ -417,8 +387,8 @@ class AgentCompletions(Resource):
                     last_context = completion.iloc[-1]["context"]
                     if last_context:
                         context = json.loads(last_context)
-                except (json.JSONDecodeError, IndexError) as e:
-                    logger.error(f"Error decoding context: {e}")
+                except (json.JSONDecodeError, IndexError):
+                    logger.warning("Error decoding context:", exc_info=True)
                     pass  # Keeping context as an empty list in case of error
 
             response["message"]["context"] = context

@@ -12,12 +12,21 @@ import numpy as np
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.executor.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
 from tests.unit.executor_test_base import BaseExecutorMockPredictor
+
+
+class DTYPE:
+    INT = "Int64"
+    FLOAT = "Float64"
+    CATEGORY = "category"
+    DATETIME = "datetime64[ns]"
+
+
+DTYPE = DTYPE()
 
 
 def to_str(query):
@@ -30,7 +39,7 @@ def to_str(query):
 class Test(BaseExecutorMockPredictor):
     def setup_method(self, method):
         super().setup_method()
-        self.set_executor(mock_lightwood=True, mock_model_controller=True, import_dummy_ml=True)
+        self.set_executor(mock_predict=True, mock_model_controller=True, import_dummy_ml=True)
 
     @pytest.mark.slow
     def test_describe(self):
@@ -108,7 +117,7 @@ class Test(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": predicted_value,
         }
         self.set_predictor(predictor)
@@ -134,7 +143,7 @@ class Test(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": 3.14,
         }
         self.set_predictor(predictor)
@@ -183,10 +192,10 @@ class Test(BaseExecutorMockPredictor):
                     "horizon": 3,
                 }
             },
-            "dtypes": {
-                "a": dtype.integer,
-                "t": dtype.date,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "a": DTYPE.INT,
+                "t": DTYPE.DATETIME,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": "",
         }
@@ -346,10 +355,10 @@ class Test(BaseExecutorMockPredictor):
             "problem_definition": {
                 "timeseries_settings": {"is_timeseries": True, "window": 2, "order_by": "t", "horizon": 3}
             },
-            "dtypes": {
-                "a": dtype.integer,
-                "t": dtype.date,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "a": DTYPE.INT,
+                "t": DTYPE.DATETIME,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": "",
         }
@@ -451,10 +460,10 @@ class Test(BaseExecutorMockPredictor):
             "problem_definition": {
                 "timeseries_settings": {"is_timeseries": True, "window": 2, "order_by": "t", "horizon": 3}
             },
-            "dtypes": {
-                "a": dtype.integer,
-                "t": dtype.date,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "a": DTYPE.INT,
+                "t": DTYPE.DATETIME,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": "",
         }
@@ -519,10 +528,10 @@ class Test(BaseExecutorMockPredictor):
                     "horizon": 3,
                 }
             },
-            "dtypes": {
-                "a": dtype.integer,
-                "t": dtype.float,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "a": DTYPE.INT,
+                "t": DTYPE.FLOAT,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": "",
         }
@@ -574,7 +583,7 @@ class Test(BaseExecutorMockPredictor):
         self.set_handler(mock_handler, name="pg", tables={})
         self.execute("drop database pg")
         self.set_handler(mock_handler, name="PG", tables={})
-        self.execute("drop database pg")
+        self.execute("drop database `PG`")
         self.set_handler(mock_handler, name="pg", tables={})
         self.execute("drop database Pg")
 
@@ -618,7 +627,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
     task_predictor = {
         "name": "task_model",
         "predict": "p",
-        "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical, "c": dtype.datetime},
+        "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY, "c": DTYPE.DATETIME},
         "predicted_value": "ccc",
     }
 
@@ -1073,6 +1082,38 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             check_dtype=False,
         )
 
+        # different case
+        sqls = [
+            """
+            WITH Ta as (
+                select 1 as x
+            )
+            select * from ta
+        """,
+            """
+            WITH ta as (
+                select 1 as x
+            )
+            select * from Ta
+        """,
+        ]
+        for sql in sqls:
+            resp = self.execute(sql)
+            pdt.assert_frame_equal(
+                resp.data.to_df(),
+                pd.DataFrame([[1]], columns=["x"]),
+                check_dtype=False,
+            )
+
+        sql = """
+            WITH `Ta` as (
+                select 1 as x
+            )
+            select * from ta
+        """
+        with pytest.raises(Exception):
+            resp = self.execute(sql)
+
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):
     #     self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
@@ -1104,7 +1145,7 @@ class TestTableau(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": 3.14,
         }
         self.set_predictor(predictor)
@@ -1134,7 +1175,7 @@ class TestTableau(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": predicted_value,
         }
         self.set_predictor(predictor)
@@ -1164,7 +1205,7 @@ class TestTableau(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": predicted_value,
         }
         self.set_predictor(predictor)
@@ -1235,7 +1276,8 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
             (select * from vtasks)
             PREDICT a
             using
-            join_learn_process=true
+                engine='dummy_ml',
+                join_learn_process=true
         """)
 
         # test creating with if not exists
@@ -1245,7 +1287,8 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
             (select * from vtasks)
             PREDICT a
             using
-            join_learn_process=true
+                engine='dummy_ml',
+                join_learn_process=true
         """)
 
         # learn was called.
@@ -1288,7 +1331,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         predictor = {
             "name": "task_model",
             "predict": "p",
-            "dtypes": {"p": dtype.float, "a": dtype.integer, "b": dtype.categorical},
+            "dtype_dict": {"p": DTYPE.FLOAT, "a": DTYPE.INT, "b": DTYPE.CATEGORY},
             "predicted_value": predicted_value,
         }
         self.set_predictor(predictor)
@@ -1348,11 +1391,11 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
                     "horizon": 1,
                 }
             },
-            "dtypes": {
-                "p": dtype.categorical,
-                "a": dtype.integer,
-                "t": dtype.date,
-                "g": dtype.categorical,
+            "dtype_dict": {
+                "p": DTYPE.CATEGORY,
+                "a": DTYPE.INT,
+                "t": DTYPE.DATETIME,
+                "g": DTYPE.CATEGORY,
             },
             "predicted_value": predicted_value,
         }
@@ -1414,43 +1457,158 @@ class TestExecutionTools:
         df = pd.DataFrame(d)
         query_df(df, "select * from models")
 
+    def test_query_df_with_rollup(self):
+        """Test GROUP BY WITH ROLLUP functionality"""
+        # Create test data with hierarchical structure
+        df = pd.DataFrame(
+            [
+                {"country": "USA", "city": "NY", "amount": 100},
+                {"country": "USA", "city": "NY", "amount": 150},
+                {"country": "USA", "city": "LA", "amount": 200},
+                {"country": "UK", "city": "London", "amount": 250},
+                {"country": "UK", "city": "London", "amount": 300},
+            ]
+        )
+
+        result = query_df(
+            df,
+            """
+            SELECT country, SUM(amount) as total
+            FROM df
+            GROUP BY country WITH ROLLUP
+        """,
+        )
+
+        # Should have 3 rows: USA, UK, and grand total (NULL)
+        assert len(result) == 3
+        # Check that we have a NULL row (grand total)
+        null_rows = result[result["country"].isna()]
+        assert len(null_rows) == 1
+        # Grand total should be 1000
+        assert null_rows["total"].values[0] == 1000
+
+        # Test multiple column ROLLUP
+        result = query_df(
+            df,
+            """
+            SELECT country, city, SUM(amount) as total
+            FROM df
+            GROUP BY country, city WITH ROLLUP
+        """,
+        )
+
+        # Should have:
+        # - 3 detail rows (USA-NY, USA-LA, UK-London)
+        # - 2 country subtotals (USA-NULL, UK-NULL)
+        # - 1 grand total (NULL-NULL)
+        # Total: 6 rows
+        assert len(result) == 6
+
+        # Check country subtotals (city is NULL but country is not)
+        country_subtotals = result[result["city"].isna() & result["country"].notna()]
+        assert len(country_subtotals) == 2
+
+        # Check USA subtotal
+        usa_subtotal = country_subtotals[country_subtotals["country"] == "USA"]
+        assert len(usa_subtotal) == 1
+        assert usa_subtotal["total"].values[0] == 450  # 100 + 150 + 200
+
+        # Check UK subtotal
+        uk_subtotal = country_subtotals[country_subtotals["country"] == "UK"]
+        assert len(uk_subtotal) == 1
+        assert uk_subtotal["total"].values[0] == 550  # 250 + 300
+
+        # Check grand total (both NULL)
+        grand_total = result[result["country"].isna() & result["city"].isna()]
+        assert len(grand_total) == 1
+        assert grand_total["total"].values[0] == 1000
+
     def test_query_df_functions(self):
+        cur_time = dt.datetime.now()
         tests = [
-            {"query": "select to_base64('test') as result from df", "result": "dGVzdA=="},
-            {"query": "select char_length('海豚') as result from df", "result": 2},
-            {"query": "select length('海豚') as result from df", "result": 6},
-            {"query": "select char(77, 78, 79) as result from df", "result": "MNO"},
-            {"query": "select locate('no', 'yes') as result from df", "result": 0},
-            {"query": "select locate('no', 'yesnoyes') as result from df", "result": 4},
-            {"query": "select format(1234567.89, 0) as result from df", "result": "1,234,568"},
-            {"query": "select format(1234567.89, 3) as result from df", "result": "1,234,567.890"},
-            {"query": "select format(f_float, 2) as result from df", "result": "1.10"},
-            {"query": "select FORMAT('{:,.2f}', 1234567.89) as result from df", "result": "1,234,567.89"},
+            {"query": "to_base64('test')", "result": "dGVzdA=="},
+            {"query": "char_length('海豚')", "result": 2},
+            {"query": "length('海豚')", "result": 6},
+            {"query": "char(77, 78, 79)", "result": "MNO"},
+            {"query": "locate('no', 'yes')", "result": 0},
+            {"query": "locate('no', 'yesnoyes')", "result": 4},
+            {"query": "format(1234567.89, 0)", "result": "1,234,568"},
+            {"query": "format(1234567.89, 3)", "result": "1,234,567.890"},
+            {"query": "format(f_float, 2)", "result": "1.10"},
+            {"query": "FORMAT('{:,.2f}', 1234567.89)", "result": "1,234,567.89"},
             {
-                "query": "select sha2('abc') as result from df",
+                "query": "sha2('abc')",
                 "result": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
             },
-            {"query": "select REGEXP_SUBSTR('abc def ghi', '[a-z]+') as result from df", "result": "abc"},
-            {"query": "select REGEXP_SUBSTR('abc def ghi', '[a-z]+', 1, 1) as result from df", "result": "abc"},
-            {"query": "select substring_index('www.mysql.com', '.', 2) as result from df", "result": "www.mysql"},
-            {"query": "select substring_index('www.mysql.com', '.', 1) as result from df", "result": "www"},
+            {"query": "REGEXP_SUBSTR('abc def ghi', '[a-z]+')", "result": "abc"},
+            {"query": "REGEXP_SUBSTR('abc def ghi', '[a-z]+', 1, 1)", "result": "abc"},
+            {"query": "substring_index('www.mysql.com', '.', 2)", "result": "www.mysql"},
+            {"query": "substring_index('www.mysql.com', '.', 1)", "result": "www"},
             {
-                "query": "select TIMESTAMPDIFF(MINUTE,'2003-02-01','2003-05-01 12:05:55') as result from df",
+                "query": "TIMESTAMPDIFF(MINUTE,'2003-02-01','2003-05-01 12:05:55')",
                 "result": 128885,
             },
-            {"query": "select TIMESTAMPDIFF(MONTH,'2003-02-01','2003-05-01') as result from df", "result": 3},
+            {"query": "TIMESTAMPDIFF(MONTH,'2003-02-01','2003-05-01')", "result": 3},
             {
-                "query": "select EXTRACT(YEAR FROM '2019-07-02') as result from df",
+                "query": "EXTRACT(YEAR FROM '2019-07-02')",
                 "result": 2019,
-                # }, {
-                #     "query": "select EXTRACT(YEAR_MONTH FROM '2019-07-02') as result from df",
-                #     "result": 201907
             },
+            {"query": "EXTRACT(YEAR_MONTH FROM '2019-07-02')", "result": 201907},
+            {"query": "EXTRACT(DAY_MINUTE FROM created)", "result": 302223},
+            {"query": "GET_FORMAT(DATE,'ISO')", "result": "%Y-%m-%d"},
+            {"query": "GET_FORMAT(DATETIME,'EUR')", "result": "%Y-%m-%d %H.%i.%s"},
+            {"query": "DATE_FORMAT('2009-10-30 22:23:11', '%X %V %H:%i:%s')", "result": "2009 43 22:23:11"},
+            {"query": "DATE_FORMAT(created, GET_FORMAT(DATE,'EUR'))", "result": "30.10.2009"},
+            {"query": "FROM_UNIXTIME(1447430881)", "result": dt.datetime.fromisoformat("2015-11-13 16:08:01")},
+            {"query": "FROM_UNIXTIME(f_seconds)", "result": dt.datetime.fromisoformat("2015-11-13 16:08:01")},
+            {"query": "FROM_DAYS(730669)", "result": dt.datetime.fromisoformat("2000-07-03")},
+            {"query": "FROM_DAYS(f_days)", "result": dt.datetime.fromisoformat("2000-07-03")},
+            {"query": "DAYOFYEAR('2009-10-30')", "result": 303},
+            {"query": "DAYOFYEAR(created)", "result": 303},
+            {"query": "DAYOFWEEK('2009-10-30')", "result": 6},
+            {"query": "DAYOFWEEK(created)", "result": 6},
+            {"query": "DAYOFMONTH('2009-10-30')", "result": 30},
+            {"query": "DAY(created)", "result": 30},
+            {"query": "DAYNAME('2009-10-30')", "result": "Friday"},
+            {"query": "DAYNAME(created)", "result": "Friday"},
+            {"query": "DAYNAME('2009-10-30')", "result": "Friday"},
+            {"query": "DAYNAME(created)", "result": "Friday"},
+            {"query": "CURDATE()", "result": dt.datetime(cur_time.year, cur_time.month, cur_time.day)},
+            {"query": "DATEDIFF('2011-01-15 01:02:03', '2009-10-30 22:23:11')", "result": 442},
+            {"query": "DATEDIFF(updated, created)", "result": 442},
+            {"query": "DATE_ADD('2011-01-15', INTERVAL 31 DAY)", "result": dt.datetime.fromisoformat("2011-02-15")},
+            {
+                "query": "ADDDATE(updated, INTERVAL '31 DAY')",
+                "result": dt.datetime.fromisoformat("2011-02-15 01:02:03"),
+            },
+            {"query": "DATE_SUB('2011-01-15', INTERVAL 31 DAY)", "result": dt.datetime.fromisoformat("2010-12-15")},
+            {"query": "DATE_SUB(updated, INTERVAL 31 DAY)", "result": dt.datetime.fromisoformat("2010-12-15 01:02:03")},
+            {
+                "query": "ADDTIME('2011-01-15 01:02:03', '1 1:1:1.2')",
+                "result": dt.datetime.fromisoformat("2011-01-16 02:03:04.200"),
+            },
+            {"query": "ADDTIME(updated, '1 1:1:1.2')", "result": dt.datetime.fromisoformat("2011-01-16 02:03:04.200")},
+            {
+                "query": "CONVERT_TZ('2009-10-30 22:23:11','GMT','MET')",
+                "result": dt.datetime.fromisoformat("2009-10-30 23:23:11"),
+            },
+            {"query": "CONVERT_TZ(created,'GMT','MET')", "result": dt.datetime.fromisoformat("2009-10-30 23:23:11")},
         ]
 
+        df = pd.DataFrame(
+            [
+                {
+                    "f_seconds": 1447430881,
+                    "f_days": 730669,
+                    "f_float": 1.1,
+                    "created": "2009-10-30 22:23:11",
+                    "updated": "2011-01-15 01:02:03",
+                }
+            ]
+        )
+
         for test in tests:
-            df = pd.DataFrame([[1, 1.1]], columns=["f_int", "f_float"])
-            query = test["query"]
+            query = f"select {test['query']} as result from df"
             expected_result = test["result"]
 
             result = query_df(df, query)["result"][0]
@@ -1464,14 +1622,14 @@ class TestExecutionTools:
 class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
     def setup_method(self, method):
         super().setup_method()
-        self.set_executor(mock_lightwood=True, mock_model_controller=True, import_dummy_ml=True)
+        self.set_executor(mock_predict=True, mock_model_controller=True, import_dummy_ml=True)
 
     def test_ml_engine(self):
         from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
         sql = """
             CREATE ML_ENGINE test_engine
-            FROM lightwood
+            FROM dummy_ml
         """
 
         # create an ml engine
@@ -1484,13 +1642,13 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         # create the same ml engine with if not exists doesn't throw an error
         self.execute("""
             CREATE ML_ENGINE IF NOT EXISTS test_engine
-            FROM lightwood
+            FROM dummy_ml
         """)
 
         # create an engine with if not exists should indeed create a new engine
         self.execute("""
             CREATE ML_ENGINE IF NOT EXISTS test_engine2
-            FROM lightwood
+            FROM dummy_ml
         """)
 
         # check that the engine was indeed created

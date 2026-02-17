@@ -21,6 +21,11 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
+from .auth_types import (
+    PasswordAuthType,
+    KeyPairAuthType,
+)
+
 try:
     import pyarrow as pa
 
@@ -172,6 +177,11 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
     name = "snowflake"
 
+    _auth_types = {
+        "key_pair": KeyPairAuthType(),
+        "password": PasswordAuthType(),
+    }
+
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data")
@@ -184,6 +194,10 @@ class SnowflakeHandler(MetaDatabaseHandler):
         """
         Establishes a connection to a Snowflake account.
 
+        Supports two authentication methods:
+        1. User/password authentication (legacy)
+        2. Key pair authentication (recommended)
+
         Raises:
             ValueError: If the required connection parameters are not provided.
             snowflake.connector.errors.Error: If an error occurs while connecting to the Snowflake account.
@@ -195,22 +209,17 @@ class SnowflakeHandler(MetaDatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        # Mandatory connection parameters
-        if not all(key in self.connection_data for key in ["account", "user", "password", "database"]):
-            raise ValueError("Required parameters (account, user, password, database) must be provided.")
+        auth_type_key = self.connection_data.get("auth_type")
+        if auth_type_key is None:
+            supported = ", ".join(self._auth_types.keys())
+            raise ValueError(f"auth_type is required. Supported values: {supported}.")
 
-        config = {
-            "account": self.connection_data.get("account"),
-            "user": self.connection_data.get("user"),
-            "password": self.connection_data.get("password"),
-            "database": self.connection_data.get("database"),
-        }
+        auth_type = self._auth_types.get(auth_type_key)
+        if not auth_type:
+            supported = ", ".join(self._auth_types.keys())
+            raise ValueError(f"Invalid auth_type '{auth_type_key}'. Supported values: {supported}.")
 
-        # Optional connection parameters
-        optional_params = ["schema", "warehouse", "role"]
-        for param in optional_params:
-            if param in self.connection_data:
-                config[param] = self.connection_data[param]
+        config = auth_type.get_config(**self.connection_data)
 
         try:
             self.connection = connector.connect(**config)
@@ -238,7 +247,6 @@ class SnowflakeHandler(MetaDatabaseHandler):
         Returns:
             StatusResponse: An object containing the success status and an error message if an error occurs.
         """
-
         response = StatusResponse(False)
         need_to_close = not self.is_connected
 
@@ -476,8 +484,9 @@ class SnowflakeHandler(MetaDatabaseHandler):
             query += f" AND TABLE_NAME IN ({table_names_str})"
 
         result = self.native_query(query)
-        result.data_frame["ROW_COUNT"] = result.data_frame["ROW_COUNT"].astype(int)
-
+        if result.data_frame is not None and "ROW_COUNT" in result.data_frame.columns:
+            # Snowflake can return NULL for ROW_COUNT (e.g., for views); preserve as <NA>.
+            result.data_frame["ROW_COUNT"] = result.data_frame["ROW_COUNT"].astype("Int64")
         return result
 
     def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
@@ -523,7 +532,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         TODO:  Add most_common_values and most_common_frequencies
         """
         columns_query = """
-            SELECT TABLE_NAME, COLUMN_NAME
+            SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = current_schema()
         """
@@ -540,25 +549,32 @@ class SnowflakeHandler(MetaDatabaseHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message="No columns found.")
 
         columns_df = columns_result.data_frame
-        grouped = columns_df.groupby("TABLE_NAME")
+        grouped = columns_df.groupby(["TABLE_SCHEMA", "TABLE_NAME"])
         all_stats = []
 
-        for table_name, group in grouped:
+        for (table_schema, table_name), group in grouped:
             select_parts = []
             for _, row in group.iterrows():
                 col = row["COLUMN_NAME"]
+                data_type = row["DATA_TYPE"]
                 # Ensure column names in the query are properly quoted if they contain special characters or are case-sensitive
                 quoted_col = f'"{col}"'
                 select_parts.extend(
                     [
                         f'COUNT_IF({quoted_col} IS NULL) AS "nulls_{col}"',
                         f'APPROX_COUNT_DISTINCT({quoted_col}) AS "distincts_{col}"',
-                        f'MIN({quoted_col}) AS "min_{col}"',
-                        f'MAX({quoted_col}) AS "max_{col}"',
                     ]
                 )
+                # We can sort and find min/max for array but is expensive for large tables, avoid for now
+                if data_type not in {"ARRAY", "OBJECT", "VARIANT"}:
+                    select_parts.extend(
+                        [
+                            f'MIN({quoted_col}) AS "min_{col}"',
+                            f'MAX({quoted_col}) AS "max_{col}"',
+                        ]
+                    )
 
-            quoted_table_name = f'"{table_name}"'
+            quoted_table_name = f'"{table_schema}"."{table_name}"'
             stats_query = f"""
             SELECT COUNT(*) AS "total_rows", {", ".join(select_parts)}
             FROM {quoted_table_name}

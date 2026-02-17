@@ -10,15 +10,19 @@ import requests
 import mysql.connector
 import pandas as pd
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE, FIELD_FLAG
 
-from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT
+from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT, get_test_resource_name, create_byom
 
 # pymysql.connections.DEBUG = True
 
 
+ML_ENGINE_NAME = "my_byom_engine"
+
+
 class Dlist(list):
-    """Service class for convenient work with list of dicts(db response)"""
+    """Service class for convenient work with list of dicts(db response).
+    Assumes keys are already normalized to lowercase."""
 
     def __contains__(self, item):
         if len(self) == 0:
@@ -59,7 +63,7 @@ class BaseStuff:
 
                 if cursor.description:
                     description = cursor.description
-                    columns = [i[0] for i in cursor.description]
+                    columns = [i[0].lower() for i in cursor.description]
                     data = cursor.fetchall()
 
                     res = Dlist()
@@ -83,7 +87,7 @@ class BaseStuff:
 
     def upload_ds(self, df, name):
         """Upload pandas df as csv file."""
-        self.query(f"DROP TABLE files.{name};")
+        self.query(f"DROP TABLE IF EXISTS files.{name};")
         with tempfile.NamedTemporaryFile(mode="w+", newline="", delete=False) as f:
             df.to_csv(f, index=False)
             filename = f.name
@@ -91,20 +95,20 @@ class BaseStuff:
 
         with open(filename, "r") as f:
             url = f"{HTTP_API_ROOT}/files/{name}"
-            data = {"name": (name, f, "text/csv")}
-            res = requests.put(url, files=data)
+            files = {"file": (f"{name}.csv", f, "text/csv")}
+            res = requests.put(url, files=files)
             res.raise_for_status()
 
     def verify_file_ds(self, ds_name):
-        timeout = 5
+        timeout = 10
         threshold = time.time() + timeout
         res = ""
         while time.time() < threshold:
             res = self.query("SHOW tables from files;")
-            if "Tables_in_files" in res and res.get_record("Tables_in_files", ds_name):
-                break
-            time.sleep(0.5)
-        assert "Tables_in_files" in res and res.get_record("Tables_in_files", ds_name), (
+            if "tables_in_files" in res and res.get_record("tables_in_files", ds_name):
+                return
+            time.sleep(0.3)
+        assert "tables_in_files" in res and res.get_record("tables_in_files", ds_name), (
             f"file datasource {ds_name} is not ready to use after {timeout} seconds"
         )
 
@@ -112,6 +116,8 @@ class BaseStuff:
         timeout = 600
         threshold = time.time() + timeout
         res = ""
+        model_not_found_threshold = time.time() + 30
+        check_interval = 1
         while time.time() < threshold:
             _query = "SELECT status, error FROM mindsdb.models WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
@@ -120,9 +126,11 @@ class BaseStuff:
                     break
                 elif res.get_record("status", "error"):
                     raise Exception(res[0]["error"])
-            time.sleep(2)
+            elif len(res) == 0 and time.time() > model_not_found_threshold:
+                raise Exception(f"Model {predictor_name} not found in models table after 30 seconds")
+            time.sleep(check_interval)
         assert "status" in res and res.get_record("status", "complete"), (
-            f"predictor {predictor_name} is not complete after {timeout} seconds"
+            f"predictor {predictor_name} is not complete after {timeout} seconds. Last result: {res}"
         )
 
     def validate_database_creation(self, name):
@@ -132,8 +140,52 @@ class BaseStuff:
         )
 
 
+@pytest.fixture(scope="class")
+def postgres_datasource(request):
+    """
+    Class-scoped fixture to create the postgres datasource once.
+    Ensures the database exists for all tests that need it.
+    """
+    helper = BaseStuff()
+    helper.use_binary = False
+    db_name = get_test_resource_name("test_demo_postgres")
+    db_details = {
+        "type": "postgres",
+        "connection_data": {
+            "host": "samples.mindsdb.com",
+            "port": "5432",
+            "user": "demo_user",
+            "password": "demo_password",
+            "database": "demo",
+            "schema": "demo",
+        },
+    }
+    helper.create_database(db_name, db_details)
+    helper.validate_database_creation(db_name)
+    request.cls.POSTGRES_DB_NAME = db_name
+    yield db_name
+    # Cleanup
+    try:
+        helper.query(f"DROP DATABASE IF EXISTS {db_name};")
+    except Exception:
+        pass
+
+
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
+@pytest.mark.usefixtures("postgres_datasource")
 class TestMySqlApi(BaseStuff):
+    # Unique resource names for this test session (initialized in setup_class)
+    POSTGRES_DB_NAME = None
+    MARIADB_DB_NAME = None
+    MYSQL_DB_NAME = None
+
+    @classmethod
+    def setup_class(cls):
+        """Initialize unique resource names for this test session."""
+        # Note: POSTGRES_DB_NAME is set by the postgres_datasource fixture
+        cls.MARIADB_DB_NAME = get_test_resource_name("test_demo_mariadb")
+        cls.MYSQL_DB_NAME = get_test_resource_name("test_demo_mysql")
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -150,8 +202,8 @@ class TestMySqlApi(BaseStuff):
                 "schema": "demo",
             },
         }
-        self.create_database("test_demo_postgres", db_details)
-        self.validate_database_creation("test_demo_postgres")
+        self.create_database(self.POSTGRES_DB_NAME, db_details)
+        self.validate_database_creation(self.POSTGRES_DB_NAME)
 
     @pytest.mark.parametrize("table_name", ["types_test_data", "types_test_data_with_nulls"])
     def test_response_types(self, use_binary, table_name):
@@ -261,7 +313,7 @@ class TestMySqlApi(BaseStuff):
                 dt_interval,
                 dt_timestamptz,
                 dt_timetz
-            FROM test_demo_postgres.{table_name} order by n_integer NULLS last;
+            FROM {self.POSTGRES_DB_NAME}.{table_name} order by n_integer NULLS last;
         """,
             with_description=True,
         )
@@ -304,8 +356,8 @@ class TestMySqlApi(BaseStuff):
             "t_varchar": "Test",
             "t_text": "Test",
             "t_bytea": "Demo binary data.",
-            "t_json": '{"name": "test"}',
-            "t_jsonb": '{"name": "test"}',
+            "t_json": '{"name":"test"}',
+            "t_jsonb": '{"name":"test"}',
             "t_xml": "<root><element>test</element><nested><value>123</value></nested></root>",
             "t_uuid": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
             # numeric types
@@ -330,6 +382,19 @@ class TestMySqlApi(BaseStuff):
             "dt_timestamptz": datetime.datetime(2023, 10, 15, 11, 30, 45),
             "dt_timetz": datetime.timedelta(seconds=52245 - (3 * 60 * 60)),
         }
+        num_types = [
+            "n_smallint",
+            "n_integer",
+            "n_bigint",
+            "n_decimal",
+            "n_numeric",
+            "n_real",
+            "n_double_precision",
+            "n_smallserial",
+            "n_serial",
+            "n_bigserial",
+            "n_money",
+        ]
         description_dict = {row[0]: {"type_code": row[1], "flags": row[-2]} for row in description}
         row = res[0]
         for column_name, expected_type in expected_types.items():
@@ -352,6 +417,10 @@ class TestMySqlApi(BaseStuff):
                 assert abs(row[column_name] - expected_values[column_name]) < 1e-5, (
                     f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
                 )
+            elif column_name in ("t_json", "t_jsonb"):
+                assert json.loads(row[column_name]) == json.loads(expected_values[column_name]), (
+                    f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
+                )
             else:
                 assert row[column_name] == expected_values[column_name], (
                     f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
@@ -363,7 +432,11 @@ class TestMySqlApi(BaseStuff):
             if os.uname().sysname == "Darwin":
                 # It seems that flags on macos may be modified by mysql.connector on the client side.
                 continue
-            assert column_description["flags"] == sum(expected_type.flags), (
+            assert (
+                column_description["flags"] == sum(expected_type.flags)
+                or column_name in num_types
+                and column_description["flags"] == (sum(expected_type.flags) + FIELD_FLAG.NUM_FLAG)
+            ), (
                 f"Expected flags {sum(expected_type.flags)} for column {column_name}, but got {column_description['flags']}, use_binary={self.use_binary}, table_name={table_name}"
             )
 
@@ -379,8 +452,8 @@ class TestMySqlApi(BaseStuff):
                 "database": "test_data",
             },
         }
-        self.create_database("test_demo_mariadb", db_details)
-        self.validate_database_creation("test_demo_mariadb")
+        self.create_database(self.MARIADB_DB_NAME, db_details)
+        self.validate_database_creation(self.MARIADB_DB_NAME)
 
     def test_create_mysql_datasources(self, use_binary):
         db_details = {
@@ -394,28 +467,40 @@ class TestMySqlApi(BaseStuff):
                 "database": "public",
             },
         }
-        self.create_database("test_demo_mysql", db_details)
-        self.validate_database_creation("test_demo_mysql")
+        self.create_database(self.MYSQL_DB_NAME, db_details)
+        self.validate_database_creation(self.MYSQL_DB_NAME)
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_create_predictor(self, use_binary):
+        create_byom(ML_ENGINE_NAME, target_column="rental_price")
+
         self.query(f"DROP MODEL IF EXISTS {self.predictor_name};")
         # add file lock here
-        self.query(
-            f"CREATE MODEL {self.predictor_name} from test_demo_postgres (select * from home_rentals) PREDICT rental_price;"
-        )
+        self.query(f"""
+            CREATE MODEL {self.predictor_name}
+            from {self.POSTGRES_DB_NAME} (select * from home_rentals limit 10)
+            PREDICT rental_price USING engine='{ML_ENGINE_NAME}'
+        """)
         self.check_predictor_readiness(self.predictor_name)
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_making_prediction(self, use_binary):
         _query = f"""
-            SELECT rental_price, rental_price_explain
+            SELECT rental_price
             FROM {self.predictor_name}
-            WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500;
+            WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500
+            USING engine='{ML_ENGINE_NAME}';
         """
         res = self.query(_query)
-        assert "rental_price" in res and "rental_price_explain" in res, (
-            f"error getting prediction from {self.predictor_name} - {res}"
-        )
+        assert "rental_price" in res, f"error getting prediction from {self.predictor_name} - {res}"
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     @pytest.mark.parametrize("describe_attr", ["model", "features", "ensemble"])
     def test_describe_predictor_attrs(self, describe_attr, use_binary):
         self.query(f"describe mindsdb.{self.predictor_name}.{describe_attr};")
@@ -446,31 +531,31 @@ class TestMySqlApi(BaseStuff):
         self.query(query)
 
     def test_show_columns(self, use_binary):
-        ret = self.query("""
+        ret = self.query(f"""
             SELECT
                 *
             FROM information_schema.columns
-            WHERE table_name = 'home_rentals' and table_schema='test_demo_postgres'
+            WHERE table_name = 'home_rentals' and table_schema='{self.POSTGRES_DB_NAME}'
         """)
         assert len(ret) == 8
         # TODO FIX STR->INT casting
-        # assert sorted([x['ORDINAL_POSITION'] for x in ret]) == list(range(1, 9))
+        # assert sorted([x['ordinal_position'] for x in ret]) == list(range(1, 9))
 
-        rental_price_column = next(x for x in ret if x["COLUMN_NAME"].lower() == "rental_price")
-        assert rental_price_column["DATA_TYPE"] == "int"
-        assert rental_price_column["COLUMN_TYPE"] == "int"
-        assert rental_price_column["ORIGINAL_TYPE"] == "integer"
-        assert rental_price_column["NUMERIC_PRECISION"] is not None
+        rental_price_column = next(x for x in ret if x["column_name"] == "rental_price")
+        assert rental_price_column["data_type"] == "int"
+        assert rental_price_column["column_type"] == "int"
+        assert rental_price_column["original_type"] == "integer"
+        assert rental_price_column["numeric_precision"] is not None
 
-        location_column = next(x for x in ret if x["COLUMN_NAME"].lower() == "location")
-        assert location_column["DATA_TYPE"] == "varchar"
-        assert location_column["COLUMN_TYPE"].startswith("varchar(")  # varchar(###)
-        assert location_column["ORIGINAL_TYPE"] == "character varying"
-        assert location_column["NUMERIC_PRECISION"] is None
-        assert location_column["CHARACTER_MAXIMUM_LENGTH"] is not None
-        assert location_column["CHARACTER_OCTET_LENGTH"] is not None
+        location_column = next(x for x in ret if x["column_name"] == "location")
+        assert location_column["data_type"] == "varchar"
+        assert location_column["column_type"].startswith("varchar(")  # varchar(###)
+        assert location_column["original_type"] == "character varying"
+        assert location_column["numeric_precision"] is None
+        assert location_column["character_maximum_length"] is not None
+        assert location_column["character_octet_length"] is not None
 
-    def test_train_model_from_files(self, use_binary):
+    def test_upload_file(self, use_binary):
         df = pd.DataFrame(
             {
                 "x1": [x for x in range(100, 210)] + [x for x in range(100, 210)],
@@ -478,16 +563,21 @@ class TestMySqlApi(BaseStuff):
                 "y": [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)],
             }
         )
-        file_predictor_name = "predictor_from_file"
         self.upload_ds(df, self.file_datasource_name)
         self.verify_file_ds(self.file_datasource_name)
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
+    def test_train_model_from_files(self, use_binary):
+        file_predictor_name = "predictor_from_file"
         self.query(f"DROP MODEL IF EXISTS mindsdb.{file_predictor_name};")
         # add file lock here
         _query = f"""
             CREATE MODEL mindsdb.{file_predictor_name}
             from files (select * from {self.file_datasource_name})
-            predict y;
+            predict y
+            USING engine='{ML_ENGINE_NAME}';
         """
         self.query(_query)
         self.check_predictor_readiness(file_predictor_name)
@@ -497,6 +587,9 @@ class TestMySqlApi(BaseStuff):
         self.query(_query)
 
     @pytest.mark.slow
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_ts_train_and_predict(self, subtests, use_binary):
         train_df = pd.DataFrame(
             {
@@ -566,6 +659,9 @@ class TestMySqlApi(BaseStuff):
                 assert len(res) == res_len, f"prediction result {res} contains more that {res_len} records"
 
     @pytest.mark.slow
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_tableau_queries(self, subtests, use_binary):
         test_ds_name = self.file_datasource_name
         predictor_name = "predictor_from_file"
@@ -575,8 +671,8 @@ class TestMySqlApi(BaseStuff):
             f"""
                SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),
                TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES
-               WHERE TABLE_SCHEMA LIKE '{integration}'
-                AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' ) ORDER BY TABLE_SCHEMA, TABLE_NAME
+               WHERE TABLE_SCHEMA = '{integration}'
+                AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_SCHEMA, TABLE_NAME
             """,
             f"""
                 SELECT SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,

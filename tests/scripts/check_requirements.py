@@ -8,17 +8,43 @@ import json
 pattern = "\=|~|>|<| |\n|#|\["  # noqa: W605
 
 
-def get_requirements_from_file(path):
+def get_requirements_from_file(path, with_snyk: bool = True):
     """Takes a requirements file path and extracts only the package names from it"""
 
     with open(path, "r") as main_f:
-        reqs = [re.split(pattern, line)[0] for line in main_f.readlines() if re.split(pattern, line)[0]]
+        reqs = []
+        for line in main_f.readlines():
+            if with_snyk is False and "pinned by Snyk to avoid a vulnerability" in line:
+                continue
+            parts = re.split(pattern, line)
+            if parts and parts[0]:
+                reqs.append(parts[0])
     return reqs
+
+
+def get_requirements_with_DEP002(path):
+    """Extract package names that have 'pinned by Snyk' comment from requirements file"""
+    no_check_packages = []
+
+    with open(path, "r") as f:
+        for line in f.readlines():
+            line = line.strip()
+            if (
+                line
+                and not line.startswith("#")
+                and ("pinned by Snyk to avoid a vulnerability" in line or "ignore-DEP002" in line)
+            ):
+                package_name = re.split(pattern, line)[0]
+                if package_name:
+                    no_check_packages.append(package_name)
+
+    return no_check_packages
 
 
 MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
+
 
 # Utilities that have their own requirements.txt files.
 # These are used only within handlers.
@@ -26,6 +52,12 @@ UTILITIES_REQS_PATHS = [
     "mindsdb/integrations/utilities/handlers/auth_utilities/microsoft/requirements.txt",
     "mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt",
 ]
+
+EXTRA_REQS_PATHS = [
+    "requirements/requirements-agents.txt",
+    "requirements/requirements-kb.txt",
+]
+
 
 HANDLER_REQS_PATHS = list(
     set(glob.glob("**/requirements*.txt", recursive=True)) - set(glob.glob("requirements/requirements*.txt"))
@@ -38,19 +70,32 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # lark is required for auto retrieval (RAG utilities). It is used by langchain
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
-# gunicorn and dataprep_ml are for optional features that aren't required.
+# dataprep_ml is for optional features that aren't required.
 # opentelemetry and langfuse are metrics/tracing libraries that are only used in the cloud images (they're installed there as extras)
+# langchain_aws is used to create agent with bedrock provider;
+#   if is not installed - error message will be shown, but it is possible to use other providers with agent
+# pyodbc is used in mssql but as optional dependency
+# litellm is used in KB but as optional dependency in case of using : snowflake,  bedrock, gemini llm providers
 MAIN_RULE_IGNORES = {
-    "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
+    "DEP003": [
+        "torch",
+        "pyarrow",
+        "langfuse",
+        "dataprep_ml",
+        "hierarchicalforecast",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
+    ],
     "DEP001": [
         "torch",
         "pgvector",
         "pyarrow",
         "openai",
-        "gunicorn",
         "dataprep_ml",
         "opentelemetry",
         "langfuse",
+        "langchain_aws",
+        "pyodbc",
+        "sklearn",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
+        "hierarchicalforecast",  # optional dependency in mindsdb/integrations/utilities/time_series_utils.py
     ],
     "DEP002": [
         "psycopg2-binary",
@@ -60,6 +105,9 @@ MAIN_RULE_IGNORES = {
         "lxml",
         "openpyxl",
         "onnxruntime",
+        "litellm",
+        "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
+        "urllib3",  # pinned by Snyk to avoid a vulnerability
     ],
 }
 
@@ -75,7 +123,7 @@ MAIN_RULE_IGNORES = {
 # The `pyarrow` package used for DataFrame serialization.
 # It is not explicitly imported in the code and used as follows:
 # modules.append('pyarrow==19.0.0')
-BYOM_DEP002_IGNORE_HANLDER_DEPS = ["pyarrow"]
+BYOM_DEP002_IGNORE_HANLDER_DEPS = ["pyarrow", "scikit-learn"]
 
 # The `thrift-sasl` package is required establish a connection via to Hive via `pyhive`, but it is not explicitly imported in the code.
 HIVE_DEP002_IGNORE_HANDLER_DEPS = ["thrift-sasl"]
@@ -87,15 +135,9 @@ LINDORM_DEP002_IGNORE_HANDLER_DEPS = ["protobuf"]
 
 HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS = ["torch"]
 
-DSPY_DEP002_IGNORE_HANDLER_DEPS = ["wikipedia", "dspy-ai", "chromadb", "tiktoken"]
-
 RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers", "faiss-cpu"]
 
 SOLR_DEP002_IGNORE_HANDLER_DEPS = ["sqlalchemy-solr"]
-
-LANGCHAIN_DEP002_IGNORE_HANDLER_DEPS = ["litellm", "chromadb", "tiktoken"]
-
-LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
@@ -112,11 +154,8 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + GCS_DEP002_IGNORE_HANDLER_DEPS
         + LINDORM_DEP002_IGNORE_HANDLER_DEPS
         + HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS
-        + DSPY_DEP002_IGNORE_HANDLER_DEPS
         + RAG_DEP002_IGNORE_HANDLER_DEPS
         + SOLR_DEP002_IGNORE_HANDLER_DEPS
-        + LANGCHAIN_DEP002_IGNORE_HANDLER_DEPS
-        + LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
     )
@@ -135,6 +174,7 @@ HANDLER_RULE_IGNORES = {
         "pyarrow",
         "IfxPyDbi",
         "ingres_sa_dialect",
+        "pyodbc",
     ],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": DEP003_IGNORE_HANDLER_DEPS,
 }
@@ -211,6 +251,7 @@ PACKAGE_NAME_MAP = {
     "pydantic_core": ["pydantic"],
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
+    "sklearn": ["scikit-learn"],
 }
 
 # We use this to exit with a non-zero status code if any check fails
@@ -228,26 +269,46 @@ def print_errors(file, errors):
         print()
 
 
-def get_ignores_str(ignores_dict):
-    """Get a list of rule ignores for deptry"""
+def get_ignores_str(ignores_dict: dict, dep002_ignore: list[str] = None) -> str:
+    """Get a list of rule ignores for deptry
 
-    return ",".join([f"{k}={'|'.join(v)}" for k, v in ignores_dict.items()])
+    Args:
+        ignores_dict: A dictionary of rule ignores for deptry
+        dep002_ignore: Additional list of packages to ignore for DEP002
+
+    Returns:
+        A string of rule ignores for deptry
+    """
+
+    rules = []
+    for k, v in ignores_dict.items():
+        rules.append(f"{k}={'|'.join(v)}")
+        if k == "DEP002" and dep002_ignore:
+            rules[-1] += "|" + "|".join(dep002_ignore)
+
+    return ",".join(rules)
 
 
 def run_deptry(reqs, rule_ignores, path, extra_args=""):
     """Run a dependency check with deptry. Return a list of error messages"""
 
     errors = []
+    # Get the full path to deptry executable from the current Python environment
+    deptry_path = os.path.join(os.path.dirname(sys.executable), "deptry")
     try:
         result = subprocess.run(
-            f'deptry -o deptry.json --no-ansi --known-first-party mindsdb --requirements-files "{reqs}" --per-rule-ignores "{rule_ignores}" --package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" {extra_args} {path}',
+            f'{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb --requirements-files "{reqs}" --per-rule-ignores "{rule_ignores}" --package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" {extra_args} {path}',
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
         )
-        if result.returncode != 0 and not os.path.exists("deptry.json"):
-            # There was some issue with running deptry
-            errors.append(f"Error running deptry: {result.stderr.decode('utf-8')}")
+        if not os.path.exists("deptry.json"):
+            if result.returncode != 0:
+                # There was some issue with running deptry
+                errors.append(f"Error running deptry: {result.stderr.decode('utf-8')}")
+            else:
+                errors.append("Error running deptry: deptry.json was not generated.")
+            return errors
 
         with open("deptry.json", "r") as f:
             deptry_results = json.loads(f.read())
@@ -265,10 +326,10 @@ def check_for_requirements_duplicates():
     """Checks that handler requirements.txt and the main requirements.txt don't contain any of the same packages"""
 
     global success
-    main_reqs = get_requirements_from_file(MAIN_REQS_PATH)
+    main_reqs = get_requirements_from_file(MAIN_REQS_PATH, with_snyk=False)
 
     for file in HANDLER_REQS_PATHS:
-        handler_reqs = get_requirements_from_file(file)
+        handler_reqs = get_requirements_from_file(file, with_snyk=False)
 
         for req in handler_reqs:
             if req in main_reqs:
@@ -383,7 +444,7 @@ def check_requirements_imports():
 
     # Run against the main codebase
     errors = run_deptry(
-        ",".join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS),
+        ",".join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS + EXTRA_REQS_PATHS),
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f'--extend-exclude "{"|".join(MAIN_EXCLUDE_PATHS)}"',
@@ -392,9 +453,13 @@ def check_requirements_imports():
 
     # Run on each handler
     for file in HANDLER_REQS_PATHS:
+        handler_no_check = get_requirements_with_DEP002(file)
+
+        ignore_str = get_ignores_str(HANDLER_RULE_IGNORES, dep002_ignore=handler_no_check)
+
         errors = run_deptry(
             f"{file},{MAIN_REQS_PATH},{TEST_REQS_PATH}",
-            get_ignores_str(HANDLER_RULE_IGNORES),
+            ignore_str,
             os.path.dirname(file),
         )
         print_errors(file, errors)

@@ -129,7 +129,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         if self.faiss_index:
             self.faiss_index.drop()
 
-    def create_index(self, table_name: str, type: str = "ivf", nlist: int = None, train_count: int = None):
+    def create_index(self, table_name: str, type: str = "ivf_file", nlist: int = None, train_count: int = None):
         if type not in ("ivf", "ivf_file"):
             raise NotImplementedError("Only ivf or ivf_file indexes are supported")
 

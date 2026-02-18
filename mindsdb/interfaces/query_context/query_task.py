@@ -17,3 +17,4 @@ class QueryTask(BaseTask):
         finally:
             # clear task
             query_context_controller.get_query(self.query_id).remove_from_task()
+            session.integration_controller.handlers_cache._clean()

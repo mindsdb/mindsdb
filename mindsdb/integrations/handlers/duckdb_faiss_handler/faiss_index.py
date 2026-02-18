@@ -45,7 +45,7 @@ class FaissIndex:
         else:
             raise ValueError(f"Unknown metric: {metric}")
 
-        self.path = path
+        self.path = os.path.join(path, "faiss_index")
 
         self._since_ram_checked = 0
 
@@ -53,6 +53,15 @@ class FaissIndex:
         self.index_type = "flat"
         self.dim = None
         self.index_fd = None
+
+        recover_path = Path(self.path).parent / "recover"
+        if recover_path.exists():
+            # move all files from recover dir that might be left after index failing
+            for item in recover_path.iterdir():
+                if item.is_dir():
+                    continue
+                item.rename(Path(self.path).parent / item.name)
+
         if os.path.exists(self.path):
             self._load_index()
 
@@ -412,7 +421,8 @@ class FaissIVFIndex(FaissIndex):
         """
 
         # index might not fit into RAM, extract data to files
-        dump_path = Path(self.path).parent / "dump"
+        base_path = Path(self.path).parent
+        dump_path = base_path / "dump"
 
         # if self.index_type != 'flat':
         #     raise ValueError('Index was already created')
@@ -448,10 +458,13 @@ class FaissIVFIndex(FaissIndex):
         # unload flat index from RAM
         self.close()
 
-        # clean index dir
-        for item in dump_path.parent.iterdir():
-            if not item.is_dir():
-                item.unlink()
+        # buckup index files
+        recover_path = base_path / "recover"
+        recover_path.mkdir(exist_ok=True)
+        for item in base_path.iterdir():
+            if item.is_dir() or item.name.startswith("duckdb."):
+                continue
+            item.rename(recover_path / item.name)
 
         # create ivf index
         if index_type == "ivf":
@@ -470,3 +483,8 @@ class FaissIVFIndex(FaissIndex):
         # remove unused items
         for item in dump_path.iterdir():
             item.unlink()
+        dump_path.rmdir()
+
+        for item in recover_path.iterdir():
+            item.unlink()
+        recover_path.rmdir()

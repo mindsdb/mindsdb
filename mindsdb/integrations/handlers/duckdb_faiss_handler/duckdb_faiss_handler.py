@@ -70,7 +70,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         # Initialize storage paths
         self.duckdb_path = os.path.join(self.persist_directory, "duckdb.db")
-        self.faiss_index_path = os.path.join(self.persist_directory, "faiss_index")
+        self.faiss_index_path = self.persist_directory
         self.connect()
 
         # check keyword index

@@ -209,7 +209,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        auth_type_key = self.connection_data.get("auth_type")
+        auth_type_key = self.connection_data.get("auth_type", "password")
         if auth_type_key is None:
             supported = ", ".join(self._auth_types.keys())
             raise ValueError(f"auth_type is required. Supported values: {supported}.")

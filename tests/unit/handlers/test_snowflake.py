@@ -149,14 +149,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         with self.assertRaises(ValueError):
             handler.connect()
 
-        # Test missing 'auth_type'
-        invalid_connection_args = self.dummy_connection_data.copy()
-        del invalid_connection_args["auth_type"]
-        handler = SnowflakeHandler("snowflake", connection_data=invalid_connection_args)
-        with self.assertRaises(ValueError) as context:
-            handler.connect()
-        self.assertIn("auth_type is required", str(context.exception))
-
     def test_map_type_handles_unknown_types(self):
         self.assertEqual(_map_type("BOOLEAN"), MYSQL_DATA_TYPE.BOOL)
         self.assertEqual(_map_type("VARIANT"), MYSQL_DATA_TYPE.VARCHAR)

@@ -3,8 +3,6 @@ title: How to Use Agents
 sidebarTitle: Syntax
 ---
 
-TODO: add new syntax
-
 Agents enable conversation with data, including structured and unstructured data connected to MindsDB.
 
 ## `CREATE AGENT` Syntax
@@ -323,6 +321,12 @@ Query an agent to generate responses to questions.
 
 ```sql
 SELECT answer
+FROM my_agent 
+WHERE question = 'What is the average number of orders per customers?';
+
+-- or
+
+SELECT customer_name, avg_number_of_orders
 FROM my_agent 
 WHERE question = 'What is the average number of orders per customers?';
 ```

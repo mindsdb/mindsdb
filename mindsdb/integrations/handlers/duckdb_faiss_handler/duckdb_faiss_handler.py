@@ -421,7 +421,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             self._sync()
 
     def get_dimension(self, table_name: str) -> int:
-        if self.faiss_index:
+        if self.faiss_index and self.faiss_index.index is not None:
             return self.faiss_index.dim
 
     def _sync(self):

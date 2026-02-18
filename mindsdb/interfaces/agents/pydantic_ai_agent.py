@@ -244,7 +244,8 @@ class PydanticAIAgent:
 
             # Get current prompt (last user message)
             current_prompt = ""
-            for _, row in reversed(df.iterrows()):
+            for index in reversed(range(len(df))):
+                row = df.iloc[index]
                 if row.get("role") == "user":
                     current_prompt = str(row.get("content", ""))
                     break
@@ -541,8 +542,7 @@ class PydanticAIAgent:
                     yield self._add_chunk_metadata(
                         {"type": "status", "content": f"Executing {query_type} SQL query: {sql_query}"}
                     )
-                    query_data = self.sql_toolkit.execute_sql(sql_query)
-
+                    query_data = self.sql_toolkit.execute_sql(sql_query, escape_identifiers=True)
                 except Exception as e:
                     # Extract error message - prefer db_error_msg for QueryError, otherwise use str(e)
                     query_error = str(e)

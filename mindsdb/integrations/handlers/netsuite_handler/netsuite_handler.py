@@ -4,6 +4,7 @@ import uuid
 import pandas as pd
 import requests
 from mindsdb_sql_parser import parse_sql
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 try:
     from requests_oauthlib import OAuth1
@@ -12,7 +13,7 @@ except ImportError:  # pragma: no cover - handled at runtime by __init__.py
 
 from mindsdb.integrations.handlers.netsuite_handler.netsuite_tables import NetSuiteRecordTable
 from mindsdb.integrations.handlers.netsuite_handler.__about__ import __version__ as handler_version
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import HandlerResponse as Response, HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.utilities import log
@@ -20,9 +21,50 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class NetSuiteHandler(APIHandler):
+def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     """
-    This handler manages connections and queries for the Oracle NetSuite REST APIs.
+    Map SuiteQL type names to MySQL types.
+    """
+    fallback_type = MYSQL_DATA_TYPE.VARCHAR
+
+    if not internal_type_name:
+        return fallback_type
+
+    name = str(internal_type_name).lower()
+
+    if "bool" in name:
+        return MYSQL_DATA_TYPE.BOOL
+    if "timestamp" in name or ("date" in name and "time" in name):
+        return MYSQL_DATA_TYPE.DATETIME
+    if name == "date" or name.endswith("date"):
+        return MYSQL_DATA_TYPE.DATE
+    if "time" in name:
+        return MYSQL_DATA_TYPE.TIME
+    if "double" in name:
+        return MYSQL_DATA_TYPE.DOUBLE
+    if "float" in name:
+        return MYSQL_DATA_TYPE.FLOAT
+    if any(token in name for token in ("decimal", "numeric", "currency", "percent", "number")):
+        return MYSQL_DATA_TYPE.DECIMAL
+    if "bigint" in name or ("big" in name and "int" in name):
+        return MYSQL_DATA_TYPE.BIGINT
+    if "smallint" in name or ("small" in name and "int" in name):
+        return MYSQL_DATA_TYPE.SMALLINT
+    if "int" in name:
+        return MYSQL_DATA_TYPE.INT
+    if "json" in name:
+        return MYSQL_DATA_TYPE.JSON
+    if "binary" in name or "blob" in name:
+        return MYSQL_DATA_TYPE.BLOB
+    if any(token in name for token in ("text", "char", "string", "clob")):
+        return MYSQL_DATA_TYPE.TEXT
+
+    return fallback_type
+
+
+class NetSuiteHandler(MetaAPIHandler):
+    """
+    This handler manages connections and queries for the Oracle NetSuite SuiteQL API.
     """
 
     name = "netsuite"
@@ -149,6 +191,7 @@ class NetSuiteHandler(APIHandler):
         "emailtemplate",
         "notetype",
     ]
+    ACCESSIBLE_TABLES = {"contact", "customer", "item", "message", "subsidiary", "task", "transaction"}
 
     def __init__(self, name: str, **kwargs):
         """
@@ -166,7 +209,9 @@ class NetSuiteHandler(APIHandler):
         self.session: Optional[requests.Session] = None
         self.is_connected: bool = False
         self.base_url = self._build_base_url()
+        self._record_types_source: str = "default"
         self.record_types = self._get_record_types()
+        self._unsupported_record_types: set[str] = set()
 
         for record_type in self.record_types:
             self._register_table(record_type, NetSuiteRecordTable(self, record_type))
@@ -195,17 +240,25 @@ class NetSuiteHandler(APIHandler):
         """
         Resolves the record types to register as tables.
 
-        Returns:
-            List[str]: List of record types.
+        - If connection_data.record_types is provided: use that (as before).
+        - If not provided: use only ACCESSIBLE_TABLES (allowed tables) to avoid
+          registering tables you can't query under current role.
+        - DEFAULT_TABLES remains as reference for future / broader roles.
         """
         record_types = self.connection_data.get("record_types")
-        if record_types is None:
-            return self.DEFAULT_TABLES
+
+        # Explicit config always wins
         if isinstance(record_types, str):
-            return [value.strip() for value in record_types.split(",") if value.strip()]
+            self._record_types_source = "config"
+            return [value.strip().lower() for value in record_types.split(",") if value.strip()]
+
         if isinstance(record_types, list):
-            return [value for value in record_types if isinstance(value, str) and value]
-        return self.DEFAULT_TABLES
+            self._record_types_source = "config"
+            return [value.strip().lower() for value in record_types if isinstance(value, str) and value.strip()]
+
+        # Default behavior (no record_types provided): register ONLY allowed tables
+        self._record_types_source = "default_allowed"
+        return sorted({name.strip().lower() for name in self.ACCESSIBLE_TABLES if name and name.strip()})
 
     def connect(self) -> requests.Session:
         """
@@ -276,6 +329,159 @@ class NetSuiteHandler(APIHandler):
 
         return response
 
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (Optional[List[str]]): Optional list of table names.
+
+        Returns:
+            Response: A response object containing the table metadata.
+        """
+        allowed = set(self._tables.keys())
+        if self._unsupported_record_types:
+            allowed = allowed - {name.lower() for name in self._unsupported_record_types}
+
+        if table_names is not None:
+            allowed = allowed & {name.lower() for name in table_names}
+
+        df = pd.DataFrame()
+        for table_name, table_class in self._tables.items():
+            if table_name not in allowed:
+                continue
+            try:
+                if hasattr(table_class, "meta_get_tables"):
+                    table_metadata = table_class.meta_get_tables(table_name)
+                    df = pd.concat([df, pd.DataFrame([table_metadata])], ignore_index=True)
+            except Exception:
+                logger.exception(f"Error retrieving metadata for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "TABLE_TYPE",
+                    "TABLE_SCHEMA",
+                    "TABLE_DESCRIPTION",
+                    "ROW_COUNT",
+                ]
+            )
+
+        return Response(RESPONSE_TYPE.TABLE, df)
+
+    def meta_get_columns(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
+        """
+        Retrieves column metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (List): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            Response: A response object containing the column metadata.
+        """
+        allowed = set(self._tables.keys())
+        if self._unsupported_record_types:
+            allowed = allowed - {name.lower() for name in self._unsupported_record_types}
+
+        if table_names is not None:
+            allowed = allowed & {name.lower() for name in table_names}
+
+        df = pd.DataFrame()
+        for table_name, table_class in self._tables.items():
+            if table_name not in allowed:
+                continue
+            try:
+                if hasattr(table_class, "meta_get_columns"):
+                    column_metadata = table_class.meta_get_columns(table_name, **kwargs)
+                    df = pd.concat([df, pd.DataFrame(column_metadata)], ignore_index=True)
+            except Exception:
+                logger.exception(f"Error retrieving column metadata for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "COLUMN_NAME",
+                    "DATA_TYPE",
+                    "COLUMN_DESCRIPTION",
+                    "IS_NULLABLE",
+                    "COLUMN_DEFAULT",
+                ]
+            )
+
+        return Response(RESPONSE_TYPE.TABLE, df)
+
+    def get_tables(self) -> Response:
+        """
+        Retrieves the list of registered NetSuite tables.
+        """
+        allowed = set(self._tables.keys())
+        if self._unsupported_record_types:
+            allowed = allowed - {name.lower() for name in self._unsupported_record_types}
+
+        data = [{"TABLE_NAME": name, "TABLE_TYPE": "BASE TABLE"} for name in sorted(allowed)]
+        return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(data))
+
+    def get_columns(self, table_name: str) -> Response:
+        """
+        Retrieves column details for a specified NetSuite table using SuiteQL metadata.
+        """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
+
+        normalized = table_name.lower()
+        table = self._tables.get(normalized)
+        if table is None:
+            raise ValueError(f"Table not found: {table_name}")
+
+        columns = table.meta_get_columns(normalized)
+        rows = []
+        for idx, column in enumerate(columns, start=1):
+            nullable = column.get("is_nullable")
+            if isinstance(nullable, bool):
+                nullable = "YES" if nullable else "NO"
+            else:
+                nullable = None
+            rows.append(
+                {
+                    "COLUMN_NAME": column.get("column_name"),
+                    "DATA_TYPE": column.get("data_type") or "varchar",
+                    "ORDINAL_POSITION": idx,
+                    "COLUMN_DEFAULT": column.get("column_default"),
+                    "IS_NULLABLE": nullable,
+                    "CHARACTER_MAXIMUM_LENGTH": None,
+                    "CHARACTER_OCTET_LENGTH": None,
+                    "NUMERIC_PRECISION": None,
+                    "NUMERIC_SCALE": None,
+                    "DATETIME_PRECISION": None,
+                    "CHARACTER_SET_NAME": None,
+                    "COLLATION_NAME": None,
+                }
+            )
+
+        df = pd.DataFrame(
+            rows,
+            columns=[
+                "COLUMN_NAME",
+                "DATA_TYPE",
+                "ORDINAL_POSITION",
+                "COLUMN_DEFAULT",
+                "IS_NULLABLE",
+                "CHARACTER_MAXIMUM_LENGTH",
+                "CHARACTER_OCTET_LENGTH",
+                "NUMERIC_PRECISION",
+                "NUMERIC_SCALE",
+                "DATETIME_PRECISION",
+                "CHARACTER_SET_NAME",
+                "COLLATION_NAME",
+            ],
+        )
+
+        result = Response(RESPONSE_TYPE.TABLE, df)
+        result.to_columns_table_response(map_type_fn=_map_type)
+        return result
+
     def native_query(self, query: Any) -> Response:
         """
         Executes SuiteQL using the NetSuite REST Query API.
@@ -329,6 +535,31 @@ class NetSuiteHandler(APIHandler):
                 df = pd.DataFrame(items)
 
         return Response(RESPONSE_TYPE.TABLE, df)
+
+    def _suiteql_select(
+        self,
+        table: str,
+        where_sql: str = "",
+        limit: Optional[int] = None,
+        targets: Optional[List[str]] = None,
+        order_by_sql: str = "",
+    ) -> Any:
+        """
+        Executes a SuiteQL SELECT and returns raw payload dict.
+        """
+        select_cols = "*"
+        if targets:
+            select_cols = ", ".join(targets)
+
+        limit_sql = ""
+        if limit is not None:
+            n = int(limit)
+            if n < 0:
+                n = 0
+            limit_sql = f" FETCH FIRST {n} ROWS ONLY"
+
+        sql = f"SELECT {select_cols} FROM {table}{where_sql}{order_by_sql}{limit_sql}"
+        return self._request("POST", "/services/rest/query/v1/suiteql", json={"q": sql})
 
     def _request(self, method: str, path: str, **kwargs):
         """

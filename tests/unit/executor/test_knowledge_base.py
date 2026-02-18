@@ -481,6 +481,7 @@ class TestKB(BaseTestKB):
 
     @pytest.mark.slow
     @pytest.mark.skipif(sys.platform == "win32", reason="Causes hard crash on windows.")
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Causes hard crash on mac.")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_kb_partitions(self, mock_handler, mock_litellm_embedding):

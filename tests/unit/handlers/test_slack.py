@@ -18,14 +18,14 @@ from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOper
 try:
     from slack_sdk.errors import SlackApiError
     from slack_sdk.web.slack_response import SlackResponse
-    from mindsdb.integrations.handlers.slack_handler.slack_handler import SlackHandler
-    from mindsdb.integrations.handlers.slack_handler.slack_tables import (
+    from mindsdb.integrations.handlers.community.slack_handler.slack_handler import SlackHandler
+    from mindsdb.integrations.handlers.community.slack_handler.slack_tables import (
         SlackConversationsTable,
         SlackMessagesTable,
         SlackThreadsTable,
         SlackUsersTable,
     )
-    from mindsdb.integrations.handlers.slack_handler.connection_args import connection_args, connection_args_example
+    from mindsdb.integrations.handlers.community.slack_handler.connection_args import connection_args, connection_args_example
 
     # Mock response for the first call to the `conversations.info` method.
     MOCK_RESPONSE_CONV_INFO_1 = {
@@ -390,9 +390,9 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         return SlackHandler("slack", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch("mindsdb.integrations.handlers.slack_handler.slack_handler.WebClient")
+        return patch("mindsdb.integrations.handlers.community.slack_handler.slack_handler.WebClient")
 
-    @patch("mindsdb.integrations.handlers.slack_handler.slack_handler.SocketModeClient")
+    @patch("mindsdb.integrations.handlers.community.slack_handler.slack_handler.SocketModeClient")
     def test_check_connection_success(self, mock_socket_mode_client):
         """
         Tests if the `check_connection` method handles a successful connection check and returns a StatusResponse object that accurately reflects the connection status.
@@ -456,7 +456,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         pd.testing.assert_frame_equal(response.data_frame, expected_df)
 
     @patch.dict(os.environ, {}, clear=True)
-    @patch("mindsdb.integrations.handlers.slack_handler.slack_handler.Config")
+    @patch("mindsdb.integrations.handlers.community.slack_handler.slack_handler.Config")
     def test_connect_requires_token(self, mock_config):
         mock_config.return_value.get.return_value = {}
         handler = SlackHandler("slack", connection_data={})
@@ -513,8 +513,8 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.handler.subscribe(stop_event, lambda *_: None, columns=["text"])
 
-    @patch("mindsdb.integrations.handlers.slack_handler.slack_handler.SocketModeResponse")
-    @patch("mindsdb.integrations.handlers.slack_handler.slack_handler.SocketModeClient")
+    @patch("mindsdb.integrations.handlers.community.slack_handler.slack_handler.SocketModeResponse")
+    @patch("mindsdb.integrations.handlers.community.slack_handler.slack_handler.SocketModeClient")
     def test_subscribe_processes_message(self, mock_socket_cls, mock_response_cls):
         class FakeClient:
             def __init__(self):
@@ -570,7 +570,7 @@ class SlackAPIResourceTestSetup(BaseAPIResourceTestSetup):
         return SlackHandler("slack", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch("mindsdb.integrations.handlers.slack_handler.slack_handler.WebClient")
+        return patch("mindsdb.integrations.handlers.community.slack_handler.slack_handler.WebClient")
 
 
 class TestSlackConversationsTable(SlackAPIResourceTestSetup, unittest.TestCase):

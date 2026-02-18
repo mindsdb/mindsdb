@@ -660,10 +660,21 @@ class IntegrationController:
 
         self.handler_modules = {}
         self.handlers_import_status = {}
-        for handler_dir in handlers_path.iterdir():
-            if handler_dir.is_dir() is False or handler_dir.name.startswith("__"):
-                continue
 
+        # Collect handler directories from tier subdirectories (community/, verified/)
+        # and any handler directories at the top level for backwards compatibility.
+        handler_dirs = []
+        for entry in handlers_path.iterdir():
+            if entry.is_dir() is False or entry.name.startswith("__"):
+                continue
+            if entry.name in ("community", "verified"):
+                for sub_entry in entry.iterdir():
+                    if sub_entry.is_dir() and not sub_entry.name.startswith("__"):
+                        handler_dirs.append(sub_entry)
+            else:
+                handler_dirs.append(entry)
+
+        for handler_dir in handler_dirs:
             handler_info = self._get_handler_info(handler_dir)
             if "name" not in handler_info:
                 continue
@@ -825,7 +836,12 @@ class IntegrationController:
 
             handler_folder_name = str(handler_dir.name)
             if base_import is None:
-                base_import = "mindsdb.integrations.handlers."
+                # Determine the base import path from the handler's parent directory
+                tier = handler_dir.parent.name
+                if tier in ("community", "verified"):
+                    base_import = f"mindsdb.integrations.handlers.{tier}."
+                else:
+                    base_import = "mindsdb.integrations.handlers."
 
             try:
                 handler_module = importlib.import_module(f"{base_import}{handler_folder_name}")

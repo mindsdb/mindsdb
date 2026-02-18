@@ -1,0 +1,1 @@
+-r mindsdb/integrations/handlers/community/matrixone_handler/requirements.txt

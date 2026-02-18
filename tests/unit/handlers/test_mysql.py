@@ -11,7 +11,7 @@ from pandas import DataFrame
 from pandas.api import types as pd_types
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.handlers.verified.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
@@ -275,7 +275,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connection_data = url_connection_data
 
         # Mock ConnectionConfig to process the URL
-        with patch("mindsdb.integrations.handlers.mysql_handler.mysql_handler.ConnectionConfig") as mock_config_class:
+        with patch("mindsdb.integrations.handlers.verified.mysql_handler.mysql_handler.ConnectionConfig") as mock_config_class:
             mock_model = MagicMock()
             mock_model.model_dump.return_value = {
                 "host": "127.0.0.1",
@@ -298,7 +298,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests the _unpack_config method to ensure it correctly validates and unpacks connection data
         """
-        with patch("mindsdb.integrations.handlers.mysql_handler.mysql_handler.ConnectionConfig") as mock_config_class:
+        with patch("mindsdb.integrations.handlers.verified.mysql_handler.mysql_handler.ConnectionConfig") as mock_config_class:
             mock_model = MagicMock()
             mock_model.model_dump.return_value = {
                 "host": "127.0.0.1",
@@ -371,7 +371,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests the query method to ensure it correctly converts ASTNode to SQL and calls native_query
         """
-        with patch("mindsdb.integrations.handlers.mysql_handler.mysql_handler.SqlalchemyRender") as mock_renderer_class:
+        with patch("mindsdb.integrations.handlers.verified.mysql_handler.mysql_handler.SqlalchemyRender") as mock_renderer_class:
             mock_renderer = MagicMock()
             mock_renderer.get_string.return_value = "SELECT * FROM test"
             mock_renderer_class.return_value = mock_renderer

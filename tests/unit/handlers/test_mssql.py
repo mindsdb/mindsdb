@@ -10,7 +10,7 @@ import builtins
 
 try:
     from pymssql import OperationalError
-    from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
+    from mindsdb.integrations.handlers.verified.mssql_handler.mssql_handler import SqlServerHandler
 except ImportError:
     pytestmark = pytest.mark.skip("MSSQL handler not installed")
 

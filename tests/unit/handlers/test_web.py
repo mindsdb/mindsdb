@@ -9,9 +9,9 @@ from requests import Response, Request
 from bs4 import BeautifulSoup
 
 from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists
-from mindsdb.integrations.handlers.web_handler.web_handler import WebHandler
-from mindsdb.integrations.handlers.web_handler.web_handler import CrawlerTable
-from mindsdb.integrations.handlers.web_handler import urlcrawl_helpers as helpers
+from mindsdb.integrations.handlers.community.web_handler.web_handler import WebHandler
+from mindsdb.integrations.handlers.community.web_handler.web_handler import CrawlerTable
+from mindsdb.integrations.handlers.community.web_handler import urlcrawl_helpers as helpers
 
 
 from mindsdb.integrations.utilities.sql_utils import (FilterCondition, FilterOperator)
@@ -71,7 +71,7 @@ class TestWebHelpers(unittest.TestCase):
 
         assert expected == actual
 
-    @patch("mindsdb.integrations.handlers.web_handler.urlcrawl_helpers.get_all_website_links")
+    @patch("mindsdb.integrations.handlers.community.web_handler.urlcrawl_helpers.get_all_website_links")
     @patch("concurrent.futures.ProcessPoolExecutor")
     def test_parallel_get_all_website_links(self, mock_executor, mock_get_links):
         # Setup: Mock the get_all_website_links function to return a list of links

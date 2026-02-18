@@ -15,7 +15,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.handlers.mongodb_handler.mongodb_handler import MongoDBHandler
+from mindsdb.integrations.handlers.community.mongodb_handler.mongodb_handler import MongoDBHandler
 
 
 class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
@@ -27,7 +27,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         return MongoDBHandler("mongodb", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch("mindsdb.integrations.handlers.mongodb_handler.mongodb_handler.MongoClient")
+        return patch("mindsdb.integrations.handlers.community.mongodb_handler.mongodb_handler.MongoClient")
 
     def test_connect_success(self):
         """

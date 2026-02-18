@@ -9,7 +9,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.handlers.redshift_handler.redshift_handler import RedshiftHandler
+from mindsdb.integrations.handlers.verified.redshift_handler.redshift_handler import RedshiftHandler
 from test_postgres import TestPostgresHandler
 
 

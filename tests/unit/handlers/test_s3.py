@@ -9,7 +9,7 @@ from mindsdb_sql_parser.ast import Select, Identifier, Star, Constant
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup
-from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
+from mindsdb.integrations.handlers.community.s3_handler.s3_handler import S3Handler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -194,7 +194,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(len(df), 5)  # +1 table is 'files'
         self.assertNotIn('file5.xlsx', df['table_name'].values)
 
-    @patch('mindsdb.integrations.handlers.s3_handler.s3_handler.S3Handler.query')
+    @patch('mindsdb.integrations.handlers.community.s3_handler.s3_handler.S3Handler.query')
     def test_get_columns(self, mock_query):
         """
         Test that the `get_columns` method correctly constructs the SQL query and calls `native_query` with the correct query.

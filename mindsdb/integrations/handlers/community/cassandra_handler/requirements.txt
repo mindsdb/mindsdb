@@ -1,0 +1,1 @@
+-r mindsdb/integrations/handlers/community/scylla_handler/requirements.txt

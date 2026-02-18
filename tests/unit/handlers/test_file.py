@@ -16,7 +16,7 @@ from mindsdb_sql_parser.ast import (
     Update,
 )
 
-from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
+from mindsdb.integrations.handlers.community.file_handler.file_handler import FileHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
 from mindsdb.integrations.utilities.files.file_reader import (

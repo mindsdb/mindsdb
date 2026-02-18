@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.response import (
 )
 
 try:
-    from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler
+    from mindsdb.integrations.handlers.verified.bigquery_handler.bigquery_handler import BigQueryHandler
 except ImportError:
     pytestmark = pytest.mark.skip("Bigquery handler not installed")
 
@@ -28,7 +28,7 @@ class TestBigQueryHandler(unittest.TestCase):
         self.patcher_get_oauth2_credentials = patch(
             "mindsdb.integrations.utilities.handlers.auth_utilities.google.GoogleServiceAccountOAuth2Manager.get_oauth2_credentials"
         )
-        self.patcher_client = patch("mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.Client")
+        self.patcher_client = patch("mindsdb.integrations.handlers.verified.bigquery_handler.bigquery_handler.Client")
         self.mock_get_oauth2_credentials = self.patcher_get_oauth2_credentials.start()
         self.mock_connect = self.patcher_client.start()
         self.handler = BigQueryHandler("bigquery", connection_data=self.dummy_connection_data)
@@ -82,7 +82,7 @@ class TestBigQueryHandler(unittest.TestCase):
         query_str = "SELECT * FROM table"
 
         with patch(
-            "mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.QueryJobConfig"
+            "mindsdb.integrations.handlers.verified.bigquery_handler.bigquery_handler.QueryJobConfig"
         ) as mock_query_job_config:
             mock_query_job_config_instance = mock_query_job_config.return_value
             data = self.handler.native_query(query_str)

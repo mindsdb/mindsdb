@@ -4,7 +4,7 @@ import tempfile
 try:
     import snowflake
     import snowflake.connector
-    from mindsdb.integrations.handlers.snowflake_handler.snowflake_handler import SnowflakeHandler, _map_type
+    from mindsdb.integrations.handlers.verified.snowflake_handler.snowflake_handler import SnowflakeHandler, _map_type
 except ImportError:
     pytestmark = pytest.mark.skip("Snowflake handler not installed")
 
@@ -380,7 +380,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("mindsdb.integrations.handlers.snowflake_handler.snowflake_handler.memory_pool") as mock_pool:
+        with patch("mindsdb.integrations.handlers.verified.snowflake_handler.snowflake_handler.memory_pool") as mock_pool:
             mock_pool.backend_name = "jemalloc"
             mock_pool.release_unused = MagicMock()
 
@@ -403,13 +403,13 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor.return_value = mock_cursor
 
         with patch(
-            "mindsdb.integrations.handlers.snowflake_handler.snowflake_handler.psutil.virtual_memory",
+            "mindsdb.integrations.handlers.verified.snowflake_handler.snowflake_handler.psutil.virtual_memory",
             return_value=SimpleNamespace(available=512),
         ):
             response = self.handler.native_query("SELECT * FROM big_table")
 
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
-        self.assertIn("Not enought memory", response.error_message)
+        self.assertIn("query result is too large", response.error_message)
 
     def test_key_pair_authentication_success(self):
         """
@@ -499,7 +499,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         with (
             patch(
-                "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
+                "mindsdb.integrations.handlers.verified.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
                 return_value="parsed_key",
             ) as mock_loader,
             patch("snowflake.connector.connect") as mock_connect,
@@ -539,7 +539,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         with (
             patch(
-                "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
+                "mindsdb.integrations.handlers.verified.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
                 return_value="parsed_key",
             ) as mock_loader,
             patch("snowflake.connector.connect") as mock_connect,

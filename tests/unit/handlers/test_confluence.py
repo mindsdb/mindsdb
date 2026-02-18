@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, call, patch
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
-from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
-from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
-from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
+from mindsdb.integrations.handlers.community.confluence_handler.confluence_api_client import ConfluenceAPIClient
+from mindsdb.integrations.handlers.community.confluence_handler.confluence_handler import ConfluenceHandler
+from mindsdb.integrations.handlers.community.confluence_handler.confluence_tables import (
     ConfluenceBlogPostsTable,
     ConfluenceDatabasesTable,
     ConfluencePagesTable,

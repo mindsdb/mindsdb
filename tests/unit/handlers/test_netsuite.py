@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 try:
-    from mindsdb.integrations.handlers.netsuite_handler.netsuite_handler import NetSuiteHandler
-    from mindsdb.integrations.handlers.netsuite_handler.netsuite_tables import NetSuiteRecordTable
+    from mindsdb.integrations.handlers.verified.netsuite_handler.netsuite_handler import NetSuiteHandler
+    from mindsdb.integrations.handlers.verified.netsuite_handler.netsuite_tables import NetSuiteRecordTable
 except ImportError:
     pytestmark = pytest.mark.skip("NetSuite handler not installed")
 
@@ -31,13 +31,13 @@ class TestNetSuiteHandler(BaseHandlerTestSetup, unittest.TestCase):
         return NetSuiteHandler("netsuite", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch("mindsdb.integrations.handlers.netsuite_handler.netsuite_handler.requests.Session")
+        return patch("mindsdb.integrations.handlers.verified.netsuite_handler.netsuite_handler.requests.Session")
 
     def test_connect_success(self):
         session = MagicMock()
         self.mock_connect.return_value = session
 
-        with patch("mindsdb.integrations.handlers.netsuite_handler.netsuite_handler.OAuth1") as oauth_mock:
+        with patch("mindsdb.integrations.handlers.verified.netsuite_handler.netsuite_handler.OAuth1") as oauth_mock:
             connection = self.handler.connect()
 
         self.assertIs(connection, session)
@@ -47,12 +47,12 @@ class TestNetSuiteHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_connect_missing_required_params_raises(self):
         handler = NetSuiteHandler("netsuite", connection_data={"account_id": "123"})
-        with patch("mindsdb.integrations.handlers.netsuite_handler.netsuite_handler.OAuth1"):
+        with patch("mindsdb.integrations.handlers.verified.netsuite_handler.netsuite_handler.OAuth1"):
             with self.assertRaises(ValueError):
                 handler.connect()
 
     def test_check_connection_success(self):
-        with patch("mindsdb.integrations.handlers.netsuite_handler.netsuite_handler.OAuth1"):
+        with patch("mindsdb.integrations.handlers.verified.netsuite_handler.netsuite_handler.OAuth1"):
             self.handler._request = MagicMock()
             response = self.handler.check_connection()
 
@@ -60,7 +60,7 @@ class TestNetSuiteHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.handler._request.assert_called_once_with("POST", "/services/rest/query/v1/suiteql", json={"q": "SELECT 1"})
 
     def test_check_connection_failure_sets_error_message(self):
-        with patch("mindsdb.integrations.handlers.netsuite_handler.netsuite_handler.OAuth1"):
+        with patch("mindsdb.integrations.handlers.verified.netsuite_handler.netsuite_handler.OAuth1"):
             self.handler._request = MagicMock(side_effect=RuntimeError("boom"))
             response = self.handler.check_connection()
 

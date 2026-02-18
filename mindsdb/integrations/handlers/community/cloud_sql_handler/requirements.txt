@@ -1,0 +1,2 @@
+-r mindsdb/integrations/handlers/verified/mysql_handler/requirements.txt
+-r mindsdb/integrations/handlers/verified/mssql_handler/requirements.txt

@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock
 try:
     import oracledb
     from oracledb import DatabaseError
-    from mindsdb.integrations.handlers.oracle_handler.oracle_handler import (
+    from mindsdb.integrations.handlers.verified.oracle_handler.oracle_handler import (
         OracleHandler,
     )
 except ImportError:
@@ -69,7 +69,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         return OracleHandler("oracle", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.connect")
+        return patch("mindsdb.integrations.handlers.verified.oracle_handler.oracle_handler.connect")
 
     def test_connect_validation(self):
         """
@@ -159,7 +159,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         connection_args["oracle_client_lib_dir"] = "/path/to/oracle/client/lib"
 
         with patch(
-            "mindsdb.integrations.handlers.oracle_handler.oracle_handler.oracledb.init_oracle_client"
+            "mindsdb.integrations.handlers.verified.oracle_handler.oracle_handler.oracledb.init_oracle_client"
         ) as mock_init:
             handler = OracleHandler("oracle", connection_data=connection_args)
             handler.connect()
@@ -271,7 +271,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         expected_sql = "SELECT * FROM rendered_table"
 
-        with patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.SqlalchemyRender") as MockRenderer:
+        with patch("mindsdb.integrations.handlers.verified.oracle_handler.oracle_handler.SqlalchemyRender") as MockRenderer:
             mock_renderer_instance = MockRenderer.return_value
             mock_renderer_instance.get_string.return_value = expected_sql
 

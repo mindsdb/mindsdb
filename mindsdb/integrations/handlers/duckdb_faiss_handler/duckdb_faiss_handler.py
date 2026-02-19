@@ -1,5 +1,9 @@
 import os
-from typing import List
+import re
+import shutil
+from contextlib import contextmanager
+from pathlib import Path
+from typing import List, Iterator, Tuple
 
 import pandas as pd
 import orjson
@@ -55,108 +59,170 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         # Storage paths
         self._use_handler_storage = False
+        self._handler_storage_folder_name = None
         self.persist_directory = self.connection_data.get("persist_directory")
         if self.persist_directory:
             if not os.path.exists(self.persist_directory):
                 raise ValueError(f"Persist directory {self.persist_directory} does not exist")
         else:
             # Use default handler storage
-            self.persist_directory = self.handler_storage.folder_get("data")
+            self._handler_storage_folder_name = "data"
+            self.persist_directory = self.handler_storage.folder_get(self._handler_storage_folder_name)
             self._use_handler_storage = True
 
-        # DuckDB connection
-        self.connection = None
+        Path(self.persist_directory).mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def _validate_table_name(table_name: str) -> None:
+        if table_name in (".", ".."):
+            raise ValueError("Invalid table_name")
+        if "/" in table_name or "\\" in table_name:
+            raise ValueError("table_name must not contain path separators")
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", table_name):
+            raise ValueError(
+                "Invalid table_name: only letters, digits, '_' and '-' are allowed (no spaces, dots, or other symbols)"
+            )
+
+    def _table_dir(self, table_name: str) -> Path:
+        """
+        Map a table name to a folder under persist_directory.
+
+        Note: do not call _validate_table_name() here (per requirement). Instead, prevent
+        path traversal by requiring the resolved path to stay within persist_directory.
+        """
+        root = Path(self.persist_directory).resolve()
+        table_dir = (Path(self.persist_directory) / table_name).resolve()
+        if table_dir == root or root not in table_dir.parents:
+            raise ValueError("Invalid table_name path")
+        return table_dir
+
+    @contextmanager
+    def _open_table(
+        self, table_name: str
+    ) -> Iterator[Tuple[duckdb.DuckDBPyConnection, FaissIVFIndex]]:
+        """
+        Open DuckDB and Faiss resources scoped to one vector table.
+        Must always be closed after use to avoid long-lived locks / RAM usage.
+        """
+        table_dir = self._table_dir(table_name)
+        if not table_dir.exists():
+            raise ValueError(f"Vector table '{table_name}' does not exist")
+
+        duckdb_path = table_dir / "duckdb.db"
+        connection = duckdb.connect(str(duckdb_path))
+        faiss_index = FaissIVFIndex(str(table_dir), self.connection_data)
+        try:
+            yield connection, faiss_index
+        finally:
+            try:
+                faiss_index.close()
+            except Exception:
+                logger.exception("Failed to close FAISS index")
+            try:
+                connection.close()
+            except Exception:
+                logger.exception("Failed to close DuckDB connection")
+
+    def connect(self):
+        """
+        Handler readiness check.
+        Must not open long-lived DuckDB/FAISS resources; tables are opened per operation.
+        """
+        self.is_connected = True
+        return True
+
+    def disconnect(self):
         self.is_connected = False
 
-        # Initialize storage paths
-        self.duckdb_path = os.path.join(self.persist_directory, "duckdb.db")
-        self.faiss_index_path = self.persist_directory
-        self.connect()
-
-        # check keyword index
-        self.is_kw_index_enabled = False
-        with self.connection.cursor() as cur:
-            # check index exists
+    @staticmethod
+    def _is_kw_index_enabled(connection: duckdb.DuckDBPyConnection) -> bool:
+        with connection.cursor() as cur:
             df = cur.execute(
                 "SELECT * FROM information_schema.schemata WHERE schema_name = 'fts_main_meta_data'"
             ).fetchdf()
-            if len(df) > 0:
-                self.is_kw_index_enabled = True
+            return len(df) > 0
 
-    def connect(self) -> duckdb.DuckDBPyConnection:
-        """Connect to DuckDB database."""
-        if self.is_connected:
-            return self.connection
+    def _create_kw_index(self, connection: duckdb.DuckDBPyConnection):
+        with connection.cursor() as cur:
+            cur.execute("PRAGMA create_fts_index('meta_data', 'id', 'content')")
 
-        try:
-            self.connection = duckdb.connect(self.duckdb_path)
-            self.faiss_index = FaissIVFIndex(self.faiss_index_path, self.connection_data)
-            self.is_connected = True
-
-            logger.info("Connected to DuckDB database")
-            return self.connection
-
-        except Exception as e:
-            logger.error(f"Error connecting to DuckDB: {e}")
-            raise
-
-    def disconnect(self):
-        """Close DuckDB connection."""
-        if self.is_connected and self.connection:
-            self.connection.close()
-            self.faiss_index.close()
-            self.is_connected = False
+    def _drop_kw_index(self, connection: duckdb.DuckDBPyConnection):
+        with connection.cursor() as cur:
+            cur.execute("pragma drop_fts_index('meta_data')")
 
     def create_table(self, table_name: str, if_not_exists=True):
-        with self.connection.cursor() as cur:
-            cur.execute("CREATE SEQUENCE  IF NOT EXISTS faiss_id_sequence START 1")
+        self._validate_table_name(table_name)
+        table_dir = self._table_dir(table_name)
+        if table_dir.exists() and not if_not_exists:
+            raise ValueError(f"Vector table '{table_name}' already exists")
+        table_dir.mkdir(parents=True, exist_ok=True)
 
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS meta_data (
-                    faiss_id INTEGER PRIMARY KEY DEFAULT nextval('faiss_id_sequence'), -- id in FAISS index 
-                    id TEXT  NOT NULL, -- chunk id                    
-                    content TEXT,
-                    metadata JSON
-                )
-            """)
+        with self._open_table(table_name) as (connection, _faiss_index):
+            with connection.cursor() as cur:
+                cur.execute("CREATE SEQUENCE IF NOT EXISTS faiss_id_sequence START 1")
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS meta_data (
+                        faiss_id INTEGER PRIMARY KEY DEFAULT nextval('faiss_id_sequence'), -- id in FAISS index
+                        id TEXT NOT NULL, -- chunk id
+                        content TEXT,
+                        metadata JSON
+                    )
+                """)
+            self._sync(table_name, connection=connection, faiss_index=_faiss_index)
 
     def drop_table(self, table_name: str, if_exists=True):
         """Drop table from both DuckDB and Faiss."""
-        with self.connection.cursor() as cur:
-            drop_sql = f"DROP TABLE {'IF EXISTS' if if_exists else ''} meta_data"
-            cur.execute(drop_sql)
+        table_dir = self._table_dir(table_name)
+        if if_exists and not table_dir.exists():
+            return
+        if not if_exists and not table_dir.exists():
+            raise ValueError(f"Vector table '{table_name}' does not exist")
 
-        if self.faiss_index:
-            self.faiss_index.drop()
+        with self._open_table(table_name) as (connection, faiss_index):
+
+            with connection.cursor() as cur:
+                drop_sql = f"DROP TABLE {'IF EXISTS' if if_exists else ''} meta_data"
+                cur.execute(drop_sql)
+            faiss_index.drop()
+            self._sync(table_name, connection=connection, faiss_index=faiss_index)
+        try:
+            shutil.rmtree(table_dir, ignore_errors=False)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            logger.exception("Failed to remove vector table directory: %s", table_dir)
 
     def create_index(self, table_name: str, type: str = "ivf_file", nlist: int = None, train_count: int = None):
         if type not in ("ivf", "ivf_file"):
             raise NotImplementedError("Only ivf or ivf_file indexes are supported")
 
-        self.faiss_index.create_index(type, nlist=nlist, train_count=train_count)
+        with self._open_table(table_name) as (connection, faiss_index):
+            faiss_index.create_index(type, nlist=nlist, train_count=train_count)
+            self._sync(table_name, connection=connection, faiss_index=faiss_index)
 
     def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into both DuckDB and Faiss."""
 
-        if self.is_kw_index_enabled:
-            # drop index, it will be created before a first keyword search
-            self.drop_kw_index()
+        with self._open_table(table_name) as (connection, faiss_index):
+            if self._is_kw_index_enabled(connection):
+                # drop index, it will be created before a first keyword search
+                self._drop_kw_index(connection)
 
-        with self.connection.cursor() as cur:
-            df_ids = cur.execute("""
-                insert into meta_data (id, content, metadata) (
-                    select id, content, metadata from data
-                )
-                RETURNING faiss_id, id
-            """).fetchdf()
+            with connection.cursor() as cur:
+                df_ids = cur.execute("""
+                    insert into meta_data (id, content, metadata) (
+                        select id, content, metadata from data
+                    )
+                    RETURNING faiss_id, id
+                """).fetchdf()
 
-        data = data.merge(df_ids, on="id")
+            data = data.merge(df_ids, on="id")
 
-        vectors = data["embeddings"]
-        ids = data["faiss_id"]
+            vectors = data["embeddings"]
+            ids = data["faiss_id"]
 
-        self.faiss_index.insert(list(vectors), list(ids))
-        self._sync()
+            faiss_index.insert(list(vectors), list(ids))
+            self._sync(table_name, connection=connection, faiss_index=faiss_index)
 
     # def upsert(self, table_name: str, data: pd.DataFrame):
     #     # delete by ids and insert
@@ -174,60 +240,61 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
     ) -> pd.DataFrame:
         """Select data with hybrid search logic."""
 
-        vector_filter = None
-        meta_filters = []
-        if conditions is None:
-            conditions = []
-        for condition in conditions:
-            if condition.column == "embeddings":
-                vector_filter = condition
-            else:
-                meta_filters.append(condition)
+        with self._open_table(table_name) as (connection, faiss_index):
+            vector_filter = None
+            meta_filters = []
+            if conditions is None:
+                conditions = []
+            for condition in conditions:
+                if condition.column == "embeddings":
+                    vector_filter = condition
+                else:
+                    meta_filters.append(condition)
 
-        if vector_filter is None:
-            # If only metadata in filter:
-            # query duckdb only
-            return self._select_from_metadata(meta_filters=meta_filters, limit=limit).drop("faiss_id", axis=1)
+            if vector_filter is None:
+                # If only metadata in filter:
+                # query duckdb only
+                return (
+                    self._select_from_metadata(connection=connection, meta_filters=meta_filters, limit=limit)
+                    .drop("faiss_id", axis=1)
+                )
 
-        # vector_filter is not None
-        if not meta_filters:
-            # If only content in filter: query faiss and attach to metadata
-            return self._select_with_vector(vector_filter=vector_filter, limit=limit)
+            # vector_filter is not None
+            if not meta_filters:
+                # If only content in filter: query faiss and attach to metadata
+                return self._select_with_vector(
+                    connection=connection, faiss_index=faiss_index, vector_filter=vector_filter, limit=limit
+                )
 
-        """
-        If metadata + content:
-        Query faiss, use limit = 1000
-        Query duckdb with `id in (...)` 
-        If count of results is less than input LIMIT value
-        Repeat the search with increased limit value
-        Limit value for step = 1000 * 5^i  (1000, 2000, 25000, 125000 …)
-        """
+            """
+            If metadata + content:
+            Query faiss, use limit = 1000
+            Query duckdb with `id in (...)`
+            If count of results is less than input LIMIT value
+            Repeat the search with increased limit value
+            Limit value for step = 1000 * 5^i  (1000, 2000, 25000, 125000 …)
+            """
 
-        df = pd.DataFrame()
+            df = pd.DataFrame()
+            total_size = self._get_total_size(connection)
 
-        total_size = self.get_total_size()
+            for i in range(10):
+                batch_size = 1000 * 5**i
 
-        for i in range(10):
-            batch_size = 1000 * 5**i
+                # TODO implement reverse search:
+                #   if batch_size > 25% of db: search metadata first and then in faiss by list of ids
 
-            # TODO implement reverse search:
-            #   if batch_size > 25% of db: search metadata first and then in faiss by list of ids
+                df = self._select_with_vector(
+                    connection=connection,
+                    faiss_index=faiss_index,
+                    vector_filter=vector_filter,
+                    meta_filters=meta_filters,
+                    limit=batch_size,
+                )
+                if batch_size >= total_size or (limit is not None and len(df) >= limit):
+                    break
 
-            df = self._select_with_vector(vector_filter=vector_filter, meta_filters=meta_filters, limit=batch_size)
-            if batch_size >= total_size or len(df) >= limit:
-                break
-
-        return df[:limit]
-
-    def create_kw_index(self):
-        with self.connection.cursor() as cur:
-            cur.execute("PRAGMA create_fts_index('meta_data', 'id', 'content')")
-            self.is_kw_index_enabled = True
-
-    def drop_kw_index(self):
-        with self.connection.cursor() as cur:
-            cur.execute("pragma drop_fts_index('meta_data')")
-            self.is_kw_index_enabled = False
+            return df if limit is None else df[:limit]
 
     def keyword_select(
         self,
@@ -238,64 +305,74 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         limit: int = None,
         keyword_search_args: KeywordSearchArgs = None,
     ) -> pd.DataFrame:
-        if not self.is_kw_index_enabled:
-            # keyword search is used for first time: create index
-            self.create_kw_index()
+        with self._open_table(table_name) as (connection, faiss_index):
+            if not self._is_kw_index_enabled(connection):
+                # keyword search is used for first time: create index
+                self._create_kw_index(connection)
+                self._sync(table_name, connection=connection, faiss_index=faiss_index)
 
-        with self.connection.cursor() as cur:
-            where_clause = self._translate_filters(conditions)
+            with connection.cursor() as cur:
+                where_clause = self._translate_filters(conditions)
 
-            score = Function(
-                namespace="fts_main_meta_data",
-                op="match_bm25",
-                args=[
-                    Identifier("id"),
-                    Constant(keyword_search_args.query),
-                    BinaryOperation(op=":=", args=[Identifier("fields"), Constant(keyword_search_args.column)]),
-                ],
-            )
+                score = Function(
+                    namespace="fts_main_meta_data",
+                    op="match_bm25",
+                    args=[
+                        Identifier("id"),
+                        Constant(keyword_search_args.query),
+                        BinaryOperation(op=":=", args=[Identifier("fields"), Constant(keyword_search_args.column)]),
+                    ],
+                )
 
-            no_emtpy_score = BinaryOperation(op="is not", args=[score, NullConstant()])
-            if where_clause:
-                where_clause = BinaryOperation(op="and", args=[where_clause, no_emtpy_score])
-            else:
-                where_clause = no_emtpy_score
+                no_emtpy_score = BinaryOperation(op="is not", args=[score, NullConstant()])
+                if where_clause:
+                    where_clause = BinaryOperation(op="and", args=[where_clause, no_emtpy_score])
+                else:
+                    where_clause = no_emtpy_score
 
-            query = Select(
-                targets=[Star(), BinaryOperation(op="-", args=[Constant(1), score], alias=Identifier("distance"))],
-                from_table=Identifier("meta_data"),
-                where=where_clause,
-            )
+                query = Select(
+                    targets=[Star(), BinaryOperation(op="-", args=[Constant(1), score], alias=Identifier("distance"))],
+                    from_table=Identifier("meta_data"),
+                    where=where_clause,
+                )
 
-            sql = self.renderer.get_string(query, with_failback=True)
-            cur.execute(sql)
-            df = cur.fetchdf()
-            df["metadata"] = df["metadata"].apply(orjson.loads)
-            return df
+                sql = self.renderer.get_string(query, with_failback=True)
+                cur.execute(sql)
+                df = cur.fetchdf()
+                df["metadata"] = df["metadata"].apply(orjson.loads)
+                return df
 
-    def get_total_size(self):
-        with self.connection.cursor() as cur:
+    @staticmethod
+    def _get_total_size(connection: duckdb.DuckDBPyConnection) -> int:
+        with connection.cursor() as cur:
             cur.execute("select count(1) size from meta_data")
             df = cur.fetchdf()
-            return df["size"].iloc[0]
+            return int(df["size"].iloc[0])
 
-    def _select_with_vector(self, vector_filter: FilterCondition, meta_filters=None, limit=None) -> pd.DataFrame:
+    def _select_with_vector(
+        self,
+        connection: duckdb.DuckDBPyConnection,
+        faiss_index: FaissIVFIndex,
+        vector_filter: FilterCondition,
+        meta_filters=None,
+        limit=None,
+    ) -> pd.DataFrame:
         embedding = vector_filter.value
         if isinstance(embedding, str):
             embedding = orjson.loads(embedding)
 
-        distances, faiss_ids = self.faiss_index.search(embedding, limit or 100)
+        distances, faiss_ids = faiss_index.search(embedding, limit or 100)
 
         # Fetch full data from DuckDB
         if len(faiss_ids) > 0:
             # ids = [str(idx) for idx in faiss_ids]
-            meta_df = self._select_from_metadata(faiss_ids=faiss_ids, meta_filters=meta_filters)
+            meta_df = self._select_from_metadata(connection=connection, faiss_ids=faiss_ids, meta_filters=meta_filters)
             vector_df = pd.DataFrame({"faiss_id": faiss_ids, "distance": distances})
             return vector_df.merge(meta_df, on="faiss_id").drop("faiss_id", axis=1).sort_values(by="distance")
 
         return pd.DataFrame([], columns=["id", "content", "metadata", "distance"])
 
-    def _select_from_metadata(self, faiss_ids=None, meta_filters=None, limit=None):
+    def _select_from_metadata(self, connection: duckdb.DuckDBPyConnection, faiss_ids=None, meta_filters=None, limit=None):
         query = Select(
             targets=[Star()],
             from_table=Identifier("meta_data"),
@@ -318,7 +395,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
                     # create results with partition
                     ids = faiss_ids[chunk * chunk_size : (chunk + 1) * chunk_size]
                     chunk += 1
-                    df = self._select_from_metadata(faiss_ids=ids, meta_filters=meta_filters, limit=limit)
+                    df = self._select_from_metadata(connection=connection, faiss_ids=ids, meta_filters=meta_filters, limit=limit)
                     total += len(df)
                     if limit is not None and limit <= total:
                         # cut the extra from the end
@@ -341,7 +418,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         query.where = where_clause
 
-        with self.connection.cursor() as cur:
+        with connection.cursor() as cur:
             sql = self.renderer.get_string(query, with_failback=True)
             cur.execute(sql)
             df = cur.fetchdf()
@@ -405,44 +482,53 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
     def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> Response:
         """Delete data from both DuckDB and Faiss."""
 
-        with self.connection.cursor() as cur:
-            where_clause = self._translate_filters(conditions)
+        with self._open_table(table_name) as (connection, faiss_index):
+            with connection.cursor() as cur:
+                where_clause = self._translate_filters(conditions)
 
-            query = Select(targets=[Identifier("faiss_id")], from_table=Identifier("meta_data"), where=where_clause)
-            cur.execute(self.renderer.get_string(query, with_failback=True))
-            df = cur.fetchdf()
-            ids = list(df["faiss_id"])
+                query = Select(targets=[Identifier("faiss_id")], from_table=Identifier("meta_data"), where=where_clause)
+                cur.execute(self.renderer.get_string(query, with_failback=True))
+                df = cur.fetchdf()
+                ids = list(df["faiss_id"])
 
-            self.faiss_index.delete_ids(ids)
+                faiss_index.delete_ids(ids)
 
-            query = Delete(table=Identifier("meta_data"), where=where_clause)
-            cur.execute(self.renderer.get_string(query, with_failback=True))
+                query = Delete(table=Identifier("meta_data"), where=where_clause)
+                cur.execute(self.renderer.get_string(query, with_failback=True))
 
-            self._sync()
+                self._sync(table_name, connection=connection, faiss_index=faiss_index)
 
     def get_dimension(self, table_name: str) -> int:
-        if self.faiss_index and self.faiss_index.index is not None:
-            return self.faiss_index.dim
+        with self._open_table(table_name) as (_connection, faiss_index):
+            if faiss_index and faiss_index.index is not None:
+                return faiss_index.dim
 
-    def _sync(self):
-        """Sync the database to disk if using persistent storage"""
-        self.faiss_index.dump()
+    def _sync(self, table_name: str, connection: duckdb.DuckDBPyConnection, faiss_index: FaissIVFIndex):
+        """Sync FAISS index and handler storage (if used)."""
+        try:
+            faiss_index.dump()
+        except Exception:
+            logger.exception("Failed to dump FAISS index")
         if self._use_handler_storage:
-            self.handler_storage.folder_sync(self.persist_directory)
+            # Sync the whole handler data folder (contains all table subfolders).
+            self.handler_storage.folder_sync(self._handler_storage_folder_name or "data")
 
     def get_tables(self) -> Response:
         """Get list of tables."""
-        with self.connection.cursor() as cur:
-            df = cur.execute("show tables").fetchdf()
-            df = df.rename(columns={"name": "table_name"})
-
+        rows = []
+        root = Path(self.persist_directory)
+        if root.exists():
+            for item in root.iterdir():
+                if not item.is_dir():
+                    continue
+                rows.append({"table_name": item.name})
+        df = pd.DataFrame(rows, columns=["table_name"])
         return Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
     def check_connection(self) -> Response:
         """Check the connection to the database."""
         try:
-            if not self.is_connected:
-                self.connect()
+            self.connect()
             return StatusResponse(RESPONSE_TYPE.OK)
         except Exception as e:
             logger.error(f"Connection check failed: {e}")
@@ -451,16 +537,26 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
     def native_query(self, query: str) -> Response:
         """Execute a native SQL query."""
         try:
-            with self.connection.cursor() as cur:
-                cur.execute(query)
-                result = cur.fetchdf()
-                return Response(RESPONSE_TYPE.TABLE, data_frame=result)
+            tables = self.get_tables().data_frame["table_name"].tolist()
+            if len(tables) == 1:
+                table_name = tables[0]
+            else:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=(
+                        "native_query is ambiguous for duckdb_faiss with multiple vector tables. "
+                        "Create exactly one table or use the vector-table APIs."
+                    ),
+                )
+            with self._open_table(table_name) as (connection, _faiss_index):
+                with connection.cursor() as cur:
+                    cur.execute(query)
+                    result = cur.fetchdf()
+                    return Response(RESPONSE_TYPE.TABLE, data_frame=result)
         except Exception as e:
             logger.error(f"Error executing native query: {e}")
             return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
     def __del__(self):
         """Cleanup on deletion."""
-        if self.is_connected:
-            self._sync()
-            self.disconnect()
+        self.disconnect()

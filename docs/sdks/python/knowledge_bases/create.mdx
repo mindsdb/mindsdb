@@ -325,9 +325,9 @@ The `binary` reranking method simplifies classification by determining whether a
 The vector store is a required component of the knowledge base. It stores data in the form of embeddings.
 
 <Note>
-When using [MindsDB via Docker](/setup/self-hosted/docker-desktop), the `storage` parameter is optional. The default storage is PGVector that is integrated into the MindsDB's Docker image.
+When using [MindsDB via Docker Desktop Extension](/setup/self-hosted/docker-desktop), the `storage` parameter is optional. The default storage is PGVector that is integrated into the MindsDB Docker Desktop Extension.
 
-When using [MindsDB via PyPI](/contribute/install), the `storage` parameter is required. Users need to connect their vector storage, such as PGVector, using the `CREATE DATABASE` command and then use it for the storage of the knowledge bases.
+When using [MindsDB via PyPI](/contribute/install) or [MindsDB via Docker image](/setup/self-hosted/docker), the `storage` parameter is required. Users need to connect their vector storage, such as PGVector, using the `CREATE DATABASE` command and then use it for the storage of the knowledge bases.
 </Note>
 
 The recommended vector store for knowledge bases is [PGVector](/integrations/vector-db-integrations/pgvector), specifically, version 0.8.0 or higher for a better performance.

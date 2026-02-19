@@ -1,15 +1,22 @@
 import os
 import sys
 import subprocess
+from enum import Enum
 from typing import Text, List
 
 
-def install_dependencies(dependencies: List[Text]) -> dict:
+class InstallTool(Enum):
+    pip = sys.executable, '-m', 'pip'
+    uv = 'uv', 'pip'
+
+
+def install_dependencies(dependencies: List[Text], tool: InstallTool = InstallTool.pip) -> dict:
     """
     Installs the dependencies for a handler by calling the `pip install` command via subprocess.
 
     Args:
         dependencies (List[Text]): List of dependencies for the handler.
+        tool (InstallTool): tool the tool that will be used to install dependencies
 
     Returns:
         dict: A dictionary containing the success status and an error message if an error occurs.
@@ -33,9 +40,9 @@ def install_dependencies(dependencies: List[Text]) -> dict:
         return result
 
     try:
-        # Install the dependencies using the `pip install` command.
+        # Install the dependencies using the selected tool.
         sp = subprocess.Popen(
-            [sys.executable, '-m', 'pip', 'install', *split_dependencies],
+            [*tool.value, 'install', *split_dependencies],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
@@ -44,6 +51,12 @@ def install_dependencies(dependencies: List[Text]) -> dict:
     except subprocess.TimeoutExpired as timeout_error:
         sp.kill()
         result['error_message'] = f"Timeout error while installing dependencies: {str(timeout_error)}"
+        return result
+    except FileNotFoundError as e:
+        if e.filename == 'uv':
+            result['error_message'] = "The 'pip' and 'uv' tools are not found. Please install them."
+        else:
+            result['error_message'] = f"FileNotFoundError error while installing dependencies: {str(e)}"
         return result
     except Exception as unknown_error:
         result['error_message'] = f"Unknown error while installing dependencies: {str(unknown_error)}"
@@ -58,6 +71,9 @@ def install_dependencies(dependencies: List[Text]) -> dict:
             if len(output) > 0:
                 output = output + '\n'
             output = output + 'Errors: ' + errs.decode()
+        if 'no module named pip' in output.lower() and tool is InstallTool.pip:
+            # try with uv
+            return install_dependencies(dependencies, InstallTool.uv)
         result['error_message'] = output
     else:
         result['success'] = True

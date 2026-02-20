@@ -1,5 +1,4 @@
 import os
-import pathlib
 from typing import Iterable, List, Callable
 import numpy as np
 import psutil
@@ -183,7 +182,11 @@ class FaissIndex:
 
     def drop(self):
         self.close()
-        if os.path.exists(self.path):
+
+        # remove index files (everything except duckdb)
+        for item in Path(self.path).parent.iterdir():
+            if item.is_dir() or item.name.startswith("duckdb."):
+                continue
             os.remove(self.path)
 
     def search(
@@ -209,7 +212,7 @@ class FaissIndex:
 
 
 class FaissIVFIndex(FaissIndex):
-    def _dump_vectors(self, index, path: pathlib.Path, batch_size: int = 30000):
+    def _dump_vectors(self, index, path: Path, batch_size: int = 30000):
         """
         Extract and dump vectors and ids from index. Method is dependent on index type
         """
@@ -252,10 +255,10 @@ class FaissIVFIndex(FaissIndex):
     def _dump_vectors_to_file(
         self,
         ids: np.ndarray,
-        path: pathlib.Path,
+        path: Path,
         ntotal: int,
         batch_size: int,
-        get_batch_f: Callable[[int, int], np.ndarray],
+        get_batch_content: Callable[[int, int], np.ndarray],
     ) -> int:
         """
 
@@ -265,7 +268,7 @@ class FaissIVFIndex(FaissIndex):
         :param path: directory to store dumps.
         :param ntotal: total number of vectors.
         :param batch_size: number of vectors per batch file.
-        :param get_batch_f: function to get a batch content
+        :param get_batch_content: function to get a batch content
 
         """
 
@@ -285,7 +288,7 @@ class FaissIVFIndex(FaissIndex):
             ntotal -= size
             batch_num += 1
 
-            vecs = get_batch_f(start, size)
+            vecs = get_batch_content(start, size)
 
             vecs_path = path / f"batch_{batch_num:05d}_vecs.mmap"
 
@@ -407,6 +410,8 @@ class FaissIVFIndex(FaissIndex):
 
         merge_ondisk(index, block_fnames, str(index_path / "faiss_index_merged"))
         os.unlink(trained_path)
+        for block_fname in block_fnames:
+            os.unlink(block_fname)
 
         return index
 
@@ -436,6 +441,7 @@ class FaissIVFIndex(FaissIndex):
         else:
             ntotal = self.index.ntotal
 
+        # faiss shows warning if train count is less than 39 * nlist and recommend to use at least this size for train data
         nlist_k = 39
         if train_count is not None:
             if train_count < nlist * nlist_k:

@@ -252,6 +252,7 @@ class Config:
             "permanent_storage": {},
             "ml_task_queue": {},
             "gui": {},
+            "byom": {},
         }
 
         # region storage root path

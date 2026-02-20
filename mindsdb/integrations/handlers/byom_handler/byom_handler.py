@@ -169,7 +169,7 @@ class BYOMHandler(BaseMLEngine):
                 if self._inhouse_enabled is False:
                     raise Exception("'Inhouse' BYOM engine type can not be used")
                 if self.inhouse_model_wrapper is None:
-                    self.inhouse_model_wrapper = ModelWrapperUnsafe(   # unsafe
+                    self.inhouse_model_wrapper = ModelWrapperUnsafe(
                         code=code,
                         modules_str=modules_str,
                         engine_id=self.engine_storage.integration_id,

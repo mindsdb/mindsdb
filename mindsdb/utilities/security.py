@@ -56,7 +56,12 @@ def _split_url(url: str) -> tuple[str, str]:
         raise ValueError(f"URL must include protocol and host name: {url}")
     hostname = parsed_url.hostname or ""
     port = parsed_url.port
-    host = f"{hostname}:{port}" if port else hostname
+    if ":" in hostname and port:
+        host = f"[{hostname}]:{port}"
+    elif port:
+        host = f"{hostname}:{port}"
+    else:
+        host = hostname
     return parsed_url.scheme.lower(), host.lower()
 
 

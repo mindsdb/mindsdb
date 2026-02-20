@@ -82,6 +82,7 @@
                       "integrations/app-integrations/google-analytics",
                       "integrations/app-integrations/gong",
                       "integrations/app-integrations/hackernews",
+                      "integrations/app-integrations/hubspot",
                       "integrations/app-integrations/instatus",
                       "integrations/app-integrations/intercom",
                       "integrations/app-integrations/jira",

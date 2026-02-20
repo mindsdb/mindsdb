@@ -28,7 +28,7 @@ except ImportError:
 
 
 class TestApiHandler(BaseExecutorDummyML):
-    @pytest.mark.skipif(os.environ.get("RUNNER_OS", None) is None, reason="Fixme: Fails localy for some reason")
+    @pytest.mark.skipif(os.environ.get("RUNNER_OS", None) is None, reason="Fixme: Fails locally for some reason")
     @patch("github.Github")
     def test_github(self, Github):
         """

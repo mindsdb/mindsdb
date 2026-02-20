@@ -20,9 +20,9 @@ pip install -r requirements/requirements.txt -r requirements/requirements-test.t
 
 This command will install all the required packages as listed in requirements-test.txt and the requirements.txt files.
 
-> Note: You will also need to install the dependencies required by any of the integrations that the tests you are running use. This can be done by running `pip install .[<integration_name>]` in the root directory of the repository. 
+> Note: You will also need to install the dependencies required by any of the integrations that the tests you are running use. This can be done by running `pip install .[<integration_name>]` in the root directory of the repository.
 
-## Runing tests
+## Running tests
 
 ### Unit and Integration Tests
 

@@ -187,7 +187,7 @@ class FaissIndex:
         for item in Path(self.path).parent.iterdir():
             if item.is_dir() or item.name.startswith("duckdb."):
                 continue
-            os.remove(self.path)
+            item.unlink()
 
     def search(
         self,

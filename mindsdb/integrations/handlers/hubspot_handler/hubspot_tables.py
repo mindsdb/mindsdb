@@ -4042,7 +4042,7 @@ class LeadsTable(HubSpotAPIResource):
             )
             if not created_leads or not hasattr(created_leads, "results") or not created_leads.results:
                 raise Exception("Lead creation returned no results")
-            created_ids = [l.id for l in created_leads.results]
+            created_ids = [lead.id for lead in created_leads.results]
             logger.info(f"Successfully created {len(created_ids)} lead(s) with IDs: {created_ids}")
         except Exception as e:
             logger.error(f"Leads creation failed: {str(e)}")
@@ -4056,7 +4056,7 @@ class LeadsTable(HubSpotAPIResource):
             updated = hubspot.crm.objects.leads.batch_api.update(
                 batch_input_simple_public_object_batch_input=batch_input
             )
-            logger.info(f"Leads with ID {[l.id for l in updated.results]} updated")
+            logger.info(f"Leads with ID {[lead.id for lead in updated.results]} updated")
         except Exception as e:
             raise Exception(f"Leads update failed {e}")
 

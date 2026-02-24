@@ -12,7 +12,6 @@ HubSpot handler for MindsDB provides interfaces to connect to HubSpot via APIs a
   - [Installation](#installation)
   - [Authentication](#authentication)
     - [Personal Access Token Authentication](#personal-access-token-authentication)
-    - [OAuth Authentication](#oauth-authentication)
   - [Supported Tables](#supported-tables)
     - [Core CRM and Engagement Tables](#core-crm-and-engagement-tables)
     - [Metadata Tables](#metadata-tables)
@@ -59,15 +58,6 @@ Recommended for server-to-server integrations and production environments.
 4. Configure required scopes for the tables you plan to access
 5. Copy the generated access token
 
-### OAuth Authentication
-
-Recommended for applications requiring user consent and dynamic scope management.
-
-**Required OAuth Parameters:**
-- `client_id`: Your app's client identifier
-- `client_secret`: Your app's client secret (store securely)
-
-OAuth token exchange and refresh are handled externally.
 
 ## Supported Tables
 

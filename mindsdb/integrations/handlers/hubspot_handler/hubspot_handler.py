@@ -13,6 +13,7 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     EmailsTable,
     MeetingsTable,
     NotesTable,
+    LeadsTable,
     OwnersTable,
     DealStagesTable,
     to_hubspot_property,
@@ -135,6 +136,7 @@ class HubspotHandler(MetaAPIHandler):
         self._register_table("emails", EmailsTable(self))
         self._register_table("meetings", MeetingsTable(self))
         self._register_table("notes", NotesTable(self))
+        self._register_table("leads", LeadsTable(self))
         self._register_table("owners", OwnersTable(self))
         self._register_table("deal_stages", DealStagesTable(self))
 

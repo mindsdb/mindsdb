@@ -52,6 +52,7 @@ class FaissIndex:
         self.index_type = "flat"
         self.dim = None
         self.index_fd = None
+        self.lock_required = True
 
         recover_path = Path(self.path).parent / "recover"
         if recover_path.exists():
@@ -65,6 +66,8 @@ class FaissIndex:
             self._load_index()
 
     def _lock_index(self):
+        if not self.lock_required:
+            return
         if os.name != "nt":
             self.index_fd = open(self.path, "rb")
             try:
@@ -84,6 +87,11 @@ class FaissIndex:
             to_free_gb = round((required_ram - available_ram) / _1gb, 2)
             raise ValueError(f"Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb")
 
+        # check ivf_file before loading index and locking it
+        index_merged = Path(self.path).parent / 'faiss_index_merged'
+        if index_merged.exists():
+            self.lock_required = False
+
         self._lock_index()
 
         self.index = faiss.read_index(self.path)
@@ -93,7 +101,6 @@ class FaissIndex:
         if hasattr(index, "index"):
             index = faiss.downcast_index(index.index)
         if isinstance(index, faiss.IndexIVFFlat):
-            index_merged = Path(self.path).parent / 'faiss_index_merged'
             if index_merged.exists():
                 self.index_type = "ivf_file"
             else:
@@ -485,9 +492,11 @@ class FaissIVFIndex(FaissIndex):
         # create ivf index
         if index_type == "ivf":
             ivf_index = self._create_ivf_index(dump_path, train_count=train_count, nlist=nlist)
+            self.lock_required = True
 
         elif index_type == "ivf_file":
             ivf_index = self._create_ivf_file_index(dump_path, train_count=train_count, nlist=nlist)
+            self.lock_required = False
         else:
             raise ValueError(f"Unknown index type: {index_type}")
 

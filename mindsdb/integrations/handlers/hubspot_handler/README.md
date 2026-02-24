@@ -76,6 +76,7 @@ These tables support `SELECT`, `INSERT`, `UPDATE`, and `DELETE` operations.
 | `emails` | Email log records | https://developers.hubspot.com/docs/api-reference/crm-emails-v3/guide |
 | `meetings` | Meeting records | https://developers.hubspot.com/docs/api-reference/crm-meetings-v3/guide |
 | `notes` | Timeline notes | https://developers.hubspot.com/docs/api-reference/crm-notes-v3/guide |
+| `leads` | Lead records including lead status and source | https://developers.hubspot.com/docs/api-reference/crm-leads-v3/guide |
 
 ### Metadata Tables
 

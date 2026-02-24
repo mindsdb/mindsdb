@@ -10,11 +10,9 @@ class QueryTask(BaseTask):
         self.query_id = self.object_id
 
     def run(self, stop_event):
-
         try:
             session = SessionController()
             SQLQuery(None, query_id=self.query_id, session=session, stop_event=stop_event)
         finally:
             # clear task
             query_context_controller.get_query(self.query_id).remove_from_task()
-            session.integration_controller.handlers_cache._clean()

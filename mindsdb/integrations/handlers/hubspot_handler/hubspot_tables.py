@@ -601,6 +601,17 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("stage_probability", "DECIMAL", "Stage probability"),
         ("stage_archived", "BOOLEAN", "Stage archived"),
     ],
+    "leads": [
+        ("hs_lead_name", "VARCHAR", "Lead name"),
+        ("hs_lead_type", "VARCHAR", "Lead type"),
+        ("hs_lead_label", "VARCHAR", "Lead label/status"),
+        ("hubspot_owner_id", "VARCHAR", "Owner ID"),
+        ("hs_timestamp", "TIMESTAMP", "Lead timestamp"),
+        ("primary_contact_id", "VARCHAR", "Primary associated contact ID"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
+        ("createdate", "TIMESTAMP", "Creation date"),
+        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+    ],
 }
 
 
@@ -3818,3 +3829,243 @@ class NotesTable(HubSpotAPIResource):
             logger.info("Notes deleted")
         except Exception as e:
             raise Exception(f"Notes deletion failed {e}")
+
+
+class LeadsTable(HubSpotAPIResource):
+    """HubSpot Leads table for prospective customer records."""
+
+    # Reference: https://developers.hubspot.com/docs/api-reference/crm-leads-v3/guide
+    SEARCHABLE_COLUMNS: Set[str] = {"hs_lead_name", "hs_lead_type", "hs_lead_label", "id"}
+    ASSOCIATION_COLUMNS = {"primary_contact_id", "primary_company_id"}
+
+    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+        row_count = None
+        try:
+            self.handler.connect()
+            row_count = self.handler._estimate_table_rows("leads")
+        except Exception as e:
+            logger.warning(f"Could not estimate HubSpot leads row count: {e}")
+        return {
+            "TABLE_NAME": "leads",
+            "TABLE_TYPE": "BASE TABLE",
+            "TABLE_DESCRIPTION": "HubSpot leads representing prospective customer records",
+            "ROW_COUNT": row_count,
+        }
+
+    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        return self.handler._get_default_meta_columns("leads")
+
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        search_filters: Optional[List[Dict[str, Any]]] = None,
+        search_sorts: Optional[List[Dict[str, Any]]] = None,
+        allow_search: bool = True,
+    ) -> pd.DataFrame:
+        leads_df = pd.json_normalize(
+            self.get_leads(
+                limit=limit,
+                where_conditions=conditions,
+                properties=targets,
+                search_filters=search_filters,
+                search_sorts=search_sorts,
+                allow_search=allow_search,
+            )
+        )
+        if leads_df.empty:
+            leads_df = pd.DataFrame(columns=targets or self._get_default_lead_columns())
+        return leads_df
+
+    def add(self, lead_data: List[dict]):
+        self.create_leads(lead_data)
+
+    def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        leads_df = pd.json_normalize(self.get_leads(limit=200, where_conditions=normalized_conditions))
+
+        if leads_df.empty:
+            raise ValueError("No leads retrieved from HubSpot to evaluate update conditions.")
+
+        executor_conditions = _normalize_conditions_for_executor(normalized_conditions)
+        update_query_executor = UPDATEQueryExecutor(leads_df, executor_conditions)
+        filtered_df = update_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(f"No leads found matching WHERE conditions: {conditions}.")
+
+        lead_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Updating {len(lead_ids)} lead(s) matching WHERE conditions")
+        self.update_leads(lead_ids, values)
+
+    def remove(self, conditions: List[FilterCondition]) -> None:
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        leads_df = pd.json_normalize(self.get_leads(limit=200, where_conditions=normalized_conditions))
+
+        if leads_df.empty:
+            raise ValueError("No leads retrieved from HubSpot to evaluate delete conditions.")
+
+        executor_conditions = _normalize_conditions_for_executor(normalized_conditions)
+        delete_query_executor = DELETEQueryExecutor(leads_df, executor_conditions)
+        filtered_df = delete_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(f"No leads found matching WHERE conditions: {conditions}.")
+
+        lead_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Deleting {len(lead_ids)} lead(s) matching WHERE conditions")
+        self.delete_leads(lead_ids)
+
+    def get_columns(self) -> List[Text]:
+        return self._get_default_lead_columns()
+
+    @staticmethod
+    def _get_default_lead_columns() -> List[str]:
+        return [
+            "id",
+            "hs_lead_name",
+            "hs_lead_type",
+            "hs_lead_label",
+            "hubspot_owner_id",
+            "hs_timestamp",
+            "primary_contact_id",
+            "primary_company_id",
+            "createdate",
+            "lastmodifieddate",
+        ]
+
+    def get_leads(
+        self,
+        limit: Optional[int] = None,
+        where_conditions: Optional[List] = None,
+        properties: Optional[List[str]] = None,
+        search_filters: Optional[List[Dict[str, Any]]] = None,
+        search_sorts: Optional[List[Dict[str, Any]]] = None,
+        allow_search: bool = True,
+        **kwargs,
+    ) -> List[Dict]:
+        normalized_conditions = _normalize_filter_conditions(where_conditions)
+        hubspot = self.handler.connect()
+
+        requested_properties = properties or []
+        default_properties = self._get_default_lead_columns()
+        columns = requested_properties or default_properties
+        association_targets, hubspot_columns = _prepare_association_request("leads", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
+
+        api_kwargs = {**kwargs, "properties": hubspot_properties}
+        if limit is not None:
+            api_kwargs["limit"] = limit
+        else:
+            api_kwargs.pop("limit", None)
+        if association_targets:
+            api_kwargs["associations"] = association_targets
+
+        if allow_search and (search_filters or search_sorts or normalized_conditions):
+            filters = search_filters
+            if filters is None and normalized_conditions:
+                filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
+            if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for leads.")
+                search_results = self._search_leads_by_conditions(
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
+                )
+                logger.info(f"Retrieved {len(search_results)} leads from HubSpot via search API")
+                return search_results
+
+        leads = self.handler._get_objects_all("leads", **api_kwargs)
+        leads_dict = []
+        for lead in leads:
+            try:
+                row = self._lead_to_dict(lead, hubspot_columns, association_targets)
+                leads_dict.append(row)
+            except Exception as e:
+                logger.warning(f"Error processing lead {getattr(lead, 'id', 'unknown')}: {str(e)}")
+                continue
+
+        logger.info(f"Retrieved {len(leads_dict)} leads from HubSpot")
+        return leads_dict
+
+    def _search_leads_by_conditions(
+        self,
+        hubspot: HubSpot,
+        filters: Optional[List[Dict[str, Any]]],
+        properties: List[str],
+        limit: Optional[int],
+        sorts: Optional[List[Dict[str, Any]]],
+        columns: List[str],
+        association_targets: List[str],
+    ) -> List[Dict[str, Any]]:
+        return _execute_hubspot_search(
+            hubspot.crm.objects.search_api,
+            filters or [],
+            properties,
+            limit,
+            lambda obj: self._lead_to_dict(obj, columns, association_targets),
+            sorts=sorts,
+            object_type="leads",
+        )
+
+    def _lead_to_dict(
+        self,
+        lead: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        columns = columns or self._get_default_lead_columns()
+        row = self._object_to_dict(lead, columns)
+        if association_targets:
+            row = enrich_object_with_associations(lead, "leads", row)
+        return row
+
+    def create_leads(self, leads_data: List[Dict[Text, Any]]) -> None:
+        if not leads_data:
+            raise ValueError("No lead data provided for creation")
+
+        logger.info(f"Attempting to create {len(leads_data)} lead(s)")
+        hubspot = self.handler.connect()
+        leads_to_create = [HubSpotObjectInputCreate(properties=lead) for lead in leads_data]
+        batch_input = BatchInputSimplePublicObjectBatchInputForCreate(inputs=leads_to_create)
+
+        try:
+            created_leads = hubspot.crm.objects.leads.batch_api.create(
+                batch_input_simple_public_object_batch_input_for_create=batch_input
+            )
+            if not created_leads or not hasattr(created_leads, "results") or not created_leads.results:
+                raise Exception("Lead creation returned no results")
+            created_ids = [l.id for l in created_leads.results]
+            logger.info(f"Successfully created {len(created_ids)} lead(s) with IDs: {created_ids}")
+        except Exception as e:
+            logger.error(f"Leads creation failed: {str(e)}")
+            raise Exception(f"Leads creation failed {e}")
+
+    def update_leads(self, lead_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+        hubspot = self.handler.connect()
+        leads_to_update = [HubSpotObjectBatchInput(id=lid, properties=values_to_update) for lid in lead_ids]
+        batch_input = BatchInputSimplePublicObjectBatchInput(inputs=leads_to_update)
+        try:
+            updated = hubspot.crm.objects.leads.batch_api.update(
+                batch_input_simple_public_object_batch_input=batch_input
+            )
+            logger.info(f"Leads with ID {[l.id for l in updated.results]} updated")
+        except Exception as e:
+            raise Exception(f"Leads update failed {e}")
+
+    def delete_leads(self, lead_ids: List[Text]) -> None:
+        hubspot = self.handler.connect()
+        leads_to_delete = [HubSpotObjectId(id=lid) for lid in lead_ids]
+        batch_input = BatchInputSimplePublicObjectId(inputs=leads_to_delete)
+        try:
+            hubspot.crm.objects.leads.batch_api.archive(batch_input_simple_public_object_id=batch_input)
+            logger.info("Leads deleted")
+        except Exception as e:
+            raise Exception(f"Leads deletion failed {e}")

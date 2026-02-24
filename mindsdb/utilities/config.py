@@ -215,6 +215,9 @@ class Config:
             "data_catalog": {
                 "enabled": False,
             },
+            "byom": {
+                "enabled": False,
+            },
             "pid_file_content": None,
             "default_ml_engine": None,
             "knowledge_bases": {
@@ -249,6 +252,7 @@ class Config:
             "permanent_storage": {},
             "ml_task_queue": {},
             "gui": {},
+            "byom": {},
         }
 
         # region storage root path
@@ -414,6 +418,14 @@ class Config:
                 self._env_config["pid_file_content"] = json.loads(os.environ["MINDSDB_PID_FILE_CONTENT"])
             except json.JSONDecodeError as e:
                 raise ValueError(f"MINDSDB_PID_FILE_CONTENT contains invalid JSON: {e}")
+
+        mindsdb_byom_enabled = os.environ.get("MINDSDB_BYOM_ENABLED", "").lower()
+        if mindsdb_byom_enabled in ("0", "false"):
+            self._env_config["byom"]["enabled"] = False
+        elif mindsdb_byom_enabled in ("1", "true"):
+            self._env_config["byom"]["enabled"] = True
+        elif mindsdb_byom_enabled != "":
+            raise ValueError(f"Wrong value of env var MINDSDB_BYOM_ENABLED={mindsdb_byom_enabled}")
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.

@@ -23,6 +23,7 @@ def get_file():
 def test_disabled_byom(client):
     """Test disabled byom"""
     config._config["byom"]["enabled"] = False
+    os.environ["MINDSDB_BYOM_ENABLED"] = "false"
     response = client.put(
         "/api/handlers/byom/model1",
         data={
@@ -37,6 +38,7 @@ def test_disabled_byom(client):
 def test_path_traversal(client):
     """Test uploading a file"""
     config._config["byom"]["enabled"] = True
+    os.environ["MINDSDB_BYOM_ENABLED"] = "true"
     path = "../../../../../../../../../../tmp/test_module.py"
     response = client.put(
         "/api/handlers/byom/model1",
@@ -54,6 +56,7 @@ def test_path_traversal(client):
 def test_conflict(client):
     """Test that it is not possible to create two engins with the same name"""
     config._config["byom"]["enabled"] = True
+    os.environ["MINDSDB_BYOM_ENABLED"] = "true"
     path = "test_module.py"
     response = client.put(
         "/api/handlers/byom/model1",

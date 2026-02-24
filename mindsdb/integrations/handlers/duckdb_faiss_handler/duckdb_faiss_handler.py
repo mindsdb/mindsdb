@@ -1,7 +1,10 @@
 import os
 import re
 import shutil
+import threading
+import time
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Iterator
 
@@ -28,6 +31,15 @@ from .duckdb_faiss_table import DuckDBFaissTable
 
 logger = log.getLogger(__name__)
 
+
+TABLE_CACHE_TTL_SECONDS = 60
+
+
+@dataclass
+class TableCacheEntry:
+    table: DuckDBFaissTable
+    last_used_ts: float
+    in_use_count: int = 0
 
 
 class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
@@ -58,6 +70,9 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         Path(self.persist_directory).mkdir(parents=True, exist_ok=True)
 
+        self.tables_cache = {}
+        self.tables_cache_lock = threading.Lock()
+
     def connect(self):
         """
         Handler readiness check.
@@ -70,8 +85,11 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         return True
 
     def disconnect(self):
-        # TODO clean cache
-        self.is_connected = False
+        with self.tables_cache_lock:
+            for item in self.tables_cache.values():
+                item.table.close()
+
+            self.tables_cache = {}
 
     def check_connection(self) -> Response:
         """Check the connection to the database."""
@@ -111,23 +129,75 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             raise ValueError("Invalid table_name path")
         return table_dir
 
+    def _close_cached_table(self, table_name: str) -> None:
+        entry = self.tables_cache.pop(table_name, None)
+        if entry is None:
+            return
+        try:
+            entry.table.close()
+        except Exception:
+            logger.exception("Failed to close cached table '%s'", table_name)
+
+    def _close_old_tables_cache(self):
+        """
+        Close stale cached tables that have not been used for more than TTL.
+        Tables that are currently in use are never closed by pruning.
+        """
+        if not self.tables_cache:
+            return
+
+        with self.tables_cache_lock:
+            now_ts = time.time()
+            to_close: List[str] = []
+            for table_name, entry in self.tables_cache.items():
+                if entry.in_use_count > 0:
+                    continue
+                if now_ts - entry.last_used_ts > TABLE_CACHE_TTL_SECONDS:
+                    to_close.append(table_name)
+
+            for table_name in to_close:
+                self._close_cached_table(table_name)
+
     @contextmanager
     def open_table(self, table_name: str) -> Iterator[DuckDBFaissTable]:
         """
         Open DuckDB and Faiss resources scoped to one vector table.
         Must always be closed after use to avoid long-lived locks / RAM usage.
+
+        If `use_cache=True` and `table.cache_required` is True, the opened table is cached
+        in `self.tables_cache` and re-used across calls. Cached tables are pruned if they
+        haven't been used for more than TABLE_CACHE_TTL_SECONDS.
         """
         table_dir = self.get_table_dir(table_name)
         if not table_dir.exists():
             raise ValueError(f"Table '{table_name}' does not exist")
 
-        # TODO cache table depending on the type of index
+        with self.tables_cache_lock:
+            entry = self.tables_cache.get(table_name)
 
-        table = DuckDBFaissTable(table_name=table_name, table_dir=table_dir, handler=self).open()
+            if entry is not None:
+                table = entry.table
+            else:
+                table = DuckDBFaissTable(table_name=table_name, table_dir=table_dir, handler=self).open()
+
+                if table.cache_required:
+                    entry = TableCacheEntry(table=table, last_used_ts=time.time(), in_use_count=1)
+                    self.tables_cache[table_name] = entry
+
         try:
+            if entry:
+                entry.in_use_count += 1
+
             yield table
         finally:
-            table.close()
+            if entry:
+                entry.in_use_count -= 1
+                entry.last_used_ts = time.time()
+            else:
+                table.close()
+
+        self._close_old_tables_cache()
+
 
     def create_table(self, table_name: str, if_not_exists=True):
         self._validate_table_name(table_name)
@@ -157,7 +227,8 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
                 return
             raise ValueError(f"Vector table '{table_name}' does not exist")
 
-        # TODO disconnect in cache
+        with self.tables_cache_lock:
+            self._close_cached_table(table_name)
 
         shutil.rmtree(table_dir, ignore_errors=False)
 
@@ -223,4 +294,3 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
     def get_dimension(self, table_name: str) -> int:
         with self.open_table(table_name) as table:
             return table.get_dimension()
-

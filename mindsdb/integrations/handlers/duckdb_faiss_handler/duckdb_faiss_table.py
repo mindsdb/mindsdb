@@ -88,6 +88,12 @@ class DuckDBFaissTable:
         # index was already saved. don't dump it twice
         self._sync(dump_faiss=False)
 
+    @property
+    def cache_required(self):
+        if self.get_total_size() > 100000 and self.faiss_index.index_type != 'ivf_file':
+            return True
+        return False
+
     def insert(self, data: pd.DataFrame):
         """Insert data into both DuckDB and Faiss."""
 
@@ -235,9 +241,13 @@ class DuckDBFaissTable:
 
     def get_total_size(self):
         with self.connection.cursor() as cur:
-            cur.execute("select count(1) size from meta_data")
-            df = cur.fetchdf()
-            return df["size"].iloc[0]
+            try:
+                cur.execute("select count(1) size from meta_data")
+                df = cur.fetchdf()
+                return df["size"].iloc[0]
+            except duckdb.CatalogException:
+                # table doesn't exist
+                return 0
 
     def _select_with_vector(self, vector_filter: FilterCondition, meta_filters=None, limit=None) -> pd.DataFrame:
         embedding = vector_filter.value

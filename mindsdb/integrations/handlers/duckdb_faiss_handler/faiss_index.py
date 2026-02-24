@@ -93,12 +93,19 @@ class FaissIndex:
         if hasattr(index, "index"):
             index = faiss.downcast_index(index.index)
         if isinstance(index, faiss.IndexIVFFlat):
-            self.index_type = "ivf"
+            index_merged = Path(self.path).parent / 'faiss_index_merged'
+            if index_merged.exists():
+                self.index_type = "ivf_file"
+            else:
+                self.index_type = "ivf"
 
     def close(self):
         if self.index_fd is not None:
             self.index_fd.close()
         self.index = None
+
+    def __del__(self):
+        self.close()
 
     def _build_flat_index(self):
         # TODO option to create hnsw
@@ -128,6 +135,9 @@ class FaissIndex:
                 required = (self.dim * 4 + m * 2 * 4) * count_vectors
             case "ivf":
                 required = (self.dim * 4 + 8) * count_vectors + self.dim * 4 * nlist
+            case "ivf_file":
+                # don't restrict for IVF file
+                required = 0
             case _:
                 raise ValueError(f"Unknown index type: {index_type}")
 
@@ -482,7 +492,7 @@ class FaissIVFIndex(FaissIndex):
             raise ValueError(f"Unknown index type: {index_type}")
 
         self.index = ivf_index
-        self.index_type = "ivf"
+        self.index_type = index_type
         self.dump()
         self._lock_index()
 

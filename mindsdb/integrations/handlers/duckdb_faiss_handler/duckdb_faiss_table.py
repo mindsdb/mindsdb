@@ -21,14 +21,11 @@ from mindsdb_sql_parser.ast import (
 
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
-    VectorStoreHandler,
     FilterOperator,
 )
-from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
 
 from mindsdb.utilities import log
-from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from .faiss_index import FaissIVFIndex
 
@@ -52,7 +49,7 @@ class DuckDBFaissTable:
         self.connection = duckdb.connect(str(duckdb_path))
         self.faiss_index = FaissIVFIndex(str(self.table_dir), self.handler.connection_data)
 
-        self.cache_required = self.faiss_index.lock_required
+        self.cache_required = (self.faiss_index.lock_required and self.faiss_index.get_size() > 100_000)
 
         # check keyword index
         with self.connection.cursor() as cur:

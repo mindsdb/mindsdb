@@ -432,6 +432,12 @@ class FaissIVFIndex(FaissIndex):
 
         return index
 
+    def get_size(self):
+        if self.index is None:
+            return 0
+        else:
+            return self.index.ntotal
+
     def create_index(self, index_type, nlist=None, train_count=None):
         """
         Create or recreate IVF index
@@ -453,10 +459,7 @@ class FaissIVFIndex(FaissIndex):
         if nlist is None:
             nlist = self.config.nlist
 
-        if self.index is None:
-            ntotal = 0
-        else:
-            ntotal = self.index.ntotal
+        ntotal = self.get_size()
 
         # faiss shows warning if train count is less than 39 * nlist and recommend to use at least this size for train data
         nlist_k = 39

@@ -181,7 +181,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
                 table = DuckDBFaissTable(table_name=table_name, table_dir=table_dir, handler=self).open()
 
                 if table.cache_required:
-                    entry = TableCacheEntry(table=table, last_used_ts=time.time(), in_use_count=1)
+                    entry = TableCacheEntry(table=table, last_used_ts=time.time())
                     self.tables_cache[table_name] = entry
 
         try:

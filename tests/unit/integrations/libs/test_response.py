@@ -611,7 +611,7 @@ class TestMemoryErrorPropagation:
         # Enough memory for first chunk, then out of memory
         mock_psutil.virtual_memory.side_effect = [
             _mock_virtual_memory(available_kb=1_000_000),  # pre-loop check
-            _mock_virtual_memory(available_kb=0),           # post-yield check
+            _mock_virtual_memory(available_kb=0),  # post-yield check
         ]
 
         df1 = pd.DataFrame({"x": list(range(1000))})
@@ -654,7 +654,7 @@ class TestMemoryErrorPropagation:
         """Test MemoryError propagates through iterate_no_save."""
         mock_psutil.virtual_memory.side_effect = [
             _mock_virtual_memory(available_kb=1_000_000),  # pre-loop check
-            _mock_virtual_memory(available_kb=0),           # post-yield check after first chunk
+            _mock_virtual_memory(available_kb=0),  # post-yield check after first chunk
         ]
 
         df1 = pd.DataFrame({"x": list(range(1000))})

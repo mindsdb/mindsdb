@@ -626,10 +626,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         # region test casting of nullable types
         bigint_val = 9223372036854775807
-        input_rows = [
-            OrderedDict(t_bigint=bigint_val, t_boolean=1),
-            OrderedDict(t_bigint=None, t_boolean=None)
-        ]
+        input_rows = [OrderedDict(t_bigint=bigint_val, t_boolean=1), OrderedDict(t_bigint=None, t_boolean=None)]
         mock_cursor.fetchall.return_value = [list(row.values()) for row in input_rows]
         description = [
             ("t_bigint", 8, None, None, None, None, 1, 0, 63),

@@ -240,9 +240,7 @@ class MySQLHandler(MetaDatabaseHandler):
 
         return result
 
-    def native_query(
-        self, query: str, stream: bool = True, **kwargs
-    ) -> TableResponse | OkResponse | ErrorResponse:
+    def native_query(self, query: str, stream: bool = True, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
         """Executes a SQL query on the MySQL database and returns the result.
 
         Args:
@@ -328,9 +326,7 @@ class MySQLHandler(MetaDatabaseHandler):
         Returns:
             ErrorResponse with appropriate error details
         """
-        logger.error(
-            f"Error running query: {query} on {self.connection_data.get('database', 'unknown')}! Error: {e}"
-        )
+        logger.error(f"Error running query: {query} on {self.connection_data.get('database', 'unknown')}! Error: {e}")
         if connection is not None and connection.is_connected():
             connection.rollback()
         if isinstance(e, mysql.connector.Error):

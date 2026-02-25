@@ -249,9 +249,7 @@ class TestTableOperations(unittest.TestCase):
 
     def test_get_tables_all_schemas(self):
         """Test get_tables with all=True."""
-        self.handler.native_query = MagicMock(
-            return_value=TableResponse(data=pd.DataFrame([{"table_name": "t1"}]))
-        )
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame([{"table_name": "t1"}])))
 
         self.handler.get_tables(all=True)
 

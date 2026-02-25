@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Generator
 
 import pandas as pd
 import mysql.connector
@@ -13,10 +13,16 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
+    TableResponse,
+    OkResponse,
+    ErrorResponse,
+    DataHandlerResponse,
 )
 from mindsdb.integrations.handlers.mysql_handler.settings import ConnectionConfig
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import C_TYPES, DATA_C_TYPE_MAP
+from mindsdb.utilities.types.column import Column
+from mindsdb.utilities.config import config as mindsdb_config
 
 logger = log.getLogger(__name__)
 
@@ -37,57 +43,47 @@ def _map_type(mysql_type_text: str) -> MYSQL_DATA_TYPE:
         return MYSQL_DATA_TYPE.TEXT
 
 
-def _make_table_response(result: List[Dict[str, Any]], cursor: mysql.connector.cursor.MySQLCursor) -> Response:
-    """Build response from result and cursor.
+def _get_columns(cursor: mysql.connector.cursor.MySQLCursor) -> list[Column]:
+    """Get columns from cursor description.
 
     Args:
-        result (list[dict]): result of the query.
         cursor (mysql.connector.cursor.MySQLCursor): cursor object.
 
     Returns:
-        Response: response object.
+        list[Column]: List of Column objects with type and dtype info.
     """
     description = cursor.description
     reverse_c_type_map = {v.code: k for k, v in DATA_C_TYPE_MAP.items() if v.code != C_TYPES.MYSQL_TYPE_BLOB}
-    mysql_types: list[MYSQL_DATA_TYPE] = []
+    columns = []
     for col in description:
+        column_name = col[0]
         type_int = col[1]
+
         if isinstance(type_int, int) is False:
-            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
-            continue
-
-        if type_int == C_TYPES.MYSQL_TYPE_TINY:
+            mysql_type = MYSQL_DATA_TYPE.TEXT
+        elif type_int == C_TYPES.MYSQL_TYPE_TINY:
             # There are 3 types that returns as TINYINT: TINYINT, BOOL, BOOLEAN.
-            mysql_types.append(MYSQL_DATA_TYPE.TINYINT)
-            continue
-
-        if type_int in reverse_c_type_map:
-            mysql_types.append(reverse_c_type_map[type_int])
-            continue
-
-        if type_int == C_TYPES.MYSQL_TYPE_BLOB:
+            mysql_type = MYSQL_DATA_TYPE.TINYINT
+        elif type_int in reverse_c_type_map:
+            mysql_type = reverse_c_type_map[type_int]
+        elif type_int == C_TYPES.MYSQL_TYPE_BLOB:
             # region determine text/blob type by flags
             # Unfortunately, there is no way to determine particular type of text/blob column by flags.
             # Subtype have to be determined by 8-s element of description tuple, but mysql.conector
             # return the same value for all text types (TINYTEXT, TEXT, MEDIUMTEXT, LONGTEXT), and for
             # all blob types (TINYBLOB, BLOB, MEDIUMBLOB, LONGBLOB).
-            if col[7] == 16:  # and col[8] == 45
-                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
-            elif col[7] == 144:  # and col[8] == 63
-                mysql_types.append(MYSQL_DATA_TYPE.BLOB)
+            if col[7] == 16:
+                mysql_type = MYSQL_DATA_TYPE.TEXT
+            elif col[7] == 144:
+                mysql_type = MYSQL_DATA_TYPE.BLOB
             else:
                 logger.debug(f"MySQL handler: unknown type code {col[7]}, use TEXT as fallback.")
-                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+                mysql_type = MYSQL_DATA_TYPE.TEXT
             # endregion
         else:
-            logger.warning(f"MySQL handler: unknown type id={type_int} in column {col[0]}, use TEXT as fallback.")
-            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            logger.warning(f"MySQL handler: unknown type id={type_int} in column {column_name}, use TEXT as fallback.")
+            mysql_type = MYSQL_DATA_TYPE.TEXT
 
-    # region cast int and bool to nullable types
-    serieses = []
-    for i, mysql_type in enumerate(mysql_types):
-        expected_dtype = None
-        column_name = description[i][0]
         if mysql_type in (
             MYSQL_DATA_TYPE.SMALLINT,
             MYSQL_DATA_TYPE.INT,
@@ -98,12 +94,27 @@ def _make_table_response(result: List[Dict[str, Any]], cursor: mysql.connector.c
             expected_dtype = "Int64"
         elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
             expected_dtype = "boolean"
-        serieses.append(pd.Series([row[column_name] for row in result], dtype=expected_dtype, name=description[i][0]))
-    df = pd.concat(serieses, axis=1, copy=False)
-    # endregion
+        else:
+            expected_dtype = None
 
-    response = Response(RESPONSE_TYPE.TABLE, df, affected_rows=cursor.rowcount, mysql_types=mysql_types)
-    return response
+        columns.append(Column(name=column_name, type=mysql_type, dtype=expected_dtype))
+    return columns
+
+
+def _make_df(result: list[tuple[Any]], columns: list[Column]) -> pd.DataFrame:
+    """Make pandas DataFrame from result and columns.
+
+    Args:
+        result (list[tuple[Any]]): result of the query (list of tuples).
+        columns (list[Column]): list of columns.
+
+    Returns:
+        pd.DataFrame: pandas DataFrame.
+    """
+    serieses = []
+    for i, column in enumerate(columns):
+        serieses.append(pd.Series([row[i] for row in result], dtype=column.dtype, name=column.name))
+    return pd.concat(serieses, axis=1, copy=False)
 
 
 class MySQLHandler(MetaDatabaseHandler):
@@ -112,6 +123,7 @@ class MySQLHandler(MetaDatabaseHandler):
     """
 
     name = "mysql"
+    stream_response = True
 
     def __init__(self, name: str, **kwargs: Any) -> None:
         super().__init__(name)
@@ -229,39 +241,102 @@ class MySQLHandler(MetaDatabaseHandler):
 
         return result
 
-    def native_query(self, query: str) -> Response:
+    def native_query(
+        self, query: str, stream: bool = True, **kwargs
+    ) -> TableResponse | OkResponse | ErrorResponse:
+        """Executes a SQL query on the MySQL database and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+            stream (bool): Whether to stream the results of the query.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
         """
-        Executes a SQL query on the MySQL database and returns the result.
+        if stream is False:
+            response = self._execute_fetchall(query)
+        else:
+            generator = self._execute_fetchmany(query)
+            try:
+                response: TableResponse = next(generator)
+                response.data_generator = generator
+            except StopIteration as e:
+                response = e.value
+                if isinstance(response, DataHandlerResponse) is False:
+                    raise
+        return response
+
+    def _execute_fetchall(self, query: str) -> TableResponse | OkResponse | ErrorResponse:
+        """Executes a SQL query on the MySQL database and returns the full result at once.
 
         Args:
             query (str): The SQL query to be executed.
 
         Returns:
-            Response: A response object containing the result of the query or an error message.
+            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
         """
-        need_to_close = not self.is_connected
-        connection = None
-        try:
-            connection = self.connect()
-            with connection.cursor(dictionary=True, buffered=True) as cur:
-                cur.execute(query)
-                if cur.with_rows:
-                    result = cur.fetchall()
-                    response = _make_table_response(result, cur)
+        connection = self.connect()
+        with connection.cursor(buffered=True) as cursor:
+            try:
+                cursor.execute(query)
+                if cursor.with_rows:
+                    result = cursor.fetchall()
+                    columns = _get_columns(cursor)
+                    df = _make_df(result, columns)
+                    response = TableResponse(data=df, affected_rows=cursor.rowcount, columns=columns)
                 else:
-                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
-        except mysql.connector.Error as e:
-            logger.error(
-                f"Error running query: {query} on {self.connection_data.get('database', 'unknown')}! Error: {e}"
-            )
-            response = Response(RESPONSE_TYPE.ERROR, error_code=e.errno or 1, error_message=str(e))
-            if connection is not None and connection.is_connected():
-                connection.rollback()
-
-        if need_to_close:
-            self.disconnect()
-
+                    response = OkResponse(affected_rows=cursor.rowcount)
+            except Exception as e:
+                response = self._handle_query_exception(e, query, connection)
         return response
+
+    def _execute_fetchmany(
+        self, query: str
+    ) -> Generator[TableResponse | pd.DataFrame, None, OkResponse | ErrorResponse]:
+        """Execute a SQL query on the MySQL database and return a generator of data frames.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Generator[TableResponse | pd.DataFrame, None, OkResponse | ErrorResponse]: Generator of data frames.
+        """
+        connection = self.connect()
+        with connection.cursor(buffered=False) as cursor:
+            try:
+                cursor.execute(query)
+                if not cursor.with_rows:
+                    return OkResponse(affected_rows=cursor.rowcount)
+
+                columns = _get_columns(cursor)
+                yield TableResponse(affected_rows=cursor.rowcount, columns=columns)
+
+                fetch_size = mindsdb_config["data_stream"]["fetch_size"]
+                while result := cursor.fetchmany(size=fetch_size):
+                    yield _make_df(result, columns)
+            except Exception as e:
+                return self._handle_query_exception(e, query, connection)
+
+    def _handle_query_exception(self, e: Exception, query: str, connection) -> ErrorResponse:
+        """Handle query execution errors with appropriate logging and rollback.
+
+        Args:
+            e: The exception that was raised
+            query: The SQL query that failed
+            connection: The database connection to rollback
+
+        Returns:
+            ErrorResponse with appropriate error details
+        """
+        logger.error(
+            f"Error running query: {query} on {self.connection_data.get('database', 'unknown')}! Error: {e}"
+        )
+        if connection is not None and connection.is_connected():
+            connection.rollback()
+        if isinstance(e, mysql.connector.Error):
+            return ErrorResponse(error_code=e.errno or 1, error_message=str(e))
+        return ErrorResponse(error_code=0, error_message=str(e))
 
     def query(self, query: ASTNode) -> Response:
         """

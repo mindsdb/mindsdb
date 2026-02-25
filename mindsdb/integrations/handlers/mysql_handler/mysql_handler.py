@@ -12,7 +12,6 @@ from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE,
     TableResponse,
     OkResponse,
     ErrorResponse,

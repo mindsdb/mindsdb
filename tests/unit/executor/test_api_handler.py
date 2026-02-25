@@ -1,4 +1,3 @@
-import os
 import sys
 import types
 
@@ -6,7 +5,6 @@ import datetime as dt
 from unittest.mock import patch
 from dataclasses import dataclass
 
-import pytest
 import pandas as pd
 
 from tests.unit.executor_test_base import BaseExecutorDummyML

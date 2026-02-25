@@ -1636,7 +1636,7 @@ class KnowledgeBaseController:
         #   it will clear internal cache of tables in faiss handler and release locks for faiss files
 
         if len(knowledge_base.parts) > 1:
-            project_name, kb_name = knowledge_base.parts[2:]
+            project_name, kb_name = knowledge_base.parts[-2:]
         else:
             kb_name = knowledge_base.parts[-1]
 

@@ -54,7 +54,6 @@ from mindsdb_sql_parser.ast.mindsdb import (
     AlterKnowledgeBase,
     CreateMLEngine,
     CreatePredictor,
-    CreateSkill,
     CreateTrigger,
     CreateView,
     CreateKnowledgeBaseIndex,
@@ -66,14 +65,12 @@ from mindsdb_sql_parser.ast.mindsdb import (
     DropKnowledgeBase,
     DropMLEngine,
     DropPredictor,
-    DropSkill,
     DropTrigger,
     Evaluate,
     FinetunePredictor,
     RetrainPredictor,
     UpdateAgent,
     UpdateChatBot,
-    UpdateSkill,
 )
 
 import mindsdb.utilities.profiler as profiler
@@ -683,12 +680,6 @@ class ExecuteCommands:
             return self.answer_alter_kb(statement, database_name)
         elif statement_type is DropKnowledgeBase:
             return self.answer_drop_kb(statement, database_name)
-        elif statement_type is CreateSkill:
-            return self.answer_create_skill(statement, database_name)
-        elif statement_type is DropSkill:
-            return self.answer_drop_skill(statement, database_name)
-        elif statement_type is UpdateSkill:
-            return self.answer_update_skill(statement, database_name)
         elif statement_type is CreateAgent:
             return self.answer_create_agent(statement, database_name)
         elif statement_type is DropAgent:
@@ -976,7 +967,9 @@ class ExecuteCommands:
 
     def answer_create_kb_index(self, statement, database_name):
         project_name, table_name = match_two_part_name(statement.name, default_db_name=database_name)
-        self.session.kb_controller.create_index(table_name=table_name, project_name=project_name)
+        self.session.kb_controller.create_index(
+            table_name=table_name, project_name=project_name, params=statement.params
+        )
         return ExecuteAnswer()
 
     def answer_evaluate_kb(self, statement: EvaluateKnowledgeBase, database_name):
@@ -1023,6 +1016,10 @@ class ExecuteCommands:
         if ctx.company_id is None:
             # bypass for tests
             return
+        if ctx.user_id is None:
+            # bypass for tests
+            return
+
         is_cloud = self.session.config.get("cloud", False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
@@ -1484,53 +1481,15 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_create_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        try:
-            _ = self.session.skills_controller.add_skill(name, project_name, statement.type, statement.params)
-        except ValueError as e:
-            # Project does not exist or skill already exists.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
-    def answer_drop_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        try:
-            self.session.skills_controller.delete_skill(name, project_name, strict_case=True)
-        except ValueError as e:
-            # Project does not exist or skill does not exist.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
-    def answer_update_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        type = statement.params.pop("type", None)
-        try:
-            _ = self.session.skills_controller.update_skill(
-                name, project_name=project_name, type=type, params=statement.params
-            )
-        except ValueError as e:
-            # Project does not exist or skill does not exist.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
     def answer_create_agent(self, statement, database_name):
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        skills = statement.params.pop("skills", [])
         provider = statement.params.pop("provider", None)
         try:
             _ = self.session.agents_controller.add_agent(
                 name=name,
                 project_name=project_name,
                 model_name=statement.model,
-                skills=skills,
                 provider=provider,
                 params=variables_controller.fill_parameters(statement.params),
             )
@@ -1558,15 +1517,11 @@ class ExecuteCommands:
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         model = statement.params.pop("model", None)
-        skills_to_add = statement.params.pop("skills_to_add", [])
-        skills_to_remove = statement.params.pop("skills_to_remove", [])
         try:
             _ = self.session.agents_controller.update_agent(
                 name,
                 project_name=project_name,
                 model_name=model,
-                skills_to_add=skills_to_add,
-                skills_to_remove=skills_to_remove,
                 params=variables_controller.fill_parameters(statement.params),
             )
         except (EntityExistsError, EntityNotExistsError, ValueError) as e:
@@ -1582,12 +1537,15 @@ class ExecuteCommands:
         statement.name.parts = [integration_name, model_name]
         statement.name.is_quoted = [False, False]
 
-        ml_integration_name = "lightwood"  # default
+        ml_integration_name = self.session.config["default_ml_engine"]
         if statement.using is not None:
             # repack using with lower names
             statement.using = {k.lower(): v for k, v in statement.using.items()}
 
             ml_integration_name = statement.using.pop("engine", ml_integration_name)
+
+        if ml_integration_name is None:
+            raise ValueError("ML engine must be specified when creating a model")
 
         if statement.query_str is not None and statement.integration_name is None:
             # set to current project

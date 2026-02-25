@@ -66,7 +66,6 @@ from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.data_types.sql_answer import SQLAnswer
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.executor import exceptions as executor_exceptions
-
 from mindsdb.api.common.middleware import check_auth
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.utilities.types.column import Column
@@ -84,6 +83,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities.dump import (
     dump_chunks,
 )
 from mindsdb.api.executor.exceptions import WrongCharsetError
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -268,7 +268,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             f"connecting to database {self.session.database}"
         )
 
-        auth_data = self.server.check_auth(username, password, scramble_func, self.salt, ctx.company_id)
+        auth_data = self.server.check_auth(username, password, scramble_func, self.salt, ctx.company_id, ctx.user_id)
         if auth_data["success"]:
             self.session.username = auth_data["username"]
             self.session.auth = True
@@ -426,14 +426,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             client_capabilities = self.request.recv(8)
             client_capabilities = struct.unpack("L", client_capabilities)[0]
 
-            company_id = self.request.recv(4)
-            company_id = struct.unpack("I", company_id)[0]
+            size_str = "16"  # 16 bytes of null-terminated string
+            company_id = self.request.recv(size_str)
+            company_id = company_id.decode().strip("\x00")
+            if not company_id:
+                company_id = DEFAULT_COMPANY_ID
+
+            user_id = self.request.recv(size_str)
+            user_id = user_id.decode().strip("\x00")
+            if not user_id:
+                user_id = DEFAULT_USER_ID
 
             user_class = self.request.recv(1)
             user_class = struct.unpack("B", user_class)[0]
-            email_confirmed = 1
-            if user_class > 1:
-                email_confirmed = (user_class >> 2) & 1
             user_class = user_class & 3
 
             database_name_len = self.request.recv(2)
@@ -447,9 +452,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 "is_cloud": True,
                 "client_capabilities": client_capabilities,
                 "company_id": company_id,
+                "user_id": user_id,
                 "user_class": user_class,
                 "database": database_name,
-                "email_confirmed": email_confirmed,
             }
 
         return {"is_cloud": False}
@@ -595,10 +600,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.server.hook_before_handle()
 
-        logger.debug("handle new incoming connection")
+        logger.debug("Handling new incoming connection.")
         cloud_connection = self.is_cloud_connection()
 
-        ctx.company_id = cloud_connection.get("company_id")
+        ctx.company_id = cloud_connection.get("company_id", DEFAULT_COMPANY_ID)
+        ctx.user_id = cloud_connection.get("user_id", DEFAULT_USER_ID)
+        logger.debug(f"Connection context: company_id: {ctx.company_id}, user_id: {ctx.user_id}.")
 
         self.init_session()
         if cloud_connection["is_cloud"] is False:
@@ -606,7 +613,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
         else:
             ctx.user_class = cloud_connection["user_class"]
-            ctx.email_confirmed = cloud_connection["email_confirmed"]
             self.client_capabilities = ClentCapabilities(cloud_connection["client_capabilities"])
             self.session.database = cloud_connection["database"]
             self.session.username = "cloud"
@@ -753,6 +759,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             hooks.after_api_query(
                 company_id=ctx.company_id,
+                user_id=ctx.user_id,
                 api="mysql",
                 command=getConstName(COMMANDS, p.type.value),
                 payload=sql,

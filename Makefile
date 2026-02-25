@@ -1,8 +1,8 @@
 PYTEST_ARGS = -v -xrs --disable-warnings -n 1 --dist loadfile
 PYTEST_ARGS_DEBUG = --runslow -vs -rs
-
 DSI_PYTEST_ARGS = --run-dsi-tests
 DSI_REPORT_ARGS = --json-report --json-report-file=reports/report.json
+SHELL := /usr/bin/env bash
 
 install_mindsdb:
 	pip install -e .
@@ -63,11 +63,25 @@ datasource_integration_tests_debug:
 unit_tests:
 	# We have to run executor tests separately because they do weird things that break everything else
 	env PYTHONPATH=./ pytest $(PYTEST_ARGS) tests/unit/executor/
-	pytest $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
+	@set -o pipefail; \
+	mkdir -p reports; \
+	COVERAGE_FILE=.coverage.unit PYTHONPATH=./ pytest $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/ \
+		--junitxml=pytest.xml \
+		--cov=mindsdb \
+		--cov-report=term \
+		--cov-report=xml:coverage.xml \
+		--cov-branch | tee pytest-coverage.txt
 
 unit_tests_slow:
 	env PYTHONPATH=./ pytest --runslow $(PYTEST_ARGS) tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
-	pytest --runslow $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
+	@set -o pipefail; \
+	mkdir -p reports; \
+	COVERAGE_FILE=.coverage.unit PYTHONPATH=./ pytest --runslow $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/ \
+		--junitxml=pytest.xml \
+		--cov=mindsdb \
+		--cov-report=term \
+		--cov-report=xml:coverage.xml \
+		--cov-branch | tee pytest-coverage.txt
 
 unit_tests_debug:
 	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/

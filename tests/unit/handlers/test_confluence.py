@@ -1,10 +1,11 @@
 from collections import OrderedDict
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, call, patch
 
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
+from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
 from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
 from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
     ConfluenceBlogPostsTable,
@@ -15,7 +16,7 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
     ConfluenceTasksTable,
 )
 from mindsdb.integrations.libs.response import TableResponse, HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 
 
 class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
@@ -200,6 +201,17 @@ class TestConfluenceSpacesTable(ConfluenceTablesTestSetup, unittest.TestCase):
             json=None,
         )
 
+    def test_list_with_unsupported_operator_raises_error(self):
+        """
+        Test that an unsupported operator on id raises a ValueError.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.list(
+                conditions=[
+                    FilterCondition(column="id", op=FilterOperator.GREATER_THAN, value="1"),
+                ]
+            )
+
 
 class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
     def create_resource(self):
@@ -252,6 +264,26 @@ class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
                 "space-id": [mock_space_id],
                 "status": [mock_status],
                 "title": mock_title,
+            },
+            json=None,
+        )
+
+    def test_list_with_sort_created_at_desc(self):
+        """
+        Test that the `list` method applies descending createdAt sort.
+        """
+        sort_column = SortColumn(column="createdAt", ascending=False)
+        df = self.resource.list(conditions=[], sort=[sort_column])
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertTrue(sort_column.applied)
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/pages",
+            params={
+                "body-format": "storage",
+                "sort": "-created-date",
             },
             json=None,
         )
@@ -455,6 +487,56 @@ class TestConfluenceTasksTable(ConfluenceTablesTestSetup, unittest.TestCase):
             },
             json=None,
         )
+
+
+class TestConfluenceAPIClient(unittest.TestCase):
+    def test_paginate_with_cursor(self):
+        client = ConfluenceAPIClient("https://example.com", "user", "pass")
+        client._make_request = MagicMock(
+            side_effect=[
+                {"results": [{"id": 1}], "_links": {"next": "https://example.com/next?cursor=abc&foo=1"}},
+                {"results": [{"id": 2}], "_links": {"next": None}},
+            ]
+        )
+
+        results = client._paginate("https://example.com/wiki/api/v2/pages", {"limit": 1})
+
+        self.assertEqual(results, [{"id": 1}, {"id": 2}])
+        self.assertEqual(
+            client._make_request.call_args_list,
+            [
+                call("GET", "https://example.com/wiki/api/v2/pages", {"limit": 1}),
+                call("GET", "https://example.com/wiki/api/v2/pages", {"limit": 1, "cursor": "abc"}),
+            ],
+        )
+
+    def test_paginate_with_next_url(self):
+        client = ConfluenceAPIClient("https://example.com", "user", "pass")
+        client._make_request = MagicMock(
+            side_effect=[
+                {"results": [{"id": 1}], "_links": {"next": "https://example.com/wiki/api/v2/pages?foo=bar"}},
+                {"results": [{"id": 2}], "_links": {"next": None}},
+            ]
+        )
+
+        results = client._paginate("https://example.com/wiki/api/v2/pages", {"limit": 1})
+
+        self.assertEqual(results, [{"id": 1}, {"id": 2}])
+        self.assertEqual(
+            client._make_request.call_args_list,
+            [
+                call("GET", "https://example.com/wiki/api/v2/pages", {"limit": 1}),
+                call("GET", "https://example.com/wiki/api/v2/pages?foo=bar"),
+            ],
+        )
+
+    def test_make_request_raises_for_non_200(self):
+        client = ConfluenceAPIClient("https://example.com", "user", "pass")
+        response = MagicMock(status_code=400, text="bad request")
+        client.session.request = MagicMock(return_value=response)
+
+        with self.assertRaises(Exception):
+            client._make_request("GET", "https://example.com/wiki/api/v2/pages")
 
 
 if __name__ == "__main__":

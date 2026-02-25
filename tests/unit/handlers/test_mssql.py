@@ -174,7 +174,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
             mock_ast = MagicMock()
             result = self.handler.query(mock_ast)
-            renderer_mock.get_string.assert_called_once_with(mock_ast, with_failback=True)
+            renderer_mock.get_string.assert_called_once_with(mock_ast, with_failback=False)
             self.handler.native_query.assert_called_once_with("SELECT * FROM test")
             self.assertEqual(result, self.handler.native_query.return_value)
         finally:

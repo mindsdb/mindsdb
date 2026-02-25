@@ -609,7 +609,9 @@ class TestPlanIntegrationSelect:
                     integration="int1",
                     query=parse_sql("select id AS id from tab1"),
                 ),
-                SubSelectStep(dataframe=Result(0), query=parse_sql("select id"), table_name="tab1"),
+                SubSelectStep(
+                    dataframe=Result(0), query=parse_sql("select id"), table_name="tab1", skip_for_aggregation=True
+                ),
                 FetchDataframeStep(
                     integration="int1",
                     query=Select(
@@ -619,7 +621,12 @@ class TestPlanIntegrationSelect:
                         limit=Constant(1),
                     ),
                 ),
-                SubSelectStep(dataframe=Result(2), query=parse_sql("select x"), table_name="tab2"),
+                SubSelectStep(
+                    dataframe=Result(2),
+                    query=parse_sql("select x limit 1"),
+                    table_name="tab2",
+                    skip_for_aggregation=True,
+                ),
             ],
         )
 
@@ -719,7 +726,9 @@ class TestPlanIntegrationSelect:
                     integration="int1",
                     query=parse_sql("select id AS id from tab1"),
                 ),
-                SubSelectStep(dataframe=Result(0), query=parse_sql("select id"), table_name="tab1"),
+                SubSelectStep(
+                    dataframe=Result(0), query=parse_sql("select id"), table_name="tab1", skip_for_aggregation=True
+                ),
                 DeleteStep(
                     table=Identifier("int1.tab1"),
                     where=BinaryOperation(op="in", args=[Identifier(parts=["x1"]), Parameter(Result(1))]),

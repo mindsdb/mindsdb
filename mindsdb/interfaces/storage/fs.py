@@ -425,12 +425,14 @@ class FileStorage:
         self.root_dir = root_dir
         self.sync = sync
 
-        self.folder_name = f"{resource_group}_{ctx.company_id}_{resource_id}"
+        # Folder naming: {resource_group}_{company_id}_{user_id}_{resource_id}
+        self.folder_name = f"{resource_group}_{ctx.company_id}_{ctx.user_id}_{resource_id}"
 
         config = Config()
         self.fs_store = FsStore()
         self.content_path = Path(config["paths"][root_dir])
         self.resource_group_path = self.content_path / resource_group
+
         self.folder_path = self.resource_group_path / self.folder_name
         if self.folder_path.exists() is False:
             self.folder_path.mkdir(parents=True, exist_ok=True)

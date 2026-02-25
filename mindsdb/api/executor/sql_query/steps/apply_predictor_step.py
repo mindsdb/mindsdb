@@ -38,6 +38,11 @@ class ApplyPredictorBaseCall(BaseStepCall):
         agent = self.session.agents_controller.get_agent(predictor_name, project_name)
         if agent is not None:
             messages = df.to_dict("records")
+            if params is None:
+                params = {}
+            if "query_str" in self.context:
+                params["original_query"] = self.context["query_str"]
+
             predictions = self.session.agents_controller.get_completion(
                 agent, messages=messages, project_name=project_name, params=params
             )

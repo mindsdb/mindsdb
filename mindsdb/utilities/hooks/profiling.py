@@ -55,9 +55,9 @@ def send_profiling_results(profiling_data: dict):
     cur.execute(
         """
         insert into profiling
-            (data, query, time, hostname, environment, api, total_time, company_id, instance_id)
+            (data, query, time, hostname, environment, api, total_time, company_id, user_id, instance_id)
         values
-            (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """,
         (
             json.dumps(profiling["tree"]),
@@ -68,6 +68,7 @@ def send_profiling_results(profiling_data: dict):
             profiling.get("api", "?"),
             profiling["tree"]["value"],
             profiling["company_id"],
+            profiling["user_id"],
             profiling["instance_id"],
         ),
     )

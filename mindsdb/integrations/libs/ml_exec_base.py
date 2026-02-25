@@ -97,6 +97,7 @@ class BaseMLEngineExec:
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             name=model_name,
             integration_id=self.integration_id,
             data_integration_ref=data_integration_ref,
@@ -113,7 +114,13 @@ class BaseMLEngineExec:
             label=label,
             version=(
                 db.session.query(coalesce(func.max(db.Predictor.version), 1) + (1 if is_retrain else 0))
-                .filter_by(company_id=ctx.company_id, name=model_name, project_id=project.id, deleted_at=null())
+                .filter_by(
+                    company_id=ctx.company_id,
+                    user_id=ctx.user_id,
+                    name=model_name,
+                    project_id=project.id,
+                    deleted_at=null(),
+                )
                 .scalar_subquery()
             ),
             active=(not is_retrain),  # if create then active
@@ -242,6 +249,7 @@ class BaseMLEngineExec:
 
         after_predict_hook(
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             predictor_id=predictor_record.id,
             rows_in_count=df.shape[0],
             columns_in_count=df.shape[1],
@@ -360,6 +368,7 @@ class BaseMLEngineExec:
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             name=model_name,
             integration_id=self.integration_id,
             data_integration_ref=data_integration_ref,
@@ -376,7 +385,13 @@ class BaseMLEngineExec:
             label=label,
             version=(
                 db.session.query(coalesce(func.max(db.Predictor.version), 1) + 1)
-                .filter_by(company_id=ctx.company_id, name=model_name, project_id=project.id, deleted_at=null())
+                .filter_by(
+                    company_id=ctx.company_id,
+                    user_id=ctx.user_id,
+                    name=model_name,
+                    project_id=project.id,
+                    deleted_at=null(),
+                )
                 .scalar_subquery()
             ),
             active=False,

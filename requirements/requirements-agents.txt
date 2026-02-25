@@ -1,7 +1,7 @@
 openai<3.0.0,>=2.9.0
 
 langchain-community==0.3.27
-langchain-core==0.3.77
+langchain-core==1.2.11
 langchain-experimental==0.3.4
 
 

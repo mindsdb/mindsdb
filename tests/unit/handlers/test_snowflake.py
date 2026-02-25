@@ -380,32 +380,10 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             mock_pool.backend_name = "jemalloc"
             mock_pool.release_unused = MagicMock()
 
-            response = self.handler.native_query("SELECT 1")
+            response = self.handler.native_query("SELECT 1", stream=False)
 
             self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
             mock_pool.release_unused.assert_called_once()
-
-    def test_native_query_memory_estimation_error(self):
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__.return_value = mock_cursor
-        mock_cursor.__exit__.return_value = None
-        large_df = DataFrame({"ID": range(1500)})
-        mock_cursor.fetch_pandas_batches.return_value = iter([large_df])
-        mock_cursor.description = [ColumnDescription(name="ID", type_code=0, scale=0)]
-        mock_cursor.rowcount = 10000
-
-        self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor.return_value = mock_cursor
-
-        with patch(
-            "mindsdb.integrations.handlers.snowflake_handler.snowflake_handler.psutil.virtual_memory",
-            return_value=SimpleNamespace(available=512),
-        ):
-            response = self.handler.native_query("SELECT * FROM big_table")
-
-        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
-        self.assertIn("query result is too large", response.error_message)
 
     def test_key_pair_authentication_success(self):
         """

@@ -96,7 +96,7 @@ def _get_columns(description: list[ResultMetadata]) -> list[Column]:
             mysql_type = MYSQL_DATA_TYPE.VARCHAR
         else:
             if sf_type_name == "FIXED":
-                if column.scale == 0:
+                if getattr(column, "scale", None) == 0:
                     mysql_type = MYSQL_DATA_TYPE.INT
                 else:
                     # It is NUMBER, DECIMAL or NUMERIC with scale > 0

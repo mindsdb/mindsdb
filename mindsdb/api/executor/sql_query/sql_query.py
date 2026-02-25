@@ -21,7 +21,7 @@ from mindsdb.api.executor.planner.steps import (
     ApplyPredictorRowStep,
     ApplyPredictorStep,
     InsertToTable,
-    FetchDataframeStepPartition
+    FetchDataframeStepPartition,
 )
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
@@ -357,5 +357,6 @@ class SQLQuery:
                 self.session.kb_controller.release_lock(step.table, project_name=self.database)
             if isinstance(step, FetchDataframeStepPartition):
                 self.release_kb_lock(step.steps)
+
 
 SQLQuery.register_steps()

@@ -1648,5 +1648,5 @@ class KnowledgeBaseController:
         if database is None:
             return
 
-        if database.engine == 'duckdb_faiss':
+        if database.engine == "duckdb_faiss":
             self.session.integration_controller.handlers_cache.delete(database.name)

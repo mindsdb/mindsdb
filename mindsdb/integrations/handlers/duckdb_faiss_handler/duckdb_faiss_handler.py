@@ -19,7 +19,6 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
     VectorStoreHandler,
-    FilterOperator,
 )
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
@@ -120,8 +119,8 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
     def get_table_dir(self, table_name: str) -> Path:
         """
-         Get folder for a table name
-         Prevent path traversal by requiring the resolved path to stay within persist_directory.
+        Get folder for a table name
+        Prevent path traversal by requiring the resolved path to stay within persist_directory.
         """
         root = Path(self.persist_directory).resolve()
         table_dir = (Path(self.persist_directory) / table_name).resolve()
@@ -197,7 +196,6 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
                 table.close()
 
         self._close_old_tables_cache()
-
 
     def create_table(self, table_name: str, if_not_exists=True):
         self._validate_table_name(table_name)

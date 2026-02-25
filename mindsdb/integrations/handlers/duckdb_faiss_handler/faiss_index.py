@@ -88,7 +88,7 @@ class FaissIndex:
             raise ValueError(f"Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb")
 
         # check ivf_file before loading index and locking it
-        index_merged = Path(self.path).parent / 'faiss_index_merged'
+        index_merged = Path(self.path).parent / "faiss_index_merged"
         if index_merged.exists():
             self.lock_required = False
 

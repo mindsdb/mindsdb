@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from typing import List
 
@@ -32,9 +31,8 @@ from .faiss_index import FaissIVFIndex
 logger = log.getLogger(__name__)
 
 
-
 class DuckDBFaissTable:
-    def __init__(self, table_name: str, table_dir: Path, handler: "DuckDBFaissHandler"):
+    def __init__(self, table_name: str, table_dir: Path, handler):
         self.table_name = table_name
         self.handler = handler
         self.connection: duckdb.DuckDBPyConnection | None = None
@@ -44,12 +42,11 @@ class DuckDBFaissTable:
         self.cache_required = False
 
     def open(self) -> "DuckDBFaissTable":
-
         duckdb_path = self.table_dir / "duckdb.db"
         self.connection = duckdb.connect(str(duckdb_path))
         self.faiss_index = FaissIVFIndex(str(self.table_dir), self.handler.connection_data)
 
-        self.cache_required = (self.faiss_index.lock_required and self.faiss_index.get_size() > 100_000)
+        self.cache_required = self.faiss_index.lock_required and self.faiss_index.get_size() > 100_000
 
         # check keyword index
         with self.connection.cursor() as cur:
@@ -153,7 +150,7 @@ class DuckDBFaissTable:
         total_size = self.get_total_size()
 
         for i in range(10):
-            batch_size = 1000 * 5 ** i
+            batch_size = 1000 * 5**i
 
             # TODO implement reverse search:
             #   if batch_size > 25% of db: search metadata first and then in faiss by list of ids
@@ -255,7 +252,6 @@ class DuckDBFaissTable:
 
         return pd.DataFrame([], columns=["id", "content", "metadata", "distance"])
 
-
     def _select_from_metadata(self, faiss_ids=None, meta_filters=None, limit=None):
         query = Select(
             targets=[Star()],
@@ -308,7 +304,6 @@ class DuckDBFaissTable:
             df = cur.fetchdf()
             df["metadata"] = df["metadata"].apply(orjson.loads)
             return df
-
 
     def _translate_filters(self, meta_filters):
         if not meta_filters:

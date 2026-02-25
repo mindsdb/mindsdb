@@ -9,7 +9,11 @@ from mindsdb.api.http.namespaces.configs.tabs import ns_conf
 from mindsdb.utilities import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.utilities.exception import EntityNotExistsError
-from mindsdb.interfaces.tabs.tabs_controller import tabs_controller, get_storage, TABS_FILENAME
+from mindsdb.interfaces.tabs.tabs_controller import (
+    tabs_controller,
+    get_storage,
+    TABS_FILENAME,
+)
 
 
 logger = log.getLogger(__name__)
@@ -50,8 +54,11 @@ class Tabs(Resource):
             try:
                 raw_data = storage.file_get(TABS_FILENAME)
                 tabs = json.loads(raw_data)
+            except FileNotFoundError:
+                # Fresh installs or new-mode usage won't have legacy single-file storage.
+                return {}, 200
             except Exception:
-                logger.warning("unable to get tabs data - %s", exc_info=True)
+                logger.warning("unable to get tabs data", exc_info=True)
                 return {}, 200
             return tabs, 200
 
@@ -77,7 +84,9 @@ class Tabs(Resource):
             except Exception:
                 logger.exception("Unable to store tabs data:")
                 return http_error(
-                    HTTPStatus.INTERNAL_SERVER_ERROR, "Can't save tabs", "something went wrong during tabs saving"
+                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    "Can't save tabs",
+                    "something went wrong during tabs saving",
                 )
 
             return "", 200

@@ -323,6 +323,12 @@ Query an agent to generate responses to questions.
 SELECT answer
 FROM my_agent 
 WHERE question = 'What is the average number of orders per customers?';
+
+-- or
+
+SELECT customer_name, avg_number_of_orders
+FROM my_agent 
+WHERE question = 'What is the average number of orders per customers?';
 ```
 
 You can redefine the agent's parameters at the query time as below.

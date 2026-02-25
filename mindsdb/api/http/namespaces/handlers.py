@@ -73,11 +73,11 @@ class HandlerIcon(Resource):
             if handler_meta is None:
                 return http_error(HTTPStatus.NOT_FOUND, "Icon not found", f"Icon for {handler_name} not found")
             icon_name = handler_meta["icon"]["name"]
-            handler_folder = handler_meta["import"]["folder"]
-            mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent
-            icon_path = mindsdb_path.joinpath("integrations/handlers").joinpath(handler_folder).joinpath(icon_name)
-            if icon_path.is_absolute() is False:
-                icon_path = Path(os.getcwd()).joinpath(icon_path)
+            # Use the stored handler path directly so community handlers
+            # (stored outside the mindsdb package) are also served correctly.
+            icon_path = handler_meta["path"] / icon_name
+            if not icon_path.is_absolute():
+                icon_path = Path(os.getcwd()) / icon_path
         except Exception:
             error_message = f"Icon for '{handler_name}' not found"
             logger.warning(error_message)

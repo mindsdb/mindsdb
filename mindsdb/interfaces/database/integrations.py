@@ -1,10 +1,13 @@
 import os
+import sys
+import types
 import base64
 import shutil
 import ast
 import time
 import tempfile
 import importlib
+import importlib.util
 import threading
 from pathlib import Path
 from copy import deepcopy
@@ -37,7 +40,14 @@ from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
 from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
 
+from mindsdb.integrations.utilities.community_handler_fetcher import (
+    fetch_handler,
+    get_community_handlers_storage_dir,
+)
+
 logger = log.getLogger(__name__)
+
+COMMUNITY_HANDLERS_URL = "https://github.com/mindsdb/mindsdb-community-handlers.git"
 
 
 class IntegrationController:
@@ -47,8 +57,18 @@ class IntegrationController:
 
     def __init__(self):
         self._import_lock = threading.Lock()
+        self._community_handlers_dir = None
         self._load_handler_modules()
         self.handlers_cache = HandlersCache()
+
+    @property
+    def community_handlers_dir(self) -> Path:
+        """Returns (and creates) the community handlers directory under MINDSDB_STORAGE_DIR."""
+        if self._community_handlers_dir is None:
+            config = Config()
+            storage_root = Path(config["paths"]["root"])
+            self._community_handlers_dir = get_community_handlers_storage_dir(storage_root)
+        return self._community_handlers_dir
 
     def _add_integration_record(self, name, engine, connection_args):
         integration_record = db.Integration(
@@ -649,6 +669,35 @@ class IntegrationController:
             logger.error(f"Error reading icon for {handler_dir}, {e}!")
         return icon
 
+    def _register_handler_dir(self, handler_dir: Path, is_community: bool = False):
+        """Parse a handler directory and register it in handlers_import_status."""
+        handler_info = self._get_handler_info(handler_dir)
+        if "name" not in handler_info:
+            return
+        handler_name = handler_info["name"]
+        dependencies = self._read_dependencies(handler_dir)
+        handler_meta = {
+            "path": handler_dir,
+            "import": {
+                "success": None,
+                "error_message": None,
+                "folder": handler_dir.name,
+                "dependencies": dependencies,
+            },
+            "name": handler_name,
+            "permanent": handler_info.get("permanent", False),
+            "connection_args": handler_info.get("connection_args", None),
+            "class_type": handler_info.get("class_type", None),
+            "type": handler_info.get("type"),
+            "support_level": handler_info.get("support_level"),
+            "community": is_community,
+        }
+        if "icon_path" in handler_info:
+            icon = self._get_handler_icon(handler_dir, handler_info["icon_path"])
+            if icon:
+                handler_meta["icon"] = icon
+        self.handlers_import_status[handler_name] = handler_meta
+
     def _load_handler_modules(self):
         mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent
         handlers_path = mindsdb_path.joinpath("integrations/handlers")
@@ -663,32 +712,15 @@ class IntegrationController:
         for handler_dir in handlers_path.iterdir():
             if handler_dir.is_dir() is False or handler_dir.name.startswith("__"):
                 continue
+            self._register_handler_dir(handler_dir, is_community=False)
 
-            handler_info = self._get_handler_info(handler_dir)
-            if "name" not in handler_info:
-                continue
-            handler_name = handler_info["name"]
-            dependencies = self._read_dependencies(handler_dir)
-            handler_meta = {
-                "path": handler_dir,
-                "import": {
-                    "success": None,
-                    "error_message": None,
-                    "folder": handler_dir.name,
-                    "dependencies": dependencies,
-                },
-                "name": handler_name,
-                "permanent": handler_info.get("permanent", False),
-                "connection_args": handler_info.get("connection_args", None),
-                "class_type": handler_info.get("class_type", None),
-                "type": handler_info.get("type"),
-                "support_level": handler_info.get("support_level"),
-            }
-            if "icon_path" in handler_info:
-                icon = self._get_handler_icon(handler_dir, handler_info["icon_path"])
-                if icon:
-                    handler_meta["icon"] = icon
-            self.handlers_import_status[handler_name] = handler_meta
+        # Also load any community handlers already fetched in a previous session
+        try:
+            for handler_dir in self.community_handlers_dir.iterdir():
+                if handler_dir.is_dir() and not handler_dir.name.startswith(("__", ".")):
+                    self._register_handler_dir(handler_dir, is_community=True)
+        except Exception as e:
+            logger.warning("Could not scan community handlers dir: %s", e)
 
     def _get_connection_args(self, args_file: Path, param_name: str) -> dict:
         """
@@ -822,25 +854,103 @@ class IntegrationController:
             logger.debug(f"Importing handler '{handler_name}'")
             handler_meta = self.handlers_import_status[handler_name]
             handler_dir = handler_meta["path"]
-
             handler_folder_name = str(handler_dir.name)
-            if base_import is None:
-                base_import = "mindsdb.integrations.handlers."
 
-            try:
-                handler_module = importlib.import_module(f"{base_import}{handler_folder_name}")
-                self.handler_modules[handler_name] = handler_module
-                handler_meta = self._get_handler_meta(handler_name)
-                logger.debug(
-                    f"Handler '{handler_name}' imported successfully in {(time.perf_counter() - time_before_import):.3f} seconds"
-                )
-            except Exception as e:
-                handler_meta["import"]["success"] = False
-                handler_meta["import"]["error_message"] = str(e)
-                logger.debug(f"Failed to import handler '{handler_name}': {e}")
+            if handler_meta.get("community"):
+                # Community handlers live outside the mindsdb package tree.
+                # Use spec_from_file_location so relative imports inside the
+                # handler (e.g. "from .github_handler import GithubHandler") work.
+                try:
+                    # Ensure a parent package is registered in sys.modules so
+                    # intra-handler relative imports can be resolved.
+                    parent_pkg = "mindsdb_community_handlers"
+                    if parent_pkg not in sys.modules:
+                        parent_mod = types.ModuleType(parent_pkg)
+                        parent_mod.__path__ = [str(self.community_handlers_dir)]
+                        parent_mod.__package__ = parent_pkg
+                        sys.modules[parent_pkg] = parent_mod
+
+                    module_name = f"{parent_pkg}.{handler_folder_name}"
+                    init_file = handler_dir / "__init__.py"
+                    spec = importlib.util.spec_from_file_location(
+                        module_name,
+                        init_file,
+                        submodule_search_locations=[str(handler_dir)],
+                    )
+                    if spec is None or spec.loader is None:
+                        raise ImportError(
+                            f"Could not create module spec for community handler '{handler_name}'"
+                        )
+                    handler_module = importlib.util.module_from_spec(spec)
+                    handler_module.__package__ = module_name
+                    sys.modules[module_name] = handler_module
+                    spec.loader.exec_module(handler_module)
+                    self.handler_modules[handler_name] = handler_module
+                    handler_meta = self._get_handler_meta(handler_name)
+                    logger.debug(
+                        f"Community handler '{handler_name}' imported in "
+                        f"{(time.perf_counter() - time_before_import):.3f} seconds"
+                    )
+                except Exception as e:
+                    handler_meta["import"]["success"] = False
+                    handler_meta["import"]["error_message"] = str(e)
+                    logger.debug(f"Failed to import community handler '{handler_name}': {e}")
+            else:
+                if base_import is None:
+                    base_import = "mindsdb.integrations.handlers."
+
+                try:
+                    handler_module = importlib.import_module(f"{base_import}{handler_folder_name}")
+                    self.handler_modules[handler_name] = handler_module
+                    handler_meta = self._get_handler_meta(handler_name)
+                    logger.debug(
+                        f"Handler '{handler_name}' imported successfully in {(time.perf_counter() - time_before_import):.3f} seconds"
+                    )
+                except Exception as e:
+                    handler_meta["import"]["success"] = False
+                    handler_meta["import"]["error_message"] = str(e)
+                    logger.debug(f"Failed to import handler '{handler_name}': {e}")
 
             self.handlers_import_status[handler_meta["name"]] = handler_meta
             return handler_meta
+
+    def _fetch_community_handler(self, handler_name: str) -> Optional[dict]:
+        """
+        Attempt to fetch a community handler from GitHub by its logical name.
+
+        Maps the logical handler name (e.g. "github") to the directory name
+        (e.g. "github_handler"), downloads it from the external repository,
+        registers it in handlers_import_status, and returns the handler_meta.
+
+        Returns None if the handler does not exist in the community repo or
+        if a network/API error occurs (error is logged as a warning).
+        """
+        handler_dir_name = f"{handler_name}_handler"
+
+        logger.info(
+            "Handler '%s' not found locally, attempting on-demand fetch from community repo...",
+            handler_name,
+        )
+
+        try:
+            handler_dir = fetch_handler(handler_dir_name, self.community_handlers_dir)
+        except RuntimeError as e:
+            logger.warning("Failed to fetch community handler '%s': %s", handler_name, e)
+            return None
+
+        if handler_dir is None:
+            logger.debug("Handler '%s' does not exist in the community repo", handler_name)
+            return None
+
+        self._register_handler_dir(handler_dir, is_community=True)
+        handler_meta = self.handlers_import_status.get(handler_name)
+        if handler_meta is None:
+            logger.warning(
+                "Fetched community handler dir '%s' but could not determine handler name "
+                "(missing or malformed __init__.py)",
+                handler_dir_name,
+            )
+        return handler_meta
 
     def get_handlers_import_status(self):
         # tries to import all not imported yet
@@ -863,7 +973,10 @@ class IntegrationController:
         # returns metadata and tries to import it
         handler_meta = self.handlers_import_status.get(handler_name)
         if handler_meta is None:
-            return
+            # On-demand fetch: attempt to pull from the community repo
+            handler_meta = self._fetch_community_handler(handler_name)
+        if handler_meta is None:
+            return None
         if handler_meta["import"]["success"] is None:
             handler_meta = self.import_handler(handler_name)
         return handler_meta

@@ -114,6 +114,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
     """
 
     name = "snowflake"
+    stream_response = True
 
     _auth_types = {
         "key_pair": KeyPairAuthType(),

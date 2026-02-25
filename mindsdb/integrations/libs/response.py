@@ -148,7 +148,7 @@ def _safe_pandas_concat(pieces: list[pandas.DataFrame]) -> pandas.DataFrame:
     """
     available_memory_kb = psutil.virtual_memory().available >> 10
     pieces_size_kb = sum([(x.memory_usage(index=True, deep=True).sum() >> 10) for x in pieces])
-    if pieces_size_kb * 2.5 < available_memory_kb:
+    if (pieces_size_kb * 2.5) > available_memory_kb:
         raise MemoryError()
     return pandas.concat(pieces)
 
@@ -164,6 +164,8 @@ class TableResponse(DataHandlerResponse):
         _data: pandas.DataFrame | None - loaded data
         _fetched: bool - if data was already fetched (data_generator is consumed)
         _invalid: bool - if data has already been fetched and cannot be iterated over
+        _last_data_piece: pandas.DataFrame | None - last data piece fetched
+        rows_fetched: int - how many rows were fetched
     """
 
     type: ClassVar[str] = RESPONSE_TYPE.TABLE
@@ -173,6 +175,8 @@ class TableResponse(DataHandlerResponse):
     _data: pandas.DataFrame | None
     _fetched: bool
     _invalid: bool
+    _last_data_piece: pandas.DataFrame | None
+    rows_fetched: int
 
     def __init__(
         self,
@@ -196,6 +200,8 @@ class TableResponse(DataHandlerResponse):
         self._data = data
         self._fetched = False if data_generator else True
         self._invalid = False
+        self._last_data_piece = None
+        self.rows_fetched = len(data) if data else 0
 
     @property
     def data_generator(self) -> Generator[pandas.DataFrame, None, None]:
@@ -216,7 +222,7 @@ class TableResponse(DataHandlerResponse):
         if self._data_generator is None or self._fetched:
             return self._data
 
-        pieces = list(self._data_generator)
+        pieces = list(self._iterate_with_memory_check())
         if self._data is None:
             if len(pieces) == 1:
                 self._data = pieces[0]
@@ -232,6 +238,63 @@ class TableResponse(DataHandlerResponse):
 
         return self._data
 
+    def _raise_if_low_memory(self) -> None:
+        """Check if there is enough available memory to load the next data chunk.
+
+        Estimates the memory required for the next chunk based on the size of the last
+        fetched chunk. If `affected_rows` (fetched rows) is known, the estimate is capped at the
+        number of remaining rows (but no more than one chunk). Otherwise, assumes the next chunk will
+        be the same size as the previous one.
+
+        Does nothing when no data has been fetched yet.
+
+        Raises:
+            MemoryError: If estimated memory for the next chunk exceeds available memory.
+        """
+        if self._last_data_piece is None or len(self._last_data_piece) == 0:
+            return
+
+        data_piece_size_kb = self._last_data_piece.memory_usage(index=True, deep=True).sum() >> 10
+        if isinstance(self.affected_rows, int) and self.affected_rows > 0:
+            row_size_kb = data_piece_size_kb / len(self._last_data_piece)
+            rows_expected = min(self.affected_rows - self.rows_fetched, len(self._last_data_piece))
+            if rows_expected > 0:
+                available_memory_kb = psutil.virtual_memory().available >> 10
+                if available_memory_kb < (row_size_kb * rows_expected * 1.1):
+                    raise MemoryError(
+                        f"Not enough memory to load remaining data. "
+                        f"Available: {available_memory_kb}KB, estimated need: {int(row_size_kb * rows_expected * 1.1)}KB"
+                    )
+        else:
+            # assume that next piece is the same size
+            available_memory_kb = psutil.virtual_memory().available >> 10
+            if available_memory_kb < (data_piece_size_kb * 1.1):
+                raise MemoryError(
+                    f"Not enough memory to load remaining data. "
+                    f"Available: {available_memory_kb}KB, estimated need: {int(data_piece_size_kb * 1.1)}KB"
+                )
+
+    def _iterate_with_memory_check(self) -> Generator[pandas.DataFrame, None, None]:
+        """Iterate over `_data_generator` with memory safety checks.
+
+        Yields:
+            pandas.DataFrame: The next chunk from the underlying data generator.
+
+        Raises:
+            MemoryError: Propagated from `_raise_if_low_memory` if available
+                         memory is insufficient for the next chunk.
+        """
+        if self._data_generator is None:
+            return
+
+        self._raise_if_low_memory()
+
+        for piece in self._data_generator:
+            self._last_data_piece = piece
+            self.rows_fetched += len(piece)
+            yield piece
+            self._raise_if_low_memory()
+
     def fetchmany(self) -> pandas.DataFrame | None:
         """Fetch one piece of data and store it in the _data attribute.
 
@@ -240,8 +303,11 @@ class TableResponse(DataHandlerResponse):
         """
         self._raise_if_invalid()
         try:
-            piece = next(self._data_generator)
-            self._data = _safe_pandas_concat([self._data, piece])
+            piece = next(self._iterate_with_memory_check())
+            if self._data is None:
+                self._data = piece
+            else:
+                self._data = _safe_pandas_concat([self._data, piece])
         except StopIteration:
             self._fetched = True
             self._data_generator = None
@@ -260,8 +326,8 @@ class TableResponse(DataHandlerResponse):
             yield self._data
         if self._data_generator:
             self._invalid = True
-            for el in self._data_generator:
-                yield el
+            for piece in self._iterate_with_memory_check():
+                yield piece
 
     def _raise_if_invalid(self):
         if self._invalid:

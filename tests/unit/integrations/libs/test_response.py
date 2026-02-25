@@ -6,7 +6,10 @@ This module tests all response types used by handlers:
 - ErrorResponse: for error cases
 - HandlerStatusResponse: for connection status checks
 - normalize_response: for converting legacy HandlerResponse to new types
+- _safe_pandas_concat: memory-safe DataFrame concatenation
 """
+
+from unittest.mock import patch, MagicMock
 
 import pandas as pd
 import pytest
@@ -18,11 +21,19 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse,
     HandlerResponse,
     normalize_response,
+    _safe_pandas_concat,
     RESPONSE_TYPE,
     DataHandlerResponse,
 )
 from mindsdb.utilities.types.column import Column
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+
+
+def _mock_virtual_memory(available_kb: int):
+    """Create a mock for psutil.virtual_memory() with given available memory in KB."""
+    mock_mem = MagicMock()
+    mock_mem.available = available_kb << 10  # convert KB back to bytes
+    return mock_mem
 
 
 class TestHandlerStatusResponse:
@@ -286,3 +297,375 @@ class TestNormalizeResponse:
 
         assert isinstance(result, TableResponse)
         assert len(result.columns) == 0
+
+
+class TestSafePandasConcat:
+    """Unit tests for _safe_pandas_concat function."""
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_concat_with_enough_memory(self, mock_psutil):
+        """Test successful concatenation when sufficient memory is available."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        df1 = pd.DataFrame({"id": [1, 2]})
+        df2 = pd.DataFrame({"id": [3, 4]})
+        result = _safe_pandas_concat([df1, df2])
+
+        pd.testing.assert_frame_equal(result, pd.concat([df1, df2]))
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_concat_raises_memory_error_when_not_enough_memory(self, mock_psutil):
+        """Test MemoryError is raised when available memory is too low."""
+        # Set available memory to essentially 0
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=10)
+
+        df1 = pd.DataFrame({"x": list(range(1000))})
+        df2 = pd.DataFrame({"x": list(range(1000))})
+
+        with pytest.raises(MemoryError):
+            _safe_pandas_concat([df1, df2])
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_concat_single_piece(self, mock_psutil):
+        """Test concatenation with a single DataFrame."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        df = pd.DataFrame({"id": [1, 2, 3]})
+        result = _safe_pandas_concat([df])
+
+        pd.testing.assert_frame_equal(result, df)
+
+
+class TestRaiseIfLowMemory:
+    """Unit tests for TableResponse._raise_if_low_memory method."""
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_with_known_affected_rows_enough_memory(self, mock_psutil):
+        """Test no error when affected_rows is known and memory is sufficient."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        response = TableResponse(data=pd.DataFrame({"id": [1, 2]}), affected_rows=100)
+        response._last_data_piece = pd.DataFrame({"id": list(range(10))})
+        response.rows_fetched = 10
+
+        # Should not raise
+        response._raise_if_low_memory()
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_with_known_affected_rows_not_enough_memory(self, mock_psutil):
+        """Test MemoryError when affected_rows is known and memory is insufficient."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1)
+
+        # Use strings to ensure DataFrame memory > 1KB after >> 10
+        large_piece = pd.DataFrame({"text": ["x" * 200 for _ in range(100)]})
+        response = TableResponse(data=pd.DataFrame({"text": ["a"]}), affected_rows=1000)
+        response._last_data_piece = large_piece
+        response.rows_fetched = 100
+
+        with pytest.raises(MemoryError, match="Not enough memory"):
+            response._raise_if_low_memory()
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_with_unknown_affected_rows_enough_memory(self, mock_psutil):
+        """Test no error when affected_rows is None and memory is sufficient."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        response = TableResponse(data=pd.DataFrame({"id": [1, 2]}))
+        response._last_data_piece = pd.DataFrame({"id": list(range(10))})
+
+        # Should not raise
+        response._raise_if_low_memory()
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_with_unknown_affected_rows_not_enough_memory(self, mock_psutil):
+        """Test MemoryError when affected_rows is None and memory is insufficient."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1)
+
+        # Use strings to ensure DataFrame memory > 1KB after >> 10
+        large_piece = pd.DataFrame({"text": ["x" * 200 for _ in range(100)]})
+        response = TableResponse(data=pd.DataFrame({"text": ["a"]}))
+        response._last_data_piece = large_piece
+
+        with pytest.raises(MemoryError, match="Not enough memory"):
+            response._raise_if_low_memory()
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_all_rows_already_fetched(self, mock_psutil):
+        """Test no error when all rows have been fetched (rows_expected = 0)."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=0)
+
+        response = TableResponse(data=pd.DataFrame({"id": [1, 2]}), affected_rows=10)
+        response._last_data_piece = pd.DataFrame({"id": list(range(10))})
+        response.rows_fetched = 10  # all rows fetched
+
+        # rows_expected = min(10 - 10, 10) = 0, should not raise
+        response._raise_if_low_memory()
+
+
+class TestIterateWithMemoryCheck:
+    """Unit tests for TableResponse._iterate_with_memory_check method."""
+
+    def test_none_generator_yields_nothing(self):
+        """Test that no chunks are yielded when data_generator is None."""
+        response = TableResponse(data=pd.DataFrame({"id": [1]}))
+        assert response._data_generator is None
+
+        chunks = list(response._iterate_with_memory_check())
+        assert chunks == []
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_normal_iteration(self, mock_psutil):
+        """Test that all chunks are yielded during normal iteration."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        df1 = pd.DataFrame({"id": [1, 2]})
+        df2 = pd.DataFrame({"id": [3, 4]})
+
+        def data_gen():
+            yield df1
+            yield df2
+
+        columns = [Column(name="id")]
+        response = TableResponse(data_generator=data_gen(), columns=columns)
+
+        chunks = list(response._iterate_with_memory_check())
+
+        assert len(chunks) == 2
+        pd.testing.assert_frame_equal(chunks[0], df1)
+        pd.testing.assert_frame_equal(chunks[1], df2)
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_memory_error_stops_iteration_after_first_chunk(self, mock_psutil):
+        """Test that MemoryError is raised after the first chunk when memory runs out.
+
+        The pre-loop _raise_if_low_memory() is a no-op (since _last_data_piece is None),
+        so the first real psutil.virtual_memory() call happens at the post-yield check.
+        """
+        # Use strings to ensure DataFrame memory > 1KB after >> 10
+        df1 = pd.DataFrame({"text": ["x" * 200 for _ in range(100)]})
+        df2 = pd.DataFrame({"text": ["y" * 200 for _ in range(100)]})
+
+        def data_gen():
+            yield df1
+            yield df2
+
+        columns = [Column(name="text")]
+        response = TableResponse(data_generator=data_gen(), columns=columns)
+
+        gen = response._iterate_with_memory_check()
+
+        # First chunk succeeds — post-yield check will be the first real psutil call
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1)
+        first = next(gen)
+        pd.testing.assert_frame_equal(first, df1)
+
+        # Resuming the generator triggers _raise_if_low_memory with 0 available memory
+        with pytest.raises(MemoryError):
+            next(gen)
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_updates_last_data_piece_and_rows_fetched(self, mock_psutil):
+        """Test that _last_data_piece and rows_fetched are updated during iteration."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        df1 = pd.DataFrame({"id": [1, 2, 3]})
+        df2 = pd.DataFrame({"id": [4, 5]})
+
+        def data_gen():
+            yield df1
+            yield df2
+
+        columns = [Column(name="id")]
+        response = TableResponse(data_generator=data_gen(), columns=columns)
+        assert response.rows_fetched == 0
+
+        list(response._iterate_with_memory_check())
+
+        pd.testing.assert_frame_equal(response._last_data_piece, df2)
+        assert response.rows_fetched == 5
+
+
+class TestTableResponseFetchallEdgeCases:
+    """Additional edge-case tests for TableResponse.fetchall."""
+
+    def test_fetchall_no_generator_returns_existing_data(self):
+        """Test fetchall returns existing data when no generator is set."""
+        df = pd.DataFrame({"id": [1, 2, 3]})
+        response = TableResponse(data=df)
+
+        result = response.fetchall()
+        pd.testing.assert_frame_equal(result, df)
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_fetchall_generator_only_no_initial_data(self, mock_psutil):
+        """Test fetchall with generator but no initial data."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        df1 = pd.DataFrame({"id": [1, 2]})
+        df2 = pd.DataFrame({"id": [3, 4]})
+
+        def data_gen():
+            yield df1
+            yield df2
+
+        columns = [Column(name="id")]
+        response = TableResponse(data_generator=data_gen(), columns=columns)
+
+        result = response.fetchall()
+        pd.testing.assert_frame_equal(result, pd.concat([df1, df2]))
+        assert response._fetched is True
+        assert response._data_generator is None
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_fetchall_empty_generator_creates_empty_df(self, mock_psutil):
+        """Test fetchall with empty generator creates DataFrame with column names."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        columns = [Column(name="id"), Column(name="name")]
+        response = TableResponse(data_generator=iter([]), columns=columns)
+
+        result = response.fetchall()
+        assert list(result.columns) == ["id", "name"]
+        assert len(result) == 0
+
+    def test_fetchall_raises_if_invalid(self):
+        """Test fetchall raises ValueError if data was already consumed by iterate_no_save."""
+        df = pd.DataFrame({"id": [1]})
+        response = TableResponse(data=df, data_generator=iter([]))
+        list(response.iterate_no_save())
+
+        with pytest.raises(ValueError, match="Data has already been fetched"):
+            response.fetchall()
+
+
+class TestTableResponseFetchmanyEdgeCases:
+    """Additional edge-case tests for TableResponse.fetchmany."""
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_fetchmany_first_piece_with_no_initial_data(self, mock_psutil):
+        """Test fetchmany sets _data directly when no initial data exists."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        df1 = pd.DataFrame({"id": [1, 2]})
+        columns = [Column(name="id")]
+        response = TableResponse(data_generator=iter([df1]), columns=columns)
+
+        piece = response.fetchmany()
+        pd.testing.assert_frame_equal(piece, df1)
+        pd.testing.assert_frame_equal(response._data, df1)
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_fetchmany_accumulates_data(self, mock_psutil):
+        """Test fetchmany accumulates pieces in _data."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        df = pd.DataFrame({"id": [0]})
+        df1 = pd.DataFrame({"id": [1]})
+        df2 = pd.DataFrame({"id": [2]})
+
+        def data_gen():
+            yield df1
+            yield df2
+
+        columns = [Column(name="id")]
+        response = TableResponse(data=df, data_generator=data_gen(), columns=columns)
+
+        response.fetchmany()  # df1
+        response.fetchmany()  # df2
+
+        pd.testing.assert_frame_equal(response._data, pd.concat([df, df1, df2]))
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_fetchmany_returns_none_when_exhausted(self, mock_psutil):
+        """Test fetchmany returns None and marks response as fetched when generator is empty."""
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+
+        df1 = pd.DataFrame({"id": [1]})
+        columns = [Column(name="id")]
+        response = TableResponse(data_generator=iter([df1]), columns=columns)
+
+        piece1 = response.fetchmany()
+        assert isinstance(piece1, pd.DataFrame)
+
+        piece2 = response.fetchmany()
+        assert piece2 is None
+        assert response._fetched is True
+        assert response._data_generator is None
+
+    def test_fetchmany_raises_if_invalid(self):
+        """Test fetchmany raises ValueError after iterate_no_save."""
+        df = pd.DataFrame({"id": [1]})
+        response = TableResponse(data=df, data_generator=iter([]))
+        list(response.iterate_no_save())
+
+        with pytest.raises(ValueError, match="Data has already been fetched"):
+            response.fetchmany()
+
+
+class TestMemoryErrorPropagation:
+    """Tests for MemoryError propagation through fetchall, fetchmany, and iterate_no_save."""
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_fetchall_raises_memory_error(self, mock_psutil):
+        """Test MemoryError propagates through fetchall."""
+        # Enough memory for first chunk, then out of memory
+        mock_psutil.virtual_memory.side_effect = [
+            _mock_virtual_memory(available_kb=1_000_000),  # pre-loop check
+            _mock_virtual_memory(available_kb=0),           # post-yield check
+        ]
+
+        df1 = pd.DataFrame({"x": list(range(1000))})
+        df2 = pd.DataFrame({"x": list(range(1000))})
+
+        def data_gen():
+            yield df1
+            yield df2
+
+        columns = [Column(name="x")]
+        response = TableResponse(data_generator=data_gen(), columns=columns)
+
+        with pytest.raises(MemoryError):
+            response.fetchall()
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_fetchmany_raises_memory_error(self, mock_psutil):
+        """Test MemoryError propagates through fetchmany on second call."""
+        df1 = pd.DataFrame({"x": list(range(1000))})
+        df2 = pd.DataFrame({"x": list(range(1000))})
+
+        def data_gen():
+            yield df1
+            yield df2
+
+        columns = [Column(name="x")]
+        response = TableResponse(data_generator=data_gen(), columns=columns)
+
+        # First fetchmany: enough memory (pre-loop check is no-op since _last_data_piece is None)
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=1_000_000)
+        response.fetchmany()
+
+        # Second fetchmany: pre-loop check fails because we now have _last_data_piece set
+        mock_psutil.virtual_memory.return_value = _mock_virtual_memory(available_kb=0)
+        with pytest.raises(MemoryError):
+            response.fetchmany()
+
+    @patch("mindsdb.integrations.libs.response.psutil")
+    def test_iterate_no_save_raises_memory_error(self, mock_psutil):
+        """Test MemoryError propagates through iterate_no_save."""
+        mock_psutil.virtual_memory.side_effect = [
+            _mock_virtual_memory(available_kb=1_000_000),  # pre-loop check
+            _mock_virtual_memory(available_kb=0),           # post-yield check after first chunk
+        ]
+
+        df1 = pd.DataFrame({"x": list(range(1000))})
+        df2 = pd.DataFrame({"x": list(range(1000))})
+
+        def data_gen():
+            yield df1
+            yield df2
+
+        columns = [Column(name="x")]
+        response = TableResponse(data_generator=data_gen(), columns=columns)
+
+        with pytest.raises(MemoryError):
+            list(response.iterate_no_save())

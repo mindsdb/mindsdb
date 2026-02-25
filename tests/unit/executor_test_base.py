@@ -85,13 +85,9 @@ class BaseUnitTest:
             if env_var_name in os.environ:
                 del os.environ[env_var_name]
 
-        if cls._original_storage_dir_env is None:
-            del os.environ["MINDSDB_STORAGE_DIR"]
-        else:
+        if cls._original_storage_dir_env is not None:
             os.environ["MINDSDB_STORAGE_DIR"] = cls._original_storage_dir_env
-        if cls._original_config_path_env is None:
-            del os.environ["MINDSDB_CONFIG_PATH"]
-        else:
+        if cls._original_config_path_env is not None:
             os.environ["MINDSDB_CONFIG_PATH"] = cls._original_config_path_env
 
         # remove import of mindsdb for next tests

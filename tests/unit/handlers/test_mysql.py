@@ -100,7 +100,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def test_native_query_with_results(self):
         """
         Tests the `native_query` method to ensure it executes a SQL query and handles the case
-        where the query returns a result set
+        where the query returns a result set, streaming data via fetchmany
         """
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -111,7 +111,11 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
         mock_conn.is_connected = MagicMock(return_value=True)
 
-        mock_cursor.fetchall.return_value = [{"id": 1, "name": "test1"}, {"id": 2, "name": "test2"}]
+        # fetchmany returns tuples (non-dictionary cursor), then empty list to signal end
+        mock_cursor.fetchmany.side_effect = [
+            [(1, "test1"), (2, "test2")],
+            [],
+        ]
 
         # MySQL cursor provides column info via description attribute
         mock_cursor.description = [
@@ -124,7 +128,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = "SELECT * FROM test_table"
         data = self.handler.native_query(query_str)
 
-        mock_conn.cursor.assert_called_once_with(dictionary=True, buffered=True)
+        mock_conn.cursor.assert_called_once_with(buffered=False)
         mock_cursor.execute.assert_called_once_with(query_str)
 
         assert isinstance(data, TableResponse)
@@ -153,7 +157,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = "INSERT INTO test_table VALUES (1, 'test')"
         data = self.handler.native_query(query_str)
 
-        mock_conn.cursor.assert_called_once_with(dictionary=True, buffered=True)
+        mock_conn.cursor.assert_called_once_with(buffered=False)
         mock_cursor.execute.assert_called_once_with(query_str)
 
         assert isinstance(data, OkResponse)
@@ -179,7 +183,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = "INVALID SQL"
         data = self.handler.native_query(query_str)
 
-        mock_conn.cursor.assert_called_once_with(dictionary=True, buffered=True)
+        mock_conn.cursor.assert_called_once_with(buffered=False)
         mock_cursor.execute.assert_called_once_with(query_str)
 
         assert isinstance(data, Response)
@@ -472,19 +476,19 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.is_connected = MagicMock(return_value=True)
 
         # region test TEXT/BLOB types and sub-types
-        input_row = {
-            "t_varchar": "v_varchar",
-            "t_tinytext": "v_tinytext",
-            "t_text": "v_text",
-            "t_mediumtext": "v_mediumtext",
-            "t_longtext": "v_longtext",
-            "t_tinyblon": "v_tinyblon",
-            "t_blob": "v_blob",
-            "t_mediumblob": "v_mediumblob",
-            "t_longblob": "v_longblob",
-            "t_json": '{"key": "value"}',
-        }
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(
+            t_varchar="v_varchar",
+            t_tinytext="v_tinytext",
+            t_text="v_text",
+            t_mediumtext="v_mediumtext",
+            t_longtext="v_longtext",
+            t_tinyblon="v_tinyblon",
+            t_blob="v_blob",
+            t_mediumblob="v_mediumblob",
+            t_longblob="v_longblob",
+            t_json='{"key": "value"}',
+        )
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
 
         mock_cursor.description = [
             ("t_varchar", 253, None, None, None, None, 1, 0, 45),
@@ -499,7 +503,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("t_json", 245, None, None, None, None, 1, 144, 63),
         ]
 
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.VARBINARY,
             MYSQL_DATA_TYPE.TEXT,
@@ -521,15 +525,15 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # endregion
 
         # region test TINYINT/BOOL/BOOLEAN types
-        input_row = {"t_tinyint": 1, "t_bool": 1, "t_boolean": 1}
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(t_tinyint=1, t_bool=1, t_boolean=1)
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
 
         mock_cursor.description = [
             ("t_tinyint", 1, None, None, None, None, 1, 0, 63),
             ("t_bool", 1, None, None, None, None, 1, 0, 63),
             ("t_boolean", 1, None, None, None, None, 1, 0, 63),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT]
         for column, mysql_type in zip(response.columns, excepted_mysql_types):
             self.assertEqual(column.type, mysql_type)
@@ -541,19 +545,19 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # endregion
 
         # region test numeric types
-        input_row = {
-            "t_tinyint": 1,
-            "t_bool": 0,
-            "t_smallint": 2,
-            "t_year": 2025,
-            "t_mediumint": 3,
-            "t_int": 4,
-            "t_bigint": 5,
-            "t_float": 1.1,
-            "t_double": 2.2,
-            "t_decimal": Decimal("3.3"),
-        }
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(
+            t_tinyint=1,
+            t_bool=0,
+            t_smallint=2,
+            t_year=2025,
+            t_mediumint=3,
+            t_int=4,
+            t_bigint=5,
+            t_float=1.1,
+            t_double=2.2,
+            t_decimal=Decimal("3.3"),
+        )
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
         mock_cursor.description = [
             ("t_tinyint", 1, None, None, None, None, 1, 0, 63),
             ("t_bool", 1, None, None, None, None, 1, 0, 63),
@@ -566,7 +570,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("t_double", 5, None, None, None, None, 1, 0, 63),
             ("t_decimal", 246, None, None, None, None, 1, 0, 63),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.TINYINT,
             MYSQL_DATA_TYPE.TINYINT,
@@ -588,14 +592,14 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # endregion
 
         # test date/time types
-        input_row = {
-            "t_date": datetime.date(2025, 4, 16),
-            "t_time": datetime.timedelta(seconds=45600),
-            "t_year": 2025,
-            "t_datetime": datetime.datetime(2025, 4, 16, 12, 30, 15),
-            "t_timestamp": datetime.datetime(2025, 4, 16, 12, 30, 15),
-        }
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(
+            t_date=datetime.date(2025, 4, 16),
+            t_time=datetime.timedelta(seconds=45600),
+            t_year=2025,
+            t_datetime=datetime.datetime(2025, 4, 16, 12, 30, 15),
+            t_timestamp=datetime.datetime(2025, 4, 16, 12, 30, 15),
+        )
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
 
         mock_cursor.description = [
             ("t_date", 10, None, None, None, None, 1, 128, 63),
@@ -605,7 +609,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("t_timestamp", 7, None, None, None, None, 1, 128, 63),
         ]
 
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.DATE,
             MYSQL_DATA_TYPE.TIME,
@@ -622,14 +626,17 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         # region test casting of nullable types
         bigint_val = 9223372036854775807
-        input_rows = [{"t_bigint": bigint_val, "t_boolean": 1}, {"t_bigint": None, "t_boolean": None}]
-        mock_cursor.fetchall.return_value = input_rows
+        input_rows = [
+            OrderedDict(t_bigint=bigint_val, t_boolean=1),
+            OrderedDict(t_bigint=None, t_boolean=None)
+        ]
+        mock_cursor.fetchall.return_value = [list(row.values()) for row in input_rows]
         description = [
             ("t_bigint", 8, None, None, None, None, 1, 0, 63),
             ("t_boolean", 1, None, None, None, None, 1, 0, 63),
         ]
         mock_cursor.description = description
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         self.assertEqual(response.data_frame.dtypes.iloc[0], "Int64")
         self.assertEqual(response.data_frame.dtypes.iloc[1], "Int64")
         self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
@@ -639,14 +646,14 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # endregion
 
         # region test vector type
-        input_row = {
-            "t_vector": array("f", [1.1, 2.2, 3.3]),
-        }
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(
+            t_vector=array("f", [1.1, 2.2, 3.3]),
+        )
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
 
         mock_cursor.description = [("t_vector", 242, None, None, None, None, 1, 144, 63)]
 
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.VECTOR]
         for column, mysql_type in zip(response.columns, excepted_mysql_types):
             self.assertEqual(column.type, mysql_type)

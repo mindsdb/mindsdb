@@ -1510,7 +1510,7 @@ class KnowledgeBaseController:
         except Exception as e:
             raise RuntimeError(f"Problem with embedding model config: {e}") from e
 
-    def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
+    def delete(self, name: str, project_name: str, if_exists: bool = False) -> None:
         """
         Delete a knowledge base from the database
         """
@@ -1629,3 +1629,24 @@ class KnowledgeBaseController:
         scores = EvaluateBase.run(self.session, kb_table, params)
 
         return scores
+
+    def release_lock(self, knowledge_base: Identifier, project_name):
+        # works only for FAISS dbs.
+        # if FAISS vector db is used in KB: remove this db from handlers cache.
+        #   it will clear internal cache of tables in faiss handler and release locks for faiss files
+
+        if len(knowledge_base.parts) > 1:
+            project_name, kb_name = knowledge_base.parts[-2:]
+        else:
+            kb_name = knowledge_base.parts[-1]
+
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb = self.get(kb_name, project_id)
+        if kb is None or kb.vector_database_id is None:
+            return
+        database = db.Integration.query.get(kb.vector_database_id)
+        if database is None:
+            return
+
+        if database.engine == "duckdb_faiss":
+            self.session.integration_controller.handlers_cache.delete(database.name)

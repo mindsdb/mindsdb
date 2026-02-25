@@ -1,21 +1,15 @@
 import os
-from typing import List
+import re
+import shutil
+import threading
+import time
+from contextlib import contextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Iterator
 
 import pandas as pd
-import orjson
-import duckdb
-from mindsdb_sql_parser.ast import (
-    Select,
-    Delete,
-    Identifier,
-    BinaryOperation,
-    Constant,
-    NullConstant,
-    Star,
-    Tuple as AstTuple,
-    Function,
-    TypeCast,
-)
+
 
 from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
@@ -25,7 +19,6 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
     VectorStoreHandler,
-    FilterOperator,
 )
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
@@ -33,9 +26,19 @@ from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
-from .faiss_index import FaissIVFIndex
+from .duckdb_faiss_table import DuckDBFaissTable
 
 logger = log.getLogger(__name__)
+
+
+TABLE_CACHE_TTL_SECONDS = 60
+
+
+@dataclass
+class TableCacheEntry:
+    table: DuckDBFaissTable
+    last_used_ts: float
+    in_use_count: int = 0
 
 
 class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
@@ -61,382 +64,31 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
                 raise ValueError(f"Persist directory {self.persist_directory} does not exist")
         else:
             # Use default handler storage
-            self.persist_directory = self.handler_storage.folder_get("data")
+            self.persist_directory = self.handler_storage.folder_get("")
             self._use_handler_storage = True
 
-        # DuckDB connection
-        self.connection = None
-        self.is_connected = False
+        Path(self.persist_directory).mkdir(parents=True, exist_ok=True)
 
-        # Initialize storage paths
-        self.duckdb_path = os.path.join(self.persist_directory, "duckdb.db")
-        self.faiss_index_path = self.persist_directory
-        self.connect()
+        self.tables_cache = {}
+        self.tables_cache_lock = threading.Lock()
 
-        # check keyword index
-        self.is_kw_index_enabled = False
-        with self.connection.cursor() as cur:
-            # check index exists
-            df = cur.execute(
-                "SELECT * FROM information_schema.schemata WHERE schema_name = 'fts_main_meta_data'"
-            ).fetchdf()
-            if len(df) > 0:
-                self.is_kw_index_enabled = True
+    def connect(self):
+        """
+        Handler readiness check.
+        Must not open long-lived DuckDB/FAISS resources; tables are opened per operation.
+        """
+        if not Path(self.persist_directory).exists():
+            raise ValueError(f"Persist directory {self.persist_directory} does not exist")
 
-    def connect(self) -> duckdb.DuckDBPyConnection:
-        """Connect to DuckDB database."""
-        if self.is_connected:
-            return self.connection
-
-        try:
-            self.connection = duckdb.connect(self.duckdb_path)
-            self.faiss_index = FaissIVFIndex(self.faiss_index_path, self.connection_data)
-            self.is_connected = True
-
-            logger.info("Connected to DuckDB database")
-            return self.connection
-
-        except Exception as e:
-            logger.error(f"Error connecting to DuckDB: {e}")
-            raise
+        self.is_connected = True
+        return True
 
     def disconnect(self):
-        """Close DuckDB connection."""
-        if self.is_connected and self.connection:
-            self.connection.close()
-            self.faiss_index.close()
-            self.is_connected = False
-
-    def create_table(self, table_name: str, if_not_exists=True):
-        with self.connection.cursor() as cur:
-            cur.execute("CREATE SEQUENCE  IF NOT EXISTS faiss_id_sequence START 1")
-
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS meta_data (
-                    faiss_id INTEGER PRIMARY KEY DEFAULT nextval('faiss_id_sequence'), -- id in FAISS index 
-                    id TEXT  NOT NULL, -- chunk id                    
-                    content TEXT,
-                    metadata JSON
-                )
-            """)
-
-    def drop_table(self, table_name: str, if_exists=True):
-        """Drop table from both DuckDB and Faiss."""
-        with self.connection.cursor() as cur:
-            drop_sql = f"DROP TABLE {'IF EXISTS' if if_exists else ''} meta_data"
-            cur.execute(drop_sql)
-
-        if self.faiss_index:
-            self.faiss_index.drop()
-
-    def create_index(self, table_name: str, type: str = "ivf_file", nlist: int = None, train_count: int = None):
-        if type not in ("ivf", "ivf_file"):
-            raise NotImplementedError("Only ivf or ivf_file indexes are supported")
-
-        self.faiss_index.create_index(type, nlist=nlist, train_count=train_count)
-
-    def insert(self, table_name: str, data: pd.DataFrame):
-        """Insert data into both DuckDB and Faiss."""
-
-        if self.is_kw_index_enabled:
-            # drop index, it will be created before a first keyword search
-            self.drop_kw_index()
-
-        with self.connection.cursor() as cur:
-            df_ids = cur.execute("""
-                insert into meta_data (id, content, metadata) (
-                    select id, content, metadata from data
-                )
-                RETURNING faiss_id, id
-            """).fetchdf()
-
-        data = data.merge(df_ids, on="id")
-
-        vectors = data["embeddings"]
-        ids = data["faiss_id"]
-
-        self.faiss_index.insert(list(vectors), list(ids))
-        self._sync()
-
-    # def upsert(self, table_name: str, data: pd.DataFrame):
-    #     # delete by ids and insert
-    #     ids = list(data['id'])
-    #     self.delete(table_name, [FilterCondition(column='id', op=FilterOperator.IN, value=ids)])
-    #     self.insert(table_name, data)
-
-    def select(
-        self,
-        table_name: str,
-        columns: List[str] = None,
-        conditions: List[FilterCondition] = None,
-        offset: int = None,
-        limit: int = None,
-    ) -> pd.DataFrame:
-        """Select data with hybrid search logic."""
-
-        vector_filter = None
-        meta_filters = []
-        if conditions is None:
-            conditions = []
-        for condition in conditions:
-            if condition.column == "embeddings":
-                vector_filter = condition
-            else:
-                meta_filters.append(condition)
-
-        if vector_filter is None:
-            # If only metadata in filter:
-            # query duckdb only
-            return self._select_from_metadata(meta_filters=meta_filters, limit=limit).drop("faiss_id", axis=1)
-
-        # vector_filter is not None
-        if not meta_filters:
-            # If only content in filter: query faiss and attach to metadata
-            return self._select_with_vector(vector_filter=vector_filter, limit=limit)
-
-        """
-        If metadata + content:
-        Query faiss, use limit = 1000
-        Query duckdb with `id in (...)` 
-        If count of results is less than input LIMIT value
-        Repeat the search with increased limit value
-        Limit value for step = 1000 * 5^i  (1000, 2000, 25000, 125000 …)
-        """
-
-        df = pd.DataFrame()
-
-        total_size = self.get_total_size()
-
-        for i in range(10):
-            batch_size = 1000 * 5**i
-
-            # TODO implement reverse search:
-            #   if batch_size > 25% of db: search metadata first and then in faiss by list of ids
-
-            df = self._select_with_vector(vector_filter=vector_filter, meta_filters=meta_filters, limit=batch_size)
-            if batch_size >= total_size or len(df) >= limit:
-                break
-
-        return df[:limit]
-
-    def create_kw_index(self):
-        with self.connection.cursor() as cur:
-            cur.execute("PRAGMA create_fts_index('meta_data', 'id', 'content')")
-            self.is_kw_index_enabled = True
-
-    def drop_kw_index(self):
-        with self.connection.cursor() as cur:
-            cur.execute("pragma drop_fts_index('meta_data')")
-            self.is_kw_index_enabled = False
-
-    def keyword_select(
-        self,
-        table_name: str,
-        columns: List[str] = None,
-        conditions: List[FilterCondition] = None,
-        offset: int = None,
-        limit: int = None,
-        keyword_search_args: KeywordSearchArgs = None,
-    ) -> pd.DataFrame:
-        if not self.is_kw_index_enabled:
-            # keyword search is used for first time: create index
-            self.create_kw_index()
-
-        with self.connection.cursor() as cur:
-            where_clause = self._translate_filters(conditions)
-
-            score = Function(
-                namespace="fts_main_meta_data",
-                op="match_bm25",
-                args=[
-                    Identifier("id"),
-                    Constant(keyword_search_args.query),
-                    BinaryOperation(op=":=", args=[Identifier("fields"), Constant(keyword_search_args.column)]),
-                ],
-            )
-
-            no_emtpy_score = BinaryOperation(op="is not", args=[score, NullConstant()])
-            if where_clause:
-                where_clause = BinaryOperation(op="and", args=[where_clause, no_emtpy_score])
-            else:
-                where_clause = no_emtpy_score
-
-            query = Select(
-                targets=[Star(), BinaryOperation(op="-", args=[Constant(1), score], alias=Identifier("distance"))],
-                from_table=Identifier("meta_data"),
-                where=where_clause,
-            )
-
-            sql = self.renderer.get_string(query, with_failback=True)
-            cur.execute(sql)
-            df = cur.fetchdf()
-            df["metadata"] = df["metadata"].apply(orjson.loads)
-            return df
-
-    def get_total_size(self):
-        with self.connection.cursor() as cur:
-            cur.execute("select count(1) size from meta_data")
-            df = cur.fetchdf()
-            return df["size"].iloc[0]
-
-    def _select_with_vector(self, vector_filter: FilterCondition, meta_filters=None, limit=None) -> pd.DataFrame:
-        embedding = vector_filter.value
-        if isinstance(embedding, str):
-            embedding = orjson.loads(embedding)
-
-        distances, faiss_ids = self.faiss_index.search(embedding, limit or 100)
-
-        # Fetch full data from DuckDB
-        if len(faiss_ids) > 0:
-            # ids = [str(idx) for idx in faiss_ids]
-            meta_df = self._select_from_metadata(faiss_ids=faiss_ids, meta_filters=meta_filters)
-            vector_df = pd.DataFrame({"faiss_id": faiss_ids, "distance": distances})
-            return vector_df.merge(meta_df, on="faiss_id").drop("faiss_id", axis=1).sort_values(by="distance")
-
-        return pd.DataFrame([], columns=["id", "content", "metadata", "distance"])
-
-    def _select_from_metadata(self, faiss_ids=None, meta_filters=None, limit=None):
-        query = Select(
-            targets=[Star()],
-            from_table=Identifier("meta_data"),
-        )
-
-        where_clause = self._translate_filters(meta_filters)
-
-        if faiss_ids:
-            # TODO what if ids list is too long - split search into batches
-            in_filter = BinaryOperation(
-                op="IN", args=[Identifier("faiss_id"), AstTuple([Constant(i) for i in faiss_ids])]
-            )
-            # split into chunks
-            chunk_size = 10000
-            if len(faiss_ids) > chunk_size:
-                dfs = []
-                chunk = 0
-                total = 0
-                while chunk * chunk_size < len(faiss_ids):
-                    # create results with partition
-                    ids = faiss_ids[chunk * chunk_size : (chunk + 1) * chunk_size]
-                    chunk += 1
-                    df = self._select_from_metadata(faiss_ids=ids, meta_filters=meta_filters, limit=limit)
-                    total += len(df)
-                    if limit is not None and limit <= total:
-                        # cut the extra from the end
-                        df = df[: -(total - limit)]
-                        dfs.append(df)
-                        break
-                    if len(df) > 0:
-                        dfs.append(df)
-                if len(dfs) == 0:
-                    return pd.DataFrame([], columns=["faiss_id", "id", "content", "metadata"])
-                return pd.concat(dfs)
-
-            if where_clause is None:
-                where_clause = in_filter
-            else:
-                where_clause = BinaryOperation(op="AND", args=[where_clause, in_filter])
-
-        if limit is not None:
-            query.limit = Constant(limit)
-
-        query.where = where_clause
-
-        with self.connection.cursor() as cur:
-            sql = self.renderer.get_string(query, with_failback=True)
-            cur.execute(sql)
-            df = cur.fetchdf()
-            df["metadata"] = df["metadata"].apply(orjson.loads)
-            return df
-
-    def _translate_filters(self, meta_filters):
-        if not meta_filters:
-            return None
-
-        where_clause = None
-        for item in meta_filters:
-            parts = item.column.split(".")
-            key = Identifier(parts[0])
-
-            # converts 'col.el1.el2' to col->'el1'->>'el2'
-            if len(parts) > 1:
-                # intermediate elements
-                for el in parts[1:-1]:
-                    key = BinaryOperation(op="->", args=[key, Constant(el)])
-
-                # last element
-                key = BinaryOperation(op="->>", args=[key, Constant(parts[-1])])
-
-            is_orig_id = item.column == "metadata._original_doc_id"
-
-            type_cast = None
-            value = item.value
-
-            if isinstance(value, list) and len(value) > 0 and item.op in (FilterOperator.IN, FilterOperator.NOT_IN):
-                if is_orig_id:
-                    # convert to str
-                    item.value = [str(i) for i in value]
-                value = item.value[0]
-            elif is_orig_id:
-                if not isinstance(value, str):
-                    value = item.value = str(item.value)
-
-            if isinstance(value, int):
-                type_cast = "int"
-            elif isinstance(value, float):
-                type_cast = "float"
-
-            if type_cast is not None:
-                key = TypeCast(type_cast, key)
-
-            if item.op in (FilterOperator.NOT_IN, FilterOperator.IN):
-                values = [Constant(i) for i in item.value]
-                value = AstTuple(values)
-            else:
-                value = Constant(item.value)
-
-            condition = BinaryOperation(op=item.op.value, args=[key, value])
-
-            if where_clause is None:
-                where_clause = condition
-            else:
-                where_clause = BinaryOperation(op="AND", args=[where_clause, condition])
-        return where_clause
-
-    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> Response:
-        """Delete data from both DuckDB and Faiss."""
-
-        with self.connection.cursor() as cur:
-            where_clause = self._translate_filters(conditions)
-
-            query = Select(targets=[Identifier("faiss_id")], from_table=Identifier("meta_data"), where=where_clause)
-            cur.execute(self.renderer.get_string(query, with_failback=True))
-            df = cur.fetchdf()
-            ids = list(df["faiss_id"])
-
-            self.faiss_index.delete_ids(ids)
-
-            query = Delete(table=Identifier("meta_data"), where=where_clause)
-            cur.execute(self.renderer.get_string(query, with_failback=True))
-
-            self._sync()
-
-    def get_dimension(self, table_name: str) -> int:
-        if self.faiss_index and self.faiss_index.index is not None:
-            return self.faiss_index.dim
-
-    def _sync(self):
-        """Sync the database to disk if using persistent storage"""
-        self.faiss_index.dump()
-        if self._use_handler_storage:
-            self.handler_storage.folder_sync(self.persist_directory)
-
-    def get_tables(self) -> Response:
-        """Get list of tables."""
-        with self.connection.cursor() as cur:
-            df = cur.execute("show tables").fetchdf()
-            df = df.rename(columns={"name": "table_name"})
-
-        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        with self.tables_cache_lock:
+            for item in self.tables_cache.values():
+                item.table.close()
+
+            self.tables_cache = {}
 
     def check_connection(self) -> Response:
         """Check the connection to the database."""
@@ -448,19 +100,195 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             logger.error(f"Connection check failed: {e}")
             return StatusResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
 
-    def native_query(self, query: str) -> Response:
-        """Execute a native SQL query."""
-        try:
-            with self.connection.cursor() as cur:
-                cur.execute(query)
-                result = cur.fetchdf()
-                return Response(RESPONSE_TYPE.TABLE, data_frame=result)
-        except Exception as e:
-            logger.error(f"Error executing native query: {e}")
-            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
-
     def __del__(self):
         """Cleanup on deletion."""
-        if self.is_connected:
-            self._sync()
-            self.disconnect()
+        self.disconnect()
+
+    # -- manage tables --
+
+    @staticmethod
+    def _validate_table_name(table_name: str) -> None:
+        if table_name in (".", ".."):
+            raise ValueError("Invalid table_name")
+        if "/" in table_name or "\\" in table_name:
+            raise ValueError("table_name must not contain path separators")
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", table_name):
+            raise ValueError(
+                "Invalid table_name: only letters, digits, '_' and '-' are allowed (no spaces, dots, or other symbols)"
+            )
+
+    def get_table_dir(self, table_name: str) -> Path:
+        """
+        Get folder for a table name
+        Prevent path traversal by requiring the resolved path to stay within persist_directory.
+        """
+        root = Path(self.persist_directory).resolve()
+        table_dir = (Path(self.persist_directory) / table_name).resolve()
+        if table_dir == root or root not in table_dir.parents:
+            raise ValueError("Invalid table_name path")
+        return table_dir
+
+    def _close_cached_table(self, table_name: str) -> None:
+        entry = self.tables_cache.pop(table_name, None)
+        if entry is None:
+            return
+        try:
+            entry.table.close()
+        except Exception:
+            logger.exception("Failed to close cached table '%s'", table_name)
+
+    def _close_old_tables_cache(self):
+        """
+        Close stale cached tables that have not been used for more than TTL.
+        Tables that are currently in use are never closed by pruning.
+        """
+        if not self.tables_cache:
+            return
+
+        with self.tables_cache_lock:
+            now_ts = time.time()
+            to_close: List[str] = []
+            for table_name, entry in self.tables_cache.items():
+                if entry.in_use_count > 0:
+                    continue
+                if now_ts - entry.last_used_ts > TABLE_CACHE_TTL_SECONDS:
+                    to_close.append(table_name)
+
+            for table_name in to_close:
+                self._close_cached_table(table_name)
+
+    @contextmanager
+    def open_table(self, table_name: str) -> Iterator[DuckDBFaissTable]:
+        """
+        Open DuckDB and Faiss resources scoped to one vector table.
+        Must always be closed after use to avoid long-lived locks / RAM usage.
+
+        If `use_cache=True` and `table.cache_required` is True, the opened table is cached
+        in `self.tables_cache` and re-used across calls. Cached tables are pruned if they
+        haven't been used for more than TABLE_CACHE_TTL_SECONDS.
+        """
+        table_dir = self.get_table_dir(table_name)
+        if not table_dir.exists():
+            raise ValueError(f"Table '{table_name}' does not exist")
+
+        with self.tables_cache_lock:
+            entry = self.tables_cache.get(table_name)
+
+            if entry is not None:
+                table = entry.table
+            else:
+                table = DuckDBFaissTable(table_name=table_name, table_dir=table_dir, handler=self).open()
+
+                if table.cache_required:
+                    entry = TableCacheEntry(table=table, last_used_ts=time.time())
+                    self.tables_cache[table_name] = entry
+
+        try:
+            if entry:
+                entry.in_use_count += 1
+
+            yield table
+        finally:
+            if entry:
+                entry.in_use_count -= 1
+                entry.last_used_ts = time.time()
+            else:
+                table.close()
+
+        self._close_old_tables_cache()
+
+    def create_table(self, table_name: str, if_not_exists=True):
+        self._validate_table_name(table_name)
+        table_dir = self.get_table_dir(table_name)
+        if table_dir.exists() and not if_not_exists:
+            raise ValueError(f"Vector table '{table_name}' already exists")
+        table_dir.mkdir(parents=True, exist_ok=True)
+
+        with self.open_table(table_name) as table:
+            with table.connection.cursor() as cur:
+                cur.execute("CREATE SEQUENCE IF NOT EXISTS faiss_id_sequence START 1")
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS meta_data (
+                        faiss_id INTEGER PRIMARY KEY DEFAULT nextval('faiss_id_sequence'), -- id in FAISS index
+                        id TEXT NOT NULL, -- chunk id
+                        content TEXT,
+                        metadata JSON
+                    )
+                """)
+
+    def drop_table(self, table_name: str, if_exists=True):
+        """Drop table from both DuckDB and Faiss."""
+        table_dir = self.get_table_dir(table_name)
+
+        if not table_dir.exists():
+            if if_exists:
+                return
+            raise ValueError(f"Vector table '{table_name}' does not exist")
+
+        with self.tables_cache_lock:
+            self._close_cached_table(table_name)
+
+        shutil.rmtree(table_dir, ignore_errors=False)
+
+        if self._use_handler_storage:
+            self.handler_storage.folder_sync(table_name)
+
+    def get_tables(self) -> Response:
+        """Get list of tables."""
+        rows = []
+        root = Path(self.persist_directory)
+        if root.exists():
+            for item in root.iterdir():
+                if not item.is_dir():
+                    continue
+                rows.append({"table_name": item.name})
+        df = pd.DataFrame(rows, columns=["table_name"])
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+    # -- table methods --
+
+    def create_index(self, table_name: str, type: str = "ivf_file", nlist: int = None, train_count: int = None):
+        with self.open_table(table_name) as table:
+            table.create_index(type=type, nlist=nlist, train_count=train_count)
+
+    def insert(self, table_name: str, data: pd.DataFrame):
+        with self.open_table(table_name) as table:
+            table.insert(data)
+
+    def select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+    ) -> pd.DataFrame:
+        with self.open_table(table_name) as table:
+            return table.select(conditions=conditions, offset=offset, limit=limit)
+
+    def keyword_select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+        keyword_search_args: KeywordSearchArgs = None,
+    ) -> pd.DataFrame:
+        with self.open_table(table_name) as table:
+            return table.keyword_select(
+                conditions=conditions,
+                offset=offset,
+                limit=limit,
+                keyword_search_args=keyword_search_args,
+            )
+
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
+        """Delete data from both DuckDB and Faiss."""
+
+        with self.open_table(table_name) as table:
+            table.delete(conditions)
+
+    def get_dimension(self, table_name: str) -> int:
+        with self.open_table(table_name) as table:
+            return table.get_dimension()

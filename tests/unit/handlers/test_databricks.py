@@ -20,6 +20,7 @@ except ImportError:
 
 from mindsdb.integrations.libs.response import (
     TableResponse,
+    ErrorResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
     HandlerStatusResponse as StatusResponse,
@@ -242,13 +243,13 @@ class TestTableOperations(unittest.TestCase):
 
         result = self.handler.native_query("SELECT * FROM test_table")
 
-        self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
+        self.assertIsInstance(result, ErrorResponse)
         self.assertIn("Server error", result.error_message)
 
     def test_get_tables_all_schemas(self):
         """Test get_tables with all=True."""
         self.handler.native_query = MagicMock(
-            return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([{"table_name": "t1"}]))
+            return_value=TableResponse(data=pd.DataFrame([{"table_name": "t1"}]))
         )
 
         self.handler.get_tables(all=True)
@@ -277,7 +278,7 @@ class TestTableOperations(unittest.TestCase):
             ]
         )
 
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=mock_df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=mock_df))
 
         self.handler.get_columns("test_table", schema_name="my_schema")
 

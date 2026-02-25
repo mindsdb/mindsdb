@@ -146,6 +146,8 @@ def _safe_pandas_concat(pieces: list[pandas.DataFrame]) -> pandas.DataFrame:
     Raises:
         MemoryError: If there is insufficient memory to perform the concatenation safely.
     """
+    if len(pieces) == 1:
+        return pieces[0]
     available_memory_kb = psutil.virtual_memory().available >> 10
     pieces_size_kb = sum([(x.memory_usage(index=True, deep=True).sum() >> 10) for x in pieces])
     if (pieces_size_kb * 2.5) > available_memory_kb:
@@ -201,7 +203,7 @@ class TableResponse(DataHandlerResponse):
         self._fetched = False if data_generator else True
         self._invalid = False
         self._last_data_piece = None
-        self.rows_fetched = len(data) if data else 0
+        self.rows_fetched = len(data) if data is not None else 0
 
     @property
     def data_generator(self) -> Generator[pandas.DataFrame, None, None]:

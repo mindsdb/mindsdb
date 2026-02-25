@@ -91,9 +91,13 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         on_error = step.params.get("error", "raise")
         if use_threads:
-            return self.fetch_threads(run_query, query, thread_count=thread_count, on_error=on_error)
+            result = self.fetch_threads(run_query, query, thread_count=thread_count, on_error=on_error)
         else:
-            return self.fetch_iterate(run_query, query, on_error=on_error)
+            result = self.fetch_iterate(run_query, query, on_error=on_error)
+
+        # release KB locks after inserting in background
+        self.sql_query.release_kb_lock(self.substeps)
+        return result
 
     def repeat_till_reach_limit(self, step, limit):
         first_table_limit = limit * 2

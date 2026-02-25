@@ -20,6 +20,8 @@ from mindsdb.api.executor.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     ApplyPredictorStep,
+    InsertToTable,
+    FetchDataframeStepPartition
 )
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
@@ -276,6 +278,9 @@ class SQLQuery:
                 )
 
             if self.planner.plan.is_async and ctx.task_id is None:
+                # release KB locks before inserting in background
+                self.release_kb_lock(steps)
+
                 # add to task
                 self.run_query.add_to_task()
                 # return query info
@@ -344,5 +349,13 @@ class SQLQuery:
 
         return handler(self, steps_data=steps_data).call(step)
 
+    def release_kb_lock(self, steps):
+        # find knowledge bases that used as tables to insert.
+        #  then and release locks of vector for these knowledge bases
+        for step in steps:
+            if isinstance(step, InsertToTable):
+                self.session.kb_controller.release_lock(step.table, project_name=self.database)
+            if isinstance(step, FetchDataframeStepPartition):
+                self.release_kb_lock(step.steps)
 
 SQLQuery.register_steps()

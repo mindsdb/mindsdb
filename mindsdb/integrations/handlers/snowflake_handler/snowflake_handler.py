@@ -209,7 +209,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        auth_type_key = self.connection_data.get("auth_type")
+        auth_type_key = self.connection_data.get("auth_type", "password")
         if auth_type_key is None:
             supported = ", ".join(self._auth_types.keys())
             raise ValueError(f"auth_type is required. Supported values: {supported}.")
@@ -295,32 +295,36 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
                     batches = []
                     memory_estimation_check_done = False
-
+                    batches_rowcount = 0
+                    total_rowcount = cur.rowcount or 0
                     for batch_df in batches_iter:
                         batches.append(batch_df)
                         # region check the size of first batch (if it is big enough) to get an estimate of the full
-                        # dataset size. If i does not fit in memory - raise an error.
+                        # dataset size. If it does not fit in memory - raise an error.
                         # NOTE batch size cannot be set on client side. Also, Snowflake will download
                         # 'CLIENT_PREFETCH_THREADS' count of chunks in parallel (by default 4), therefore this check
                         # can not work in some cases.
-                        batches_rowcount = sum([len(x) for x in batches])
+                        batches_rowcount += len(batch_df)
                         if memory_estimation_check_done is False and batches_rowcount > 1000:
                             memory_estimation_check_done = True
                             available_memory_kb = psutil.virtual_memory().available >> 10
                             batches_size_kb = sum(
                                 [(x.memory_usage(index=True, deep=True).sum() >> 10) for x in batches]
                             )
-                            total_rowcount = cur.rowcount
                             rest_rowcount = total_rowcount - batches_rowcount
                             rest_estimated_size_kb = int((rest_rowcount / batches_rowcount) * batches_size_kb)
-                            if (available_memory_kb * 0.9) < rest_estimated_size_kb:
-                                logger.error(
-                                    "Attempt to get too large dataset:\n"
-                                    f"batches_rowcount={batches_rowcount}, size_kb={batches_size_kb}\n"
-                                    f"total_rowcount={total_rowcount}, estimated_size_kb={rest_estimated_size_kb}\n"
-                                    f"available_memory_kb={available_memory_kb}"
+                            # for pd.concat required at least x2 memory
+                            max_allowed_memory_kb = available_memory_kb / 2.4
+                            if max_allowed_memory_kb < rest_estimated_size_kb:
+                                error_message = (
+                                    "The query result is too large to fit into available memory. "
+                                    f"The dataset contains {total_rowcount} rows with an estimated size "
+                                    f"of {rest_estimated_size_kb} KB, but only {max_allowed_memory_kb:.0f} KB "
+                                    f"of memory is allowed fot the dataset. Please narrow down the query by adding filters "
+                                    f"or a LIMIT clause to reduce the result set size."
                                 )
-                                raise MemoryError("Not enought memory")
+                                logger.error(error_message)
+                                raise MemoryError(error_message)
                         # endregion
                     if len(batches) > 0:
                         response = _make_table_response(result=pandas.concat(batches, ignore_index=True), cursor=cur)

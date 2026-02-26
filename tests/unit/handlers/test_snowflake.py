@@ -149,14 +149,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         with self.assertRaises(ValueError):
             handler.connect()
 
-        # Test missing 'auth_type'
-        invalid_connection_args = self.dummy_connection_data.copy()
-        del invalid_connection_args["auth_type"]
-        handler = SnowflakeHandler("snowflake", connection_data=invalid_connection_args)
-        with self.assertRaises(ValueError) as context:
-            handler.connect()
-        self.assertIn("auth_type is required", str(context.exception))
-
     def test_map_type_handles_unknown_types(self):
         self.assertEqual(_map_type("BOOLEAN"), MYSQL_DATA_TYPE.BOOL)
         self.assertEqual(_map_type("VARIANT"), MYSQL_DATA_TYPE.VARCHAR)
@@ -409,7 +401,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             response = self.handler.native_query("SELECT * FROM big_table")
 
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
-        self.assertIn("Not enought memory", response.error_message)
+        self.assertIn("query result is too large", response.error_message)
 
     def test_key_pair_authentication_success(self):
         """

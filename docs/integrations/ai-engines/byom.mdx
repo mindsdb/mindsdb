@@ -149,7 +149,16 @@ The BYOM feature can be configured with the following environment variables:
 
 * `MINDSDB_BYOM_ENABLED`
 
-        This environment variable defines whether the BYOM feature is enabled (`MINDSDB_BYOM_ENABLED=true`) or disabled (`MINDSDB_BYOM_ENABLED=false`). Note that when running MindsDB locally, it is enabled by default.
+        This environment variable defines whether the BYOM feature is enabled (`MINDSDB_BYOM_ENABLED=true`) or disabled (`MINDSDB_BYOM_ENABLED=false`). Note that by default, it is disabled.
+
+        Alternatively, you can enable it in the MindsDB configuration file:
+        ```json
+        {
+          "byom": {
+            "enabled": true
+          }
+        }
+        ```
 
 * `MINDSDB_BYOM_DEFAULT_TYPE`
 

@@ -70,7 +70,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         # Initialize storage paths
         self.duckdb_path = os.path.join(self.persist_directory, "duckdb.db")
-        self.faiss_index_path = os.path.join(self.persist_directory, "faiss_index")
+        self.faiss_index_path = self.persist_directory
         self.connect()
 
         # check keyword index
@@ -129,11 +129,11 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         if self.faiss_index:
             self.faiss_index.drop()
 
-    def create_index(self, table_name: str, type: str = "ivf", nlist: int = 1024, train_count: int = 10000):
-        if type != "ivf":
-            raise NotImplementedError("Only ivf index is supported")
+    def create_index(self, table_name: str, type: str = "ivf_file", nlist: int = None, train_count: int = None):
+        if type not in ("ivf", "ivf_file"):
+            raise NotImplementedError("Only ivf or ivf_file indexes are supported")
 
-        self.faiss_index.create_index(nlist=nlist, train_count=train_count)
+        self.faiss_index.create_index(type, nlist=nlist, train_count=train_count)
 
     def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into both DuckDB and Faiss."""
@@ -421,7 +421,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
             self._sync()
 
     def get_dimension(self, table_name: str) -> int:
-        if self.faiss_index:
+        if self.faiss_index and self.faiss_index.index is not None:
             return self.faiss_index.dim
 
     def _sync(self):

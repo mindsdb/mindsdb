@@ -2,6 +2,7 @@ from typing import Any, Optional, List, Generator
 
 import pandas
 from pandas import DataFrame
+from pandas.api import types as pd_types
 from snowflake.sqlalchemy import snowdialect
 from snowflake import connector
 from snowflake.connector.errors import NotSupportedError
@@ -79,30 +80,82 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     return MYSQL_DATA_TYPE.VARCHAR
 
 
-def _get_columns(description: list[ResultMetadata]) -> list[Column]:
+def _get_columns(description: list[ResultMetadata], sample: pandas.DataFrame = None) -> list[Column]:
     """Get columns from Snowflake cursor description.
 
     Args:
         description (list[ResultMetadata]): cursor description metadata.
+        sample (pandas.DataFrame): data sample
 
     Returns:
         list[Column]: list of columns with mapped MySQL types.
     """
     result = []
     for column in description:
+        mysql_type = None
         sf_type_name = connector.constants.FIELD_ID_TO_NAME.get(column.type_code)
         if sf_type_name is None:
             logger.warning(f"Snowflake handler: unknown type code: {column.type_code}")
             mysql_type = MYSQL_DATA_TYPE.VARCHAR
-        else:
-            if sf_type_name == "FIXED":
-                if getattr(column, "scale", None) == 0:
-                    mysql_type = MYSQL_DATA_TYPE.INT
+
+        if sample is not None:
+            column_dtype = sample[column.name].dtype
+
+            if pd_types.is_integer_dtype(column_dtype):
+                column_dtype_name = column_dtype.name
+                if column_dtype_name in ("int8", "Int8"):
+                    mysql_type = MYSQL_DATA_TYPE.TINYINT
+                elif column_dtype in ("int16", "Int16"):
+                    mysql_type = MYSQL_DATA_TYPE.SMALLINT
+                elif column_dtype in ("int32", "Int32"):
+                    mysql_type = MYSQL_DATA_TYPE.MEDIUMINT
+                elif column_dtype in ("int64", "Int64"):
+                    mysql_type = MYSQL_DATA_TYPE.BIGINT
                 else:
-                    # It is NUMBER, DECIMAL or NUMERIC with scale > 0
+                    mysql_type = MYSQL_DATA_TYPE.INT
+
+            elif pd_types.is_float_dtype(column_dtype):
+                column_dtype_name = column_dtype.name
+                if column_dtype_name in ("float16", "Float16"):  # Float16 does not exists so far
                     mysql_type = MYSQL_DATA_TYPE.FLOAT
-            else:
-                mysql_type = _map_type(sf_type_name)
+                elif column_dtype_name in ("float32", "Float32"):
+                    mysql_type = MYSQL_DATA_TYPE.FLOAT
+                elif column_dtype_name in ("float64", "Float64"):
+                    mysql_type = MYSQL_DATA_TYPE.DOUBLE
+                else:
+                    mysql_type = MYSQL_DATA_TYPE.FLOAT
+
+            elif pd_types.is_bool_dtype(column_dtype):
+                mysql_type = MYSQL_DATA_TYPE.BOOLEAN
+
+            elif pd_types.is_datetime64_any_dtype(column_dtype):
+                mysql_type = MYSQL_DATA_TYPE.DATETIME
+                series = sample[column.name]
+                # snowflake use pytz.timezone
+                if series.dt.tz is not None and getattr(series.dt.tz, "zone", "UTC") != "UTC":
+                    series = series.dt.tz_convert("UTC")
+                    sample[column.name] = series.dt.tz_localize(None)
+
+            elif pd_types.is_object_dtype(column_dtype):
+                if sf_type_name == "TEXT":
+                    # we can also check column.internal_size, if == 16777216 then it is TEXT, else VARCHAR(internal_size)
+                    mysql_type = MYSQL_DATA_TYPE.TEXT
+                elif sf_type_name == "BINARY":
+                    # if column.internal_size == 8388608 then BINARY, else VARBINARY(internal_size)
+                    mysql_type = MYSQL_DATA_TYPE.BINARY
+                elif sf_type_name == "DATE":
+                    mysql_type = MYSQL_DATA_TYPE.DATE
+                elif sf_type_name == "TIME":
+                    mysql_type = MYSQL_DATA_TYPE.TIME
+                elif sf_type_name == "FIXED":
+                    if getattr(column, "scale", None) == 0:
+                        mysql_type = MYSQL_DATA_TYPE.INT
+                    else:
+                        # It is NUMBER, DECIMAL or NUMERIC with scale > 0
+                        mysql_type = MYSQL_DATA_TYPE.FLOAT
+
+        if mysql_type is None:
+            mysql_type = _map_type(sf_type_name)
 
         result.append(Column(name=column.name, type=mysql_type, original_type=sf_type_name))
     return result
@@ -257,8 +310,12 @@ class SnowflakeHandler(MetaDatabaseHandler):
                     except ValueError:
                         # duplicated columns raises ValueError
                         raise NotSupportedError()
-                    columns = _get_columns(cursor.description)
-                    yield TableResponse(affected_rows=cursor.rowcount, columns=columns)
+                    try:
+                        sample_df = next(batches_iter)
+                    except StopIteration:
+                        sample_df = None
+                    columns = _get_columns(cursor.description, sample=sample_df)
+                    yield TableResponse(data=sample_df, affected_rows=cursor.rowcount, columns=columns)
                     for batch_df in batches_iter:
                         yield batch_df
                 except NotSupportedError:

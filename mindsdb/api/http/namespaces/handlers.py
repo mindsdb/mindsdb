@@ -127,12 +127,18 @@ class HandlerReadme(Resource):
             logger.warning(error_message)
             return make_response(error_message=error_message)
 
-        try:
-            readme_path = _resolve_handler_readme_path(handler_folder)
-        except ValueError as exc:
-            error_message = str(exc)
-            logger.warning(error_message)
-            return make_response(error_message=error_message)
+        # Community handlers have their path set after fetching; use it directly.
+        # Built-in handlers resolve through the package tree.
+        handler_path = handler_meta.get("path")
+        if handler_path is not None:
+            readme_path = Path(handler_path) / "README.md"
+        else:
+            try:
+                readme_path = _resolve_handler_readme_path(handler_folder)
+            except ValueError as exc:
+                error_message = str(exc)
+                logger.warning(error_message)
+                return make_response(error_message=error_message)
 
         try:
             with open(readme_path, "r", encoding="utf-8") as readme_file:

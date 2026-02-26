@@ -8,6 +8,7 @@ Environment variables:
     GITHUB_TOKEN               Optional PAT for higher rate limits (5000 req/hr vs 60)
 """
 
+import base64
 import json
 import os
 import shutil
@@ -26,7 +27,6 @@ _DEFAULT_REPO = "mindsdb/mindsdb-community-handlers"
 _DEFAULT_BRANCH = "main"
 _DEFAULT_PATH_PREFIX = "community_handlers"
 
-# Per-handler locks prevent concurrent duplicate fetches of the same handler
 _fetch_locks: dict = {}
 _fetch_locks_lock = threading.Lock()
 
@@ -59,8 +59,7 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
     Fetch a single community handler directory from GitHub into storage_dir.
 
     Downloads only the files for the specific requested handler using the
-    GitHub Contents API. Subsequent calls for the same handler are no-ops
-    (the directory already exists on disk).
+    GitHub Contents API.
 
     Args:
         handler_dir_name: The directory name of the handler (e.g. "github_handler")
@@ -77,7 +76,6 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
     with lock:
         dest_dir = storage_dir / handler_dir_name
 
-        # Idempotent: already fetched
         if dest_dir.is_dir() and (dest_dir / "__init__.py").exists():
             logger.debug(
                 "Community handler '%s' already on disk at %s",
@@ -132,7 +130,6 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
             )
             return None
 
-        # Download into a temp directory first, then atomically rename to dest_dir
         tmp_dir = storage_dir / f".tmp_{handler_dir_name}"
         if tmp_dir.exists():
             shutil.rmtree(tmp_dir)
@@ -141,7 +138,6 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
         try:
             for entry in file_entries:
                 if entry.get("type") != "file":
-                    # Skip subdirectories (uncommon in handlers but possible)
                     continue
                 file_name = entry["name"]
                 download_url = entry.get("download_url")
@@ -167,7 +163,6 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
             tmp_dir.rename(dest_dir)
 
         except Exception:
-            # Clean up temp dir on any failure to avoid leaving partial state
             if tmp_dir.exists():
                 shutil.rmtree(tmp_dir)
             raise
@@ -179,8 +174,63 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
         return dest_dir
 
 
+def community_handlers_enabled() -> bool:
+    """Returns True if community handlers are enabled via env var.
+
+    Set MINDSDB_COMMUNITY_HANDLERS=true to opt in.
+    Community handlers are disabled by default.
+    """
+    val = os.environ.get("MINDSDB_COMMUNITY_HANDLERS", "false").lower()
+    return val in ("1", "true", "yes", "enabled")
+
+
 def get_community_handlers_storage_dir(storage_root: Path) -> Path:
     """Returns (and creates if needed) the community handlers storage directory."""
     community_dir = storage_root / "community_handlers"
     community_dir.mkdir(parents=True, exist_ok=True)
     return community_dir
+
+
+def list_available_handlers(storage_dir: Path) -> list:
+    """
+    Return handler metadata from the community index.json.
+
+    Fetches a fresh copy from GitHub and caches it locally. Falls back to
+    the cached copy if the network call fails. Returns [] if neither is
+    available.
+
+    Each dict has keys: name, title, folder, type, support_level,
+    icon_path, description.
+    """
+    cache_path = storage_dir / "index.json"
+    repo, branch, _ = _get_repo_config()
+    api_url = f"{_GITHUB_API_BASE}/repos/{repo}/contents/index.json"
+    params = {"ref": branch}
+
+    try:
+        resp = requests.get(
+            api_url, params=params, headers=_github_headers(), timeout=30
+        )
+        if resp.status_code == 200:
+            entry = resp.json()
+            raw = base64.b64decode(entry["content"]).decode("utf-8")
+            data = json.loads(raw)
+            cache_path.write_text(raw, encoding="utf-8")
+            return data.get("handlers", [])
+        logger.warning(
+            "Could not fetch community index: HTTP %s", resp.status_code
+        )
+    except Exception as e:
+        logger.warning("Could not fetch community handlers index: %s", e)
+
+    # Fallback: read from disk cache
+    if cache_path.exists():
+        try:
+            data = json.loads(cache_path.read_text(encoding="utf-8"))
+            return data.get("handlers", [])
+        except Exception as e:
+            logger.warning(
+                "Could not read cached community handlers index: %s", e
+            )
+
+    return []

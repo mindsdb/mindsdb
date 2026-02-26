@@ -41,15 +41,13 @@ import mindsdb.utilities.profiler as profiler
 from mindsdb.interfaces.database.data_handlers_cache import HandlersCache
 
 from mindsdb.integrations.utilities.community_handler_fetcher import (
+    community_handlers_enabled,
     fetch_handler,
     get_community_handlers_storage_dir,
     list_available_handlers,
 )
 
 logger = log.getLogger(__name__)
-
-COMMUNITY_HANDLERS_URL = "https://github.com/mindsdb/mindsdb-community-handlers.git"
-
 
 class IntegrationController:
     @staticmethod
@@ -717,6 +715,10 @@ class IntegrationController:
                 continue
             self._register_handler_dir(handler_dir, is_community=False)
 
+        if not community_handlers_enabled():
+            logger.debug("Community handlers disabled (set MINDSDB_COMMUNITY_HANDLERS=true to enable)")
+            return
+
         # 2. Community handlers already fetched in a previous session (on disk)
         try:
             for handler_dir in self.community_handlers_dir.iterdir():
@@ -747,6 +749,7 @@ class IntegrationController:
                     },
                     "name": handler_name,
                     "title": entry.get("title", handler_name),
+                    "description": entry.get("description", ""),
                     "permanent": False,
                     "connection_args": None,
                     "class_type": None,
@@ -929,13 +932,10 @@ class IntegrationController:
             handler_dir = handler_meta["path"]
 
             # Community handlers live outside the mindsdb package tree.
-            # They need spec_from_file_location so relative imports inside
-            # the handler (e.g. "from .github_handler import GithubHandler") work.
+            # They need spec_from_file_location so relative imports inside the handler.
             if handler_meta.get("community") and handler_dir is not None:
                 handler_folder_name = str(handler_dir.name)
                 try:
-                    # Ensure a parent package is registered in sys.modules so
-                    # intra-handler relative imports resolve correctly.
                     parent_pkg = "mindsdb_community_handlers"
                     if parent_pkg not in sys.modules:
                         parent_mod = types.ModuleType(parent_pkg)
@@ -1047,13 +1047,9 @@ class IntegrationController:
         # returns metadata and tries to import it
         handler_meta = self.handlers_import_status.get(handler_name)
         if handler_meta is None:
-            # On-demand fetch: attempt to pull this specific handler from the
-            # community repo. Stub-only entries (from the index) still have
-            # path=None so the fetch is needed before the import can run.
-            handler_meta = self._fetch_community_handler(handler_name)
-        if handler_meta is None:
             return None
-        # Stub from the index: needs to be fetched before it can be imported
+        # Stub from the index: path=None means the handler hasn't been
+        # fetched yet — download it on demand from the community repo.
         if handler_meta.get("community") and handler_meta["path"] is None:
             handler_meta = self._fetch_community_handler(handler_name)
         if handler_meta is None:

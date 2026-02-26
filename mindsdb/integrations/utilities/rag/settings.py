@@ -696,7 +696,7 @@ class RerankerMode(str, Enum):
 
 class RerankerConfig(BaseModel):
     model: str = DEFAULT_RERANKING_MODEL
-    base_url: str = DEFAULT_LLM_ENDPOINT
+    base_url: Optional[str] = None
     filtering_threshold: float = 0.5
     num_docs_to_keep: Optional[int] = None
     mode: RerankerMode = Field(

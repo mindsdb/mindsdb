@@ -149,6 +149,7 @@ class PidFileLock:
         try:
             if sys.platform == "win32":
                 import msvcrt
+
                 # NOTE if file is locked, LK_LOCK will raise OSError after 10 seconds, LK_NBLCK immediately
                 mode = msvcrt.LK_LOCK if self._blocking else msvcrt.LK_NBLCK
                 self._fh.seek(0)

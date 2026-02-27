@@ -118,13 +118,13 @@ Here is a step-by-step guide:
     The `native_query()` method runs commands of the native API syntax.
 
     ```py
-    def native_query(self, query: Any) -> HandlerResponse:
+    def native_query(self, query: Any) -> TableResponse | OkResponse | ErrorResponse:
         """Receive raw query and act upon it somehow.
         Args:
             query (Any): query in native format (str for sql databases,
                 api's json etc)
         Returns:
-            HandlerResponse
+            TableResponse | OkResponse | ErrorResponse
         """
     ```
 

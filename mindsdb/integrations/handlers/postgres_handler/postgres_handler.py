@@ -1,7 +1,7 @@
 import time
 import json
 import logging
-from typing import Optional, Any
+from typing import Optional, Any, Generator
 
 import pandas as pd
 from pandas import DataFrame
@@ -10,19 +10,25 @@ from psycopg import Column as PGColumn, Cursor
 from psycopg.postgres import TypeInfo, types as pg_types
 from psycopg.pq import ExecStatus
 
-from mindsdb_sql_parser import parse_sql
-from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser import parse_sql, Select
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.base import MetaDatabaseHandler
+import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.types.column import Column
 from mindsdb.utilities import log
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
+    TableResponse,
+    OkResponse,
+    ErrorResponse,
+    DataHandlerResponse,
 )
-import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+from mindsdb.utilities.config import config as mindsdb_config
 
 logger = log.getLogger(__name__)
 
@@ -70,15 +76,14 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     return fallback_type
 
 
-def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
-    """Build response from result and cursor.
+def _get_columns(cursor: Cursor) -> list[Column]:
+    """Get columns from cursor.
 
     Args:
-        result (list[tuple[Any]]): result of the query.
         cursor (psycopg.Cursor): cursor object.
 
     Returns:
-        Response: response object.
+        List of columns
     """
     description: list[PGColumn] = cursor.description
     mysql_types: list[MYSQL_DATA_TYPE] = []
@@ -108,11 +113,9 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
         mysql_type = _map_type(regtype)
         mysql_types.append(mysql_type)
 
-    # region cast int and bool to nullable types
-    serieses = []
-    for i, mysql_type in enumerate(mysql_types):
-        expected_dtype = None
-        if mysql_type in (
+    result = []
+    for i, column in enumerate(cursor.description):
+        if mysql_types[i] in (
             MYSQL_DATA_TYPE.SMALLINT,
             MYSQL_DATA_TYPE.INT,
             MYSQL_DATA_TYPE.MEDIUMINT,
@@ -120,13 +123,30 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             MYSQL_DATA_TYPE.TINYINT,
         ):
             expected_dtype = "Int64"
-        elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
+        elif mysql_types[i] in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
             expected_dtype = "boolean"
-        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i].name))
-    df = pd.concat(serieses, axis=1, copy=False)
-    # endregion
+        else:
+            expected_dtype = None
+        result.append(
+            Column(name=column.name, type=mysql_types[i], original_type=column.type_display, dtype=expected_dtype)
+        )
+    return result
 
-    return Response(RESPONSE_TYPE.TABLE, data_frame=df, affected_rows=cursor.rowcount, mysql_types=mysql_types)
+
+def _make_df(result: list[tuple[Any]], columns: list[Column]) -> pd.DataFrame:
+    """Make pandas DataFrame from result and columns.
+
+    Args:
+        result (list[tuple[Any]]): result of the query.
+        columns (list[Column]): list of columns.
+
+    Returns:
+        pd.DataFrame: pandas DataFrame.
+    """
+    serieses = []
+    for i, column in enumerate(columns):
+        serieses.append(pd.Series([row[i] for row in result], dtype=column.dtype, name=column.name))
+    return pd.concat(serieses, axis=1, copy=False)
 
 
 class PostgresHandler(MetaDatabaseHandler):
@@ -135,6 +155,7 @@ class PostgresHandler(MetaDatabaseHandler):
     """
 
     name = "postgres"
+    stream_response = True
 
     @profiler.profile("init_pg_handler")
     def __init__(self, name=None, **kwargs):
@@ -282,19 +303,49 @@ class PostgresHandler(MetaDatabaseHandler):
                         logger.error(f"Error casting column {col.name} to {types_map[pg_type_info.name]}: {e}")
         df.columns = columns
 
-    @profiler.profile()
-    def native_query(self, query: str, params=None, **kwargs) -> Response:
-        """
-        Executes a SQL query on the PostgreSQL database and returns the result.
+    def native_query(
+        self, query: str, params=None, stream: bool = True, **kwargs
+    ) -> TableResponse | OkResponse | ErrorResponse:
+        """Executes a SQL query on the PostgreSQL database and returns the result.
+        NOTE: 'INSERT' (and may be some else) queries can not be executed on the server side,
+        but there are fallbackto client side execution.
 
         Args:
             query (str): The SQL query to be executed.
+            params (list): The parameters to be passed to the query.
+            stream (bool): Whether to stream the results of the query.
+            **kwargs: Additional keyword arguments.
 
         Returns:
-            Response: A response object containing the result of the query or an error message.
+            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
         """
-        need_to_close = not self.is_connected
+        if stream is False:
+            response = self._execute_client_side(query, params, **kwargs)
+        elif params is not None:
+            logger.info("Server side cursor does not support 'fetchmany', executing with client side cursor")
+            response = self._execute_client_side(query, params, **kwargs)
+        else:
+            generator = self._execute_server_side(query, **kwargs)
+            try:
+                response: TableResponse = next(generator)
+                response.data_generator = generator
+            except StopIteration as e:
+                response = e.value
+                if isinstance(response, DataHandlerResponse) is False:
+                    raise
+        return response
 
+    def _execute_client_side(self, query: str, params=None, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
+        """Executes a SQL query on the PostgreSQL database and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+            params (list): The parameters to be passed to the query.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
+        """
         connection = self.connect()
         with connection.cursor() as cur:
             try:
@@ -303,66 +354,86 @@ class PostgresHandler(MetaDatabaseHandler):
                 else:
                     cur.execute(query)
                 if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
+                    response = OkResponse(affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
-                    response = _make_table_response(result, cur)
+                    columns: list[Column] = _get_columns(cur)
+                    response = TableResponse(
+                        affected_rows=cur.rowcount, columns=columns, data=_make_df(result, columns)
+                    )
                 connection.commit()
-            except (psycopg.ProgrammingError, psycopg.DataError) as e:
-                # These is 'expected' exceptions, they should not be treated as mindsdb's errors
-                # ProgrammingError: table not found or already exists, syntax error, etc
-                # DataError: division by zero, numeric value out of range, etc.
-                # https://www.psycopg.org/psycopg3/docs/api/errors.html
-                log_message = "Database query failed with error, likely due to invalid SQL query"
-                if logger.isEnabledFor(logging.DEBUG):
-                    log_message += f". Executed query:\n{query}"
-                logger.info(log_message)
-                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_expected_error=True)
-                connection.rollback()
             except Exception as e:
-                logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
-                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
-                connection.rollback()
-
-        if need_to_close:
-            self.disconnect()
+                response = self._handle_query_exception(e, query, connection)
 
         return response
 
-    def query_stream(self, query: ASTNode, fetch_size: int = 1000):
+    def _execute_server_side(
+        self, query: str, **kwargs
+    ) -> Generator[TableResponse | pd.DataFrame, None, OkResponse | ErrorResponse]:
+        """Execute a SQL query on the PostgreSQL database and return a generator of data frames.
+
+        Args:
+            query (str): The SQL query to be executed.
+            params (list): The parameters to be passed to the query.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            Generator[TableResponse | pd.DataFrame, None, OkResponse | ErrorResponse]: Generator of data frames.
         """
-        Executes a SQL query and stream results outside by batches
-
-        :param query: An ASTNode representing the SQL query to be executed.
-        :param fetch_size: size of the batch
-        :return: generator with query results
-        """
-        query_str, params = self.renderer.get_exec_params(query, with_failback=True)
-
-        need_to_close = not self.is_connected
-
         connection = self.connect()
-        with connection.cursor() as cur:
+        with connection.cursor(name=f"mindsdb_{id(self)}") as cursor:
             try:
-                if params is not None:
-                    cur.executemany(query_str, params)
-                else:
-                    cur.execute(query_str)
+                try:
+                    cursor.execute(query)
+                except psycopg.errors.SyntaxError as e:
+                    # NOTE: INSERT queries cannot be executed server-side. When they fail, they produce a syntax error
+                    # that always starts with the text below, regardless of the INSERT query format.
+                    lower_e = str(e).lower()
+                    if not lower_e.startswith('syntax error at or near "insert"') and not lower_e.startswith(
+                        'syntax error at or near "drop"'
+                    ):
+                        raise
+                    connection.rollback()
+                    return self._execute_client_side(query=query)
 
-                if cur.pgresult is not None and ExecStatus(cur.pgresult.status) != ExecStatus.COMMAND_OK:
-                    while True:
-                        result = cur.fetchmany(fetch_size)
-                        if not result:
-                            break
-                        df = DataFrame(result, columns=[x.name for x in cur.description])
-                        self._cast_dtypes(df, cur.description)
-                        yield df
+                if cursor.description is None:
+                    connection.commit()
+                    return OkResponse(affected_rows=cursor.rowcount)
+
+                columns: list[Column] = _get_columns(cursor)
+                yield TableResponse(affected_rows=cursor.rowcount, columns=columns)
+                while result := cursor.fetchmany(size=mindsdb_config["data_stream"]["fetch_size"]):
+                    yield _make_df(result, columns)
                 connection.commit()
-            finally:
-                connection.rollback()
+            except Exception as e:
+                return self._handle_query_exception(e, query, connection)
 
-        if need_to_close:
-            self.disconnect()
+    def _handle_query_exception(self, e: Exception, query: str, connection) -> ErrorResponse:
+        """Handle query execution errors with appropriate logging and rollback.
+
+        Args:
+            e: The exception that was raised
+            query: The SQL query that failed
+            connection: The database connection to rollback
+
+        Returns:
+            ErrorResponse with appropriate error details
+        """
+        if isinstance(e, (psycopg.ProgrammingError, psycopg.DataError)):
+            # These are 'expected' exceptions, they should not be treated as mindsdb's errors
+            # ProgrammingError: table not found or already exists, syntax error, etc
+            # DataError: division by zero, numeric value out of range, etc.
+            # https://www.psycopg.org/psycopg3/docs/api/errors.html
+            log_message = "Database query failed with error, likely due to invalid SQL query"
+            if logger.isEnabledFor(logging.DEBUG):
+                log_message += f". Executed query:\n{query}"
+            logger.info(log_message)
+            connection.rollback()
+            return ErrorResponse(error_code=0, error_message=str(e), is_expected_error=True)
+        else:
+            logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
+            connection.rollback()
+            return ErrorResponse(error_code=0, error_message=str(e))
 
     def insert(self, table_name: str, df: pd.DataFrame) -> Response:
         need_to_close = not self.is_connected
@@ -413,7 +484,8 @@ class PostgresHandler(MetaDatabaseHandler):
         """
         query_str, params = self.renderer.get_exec_params(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str, params)
+        support_stream = isinstance(query, Select)
+        return self.native_query(query_str, params, stream=support_stream)
 
     def get_tables(self, all: bool = False) -> Response:
         """

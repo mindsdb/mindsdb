@@ -16,7 +16,7 @@ from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
+    TableResponse,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE,
 )
@@ -157,7 +157,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_get_tables(self):
         """
-        Test that the `get_tables` method returns a list of tables mapped from the Salesforce API.
+        Test that the `get_tables` method returns a TableResponse with a list of tables mapped from the Salesforce API.
         """
         mock_tables = ["Account", "Contact"]
         self.mock_connect.return_value = MagicMock(
@@ -168,7 +168,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.handler.connect()
         response = self.handler.get_tables()
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -177,7 +177,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_get_columns(self):
         """
-        Test that the `get_columns` method returns a list of columns for a given table.
+        Test that the `get_columns` method returns a TableResponse with a list of columns for a given table.
         """
         mock_columns = ["Id", "Name", "Email"]
         mock_table = "Contact"
@@ -203,7 +203,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.handler.connect()
         response = self.handler.get_columns(mock_table)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -435,7 +435,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         with patch(
             "mindsdb.integrations.handlers.salesforce_handler.salesforce_handler.MetaAPIHandler.meta_get_tables",
-            return_value=Response(RESPONSE_TYPE.TABLE, None),
+            return_value=TableResponse(),
         ) as mock_meta:
             response = self.handler.meta_get_tables(table_names=["contact"])
 

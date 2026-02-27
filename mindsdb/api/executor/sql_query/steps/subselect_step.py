@@ -15,7 +15,8 @@ from mindsdb_sql_parser.ast import (
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import SubSelectStep, QueryStep
-from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
+from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.utilities.types.column import Column
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.executor.exceptions import KeyColumnDoesNotExist
 from mindsdb.integrations.utilities.query_traversal import query_traversal

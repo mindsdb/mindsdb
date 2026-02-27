@@ -1,9 +1,9 @@
-from typing import List, Optional, Iterable
 import pickle
 import datetime as dt
+from typing import List, Optional, Iterable
 
-from sqlalchemy.orm.attributes import flag_modified
 import pandas as pd
+from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser import Select, Star, OrderBy
 
@@ -17,7 +17,6 @@ from mindsdb_sql_parser.ast import (
 )
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.cache import get_cache
-
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import config
@@ -70,14 +69,14 @@ class RunningQuery:
         :param query: AST query to execute
         :return: generator with query results
         """
-        if hasattr(dn, "has_support_stream") and dn.has_support_stream():
+        if dn.has_support_stream():
             query2 = self.get_partition_query(step_call.current_step_num, query, stream=True)
 
-            for df in dn.query_stream(query2, fetch_size=self.batch_size):
+            response = dn.query(query=query2, session=step_call.session)
+            for df in response.iterate_no_save():
                 max_track_value = self.get_max_track_value(df)
                 yield df
                 self.set_progress(max_track_value=max_track_value)
-
         else:
             while True:
                 query2 = self.get_partition_query(step_call.current_step_num, query, stream=False)
@@ -457,7 +456,7 @@ class QueryContextController:
 
                 idx = None
                 for i, col in enumerate(columns_info):
-                    if col["name"].upper() == info["column_name"].upper():
+                    if col.name.upper() == info["column_name"].upper():
                         idx = i
                         break
 

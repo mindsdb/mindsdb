@@ -3,7 +3,7 @@ from mindsdb_sql_parser.exceptions import ParsingException
 from mindsdb_sql_parser.ast.base import ASTNode
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor.sql_query import SQLQuery
-from mindsdb.api.executor.sql_query.result_set import Column
+from mindsdb.utilities.types.column import Column
 from mindsdb.api.executor.planner import utils as planner_utils
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.command_executor import ExecuteCommands

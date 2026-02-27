@@ -35,13 +35,18 @@ def clear_filename(filename: str) -> str:
 
 def _split_url(url: str) -> tuple[str, str]:
     """
-    Splits the URL into scheme and netloc.
+    Splits the URL into scheme and host (hostname:port).
+
+    Uses ``parsed_url.hostname`` instead of ``parsed_url.netloc`` so that
+    any userinfo component (e.g. ``user@``) is stripped.  This prevents
+    SSRF bypasses such as ``http://attacker@127.0.0.1`` from evading
+    blocklist checks.
 
     Args:
         url (str): The URL to split.
 
     Returns:
-        tuple[str, str]: The scheme and netloc of the URL.
+        tuple[str, str]: The scheme and host of the URL.
 
     Raises:
         ValueError: If the URL does not include protocol and host name.
@@ -49,14 +54,22 @@ def _split_url(url: str) -> tuple[str, str]:
     parsed_url = urlparse(url)
     if not (parsed_url.scheme and parsed_url.netloc):
         raise ValueError(f"URL must include protocol and host name: {url}")
-    return parsed_url.scheme.lower(), parsed_url.netloc.lower()
+    hostname = parsed_url.hostname or ""
+    port = parsed_url.port
+    if ":" in hostname and port:
+        host = f"[{hostname}]:{port}"
+    elif port:
+        host = f"{hostname}:{port}"
+    else:
+        host = hostname
+    return parsed_url.scheme.lower(), host.lower()
 
 
 def validate_urls(urls: str | list[str], allowed_urls: list[str], disallowed_urls: list[str] | None = None) -> bool:
     """
     Checks if the provided URL(s) is/are from an allowed host.
 
-    This function parses the URL(s) and checks the origin (scheme + netloc)
+    This function parses the URL(s) and checks the origin (scheme + host)
     against a list of allowed hosts.
 
     Examples:

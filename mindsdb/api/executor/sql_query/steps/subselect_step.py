@@ -183,6 +183,8 @@ class QueryStepCall(BaseStepCall):
                         "version for the right syntax to use near '$$' at line 1"
                     )
 
+                key, column_quoted = (), False
+
                 match node.parts, node.is_quoted:
                     case [column_name], [column_quoted]:
                         if column_name in aliases:

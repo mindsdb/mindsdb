@@ -1,8 +1,11 @@
 import time
+import csv
+import json
 from http import HTTPStatus
 from collections import defaultdict
+from io import StringIO
 
-from flask import request
+from flask import request, Response
 from flask_restx import Resource
 
 from mindsdb_sql_parser import parse_sql
@@ -44,6 +47,8 @@ class Query(Resource):
         start_time = time.time()
         query = request.json["query"]
         context = request.json.get("context", {})
+        params = request.json.get("params", {})
+
         if "params" in request.json:
             ctx.params = request.json["params"]
         if isinstance(query, str) is False or isinstance(context, dict) is False:
@@ -63,7 +68,7 @@ class Query(Resource):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
             try:
-                result: SQLAnswer = mysql_proxy.process_query(query)
+                result: SQLAnswer = mysql_proxy.process_query(query, params=params)
                 query_response: dict = result.dump_http_response()
             except ExecutorException as e:
                 # classified error
@@ -397,3 +402,156 @@ class ListDatabases(Resource):
             }
 
         return listing_query_response, 200
+
+
+def _convert_result_to_copy_format(
+    result: SQLAnswer, format_type: str = "csv"
+) -> str:
+    """
+    Convert SQL query result to a copy-friendly format.
+
+    Args:
+        result: SQLAnswer object containing the query result
+        format_type: Format type - 'csv', 'tsv', or 'tab' (default: 'csv')
+
+    Returns:
+        str: Formatted string ready to be copied to clipboard
+    """
+    if result.type not in (
+        SQL_RESPONSE_TYPE.TABLE,
+        SQL_RESPONSE_TYPE.COLUMNS_TABLE,
+    ):
+        msg = "Result must be a table type to convert to copy format"
+        raise ValueError(msg)
+
+    if result.result_set is None:
+        return ""
+
+    column_names = [
+        column.alias or column.name or "" for column in result.result_set.columns
+    ]
+
+    data = result.result_set.to_lists(json_types=True)
+
+    def _serialize_value(value):
+        """Serialize a value for CSV/TSV output."""
+        if value is None:
+            return ""
+        if isinstance(value, (list, dict)):
+            try:
+                return json.dumps(value, ensure_ascii=False)
+            except (TypeError, ValueError):
+                return str(value)
+        if isinstance(value, bool):
+            return str(value).lower()
+        return str(value)
+
+    if format_type.lower() in ("tsv", "tab"):
+        def _escape_tsv_value(value):
+            """Escape tabs and newlines in TSV values."""
+            if isinstance(value, str):
+                return (
+                    value
+                    .replace("\t", " ")
+                    .replace("\n", " ")
+                    .replace("\r", " ")
+                )
+            return str(value)
+
+        serialized_data = [
+            [_escape_tsv_value(_serialize_value(item)) for item in row]
+            for row in data
+        ]
+        escaped_column_names = (
+            [_escape_tsv_value(name) for name in column_names]
+        )
+        all_rows = [escaped_column_names] + serialized_data
+        return "\n".join(["\t".join(row) for row in all_rows])
+    else:
+        output = StringIO()
+        writer = csv.writer(output, dialect="excel")
+        writer.writerow(column_names)
+        for row in data:
+            writer.writerow([_serialize_value(item) for item in row])
+        return output.getvalue()
+
+
+@ns_conf.route("/query/copy")
+@ns_conf.param("query", "Execute query and return results in copy-friendly format")
+class QueryCopy(Resource):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @ns_conf.doc("query_copy")
+    @api_endpoint_metrics("POST", "/sql/query/copy")
+    @mark_process(name="http_query_copy")
+    def post(self):
+        """
+        Execute a SQL query and return results in a copy-friendly format (CSV or TSV).
+        This endpoint is designed to be used by the frontend to enable copy-to-clipboard functionality.
+        
+        Request body:
+        - query: SQL query string
+        - context: Optional context dictionary
+        - params: Optional parameters dictionary
+        - format: Optional format type - 'csv' (default) or 'tsv'/'tab'
+        
+        Returns:
+        - text/plain response with formatted data ready for clipboard
+        """
+        query = request.json.get("query")
+        context = request.json.get("context", {})
+        params = request.json.get("params", {})
+        format_type = request.json.get("format", "csv").lower()
+
+        if not isinstance(query, str):
+            return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", 'Please provide "query" with the request.')
+        
+        if format_type not in ("csv", "tsv", "tab"):
+            return http_error(HTTPStatus.BAD_REQUEST, "Invalid format", 'Format must be "csv", "tsv", or "tab".')
+        
+        logger.debug(f"Incoming copy query: {query}")
+
+        try:
+            mysql_proxy = FakeMysqlProxy()
+            mysql_proxy.set_context(context)
+            result: SQLAnswer = mysql_proxy.process_query(query, params=params)
+            
+            if result.type == SQL_RESPONSE_TYPE.ERROR:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    f"Query Error {result.error_code or 0}",
+                    result.error_message or "Unknown error"
+                )
+            
+            if result.type not in (SQL_RESPONSE_TYPE.TABLE, SQL_RESPONSE_TYPE.COLUMNS_TABLE):
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    "Invalid result type",
+                    "Query must return table data to copy. Non-SELECT queries cannot be copied."
+                )
+            
+            # Convert to copy-friendly format
+            copy_text = _convert_result_to_copy_format(result, format_type)
+            
+            # Return as plain text
+            return Response(
+                copy_text,
+                mimetype="text/plain",
+                headers={
+                    "Content-Disposition": f"inline; filename=query_result.{format_type if format_type != 'tab' else 'tsv'}"
+                }
+            )
+            
+        except ExecutorException as e:
+            logger.warning(f"Error query processing: {e}")
+            return http_error(HTTPStatus.BAD_REQUEST, "Query Error", str(e))
+        except QueryError as e:
+            logger.warning(f"Query failed: {e}")
+            return http_error(HTTPStatus.BAD_REQUEST, "Query Error", str(e))
+        except UnknownError as e:
+            logger.exception("Error query processing:")
+            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Internal Error", str(e))
+        except Exception as e:
+            logger.exception("Error query processing:")
+            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Internal Error", str(e))

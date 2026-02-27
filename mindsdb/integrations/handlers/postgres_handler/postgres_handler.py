@@ -545,7 +545,7 @@ class PostgresHandler(MetaDatabaseHandler):
         def process_event(event):
             try:
                 row = json.loads(event.payload)
-            except json.JSONDecoder:
+            except json.JSONDecodeError:
                 return
 
             # check column in input data

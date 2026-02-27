@@ -17,7 +17,7 @@ from pandas.api import types as pd_types
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler, _map_type
-from mindsdb.integrations.libs.response import DataHandlerResponse as Response, RESPONSE_TYPE, TableResponse
+from mindsdb.integrations.libs.response import DataHandlerResponse as Response, RESPONSE_TYPE, TableResponse, OkResponse, ErrorResponse
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
@@ -122,8 +122,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         data = self.handler.native_query(query_str, stream=True)
         mock_cursor_server.execute.assert_called_once_with(query_str)
         mock_cursor_client.execute.assert_called_once_with(query_str)
-        assert isinstance(data, Response)
-        self.assertEqual(data.type, RESPONSE_TYPE.OK)
+        assert isinstance(data, OkResponse)
         self.assertEqual(data.affected_rows, 1)
 
     def test_native_query_command_ok_no_stream(self):
@@ -151,8 +150,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         data = self.handler.native_query(query_str, stream=False)
         # mock_cursor_server.execute.assert_called_once_with(query_str)
         mock_cursor_client.execute.assert_called_once_with(query_str)
-        assert isinstance(data, Response)
-        self.assertEqual(data.type, RESPONSE_TYPE.OK)
+        assert isinstance(data, OkResponse)
         self.assertEqual(data.affected_rows, 1)
 
     def test_native_query_with_results_client_side(self):
@@ -243,8 +241,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         params = [(1, "a"), (2, "b")]
         data = self.handler.native_query(query_str, params=params)
         mock_cursor.executemany.assert_called_once_with(query_str, params)
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
+        assert isinstance(data, OkResponse)
 
     def test_native_query_error(self):
         """
@@ -266,8 +263,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         mock_cursor.execute.assert_called_once_with(query_str)
 
-        assert isinstance(data, Response)
-        self.assertEqual(data.type, RESPONSE_TYPE.ERROR)
+        assert isinstance(data, ErrorResponse)
 
         # The handler implementation sets error_code to 0, check error_message instead
         self.assertEqual(data.error_code, 0)
@@ -344,9 +340,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
         self.handler.disconnect = MagicMock()
         self.handler.get_columns = MagicMock(
-            return_value=Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame({"COLUMN_NAME": ["Id", "Amount"]}),
+            return_value=TableResponse(
+                data=pd.DataFrame({"COLUMN_NAME": ["Id", "Amount"]}),
             )
         )
 
@@ -675,7 +670,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.VARCHAR,
             MYSQL_DATA_TYPE.VARCHAR,
         ]
-        response: Response = self.handler.native_query(query_str, stream=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
 
         for column, mysql_type in zip(response.columns, excepted_mysql_types):
             self.assertEqual(column.type, mysql_type)
@@ -691,7 +686,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.fetchall.return_value = input_rows
         mock_cursor.description = [ColumnDescription(name="t_boolean", type_code=16)]
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOL]
-        response: Response = self.handler.native_query(query_str, stream=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         for column, mysql_type in zip(response.columns, excepted_mysql_types):
             self.assertEqual(column.type, mysql_type)
         self.assertTrue(pd_types.is_bool_dtype(response.data_frame["t_boolean"][0]))
@@ -809,7 +804,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.FLOAT,  # n_float4
             MYSQL_DATA_TYPE.DOUBLE,  # n_float8
         ]
-        response: Response = self.handler.native_query(query_str, stream=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         for column, mysql_type in zip(response.columns, excepted_mysql_types):
             self.assertEqual(column.type, mysql_type)
         for i, input_value in enumerate(input_row):
@@ -886,7 +881,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.TIME,  # TIMETZ
         ]
 
-        response: Response = self.handler.native_query(query_str, stream=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         for column, mysql_type in zip(response.columns, excepted_mysql_types):
             self.assertEqual(column.type, mysql_type)
         for i, input_value in enumerate(input_row):
@@ -903,7 +898,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ColumnDescription(name="t_boolean", type_code=16),
         ]
         mock_cursor.description = description
-        response: Response = self.handler.native_query(query_str, stream=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         self.assertEqual(response.data_frame.dtypes[0], "Int64")
         self.assertEqual(response.data_frame.dtypes[1], "boolean")
         self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
@@ -958,7 +953,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.VECTOR,
         ]
 
-        response: Response = self.handler.native_query(query_str, stream=False)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         for column, mysql_type in zip(response.columns, excepted_mysql_types):
             self.assertEqual(column.type, mysql_type)
         for i, input_value in enumerate(input_row):

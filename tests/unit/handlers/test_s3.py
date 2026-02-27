@@ -2,6 +2,8 @@ from collections import OrderedDict
 import unittest
 from unittest.mock import patch, MagicMock
 
+import pytest
+
 from botocore.client import ClientError
 from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast import Select, Identifier, Star, Constant
@@ -9,14 +11,20 @@ from mindsdb_sql_parser.ast import Select, Identifier, Star, Constant
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup
-from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
 
+try:
+    from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
+    S3_HANDLER_AVAILABLE = True
+except ImportError:
+    S3_HANDLER_AVAILABLE = False
 
+
+@pytest.mark.skipif(not S3_HANDLER_AVAILABLE, reason="s3_handler not installed (community handler)")
 class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
 
     @property

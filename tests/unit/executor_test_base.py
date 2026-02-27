@@ -229,15 +229,25 @@ class BaseExecutorTest(BaseUnitTest):
     def setup_community_handler(self, handler_name: str):
         """
         Register and import a community handler for testing.
-        Skips the test if the handler cannot be fetched (no network, no token, etc.).
+
+        Requires MINDSDB_COMMUNITY_HANDLERS=true — this mirrors the production
+        gate and also exercises the fetch mechanism when the env var is set.
+        Skips the test if the env var is not set or the handler cannot be fetched.
         """
         import pytest
         from mindsdb.integrations.utilities.community_handler_fetcher import (
+            community_handlers_enabled,
             fetch_handler,
             get_community_handlers_storage_dir,
         )
         from mindsdb.interfaces.database.integrations import integration_controller
         from mindsdb.utilities.config import Config
+
+        if not community_handlers_enabled():
+            pytest.skip(
+                f"Community handler '{handler_name}' test skipped: "
+                "set MINDSDB_COMMUNITY_HANDLERS=true to enable"
+            )
 
         storage_root = Path(Config()["paths"]["root"])
         storage_dir = get_community_handlers_storage_dir(storage_root)

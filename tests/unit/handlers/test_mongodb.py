@@ -2,6 +2,8 @@ import unittest
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
+import pytest
+
 from bson import ObjectId
 from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast.select.star import Star
@@ -15,9 +17,15 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.handlers.mongodb_handler.mongodb_handler import MongoDBHandler
+
+try:
+    from mindsdb.integrations.handlers.mongodb_handler.mongodb_handler import MongoDBHandler
+    MONGODB_HANDLER_AVAILABLE = True
+except ImportError:
+    MONGODB_HANDLER_AVAILABLE = False
 
 
+@pytest.mark.skipif(not MONGODB_HANDLER_AVAILABLE, reason="mongodb_handler not installed (community handler)")
 class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
     @property
     def dummy_connection_data(self):

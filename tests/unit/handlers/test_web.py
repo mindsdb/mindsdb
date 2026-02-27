@@ -9,14 +9,19 @@ from requests import Response, Request
 from bs4 import BeautifulSoup
 
 from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists
-from mindsdb.integrations.handlers.web_handler.web_handler import WebHandler
-from mindsdb.integrations.handlers.web_handler.web_handler import CrawlerTable
-from mindsdb.integrations.handlers.web_handler import urlcrawl_helpers as helpers
 
+try:
+    from mindsdb.integrations.handlers.web_handler.web_handler import WebHandler
+    from mindsdb.integrations.handlers.web_handler.web_handler import CrawlerTable
+    from mindsdb.integrations.handlers.web_handler import urlcrawl_helpers as helpers
+    WEB_HANDLER_AVAILABLE = True
+except ImportError:
+    WEB_HANDLER_AVAILABLE = False
 
 from mindsdb.integrations.utilities.sql_utils import (FilterCondition, FilterOperator)
 
 
+@pytest.mark.skipif(not WEB_HANDLER_AVAILABLE, reason="web_handler not installed (community handler)")
 class TestWebsHandler(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -43,6 +48,7 @@ HTML_SAMPLE_1 = "<h1>Heading One</h1><h2>Heading Two</h2>"
 MARKDOWN_SAMPLE_1 = "# Heading One \n\n ## Heading Two"
 
 
+@pytest.mark.skipif(not WEB_HANDLER_AVAILABLE, reason="web_handler not installed (community handler)")
 class TestWebHelpers(unittest.TestCase):
     @patch("requests.Response")
     def test_pdf_to_markdown(self, mock_response) -> None:
@@ -128,6 +134,7 @@ def html_get(url, **kwargs):
     return resp
 
 
+@pytest.mark.skipif(not WEB_HANDLER_AVAILABLE, reason="web_handler not installed (community handler)")
 class TestWebHandler(unittest.TestCase):
 
     @patch('requests.Session.get')

@@ -3,6 +3,8 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import sys
 
+import pytest
+
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
 
 # Mock pyodbc and sqlalchemy_access before importing the handler
@@ -13,9 +15,14 @@ if "sqlalchemy_access" not in sys.modules:
     sys.modules["sqlalchemy_access"] = MagicMock()
     sys.modules["sqlalchemy_access.base"] = MagicMock()
 
-from mindsdb.integrations.handlers.access_handler.access_handler import AccessHandler
+try:
+    from mindsdb.integrations.handlers.access_handler.access_handler import AccessHandler
+    ACCESS_HANDLER_AVAILABLE = True
+except ImportError:
+    ACCESS_HANDLER_AVAILABLE = False
 
 
+@pytest.mark.skipif(not ACCESS_HANDLER_AVAILABLE, reason="access_handler not installed (community handler)")
 class BaseAccessHandlerTest(unittest.TestCase):
     """Base test class with common setup and helper methods."""
 
@@ -76,6 +83,7 @@ class BaseAccessHandlerTest(unittest.TestCase):
         mock_cursor.columns.return_value = mock_columns
 
 
+@pytest.mark.skipif(not ACCESS_HANDLER_AVAILABLE, reason="access_handler not installed (community handler)")
 class TestAccessHandlerConnection(BaseAccessHandlerTest):
     """Test suite for Access Handler connection management."""
 
@@ -173,6 +181,7 @@ class TestAccessHandlerConnection(BaseAccessHandlerTest):
         self.assertIn(error_message, result.error_message)
 
 
+@pytest.mark.skipif(not ACCESS_HANDLER_AVAILABLE, reason="access_handler not installed (community handler)")
 class TestAccessHandlerQueries(BaseAccessHandlerTest):
     """Test suite for Access Handler query execution."""
 
@@ -346,6 +355,7 @@ class TestAccessHandlerQueries(BaseAccessHandlerTest):
             self.assertEqual(result.type, RESPONSE_TYPE.OK)
 
 
+@pytest.mark.skipif(not ACCESS_HANDLER_AVAILABLE, reason="access_handler not installed (community handler)")
 class TestAccessHandlerMetadata(BaseAccessHandlerTest):
     """Test suite for Access Handler metadata operations."""
 
@@ -421,6 +431,7 @@ class TestAccessHandlerMetadata(BaseAccessHandlerTest):
         self.assertEqual(len(result.data_frame), 0)
 
 
+@pytest.mark.skipif(not ACCESS_HANDLER_AVAILABLE, reason="access_handler not installed (community handler)")
 class TestAccessHandlerConnectionArgs(BaseAccessHandlerTest):
     """Test suite for Access Handler connection arguments validation."""
 
@@ -452,6 +463,7 @@ class TestAccessHandlerConnectionArgs(BaseAccessHandlerTest):
         self.assertIsNone(handler.connection)
 
 
+@pytest.mark.skipif(not ACCESS_HANDLER_AVAILABLE, reason="access_handler not installed (community handler)")
 class TestAccessHandlerEdgeCases(BaseAccessHandlerTest):
     """Test suite for Access Handler edge cases."""
 

@@ -3,6 +3,8 @@ from collections import OrderedDict
 from botocore.client import ClientError
 from unittest.mock import patch, MagicMock, Mock
 
+import pytest
+
 from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast.select.star import Star
 from mindsdb_sql_parser.ast.select.identifier import Identifier
@@ -13,9 +15,15 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.handlers.dynamodb_handler.dynamodb_handler import DynamoDBHandler
+
+try:
+    from mindsdb.integrations.handlers.dynamodb_handler.dynamodb_handler import DynamoDBHandler
+    DYNAMODB_HANDLER_AVAILABLE = True
+except ImportError:
+    DYNAMODB_HANDLER_AVAILABLE = False
 
 
+@pytest.mark.skipif(not DYNAMODB_HANDLER_AVAILABLE, reason="dynamodb_handler not installed (community handler)")
 class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     @property

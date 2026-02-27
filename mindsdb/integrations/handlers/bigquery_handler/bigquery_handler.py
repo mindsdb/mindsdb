@@ -139,7 +139,8 @@ class BigQueryHandler(MetaDatabaseHandler):
             )
             query = connection.query(query, job_config=job_config)
             result = query.to_dataframe()
-            if not result.empty:
+            has_table_result = isinstance(result, pd.DataFrame) and (not result.empty or len(result.columns) > 0)
+            if has_table_result:
                 response = Response(RESPONSE_TYPE.TABLE, result)
             else:
                 response = Response(RESPONSE_TYPE.OK)

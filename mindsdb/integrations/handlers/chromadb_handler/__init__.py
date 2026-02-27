@@ -1,4 +1,4 @@
-from mindsdb.integrations.libs.const import HANDLER_TYPE
+from mindsdb.integrations.libs.const import HANDLER_SUPPORT_LEVEL, HANDLER_TYPE
 
 from .__about__ import __description__ as description
 from .__about__ import __version__ as version
@@ -13,6 +13,7 @@ except Exception as e:
 title = "ChromaDB"
 name = "chromadb"
 type = HANDLER_TYPE.DATA
+support_level = HANDLER_SUPPORT_LEVEL.MINDSDB
 icon_path = "icon.png"
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "type",
     "title",
     "description",
+    "support_level",
     "connection_args",
     "connection_args_example",
     "import_error",

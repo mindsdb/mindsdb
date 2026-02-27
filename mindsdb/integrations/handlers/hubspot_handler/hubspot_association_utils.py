@@ -42,6 +42,10 @@ PRIMARY_ASSOCIATIONS_CONFIG = {
         ("companies", "primary_company_id"),
         ("deals", "primary_deal_id"),
     ],
+    "leads": [
+        ("contacts", "primary_contact_id"),
+        ("companies", "primary_company_id"),
+    ],
 }
 
 

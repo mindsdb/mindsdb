@@ -6,6 +6,7 @@ from mindsdb_sql_parser import parse_sql
 try:
     from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_render import MongodbRender
     from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_parser import MongodbParser
+
     MONGODB_HANDLER_AVAILABLE = True
 except ImportError:
     MONGODB_HANDLER_AVAILABLE = False

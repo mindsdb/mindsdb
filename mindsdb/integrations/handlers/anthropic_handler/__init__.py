@@ -17,7 +17,7 @@ except Exception as e:
 title = "Anthropic"
 name = "anthropic"
 type = HANDLER_TYPE.ML
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
 support_level = HANDLER_SUPPORT_LEVEL.MINDSDB
 permanent = False
 __all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path", "support_level"]

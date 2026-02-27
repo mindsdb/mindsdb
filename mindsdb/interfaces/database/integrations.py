@@ -754,7 +754,7 @@ class IntegrationController:
                     "connection_args": None,
                     "class_type": None,
                     "type": handler_type,
-                    "support_level": HANDLER_SUPPORT_LEVEL.COMMUNITY
+                    "support_level": HANDLER_SUPPORT_LEVEL.COMMUNITY,
                 }
         except Exception as e:
             logger.warning("Could not load community handlers index: %s", e)

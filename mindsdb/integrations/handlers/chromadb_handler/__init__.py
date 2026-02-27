@@ -3,8 +3,10 @@ from mindsdb.integrations.libs.const import HANDLER_SUPPORT_LEVEL, HANDLER_TYPE
 from .__about__ import __description__ as description
 from .__about__ import __version__ as version
 from .connection_args import connection_args, connection_args_example
+
 try:
     from .chromadb_handler import ChromaDBHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None

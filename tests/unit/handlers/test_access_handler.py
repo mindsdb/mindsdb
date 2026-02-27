@@ -17,6 +17,7 @@ if "sqlalchemy_access" not in sys.modules:
 
 try:
     from mindsdb.integrations.handlers.access_handler.access_handler import AccessHandler
+
     ACCESS_HANDLER_AVAILABLE = True
 except ImportError:
     ACCESS_HANDLER_AVAILABLE = False

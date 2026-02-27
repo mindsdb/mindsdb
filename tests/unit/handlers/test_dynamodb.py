@@ -13,11 +13,12 @@ from base_handler_test import BaseHandlerTestSetup
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 try:
     from mindsdb.integrations.handlers.dynamodb_handler.dynamodb_handler import DynamoDBHandler
+
     DYNAMODB_HANDLER_AVAILABLE = True
 except ImportError:
     DYNAMODB_HANDLER_AVAILABLE = False
@@ -25,20 +26,19 @@ except ImportError:
 
 @pytest.mark.skipif(not DYNAMODB_HANDLER_AVAILABLE, reason="dynamodb_handler not installed (community handler)")
 class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
-
     @property
     def dummy_connection_data(self):
         return OrderedDict(
-            aws_access_key_id='AQAXEQK89OX07YS34OP',
-            aws_secret_access_key='wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-            region_name='us-east-2',
+            aws_access_key_id="AQAXEQK89OX07YS34OP",
+            aws_secret_access_key="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            region_name="us-east-2",
         )
 
     def create_handler(self):
-        return DynamoDBHandler('dynamodb', connection_data=self.dummy_connection_data)
+        return DynamoDBHandler("dynamodb", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch('boto3.client')
+        return patch("boto3.client")
 
     def test_connect_failure_with_missing_connection_data(self):
         """
@@ -66,8 +66,8 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         Test if the `check_connection` method returns a StatusResponse object and accurately reflects the connection status on failed connection due to incorrect credentials.
         """
         self.mock_connect.return_value.list_tables.side_effect = ClientError(
-            error_response={'Error': {'Code': 'AccessDeniedException', 'Message': 'Access Denied'}},
-            operation_name='list_tables'
+            error_response={"Error": {"Code": "AccessDeniedException", "Message": "Access Denied"}},
+            operation_name="list_tables",
         )
 
         response = self.handler.check_connection()
@@ -80,7 +80,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Test if the `check_connection` method returns a StatusResponse object and accurately reflects the connection status on a successful connection.
         """
-        self.mock_connect.return_value.list_tables.return_value = {'TableNames': ['table1', 'table2']}
+        self.mock_connect.return_value.list_tables.return_value = {"TableNames": ["table1", "table2"]}
         response = self.handler.check_connection()
 
         self.assertTrue(response.success)
@@ -94,10 +94,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         mock_boto3_client = Mock()
         mock_boto3_client.execute_statement.return_value = {
-            'Items': [
-                {'id': {'N': '1'}, 'name': {'S': 'Alice'}},
-                {'id': {'N': '2'}, 'name': {'S': 'Bob'}}
-            ]
+            "Items": [{"id": {"N": "1"}, "name": {"S": "Alice"}}, {"id": {"N": "2"}, "name": {"S": "Bob"}}]
         }
 
         self.handler.connect = MagicMock(return_value=mock_boto3_client)
@@ -105,7 +102,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
             targets=[
                 Star(),
             ],
-            from_table=ast.Identifier('table1')
+            from_table=ast.Identifier("table1"),
         )
         response = self.handler.query(query)
 
@@ -114,9 +111,9 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         df = response.data_frame
         self.assertEqual(len(df), 2)
-        self.assertEqual(df.columns.tolist(), ['id', 'name'])
-        self.assertEqual(df['id'].tolist(), [1, 2])
-        self.assertEqual(df['name'].tolist(), ['Alice', 'Bob'])
+        self.assertEqual(df.columns.tolist(), ["id", "name"])
+        self.assertEqual(df["id"].tolist(), [1, 2])
+        self.assertEqual(df["name"].tolist(), ["Alice", "Bob"])
 
     def test_query_select_failure_with_unsupported_clause(self):
         """
@@ -126,8 +123,8 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
             targets=[
                 Star(),
             ],
-            from_table=ast.Identifier('table1'),
-            limit=10
+            from_table=ast.Identifier("table1"),
+            limit=10,
         )
         with self.assertRaises(ValueError):
             self.handler.query(query)
@@ -140,11 +137,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         mock_boto3_client.execute_statement.return_value = {}
 
         self.handler.connect = MagicMock(return_value=mock_boto3_client)
-        query = ast.Insert(
-            table=Identifier('table1'),
-            columns=['id', 'name'],
-            values=[[1, 'Alice']]
-        )
+        query = ast.Insert(table=Identifier("table1"), columns=["id", "name"], values=[[1, "Alice"]])
         with self.assertRaises(ValueError):
             self.handler.query(query)
 
@@ -153,7 +146,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         Test if the `get_tables` method returns a response object with a list of tables.
         """
         mock_boto3_client = Mock()
-        mock_boto3_client.list_tables.return_value = {'TableNames': ['table1', 'table2']}
+        mock_boto3_client.list_tables.return_value = {"TableNames": ["table1", "table2"]}
 
         self.handler.connection = mock_boto3_client
         response = self.handler.get_tables()
@@ -163,8 +156,8 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         df = response.data_frame
         self.assertEqual(len(df), 2)
-        self.assertEqual(df.columns.tolist(), ['table_name'])
-        self.assertEqual(df['table_name'].tolist(), ['table1', 'table2'])
+        self.assertEqual(df.columns.tolist(), ["table_name"])
+        self.assertEqual(df["table_name"].tolist(), ["table1", "table2"])
 
     def test_get_columns(self):
         """
@@ -172,30 +165,30 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         mock_boto3_client = Mock()
         mock_boto3_client.describe_table.return_value = {
-            'Table': {
-                'KeySchema': [
-                    {'AttributeName': 'id', 'KeyType': 'HASH'},
-                    {'AttributeName': 'name', 'KeyType': 'RANGE'}
+            "Table": {
+                "KeySchema": [
+                    {"AttributeName": "id", "KeyType": "HASH"},
+                    {"AttributeName": "name", "KeyType": "RANGE"},
                 ],
-                'AttributeDefinitions': [
-                    {'AttributeName': 'id', 'AttributeType': 'N'},
-                    {'AttributeName': 'name', 'AttributeType': 'S'}
-                ]
+                "AttributeDefinitions": [
+                    {"AttributeName": "id", "AttributeType": "N"},
+                    {"AttributeName": "name", "AttributeType": "S"},
+                ],
             }
         }
 
         self.handler.connection = mock_boto3_client
-        response = self.handler.get_columns('table1')
+        response = self.handler.get_columns("table1")
 
         assert isinstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
         self.assertEqual(len(df), 2)
-        self.assertEqual(df.columns.tolist(), ['column_name', 'data_type'])
-        self.assertEqual(df['column_name'].tolist(), ['id', 'name'])
-        self.assertEqual(df['data_type'].tolist(), ['N', 'S'])
+        self.assertEqual(df.columns.tolist(), ["column_name", "data_type"])
+        self.assertEqual(df["column_name"].tolist(), ["id", "name"])
+        self.assertEqual(df["data_type"].tolist(), ["N", "S"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

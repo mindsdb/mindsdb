@@ -245,8 +245,7 @@ class BaseExecutorTest(BaseUnitTest):
 
         if not community_handlers_enabled():
             pytest.skip(
-                f"Community handler '{handler_name}' test skipped: "
-                "set MINDSDB_COMMUNITY_HANDLERS=true to enable"
+                f"Community handler '{handler_name}' test skipped: set MINDSDB_COMMUNITY_HANDLERS=true to enable"
             )
 
         storage_root = Path(Config()["paths"]["root"])

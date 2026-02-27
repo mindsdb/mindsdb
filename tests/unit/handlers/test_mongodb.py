@@ -20,6 +20,7 @@ from mindsdb.integrations.libs.response import (
 
 try:
     from mindsdb.integrations.handlers.mongodb_handler.mongodb_handler import MongoDBHandler
+
     MONGODB_HANDLER_AVAILABLE = True
 except ImportError:
     MONGODB_HANDLER_AVAILABLE = False

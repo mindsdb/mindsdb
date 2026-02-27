@@ -18,6 +18,7 @@ try:
         ConfluenceWhiteboardsTable,
         ConfluenceTasksTable,
     )
+
     CONFLUENCE_HANDLER_AVAILABLE = True
 except ImportError:
     CONFLUENCE_HANDLER_AVAILABLE = False

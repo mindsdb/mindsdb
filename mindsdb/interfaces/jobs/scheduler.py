@@ -27,13 +27,15 @@ def execute_async(q_in, q_out):
         try:
             executor.execute_task_local(record_id, history_id)
         except (KeyboardInterrupt, SystemExit):
-            q_out.put(True)
+            q_out.put(False)
             raise
 
         except Exception:
+            logger.exception("Error executing scheduled task")
             db.session.rollback()
-
-        q_out.put(True)
+            q_out.put(False)
+        else:
+            q_out.put(True)
 
 
 class Scheduler:

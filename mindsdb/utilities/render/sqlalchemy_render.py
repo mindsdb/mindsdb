@@ -127,6 +127,15 @@ class SqlalchemyRender:
                             return True
 
                     lc_value = value.lower()
+                    uc_value = value.upper()
+
+                    # Snowflake converts unquoted identifiers to uppercase
+                    # We need to quote any identifier that's not already uppercase to preserve its case
+                    # This includes: lowercase (demo__gender), mixed-case (Hugo_Symbol), etc.
+                    is_snowflake = getattr(dialect, "driver", None) == "snowflake"
+                    if is_snowflake and uc_value != value:
+                        return True
+
                     return (
                         lc_value in self.reserved_words
                         or value[0] in self.illegal_initial_characters

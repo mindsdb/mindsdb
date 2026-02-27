@@ -389,7 +389,9 @@ class PostgresHandler(MetaDatabaseHandler):
                     # NOTE: INSERT queries cannot be executed server-side. When they fail, they produce a syntax error
                     # that always starts with the text below, regardless of the INSERT query format.
                     lower_e = str(e).lower()
-                    if not lower_e.startswith('syntax error at or near "insert"') and not lower_e.startswith('syntax error at or near "drop"'):
+                    if not lower_e.startswith('syntax error at or near "insert"') and not lower_e.startswith(
+                        'syntax error at or near "drop"'
+                    ):
                         raise
                     connection.rollback()
                     return self._execute_client_side(query=query)

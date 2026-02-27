@@ -712,10 +712,10 @@ class SnowflakeHandler(MetaDatabaseHandler):
                 df = df[["pk_table_name", "pk_column_name", "fk_table_name", "fk_column_name"]]
                 df = df.rename(
                     columns={
-                        "pk_table_name": "child_table_name",
-                        "pk_column_name": "child_column_name",
-                        "fk_table_name": "parent_table_name",
-                        "fk_column_name": "parent_column_name",
+                        "pk_table_name": "parent_table_name",
+                        "pk_column_name": "parent_column_name",
+                        "fk_table_name": "child_table_name",
+                        "fk_column_name": "child_column_name",
                     }
                 )
 

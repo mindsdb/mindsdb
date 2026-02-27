@@ -105,6 +105,19 @@ class TestBigQueryHandler(unittest.TestCase):
         self.assertEqual(list(response.data_frame.columns), ["id"])
         self.assertTrue(response.data_frame.empty)
 
+    def test_native_query_empty_dataframe_without_columns_returns_ok(self):
+        mock_conn = MagicMock()
+        self.handler.connect = MagicMock(return_value=mock_conn)
+
+        mock_query = MagicMock()
+        mock_query.to_dataframe.return_value = pd.DataFrame()
+        mock_conn.query.return_value = mock_query
+
+        with patch("mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.QueryJobConfig"):
+            response = self.handler.native_query("UPDATE table SET col = 1")
+
+        self.assertEqual(response.type, RESPONSE_TYPE.OK)
+
     def test_get_tables(self):
         """
         Checks if the `get_tables` method correctly constructs the SQL query and if it calls `native_query` with the correct query.

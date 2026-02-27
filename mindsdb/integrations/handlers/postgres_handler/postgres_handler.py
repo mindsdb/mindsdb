@@ -321,8 +321,11 @@ class PostgresHandler(MetaDatabaseHandler):
         """
         if stream is False:
             response = self._execute_client_side(query, params, **kwargs)
+        elif params is not None:
+            logger.info("Server side cursor does not support 'fetchmany', executing with client side cursor")
+            response = self._execute_client_side(query, params, **kwargs)
         else:
-            generator = self._execute_server_side(query, params, **kwargs)
+            generator = self._execute_server_side(query, **kwargs)
             try:
                 response: TableResponse = next(generator)
                 response.data_generator = generator
@@ -365,7 +368,7 @@ class PostgresHandler(MetaDatabaseHandler):
         return response
 
     def _execute_server_side(
-        self, query: str, params=None, **kwargs
+        self, query: str, **kwargs
     ) -> Generator[TableResponse | pd.DataFrame, None, OkResponse | ErrorResponse]:
         """Execute a SQL query on the PostgreSQL database and return a generator of data frames.
 
@@ -380,18 +383,16 @@ class PostgresHandler(MetaDatabaseHandler):
         connection = self.connect()
         with connection.cursor(name=f"mindsdb_{id(self)}") as cursor:
             try:
-                if params is not None:
-                    cursor.executemany(query, params)
-                else:
-                    try:
-                        cursor.execute(query)
-                    except psycopg.errors.SyntaxError as e:
-                        # NOTE: INSERT queries cannot be executed server-side. When they fail, they produce a syntax error
-                        # that always starts with the text below, regardless of the INSERT query format.
-                        if not str(e).startswith('syntax error at or near "insert"'):
-                            raise
-                        connection.rollback()
-                        return self._execute_client_side(query=query)
+                try:
+                    cursor.execute(query)
+                except psycopg.errors.SyntaxError as e:
+                    # NOTE: INSERT queries cannot be executed server-side. When they fail, they produce a syntax error
+                    # that always starts with the text below, regardless of the INSERT query format.
+                    lower_e = str(e).lower()
+                    if not lower_e.startswith('syntax error at or near "insert"') and not lower_e.startswith('syntax error at or near "drop"'):
+                        raise
+                    connection.rollback()
+                    return self._execute_client_side(query=query)
 
                 if cursor.description is None:
                     connection.commit()

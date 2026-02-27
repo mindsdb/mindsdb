@@ -6,8 +6,8 @@ from typing import Text, List
 
 
 class InstallTool(Enum):
-    pip = sys.executable, "-m", "pip"
-    uv = "uv", "pip"
+    pip = (sys.executable, "-m", "pip")
+    uv = ("uv", "pip")
 
 
 def install_dependencies(dependencies: List[Text], tool: InstallTool = InstallTool.pip) -> dict:

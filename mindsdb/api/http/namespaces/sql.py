@@ -62,6 +62,33 @@ class Query(Resource):
         with profiler.Context("http_query_processing"):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
+
+            if context.get("native_query"):
+                db = context.get("db")
+                if not db:
+                    return {"type": "error", "error_code": 0,
+                            "error_message": "native_query requires 'db' in context"}, 400
+
+                try:
+                    handler = mysql_proxy.session.integration_controller.get_data_handler(db)
+                    result = handler.native_query(query)
+                except Exception as e:
+                    query_response = {"type": "error", "error_code": 0, "error_message": str(e)}
+                else:
+                    if result.type == SQL_RESPONSE_TYPE.ERROR:
+                        query_response = {"type": "error", "error_code": 0,
+                                          "error_message": result.error_message}
+                    elif result.type == SQL_RESPONSE_TYPE.OK:
+                        query_response = {"type": "ok"}
+                    else:
+                        df = result.data_frame
+                        columns = list(df.columns)
+                        data = df.values.tolist()
+                        query_response = {"type": "table", "column_names": columns, "data": data}
+
+                query_response["context"] = mysql_proxy.get_context()
+                return query_response, 200
+
             try:
                 result: SQLAnswer = mysql_proxy.process_query(query)
                 query_response: dict = result.dump_http_response()

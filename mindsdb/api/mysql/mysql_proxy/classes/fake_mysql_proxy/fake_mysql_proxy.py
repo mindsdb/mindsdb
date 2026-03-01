@@ -2,6 +2,7 @@ from mindsdb.api.executor.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
 from mindsdb.utilities.config import config
+from mindsdb.utilities.context import context as ctx
 
 
 def empty_fn():
@@ -14,6 +15,9 @@ class Dummy:
 
 class FakeMysqlProxy(MysqlProxy):
     def __init__(self):
+        # Ensure context is initialized for this thread/coroutine
+        ctx.set_default()
+
         request = Dummy()
         client_address = ['', '']
         server = Dummy()

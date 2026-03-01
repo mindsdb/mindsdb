@@ -77,6 +77,7 @@ from mindsdb.utilities.otel import increment_otel_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.exception import QueryError
 from mindsdb.utilities.functions import mark_process
+from mindsdb.interfaces.storage import db
 from mindsdb.api.mysql.mysql_proxy.utilities.dump import (
     dump_result_set_to_mysql,
     column_to_mysql_column_dict,
@@ -87,6 +88,18 @@ from mindsdb.api.executor.exceptions import WrongCharsetError
 from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
+
+
+def _rollback_storage_session() -> None:
+    try:
+        db.session.rollback()
+    except Exception:
+        logger.exception("Failed to rollback storage session after query error")
+    finally:
+        try:
+            db.session.remove()
+        except Exception:
+            logger.exception("Failed to remove storage session after query error")
 
 
 def empty_fn():
@@ -506,7 +519,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def process_query(self, sql: str) -> SQLAnswer:
         log.log_ram_info(logger)
         executor = Executor(session=self.session, sqlserver=self)
-        executor.query_execute(sql)
+        try:
+            executor.query_execute(sql)
+        except Exception:
+            _rollback_storage_session()
+            raise
         executor_answer = executor.executor_answer
 
         if executor_answer.data is None:

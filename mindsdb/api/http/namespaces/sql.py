@@ -17,6 +17,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProx
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
+from mindsdb.api.executor.sql_query.result_set import ResultSet
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
@@ -84,9 +85,12 @@ class Query(Resource):
                         query_response = {"type": "ok"}
                     else:
                         df = result.data_frame
-                        columns = list(df.columns)
-                        data = df.values.tolist()
-                        query_response = {"type": "table", "column_names": columns, "data": data}
+                        result_set = ResultSet.from_df(df)
+                        query_response = {
+                            "type": "table",
+                            "column_names": result_set.get_column_names(),
+                            "data": result_set.to_lists(json_types=True),
+                        }
 
                 query_response["context"] = mysql_proxy.get_context()
 

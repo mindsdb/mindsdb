@@ -141,10 +141,7 @@ class BaseTestKB(BaseExecutorDummyML):
         self.run_sql(f"""
           create database {db_name} 
            with 
-           engine='chromadb',
-           PARAMETERS = {{
-               'persist_directory': '{kb_name}'
-           }}
+           engine='duckdb_faiss'
         """)
         self.storages.append(db_name)
 

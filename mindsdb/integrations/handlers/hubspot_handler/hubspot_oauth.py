@@ -13,17 +13,12 @@ logger = log.getLogger(__name__)
 _STORAGE_KEY = "hubspot_oauth_tokens"
 _DEFAULT_REDIRECT_PATH = "/verify-auth"
 _TOKEN_EXPIRY_BUFFER = 0.95
+_DEFAULT_SCOPES = ("oauth",)
 
 
 class HubSpotOAuth2Manager:
     """
     Manages HubSpot OAuth2 authorization_code flow for MindsDB.
-
-    On the first connect (no stored token, no code), raises AuthException
-    with the HubSpot authorization URL so MindsDB can redirect the user.
-    Once the user authorizes and the callback code is passed via connection_data,
-    the code is exchanged for tokens which are persisted in handler_storage.
-    Subsequent connects use the stored token, refreshing it automatically when expired.
     """
 
     def __init__(
@@ -38,7 +33,7 @@ class HubSpotOAuth2Manager:
         self.handler_storage = handler_storage
         self.client_id = client_id
         self.client_secret = client_secret
-        self.scopes = tuple(scopes.split()) if scopes else ()
+        self.scopes = tuple(scopes.split()) if scopes else _DEFAULT_SCOPES
         self.redirect_uri = redirect_uri
         self.code = code
 

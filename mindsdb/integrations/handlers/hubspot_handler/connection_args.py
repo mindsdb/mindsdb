@@ -7,49 +7,40 @@ from mindsdb.integrations.libs.const import (
 connection_args = OrderedDict(
     access_token={
         "type": ARG_TYPE.STR,
-        "description": (
-            "The access token for the HubSpot API. "
-            "Required for direct access token authentication."
-        ),
+        "description": ("The access token for the HubSpot API. Required for direct access token authentication."),
         "required": False,
         "label": "Access Token",
     },
     client_id={
         "type": ARG_TYPE.STR,
-        "description": (
-            "The client ID (consumer key) from your HubSpot app "
-            "for OAuth authentication."
-        ),
+        "description": ("The client ID (consumer key) from your HubSpot app for OAuth authentication."),
         "required": False,
         "label": "Client ID",
     },
     client_secret={
         "type": ARG_TYPE.PWD,
-        "description": (
-            "The client secret (consumer secret) from your HubSpot app "
-            "for OAuth authentication."
-        ),
+        "description": ("The client secret (consumer secret) from your HubSpot app for OAuth authentication."),
         "secret": True,
         "required": False,
         "label": "Client Secret",
     },
-    scopes={
+    scope={
         "type": ARG_TYPE.STR,
-        "description": (
-            "Space-separated OAuth scopes requested "
-            "for token generation."
-        ),
+        "description": ("Space-separated OAuth scopes requested for token generation."),
         "required": False,
         "label": "Scopes",
     },
     redirect_uri={
         "type": ARG_TYPE.STR,
-        "description": (
-            "Optional OAuth callback URI. Defaults to "
-            "http://localhost:47334/verify-auth."
-        ),
+        "description": ("Optional OAuth callback URI. Defaults to http://localhost:47334/verify-auth."),
         "required": False,
         "label": "Redirect URI",
+    },
+    code={
+        "type": ARG_TYPE.STR,
+        "description": "OAuth authorization code returned by HubSpot after user consent. Only used within UI flow.",
+        "required": False,
+        "label": "Authorization Code",
     },
 )
 

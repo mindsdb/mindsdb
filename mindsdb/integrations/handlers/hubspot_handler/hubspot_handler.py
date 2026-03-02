@@ -154,7 +154,7 @@ class HubspotHandler(MetaAPIHandler):
                 if not access_token or not isinstance(access_token, str):
                     raise ValueError("Invalid access_token provided")
 
-                logger.info("Connecting to HubSpot using access token")
+                logger.info("Connecting to HubSpot using PAT credentials")
                 self.connection = HubSpot(access_token=access_token)
 
             elif "client_id" in self.connection_data and "client_secret" in self.connection_data:

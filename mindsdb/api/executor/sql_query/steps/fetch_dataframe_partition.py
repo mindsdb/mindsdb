@@ -1,3 +1,4 @@
+import time
 import copy
 import pandas as pd
 from typing import List
@@ -105,6 +106,7 @@ class FetchDataframePartitionCall(BaseStepCall):
         query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
 
         try_num = 1
+        started_at = time.time()
         while True:
             self.substeps = copy.deepcopy(step.steps)
             query2 = copy.deepcopy(query)
@@ -126,7 +128,8 @@ class FetchDataframePartitionCall(BaseStepCall):
                 result = result[:limit]
                 break
 
-            if try_num > 3:
+            # break if process is too long or to many tries
+            if try_num > 3 or started_at - time.time() > 5:
                 # the last try without the limit
                 first_table_limit = None
                 continue

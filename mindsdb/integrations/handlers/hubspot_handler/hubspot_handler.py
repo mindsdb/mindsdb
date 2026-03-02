@@ -170,8 +170,9 @@ class HubspotHandler(MetaAPIHandler):
                     handler_storage=self.handler_storage,
                     client_id=client_id,
                     client_secret=client_secret,
-                    scopes=self.connection_data.get("scopes"),
+                    scopes=self.connection_data.get("scope"),
                     redirect_uri=self.connection_data.get("redirect_uri"),
+                    code=self.connection_data.get("code"),
                 )
                 self.connection = HubSpot(access_token=oauth_manager.get_access_token())
 
@@ -228,8 +229,10 @@ class HubspotHandler(MetaAPIHandler):
                         response.error_message = error_msg
                         response.success = False
 
-        except AuthException:
-            raise
+        except AuthException as error:
+            response.error_message = str(error)
+            response.redirect_url = error.auth_url
+            return response
         except Exception as e:
             error_msg = _extract_hubspot_error_message(e)
             logger.error(f"HubSpot connection check failed: {error_msg}")

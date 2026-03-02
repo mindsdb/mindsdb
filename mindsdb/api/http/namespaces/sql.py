@@ -67,8 +67,11 @@ class Query(Resource):
             if context.get("native_query"):
                 db = context.get("db")
                 if not db:
-                    return {"type": "error", "error_code": 0,
-                            "error_message": "native_query requires 'db' in context"}, 400
+                    return {
+                        "type": "error",
+                        "error_code": 0,
+                        "error_message": "native_query requires 'db' in context",
+                    }, 400
 
                 logger.debug(f"Running query natively for database {db}")
 
@@ -79,8 +82,7 @@ class Query(Resource):
                     query_response = {"type": "error", "error_code": 0, "error_message": str(e)}
                 else:
                     if result.type == SQL_RESPONSE_TYPE.ERROR:
-                        query_response = {"type": "error", "error_code": 0,
-                                          "error_message": result.error_message}
+                        query_response = {"type": "error", "error_code": 0, "error_message": result.error_message}
                     elif result.type == SQL_RESPONSE_TYPE.OK:
                         query_response = {"type": "ok"}
                     else:

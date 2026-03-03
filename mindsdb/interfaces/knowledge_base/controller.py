@@ -1283,11 +1283,21 @@ class KnowledgeBaseController:
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
                 params["default_vector_storage"] = vector_db_name
             else:
-                raise ValueError(
-                    "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
-                    "One of the options is to use pgvector: "
-                    "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
-                )
+                # try faiss
+                module = self.session.integration_controller.get_handler_module("duckdb_faiss")
+                if module is None or module.Handler is None:
+                    raise ValueError(
+                        "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
+                        "One of the options is to use pgvector: "
+                        "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
+                    )
+
+                # create faiss db with same name
+                vector_table_name = "data"
+                vector_db_name = self._create_persistent_faiss(name)
+                # memorize to remove it later
+                params["default_vector_storage"] = vector_db_name
+
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:
@@ -1463,6 +1473,16 @@ class KnowledgeBaseController:
             return vector_store_name
 
         self.session.integration_controller.add(vector_store_name, "pgvector", params or {})
+        return vector_store_name
+
+    def _create_persistent_faiss(self, kb_name: str):
+        vector_store_name = f"store_{kb_name}"
+
+        # check if exists
+        if self.session.integration_controller.get(vector_store_name):
+            return vector_store_name
+
+        self.session.integration_controller.add(vector_store_name, 'duckdb_faiss', {})
         return vector_store_name
 
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):

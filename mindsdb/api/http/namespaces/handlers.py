@@ -1,6 +1,7 @@
 import os
 import tempfile
 import importlib
+import importlib.util as iutil
 import multipart
 from pathlib import Path
 from http import HTTPStatus
@@ -31,7 +32,7 @@ def _resolve_handler_readme_path(handler_folder: str) -> Path:
     if handler_folder_name != handler_folder or ".." in handler_folder:
         raise ValueError(f"Handler folder '{handler_folder}' is invalid.")
 
-    mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent
+    mindsdb_path = Path(iutil.find_spec("mindsdb").origin).parent
     base_handlers_path = mindsdb_path.joinpath("integrations/handlers").resolve()
     readme_path = base_handlers_path.joinpath(handler_folder_name).joinpath("README.md").resolve()
 

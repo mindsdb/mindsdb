@@ -7,7 +7,7 @@ import ast
 import time
 import tempfile
 import importlib
-import importlib.util
+import importlib.util as iutil
 import threading
 from pathlib import Path
 from copy import deepcopy
@@ -702,12 +702,12 @@ class IntegrationController:
         self.handlers_import_status[handler_name] = handler_meta
 
     def _load_handler_modules(self):
-        mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent
+        mindsdb_path = Path(iutil.find_spec("mindsdb").origin).parent
         handlers_path = mindsdb_path.joinpath("integrations/handlers")
 
         # edge case: running from tests directory, find_spec finds the base folder instead of actual package
         if not os.path.isdir(handlers_path):
-            mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent.joinpath("mindsdb")
+            mindsdb_path = Path(iutil.find_spec("mindsdb").origin).parent.joinpath("mindsdb")
             handlers_path = mindsdb_path.joinpath("integrations/handlers")
 
         self.handler_modules = {}
@@ -946,14 +946,14 @@ class IntegrationController:
                     init_file = handler_dir / "__init__.py"
                     # We need to use spec_from_file_location with submodule_search_locations
                     # to make relative imports work inside the handler's __init__.py
-                    spec = importlib.util.spec_from_file_location(
+                    spec = iutil.spec_from_file_location(
                         module_name,
                         init_file,
                         submodule_search_locations=[str(handler_dir)],
                     )
                     if spec is None or spec.loader is None:
                         raise ImportError(f"Could not create module spec for community handler '{handler_name}'")
-                    handler_module = importlib.util.module_from_spec(spec)
+                    handler_module = iutil.module_from_spec(spec)
                     handler_module.__package__ = module_name
                     # Insert the module so that imports can wokr inside the mindsdb handler
                     sys.modules[module_name] = handler_module

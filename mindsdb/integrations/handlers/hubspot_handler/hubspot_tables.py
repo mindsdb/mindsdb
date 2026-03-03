@@ -1646,6 +1646,8 @@ class CompaniesTable(HubSpotAPIResource):
         for company in companies:
             try:
                 companies_dict.append(self._company_to_dict(company, columns))
+                if limit is not None and len(companies_dict) >= limit:
+                    break
             except Exception as e:
                 logger.warning(f"Error processing company {getattr(company, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -1946,11 +1948,17 @@ class ContactsTable(HubSpotAPIResource):
 
         contacts = hubspot.crm.contacts.get_all(**api_kwargs)
         contacts_dict = []
+        # When fetching contacts with associations (needed for primary_company_id),
+        # each page requires an extra API call. Without an explicit limit this
+        # becomes an unbounded scan (e.g. during JOIN processing where the outer
+        # LIMIT is not propagated to the sub-table query). Cap at a large but
+        # finite number so the query does not run indefinitely.
+        effective_limit = limit if limit is not None else (10_000 if association_targets else None)
         try:
             for contact in contacts:
                 row = self._contact_to_dict(contact, hubspot_columns, association_targets)
                 contacts_dict.append(row)
-                if limit is not None and len(contacts_dict) >= limit:
+                if effective_limit is not None and len(contacts_dict) >= effective_limit:
                     break
         except Exception as e:
             logger.error(f"Failed to iterate HubSpot contacts: {str(e)}")

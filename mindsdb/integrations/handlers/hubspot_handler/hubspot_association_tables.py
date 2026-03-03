@@ -12,14 +12,14 @@ from __future__ import annotations
 from typing import Any
 import pandas as pd
 
-from mindsdb.integrations.libs.api_handler import APIResource
+from mindsdb.integrations.libs.api_handler import MetaAPIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
 
-class HubSpotAssociationTable(APIResource):
+class HubSpotAssociationTable(MetaAPIResource):
     """
     Base class for HubSpot association tables.
 

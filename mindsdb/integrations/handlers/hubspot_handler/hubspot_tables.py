@@ -1108,6 +1108,10 @@ class HubSpotAPIResource(APIResource):
         if order_by and not result.empty:
             result = self._apply_post_sort(result, order_by)
 
+        print("*****************************************************************")
+        print("********************RESULT AFTER POST-FILTER/SORT********************")
+        print(result)
+        print(f"Applied post-filtering and sorting, final row count: {len(result)}")
         return self._apply_column_selection(result, original_targets)
 
     def _extract_query_params(self, query: ASTNode) -> Tuple[List, List, Optional[int]]:

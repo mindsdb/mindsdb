@@ -224,10 +224,14 @@ class HubspotHandler(MetaAPIHandler):
 
     def native_query(self, query: Optional[str] = None) -> Response:
         """Receive and process a raw query."""
+        print("*****************************************************")
+        print("Received native query:", query)
         if not query:
             return Response(RESPONSE_TYPE.ERROR, error_message="Query cannot be None or empty")
 
         try:
+            print("EXECUTING NATIVE QUERY:", query)
+            print("************************************************************")
             ast = parse_sql(query)
             return self.query(ast)
         except Exception as e:
@@ -245,7 +249,6 @@ class HubspotHandler(MetaAPIHandler):
                 try:
                     if table_name in self._association_tables:
                         table_info = {
-                            "TABLE_SCHEMA": "hubspot",
                             "TABLE_NAME": table_name,
                             "TABLE_TYPE": "BASE TABLE",
                         }
@@ -254,7 +257,6 @@ class HubspotHandler(MetaAPIHandler):
                     if table_name in self._non_object_tables:
                         self._tables[table_name].list(limit=1)
                         table_info = {
-                            "TABLE_SCHEMA": "hubspot",
                             "TABLE_NAME": table_name,
                             "TABLE_TYPE": "BASE TABLE",
                         }
@@ -278,7 +280,6 @@ class HubspotHandler(MetaAPIHandler):
                         )
 
                     table_info = {
-                        "TABLE_SCHEMA": "hubspot",
                         "TABLE_NAME": table_name,
                         "TABLE_TYPE": "BASE TABLE",
                     }

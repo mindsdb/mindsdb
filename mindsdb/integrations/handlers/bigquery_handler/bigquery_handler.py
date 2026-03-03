@@ -138,9 +138,7 @@ class BigQueryHandler(MetaDatabaseHandler):
         connection = self.connect()
         try:
             dataset_project = self.connection_data.get("dataset_project") or self.connection_data["project_id"]
-            job_config = QueryJobConfig(
-                default_dataset=f"{dataset_project}.{self.connection_data['dataset']}"
-            )
+            job_config = QueryJobConfig(default_dataset=f"{dataset_project}.{self.connection_data['dataset']}")
             query = connection.query(query, job_config=job_config)
             result = query.to_dataframe()
             if not result.empty:

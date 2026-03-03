@@ -2,6 +2,7 @@ import copy
 import datetime as dt
 import json
 import os
+import pytest
 import sys
 import tempfile
 import shutil
@@ -15,9 +16,18 @@ import pandas as pd
 from prometheus_client import REGISTRY
 from mindsdb_sql_parser import parse_sql
 
+from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.utilities.config import Config
+
 from mindsdb.utilities import log
 from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.integrations.utilities.community_handler_fetcher import (
+    community_handlers_enabled,
+    fetch_handler,
+    get_community_handlers_storage_dir,
+)
 
 logger = log.getLogger(__name__)
 
@@ -234,14 +244,6 @@ class BaseExecutorTest(BaseUnitTest):
         gate and also exercises the fetch mechanism when the env var is set.
         Skips the test if the env var is not set or the handler cannot be fetched.
         """
-        import pytest
-        from mindsdb.integrations.utilities.community_handler_fetcher import (
-            community_handlers_enabled,
-            fetch_handler,
-            get_community_handlers_storage_dir,
-        )
-        from mindsdb.interfaces.database.integrations import integration_controller
-        from mindsdb.utilities.config import Config
 
         if not community_handlers_enabled():
             pytest.skip(

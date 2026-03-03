@@ -6,7 +6,15 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 connection_args = OrderedDict(
     project_id={
         'type': ARG_TYPE.STR,
-        'description': 'The BigQuery project id.'
+        'description': 'Default BigQuery project id (used for billing and dataset lookup if not overridden).'
+    },
+    billing_project={
+        'type': ARG_TYPE.STR,
+        'description': 'BigQuery project id to bill query jobs to (defaults to project_id).'
+    },
+    dataset_project={
+        'type': ARG_TYPE.STR,
+        'description': 'Project id that owns the dataset (defaults to project_id).'
     },
     dataset={
         'type': ARG_TYPE.STR,

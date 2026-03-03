@@ -224,14 +224,10 @@ class HubspotHandler(MetaAPIHandler):
 
     def native_query(self, query: Optional[str] = None) -> Response:
         """Receive and process a raw query."""
-        print("*****************************************************")
-        print("Received native query:", query)
         if not query:
             return Response(RESPONSE_TYPE.ERROR, error_message="Query cannot be None or empty")
 
         try:
-            print("EXECUTING NATIVE QUERY:", query)
-            print("************************************************************")
             ast = parse_sql(query)
             return self.query(ast)
         except Exception as e:

@@ -327,7 +327,7 @@ class SqlServerHandler(MetaDatabaseHandler):
                 # Execute a simple query to test the connection
                 cur.execute("select 1;")
             response.success = True
-        except OperationalError as e:
+        except Exception as e:
             logger.error(f"Error connecting to Microsoft SQL Server {self.database}, {e}!")
             response.error_message = str(e)
 

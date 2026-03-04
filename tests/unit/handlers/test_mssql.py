@@ -639,6 +639,13 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertFalse(response.success)
         self.assertEqual(response.error_message, "Connection error")
 
+        self.handler.connect.side_effect = ValueError("Invalid connection args")
+
+        response = self.handler.check_connection()
+
+        self.assertFalse(response.success)
+        self.assertEqual(response.error_message, "Invalid connection args")
+
     def test_types_casting(self):
         """Test that types are casted correctly"""
         query_str = "SELECT * FROM test_table"

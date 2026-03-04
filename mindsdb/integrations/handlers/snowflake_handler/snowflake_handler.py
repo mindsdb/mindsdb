@@ -497,36 +497,81 @@ class SnowflakeHandler(MetaDatabaseHandler):
         """
         Retrieves column metadata for the specified tables (or all tables if no list is provided).
 
+        NOTE: Uses SHOW COLUMNS to preserve exact column name case, as INFORMATION_SCHEMA.COLUMNS
+        returns uppercase names by default even when actual columns are mixed case.
+
         Args:
             table_names (list): A list of table names for which to retrieve column metadata.
 
         Returns:
             Response: A response object containing the column metadata.
         """
-        query = """
-            SELECT
-                TABLE_NAME,
-                COLUMN_NAME,
-                DATA_TYPE,
-                COMMENT AS COLUMN_DESCRIPTION,
-                COLUMN_DEFAULT,
-                (IS_NULLABLE = 'YES') AS IS_NULLABLE,
-                CHARACTER_MAXIMUM_LENGTH,
-                CHARACTER_OCTET_LENGTH,
-                NUMERIC_PRECISION,
-                NUMERIC_SCALE,
-                DATETIME_PRECISION,
-                CHARACTER_SET_NAME,
-                COLLATION_NAME
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = current_schema()
-        """
+        logger.info(f"meta_get_columns called with table_names: {table_names}")
+        # Get all tables if not specified
+        if table_names is None or len(table_names) == 0:
+            tables_query = """
+                SELECT TABLE_NAME 
+                FROM INFORMATION_SCHEMA.TABLES
+                WHERE TABLE_SCHEMA = current_schema()
+                AND TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+            """
+            tables_result = self.native_query(tables_query)
+            if tables_result.resp_type != RESPONSE_TYPE.TABLE:
+                return tables_result
+            table_names = tables_result.data_frame["TABLE_NAME"].tolist()
 
-        if table_names is not None and len(table_names) > 0:
-            table_names_str = ", ".join([f"'{t.upper()}'" for t in table_names])
-            query += f" AND TABLE_NAME IN ({table_names_str})"
+        # Use SHOW COLUMNS to get exact column case for each table
+        all_columns = []
+        for table_name in table_names:
+            # SHOW COLUMNS preserves the actual case of column names
+            show_query = f"SHOW COLUMNS IN TABLE {table_name}"
+            result = self.native_query(show_query)
 
-        result = self.native_query(query)
+            if result.resp_type == RESPONSE_TYPE.TABLE and not result.data_frame.empty:
+                df = result.data_frame
+                # SHOW COLUMNS returns: table_name, schema_name, column_name, data_type, null?, default, kind, expression, comment, etc.
+                # Map to expected column names
+                df["TABLE_NAME"] = table_name
+                df["COLUMN_NAME"] = df["column_name"]  # Preserves exact case
+                df["DATA_TYPE"] = df["data_type"]
+                df["COLUMN_DESCRIPTION"] = df.get("comment", None)
+                df["COLUMN_DEFAULT"] = df.get("default", None)
+                df["IS_NULLABLE"] = df["null?"] == "Y"
+
+                # Add other metadata columns (may not be available from SHOW COLUMNS)
+                df["CHARACTER_MAXIMUM_LENGTH"] = None
+                df["CHARACTER_OCTET_LENGTH"] = None
+                df["NUMERIC_PRECISION"] = None
+                df["NUMERIC_SCALE"] = None
+                df["DATETIME_PRECISION"] = None
+                df["CHARACTER_SET_NAME"] = None
+                df["COLLATION_NAME"] = None
+
+                all_columns.append(
+                    df[
+                        [
+                            "TABLE_NAME",
+                            "COLUMN_NAME",
+                            "DATA_TYPE",
+                            "COLUMN_DESCRIPTION",
+                            "COLUMN_DEFAULT",
+                            "IS_NULLABLE",
+                            "CHARACTER_MAXIMUM_LENGTH",
+                            "CHARACTER_OCTET_LENGTH",
+                            "NUMERIC_PRECISION",
+                            "NUMERIC_SCALE",
+                            "DATETIME_PRECISION",
+                            "CHARACTER_SET_NAME",
+                            "COLLATION_NAME",
+                        ]
+                    ]
+                )
+
+        if not all_columns:
+            return Response(resp_type=RESPONSE_TYPE.OK)
+
+        combined_df = pandas.concat(all_columns, ignore_index=True)
+        result = Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=combined_df)
         return result
 
     def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:

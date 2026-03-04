@@ -8,7 +8,6 @@ from contextlib import contextmanager
 
 import pandas as pd
 import pytest
-import sys
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import (

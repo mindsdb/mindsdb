@@ -1482,7 +1482,7 @@ class KnowledgeBaseController:
         if self.session.integration_controller.get(vector_store_name):
             return vector_store_name
 
-        self.session.integration_controller.add(vector_store_name, 'duckdb_faiss', {})
+        self.session.integration_controller.add(vector_store_name, "duckdb_faiss", {})
         return vector_store_name
 
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):

@@ -245,6 +245,7 @@ class HubspotHandler(MetaAPIHandler):
                 try:
                     if table_name in self._association_tables:
                         table_info = {
+                            "TABLE_SCHEMA": "hubspot",
                             "TABLE_NAME": table_name,
                             "TABLE_TYPE": "BASE TABLE",
                         }
@@ -253,6 +254,7 @@ class HubspotHandler(MetaAPIHandler):
                     if table_name in self._non_object_tables:
                         self._tables[table_name].list(limit=1)
                         table_info = {
+                            "TABLE_SCHEMA": "hubspot",
                             "TABLE_NAME": table_name,
                             "TABLE_TYPE": "BASE TABLE",
                         }
@@ -276,6 +278,7 @@ class HubspotHandler(MetaAPIHandler):
                         )
 
                     table_info = {
+                        "TABLE_SCHEMA": "hubspot",
                         "TABLE_NAME": table_name,
                         "TABLE_TYPE": "BASE TABLE",
                     }

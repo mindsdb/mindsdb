@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "willow",
+  "theme": "almond",
   "name": "MindsDB",
   "colors": {
     "primary": "#3f8394",
@@ -16,6 +16,7 @@
             {
               "group": "Get Started",
               "pages": [
+                "homepage",
                 "mindsdb",
                 "quickstart-tutorial",
                 "releases"

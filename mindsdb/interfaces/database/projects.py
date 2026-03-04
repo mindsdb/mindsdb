@@ -125,8 +125,8 @@ class Project:
 
             query_context_controller.set_context(query_context_controller.IGNORE_CONTEXT)
             try:
-                query = SQLQuery(ast_query, session=session, database=self.name)
-                columns = [col.name for col in query.fetched_data.columns]
+                resp = SQLQuery(ast_query, session=session, database=self.name)
+                columns = [col.name for col in resp.fetched_data.columns]
                 seen, duplicates = set(), set()
                 for col in columns:
                     if col in seen:

@@ -589,6 +589,7 @@ class Config:
                 agent=None,
                 project=None,
                 update_gui=False,
+                mcp_stdio=False,
             )
             return
 
@@ -615,6 +616,7 @@ class Config:
 
         parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
         parser.add_argument("--update-gui", action="store_true", default=False, help="Update GUI and exit")
+        parser.add_argument("--mcp-stdio", action="store_true", default=False, help="Run MCP with STDIO transport")
 
         self._cmd_args = parser.parse_args()
 

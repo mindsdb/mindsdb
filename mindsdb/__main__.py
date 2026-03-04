@@ -381,6 +381,11 @@ if __name__ == "__main__":
 
     db.init()
 
+    if config.cmd_args.mcp_stdio:
+        from mindsdb.api.mcp.mcp_instance import mcp
+        mcp.run()
+        sys.exit(0)
+
     environment = config["environment"]
     if environment == "aws_marketplace":
         try:

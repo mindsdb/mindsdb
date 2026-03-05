@@ -202,6 +202,14 @@ class TestTableOperations(unittest.TestCase):
         """
         self.handler.native_query.assert_called_once_with(expected_query)
 
+    def test_get_tables_returns_non_table_response_without_transform(self):
+        expected = Response(RESPONSE_TYPE.ERROR, error_message="boom")
+        self.handler.native_query = MagicMock(return_value=expected)
+
+        result = self.handler.get_tables()
+
+        self.assertIs(result, expected)
+
     def test_get_columns(self):
         """
         Tests if the `get_columns` method correctly constructs the SQL query and if it calls `native_query` with the correct query.

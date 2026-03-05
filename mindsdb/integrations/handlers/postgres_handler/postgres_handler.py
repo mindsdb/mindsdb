@@ -305,7 +305,7 @@ class PostgresHandler(MetaDatabaseHandler):
 
     def native_query(
         self, query: str, params=None, stream: bool = True, **kwargs
-    ) -> TableResponse | OkResponse | ErrorResponse:
+    ) -> DataHandlerResponse:
         """Executes a SQL query on the PostgreSQL database and returns the result.
         NOTE: 'INSERT' (and may be some else) queries can not be executed on the server side,
         but there are fallbackto client side execution.
@@ -317,7 +317,7 @@ class PostgresHandler(MetaDatabaseHandler):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
+            DataHandlerResponse: A response object containing the result of the query or an error message.
         """
         if stream is False:
             response = self._execute_client_side(query, params, **kwargs)
@@ -472,7 +472,7 @@ class PostgresHandler(MetaDatabaseHandler):
         return Response(RESPONSE_TYPE.OK, affected_rows=rowcount)
 
     @profiler.profile()
-    def query(self, query: ASTNode) -> TableResponse | OkResponse | ErrorResponse:
+    def query(self, query: ASTNode) -> DataHandlerResponse:
         """
         Executes a SQL query represented by an ASTNode and retrieves the data.
 
@@ -480,8 +480,8 @@ class PostgresHandler(MetaDatabaseHandler):
             query (ASTNode): An ASTNode representing the SQL query to be executed.
 
         Returns:
-            TableResponse | OkResponse | ErrorResponse: The response from the `native_query` method, containing
-                                                        the result of the SQL query execution.
+            DataHandlerResponse: The response from the `native_query` method,
+                                 containing the result of the SQL query execution.
         """
         query_str, params = self.renderer.get_exec_params(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")

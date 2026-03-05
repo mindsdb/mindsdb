@@ -240,7 +240,7 @@ class MySQLHandler(MetaDatabaseHandler):
 
         return result
 
-    def native_query(self, query: str, stream: bool = True, **kwargs) -> TableResponse | OkResponse | ErrorResponse:
+    def native_query(self, query: str, stream: bool = True, **kwargs) -> DataHandlerResponse:
         """Executes a SQL query on the MySQL database and returns the result.
 
         Args:
@@ -249,7 +249,7 @@ class MySQLHandler(MetaDatabaseHandler):
             **kwargs: Additional keyword arguments.
 
         Returns:
-            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
+            DataHandlerResponse: A response object containing the result of the query or an error message.
         """
         if stream is False:
             response = self._execute_fetchall(query)
@@ -264,14 +264,14 @@ class MySQLHandler(MetaDatabaseHandler):
                     raise
         return response
 
-    def _execute_fetchall(self, query: str) -> TableResponse | OkResponse | ErrorResponse:
+    def _execute_fetchall(self, query: str) -> DataHandlerResponse:
         """Executes a SQL query on the MySQL database and returns the full result at once.
 
         Args:
             query (str): The SQL query to be executed.
 
         Returns:
-            TableResponse | OkResponse | ErrorResponse: A response object containing the result of the query or an error message.
+            DataHandlerResponse: A response object containing the result of the query or an error message.
         """
         connection = self.connect()
         with connection.cursor(buffered=True) as cursor:
@@ -333,7 +333,7 @@ class MySQLHandler(MetaDatabaseHandler):
             return ErrorResponse(error_code=e.errno or 1, error_message=str(e))
         return ErrorResponse(error_code=0, error_message=str(e))
 
-    def query(self, query: ASTNode) -> Response:
+    def query(self, query: ASTNode) -> DataHandlerResponse:
         """
         Retrieve the data from the SQL statement.
         """

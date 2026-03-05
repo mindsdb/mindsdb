@@ -1654,6 +1654,7 @@ class KnowledgeBaseController:
         # works only for FAISS dbs.
         # if FAISS vector db is used in KB: remove this db from handlers cache.
         #   it will clear internal cache of tables in faiss handler and release locks for faiss files
+        #   return unloaded database name
 
         if len(knowledge_base.parts) > 1:
             project_name, kb_name = knowledge_base.parts[-2:]
@@ -1670,3 +1671,4 @@ class KnowledgeBaseController:
 
         if database.engine == "duckdb_faiss":
             self.session.integration_controller.handlers_cache.delete(database.name)
+            return database.name

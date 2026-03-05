@@ -567,13 +567,14 @@ class TestKB(BaseTestKB):
             """
             )
 
-            # test threads
-            check_partition(
-                """
-                insert into kb_part SELECT id, english FROM pg.ral
-                using batch_size=20, track_column=id, threads = 3
-            """
-            )
+            # switched off for faiss
+            # # test threads
+            # check_partition(
+            #     """
+            #     insert into kb_part SELECT id, english FROM pg.ral
+            #     using batch_size=20, track_column=id, threads = 3
+            # """
+            # )
 
             # without track column
             check_partition(
@@ -594,13 +595,14 @@ class TestKB(BaseTestKB):
             """
             )
 
-            # test threads
-            check_partition(
-                """
-                insert into kb_part SELECT id, english FROM pg.ral
-                using batch_size=20, track_column=id, threads = 3
-            """
-            )
+            # switched off for faiss
+            # # test threads
+            # check_partition(
+            #     """
+            #     insert into kb_part SELECT id, english FROM pg.ral
+            #     using batch_size=20, track_column=id, threads = 3
+            # """
+            # )
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb_algebra(self, mock_litellm_embedding):

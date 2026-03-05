@@ -69,7 +69,7 @@ class SQLAnswer:
 
         if self.resp_type in (RESPONSE_TYPE.OK, RESPONSE_TYPE.ERROR):
             response = self.dump_http_response(context=context)
-            yield orjson.dumps(response) + "\n"
+            yield orjson.dumps(response).decode() + "\n"
             return
 
         yield (

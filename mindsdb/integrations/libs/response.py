@@ -393,7 +393,9 @@ class TableResponse(DataHandlerResponse):
         if self.type == RESPONSE_TYPE.COLUMNS_TABLE:
             return
         if self.type != RESPONSE_TYPE.TABLE:
-            raise ValueError(f"Cannot convert {self.resp} to {RESPONSE_TYPE.COLUMNS_TABLE}")
+            raise ValueError(
+                f"Cannot convert handler response with type '{self.type}' to '{RESPONSE_TYPE.COLUMNS_TABLE}'"
+            )
 
         self.fetchall()
         self._resolve_columns()

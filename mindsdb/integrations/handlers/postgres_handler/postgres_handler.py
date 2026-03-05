@@ -687,31 +687,33 @@ class PostgresHandler(MetaDatabaseHandler):
 
         result = self.native_query(query)
 
-        if result.type == RESPONSE_TYPE.TABLE and result.data_frame is not None:
-            df = result.data_frame
+        if result.type != RESPONSE_TYPE.TABLE or result.data_frame is None:
+            return result
 
-            # Extract min/max from histogram bounds
-            def extract_min_max(histogram_str):
-                if histogram_str and str(histogram_str) != "nan":
-                    clean = str(histogram_str).strip("{}")
-                    if clean:
-                        values = clean.split(",")
-                        min_val = values[0].strip(" \"'") if values else None
-                        max_val = values[-1].strip(" \"'") if values else None
-                        return min_val, max_val
-                return None, None
+        df = result.data_frame
 
-            min_max_values = df["histogram_bounds"].apply(extract_min_max)
-            df["MINIMUM_VALUE"] = min_max_values.apply(lambda x: x[0])
-            df["MAXIMUM_VALUE"] = min_max_values.apply(lambda x: x[1])
+        # Extract min/max from histogram bounds
+        def extract_min_max(histogram_str):
+            if histogram_str and str(histogram_str) != "nan":
+                clean = str(histogram_str).strip("{}")
+                if clean:
+                    values = clean.split(",")
+                    min_val = values[0].strip(" \"'") if values else None
+                    max_val = values[-1].strip(" \"'") if values else None
+                    return min_val, max_val
+            return None, None
 
-            # Convert most_common_values and most_common_freqs to arrays.
-            df["MOST_COMMON_VALUES"] = df["most_common_values"].apply(
-                lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
-            )
-            df["MOST_COMMON_FREQUENCIES"] = df["most_common_frequencies"].apply(
-                lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
-            )
+        min_max_values = df["histogram_bounds"].apply(extract_min_max)
+        df["MINIMUM_VALUE"] = min_max_values.apply(lambda x: x[0])
+        df["MAXIMUM_VALUE"] = min_max_values.apply(lambda x: x[1])
+
+        # Convert most_common_values and most_common_freqs to arrays.
+        df["MOST_COMMON_VALUES"] = df["most_common_values"].apply(
+            lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
+        )
+        df["MOST_COMMON_FREQUENCIES"] = df["most_common_frequencies"].apply(
+            lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
+        )
 
         result.data_frame = df.drop(columns=["histogram_bounds", "most_common_values", "most_common_frequencies"])
 

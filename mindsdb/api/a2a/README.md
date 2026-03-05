@@ -48,7 +48,8 @@ curl -X POST \
           {"type": "text", "text": "What is the average rental price for a three bedroom?"}
         ],
         "metadata": {
-          "agentName": "my_agent_123"
+          "agentName": "my_agent_123",
+          "projectName": "my_project"
         }
       },
       "acceptedOutputModes": ["text/plain"]
@@ -58,6 +59,8 @@ curl -X POST \
 ```
 
 **Note:** You must pass the agent name in metadata using either `agentName` or `agent_name` parameter.
+
+If the agent belongs to a project other than the default (`mindsdb`), you should also pass the project name using either `projectName` or `project_name` in metadata. When omitted, the default project is used.
 
 ## Example Queries
 

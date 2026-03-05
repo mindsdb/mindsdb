@@ -57,14 +57,14 @@ class AgentTaskManager(InMemoryTaskManager):
         self.tasks = {}  # Task storage
         self.lock = asyncio.Lock()  # Lock for task operations
 
-    def _create_agent(self, user_info: Dict, agent_name: str = None) -> MindsDBAgent:
+    def _create_agent(self, user_info: Dict, agent_name: str = None, project_name: str = None) -> MindsDBAgent:
         """Create a new MindsDBAgent instance for the given agent name."""
         if not agent_name:
             raise ValueError("Agent name is required but was not provided in the request")
 
         return MindsDBAgent(
             agent_name=agent_name,
-            project_name=self.project_name,
+            project_name=project_name or self.project_name,
             user_info=user_info,
         )
 
@@ -92,7 +92,7 @@ class AgentTaskManager(InMemoryTaskManager):
             yield error_result
             return  # Early return from generator
 
-        agent = self._create_agent(user_info, agent_name)
+        agent = self._create_agent(user_info, agent_name, project_name=params.get("project_name"))
 
         # Get the history from the task object (where it was properly extracted and stored)
         history = task.history if task and task.history else []
@@ -455,8 +455,14 @@ class AgentTaskManager(InMemoryTaskManager):
         metadata = task_send_params.message.metadata or {}
         # Check for both agent_name and agentName in the metadata
         agent_name = metadata.get("agent_name", metadata.get("agentName"))
+        # Check for both project_name and projectName in the metadata.
+        # This allows the caller (e.g. the "Chat with your data" UI) to
+        # specify which project the agent belongs to, instead of always
+        # routing to the default project configured at startup.
+        project_name = metadata.get("project_name", metadata.get("projectName"))
         return {
             "agent_name": agent_name,
+            "project_name": project_name,
             "streaming": metadata.get("streaming", True),
             "session_id": task_send_params.sessionId,
         }
@@ -467,7 +473,7 @@ class AgentTaskManager(InMemoryTaskManager):
         params = self._get_task_params(task_send_params)
         agent_name = params["agent_name"]
         streaming = params["streaming"]
-        agent = self._create_agent(user_info, agent_name)
+        agent = self._create_agent(user_info, agent_name, project_name=params.get("project_name"))
 
         try:
             # Get the history from the task
@@ -538,6 +544,7 @@ class AgentTaskManager(InMemoryTaskManager):
 
         query = self._get_user_query(request.params)
         params = self._get_task_params(request.params)
+        project_name = params.get("project_name") or self.project_name
 
         try:
             task_id = f"msg_stream_{request.params.sessionId}_{request.id}"
@@ -545,8 +552,8 @@ class AgentTaskManager(InMemoryTaskManager):
             message_id = f"msg_{request.id}"
 
             agents_controller = AgentsController()
-            existing_agent = agents_controller.get_agent(params["agent_name"])
-            resp = agents_controller.get_completion(existing_agent, [{"question": query}])
+            existing_agent = agents_controller.get_agent(params["agent_name"], project_name=project_name)
+            resp = agents_controller.get_completion(existing_agent, [{"question": query}], project_name=project_name)
             response_message = resp["answer"][0]
 
             response_message = Message(

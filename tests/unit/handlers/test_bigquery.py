@@ -200,6 +200,7 @@ class TestBigQueryHandler(unittest.TestCase):
 
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)
+        self.assertNotIn("tc.constraint_name,", query)
 
     def test_meta_get_foreign_keys_filters(self):
         self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))

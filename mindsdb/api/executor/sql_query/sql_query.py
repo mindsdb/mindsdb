@@ -289,6 +289,7 @@ class SQLQuery:
             ctx.run_query_id = self.run_query.record.id
 
         step_result = None
+        failed_step_num = None
         process_mark = None
         try:
             steps_classes = (x.__class__ for x in steps)
@@ -296,13 +297,14 @@ class SQLQuery:
             if any(s in predict_steps for s in steps_classes):
                 process_mark = create_process_mark("predict")
             for step in steps:
+                failed_step_num = step.step_num
                 with profiler.Context(f"step: {step.__class__.__name__}"):
                     step_result = self.execute_step(step)
                 self.steps_data[step.step_num] = step_result
         except Exception as e:
             if self.run_query is not None:
                 # set error and place where it stopped
-                self.run_query.on_error(e, step.step_num, self.steps_data)
+                self.run_query.on_error(e, failed_step_num, self.steps_data)
             raise e
         else:
             # mark running query as completed

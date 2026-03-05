@@ -104,7 +104,6 @@ MAIN_RULE_IGNORES = {
         "langchain-experimental",
         "lxml",
         "openpyxl",
-        "onnxruntime",
         "litellm",
         "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
         "urllib3",  # pinned by Snyk to avoid a vulnerability
@@ -141,8 +140,6 @@ SOLR_DEP002_IGNORE_HANDLER_DEPS = ["sqlalchemy-solr"]
 
 OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
-CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
-
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
 SNOWFLAKE_DEP003_IGNORE_HANDLER_DEPS = ["pyarrow"]
@@ -157,7 +154,6 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + RAG_DEP002_IGNORE_HANDLER_DEPS
         + SOLR_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
-        + CHROMADB_EP002_IGNORE_HANDLER_DEPS
     )
 )
 

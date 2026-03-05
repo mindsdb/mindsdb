@@ -118,14 +118,14 @@ class ResultSet:
         return f"{self.__class__.__name__}({self.length()} rows, cols: {col_names})"
 
     def __len__(self) -> int:
-        self._resolve_table_response()
+        self._load_table_response()
         if self._df is None:
             return 0
         return len(self._df)
 
     def __getitem__(self, slice_val):
         # return resultSet with sliced dataframe
-        self._resolve_table_response()
+        self._load_table_response()
         df = self._df[slice_val]
         return ResultSet(columns=self.columns, df=df)
 
@@ -240,7 +240,7 @@ class ResultSet:
         return col_idx
 
     def add_column(self, col, values=None):
-        self._resolve_table_response()
+        self._load_table_response()
         self._columns.append(col)
 
         col_idx = len(self._columns) - 1
@@ -249,7 +249,7 @@ class ResultSet:
         return col_idx
 
     def del_column(self, col):
-        self._resolve_table_response()
+        self._load_table_response()
         idx = self.get_col_index(col)
         self._columns.pop(idx)
 
@@ -287,22 +287,24 @@ class ResultSet:
         return col2
 
     def set_col_type(self, col_idx, type_name):
-        self._resolve_table_response()
+        self._load_table_response()
         self.columns[col_idx].type = type_name
         if self._df is not None:
             self._df[col_idx] = self._df[col_idx].astype(type_name)
 
     # --- records ---
 
-    def _resolve_table_response(self):
-        """Resolve the table response by fetching all data from the table response and storing it in the _df attribute."""
-        if self._table_response is not None:
-            self._table_response.fetchall()
-            if self._df is None:
-                self._df = self._table_response._data
-            else:
-                self._df = pd.concat([self._df, self._table_response._data])
-            self._table_response = None
+    def _load_table_response(self):
+        """Fully load the table response by fetching all data from the table response and storing it in the _df attribute."""
+        if self._table_response is None:
+            return
+
+        self._table_response.fetchall()
+        if self._df is None:
+            self._df = self._table_response._data
+        else:
+            self._df = pd.concat([self._df, self._table_response._data])
+        self._table_response = None
 
     def stream_data(self) -> Generator[pd.DataFrame, None, None]:
         """Stream data from the result set.
@@ -317,7 +319,7 @@ class ResultSet:
                 yield el
 
     def get_raw_df(self):
-        self._resolve_table_response()
+        self._load_table_response()
         names = range(len(self._columns))
         if self._df is None:
             return pd.DataFrame([], columns=names)
@@ -327,7 +329,7 @@ class ResultSet:
     def add_raw_df(self, df):
         if len(df.columns) != len(self._columns):
             raise WrongArgumentError(f"Record length mismatch columns length: {len(df.columns)} != {len(self.columns)}")
-        self._resolve_table_response()
+        self._load_table_response()
 
         rename_df_columns(df)
 
@@ -359,7 +361,7 @@ class ResultSet:
             list[TableColumn]: A list of TableColumn objects with properly mapped SQLAlchemy types
         """
         columns: list[TableColumn] = []
-        self._resolve_table_response()
+        self._load_table_response()
 
         type_mapping = {
             MYSQL_DATA_TYPE.TINYINT: sqlalchemy_types.INTEGER,
@@ -401,7 +403,7 @@ class ResultSet:
             array->list, datetime64->str
         :return: list of lists
         """
-        self._resolve_table_response()
+        self._load_table_response()
 
         if len(self.get_raw_df()) == 0:
             return []
@@ -428,7 +430,7 @@ class ResultSet:
 
     def set_column_values(self, col_name, values):
         # values is one value or list of values
-        self._resolve_table_response()
+        self._load_table_response()
         cols = self.find_columns(col_name)
         if len(cols) == 0:
             col_idx = self.add_column(Column(name=col_name))

@@ -19,6 +19,7 @@ def get_mcp_app():
 
     @asynccontextmanager
     async def lifespan(_):
+        """Required for streamable_http to run task group"""
         async with http_starlette.router.lifespan_context(http_starlette):
             yield
 

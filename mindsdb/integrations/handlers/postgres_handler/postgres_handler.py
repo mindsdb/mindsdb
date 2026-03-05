@@ -472,7 +472,7 @@ class PostgresHandler(MetaDatabaseHandler):
         return Response(RESPONSE_TYPE.OK, affected_rows=rowcount)
 
     @profiler.profile()
-    def query(self, query: ASTNode) -> Response:
+    def query(self, query: ASTNode) -> TableResponse | OkResponse | ErrorResponse:
         """
         Executes a SQL query represented by an ASTNode and retrieves the data.
 
@@ -480,7 +480,8 @@ class PostgresHandler(MetaDatabaseHandler):
             query (ASTNode): An ASTNode representing the SQL query to be executed.
 
         Returns:
-            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+            TableResponse | OkResponse | ErrorResponse: The response from the `native_query` method, containing
+                                                        the result of the SQL query execution.
         """
         query_str, params = self.renderer.get_exec_params(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")

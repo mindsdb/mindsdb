@@ -65,7 +65,10 @@ class LoginRoute(Resource):
             session.permanent = True
 
         if config["auth"]["http_auth_type"] in (HTTP_AUTH_TYPE.TOKEN, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
-            response["token"] = generate_pat()
+            if config["auth"]["token"]:
+                response["token"] = config["auth"]["token"]
+            else:
+                response["token"] = generate_pat()
 
         return response, 200
 

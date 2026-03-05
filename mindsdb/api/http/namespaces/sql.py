@@ -17,6 +17,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProx
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
+from mindsdb.api.executor.sql_query.result_set import ResultSet
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
@@ -62,56 +63,90 @@ class Query(Resource):
         with profiler.Context("http_query_processing"):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
-            try:
-                result: SQLAnswer = mysql_proxy.process_query(query)
-                query_response: dict = result.dump_http_response()
-            except ExecutorException as e:
-                # classified error
-                error_type = "expected"
-                query_response = {
-                    "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": 0,
-                    "error_message": str(e),
-                }
-                logger.warning(f"Error query processing: {e}")
-            except QueryError as e:
-                error_type = "expected" if e.is_expected else "unexpected"
-                query_response = {
-                    "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": 0,
-                    "error_message": str(e),
-                }
-                if e.is_expected:
-                    logger.warning(f"Query failed due to expected reason: {e}")
+
+            if context.get("native_query"):
+                db = context.get("db")
+                if not db:
+                    return {
+                        "type": "error",
+                        "error_code": 0,
+                        "error_message": "native_query requires 'db' in context",
+                    }, 400
+
+                logger.debug(f"Running query natively for database {db}")
+
+                try:
+                    handler = mysql_proxy.session.integration_controller.get_data_handler(db)
+                    result = handler.native_query(query)
+                except Exception as e:
+                    query_response = {"type": "error", "error_code": 0, "error_message": str(e)}
                 else:
+                    if result.type == SQL_RESPONSE_TYPE.ERROR:
+                        query_response = {"type": "error", "error_code": 0, "error_message": result.error_message}
+                    elif result.type == SQL_RESPONSE_TYPE.OK:
+                        query_response = {"type": "ok"}
+                    else:
+                        df = result.data_frame
+                        result_set = ResultSet.from_df(df)
+                        query_response = {
+                            "type": "table",
+                            "column_names": result_set.get_column_names(),
+                            "data": result_set.to_lists(json_types=True),
+                        }
+
+                query_response["context"] = mysql_proxy.get_context()
+
+            else:
+                try:
+                    result: SQLAnswer = mysql_proxy.process_query(query)
+                    query_response: dict = result.dump_http_response()
+                except ExecutorException as e:
+                    # classified error
+                    error_type = "expected"
+                    query_response = {
+                        "type": SQL_RESPONSE_TYPE.ERROR,
+                        "error_code": 0,
+                        "error_message": str(e),
+                    }
+                    logger.warning(f"Error query processing: {e}")
+                except QueryError as e:
+                    error_type = "expected" if e.is_expected else "unexpected"
+                    query_response = {
+                        "type": SQL_RESPONSE_TYPE.ERROR,
+                        "error_code": 0,
+                        "error_message": str(e),
+                    }
+                    if e.is_expected:
+                        logger.warning(f"Query failed due to expected reason: {e}")
+                    else:
+                        logger.exception("Error query processing:")
+                except UnknownError as e:
+                    # unclassified
+                    error_type = "unexpected"
+                    query_response = {
+                        "type": SQL_RESPONSE_TYPE.ERROR,
+                        "error_code": 0,
+                        "error_message": str(e),
+                    }
                     logger.exception("Error query processing:")
-            except UnknownError as e:
-                # unclassified
-                error_type = "unexpected"
-                query_response = {
-                    "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": 0,
-                    "error_message": str(e),
-                }
-                logger.exception("Error query processing:")
 
-            except Exception as e:
-                error_type = "unexpected"
-                query_response = {
-                    "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": 0,
-                    "error_message": str(e),
-                }
-                logger.exception("Error query processing:")
+                except Exception as e:
+                    error_type = "unexpected"
+                    query_response = {
+                        "type": SQL_RESPONSE_TYPE.ERROR,
+                        "error_code": 0,
+                        "error_message": str(e),
+                    }
+                    logger.exception("Error query processing:")
 
-            if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
-                error_type = "expected"
-                error_code = query_response.get("error_code")
-                error_text = query_response.get("error_message")
+                if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
+                    error_type = "expected"
+                    error_code = query_response.get("error_code")
+                    error_text = query_response.get("error_message")
 
-            context = mysql_proxy.get_context()
+                context = mysql_proxy.get_context()
 
-            query_response["context"] = context
+                query_response["context"] = context
 
         hooks.after_api_query(
             company_id=ctx.company_id,

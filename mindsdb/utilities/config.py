@@ -155,6 +155,7 @@ class Config:
                 "http_permanent_session_lifetime": datetime.timedelta(days=31),
                 "username": "mindsdb",
                 "password": "",
+                "token": None,  # MINDSDB_AUTH_TOKEN
             },
             "logging": {
                 "handlers": {
@@ -311,6 +312,10 @@ class Config:
             self._env_config["auth"]["http_auth_type"] = http_auth_type
         elif http_auth_type != "":
             raise ValueError(f"Wrong value of env var MINDSDB_HTTP_AUTH_TYPE={http_auth_type}")
+
+        mindsdb_auth_token = os.environ.get("MINDSDB_AUTH_TOKEN", "").lower()
+        if mindsdb_auth_token != "":
+            self._env_config["auth"]["token"] = mindsdb_auth_token
 
         # region logging
         if os.environ.get("MINDSDB_LOG_LEVEL", "") != "":

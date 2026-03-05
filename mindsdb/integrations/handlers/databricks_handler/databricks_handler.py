@@ -404,7 +404,7 @@ class DatabricksHandler(MetaDatabaseHandler):
             try:
                 cursor.execute(query)
                 result = cursor.fetchall()
-                if result:
+                if cursor.description:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description]),

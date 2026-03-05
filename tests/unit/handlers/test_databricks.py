@@ -182,6 +182,15 @@ class TestTableOperations(unittest.TestCase):
         self.assertIsInstance(data, Response)
         self.assertFalse(data.error_code)
 
+    def test_native_query_empty_select_returns_table(self):
+        self.mock_cursor.set_results([], ["id", "name"])
+
+        response = self.handler.native_query("SELECT id, name FROM table WHERE 1 = 0")
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(list(response.data_frame.columns), ["id", "name"])
+        self.assertEqual(len(response.data_frame), 0)
+
     def test_get_tables(self):
         """
         Tests if the `get_tables` method to confirm it correctly calls `native_query` with the appropriate SQL commands.

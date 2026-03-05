@@ -1,9 +1,0 @@
-__title__ = 'MindsDB ClickHouse handler'
-__package_name__ = 'mindsdb_clickhouse_handler'
-__version__ = '0.0.2'
-__description__ = "MindsDB handler for ClickHouse"
-__author__ = 'MindsDB Inc'
-__github__ = 'https://github.com/mindsdb/mindsdb'
-__pypi__ = 'https://pypi.org/project/mindsdb/'
-__license__ = 'MIT'
-__copyright__ = 'Copyright 2022 MindsDB'

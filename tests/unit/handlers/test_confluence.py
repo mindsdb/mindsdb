@@ -2,19 +2,27 @@ from collections import OrderedDict
 import unittest
 from unittest.mock import MagicMock, call, patch
 
+import pytest
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
-from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
-from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
-from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
-    ConfluenceBlogPostsTable,
-    ConfluenceDatabasesTable,
-    ConfluencePagesTable,
-    ConfluenceSpacesTable,
-    ConfluenceWhiteboardsTable,
-    ConfluenceTasksTable,
-)
+
+try:
+    from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
+    from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
+    from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
+        ConfluenceBlogPostsTable,
+        ConfluenceDatabasesTable,
+        ConfluencePagesTable,
+        ConfluenceSpacesTable,
+        ConfluenceWhiteboardsTable,
+        ConfluenceTasksTable,
+    )
+
+    CONFLUENCE_HANDLER_AVAILABLE = True
+except ImportError:
+    CONFLUENCE_HANDLER_AVAILABLE = False
+
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -27,6 +35,7 @@ from mindsdb.integrations.utilities.sql_utils import (
 )
 
 
+@pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
 class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
     @property
     def dummy_connection_data(self):
@@ -122,6 +131,7 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(response.data_frame.columns.tolist(), ["Field", "Type"])
 
 
+@pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
 class ConfluenceTablesTestSetup(BaseAPIResourceTestSetup):
     @property
     def dummy_connection_data(self):
@@ -154,6 +164,7 @@ class ConfluenceTablesTestSetup(BaseAPIResourceTestSetup):
         self.mock_connect.return_value = MagicMock(request=mock_request)
 
 
+@pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
 class TestConfluenceSpacesTable(ConfluenceTablesTestSetup, unittest.TestCase):
     def create_resource(self):
         return ConfluenceSpacesTable(self.handler)
@@ -221,6 +232,7 @@ class TestConfluenceSpacesTable(ConfluenceTablesTestSetup, unittest.TestCase):
             )
 
 
+@pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
 class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
     def create_resource(self):
         return ConfluencePagesTable(self.handler)
@@ -297,6 +309,7 @@ class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
         )
 
 
+@pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
 class TestConfluenceBlogPostsTable(ConfluenceTablesTestSetup, unittest.TestCase):
     def create_resource(self):
         return ConfluenceBlogPostsTable(self.handler)
@@ -353,6 +366,7 @@ class TestConfluenceBlogPostsTable(ConfluenceTablesTestSetup, unittest.TestCase)
         )
 
 
+@pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
 class TestConfluenceDatabasesTable(ConfluenceTablesTestSetup, unittest.TestCase):
     def create_resource(self):
         return ConfluenceDatabasesTable(self.handler)
@@ -392,6 +406,7 @@ class TestConfluenceDatabasesTable(ConfluenceTablesTestSetup, unittest.TestCase)
             self.resource.list(conditions=[])
 
 
+@pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
 class TestConfluenceWhiteboardsTable(ConfluenceTablesTestSetup, unittest.TestCase):
     def create_resource(self):
         return ConfluenceWhiteboardsTable(self.handler)
@@ -431,6 +446,7 @@ class TestConfluenceWhiteboardsTable(ConfluenceTablesTestSetup, unittest.TestCas
             self.resource.list(conditions=[])
 
 
+@pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
 class TestConfluenceTasksTable(ConfluenceTablesTestSetup, unittest.TestCase):
     def create_resource(self):
         return ConfluenceTasksTable(self.handler)
@@ -497,6 +513,7 @@ class TestConfluenceTasksTable(ConfluenceTablesTestSetup, unittest.TestCase):
         )
 
 
+@pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
 class TestConfluenceAPIClient(unittest.TestCase):
     def test_paginate_with_cursor(self):
         client = ConfluenceAPIClient("https://example.com", "user", "pass")

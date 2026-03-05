@@ -1,2 +1,0 @@
-google-cloud-aiplatform>=1.35.0
--r mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt

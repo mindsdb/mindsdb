@@ -159,7 +159,7 @@ class TableResponse(DataHandlerResponse):
     """Response for successful cases with data (e.g. SELECT, SHOW, etc.).
 
     Attributes:
-        type: RESPONSE_TYPE.TABLE
+        type: RESPONSE_TYPE.TABLE | RESPONSE_TYPE.COLUMNS_TABLE - type of data in the response
         affected_rows: int | None - how many rows were affected by the query
         data_generator: Generator[pandas.DataFrame, None, None] | None - generator of data for lazy loading
         _columns: list[Column] | None - list of columns
@@ -170,7 +170,7 @@ class TableResponse(DataHandlerResponse):
         rows_fetched: int - how many rows were fetched
     """
 
-    type: ClassVar[str] = RESPONSE_TYPE.TABLE
+    type: str
     affected_rows: int | None
     _data_generator: Generator[pandas.DataFrame, None, None] | None
     _columns: list[Column] | None
@@ -196,6 +196,7 @@ class TableResponse(DataHandlerResponse):
                                  NOTE: name affected_rows for compatibility with OKResponse
             columns (list[Column]): list of columns
         """
+        self.type = RESPONSE_TYPE.TABLE
         self._data_generator = data_generator
         self._columns = columns
         self.affected_rows = affected_rows

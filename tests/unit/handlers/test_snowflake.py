@@ -915,6 +915,11 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.assertEqual(len(result.data_frame), 1)
         self.assertIn("child_table_name", result.data_frame.columns)
+        row = result.data_frame.iloc[0]
+        self.assertEqual(row["parent_table_name"], "ORDERS")
+        self.assertEqual(row["parent_column_name"], "CUSTOMER_ID")
+        self.assertEqual(row["child_table_name"], "CUSTOMERS")
+        self.assertEqual(row["child_column_name"], "ID")
 
     def test_meta_get_foreign_keys_handles_exception(self):
         self.handler.native_query = MagicMock(side_effect=Exception("boom"))

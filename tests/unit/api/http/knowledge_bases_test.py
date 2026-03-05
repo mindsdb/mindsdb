@@ -3,17 +3,17 @@ from http import HTTPStatus
 from unittest.mock import patch
 
 
-@patch("mindsdb.integrations.handlers.chromadb_handler.chromadb_handler.ChromaDBHandler")
+@patch("mindsdb.integrations.handlers.duckdb_faiss_handler.duckdb_faiss_handler.DuckDBFaissHandler")
 @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-def test_update_kb_embeddings(mock_embedding, chroma, client):
+def test_update_kb_embeddings(mock_embedding, handler, client):
     # for test of embeddings
     mock_embedding().data = [{"embedding": [0.1, 0.2]}]
 
     integration_data = {
         "database": {
             "name": "kb_vector_db",
-            "engine": "chromadb",
-            "parameters": {"persist_directory": "kb_vector_db"},
+            "engine": "duckdb_faiss",
+            "parameters": {},
         }
     }
     response = client.post("/api/databases", json=integration_data, follow_redirects=True)

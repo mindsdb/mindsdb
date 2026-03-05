@@ -303,9 +303,7 @@ class PostgresHandler(MetaDatabaseHandler):
                         logger.error(f"Error casting column {col.name} to {types_map[pg_type_info.name]}: {e}")
         df.columns = columns
 
-    def native_query(
-        self, query: str, params=None, stream: bool = True, **kwargs
-    ) -> DataHandlerResponse:
+    def native_query(self, query: str, params=None, stream: bool = True, **kwargs) -> DataHandlerResponse:
         """Executes a SQL query on the PostgreSQL database and returns the result.
         NOTE: 'INSERT' (and may be some else) queries can not be executed on the server side,
         but there are fallbackto client side execution.

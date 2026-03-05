@@ -132,7 +132,6 @@ class BaseTestKB(BaseExecutorDummyML):
         )
 
     def _get_storage_table(self, kb_name):
-        # default chromadb
         db_name = f"db_{kb_name}"
 
         self._drop_storage_db(db_name)
@@ -187,7 +186,7 @@ class TestKB(BaseTestKB):
         ret = self.run_sql("select * from kb_review")
         assert len(ret) == 1
 
-        # show tables in default chromadb
+        # show tables in default vectordb
         ret = self.run_sql("show knowledge bases")
 
         db_name = ret.STORAGE[0].split(".")[0]
@@ -1117,16 +1116,16 @@ class TestKB(BaseTestKB):
         temp_dir = tempfile.mkdtemp()
 
         self.run_sql(f"""
-        create database my_chroma 
-          with 
-           engine='chromadb',
+        create database my_faiss
+          with
+           engine='duckdb_faiss',
            PARAMETERS = {{
                'persist_directory': '{temp_dir}'
            }}
         """)
 
         set_litellm_embedding(mock_litellm_embedding, dimension=1000)
-        self._create_kb("kb1", storage="my_chroma.table1")
+        self._create_kb("kb1", storage="my_faiss.table1")
 
         self.run_sql("insert into kb1 (content) values ('review')")
 
@@ -1134,11 +1133,11 @@ class TestKB(BaseTestKB):
         set_litellm_embedding(mock_litellm_embedding, dimension=1500)
 
         with pytest.raises(ValueError):
-            self._create_kb("kb2", storage="my_chroma.table1")
+            self._create_kb("kb2", storage="my_faiss.table1")
 
         self.run_sql("drop knowledge base kb1")
-        self.run_sql("drop table my_chroma.table1")
-        self.run_sql("drop database my_chroma")
+        self.run_sql("drop table my_faiss.table1")
+        self.run_sql("drop database my_faiss")
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_duplicated_ids(self, mock_litellm_embedding):

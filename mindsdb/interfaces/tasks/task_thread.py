@@ -23,6 +23,9 @@ class TaskThread(threading.Thread):
         # create context and session
 
         task_record = db.Tasks.query.get(self.task_id)
+        if task_record is None:
+            logger.error(f"Task record not found: {self.task_id}")
+            return
 
         ctx.set_default()
         ctx.company_id = task_record.company_id

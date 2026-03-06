@@ -6,6 +6,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from mindsdb.api.mcp.mcp_instance import mcp
+
 # region these imports required for correct initialization
 from mindsdb.api.mcp import tools  # noqa: F401
 from mindsdb.api.mcp import resources  # noqa: F401

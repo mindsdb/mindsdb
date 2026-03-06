@@ -30,10 +30,15 @@ query_tool_description = dedent("""\
 @mcp.tool(name="query", description=query_tool_description)
 def query(
     query: Annotated[str, Field(description="SQL query to execute against MindsDB.")],
-    context: Annotated[dict | None, Field(
-        description='Default database context, e.g. {"db": "my_postgres"}. '
-                    'Required if the query does not use fully qualified table names.'
-    )] = None,
+    context: Annotated[
+        dict | None,
+        Field(
+            description=(
+                'Default database context, e.g. {"db": "my_postgres"}. '
+                "Required if the query does not use fully qualified table names."
+            )
+        ),
+    ] = None,
 ) -> QueryResponseAnswer:
     ctx.set_default()
 

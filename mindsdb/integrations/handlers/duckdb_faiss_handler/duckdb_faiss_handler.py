@@ -77,8 +77,6 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
         Handler readiness check.
         Must not open long-lived DuckDB/FAISS resources; tables are opened per operation.
         """
-        if not Path(self.persist_directory).exists():
-            raise ValueError(f"Persist directory {self.persist_directory} does not exist")
 
         self.is_connected = True
         return True

@@ -3,6 +3,8 @@ name: Build and deploy release
 permissions:
   contents: read
   pull-requests: write
+  pages: write
+  id-token: write
 
 on:
   release:

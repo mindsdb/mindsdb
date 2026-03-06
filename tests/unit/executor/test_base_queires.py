@@ -867,7 +867,7 @@ class TestSelect(BaseExecutorDummyML):
 
         # is not possible to update name of database
         with pytest.raises(Exception):
-            res = self.run_sql("""
+            self.run_sql("""
                 alter database test_db name=db_test;
             """)
 
@@ -884,6 +884,20 @@ class TestSelect(BaseExecutorDummyML):
             """)
 
         assert "Unknown function" in str(exc_info.value)
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_subselect_1row_aggregate(self, data_handler):
+        self.set_handler(data_handler, name="pg", tables={})
+
+        ret = self.run_sql("""
+            select count (*) result from (
+                SELECT * FROM pg (
+                    select 'content'
+                )
+            ) 
+        """)
+        assert len(ret) == 1
+        assert ret["result"][0] == 1
 
 
 class TestSet(BaseExecutorTest):

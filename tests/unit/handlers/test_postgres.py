@@ -17,7 +17,12 @@ from pandas.api import types as pd_types
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler, _map_type
-from mindsdb.integrations.libs.response import HandlerResponse as Response, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    RESPONSE_TYPE,
+    TableResponse,
+    OkResponse,
+    ErrorResponse,
+)
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
@@ -96,35 +101,64 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def create_patcher(self):
         return patch("psycopg.connect")
 
-    def test_native_query_command_ok(self):
+    def test_native_query_command_ok_stream(self):
         """
         Tests the `native_query` method to ensure it executes a SQL query and handles the case
         where the query doesn't return a result set (ExecStatus.COMMAND_OK)
         """
         mock_conn = MagicMock()
-        # Use MockCursorContextManager for simplified mocking
-        mock_cursor = MockCursorContextManager()
+        mock_cursor_server = MockCursorContextManager()
+        mock_cursor_client = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor = MagicMock(side_effect=[mock_cursor_server, mock_cursor_client])
 
-        mock_cursor.execute.return_value = None
+        syntax_error = psycopg.errors.SyntaxError('syntax error at or near "insert"')
+        mock_cursor_server.execute.side_effect = syntax_error
+        mock_cursor_client.execute.return_value = None
 
         # Setup pgresult
         mock_pgresult = MagicMock()
         mock_pgresult.status = ExecStatus.COMMAND_OK
-        mock_cursor.pgresult = mock_pgresult
-        mock_cursor.rowcount = 1
+        mock_cursor_client.pgresult = mock_pgresult
+        mock_cursor_client.rowcount = 1
 
         query_str = "INSERT INTO table VALUES (1, 2, 3)"
-        data = self.handler.native_query(query_str)
-        mock_cursor.execute.assert_called_once_with(query_str)
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
-        self.assertEqual(data.type, RESPONSE_TYPE.OK)
+        data = self.handler.native_query(query_str, stream=True)
+        mock_cursor_server.execute.assert_called_once_with(query_str)
+        mock_cursor_client.execute.assert_called_once_with(query_str)
+        assert isinstance(data, OkResponse)
         self.assertEqual(data.affected_rows, 1)
 
-    def test_native_query_with_results(self):
+    def test_native_query_command_ok_no_stream(self):
+        """
+        Tests the `native_query` at client side execution
+        """
+        mock_conn = MagicMock()
+        # mock_cursor_server = MockCursorContextManager()
+        mock_cursor_client = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(side_effect=[mock_cursor_client])
+
+        # syntax_error = psycopg.errors.SyntaxError('syntax error at or near "insert"')
+        # mock_cursor_server.execute.side_effect = syntax_error
+        mock_cursor_client.execute.return_value = None
+
+        # Setup pgresult
+        mock_pgresult = MagicMock()
+        mock_pgresult.status = ExecStatus.COMMAND_OK
+        mock_cursor_client.pgresult = mock_pgresult
+        mock_cursor_client.rowcount = 1
+
+        query_str = "INSERT INTO table VALUES (1, 2, 3)"
+        data = self.handler.native_query(query_str, stream=False)
+        # mock_cursor_server.execute.assert_called_once_with(query_str)
+        mock_cursor_client.execute.assert_called_once_with(query_str)
+        assert isinstance(data, OkResponse)
+        self.assertEqual(data.affected_rows, 1)
+
+    def test_native_query_with_results_client_side(self):
         """
         Tests the `native_query` method to ensure it executes a SQL query and handles the case
         where the query returns a result set
@@ -135,7 +169,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.fetchall = MagicMock(return_value=[[1, "name1"], [2, "name2"]])
+        mock_cursor.fetchall = MagicMock(side_effect=[[[1, "name1"], [2, "name2"]], []])
 
         # Create proper description objects with necessary type_code for _cast_dtypes
         mock_cursor.description = [
@@ -149,13 +183,50 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.pgresult = mock_pgresult
 
         query_str = "SELECT * FROM table"
-        data = self.handler.native_query(query_str)
+        data = self.handler.native_query(query_str, stream=False)
         mock_cursor.execute.assert_called_once_with(query_str)
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
+        assert isinstance(data, TableResponse)
+        assert getattr(data, "error_code", None) is None
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
         self.assertEqual(list(data.data_frame.columns), ["id", "name"])
+
+    def test_native_query_with_results_stream(self):
+        """
+        Tests the `native_query` method to ensure it executes a SQL query and handles the case
+        where the query returns a result set at server side execution
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        # Server-side execution uses fetchmany, not fetchall
+        mock_cursor.fetchmany = MagicMock(side_effect=[[[1, "name1"], [2, "name2"]], []])
+
+        mock_cursor.description = [
+            ColumnDescription(name="id", type_code=regtype_to_oid["integer"]),  # int4 type code
+            ColumnDescription(name="name", type_code=regtype_to_oid["text"]),  # text type code
+        ]
+
+        query_str = "SELECT * FROM table"
+        data = self.handler.native_query(query_str, stream=True)
+        mock_cursor.execute.assert_called_once_with(query_str)
+
+        # Verify the response
+        assert isinstance(data, TableResponse)
+        assert getattr(data, "error_code", None) is None
+        self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
+        self.assertIsNone(data._data)
+        data.fetchall()
+        self.assertIsInstance(data._data, DataFrame)
+        self.assertEqual(list(data.data_frame.columns), ["id", "name"])
+
+        # Verify DataFrame contains all expected rows
+        self.assertEqual(len(data.data_frame), 2)
+        self.assertEqual(data.data_frame["id"].tolist(), [1, 2])
+        self.assertEqual(data.data_frame["name"].tolist(), ["name1", "name2"])
 
     def test_native_query_with_params(self):
         """
@@ -175,8 +246,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         params = [(1, "a"), (2, "b")]
         data = self.handler.native_query(query_str, params=params)
         mock_cursor.executemany.assert_called_once_with(query_str, params)
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
+        assert isinstance(data, OkResponse)
 
     def test_native_query_error(self):
         """
@@ -198,8 +268,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         mock_cursor.execute.assert_called_once_with(query_str)
 
-        assert isinstance(data, Response)
-        self.assertEqual(data.type, RESPONSE_TYPE.ERROR)
+        assert isinstance(data, ErrorResponse)
 
         # The handler implementation sets error_code to 0, check error_message instead
         self.assertEqual(data.error_code, 0)
@@ -260,30 +329,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.assertEqual(result, "ok")
         self.handler.renderer.get_exec_params.assert_called_once_with(query_node, with_failback=True)
-        self.handler.native_query.assert_called_once_with("SELECT 1", ["foo"])
-
-    def test_query_stream_yields_batches(self):
-        mock_conn = MagicMock()
-        mock_cursor = MockCursorContextManager()
-        mock_cursor.pgresult = MagicMock(status=ExecStatus.TUPLES_OK)
-        mock_cursor.fetchmany = MagicMock(side_effect=[[(1, "name")], []])
-        mock_cursor.description = [
-            ColumnDescription(name="id", type_code=regtype_to_oid["integer"]),
-            ColumnDescription(name="name", type_code=regtype_to_oid["text"]),
-        ]
-
-        self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor = MagicMock(return_value=mock_cursor)
-        self.handler.renderer.get_exec_params = MagicMock(return_value=("SELECT * FROM table", None))
-        self.handler.disconnect = MagicMock()
-
-        batches = list(self.handler.query_stream(MagicMock(), fetch_size=1))
-
-        self.assertEqual(len(batches), 1)
-        self.assertListEqual(list(batches[0].columns), ["id", "name"])
-        mock_conn.commit.assert_called_once()
-        mock_conn.rollback.assert_called_once()
-        self.handler.disconnect.assert_called_once()
+        self.handler.native_query.assert_called_once_with("SELECT 1", ["foo"], stream=False)
 
     def test_insert_respects_existing_column_case(self):
         if getattr(self.handler, "name", None) != "postgres":
@@ -299,9 +345,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
         self.handler.disconnect = MagicMock()
         self.handler.get_columns = MagicMock(
-            return_value=Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame({"COLUMN_NAME": ["Id", "Amount"]}),
+            return_value=TableResponse(
+                data=pd.DataFrame({"COLUMN_NAME": ["Id", "Amount"]}),
             )
         )
 
@@ -444,13 +489,13 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_pgresult.status = ExecStatus.TUPLES_OK
         mock_cursor.pgresult = mock_pgresult
         mock_cursor.rowcount = 1
-        mock_cursor.fetchall = MagicMock(
-            return_value=[
-                ["a", "int", 1, None, "YES", None, None, None, None, None, None, None],
-                ["b", "int", 2, None, "YES", None, None, None, None, None, None, None],
-                ["c", "int", 3, None, "YES", None, None, None, None, None, None, None],
-            ]
-        )
+
+        get_columns_result = [
+            ["id", "int", 1, None, "YES", None, None, None, None, None, None, None],
+            ["name", "text", 2, None, "YES", None, None, None, None, None, None, None],
+        ]
+        mock_cursor.fetchmany = MagicMock(side_effect=[get_columns_result, []])
+
         information_schema_description = [
             ColumnDescription(name="COLUMN_NAME", type_code=regtype_to_oid["text"]),
             ColumnDescription(name="DATA_TYPE", type_code=regtype_to_oid["text"]),
@@ -473,19 +518,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # Ensure copy.__enter__ returns the copy object to mimic context manager
         copy_obj.__enter__ = MagicMock(return_value=copy_obj)
         copy_obj.__exit__ = MagicMock(return_value=None)
-
-        # region add result for 'get_columns' call
-        mock_pgresult = MagicMock()
-        mock_pgresult.status = ExecStatus.TUPLES_OK
-        mock_cursor.pgresult = mock_pgresult
-        mock_cursor.fetchall = MagicMock(
-            return_value=[
-                ["id", "int", 1, None, "YES", None, None, None, None, None, None, None],
-                ["name", "text", 2, None, "YES", None, None, None, None, None, None, None],
-            ]
-        )
-        mock_cursor.description = information_schema_description
-        # endregino
 
         df = pd.DataFrame({"id": [1, 2, 3], "name": ["a", "b", "c"]})
 
@@ -643,9 +675,11 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.VARCHAR,
             MYSQL_DATA_TYPE.VARCHAR,
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
 
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
+
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
             self.assertEqual(type(result_value), type(input_value), f"type mismatch: {result_value} != {input_value}")
@@ -657,8 +691,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.fetchall.return_value = input_rows
         mock_cursor.description = [ColumnDescription(name="t_boolean", type_code=16)]
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOL]
-        response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         self.assertTrue(pd_types.is_bool_dtype(response.data_frame["t_boolean"][0]))
         self.assertTrue(bool(response.data_frame["t_boolean"][0]) is True)
         self.assertTrue(bool(response.data_frame["t_boolean"][1]) is False)
@@ -774,8 +809,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.FLOAT,  # n_float4
             MYSQL_DATA_TYPE.DOUBLE,  # n_float8
         ]
-        response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
             self.assertEqual(result_value, input_value, f"value mismatch: {result_value} != {input_value}")
@@ -850,8 +886,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.TIME,  # TIMETZ
         ]
 
-        response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
             self.assertEqual(result_value, input_value, f"value mismatch: {result_value} != {input_value}")
@@ -866,7 +903,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ColumnDescription(name="t_boolean", type_code=16),
         ]
         mock_cursor.description = description
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         self.assertEqual(response.data_frame.dtypes[0], "Int64")
         self.assertEqual(response.data_frame.dtypes[1], "boolean")
         self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
@@ -921,8 +958,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.VECTOR,
         ]
 
-        response: Response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
             self.assertEqual(type(result_value), type(input_value), f"type mismatch: {result_value} != {input_value}")
@@ -933,7 +971,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # endregion
 
     def test_get_tables_all_flag(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.get_tables(all=True)
         query = self.handler.native_query.call_args[0][0]
         self.assertNotIn("current_schema()", query.split("table_schema")[-1])
@@ -955,19 +993,19 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 "COLLATION_NAME": [None],
             }
         )
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=df))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
         self.handler.get_columns("customers", schema_name="analytics")
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("table_schema = 'analytics'", query)
 
     def test_meta_get_tables_filters_by_list(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_tables(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("IN ('orders')", query)
 
     def test_meta_get_columns_filters_by_list(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_columns(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("IN ('orders')", query)
@@ -984,7 +1022,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 "histogram_bounds": ["{1,5,10}"],
             }
         )
-        response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        response = TableResponse(data=df)
         self.handler.native_query = MagicMock(return_value=response)
 
         result = self.handler.meta_get_column_statistics(table_names=["orders"])
@@ -995,13 +1033,13 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(result.data_frame.loc[0, "MOST_COMMON_VALUES"], ["A", "B"])
 
     def test_meta_get_primary_keys_with_filter(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_primary_keys(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)
 
     def test_meta_get_foreign_keys_with_filter(self):
-        self.handler.native_query = MagicMock(return_value=Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame()))
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=pd.DataFrame()))
         self.handler.meta_get_foreign_keys(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)

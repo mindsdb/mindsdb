@@ -7,8 +7,13 @@ from pathlib import Path
 import portalocker
 
 import faiss  # faiss or faiss-gpu
-from faiss.contrib.ondisk import merge_ondisk
+
+from mindsdb.utilities import log
+
 from pydantic import BaseModel
+
+
+logger = log.getLogger(__name__)
 
 
 def _normalize_rows(x: np.ndarray) -> np.ndarray:
@@ -23,6 +28,54 @@ class FaissParams(BaseModel):
     nprobe: int | None = 32
     hnsw_m: int | None = 32
     hnsw_ef_search: int | None = 64
+
+
+def merge_ondisk(trained_index: faiss.Index, shard_fnames: List[str], ivfdata_fname: str, shift_ids=False) -> None:
+    """
+    Modified version of faiss.contrib.ondisk.merge_ondisk. Prevents leaving orphan memory mapped shard files
+
+    Add the contents of the indexes stored in shard_fnames into the index trained_index.
+    The on-disk data is stored in ivfdata_fname
+    """
+    assert not isinstance(trained_index, faiss.IndexIVFPQR), "IndexIVFPQR is not supported as an on disk index."
+    # merge the images into an on-disk index
+    # first load the inverted lists
+    ivfs = []
+    indexes = []
+
+    for fname in shard_fnames:
+        # the IO_FLAG_MMAP is to avoid actually loading the data
+        #  thus the total size of the inverted lists can exceed the available RAM
+        logger.info("read " + fname)
+        index = faiss.read_index(fname, faiss.IO_FLAG_MMAP)
+        index_ivf = faiss.extract_index_ivf(index)
+        ivfs.append(index_ivf.invlists)
+
+        indexes.append(index)
+
+    # construct the output index
+    index = trained_index
+    index_ivf = faiss.extract_index_ivf(index)
+
+    assert index.ntotal == 0, "works only on empty index"
+
+    # prepare the output inverted lists. They will be written to merged_index.ivfdata
+    invlists = faiss.OnDiskInvertedLists(index_ivf.nlist, index_ivf.code_size, ivfdata_fname)
+
+    # merge all the inverted lists
+    ivf_vector = faiss.InvertedListsPtrVector()
+    for ivf in ivfs:
+        ivf_vector.push_back(ivf)
+
+    logger.info("merge %d inverted lists " % ivf_vector.size())
+    ntotal = invlists.merge_from_multiple(ivf_vector.data(), ivf_vector.size(), shift_ids)
+
+    # now replace the inverted lists in the output index
+    index.ntotal = index_ivf.ntotal = ntotal
+    index_ivf.replace_invlists(invlists, True)
+    invlists.this.disown()
+
+    del indexes
 
 
 class FaissIndex:
@@ -85,7 +138,7 @@ class FaissIndex:
         available_ram = psutil.virtual_memory().available
         if required_ram > _1gb and available_ram < required_ram:
             to_free_gb = round((required_ram - available_ram) / _1gb, 2)
-            raise ValueError(f"Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb")
+            raise ValueError(f"Unable load FAISS index into RAM, free up at least : {to_free_gb} Gb")
 
         # check ivf_file before loading index and locking it
         index_merged = Path(self.path).parent / "faiss_index_merged"
@@ -354,29 +407,29 @@ class FaissIVFIndex(FaissIndex):
         vec_files.sort()
         return vec_files
 
-    def _create_ivf_index(self, path, train_count, nlist):
+    def _create_ivf_index(self, dump_path, train_count, nlist):
         """
         Build an in-memory IVF index
 
-        :param path: Directory containing memmap files
+        :param dump_path: Directory containing memmap files
         :param train_count: Number of vectors to use for training
         :param nlist: number of clusters for IVF
         """
 
         # Load ids
-        ids_path = path / "ids.mmap"
+        ids_path = dump_path / "ids.mmap"
         if not os.path.exists(ids_path):
             raise FileNotFoundError(f"Missing ids memmap: {ids_path}")
         ids = np.fromfile(ids_path, dtype="int64")
 
-        ivf = self._train_ivf(path, nlist=nlist, train_count=train_count)
+        ivf = self._train_ivf(dump_path, nlist=nlist, train_count=train_count)
 
-        vec_files = self._get_dump_vector_files(path)
+        vec_files = self._get_dump_vector_files(dump_path)
 
         # load data
         start = 0
         for fname in vec_files:
-            fpath = path / fname
+            fpath = dump_path / fname
 
             batch_data = np.fromfile(fpath, dtype="float32")
             rows = int(batch_data.shape[0] / self.dim)
@@ -387,29 +440,33 @@ class FaissIVFIndex(FaissIndex):
             ivf.add_with_ids(batch_vectors, ids_batch)
             start += rows
 
+        # remove dumps
+        for item in dump_path.iterdir():
+            item.unlink()
+
         return ivf
 
-    def _create_ivf_file_index(self, path, train_count, nlist):
+    def _create_ivf_file_index(self, dump_path, train_count, nlist):
         """Build an IVF on disk index"""
 
-        index_path = path.parent
-        trained_index = self._train_ivf(path, train_count=train_count, nlist=nlist)
+        index_path = dump_path.parent
+        trained_index = self._train_ivf(dump_path, train_count=train_count, nlist=nlist)
         # store trained index
         trained_path = str(index_path / "faiss_index.trained")
         faiss.write_index(trained_index, trained_path)
 
-        ids_path = path / "ids.mmap"
+        ids_path = dump_path / "ids.mmap"
         if not os.path.exists(ids_path):
             raise FileNotFoundError(f"Missing ids memmap: {ids_path}")
         ids = np.fromfile(ids_path, dtype="int64")
 
-        vec_files = self._get_dump_vector_files(path)
+        vec_files = self._get_dump_vector_files(dump_path)
 
         start = 0
         block_fnames = []
         for num, fname in enumerate(vec_files):
             index = faiss.read_index(trained_path)
-            fpath = path / fname
+            fpath = dump_path / fname
 
             batch_data = np.fromfile(fpath, dtype="float32")
             rows = int(batch_data.shape[0] / self.dim)
@@ -422,6 +479,10 @@ class FaissIVFIndex(FaissIndex):
             block_fnames.append(block_fname)
             faiss.write_index(index, block_fname)
             start += rows
+
+        # remove dumps
+        for item in dump_path.iterdir():
+            item.unlink()
 
         index = faiss.read_index(trained_path)
 
@@ -437,6 +498,30 @@ class FaissIVFIndex(FaissIndex):
             return 0
         else:
             return self.index.ntotal
+
+    def check_required_disk_space(self, index_type):
+        available = psutil.disk_usage(self.path).free
+
+        # current size of index
+        index_size = 0
+        base_path = Path(self.path).parent
+        for item in base_path.iterdir():
+            if item.is_dir() or not item.name.startswith("faiss_index"):
+                continue
+            index_size += item.stat().st_size
+
+        # k - how more space required than current index size
+        if index_type == "ivf_file":
+            # recovery + dump + shard files
+            k = 3.01
+        else:
+            # recovery + dump
+            k = 2.01
+
+        # k-1 because the current index space will be reused
+        if available < index_size * (k - 1):
+            to_free_gb = round((index_size * (k - 1)) / 1024**3, 2)
+            raise ValueError(f"Unable run indexing FAISS not enough disk space, get free at least : {to_free_gb} Gb")
 
     def create_index(self, index_type, nlist=None, train_count=None):
         """
@@ -473,6 +558,8 @@ class FaissIVFIndex(FaissIndex):
         if train_count > ntotal:
             raise ValueError(f"Not enough data to create index: {ntotal}, at least {train_count} records are required")
 
+        self.check_required_disk_space(index_type)
+
         dump_path.mkdir(exist_ok=True)
 
         # remove old items
@@ -508,9 +595,7 @@ class FaissIVFIndex(FaissIndex):
         self.dump()
         self._lock_index()
 
-        # remove unused items
-        for item in dump_path.iterdir():
-            item.unlink()
+        # remove unused files
         dump_path.rmdir()
 
         for item in recover_path.iterdir():

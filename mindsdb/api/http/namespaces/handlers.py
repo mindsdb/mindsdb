@@ -20,6 +20,7 @@ from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities.exception import EntityExistsError
+from mindsdb.utilities.config import config
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -237,6 +238,17 @@ class BYOMUpload(Resource):
     @ns_conf.doc("post_file")
     @api_endpoint_metrics("POST", "/handlers/byom/handler")
     def post(self, name):
+        if config["byom"]["enabled"] is not True:
+            return http_error(
+                HTTPStatus.FORBIDDEN,
+                "BYOM is disabled",
+                "BYOM is disabled"
+                if config.is_cloud
+                else (
+                    "BYOM is disabled on this server. To enable this feature, set the environment variable "
+                    "MINDSDB_BYOM_ENABLED=true, or change the value in the configuration file config['byom']['enabled'] = True"
+                ),
+            )
         params = prepare_formdata()
 
         code_file_path = params["code"]
@@ -268,6 +280,17 @@ class BYOMUpload(Resource):
             - code
             - modules
         """
+        if config["byom"]["enabled"] is not True:
+            return http_error(
+                HTTPStatus.FORBIDDEN,
+                "BYOM is disabled",
+                "BYOM is disabled"
+                if config.is_cloud
+                else (
+                    "BYOM is disabled on this server. To enable this feature, set the environment variable "
+                    "MINDSDB_BYOM_ENABLED=true, or change the value in the configuration file config['byom']['enabled'] = True"
+                ),
+            )
 
         params = prepare_formdata()
 

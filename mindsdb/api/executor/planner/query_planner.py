@@ -478,7 +478,7 @@ class QueryPlanner:
 
         # clear where
         query.where = None
-        return self.plan_sub_select(query, prev_step)
+        return self.plan_sub_select(query, prev_step, skip_for_aggregation=True)
 
     def plan_nested_select(self, select):
         # query_info = self.get_query_info(select)
@@ -839,7 +839,7 @@ class QueryPlanner:
         else:
             raise PlanningException(f"Unsupported from_table {type(from_table)}")
 
-    def plan_sub_select(self, query, prev_step, add_absent_cols=False):
+    def plan_sub_select(self, query, prev_step, add_absent_cols=False, skip_for_aggregation=False):
         if (
             query.group_by is not None
             or query.order_by is not None
@@ -860,7 +860,13 @@ class QueryPlanner:
 
             query2 = copy.deepcopy(query)
             query2.from_table = None
-            sup_select = SubSelectStep(query2, prev_step.result, table_name=table_name, add_absent_cols=add_absent_cols)
+            sup_select = SubSelectStep(
+                query2,
+                prev_step.result,
+                table_name=table_name,
+                add_absent_cols=add_absent_cols,
+                skip_for_aggregation=skip_for_aggregation,
+            )
             self.plan.add_step(sup_select)
             return sup_select
         return prev_step

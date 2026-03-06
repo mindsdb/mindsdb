@@ -8,7 +8,6 @@ from contextlib import contextmanager
 
 import pandas as pd
 import pytest
-import sys
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import (
@@ -133,7 +132,6 @@ class BaseTestKB(BaseExecutorDummyML):
         )
 
     def _get_storage_table(self, kb_name):
-        # default chromadb
         db_name = f"db_{kb_name}"
 
         self._drop_storage_db(db_name)
@@ -141,10 +139,7 @@ class BaseTestKB(BaseExecutorDummyML):
         self.run_sql(f"""
           create database {db_name} 
            with 
-           engine='chromadb',
-           PARAMETERS = {{
-               'persist_directory': '{kb_name}'
-           }}
+           engine='duckdb_faiss'
         """)
         self.storages.append(db_name)
 
@@ -191,7 +186,7 @@ class TestKB(BaseTestKB):
         ret = self.run_sql("select * from kb_review")
         assert len(ret) == 1
 
-        # show tables in default chromadb
+        # show tables in default vectordb
         ret = self.run_sql("show knowledge bases")
 
         db_name = ret.STORAGE[0].split(".")[0]
@@ -480,8 +475,6 @@ class TestKB(BaseTestKB):
         assert set(ret["id"]) == {"9016", "9023"}
 
     @pytest.mark.slow
-    @pytest.mark.skipif(sys.platform == "win32", reason="Causes hard crash on windows.")
-    @pytest.mark.skipif(sys.platform == "darwin", reason="Causes hard crash on mac.")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_kb_partitions(self, mock_handler, mock_litellm_embedding):
@@ -581,13 +574,14 @@ class TestKB(BaseTestKB):
             """
             )
 
-            # test threads
-            check_partition(
-                """
-                insert into kb_part SELECT id, english FROM pg.ral
-                using batch_size=20, track_column=id, threads = 3
-            """
-            )
+            # switched off for faiss
+            # # test threads
+            # check_partition(
+            #     """
+            #     insert into kb_part SELECT id, english FROM pg.ral
+            #     using batch_size=20, track_column=id, threads = 3
+            # """
+            # )
 
             # without track column
             check_partition(
@@ -616,13 +610,14 @@ class TestKB(BaseTestKB):
             """
             )
 
-            # test threads
-            check_partition(
-                """
-                insert into kb_part SELECT id, english FROM pg.ral
-                using batch_size=20, track_column=id, threads = 3
-            """
-            )
+            # switched off for faiss
+            # # test threads
+            # check_partition(
+            #     """
+            #     insert into kb_part SELECT id, english FROM pg.ral
+            #     using batch_size=20, track_column=id, threads = 3
+            # """
+            # )
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_kb_algebra(self, mock_litellm_embedding):
@@ -1137,16 +1132,16 @@ class TestKB(BaseTestKB):
         temp_dir = tempfile.mkdtemp()
 
         self.run_sql(f"""
-        create database my_chroma 
-          with 
-           engine='chromadb',
+        create database my_faiss
+          with
+           engine='duckdb_faiss',
            PARAMETERS = {{
                'persist_directory': '{temp_dir}'
            }}
         """)
 
         set_litellm_embedding(mock_litellm_embedding, dimension=1000)
-        self._create_kb("kb1", storage="my_chroma.table1")
+        self._create_kb("kb1", storage="my_faiss.table1")
 
         self.run_sql("insert into kb1 (content) values ('review')")
 
@@ -1154,11 +1149,11 @@ class TestKB(BaseTestKB):
         set_litellm_embedding(mock_litellm_embedding, dimension=1500)
 
         with pytest.raises(ValueError):
-            self._create_kb("kb2", storage="my_chroma.table1")
+            self._create_kb("kb2", storage="my_faiss.table1")
 
         self.run_sql("drop knowledge base kb1")
-        self.run_sql("drop table my_chroma.table1")
-        self.run_sql("drop database my_chroma")
+        self.run_sql("drop table my_faiss.table1")
+        self.run_sql("drop database my_faiss")
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_duplicated_ids(self, mock_litellm_embedding):

@@ -217,10 +217,6 @@ for handler in "${HANDLERS_TO_INSTALL[@]}"; do
         -r requirements/requirements-test.txt \
         "${HANDLER_EXTRAS[@]}"
 
-    # Install onnxruntime for ChromaDB
-    echo "Installing onnxruntime..."
-    uv pip install --force-reinstall onnxruntime==1.20.1
-
     # Clone parser tests
     PARSER_VERSION=$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2)
     if [[ ! -d "parser_tests" ]]; then

@@ -383,6 +383,7 @@ if __name__ == "__main__":
 
     if config.cmd_args.mcp_stdio:
         from mindsdb.api.mcp.mcp_instance import mcp
+
         mcp.run()
         sys.exit(0)
 

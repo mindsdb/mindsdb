@@ -102,4 +102,10 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
     )
 
     # Setting logging to None makes uvicorn use the existing logging configuration
-    uvicorn.run(Starlette(routes=routes, lifespan=lifespan, debug=verbose), host=host, port=int(port), log_level=None, log_config=None)
+    uvicorn.run(
+        Starlette(routes=routes, lifespan=lifespan, debug=verbose),
+        host=host,
+        port=int(port),
+        log_level=None,
+        log_config=None,
+    )

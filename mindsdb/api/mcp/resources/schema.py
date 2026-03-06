@@ -30,7 +30,8 @@ def _get_database_names() -> list[str]:
     ctx.set_default()
     session = SessionController()
     databases = session.database_controller.get_list()
-    return [x['name'] for x in databases if x['type'] == 'data']
+    return [x["name"] for x in databases if x["type"] == "data"]
+
 
 @mcp.resource("schema://databases", mime_type="application/json")
 def list_databases() -> list[str]:
@@ -43,11 +44,14 @@ def db_tables(database_name: str) -> list[TableInfo]:
     session = SessionController()
     datanode = session.datahub.get(database_name)
     all_tables = datanode.get_tables()
-    all_tables = [{
-        "TABLE_NAME": table.TABLE_NAME,
-        "TABLE_TYPE": table.TABLE_TYPE,
-        "TABLE_SCHEMA": table.TABLE_SCHEMA,
-    } for table in all_tables]
+    all_tables = [
+        {
+            "TABLE_NAME": table.TABLE_NAME,
+            "TABLE_TYPE": table.TABLE_TYPE,
+            "TABLE_SCHEMA": table.TABLE_SCHEMA,
+        }
+        for table in all_tables
+    ]
     return all_tables
 
 
@@ -60,13 +64,14 @@ def db_table_columns(database_name: str, table_name: str) -> list[ColumnInfo]:
     respnse = []
     if isinstance(columns_answer, TableResponse) and columns_answer.type == RESPONSE_TYPE.COLUMNS_TABLE:
         if columns_answer.type != RESPONSE_TYPE.COLUMNS_TABLE:
-            raise ValueError("Database returned a successful response, but the column list does not match the expected format")
+            raise ValueError(
+                "Database returned a successful response, but the column list does not match the expected format"
+            )
         df = columns_answer.fetchall()
-        respnse = df[['COLUMN_NAME', 'MYSQL_DATA_TYPE']].to_dict(orient='records')
+        respnse = df[["COLUMN_NAME", "MYSQL_DATA_TYPE"]].to_dict(orient="records")
         return respnse
     if isinstance(columns_answer, ErrorResponse):
         raise ValueError(columns_answer.error_message)
-
 
 
 @mcp.resource("schema://knowledge_bases")
@@ -78,11 +83,13 @@ def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
     for project_name in project_names:
         kbs = session.kb_controller.list(project_name)
         for kb in kbs:
-            result.append({
-                "name": kb["name"],
-                "project": kb["project"],
-                "metadata_columns": kb["metadata_columns"],
-                "content_columns": kb["content_columns"],
-                "id_column": kb["id_column"],
-            })
+            result.append(
+                {
+                    "name": kb["name"],
+                    "project": kb["project"],
+                    "metadata_columns": kb["metadata_columns"],
+                    "content_columns": kb["content_columns"],
+                    "id_column": kb["id_column"],
+                }
+            )
     return result

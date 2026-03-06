@@ -18,13 +18,14 @@ SECRET_KEY = os.environ.get("AUTH_SECRET_KEY") or secrets.token_urlsafe(32)
 # We store token (fingerprints) in memory, which means everyone is logged out if the process restarts
 TOKENS = []
 
+
 def get_pat_fingerprint(token: str) -> str:
     """Hash the token with HMAC-SHA256 using secret_key as pepper."""
     return hmac.new(SECRET_KEY.encode(), token.encode(), hashlib.sha256).hexdigest()
 
 
-if config['auth']["token"]:
-    TOKENS.append(get_pat_fingerprint(config['auth']["token"]))
+if config["auth"]["token"]:
+    TOKENS.append(get_pat_fingerprint(config["auth"]["token"]))
 
 
 def generate_pat() -> str:

@@ -8,7 +8,7 @@ import sqlalchemy as sa
 import numpy as np
 
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier, BinaryOperation
+from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier, BinaryOperation, Join
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.interfaces.storage import db
@@ -185,28 +185,34 @@ class Project:
                 #     column is not in black list AND (query has star(*) OR column in white list)
 
                 has_star = False
-                white_list, black_list = [], []
+                white_list, black_list = {}, []
                 for target in view_query.targets:
                     if isinstance(target, Star):
                         has_star = True
                     if isinstance(target, Identifier):
                         name = target.parts[-1].lower()
                         if target.alias is None or target.alias.parts[-1].lower() == name:
-                            white_list.append(name)
+                            white_list[name] = target
                     elif target.alias is not None:
                         black_list.append(target.alias.parts[-1].lower())
 
+                is_join = isinstance(view_query.from_table, Join)
                 view_where = view_query.where
                 for condition in conditions:
                     arg1, arg2 = condition.args
 
                     if isinstance(arg1, Identifier):
                         name = arg1.parts[-1].lower()
-                        if name in black_list or not (has_star or name in white_list):
+                        if name in white_list:
+                            arg1 = white_list[name]
+                        # don't move condition for join with Star
+                        elif name in black_list or not (has_star and not is_join):
                             continue
                     if isinstance(arg2, Identifier):
                         name = arg2.parts[-1].lower()
-                        if name in black_list or not (has_star or name in white_list):
+                        if name in white_list:
+                            arg2 = white_list[name]
+                        if name in black_list or not (has_star and not is_join):
                             continue
 
                     # condition can be moved into view
@@ -224,7 +230,13 @@ class Project:
 
         # combine outer query with view's query
         view_query.parentheses = True
+
+        # keep alias (column of the query might relate to it)
+        alias = query.from_table.alias if query.from_table.alias is not None else query.from_table
+        view_query.alias = Identifier(parts=[alias.parts[-1]])
+
         query.from_table = view_query
+
         return query
 
     def query_view(self, query: Select, session) -> pd.DataFrame:

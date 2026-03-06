@@ -33,12 +33,20 @@ def _get_database_names() -> list[str]:
     return [x["name"] for x in databases if x["type"] == "data"]
 
 
-@mcp.resource("schema://databases", mime_type="application/json")
+@mcp.resource(
+    "schema://databases",
+    mime_type="application/json",
+    description="List of connected data source names available for querying.",
+)
 def list_databases() -> list[str]:
     return _get_database_names()
 
 
-@mcp.resource("schema://databases/{database_name}/tables", mime_type="application/json")
+@mcp.resource(
+    "schema://databases/{database_name}/tables",
+    mime_type="application/json",
+    description="List of tables in the specified connected database.",
+)
 def db_tables(database_name: str) -> list[TableInfo]:
     ctx.set_default()
     session = SessionController()
@@ -55,7 +63,11 @@ def db_tables(database_name: str) -> list[TableInfo]:
     return all_tables
 
 
-@mcp.resource("schema://databases/{database_name}/tables/{table_name}/columns", mime_type="application/json")
+@mcp.resource(
+    "schema://databases/{database_name}/tables/{table_name}/columns",
+    mime_type="application/json",
+    description="Column names and types for a specific table in a connected database.",
+)
 def db_table_columns(database_name: str, table_name: str) -> list[ColumnInfo]:
     ctx.set_default()
     session = SessionController()
@@ -74,7 +86,10 @@ def db_table_columns(database_name: str, table_name: str) -> list[ColumnInfo]:
         raise ValueError(columns_answer.error_message)
 
 
-@mcp.resource("schema://knowledge_bases")
+@mcp.resource(
+    "schema://knowledge_bases",
+    description="List of knowledge bases with their project, column configuration, and ID column.",
+)
 def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
     ctx.set_default()
     session = SessionController()

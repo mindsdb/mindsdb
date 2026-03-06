@@ -74,7 +74,7 @@ def db_table_columns(database_name: str, table_name: str) -> list[ColumnInfo]:
     handler = session.integration_controller.get_data_handler(database_name)
     columns_answer = handler.get_columns(table_name)
     respnse = []
-    if isinstance(columns_answer, TableResponse) and columns_answer.type == RESPONSE_TYPE.COLUMNS_TABLE:
+    if isinstance(columns_answer, TableResponse):
         if columns_answer.type != RESPONSE_TYPE.COLUMNS_TABLE:
             raise ValueError(
                 "Database returned a successful response, but the column list does not match the expected format"
@@ -84,6 +84,7 @@ def db_table_columns(database_name: str, table_name: str) -> list[ColumnInfo]:
         return respnse
     if isinstance(columns_answer, ErrorResponse):
         raise ValueError(columns_answer.error_message)
+    raise ValueError(f"Unexpected handler response type: {columns_answer}")
 
 
 @mcp.resource(

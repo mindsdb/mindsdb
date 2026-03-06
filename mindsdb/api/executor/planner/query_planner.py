@@ -69,9 +69,11 @@ class QueryPlanner:
         predictor_namespace=None,
         predictor_metadata: list = None,
         default_namespace: str = None,
+        kb_metadata: dict = None,
     ):
         self.query = query
         self.plan = QueryPlan()
+        self.kb_metadata = kb_metadata or {}
 
         _projects = set()
         self.integrations = {}

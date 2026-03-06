@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 import numpy as np
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     Column,
     DateTime,

@@ -74,6 +74,14 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
         if mounted is not None:
             sub_apps.append(mounted)
 
+    # RFC 9728: /.well-known/oauth-protected-resource must be at the server root,
+    # not under the /mcp mount, so we register it here before the Flask fallback.
+    try:
+        well_known_routes = import_module("mindsdb.api.mcp").get_mcp_well_known_routes()
+        routes.extend(well_known_routes)
+    except Exception:
+        pass
+
     @asynccontextmanager
     async def lifespan(_):
         """Propagate ASGI lifespan events to mounted sub-apps.

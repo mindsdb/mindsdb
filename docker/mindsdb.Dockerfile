@@ -1,7 +1,7 @@
 # This stage's objective is to gather ONLY requirements.txt files and anything else needed to install deps.
 # This stage will be run almost every build, but it is fast and the resulting layer hash will be the same unless a deps file changes.
 # We do it this way because we can't copy all requirements files with a glob pattern in docker while maintaining the folder structure.
-FROM python:3.10 AS deps
+FROM python:3.10-slim AS deps
 WORKDIR /mindsdb
 
 # Copy everything to begin with
@@ -21,7 +21,7 @@ COPY mindsdb/__about__.py mindsdb/
 
 
 # Use the stage from above to install our deps with as much caching as possible
-FROM python:3.10 AS build
+FROM python:3.10-slim AS build
 WORKDIR /mindsdb
 
 # Configure apt to retain downloaded packages so we can store them in a cache mount
@@ -34,7 +34,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -qy \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
-    freetds-dev freetds-bin libpq5 curl unixodbc unixodbc-dev gnupg # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
+    build-essential freetds-dev freetds-bin libpq5 curl unixodbc unixodbc-dev gnupg # build-essential required to compile C extensions like quadprog; freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
 
 # Install Microsoft ODBC Driver 18 for SQL Server
 # Use Debian 12 (bookworm) repo as it's the latest stable version supported by Microsoft
@@ -97,8 +97,8 @@ EXPOSE 47335/tcp
 RUN python -m mindsdb --config=/root/mindsdb_config.json --load-tokenizer --update-gui
 
 # Same as extras image, but with dev dependencies installed.
-# This image is used in our docker-compose
-FROM extras AS dev
+# This image is used in our docker-compose and for local development with volume mounting
+FROM build AS dev
 WORKDIR /mindsdb
 
 # Configure apt to retain downloaded packages so we can store them in a cache mount
@@ -114,11 +114,31 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     -o APT::Install-Suggests=false \
     libpq5 freetds-bin curl
 
-# Install dev requirements and install 'mindsdb' as an editable package
-RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requirements-dev.txt \
-                                        && uv pip install --no-deps -e "."
+# Copy requirements files to install dev dependencies
+COPY --from=deps /mindsdb/requirements requirements/
+# Install dev requirements
+RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requirements-dev.txt
+
+# Copy minimal files needed for editable install
+COPY setup.py default_handlers.txt README.md ./
+COPY mindsdb/__about__.py mindsdb/__about__.py
+
+# Install mindsdb as editable - this creates .egg-link that points to /mindsdb
+# When we mount the volume, the editable install will use the mounted code
+RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps -e "."
+
+# Copy code (will be overridden by volume mount in docker run)
+COPY . .
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
+
+ENV PYTHONUNBUFFERED=1
+ENV MINDSDB_DOCKER_ENV=1
+ENV VIRTUAL_ENV=/venv
+ENV PATH=/venv/bin:$PATH
+
+EXPOSE 47334/tcp
+EXPOSE 47335/tcp
 
 ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql' mindsdb" ]
 

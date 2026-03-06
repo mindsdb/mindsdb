@@ -59,7 +59,7 @@ python-pptx>=0.6.0
 filetype
 charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
-aipdf==0.0.7.0
+aipdf==0.0.6.3  # 0.0.7.0 requires openai>=2.0.0, conflicts with langchain-openai
 pyarrow<=19.0.0 # used by pandas to read feather files in Files handler
 orjson==3.11.3
 

@@ -1,6 +1,5 @@
 from typing import List, Dict, Any, Optional, Tuple, Set, Iterable
 import calendar
-import inspect
 import re
 from datetime import date, datetime, time, timedelta
 
@@ -899,8 +898,9 @@ def _build_hubspot_search_filters(
 
         if hubspot_operator in {"IN", "NOT_IN"}:
             values = _extract_in_values(value)
+            values = [v for v in values if v is not None]
             if not values:
-                logger.warning(f"Empty IN clause values for column '{column}'")
+                logger.debug(f"No valid (non-None) values in IN clause for column '{column}', falling back to post-filter")
                 return None
 
             logger.debug(f"Building IN filter for {column}: {values}")
@@ -973,6 +973,9 @@ def _prepare_association_request(object_type: str, columns: List[str]) -> Tuple[
     return association_targets, hubspot_columns
 
 
+HUBSPOT_IN_MAX = 100
+
+
 def _execute_hubspot_search(
     search_api,
     filters: List[Dict],
@@ -984,7 +987,26 @@ def _execute_hubspot_search(
 ) -> List[Dict[str, Any]]:
     """
     Execute paginated HubSpot search with filters.
+    Automatically chunks oversized IN filters (HubSpot max: 100 values).
     """
+    for i, f in enumerate(filters or []):
+        if f.get("operator") in {"IN", "NOT_IN"} and len(f.get("values", [])) > HUBSPOT_IN_MAX:
+            values = f["values"]
+            chunks = [values[j: j + HUBSPOT_IN_MAX] for j in range(0, len(values), HUBSPOT_IN_MAX)]
+            collected: List[Dict[str, Any]] = []
+            for chunk in chunks:
+                if limit is not None and len(collected) >= limit:
+                    break
+                chunk_limit = limit - len(collected) if limit is not None else None
+                chunked_filters = filters[:i] + [{**f, "values": chunk}] + filters[i + 1:]
+                collected.extend(
+                    _execute_hubspot_search(
+                        search_api, chunked_filters, properties,
+                        chunk_limit, to_dict_fn, sorts, object_type,
+                    )
+                )
+            return collected
+
     collected: List[Dict[str, Any]] = []
     remaining = limit if limit is not None else float("inf")
     after = None
@@ -992,9 +1014,11 @@ def _execute_hubspot_search(
     while remaining > 0:
         page_limit = min(int(remaining) if remaining != float("inf") else 200, 200)
         search_request = {
-            "properties": properties,
             "limit": page_limit,
         }
+
+        if properties:
+            search_request["properties"] = properties
 
         if filters:
             search_request["filterGroups"] = [{"filters": filters}]
@@ -1048,6 +1072,12 @@ class HubSpotAPIResource(APIResource):
         original_targets = list(targets)
         normalized_conditions = _normalize_filter_conditions(conditions)
         self._validate_query_columns(targets, normalized_conditions, order_by)
+
+        for condition in normalized_conditions:
+            if len(condition) >= 3 and condition[0] == "in":
+                in_vals = condition[2] if isinstance(condition[2], list) else [condition[2]]
+                if in_vals and all(v is None for v in in_vals):
+                    return pd.DataFrame(columns=original_targets or self.get_columns())
 
         if self.SEARCHABLE_COLUMNS:
             filters = (
@@ -1623,6 +1653,8 @@ class CompaniesTable(HubSpotAPIResource):
         for company in companies:
             try:
                 companies_dict.append(self._company_to_dict(company, columns))
+                if limit is not None and len(companies_dict) >= limit:
+                    break
             except Exception as e:
                 logger.warning(f"Error processing company {getattr(company, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -1692,6 +1724,26 @@ class CompaniesTable(HubSpotAPIResource):
             logger.info("Companies deleted")
         except Exception as e:
             raise Exception(f"Companies deletion failed {e}")
+
+
+def _extract_association_condition(
+    conditions: List[List[Any]], column: str
+) -> Optional[List[str]]:
+    """
+    Return a list of non-None string values if conditions contain an
+    eq/in filter on *column*, otherwise return None.
+    """
+    for condition in conditions:
+        if len(condition) >= 3 and condition[1] == column:
+            op, val = condition[0], condition[2]
+            if op == "eq" and val is not None:
+                return [str(val)]
+            if op == "in":
+                vals = val if isinstance(val, list) else [val]
+                valid = [str(v) for v in vals if v is not None]
+                if valid:
+                    return valid
+    return None
 
 
 class ContactsTable(HubSpotAPIResource):
@@ -1866,12 +1918,20 @@ class ContactsTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("contacts", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        # Optimization: if filtering by primary_company_id, bypass full contact
+        # scan and use the associations API to fetch only the relevant contacts.
+        company_ids = _extract_association_condition(normalized_conditions, "primary_company_id")
+        if company_ids:
+            return self._get_contacts_by_company_ids(
+                hubspot, company_ids, hubspot_columns, hubspot_properties, columns, limit
+            )
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
-        if association_targets and "associations" in inspect.signature(hubspot.crm.contacts.get_all).parameters:
+        if association_targets:
             api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
@@ -1895,17 +1955,103 @@ class ContactsTable(HubSpotAPIResource):
 
         contacts = hubspot.crm.contacts.get_all(**api_kwargs)
         contacts_dict = []
+        # When fetching contacts with associations (needed for primary_company_id),
+        # each page requires an extra API call. Without an explicit limit this
+        # becomes an unbounded scan (e.g. during JOIN processing where the outer
+        # LIMIT is not propagated to the sub-table query). Cap at a large but
+        # finite number so the query does not run indefinitely.
+        effective_limit = limit if limit is not None else (10_000 if association_targets else None)
         try:
             for contact in contacts:
                 row = self._contact_to_dict(contact, hubspot_columns, association_targets)
                 contacts_dict.append(row)
-                if limit is not None and len(contacts_dict) >= limit:
+                if effective_limit is not None and len(contacts_dict) >= effective_limit:
                     break
         except Exception as e:
             logger.error(f"Failed to iterate HubSpot contacts: {str(e)}")
             raise
 
         logger.info(f"Retrieved {len(contacts_dict)} contacts from HubSpot")
+        return contacts_dict
+
+    def _get_contacts_by_company_ids(
+        self,
+        hubspot: HubSpot,
+        company_ids: List[str],
+        hubspot_columns: List[str],
+        hubspot_properties: List[str],
+        columns: List[str],
+        limit: Optional[int],
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch contacts that are associated with the given company IDs using
+        HubSpot's batch associations API + batch read, instead of scanning
+        all contacts (~100x faster for large accounts).
+        """
+        from hubspot.crm.associations.models import (
+            BatchInputPublicObjectId,
+            PublicObjectId,
+        )
+        from hubspot.crm.contacts.models import (
+            BatchReadInputSimplePublicObjectId,
+            SimplePublicObjectId as ContactObjectId,
+        )
+
+        BATCH = 100
+        # contact_id -> company_id (first company that referenced this contact)
+        contact_company_map: Dict[str, str] = {}
+
+        for i in range(0, len(company_ids), BATCH):
+            chunk = company_ids[i: i + BATCH]
+            try:
+                resp = hubspot.crm.associations.batch_api.read(
+                    "companies",
+                    "contacts",
+                    BatchInputPublicObjectId(
+                        inputs=[PublicObjectId(id=cid) for cid in chunk]
+                    ),
+                )
+                for multi in resp.results or []:
+                    from_id = str(
+                        (multi._from or {}).get("id", "")
+                        if isinstance(multi._from, dict)
+                        else getattr(multi._from, "id", "")
+                    )
+                    for assoc in multi.to or []:
+                        cid = str(assoc.id)
+                        if cid not in contact_company_map:
+                            contact_company_map[cid] = from_id
+            except Exception as e:
+                logger.warning(f"Failed to fetch associations for companies {chunk}: {e}")
+
+        if not contact_company_map:
+            return []
+
+        all_contact_ids = list(contact_company_map.keys())
+        if limit is not None:
+            all_contact_ids = all_contact_ids[:limit]
+
+        contacts_dict = []
+        for i in range(0, len(all_contact_ids), BATCH):
+            batch_ids = all_contact_ids[i: i + BATCH]
+            try:
+                resp = hubspot.crm.contacts.batch_api.read(
+                    batch_read_input_simple_public_object_id=BatchReadInputSimplePublicObjectId(
+                        properties=hubspot_properties,
+                        inputs=[ContactObjectId(id=cid) for cid in batch_ids],
+                    )
+                )
+                for contact in resp.results or []:
+                    row = self._contact_to_dict(contact, hubspot_columns, None)
+                    row["primary_company_id"] = contact_company_map.get(str(contact.id))
+                    contacts_dict.append(row)
+            except Exception as e:
+                logger.error(f"Failed to batch read contacts: {e}")
+                raise
+
+        logger.info(
+            f"Retrieved {len(contacts_dict)} contacts via company associations API"
+        )
         return contacts_dict
 
     def _search_contacts_by_conditions(
@@ -2264,7 +2410,7 @@ class DealsTable(HubSpotAPIResource):
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
-        if association_targets and "associations" in inspect.signature(hubspot.crm.deals.get_all).parameters:
+        if association_targets:
             api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
@@ -2508,7 +2654,7 @@ class TicketsTable(HubSpotAPIResource):
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
-        if association_targets and "associations" in inspect.signature(hubspot.crm.tickets.get_all).parameters:
+        if association_targets:
             api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):

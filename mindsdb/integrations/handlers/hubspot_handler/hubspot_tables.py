@@ -1,4 +1,4 @@
-from typing import List, Dict, Text, Any, Optional, Tuple, Set, Iterable
+from typing import List, Dict, Any, Optional, Tuple, Set, Iterable
 import calendar
 import inspect
 import re
@@ -600,6 +600,17 @@ HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
         ("stage_order", "INTEGER", "Stage display order"),
         ("stage_probability", "DECIMAL", "Stage probability"),
         ("stage_archived", "BOOLEAN", "Stage archived"),
+    ],
+    "leads": [
+        ("hs_lead_name", "VARCHAR", "Lead name"),
+        ("hs_lead_type", "VARCHAR", "Lead type"),
+        ("hs_lead_label", "VARCHAR", "Lead label/status"),
+        ("hubspot_owner_id", "VARCHAR", "Owner ID"),
+        ("hs_timestamp", "TIMESTAMP", "Lead timestamp"),
+        ("primary_contact_id", "VARCHAR", "Primary associated contact ID"),
+        ("primary_company_id", "VARCHAR", "Primary associated company ID"),
+        ("createdate", "TIMESTAMP", "Creation date"),
+        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
     ],
 }
 
@@ -1327,7 +1338,7 @@ class OwnersTable(HubSpotAPIResource):
     def remove(self, conditions: List[FilterCondition]) -> None:
         raise NotImplementedError("Deleting owners via DELETE is not supported.")
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_owner_columns()
 
     @staticmethod
@@ -1393,7 +1404,7 @@ class DealStagesTable(HubSpotAPIResource):
     def remove(self, conditions: List[FilterCondition]) -> None:
         raise NotImplementedError("Deleting deal stages via DELETE is not supported.")
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_deal_stage_columns()
 
     @staticmethod
@@ -1532,7 +1543,7 @@ class CompaniesTable(HubSpotAPIResource):
         logger.info(f"Deleting {len(company_ids)} compan(ies) matching WHERE conditions")
         self.delete_companies(company_ids)
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_company_columns()
 
     @staticmethod
@@ -1641,7 +1652,7 @@ class CompaniesTable(HubSpotAPIResource):
         columns = columns or self._get_default_company_columns()
         return self._object_to_dict(company, columns)
 
-    def create_companies(self, companies_data: List[Dict[Text, Any]]) -> None:
+    def create_companies(self, companies_data: List[Dict[str, Any]]) -> None:
         if not companies_data:
             raise ValueError("No company data provided for creation")
 
@@ -1662,7 +1673,7 @@ class CompaniesTable(HubSpotAPIResource):
             logger.error(f"Companies creation failed: {str(e)}")
             raise Exception(f"Companies creation failed {e}")
 
-    def update_companies(self, company_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+    def update_companies(self, company_ids: List[str], values_to_update: Dict[str, Any]) -> None:
         hubspot = self.handler.connect()
         companies_to_update = [HubSpotObjectBatchInput(id=cid, properties=values_to_update) for cid in company_ids]
         batch_input = BatchInputSimplePublicObjectBatchInput(inputs=companies_to_update)
@@ -1672,7 +1683,7 @@ class CompaniesTable(HubSpotAPIResource):
         except Exception as e:
             raise Exception(f"Companies update failed {e}")
 
-    def delete_companies(self, company_ids: List[Text]) -> None:
+    def delete_companies(self, company_ids: List[str]) -> None:
         hubspot = self.handler.connect()
         companies_to_delete = [HubSpotObjectId(id=cid) for cid in company_ids]
         batch_input = BatchInputSimplePublicObjectId(inputs=companies_to_delete)
@@ -1800,7 +1811,7 @@ class ContactsTable(HubSpotAPIResource):
         logger.info(f"Deleting {len(contact_ids)} contact(s) matching WHERE conditions")
         self.delete_contacts(contact_ids)
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_contact_columns()
 
     @staticmethod
@@ -1937,7 +1948,7 @@ class ContactsTable(HubSpotAPIResource):
                 **{col: None for col in assoc_columns},
             }
 
-    def create_contacts(self, contacts_data: List[Dict[Text, Any]]) -> None:
+    def create_contacts(self, contacts_data: List[Dict[str, Any]]) -> None:
         if not contacts_data:
             raise ValueError("No contact data provided for creation")
 
@@ -1958,7 +1969,7 @@ class ContactsTable(HubSpotAPIResource):
             logger.error(f"Contacts creation failed: {str(e)}")
             raise Exception(f"Contacts creation failed {e}")
 
-    def update_contacts(self, contact_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+    def update_contacts(self, contact_ids: List[str], values_to_update: Dict[str, Any]) -> None:
         hubspot = self.handler.connect()
         contacts_to_update = [HubSpotObjectBatchInput(id=cid, properties=values_to_update) for cid in contact_ids]
         batch_input = BatchInputSimplePublicObjectBatchInput(inputs=contacts_to_update)
@@ -1968,7 +1979,7 @@ class ContactsTable(HubSpotAPIResource):
         except Exception as e:
             raise Exception(f"Contacts update failed {e}")
 
-    def delete_contacts(self, contact_ids: List[Text]) -> None:
+    def delete_contacts(self, contact_ids: List[str]) -> None:
         hubspot = self.handler.connect()
         contacts_to_delete = [HubSpotObjectId(id=cid) for cid in contact_ids]
         batch_input = BatchInputSimplePublicObjectId(inputs=contacts_to_delete)
@@ -2091,7 +2102,7 @@ class DealsTable(HubSpotAPIResource):
         logger.info(f"Deleting {len(deal_ids)} deal(s) matching WHERE conditions")
         self.delete_deals(deal_ids)
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_deal_columns()
 
     @staticmethod
@@ -2323,7 +2334,7 @@ class DealsTable(HubSpotAPIResource):
             row = enrich_object_with_associations(deal, "deals", row)
         return row
 
-    def create_deals(self, deals_data: List[Dict[Text, Any]]) -> None:
+    def create_deals(self, deals_data: List[Dict[str, Any]]) -> None:
         if not deals_data:
             raise ValueError("No deal data provided for creation")
 
@@ -2344,7 +2355,7 @@ class DealsTable(HubSpotAPIResource):
             logger.error(f"Deals creation failed: {str(e)}")
             raise Exception(f"Deals creation failed {e}")
 
-    def update_deals(self, deal_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+    def update_deals(self, deal_ids: List[str], values_to_update: Dict[str, Any]) -> None:
         hubspot = self.handler.connect()
         deals_to_update = [HubSpotObjectBatchInput(id=did, properties=values_to_update) for did in deal_ids]
         batch_input = BatchInputSimplePublicObjectBatchInput(inputs=deals_to_update)
@@ -2354,7 +2365,7 @@ class DealsTable(HubSpotAPIResource):
         except Exception as e:
             raise Exception(f"Deals update failed {e}")
 
-    def delete_deals(self, deal_ids: List[Text]) -> None:
+    def delete_deals(self, deal_ids: List[str]) -> None:
         hubspot = self.handler.connect()
         deals_to_delete = [HubSpotObjectId(id=did) for did in deal_ids]
         batch_input = BatchInputSimplePublicObjectId(inputs=deals_to_delete)
@@ -2452,7 +2463,7 @@ class TicketsTable(HubSpotAPIResource):
         logger.info(f"Deleting {len(ticket_ids)} ticket(s) matching WHERE conditions")
         self.delete_tickets(ticket_ids)
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_ticket_columns()
 
     @staticmethod
@@ -2563,7 +2574,7 @@ class TicketsTable(HubSpotAPIResource):
             row = enrich_object_with_associations(ticket, "tickets", row)
         return row
 
-    def create_tickets(self, tickets_data: List[Dict[Text, Any]]) -> None:
+    def create_tickets(self, tickets_data: List[Dict[str, Any]]) -> None:
         if not tickets_data:
             raise ValueError("No ticket data provided for creation")
 
@@ -2584,7 +2595,7 @@ class TicketsTable(HubSpotAPIResource):
             logger.error(f"Tickets creation failed: {str(e)}")
             raise Exception(f"Tickets creation failed {e}")
 
-    def update_tickets(self, ticket_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+    def update_tickets(self, ticket_ids: List[str], values_to_update: Dict[str, Any]) -> None:
         hubspot = self.handler.connect()
         tickets_to_update = [HubSpotObjectBatchInput(id=tid, properties=values_to_update) for tid in ticket_ids]
         batch_input = BatchInputSimplePublicObjectBatchInput(inputs=tickets_to_update)
@@ -2594,7 +2605,7 @@ class TicketsTable(HubSpotAPIResource):
         except Exception as e:
             raise Exception(f"Tickets update failed {e}")
 
-    def delete_tickets(self, ticket_ids: List[Text]) -> None:
+    def delete_tickets(self, ticket_ids: List[str]) -> None:
         hubspot = self.handler.connect()
         tickets_to_delete = [HubSpotObjectId(id=tid) for tid in ticket_ids]
         batch_input = BatchInputSimplePublicObjectId(inputs=tickets_to_delete)
@@ -2692,7 +2703,7 @@ class TasksTable(HubSpotAPIResource):
         logger.info(f"Deleting {len(task_ids)} task(s) matching WHERE conditions")
         self.delete_tasks(task_ids)
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_task_columns()
 
     @staticmethod
@@ -2805,7 +2816,7 @@ class TasksTable(HubSpotAPIResource):
             row = enrich_object_with_associations(task, "tasks", row)
         return row
 
-    def create_tasks(self, tasks_data: List[Dict[Text, Any]]) -> None:
+    def create_tasks(self, tasks_data: List[Dict[str, Any]]) -> None:
         if not tasks_data:
             raise ValueError("No task data provided for creation")
 
@@ -2826,7 +2837,7 @@ class TasksTable(HubSpotAPIResource):
             logger.error(f"Tasks creation failed: {str(e)}")
             raise Exception(f"Tasks creation failed {e}")
 
-    def update_tasks(self, task_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+    def update_tasks(self, task_ids: List[str], values_to_update: Dict[str, Any]) -> None:
         hubspot = self.handler.connect()
         tasks_to_update = [HubSpotObjectBatchInput(id=tid, properties=values_to_update) for tid in task_ids]
         batch_input = BatchInputSimplePublicObjectBatchInput(inputs=tasks_to_update)
@@ -2838,7 +2849,7 @@ class TasksTable(HubSpotAPIResource):
         except Exception as e:
             raise Exception(f"Tasks update failed {e}")
 
-    def delete_tasks(self, task_ids: List[Text]) -> None:
+    def delete_tasks(self, task_ids: List[str]) -> None:
         hubspot = self.handler.connect()
         tasks_to_delete = [HubSpotObjectId(id=tid) for tid in task_ids]
         batch_input = BatchInputSimplePublicObjectId(inputs=tasks_to_delete)
@@ -2936,7 +2947,7 @@ class CallsTable(HubSpotAPIResource):
         logger.info(f"Deleting {len(call_ids)} call(s) matching WHERE conditions")
         self.delete_calls(call_ids)
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_call_columns()
 
     @staticmethod
@@ -3049,7 +3060,7 @@ class CallsTable(HubSpotAPIResource):
             row = enrich_object_with_associations(call, "calls", row)
         return row
 
-    def create_calls(self, calls_data: List[Dict[Text, Any]]) -> None:
+    def create_calls(self, calls_data: List[Dict[str, Any]]) -> None:
         if not calls_data:
             raise ValueError("No call data provided for creation")
 
@@ -3070,7 +3081,7 @@ class CallsTable(HubSpotAPIResource):
             logger.error(f"Calls creation failed: {str(e)}")
             raise Exception(f"Calls creation failed {e}")
 
-    def update_calls(self, call_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+    def update_calls(self, call_ids: List[str], values_to_update: Dict[str, Any]) -> None:
         hubspot = self.handler.connect()
         calls_to_update = [HubSpotObjectBatchInput(id=cid, properties=values_to_update) for cid in call_ids]
         batch_input = BatchInputSimplePublicObjectBatchInput(inputs=calls_to_update)
@@ -3082,7 +3093,7 @@ class CallsTable(HubSpotAPIResource):
         except Exception as e:
             raise Exception(f"Calls update failed {e}")
 
-    def delete_calls(self, call_ids: List[Text]) -> None:
+    def delete_calls(self, call_ids: List[str]) -> None:
         hubspot = self.handler.connect()
         calls_to_delete = [HubSpotObjectId(id=cid) for cid in call_ids]
         batch_input = BatchInputSimplePublicObjectId(inputs=calls_to_delete)
@@ -3180,7 +3191,7 @@ class EmailsTable(HubSpotAPIResource):
         logger.info(f"Deleting {len(email_ids)} email(s) matching WHERE conditions")
         self.delete_emails(email_ids)
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_email_columns()
 
     @staticmethod
@@ -3293,7 +3304,7 @@ class EmailsTable(HubSpotAPIResource):
             row = enrich_object_with_associations(email, "emails", row)
         return row
 
-    def create_emails(self, emails_data: List[Dict[Text, Any]]) -> None:
+    def create_emails(self, emails_data: List[Dict[str, Any]]) -> None:
         if not emails_data:
             raise ValueError("No email data provided for creation")
 
@@ -3314,7 +3325,7 @@ class EmailsTable(HubSpotAPIResource):
             logger.error(f"Emails creation failed: {str(e)}")
             raise Exception(f"Emails creation failed {e}")
 
-    def update_emails(self, email_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+    def update_emails(self, email_ids: List[str], values_to_update: Dict[str, Any]) -> None:
         hubspot = self.handler.connect()
         emails_to_update = [HubSpotObjectBatchInput(id=eid, properties=values_to_update) for eid in email_ids]
         batch_input = BatchInputSimplePublicObjectBatchInput(inputs=emails_to_update)
@@ -3326,7 +3337,7 @@ class EmailsTable(HubSpotAPIResource):
         except Exception as e:
             raise Exception(f"Emails update failed {e}")
 
-    def delete_emails(self, email_ids: List[Text]) -> None:
+    def delete_emails(self, email_ids: List[str]) -> None:
         hubspot = self.handler.connect()
         emails_to_delete = [HubSpotObjectId(id=eid) for eid in email_ids]
         batch_input = BatchInputSimplePublicObjectId(inputs=emails_to_delete)
@@ -3424,7 +3435,7 @@ class MeetingsTable(HubSpotAPIResource):
         logger.info(f"Deleting {len(meeting_ids)} meeting(s) matching WHERE conditions")
         self.delete_meetings(meeting_ids)
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_meeting_columns()
 
     @staticmethod
@@ -3537,7 +3548,7 @@ class MeetingsTable(HubSpotAPIResource):
             row = enrich_object_with_associations(meeting, "meetings", row)
         return row
 
-    def create_meetings(self, meetings_data: List[Dict[Text, Any]]) -> None:
+    def create_meetings(self, meetings_data: List[Dict[str, Any]]) -> None:
         if not meetings_data:
             raise ValueError("No meeting data provided for creation")
 
@@ -3558,7 +3569,7 @@ class MeetingsTable(HubSpotAPIResource):
             logger.error(f"Meetings creation failed: {str(e)}")
             raise Exception(f"Meetings creation failed {e}")
 
-    def update_meetings(self, meeting_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+    def update_meetings(self, meeting_ids: List[str], values_to_update: Dict[str, Any]) -> None:
         hubspot = self.handler.connect()
         meetings_to_update = [HubSpotObjectBatchInput(id=mid, properties=values_to_update) for mid in meeting_ids]
         batch_input = BatchInputSimplePublicObjectBatchInput(inputs=meetings_to_update)
@@ -3570,7 +3581,7 @@ class MeetingsTable(HubSpotAPIResource):
         except Exception as e:
             raise Exception(f"Meetings update failed {e}")
 
-    def delete_meetings(self, meeting_ids: List[Text]) -> None:
+    def delete_meetings(self, meeting_ids: List[str]) -> None:
         hubspot = self.handler.connect()
         meetings_to_delete = [HubSpotObjectId(id=mid) for mid in meeting_ids]
         batch_input = BatchInputSimplePublicObjectId(inputs=meetings_to_delete)
@@ -3668,7 +3679,7 @@ class NotesTable(HubSpotAPIResource):
         logger.info(f"Deleting {len(note_ids)} note(s) matching WHERE conditions")
         self.delete_notes(note_ids)
 
-    def get_columns(self) -> List[Text]:
+    def get_columns(self) -> List[str]:
         return self._get_default_note_columns()
 
     @staticmethod
@@ -3776,7 +3787,7 @@ class NotesTable(HubSpotAPIResource):
             row = enrich_object_with_associations(note, "notes", row)
         return row
 
-    def create_notes(self, notes_data: List[Dict[Text, Any]]) -> None:
+    def create_notes(self, notes_data: List[Dict[str, Any]]) -> None:
         if not notes_data:
             raise ValueError("No note data provided for creation")
 
@@ -3797,7 +3808,7 @@ class NotesTable(HubSpotAPIResource):
             logger.error(f"Notes creation failed: {str(e)}")
             raise Exception(f"Notes creation failed {e}")
 
-    def update_notes(self, note_ids: List[Text], values_to_update: Dict[Text, Any]) -> None:
+    def update_notes(self, note_ids: List[str], values_to_update: Dict[str, Any]) -> None:
         hubspot = self.handler.connect()
         notes_to_update = [HubSpotObjectBatchInput(id=nid, properties=values_to_update) for nid in note_ids]
         batch_input = BatchInputSimplePublicObjectBatchInput(inputs=notes_to_update)
@@ -3809,7 +3820,7 @@ class NotesTable(HubSpotAPIResource):
         except Exception as e:
             raise Exception(f"Notes update failed {e}")
 
-    def delete_notes(self, note_ids: List[Text]) -> None:
+    def delete_notes(self, note_ids: List[str]) -> None:
         hubspot = self.handler.connect()
         notes_to_delete = [HubSpotObjectId(id=nid) for nid in note_ids]
         batch_input = BatchInputSimplePublicObjectId(inputs=notes_to_delete)
@@ -3818,3 +3829,243 @@ class NotesTable(HubSpotAPIResource):
             logger.info("Notes deleted")
         except Exception as e:
             raise Exception(f"Notes deletion failed {e}")
+
+
+class LeadsTable(HubSpotAPIResource):
+    """HubSpot Leads table for prospective customer records."""
+
+    # Reference: https://developers.hubspot.com/docs/api-reference/crm-leads-v3/guide
+    SEARCHABLE_COLUMNS: Set[str] = {"hs_lead_name", "hs_lead_type", "hs_lead_label", "id"}
+    ASSOCIATION_COLUMNS = {"primary_contact_id", "primary_company_id"}
+
+    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+        row_count = None
+        try:
+            self.handler.connect()
+            row_count = self.handler._estimate_table_rows("leads")
+        except Exception as e:
+            logger.warning(f"Could not estimate HubSpot leads row count: {e}")
+        return {
+            "TABLE_NAME": "leads",
+            "TABLE_TYPE": "BASE TABLE",
+            "TABLE_DESCRIPTION": "HubSpot leads representing prospective customer records",
+            "ROW_COUNT": row_count,
+        }
+
+    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        return self.handler._get_default_meta_columns("leads")
+
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        search_filters: Optional[List[Dict[str, Any]]] = None,
+        search_sorts: Optional[List[Dict[str, Any]]] = None,
+        allow_search: bool = True,
+    ) -> pd.DataFrame:
+        leads_df = pd.json_normalize(
+            self.get_leads(
+                limit=limit,
+                where_conditions=conditions,
+                properties=targets,
+                search_filters=search_filters,
+                search_sorts=search_sorts,
+                allow_search=allow_search,
+            )
+        )
+        if leads_df.empty:
+            leads_df = pd.DataFrame(columns=targets or self._get_default_lead_columns())
+        return leads_df
+
+    def add(self, lead_data: List[dict]):
+        self.create_leads(lead_data)
+
+    def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        leads_df = pd.json_normalize(self.get_leads(limit=200, where_conditions=normalized_conditions))
+
+        if leads_df.empty:
+            raise ValueError("No leads retrieved from HubSpot to evaluate update conditions.")
+
+        executor_conditions = _normalize_conditions_for_executor(normalized_conditions)
+        update_query_executor = UPDATEQueryExecutor(leads_df, executor_conditions)
+        filtered_df = update_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(f"No leads found matching WHERE conditions: {conditions}.")
+
+        lead_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Updating {len(lead_ids)} lead(s) matching WHERE conditions")
+        self.update_leads(lead_ids, values)
+
+    def remove(self, conditions: List[FilterCondition]) -> None:
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        leads_df = pd.json_normalize(self.get_leads(limit=200, where_conditions=normalized_conditions))
+
+        if leads_df.empty:
+            raise ValueError("No leads retrieved from HubSpot to evaluate delete conditions.")
+
+        executor_conditions = _normalize_conditions_for_executor(normalized_conditions)
+        delete_query_executor = DELETEQueryExecutor(leads_df, executor_conditions)
+        filtered_df = delete_query_executor.execute_query()
+
+        if filtered_df.empty:
+            raise ValueError(f"No leads found matching WHERE conditions: {conditions}.")
+
+        lead_ids = filtered_df["id"].astype(str).tolist()
+        logger.info(f"Deleting {len(lead_ids)} lead(s) matching WHERE conditions")
+        self.delete_leads(lead_ids)
+
+    def get_columns(self) -> List[str]:
+        return self._get_default_lead_columns()
+
+    @staticmethod
+    def _get_default_lead_columns() -> List[str]:
+        return [
+            "id",
+            "hs_lead_name",
+            "hs_lead_type",
+            "hs_lead_label",
+            "hubspot_owner_id",
+            "hs_timestamp",
+            "primary_contact_id",
+            "primary_company_id",
+            "createdate",
+            "lastmodifieddate",
+        ]
+
+    def get_leads(
+        self,
+        limit: Optional[int] = None,
+        where_conditions: Optional[List] = None,
+        properties: Optional[List[str]] = None,
+        search_filters: Optional[List[Dict[str, Any]]] = None,
+        search_sorts: Optional[List[Dict[str, Any]]] = None,
+        allow_search: bool = True,
+        **kwargs,
+    ) -> List[Dict]:
+        normalized_conditions = _normalize_filter_conditions(where_conditions)
+        hubspot = self.handler.connect()
+
+        requested_properties = properties or []
+        default_properties = self._get_default_lead_columns()
+        columns = requested_properties or default_properties
+        association_targets, hubspot_columns = _prepare_association_request("leads", columns)
+        hubspot_properties = _build_hubspot_properties(hubspot_columns)
+
+        api_kwargs = {**kwargs, "properties": hubspot_properties}
+        if limit is not None:
+            api_kwargs["limit"] = limit
+        else:
+            api_kwargs.pop("limit", None)
+        if association_targets:
+            api_kwargs["associations"] = association_targets
+
+        if allow_search and (search_filters or search_sorts or normalized_conditions):
+            filters = search_filters
+            if filters is None and normalized_conditions:
+                filters = _build_hubspot_search_filters(normalized_conditions, self.SEARCHABLE_COLUMNS)
+            if filters is not None or search_sorts is not None:
+                if association_targets:
+                    logger.debug("HubSpot search API does not include associations for leads.")
+                search_results = self._search_leads_by_conditions(
+                    hubspot,
+                    filters,
+                    hubspot_properties,
+                    limit,
+                    search_sorts,
+                    hubspot_columns,
+                    association_targets,
+                )
+                logger.info(f"Retrieved {len(search_results)} leads from HubSpot via search API")
+                return search_results
+
+        leads = self.handler._get_objects_all("leads", **api_kwargs)
+        leads_dict = []
+        for lead in leads:
+            try:
+                row = self._lead_to_dict(lead, hubspot_columns, association_targets)
+                leads_dict.append(row)
+            except Exception as e:
+                logger.warning(f"Error processing lead {getattr(lead, 'id', 'unknown')}: {str(e)}")
+                continue
+
+        logger.info(f"Retrieved {len(leads_dict)} leads from HubSpot")
+        return leads_dict
+
+    def _search_leads_by_conditions(
+        self,
+        hubspot: HubSpot,
+        filters: Optional[List[Dict[str, Any]]],
+        properties: List[str],
+        limit: Optional[int],
+        sorts: Optional[List[Dict[str, Any]]],
+        columns: List[str],
+        association_targets: List[str],
+    ) -> List[Dict[str, Any]]:
+        return _execute_hubspot_search(
+            hubspot.crm.objects.search_api,
+            filters or [],
+            properties,
+            limit,
+            lambda obj: self._lead_to_dict(obj, columns, association_targets),
+            sorts=sorts,
+            object_type="leads",
+        )
+
+    def _lead_to_dict(
+        self,
+        lead: Any,
+        columns: Optional[List[str]] = None,
+        association_targets: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        columns = columns or self._get_default_lead_columns()
+        row = self._object_to_dict(lead, columns)
+        if association_targets:
+            row = enrich_object_with_associations(lead, "leads", row)
+        return row
+
+    def create_leads(self, leads_data: List[Dict[str, Any]]) -> None:
+        if not leads_data:
+            raise ValueError("No lead data provided for creation")
+
+        logger.info(f"Attempting to create {len(leads_data)} lead(s)")
+        hubspot = self.handler.connect()
+        leads_to_create = [HubSpotObjectInputCreate(properties=lead) for lead in leads_data]
+        batch_input = BatchInputSimplePublicObjectBatchInputForCreate(inputs=leads_to_create)
+
+        try:
+            created_leads = hubspot.crm.objects.leads.batch_api.create(
+                batch_input_simple_public_object_batch_input_for_create=batch_input
+            )
+            if not created_leads or not hasattr(created_leads, "results") or not created_leads.results:
+                raise Exception("Lead creation returned no results")
+            created_ids = [lead.id for lead in created_leads.results]
+            logger.info(f"Successfully created {len(created_ids)} lead(s) with IDs: {created_ids}")
+        except Exception as e:
+            logger.error(f"Leads creation failed: {str(e)}")
+            raise Exception(f"Leads creation failed {e}")
+
+    def update_leads(self, lead_ids: List[str], values_to_update: Dict[str, Any]) -> None:
+        hubspot = self.handler.connect()
+        leads_to_update = [HubSpotObjectBatchInput(id=lid, properties=values_to_update) for lid in lead_ids]
+        batch_input = BatchInputSimplePublicObjectBatchInput(inputs=leads_to_update)
+        try:
+            updated = hubspot.crm.objects.leads.batch_api.update(
+                batch_input_simple_public_object_batch_input=batch_input
+            )
+            logger.info(f"Leads with ID {[lead.id for lead in updated.results]} updated")
+        except Exception as e:
+            raise Exception(f"Leads update failed {e}")
+
+    def delete_leads(self, lead_ids: List[str]) -> None:
+        hubspot = self.handler.connect()
+        leads_to_delete = [HubSpotObjectId(id=lid) for lid in lead_ids]
+        batch_input = BatchInputSimplePublicObjectId(inputs=leads_to_delete)
+        try:
+            hubspot.crm.objects.leads.batch_api.archive(batch_input_simple_public_object_id=batch_input)
+            logger.info("Leads deleted")
+        except Exception as e:
+            raise Exception(f"Leads deletion failed {e}")

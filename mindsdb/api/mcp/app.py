@@ -5,6 +5,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from mindsdb.utilities.config import config
 from mindsdb.api.mcp.mcp_instance import mcp
 
 # region these imports required for correct initialization
@@ -34,13 +35,14 @@ def get_mcp_app():
         lifespan=lifespan,
     )
 
-    combined_app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
-        expose_headers=["mcp-session-id"],
-    )
+    if config["api"]["mcp"]["cors"]["enabled"]:
+        combined_app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+            allow_headers=["*"],
+            expose_headers=["mcp-session-id"],
+        )
 
     combined_app.add_route("/status", _get_status, methods=["GET"])
 

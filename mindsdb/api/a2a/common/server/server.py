@@ -22,6 +22,7 @@ from ...common.types import (
     AgentCard,
     TaskResubscriptionRequest,
     SendTaskStreamingRequest,
+    MessageStreamRequest,
 )
 from pydantic import ValidationError
 from ...common.server.task_manager import TaskManager
@@ -43,6 +44,7 @@ class A2AServer:
             routes=[
                 Route("/", self._process_request, methods=["POST"]),
                 Route("/.well-known/agent.json", self._get_agent_card, methods=["GET"]),
+                Route("/.well-known/agent-card.json", self._get_agent_card, methods=["GET"]),
                 Route("/status", self._get_status, methods=["GET"]),
             ]
         )
@@ -103,6 +105,8 @@ class A2AServer:
                 result = await self.task_manager.on_get_task_push_notification(json_rpc_request)
             elif isinstance(json_rpc_request, TaskResubscriptionRequest):
                 result = await self.task_manager.on_resubscribe_to_task(json_rpc_request)
+            elif isinstance(json_rpc_request, MessageStreamRequest):
+                result = await self.task_manager.on_message_stream(json_rpc_request, user_info)
             else:
                 logger.warning(f"Unexpected request type: {type(json_rpc_request)}")
                 raise ValueError(f"Unexpected request type: {type(request)}")
@@ -118,7 +122,7 @@ class A2AServer:
         elif isinstance(e, ValidationError):
             json_rpc_error = InvalidRequestError(data=json.loads(e.json()))
         else:
-            logger.error(f"Unhandled exception: {e}")
+            logger.exception("Unhandled exception:")
             json_rpc_error = InternalError()
 
         response = JSONRPCResponse(id=None, error=json_rpc_error)
@@ -137,8 +141,8 @@ class A2AServer:
                         else:
                             data = json.dumps(item)
                     except Exception as e:
-                        logger.error(f"Serialization error in SSE stream: {e}")
-                        data = json.dumps({"error": f"Serialization error: {str(e)}"})
+                        logger.exception("Serialization error in SSE stream:")
+                        data = json.dumps({"error": f"Serialization error: {e}"})
                     yield {"data": data}
 
             # Add robust SSE headers for compatibility

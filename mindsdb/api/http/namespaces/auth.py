@@ -117,7 +117,7 @@ class Auth(Resource):
             if resp.status_code != 200:
                 logger.warning(f"Wrong response from cloud server: {resp.status_code}")
         except Exception as e:
-            logger.warning(f"Cant't send request to cloud server: {e}")
+            logger.warning(f"Cant't send request to cloud server: {e}", exc_info=True)
 
         if request.path.endswith("/auth/callback/cloud_home"):
             return redirect(f"https://{auth_server}")

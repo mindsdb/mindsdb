@@ -1,13 +1,13 @@
+import os
+import hmac
+import secrets
+import hashlib
+from http import HTTPStatus
+from typing import Optional
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.requests import Request
-from http import HTTPStatus
-from typing import Optional
-import secrets
-import hmac
-import hashlib
-import os
-import traceback
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
@@ -75,8 +75,8 @@ class PATAuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# Used by mysql and postgres protocols
-def check_auth(username, password, scramble_func, salt, company_id, config):
+# Used by mysql protocol
+def check_auth(username, password, scramble_func, salt, company_id, user_id, config):
     try:
         hardcoded_user = config["auth"].get("username")
         hardcoded_password = config["auth"].get("password")
@@ -99,8 +99,6 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
             return {"success": False}
 
         logger.info(f"Check auth, user={username}: Ok")
-        return {"success": True, "username": username}
-    except Exception as e:
-        logger.error(f"Check auth, user={username}: ERROR")
-        logger.error(e)
-        logger.error(traceback.format_exc())
+        return {"success": True, "username": username, "company_id": company_id, "user_id": user_id}
+    except Exception:
+        logger.exception(f"Check auth, user={username}: ERROR")

@@ -43,7 +43,18 @@ class KnowledgeBaseQueryExecutor:
         if isinstance(node, BinaryOperation):
             if isinstance(node.args[0], Identifier):
                 parts = node.args[0].parts
+
+                # map chunk_content to content
+                if parts[0].lower() == "chunk_content":
+                    parts[0] = self.content_column
+
                 if len(parts) == 1 and parts[0].lower() == self.content_column:
+                    if "LIKE" in node.op.upper():
+                        # remove '%'
+                        arg = node.args[1]
+                        if isinstance(arg, Constant) and isinstance(arg.value, str):
+                            arg.value = arg.value.strip(" %")
+
                     return True
         return False
 
@@ -156,6 +167,19 @@ class KnowledgeBaseQueryExecutor:
 
         where = None
         for condition in conditions:
+            arg0 = condition.args[0]
+
+            # is it json operator on metadata
+            if isinstance(arg0, BinaryOperation) and arg0.op in ("->", "->>"):
+                op_arg0, op_arg1 = arg0.args
+                if (
+                    isinstance(op_arg0, Identifier)
+                    and isinstance(op_arg1, Constant)
+                    and op_arg0.parts[-1].lower() == "metadata"
+                ):
+                    # replace to metadata column
+                    condition.args[0] = Identifier(parts=[op_arg1.value])
+
             if where is None:
                 where = condition
             else:

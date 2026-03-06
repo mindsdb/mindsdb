@@ -123,11 +123,12 @@ class FetchDataframeStep(PlanStep):
 class FetchDataframeStepPartition(FetchDataframeStep):
     """Fetches a dataframe from external integration in partitions"""
 
-    def __init__(self, steps=None, *args, **kwargs):
+    def __init__(self, steps=None, condition=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if steps is None:
             steps = []
         self.steps = steps
+        self.condition = condition
 
 
 class ApplyPredictorStep(PlanStep):
@@ -278,13 +279,16 @@ class DeleteStep(PlanStep):
 
 
 class SubSelectStep(PlanStep):
-    def __init__(self, query, dataframe, table_name=None, add_absent_cols=False, *args, **kwargs):
+    def __init__(
+        self, query, dataframe, table_name=None, add_absent_cols=False, skip_for_aggregation=False, *args, **kwargs
+    ):
         """Performs select from dataframe"""
         super().__init__(*args, **kwargs)
         self.query = query
         self.dataframe = dataframe
         self.table_name = table_name
         self.add_absent_cols = add_absent_cols
+        self.skip_for_aggregation = skip_for_aggregation
 
 
 class QueryStep(PlanStep):

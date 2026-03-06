@@ -24,10 +24,14 @@ class BasePolling:
         chat_id = message.destination if isinstance(message.destination, tuple) else (message.destination,)
         text = message.text
 
-        t_params = self.params["chat_table"] if table_name is None else next(
-            (t["chat_table"] for t in self.params if t["chat_table"]["name"] == table_name)
+        t_params = (
+            self.params["chat_table"]
+            if table_name is None
+            else next((t["chat_table"] for t in self.params if t["chat_table"]["name"] == table_name))
         )
-        chat_id_cols = t_params["chat_id_col"] if isinstance(t_params["chat_id_col"], list) else [t_params["chat_id_col"]]
+        chat_id_cols = (
+            t_params["chat_id_col"] if isinstance(t_params["chat_id_col"], list) else [t_params["chat_id_col"]]
+        )
 
         ast_query = Insert(
             table=Identifier(t_params["name"]),
@@ -60,20 +64,22 @@ class MessageCountPolling(BasePolling):
                                 chat_id,
                                 table_name=chat_params["chat_table"]["name"],
                             )
-                        except Exception as e:
-                            logger.error(f"Problem retrieving chat memory: {e}")
+                        except Exception:
+                            logger.exception("Problem retrieving chat memory:")
 
                         try:
                             message = self.get_last_message(chat_memory)
-                        except Exception as e:
-                            logger.error(f"Problem getting last message: {e}")
+                        except Exception:
+                            logger.exception("Problem getting last message:")
                             message = None
 
                         if message:
-                            self.chat_task.on_message(message, chat_memory=chat_memory, table_name=chat_params["chat_table"]["name"])
+                            self.chat_task.on_message(
+                                message, chat_memory=chat_memory, table_name=chat_params["chat_table"]["name"]
+                            )
 
-            except Exception as e:
-                logger.error(e)
+            except Exception:
+                logger.exception("Unexpected error")
 
             if stop_event.is_set():
                 return
@@ -84,8 +90,8 @@ class MessageCountPolling(BasePolling):
         # retrive from history
         try:
             history = chat_memory.get_history()
-        except Exception as e:
-            logger.error(f"Problem retrieving history: {e}")
+        except Exception:
+            logger.exception("Problem retrieving history:")
             history = []
         last_message = history[-1]
         if last_message.user == self.chat_task.bot_params["bot_username"]:
@@ -151,7 +157,11 @@ class RealtimePolling(BasePolling):
             # Identify the table relevant to this event based on the key.
             event_keys = list(key.keys())
             for param in self.params:
-                table_keys = [param["chat_table"]["chat_id_col"]] if isinstance(param["chat_table"]["chat_id_col"], str) else param["chat_table"]["chat_id_col"]
+                table_keys = (
+                    [param["chat_table"]["chat_id_col"]]
+                    if isinstance(param["chat_table"]["chat_id_col"], str)
+                    else param["chat_table"]["chat_id_col"]
+                )
 
                 if sorted(event_keys) == sorted(table_keys):
                     t_params = param["chat_table"]
@@ -162,7 +172,11 @@ class RealtimePolling(BasePolling):
             t_params = self.params[0]
 
         # Get the chat ID from the row based on the chat ID column(s).
-        chat_id = tuple(row[key] for key in t_params["chat_id_col"]) if isinstance(t_params["chat_id_col"], list) else row[t_params["chat_id_col"]]
+        chat_id = (
+            tuple(row[key] for key in t_params["chat_id_col"])
+            if isinstance(t_params["chat_id_col"], list)
+            else row[t_params["chat_id_col"]]
+        )
 
         message = ChatBotMessage(
             ChatBotMessage.Type.DIRECT,
@@ -179,10 +193,7 @@ class RealtimePolling(BasePolling):
         )
 
     def run(self, stop_event):
-        self.chat_task.chat_handler.subscribe(
-            stop_event,
-            self._callback
-        )
+        self.chat_task.chat_handler.subscribe(stop_event, self._callback)
 
     # def send_message(self, message: ChatBotMessage):
     #
@@ -193,6 +204,7 @@ class WebhookPolling(BasePolling):
     """
     Polling class for handling webhooks.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

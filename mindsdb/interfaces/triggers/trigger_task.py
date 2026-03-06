@@ -44,19 +44,19 @@ class TriggerTask(BaseTask):
 
         # subscribe
         database = session.integration_controller.get_by_id(trigger.database_id)
-        data_handler = session.integration_controller.get_data_handler(database['name'])
+        data_handler = session.integration_controller.get_data_handler(database["name"])
 
         columns = trigger.columns
         if columns is not None:
-            if columns == '':
+            if columns == "":
                 columns = None
             else:
-                columns = columns.split('|')
+                columns = columns.split("|")
 
         data_handler.subscribe(stop_event, self._callback, trigger.table_name, columns=columns)
 
     def _callback(self, row, key=None):
-        logger.debug(f'trigger call: {row}, {key}')
+        logger.debug(f"trigger call: {row}, {key}")
 
         # set up environment
         ctx.load(self._ctx_dump)
@@ -64,21 +64,14 @@ class TriggerTask(BaseTask):
         try:
             if key is not None:
                 row.update(key)
-            table = [
-                row
-            ]
+            table = [row]
 
             # inject data to query
             query = copy.deepcopy(self.query)
 
             def find_table(node, is_table, **kwargs):
-
                 if is_table:
-                    if (
-                            isinstance(node, Identifier)
-                            and len(node.parts) == 1
-                            and node.parts[0] == 'TABLE_DELTA'
-                    ):
+                    if isinstance(node, Identifier) and len(node.parts) == 1 and node.parts[0] == "TABLE_DELTA":
                         # replace with data
                         return Data(table, alias=node.alias)
 
@@ -90,6 +83,7 @@ class TriggerTask(BaseTask):
                 self.set_error(ret.error_message)
 
         except Exception:
+            logger.exception("Error during trigger call processing")
             self.set_error(str(traceback.format_exc()))
 
         db.session.commit()

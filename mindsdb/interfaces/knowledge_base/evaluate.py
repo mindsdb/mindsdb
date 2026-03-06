@@ -2,6 +2,7 @@ import json
 import math
 import re
 import time
+import copy
 from typing import List
 
 import pandas as pd
@@ -10,6 +11,7 @@ import datetime as dt
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb_sql_parser import Identifier, Select, Constant, Star, parse_sql, BinaryOperation
 from mindsdb.utilities import log
+from mindsdb.utilities.config import config
 
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
@@ -105,7 +107,12 @@ class EvaluateBase:
         if llm_params is None:
             llm_params = self.kb._kb.params.get("reranking_model")
 
-        self.llm_client = LLMClient(llm_params)
+        params = copy.deepcopy(config.get("default_llm", {}))
+
+        if llm_params:
+            params.update(llm_params)
+
+        self.llm_client = LLMClient(params)
 
     def generate_test_data(self, gen_params: dict) -> pd.DataFrame:
         # Extract source data (from users query or from KB itself) and call `generate` to get test data
@@ -241,6 +248,26 @@ class EvaluateBase:
 
         return cls(session, kb_table).run_evaluate(params)
 
+    def generate_question_answer(self, text: str) -> (str, str):
+        messages = [
+            {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
+            {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
+        ]
+        answer = self.llm_client.completion(messages, json_output=True)[0]
+
+        # Sanitize the response by removing markdown code block formatting like ```json
+        sanitized_answer = sanitize_json_response(answer)
+
+        try:
+            output = json.loads(sanitized_answer)
+        except json.JSONDecodeError:
+            raise ValueError(f"Could not parse response from LLM: {answer}")
+
+        if "query" not in output or "reference_answer" not in output:
+            raise ValueError("Cant find question/answer in LLM response")
+
+        return output.get("query"), output.get("reference_answer")
+
 
 class EvaluateRerank(EvaluateBase):
     """
@@ -268,28 +295,12 @@ class EvaluateRerank(EvaluateBase):
         df["id"] = df.index
         return df
 
-    def generate_question_answer(self, text: str) -> (str, str):
-        messages = [
-            {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
-            {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
-        ]
-        answer = self.llm_client.completion(messages, json_output=True)
-
-        # Sanitize the response by removing markdown code block formatting like ```json
-        sanitized_answer = sanitize_json_response(answer)
-
-        try:
-            output = json.loads(sanitized_answer)
-        except json.JSONDecodeError:
-            raise ValueError(f"Could not parse response from LLM: {answer}")
-
-        if "query" not in output or "reference_answer" not in output:
-            raise ValueError("Cant find question/answer in LLM response")
-
-        return output.get("query"), output.get("reference_answer")
-
     def evaluate(self, test_data: pd.DataFrame) -> pd.DataFrame:
         json_to_log_list = []
+        if {"question", "answer"} - set(test_data.columns):
+            raise KeyError(
+                f'Test data must contain "question" and "answer" columns. Columns in the provided test data: {list(test_data.columns)}'
+            )
         questions = test_data.to_dict("records")
 
         for i, item in enumerate(questions):
@@ -483,28 +494,12 @@ class EvaluateDocID(EvaluateBase):
         df = pd.DataFrame(qa_data)
         return df
 
-    def generate_question_answer(self, text: str) -> (str, str):
-        messages = [
-            {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
-            {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
-        ]
-        answer = self.llm_client.completion(messages, json_output=True)
-
-        # Sanitize the response by removing markdown code block formatting like ```json
-        sanitized_answer = sanitize_json_response(answer)
-
-        try:
-            output = json.loads(sanitized_answer)
-        except json.JSONDecodeError:
-            raise ValueError(f"Could not parse response from LLM: {answer}")
-
-        if "query" not in output or "reference_answer" not in output:
-            raise ValueError("Cant find question/answer in LLM response")
-
-        return output.get("query"), output.get("reference_answer")
-
     def evaluate(self, test_data: pd.DataFrame) -> pd.DataFrame:
         stats = []
+        if {"question", "doc_id"} - set(test_data.columns):
+            raise KeyError(
+                f'Test data must contain "question" and "doc_id" columns. Columns in the provided test data: {list(test_data.columns)}'
+            )
         questions = test_data.to_dict("records")
 
         for i, item in enumerate(questions):

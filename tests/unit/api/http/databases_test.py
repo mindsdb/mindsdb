@@ -27,17 +27,17 @@ def test_get_database(client):
     # Get a newly created integration.
     integration_data = {
         "database": {
-            "name": "test_get_database",
+            "name": "TEST_get_database",
             "engine": "postgres",
             "parameters": {"user": "ricky_sanchez", "password": "florpglorp"},
         }
     }
     response = client.post("/api/databases", json=integration_data, follow_redirects=True)
-    response = client.get("/api/databases/test_get_database", follow_redirects=True)
+    response = client.get("/api/databases/TEST_get_database", follow_redirects=True)
 
     integration_db = response.get_json()
     expected_db = {
-        "name": "test_get_database",
+        "name": "TEST_get_database",
         "type": "data",
         "engine": "postgres",
         "connection_data": {"user": "ricky_sanchez", "password": "florpglorp"},
@@ -154,3 +154,29 @@ def test_delete_database_does_not_exist(client):
 def test_delete_system_database(client):
     response = client.delete("/api/databases/information_schema", follow_redirects=True)
     assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+def test_update_database_check_connection_with_invalid_parameters(client):
+    # Test that PUT with check_connection=true and invalid parameters returns an error
+    database_data = {
+        "database": {
+            "name": "test_invalid_connection",
+            "engine": "postgres",
+            "parameters": {
+                "host": "invalid_host_that_does_not_exist",
+                "port": 5432,
+                "user": "invalid_user",
+                "password": "invalid_password",
+                "database": "invalid_db",
+            },
+        },
+        "check_connection": True,
+    }
+
+    response = client.put("/api/databases/test_invalid_connection", json=database_data, follow_redirects=True)
+    # Should return BAD_REQUEST due to connection failure
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+    response_data = response.get_json()
+    # Verify error message indicates connection error
+    assert response_data["title"] == "Connection error"

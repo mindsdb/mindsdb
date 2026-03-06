@@ -20,6 +20,20 @@ with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 
+def filter_requirements(lines: list) -> list:
+    """
+    Filter out comments, empty lines, and editable installs from requirement lines.
+    We are have generated reqquirements files with transitive dependencies.
+    """
+    result = []
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#') or line.startswith('-e '):
+            continue
+        result.append(line)
+    return result
+
+
 def expand_requirements_links(requirements: list) -> list:
     """Expand requirements that contain links to other requirement files"""
     to_add = []
@@ -29,7 +43,7 @@ def expand_requirements_links(requirements: list) -> list:
         if requirement.startswith("-r "):
             if os.path.exists(requirement.split()[1]):
                 with open(requirement.split()[1]) as fh:
-                    to_add += expand_requirements_links([req.strip() for req in fh.read().splitlines()])
+                    to_add += expand_requirements_links(filter_requirements(fh.read().splitlines()))
             to_remove.append(requirement)
 
     for req in to_remove:
@@ -61,7 +75,7 @@ def define_deps():
          list of packages, extras and dependency links.
     """
     with open(os.path.normpath("requirements/requirements.txt")) as req_file:
-        defaults = [req.strip() for req in req_file.read().splitlines()]
+        defaults = filter_requirements(req_file.read().splitlines())
 
     links = []
     requirements = []
@@ -79,7 +93,7 @@ def define_deps():
         if fn.startswith("requirements-") and fn.endswith(".txt"):
             extra_name = fn.replace("requirements-", "").replace(".txt", "")
             with open(os.path.normpath(f"./requirements/{fn}")) as fp:
-                extra = [req.strip() for req in fp.read().splitlines()]
+                extra = filter_requirements(fp.read().splitlines())
             extra_requirements[extra_name] = extra
             full_requirements += extra
 
@@ -100,7 +114,7 @@ def define_deps():
 
                 # If requirements.txt in our handler folder, import them as our extra's requirements
                 with open(req_file_path) as fp:
-                    extra = expand_requirements_links([req.strip() for req in fp.read().splitlines()])
+                    extra = expand_requirements_links(filter_requirements(fp.read().splitlines()))
 
                 extra_requirements[extra_name] = extra
                 full_handlers_requirements += extra
@@ -108,10 +122,10 @@ def define_deps():
     extra_requirements["all_handlers_extras"] = list(set(full_handlers_requirements))
 
     with open(os.path.normpath("requirements/requirements-opentelemetry.txt")) as req_file:
-        extra_requirements["opentelemetry"] = [req.strip() for req in req_file.read().splitlines()]
+        extra_requirements["opentelemetry"] = filter_requirements(req_file.read().splitlines())
 
     with open(os.path.normpath("requirements/requirements-langfuse.txt")) as req_file:
-        extra_requirements["langfuse"] = [req.strip() for req in req_file.read().splitlines()]
+        extra_requirements["langfuse"] = filter_requirements(req_file.read().splitlines())
 
     Deps.pkgs = requirements
     Deps.extras = extra_requirements

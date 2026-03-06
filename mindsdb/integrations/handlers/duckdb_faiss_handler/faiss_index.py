@@ -533,8 +533,6 @@ class FaissIVFIndex(FaissIndex):
 
         """
 
-        self.check_required_disk_space(index_type)
-
         # index might not fit into RAM, extract data to files
         base_path = Path(self.path).parent
         dump_path = base_path / "dump"
@@ -559,6 +557,8 @@ class FaissIVFIndex(FaissIndex):
 
         if train_count > ntotal:
             raise ValueError(f"Not enough data to create index: {ntotal}, at least {train_count} records are required")
+
+        self.check_required_disk_space(index_type)
 
         dump_path.mkdir(exist_ok=True)
 

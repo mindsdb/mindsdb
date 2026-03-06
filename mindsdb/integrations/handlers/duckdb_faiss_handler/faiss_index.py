@@ -7,8 +7,13 @@ from pathlib import Path
 import portalocker
 
 import faiss  # faiss or faiss-gpu
-from faiss.contrib.ondisk import merge_ondisk
+
+from mindsdb.utilities import log
+
 from pydantic import BaseModel
+
+
+logger = log.getLogger(__name__)
 
 
 def _normalize_rows(x: np.ndarray) -> np.ndarray:
@@ -23,6 +28,54 @@ class FaissParams(BaseModel):
     nprobe: int | None = 32
     hnsw_m: int | None = 32
     hnsw_ef_search: int | None = 64
+
+
+def merge_ondisk(trained_index: faiss.Index, shard_fnames: List[str], ivfdata_fname: str) -> None:
+    """
+    Modified version of faiss.contrib.ondisk.merge_ondisk. Prevents leaving orphan memory mapped shard files
+
+    Add the contents of the indexes stored in shard_fnames into the index trained_index.
+    The on-disk data is stored in ivfdata_fname
+    """
+    assert not isinstance(trained_index, faiss.IndexIVFPQR), "IndexIVFPQR is not supported as an on disk index."
+    # merge the images into an on-disk index
+    # first load the inverted lists
+    ivfs = []
+    indexes = []
+
+    for fname in shard_fnames:
+        # the IO_FLAG_MMAP is to avoid actually loading the data
+        #  thus the total size of the inverted lists can exceed the available RAM
+        logger.info("read " + fname)
+        index = faiss.read_index(fname, faiss.IO_FLAG_MMAP)
+        index_ivf = faiss.extract_index_ivf(index)
+        ivfs.append(index_ivf.invlists)
+
+        indexes.append(index)
+
+    # construct the output index
+    index = trained_index
+    index_ivf = faiss.extract_index_ivf(index)
+
+    assert index.ntotal == 0, "works only on empty index"
+
+    # prepare the output inverted lists. They will be written to merged_index.ivfdata
+    invlists = faiss.OnDiskInvertedLists(index_ivf.nlist, index_ivf.code_size, ivfdata_fname)
+
+    # merge all the inverted lists
+    ivf_vector = faiss.InvertedListsPtrVector()
+    for ivf in ivfs:
+        ivf_vector.push_back(ivf)
+
+    logger.info("merge %d inverted lists " % ivf_vector.size())
+    ntotal = invlists.merge_from(ivf_vector.data(), ivf_vector.size())
+
+    # now replace the inverted lists in the output index
+    index.ntotal = index_ivf.ntotal = ntotal
+    index_ivf.replace_invlists(invlists, True)
+    invlists.this.disown()
+
+    del indexes
 
 
 class FaissIndex:

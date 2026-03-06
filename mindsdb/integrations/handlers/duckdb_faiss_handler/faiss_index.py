@@ -30,7 +30,7 @@ class FaissParams(BaseModel):
     hnsw_ef_search: int | None = 64
 
 
-def merge_ondisk(trained_index: faiss.Index, shard_fnames: List[str], ivfdata_fname: str) -> None:
+def merge_ondisk(trained_index: faiss.Index, shard_fnames: List[str], ivfdata_fname: str, shift_ids=False) -> None:
     """
     Modified version of faiss.contrib.ondisk.merge_ondisk. Prevents leaving orphan memory mapped shard files
 
@@ -68,7 +68,7 @@ def merge_ondisk(trained_index: faiss.Index, shard_fnames: List[str], ivfdata_fn
         ivf_vector.push_back(ivf)
 
     logger.info("merge %d inverted lists " % ivf_vector.size())
-    ntotal = invlists.merge_from(ivf_vector.data(), ivf_vector.size())
+    ntotal = invlists.merge_from_multiple(ivf_vector.data(), ivf_vector.size(), shift_ids)
 
     # now replace the inverted lists in the output index
     index.ntotal = index_ivf.ntotal = ntotal

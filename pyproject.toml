@@ -77,24 +77,26 @@ dependencies = [
     "sentry-sdk[flask] ~= 2.14",
     # --- Misc ---
     "pyaml ~= 23.12",
-    #"pydantic-ai[openai]>=0.0.14",
     "html2text>=2025.4.15",
 ]
 
 [project.optional-dependencies]
 
-#  Agent / LLM stack
+# Agent stack
 # Generates: requirements/requirements-agents.txt
 # Regenerate: uv export --format requirements-txt --extra agents --no-hashes > requirements/requirements-agents.txt
 agents = [
     "openai >= 2.9.0, < 3.0.0",
-    "langchain-community ~= 0.3",
-    "langchain-core ~= 0.3",
-    "langchain-experimental ~= 0.3",
+
+    # When using agents, some LLMs may require the 'transformers' library (like Ollama):
     "transformers >= 4.42.4",
+
+    # Required for KB
     "mindsdb-evaluator == 0.0.21",
     "litellm ~= 1.80",
     "mcp >= 1.25.0",
+
+    # A2A requirements
     "httpx ~= 0.28",
     "jwcrypto ~= 1.5",
     "pydantic-ai >= 1.66.0, < 2.0.0",
@@ -104,23 +106,25 @@ agents = [
 # Generates: requirements/requirements-kb.txt
 # Regenerate: uv export --format requirements-txt --extra kb --no-hashes > requirements/requirements-kb.txt
 kb = [
-    "lxml ~= 5.3",
+    "lxml ~= 5.3", # Do we need this? It is a dependency of aipdf
     "pgvector ~= 0.3",
-    "langchain-core ~= 0.3",          
     "litellm ~= 1.80", 
 ]
 
-#  Opentelemetry
+# Opentelemetry
 # Generates: requirements/requirements-opentelemetry.txt
 # Regenerate: uv export --format requirements-txt --extra opentelemetry --no-hashes > requirements/requirements-opentelemetry.txt
 opentelemetry = [
-    "langfuse >= 2.53",
     "opentelemetry-api >= 1.27",
     "opentelemetry-sdk >= 1.27",
     "opentelemetry-exporter-otlp >= 1.27",
     "opentelemetry-instrumentation-requests >= 0.48b0",
     "opentelemetry-instrumentation-flask >= 0.48b0",
     "opentelemetry-distro >= 0.48b0",
+]
+
+langfuse = [
+    "langfuse ~= 3.14",
 ]
 
 #  Supported handlers
@@ -220,8 +224,17 @@ test = [
 
 #  uv configuration
 [tool.uv]
+# Strict environment sync (CI/production — installs exactly what's in uv.lock):
+#   uv sync --locked --extra agents --extra kb
+#
+# Additive install (dev — adds an extra WITHOUT removing packages from other extras):
+#   uv pip install -e ".[agents]"
+#   uv pip install -e ".[kb]"
+#
 # Use `uv lock --check` in CI to verify uv.lock matches pyproject.toml.
-# Use `uv sync --locked` in CI/production for strict installs.
+#
+# To regenerate a requirements file after changing extras:
+#   uv export --format requirements-txt --extra <name> --no-hashes > requirements/requirements-<name>.txt
 
 #  Ruff
 [tool.ruff]

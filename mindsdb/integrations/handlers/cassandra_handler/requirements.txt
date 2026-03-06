@@ -1,1 +1,1 @@
--r mindsdb/integrations/handlers/scylla_handler/requirements.txt
+cassandra-driver>=3.29.3,<4.0.0 #block 4.x.x in case of breaking changes

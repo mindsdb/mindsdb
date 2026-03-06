@@ -182,7 +182,7 @@ openai==2.24.0
     # via aipdf
 openpyxl==3.1.5
     # via mindsdb
-orjson==3.11.3
+orjson==3.11.7
     # via mindsdb
 packaging==25.0
     # via mindsdb

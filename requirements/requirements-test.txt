@@ -283,7 +283,7 @@ openai==2.24.0
     #   mindsdb
 openpyxl==3.1.5
     # via mindsdb
-orjson==3.11.3
+orjson==3.11.7
     # via
     #   langsmith
     #   mindsdb

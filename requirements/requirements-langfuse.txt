@@ -214,7 +214,7 @@ opentelemetry-sdk==1.39.1
     #   opentelemetry-exporter-otlp-proto-http
 opentelemetry-semantic-conventions==0.60b1
     # via opentelemetry-sdk
-orjson==3.11.3
+orjson==3.11.7
     # via mindsdb
 packaging==25.0
     # via

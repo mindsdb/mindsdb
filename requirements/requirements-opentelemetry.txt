@@ -249,7 +249,7 @@ opentelemetry-util-http==0.60b1
     #   opentelemetry-instrumentation-flask
     #   opentelemetry-instrumentation-requests
     #   opentelemetry-instrumentation-wsgi
-orjson==3.11.3
+orjson==3.11.7
     # via mindsdb
 packaging==25.0
     # via

@@ -452,7 +452,7 @@ opentelemetry-semantic-conventions==0.60b1
     #   opentelemetry-sdk
 opentelemetry-util-http==0.60b1
     # via opentelemetry-instrumentation-httpx
-orjson==3.11.3
+orjson==3.11.7
     # via mindsdb
 packaging==25.0
     # via

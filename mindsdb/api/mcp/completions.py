@@ -13,7 +13,7 @@ logger = log.getLogger(__name__)
 async def handle_completion(ref, argument, context):
     if not isinstance(ref, (ResourceTemplateReference, PromptReference)):
         return None
-    
+
     try:
         if argument.name == "database_name":
             names = _get_database_names()

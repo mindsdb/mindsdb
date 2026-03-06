@@ -14,26 +14,24 @@ logger = log.getLogger(__name__)
 
 
 query_tool_description = dedent("""\
-    Executes a SQL query against MindsDB.
+    Execute a SQL query against MindsDB and return the result.
 
-    A database must be specified either in the `context` parameter or directly in the query string (e.g., `SELECT * FROM my_database.my_table`). Queries like `SELECT * FROM my_table` will fail without a `context`.
+    Use fully qualified names (`database.table`) or set `context` to specify the default database.
 
-    Args:
-        query (str): The SQL query to execute.
-        context (dict, optional): The default database context. For example, `{"db": "my_postgres"}`.
-
-    Returns:
-        A dictionary describing the result.
-        - For a successful query with no data to return (e.g., an `UPDATE` statement), the response is `{"type": "ok"}`.
-        - If the query returns tabular data, the response is a dictionary containing `data` (a list of rows) and `column_names` (a list of column names). For example: `{"type": "table", "data": [[1, "a"], [2, "b"]], "column_names": ["column_a", "column_b"]}`.
-        - In case of an error, a response is `{"type": "error", "error_message": "the error message"}`.
+    Returns one of:
+    - `{"type": "ok"}` — for statements with no output (INSERT, UPDATE, etc.)
+    - `{"type": "table", "column_names": [...], "data": [[...], ...]}` — for SELECT results
+    - `{"type": "error", "error_message": "..."}` — on failure
 """)
 
 
 @mcp.tool(name="query", description=query_tool_description)
 def query(
-    query: Annotated[str, Field(description="query string")],
-    context: Annotated[dict | None, Field(description="Optional context parameters for the query")] = None,
+    query: Annotated[str, Field(description="SQL query to execute against MindsDB.")],
+    context: Annotated[dict | None, Field(
+        description='Default database context, e.g. {"db": "my_postgres"}. '
+                    'Required if the query does not use fully qualified table names.'
+    )] = None,
 ) -> QueryResponseAnswer:
     ctx.set_default()
 

@@ -104,7 +104,7 @@ class TestPostgresRender:
     def test_quoted_mixed_case(self):
         query = Select(targets=[Identifier("Test", alias=Identifier("Test2"))])
         rendered = SqlalchemyRender("postgres").get_string(query, with_failback=False)
-        assert rendered == "SELECT Test AS Test2"
+        assert rendered == 'SELECT "Test" AS "Test2"'
 
         query = Select(targets=[Identifier("table")])
         rendered = SqlalchemyRender("postgres").get_string(query, with_failback=False)
@@ -134,7 +134,7 @@ class TestPostgresRender:
         rendered = SqlalchemyRender("postgres").get_string(query, with_failback=False)
 
         # check queries are the same after render
-        assert rendered.replace("\n", "") == 'SELECT "A".*, A."B" AS "Bb", "c" AS Cc FROM Tbl."Tab" AS "Tt"'
+        assert rendered.replace("\n", "") == 'SELECT "A".*, "A"."B" AS "Bb", "c" AS "Cc" FROM "Tbl"."Tab" AS "Tt"'
 
     def test_intersect_except(self):
         for op in ("EXCEPT", "INTERSECT"):

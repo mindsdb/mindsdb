@@ -36,6 +36,6 @@ class KeywordSearchBase:
             conditions (List[FilterCondition]): conditions to select
 
         Returns:
-            HandlerResponse
+            pd.DataFrame
         """
         raise NotImplementedError()

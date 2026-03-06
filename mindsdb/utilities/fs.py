@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import time
 import tempfile
@@ -127,6 +128,70 @@ def clean_unlinked_process_marks() -> list[int]:
     return deleted_pids
 
 
+class PidFileLock:
+    """Cross-platform exclusive file lock context manager.
+    Uses fcntl.flock on Unix and msvcrt.locking on Windows.
+
+    Attributes:
+        _lock_file_path (Path): path to lock file
+        _blocking (bool): if True, waits until the lock becomes available, otherwise raises OSError immediately if lock is held
+        _fh (int): lock file descriptor
+    """
+
+    def __init__(self, lock_file_path: Path, blocking: bool = True):
+        self._lock_file_path = lock_file_path
+        self._blocking = blocking
+        self._fh = None
+
+    def __enter__(self):
+        self._lock_file_path.parent.mkdir(parents=True, exist_ok=True)
+        self._fh = open(self._lock_file_path, "a+")
+        try:
+            if sys.platform == "win32":
+                import msvcrt
+
+                # NOTE if file is locked, LK_LOCK will raise OSError after 10 seconds, LK_NBLCK immediately
+                mode = msvcrt.LK_LOCK if self._blocking else msvcrt.LK_NBLCK
+                self._fh.seek(0)
+                msvcrt.locking(self._fh.fileno(), mode, 1)
+            else:
+                import fcntl
+
+                flags = fcntl.LOCK_EX
+                if not self._blocking:
+                    flags |= fcntl.LOCK_NB
+                fcntl.flock(self._fh.fileno(), flags)
+        except (OSError, IOError):
+            self._fh.close()
+            self._fh = None
+            logger.error(f"Failed to acquire lock on {self._lock_file_path}")
+            raise
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._fh is None:
+            return False
+        try:
+            if sys.platform == "win32":
+                import msvcrt
+
+                self._fh.seek(0)
+                msvcrt.locking(self._fh.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
+        except (OSError, IOError):
+            pass
+        finally:
+            try:
+                self._fh.close()
+            except (OSError, IOError):
+                pass
+            self._fh = None
+        return False
+
+
 def create_pid_file(config):
     """
     Create mindsdb process pid file. Check if previous process exists and is running
@@ -140,48 +205,49 @@ def create_pid_file(config):
     p = get_tmp_dir()
     p.mkdir(parents=True, exist_ok=True)
     pid_file = p.joinpath("pid")
-    if pid_file.exists():
-        # if process exists raise exception
-        pid_file_data_str = pid_file.read_text().strip()
-        pid = None
-        try:
-            pid_file_data = json.loads(pid_file_data_str)
-            if isinstance(pid_file_data, dict):
-                pid = pid_file_data.get("pid")
-            else:
-                pid = pid_file_data
-        except json.JSONDecodeError:
-            # is it just pid number (old approach)?
+    lock_file = p.joinpath("pid.lock")
+
+    with PidFileLock(lock_file):
+        if pid_file.exists():
+            pid_file_data_str = pid_file.read_text().strip()
+            pid = None
             try:
-                pid = int(pid_file_data_str)
-            except Exception:
-                pass
-            logger.warning(f"Found existing PID file {pid_file} but it is not a valid JSON, removing")
+                pid_file_data = json.loads(pid_file_data_str)
+                if isinstance(pid_file_data, dict):
+                    pid = pid_file_data.get("pid")
+                else:
+                    pid = pid_file_data
+            except json.JSONDecodeError:
+                try:
+                    pid = int(pid_file_data_str)
+                except Exception:
+                    pass
+                logger.warning(f"Found existing PID file {pid_file} but it is not a valid JSON, removing")
 
-        if pid is not None:
-            try:
-                psutil.Process(int(pid))
-                raise Exception(f"Found PID file with existing process: {pid} {pid_file}")
-            except (psutil.Error, ValueError):
-                pass
-            logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
+            if pid is not None:
+                try:
+                    psutil.Process(int(pid))
+                    raise Exception(f"Found PID file with existing process: {pid} {pid_file}")
+                except (psutil.Error, ValueError):
+                    pass
+                logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
 
-        pid_file.unlink(missing_ok=True)
+            pid_file.unlink(missing_ok=True)
 
-    pid_file_content = config["pid_file_content"]
-    if pid_file_content is None or len(pid_file_content) == 0:
-        pid_file_data_str = str(os.getpid())
-    else:
-        pid_file_data = {"pid": os.getpid()}
-        for key, value in pid_file_content.items():
-            value_path = value.split(".")
-            value_obj = config
-            for path_part in value_path:
-                value_obj = value_obj.get(path_part) if value_obj else None
-            pid_file_data[key] = value_obj
+        pid_file_content = config["pid_file_content"]
+        if pid_file_content is None or len(pid_file_content) == 0:
+            pid_file_data_str = str(os.getpid())
+        else:
+            pid_file_data = {"pid": os.getpid()}
+            for key, value in pid_file_content.items():
+                value_path = value.split(".")
+                value_obj = config
+                for path_part in value_path:
+                    value_obj = value_obj.get(path_part) if value_obj else None
+                pid_file_data[key] = value_obj
 
-        pid_file_data_str = json.dumps(pid_file_data)
-    pid_file.write_text(pid_file_data_str)
+            pid_file_data_str = json.dumps(pid_file_data)
+        pid_file.write_text(pid_file_data_str)
 
 
 def delete_pid_file():
@@ -193,27 +259,29 @@ def delete_pid_file():
         return
 
     pid_file = get_tmp_dir().joinpath("pid")
+    lock_file = get_tmp_dir().joinpath("pid.lock")
 
-    if not pid_file.exists():
-        return
+    with PidFileLock(lock_file):
+        if not pid_file.exists():
+            return
 
-    pid_file_data_str = pid_file.read_text().strip()
-    pid = None
-    try:
-        pid_file_data = json.loads(pid_file_data_str)
-        if isinstance(pid_file_data, dict):
-            pid = pid_file_data.get("pid")
-        else:
-            # It's a simple number (old format or pid_file_content=None format)
-            pid = pid_file_data
-    except json.JSONDecodeError:
-        logger.warning(f"Found existing PID file {pid_file} but it is not a valid JSON")
+        pid_file_data_str = pid_file.read_text().strip()
+        pid = None
+        try:
+            pid_file_data = json.loads(pid_file_data_str)
+            if isinstance(pid_file_data, dict):
+                pid = pid_file_data.get("pid")
+            else:
+                # It's a simple number (old format or pid_file_content=None format)
+                pid = pid_file_data
+        except json.JSONDecodeError:
+            logger.warning(f"Found existing PID file {pid_file} but it is not a valid JSON")
 
-    if pid is not None and str(pid) != str(os.getpid()):
-        logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
-        return
+        if pid is not None and str(pid) != str(os.getpid()):
+            logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
+            return
 
-    pid_file.unlink(missing_ok=True)
+        pid_file.unlink(missing_ok=True)
 
 
 def __is_within_directory(directory, target):

@@ -16,7 +16,9 @@ logger = log.getLogger(__name__)
 query_tool_description = dedent("""\
     Execute a SQL query against MindsDB and return the result.
 
-    Use fully qualified names (`database.table`) or set `context` to specify the default database.
+    Queries use MySQL syntax. Use fully qualified names (`database`.`table`) or set `context` to specify
+    the default database. Use backticks (`) to quote identifiers that are reserved words or contain
+    special characters.
 
     Returns one of:
     - `{"type": "ok"}` — for statements with no output (INSERT, UPDATE, etc.)

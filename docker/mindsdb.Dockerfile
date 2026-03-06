@@ -83,6 +83,11 @@ COPY . .
 # Install the "mindsdb" package now that we have the code for it
 RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps "."
 
+# Download required NLTK resources
+# punkt_tab is required for NLTK 3.8+ tokenization
+# punkt is kept for backward compatibility
+RUN python -m nltk.downloader -d /root/nltk_data punkt punkt_tab stopwords || true
+
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED=1

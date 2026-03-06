@@ -205,15 +205,18 @@ class SqlalchemyRender:
         elif isinstance(t, ast.Last):
             col = self.to_column(ast.Identifier(parts=["last"]))
         elif isinstance(t, ast.Constant):
-            col = sa.literal(t.value)
-            if t.alias:
-                alias = self.get_alias(t.alias)
+            if t.value is None:
+                col = sa.null()
+                if t.alias:
+                    alias = self.get_alias(t.alias)
+                    col = col.label(alias)
             else:
-                if t.value is None:
-                    alias = "NULL"
+                col = sa.literal(t.value)
+                if t.alias:
+                    alias = self.get_alias(t.alias)
                 else:
                     alias = str(t.value)
-            col = col.label(alias)
+                col = col.label(alias)
         elif isinstance(t, ast.Identifier):
             # sql functions
             col = None

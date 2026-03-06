@@ -28,7 +28,7 @@ def filter_requirements(lines: list) -> list:
     result = []
     for line in lines:
         line = line.strip()
-        if not line or line.startswith('#') or line.startswith('-e '):
+        if not line or line.startswith("#") or line.startswith("-e "):
             continue
         result.append(line)
     return result

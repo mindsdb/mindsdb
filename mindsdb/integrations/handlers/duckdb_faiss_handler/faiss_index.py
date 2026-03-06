@@ -138,7 +138,7 @@ class FaissIndex:
         available_ram = psutil.virtual_memory().available
         if required_ram > _1gb and available_ram < required_ram:
             to_free_gb = round((required_ram - available_ram) / _1gb, 2)
-            raise ValueError(f"Unable load FAISS index into RAM, free up al least : {to_free_gb} Gb")
+            raise ValueError(f"Unable load FAISS index into RAM, free up at least : {to_free_gb} Gb")
 
         # check ivf_file before loading index and locking it
         index_merged = Path(self.path).parent / "faiss_index_merged"
@@ -499,6 +499,30 @@ class FaissIVFIndex(FaissIndex):
         else:
             return self.index.ntotal
 
+    def check_required_disk_space(self, index_type):
+        available = psutil.disk_usage(self.path).free
+
+        # current size of index
+        index_size = 0
+        base_path = Path(self.path).parent
+        for item in base_path.iterdir():
+            if item.is_dir() or not item.name.startswith("faiss_index"):
+                continue
+            index_size += item.stat().st_size
+
+        # k - how more space required than current index size
+        if index_type == "ivf_file":
+            # recovery + dump + shard files
+            k = 3.01
+        else:
+            # recovery + dump
+            k = 2.01
+
+        # k-1 because the current index space will be reused
+        if available < index_size * (k - 1):
+            to_free_gb = round((index_size * (k - 1)) / 1024**3, 2)
+            raise ValueError(f"Unable run indexing FAISS not enough disk space, get free at least : {to_free_gb} Gb")
+
     def create_index(self, index_type, nlist=None, train_count=None):
         """
         Create or recreate IVF index
@@ -508,6 +532,8 @@ class FaissIVFIndex(FaissIndex):
         :param train_count: count of vectors to use for training.
 
         """
+
+        self.check_required_disk_space(index_type)
 
         # index might not fit into RAM, extract data to files
         base_path = Path(self.path).parent

@@ -1,1 +1,1 @@
-from . import schema
+from mindsdb.api.mcp.resources import schema

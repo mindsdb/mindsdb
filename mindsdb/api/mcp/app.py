@@ -7,6 +7,9 @@ from starlette.responses import JSONResponse
 
 from mindsdb.api.mcp.mcp_instance import mcp
 from mindsdb.api.mcp import tools  # noqa: F401 — registers all tools via @mcp.tool
+from mindsdb.api.mcp import resources  # noqa: F401 — registers all resources via @mcp.resource
+from mindsdb.api.mcp import prompts  # noqa: F401 — registers all prompts via @mcp.prompt
+from mindsdb.api.mcp import completions  # noqa: F401 — registers completion handler
 
 
 def _get_status(request: Request) -> JSONResponse:

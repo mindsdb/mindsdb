@@ -38,9 +38,10 @@ def get_mcp_app():
     if config["api"]["mcp"]["cors"]["enabled"]:
         combined_app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
+            allow_origins=config["api"]["mcp"]["cors"]["allow_origins"],
+            allow_origin_regex=config["api"]["mcp"]["cors"]["allow_origin_regex"],
             allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-            allow_headers=["*"],
+            allow_headers=config["api"]["mcp"]["cors"]["allow_headers"],
             expose_headers=["mcp-session-id"],
         )
 

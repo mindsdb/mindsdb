@@ -100,11 +100,11 @@ def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
         for kb in kbs:
             result.append(
                 {
-                    "name": kb["name"],
-                    "project": kb["project"],
-                    "metadata_columns": kb["metadata_columns"],
-                    "content_columns": kb["content_columns"],
-                    "id_column": kb["id_column"],
+                    "name": kb.get("name"),
+                    "project": kb.get("project"),
+                    "metadata_columns": kb.get("metadata_columns"),
+                    "content_columns": kb.get("content_columns"),
+                    "id_column": kb.get("id_column"),
                 }
             )
     return result

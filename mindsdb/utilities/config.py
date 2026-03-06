@@ -246,7 +246,8 @@ class Config:
                 "mcp": {
                     "cors": {
                         "enabled": True,
-                        "allow_origins": ["*"],
+                        "allow_origins": [],
+                        "allow_origin_regex": r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
                         "allow_headers": ["*"],
                     }
                 },
@@ -494,6 +495,9 @@ class Config:
         mindsdb_mcp_allow_headers = get_list_env_var("MINDSDB_MCP_ALLOW_HEADERS")
         if isinstance(mindsdb_mcp_allow_headers, list):
             self._env_config["api"]["mcp"]["cors"]["allow_headers"] = mindsdb_mcp_allow_headers
+        mindsdb_mcp_allow_origin_regex = os.environ.get("MINDSDB_MCP_ALLOW_ORIGIN_REGEXP", "")
+        if mindsdb_mcp_allow_origin_regex != "":
+            self._env_config["api"]["mcp"]["cors"]["allow_origin_regex"] = mindsdb_mcp_allow_origin_regex
         # endregion
 
     def fetch_auto_config(self) -> bool:

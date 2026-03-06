@@ -369,7 +369,7 @@ class Config:
         elif http_auth_type != "":
             raise ValueError(f"Wrong value of env var MINDSDB_HTTP_AUTH_TYPE={http_auth_type}")
 
-        mindsdb_auth_token = os.environ.get("MINDSDB_AUTH_TOKEN", "").lower()
+        mindsdb_auth_token = os.environ.get("MINDSDB_AUTH_TOKEN", "")
         if mindsdb_auth_token != "":
             self._env_config["auth"]["token"] = mindsdb_auth_token
 

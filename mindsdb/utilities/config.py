@@ -488,10 +488,10 @@ class Config:
         mindsdb_mcp_enabled = get_bool_env_var("MINDSDB_MCP_CORS_ENABLED")
         if mindsdb_mcp_enabled is not None:
             self._env_config["api"]["mcp"]["cors"]["enabled"] = mindsdb_mcp_enabled
-        mindsdb_mcp_allow_origins = get_bool_env_var("MINDSDB_MCP_ALLOW_ORIGINS")
+        mindsdb_mcp_allow_origins = get_list_env_var("MINDSDB_MCP_ALLOW_ORIGINS")
         if isinstance(mindsdb_mcp_allow_origins, list):
             self._env_config["api"]["mcp"]["cors"]["allow_origins"] = mindsdb_mcp_allow_origins
-        mindsdb_mcp_allow_headers = get_bool_env_var("MINDSDB_MCP_ALLOW_HEADERS")
+        mindsdb_mcp_allow_headers = get_list_env_var("MINDSDB_MCP_ALLOW_HEADERS")
         if isinstance(mindsdb_mcp_allow_headers, list):
             self._env_config["api"]["mcp"]["cors"]["allow_headers"] = mindsdb_mcp_allow_headers
         # endregion

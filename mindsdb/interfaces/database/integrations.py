@@ -68,6 +68,14 @@ class HandlersCache:
         """stop clean worker"""
         self._stop_event.set()
 
+    @staticmethod
+    def _disconnect_cached_handler(handler_entry: dict) -> None:
+        """Disconnect a handler stored in cache entry."""
+        try:
+            handler_entry["handler"].disconnect()
+        except Exception:
+            pass
+
     def set(self, handler: DatabaseHandler):
         """add (or replace) handler in cache
 
@@ -115,12 +123,10 @@ class HandlersCache:
             name (str): handler name
         """
         with self._lock:
-            key = (name, ctx.company_id, threading.get_native_id())
-            if key in self.handlers:
-                try:
-                    self.handlers[key].disconnect()
-                except Exception:
-                    pass
+            # Remove all handlers for this integration/company across thread keys.
+            keys_to_delete = [key for key in self.handlers if key[0] == name and key[1] == ctx.company_id]
+            for key in keys_to_delete:
+                self._disconnect_cached_handler(self.handlers[key])
                 del self.handlers[key]
             if len(self.handlers) == 0:
                 self._stop_clean()
@@ -134,10 +140,7 @@ class HandlersCache:
                         self.handlers[key]["expired_at"] < time.time()
                         and sys.getrefcount(self.handlers[key]) == 2  # returned ref count is always 1 higher
                     ):
-                        try:
-                            self.handlers[key].disconnect()
-                        except Exception:
-                            pass
+                        self._disconnect_cached_handler(self.handlers[key])
                         del self.handlers[key]
                 if len(self.handlers) == 0:
                     self._stop_event.set()

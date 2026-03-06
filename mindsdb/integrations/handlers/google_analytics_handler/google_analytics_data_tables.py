@@ -191,9 +191,32 @@ class ReportsTable(APITable):
             if order_bys:
                 request.order_bys = order_bys
 
+            logger.info(
+                "[TEMP DEBUG][google_analytics] run_report integration=%s handler_property_id=%s request_property=%s dimensions=%s metrics=%s "
+                "start_date=%s end_date=%s limit=%s offset=%s",
+                getattr(self.handler, "name", None),
+                self.handler.property_id,
+                request.property,
+                [d.name for d in dimensions],
+                [m.name for m in metrics],
+                start_date,
+                end_date,
+                limit,
+                offset,
+            )
+
             # Execute the request
             self.handler.connect()
             response = self.handler.data_service.run_report(request)
+            logger.info(
+                "[TEMP DEBUG][google_analytics] run_report_response integration=%s request_property=%s row_count=%s "
+                "time_zone=%s currency_code=%s",
+                getattr(self.handler, "name", None),
+                request.property,
+                getattr(response, "row_count", None),
+                getattr(response.metadata, "time_zone", None) if hasattr(response, "metadata") else None,
+                getattr(response.metadata, "currency_code", None) if hasattr(response, "metadata") else None,
+            )
 
             # Convert response to DataFrame
             df = self._response_to_dataframe(response)
@@ -577,6 +600,17 @@ class RealtimeReportsTable(APITable):
                 request.dimension_filter = dimension_filter
             if metric_filter:
                 request.metric_filter = metric_filter
+
+            logger.info(
+                "[TEMP DEBUG][google_analytics] run_realtime_report integration=%s handler_property_id=%s request_property=%s dimensions=%s "
+                "metrics=%s limit=%s",
+                getattr(self.handler, "name", None),
+                self.handler.property_id,
+                request.property,
+                [d.name for d in dimensions],
+                [m.name for m in metrics],
+                limit,
+            )
 
             # Execute the request
             self.handler.connect()

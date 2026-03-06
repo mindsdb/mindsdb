@@ -5,9 +5,9 @@ import hashlib
 from http import HTTPStatus
 from typing import Optional
 
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.requests import Request
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
@@ -22,6 +22,10 @@ TOKENS = []
 def get_pat_fingerprint(token: str) -> str:
     """Hash the token with HMAC-SHA256 using secret_key as pepper."""
     return hmac.new(SECRET_KEY.encode(), token.encode(), hashlib.sha256).hexdigest()
+
+
+if config["auth"]["token"]:
+    TOKENS.append(get_pat_fingerprint(config["auth"]["token"]))
 
 
 def generate_pat() -> str:
@@ -56,23 +60,44 @@ def revoke_pat(raw_token: str) -> bool:
     return False
 
 
-class PATAuthMiddleware(BaseHTTPMiddleware):
-    def _extract_bearer(self, request: Request) -> Optional[str]:
-        h = request.headers.get("Authorization")
+class PATAuthMiddleware:
+    """Pure ASGI middleware (compatible with SSE / streaming responses).
+    The class is not inherited from starlette.middleware.base.BaseHTTPMiddleware
+    bacause it collect responses to buffer, which is not good for streaming
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    @staticmethod
+    def _extract_bearer(headers: dict) -> Optional[str]:
+        h = headers.get("authorization")
         if not h or not h.startswith("Bearer "):
             return None
         return h.split(" ", 1)[1].strip() or None
 
-    async def dispatch(self, request: Request, call_next):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
         if config.get("auth", {}).get("http_auth_enabled", False) is False:
-            return await call_next(request)
+            await self.app(scope, receive, send)
+            return
 
-        token = self._extract_bearer(request)
+        if scope.get("method") == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
+        token = self._extract_bearer(dict(request.headers))
         if not token or not verify_pat(token):
-            return JSONResponse({"detail": "Unauthorized"}, status_code=HTTPStatus.UNAUTHORIZED)
+            response = JSONResponse({"detail": "Unauthorized"}, status_code=HTTPStatus.UNAUTHORIZED)
+            await response(scope, receive, send)
+            return
 
-        request.state.user = config["auth"].get("username")
-        return await call_next(request)
+        scope.setdefault("state", {})["user"] = config["auth"].get("username")
+        await self.app(scope, receive, send)
 
 
 # Used by mysql protocol

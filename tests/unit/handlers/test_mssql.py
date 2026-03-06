@@ -5,6 +5,8 @@ from decimal import Decimal
 from unittest.mock import patch, MagicMock
 from uuid import UUID
 import datetime
+import sys
+import builtins
 
 try:
     from pymssql import OperationalError
@@ -168,7 +170,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
             mock_ast = MagicMock()
             result = self.handler.query(mock_ast)
-            renderer_mock.get_string.assert_called_once_with(mock_ast, with_failback=True)
+            renderer_mock.get_string.assert_called_once_with(mock_ast, with_failback=False)
             self.handler.native_query.assert_called_once_with("SELECT * FROM test")
             self.assertEqual(result, self.handler.native_query.return_value)
         finally:
@@ -229,6 +231,337 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         self.assertEqual(call_args, expected_sql)
         self.assertEqual(response, expected_response)
+
+    def test_meta_get_tables_returns_response(self):
+        # realistic names
+        df = DataFrame(
+            [
+                {
+                    "table_name": "customers",
+                    "table_schema": "dbo",
+                    "table_type": "BASE TABLE",
+                    "table_description": None,
+                    "row_count": 100,
+                },
+                {
+                    "table_name": "orders",
+                    "table_schema": "dbo",
+                    "table_type": "BASE TABLE",
+                    "table_description": None,
+                    "row_count": 500,
+                },
+                {
+                    "table_name": "products",
+                    "table_schema": "dbo",
+                    "table_type": "BASE TABLE",
+                    "table_description": None,
+                    "row_count": 42,
+                },
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_tables()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter
+        self.handler.native_query.reset_mock()
+        tables = ["customers", "orders"]
+        filtered_df = df[df["table_name"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_tables(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertEqual(sorted(list(response.data_frame["table_name"])), sorted(tables))
+
+    def test_meta_get_columns_returns_response(self):
+        df = DataFrame(
+            [
+                {
+                    "table_name": "customers",
+                    "column_name": "id",
+                    "data_type": "int",
+                    "column_description": None,
+                    "column_default": None,
+                    "is_nullable": 0,
+                },
+                {
+                    "table_name": "customers",
+                    "column_name": "name",
+                    "data_type": "varchar",
+                    "column_description": None,
+                    "column_default": None,
+                    "is_nullable": 1,
+                },
+                {
+                    "table_name": "products",
+                    "column_name": "sku",
+                    "data_type": "varchar",
+                    "column_description": None,
+                    "column_default": None,
+                    "is_nullable": 0,
+                },
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_columns()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter
+        self.handler.native_query.reset_mock()
+        tables = ["customers"]
+        filtered_df = df[df["table_name"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_columns(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertTrue((response.data_frame["table_name"] == "customers").all())
+
+    def test_meta_get_column_statistics_returns_response(self):
+        df = DataFrame(
+            [
+                {
+                    "TABLE_NAME": "customers",
+                    "COLUMN_NAME": "id",
+                    "NULL_PERCENTAGE": 0.0,
+                    "DISTINCT_VALUES_COUNT": 100,
+                    "MOST_COMMON_VALUES": None,
+                    "MOST_COMMON_FREQUENCIES": None,
+                    "MINIMUM_VALUE": "1",
+                    "MAXIMUM_VALUE": "100",
+                },
+                {
+                    "TABLE_NAME": "products",
+                    "COLUMN_NAME": "sku",
+                    "NULL_PERCENTAGE": 0.0,
+                    "DISTINCT_VALUES_COUNT": 42,
+                    "MOST_COMMON_VALUES": None,
+                    "MOST_COMMON_FREQUENCIES": None,
+                    "MINIMUM_VALUE": None,
+                    "MAXIMUM_VALUE": None,
+                },
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_column_statistics()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter
+        self.handler.native_query.reset_mock()
+        tables = ["customers"]
+        filtered_df = df[df["TABLE_NAME"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_column_statistics(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertTrue((response.data_frame["TABLE_NAME"] == "customers").all())
+
+    def test_meta_get_primary_keys_returns_response(self):
+        df = DataFrame(
+            [
+                {
+                    "table_name": "customers",
+                    "column_name": "id",
+                    "ordinal_position": 1,
+                    "constraint_name": "pk_customers",
+                },
+                {"table_name": "orders", "column_name": "id", "ordinal_position": 1, "constraint_name": "pk_orders"},
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_primary_keys()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter
+        self.handler.native_query.reset_mock()
+        tables = ["customers"]
+        filtered_df = df[df["table_name"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_primary_keys(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertEqual(list(response.data_frame["table_name"].unique()), ["customers"])
+
+    def test_meta_get_foreign_keys_returns_response(self):
+        df = DataFrame(
+            [
+                {
+                    "parent_table_name": "customers",
+                    "parent_column_name": "id",
+                    "child_table_name": "orders",
+                    "child_column_name": "customer_id",
+                    "constraint_name": "fk_orders_customers",
+                },
+                {
+                    "parent_table_name": "products",
+                    "parent_column_name": "sku",
+                    "child_table_name": "orders",
+                    "child_column_name": "product_sku",
+                    "constraint_name": "fk_orders_products",
+                },
+            ]
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        # without filter
+        response = self.handler.meta_get_foreign_keys()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # with filter (filter by child table names per handler implementation)
+        self.handler.native_query.reset_mock()
+        tables = ["orders"]
+        filtered_df = df[df["child_table_name"].isin(tables)].reset_index(drop=True)
+        filtered_response = Response(RESPONSE_TYPE.TABLE, data_frame=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+        response = self.handler.meta_get_foreign_keys(table_names=tables)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+        self.assertTrue((response.data_frame["child_table_name"] == "orders").all())
+
+    def test_meta_methods_result_shape_and_exceptions(self):
+        """
+        Smoke-check expected columns presence and exception propagation
+        for all meta_* methods with and without table filters.
+        """
+        methods = [
+            (
+                "meta_get_tables",
+                lambda: DataFrame(
+                    [
+                        {
+                            "table_name": "t1",
+                            "table_schema": "dbo",
+                            "table_type": "BASE TABLE",
+                            "table_description": None,
+                            "row_count": 1,
+                        }
+                    ]
+                ),
+                self.handler.meta_get_tables,
+            ),
+            (
+                "meta_get_columns",
+                lambda: DataFrame(
+                    [
+                        {
+                            "table_name": "t1",
+                            "column_name": "c1",
+                            "data_type": "int",
+                            "column_description": None,
+                            "column_default": None,
+                            "is_nullable": 1,
+                        }
+                    ]
+                ),
+                self.handler.meta_get_columns,
+            ),
+            (
+                "meta_get_column_statistics",
+                lambda: DataFrame(
+                    [
+                        {
+                            "TABLE_NAME": "t1",
+                            "COLUMN_NAME": "c1",
+                            "NULL_PERCENTAGE": None,
+                            "DISTINCT_VALUES_COUNT": 0,
+                            "MOST_COMMON_VALUES": None,
+                            "MOST_COMMON_FREQUENCIES": None,
+                            "MINIMUM_VALUE": None,
+                            "MAXIMUM_VALUE": None,
+                        }
+                    ]
+                ),
+                self.handler.meta_get_column_statistics,
+            ),
+            (
+                "meta_get_primary_keys",
+                lambda: DataFrame(
+                    [{"table_name": "t1", "column_name": "id", "ordinal_position": 1, "constraint_name": "pk_t1"}]
+                ),
+                self.handler.meta_get_primary_keys,
+            ),
+            (
+                "meta_get_foreign_keys",
+                lambda: DataFrame(
+                    [
+                        {
+                            "parent_table_name": "p",
+                            "parent_column_name": "id",
+                            "child_table_name": "c",
+                            "child_column_name": "p_id",
+                            "constraint_name": "fk_c_p",
+                        }
+                    ]
+                ),
+                self.handler.meta_get_foreign_keys,
+            ),
+        ]
+
+        for name, df_factory, method in methods:
+            with self.subTest(method=name, case="no_filter"):
+                df = df_factory()
+                expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+                self.handler.native_query = MagicMock(return_value=expected_response)
+                res = method()
+                self.handler.native_query.assert_called_once()
+                self.assertIs(res, expected_response)
+                self.assertIsNotNone(res.data_frame)
+                # Columns presence smoke-check
+                for col in list(df.columns):
+                    self.assertIn(col, res.data_frame.columns)
+
+            with self.subTest(method=name, case="with_filter"):
+                df = df_factory()
+                expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+                self.handler.native_query = MagicMock(return_value=expected_response)
+                res = (
+                    method(table_names=["A", "B"])
+                    if name != "meta_get_column_statistics"
+                    else method(table_names=["A", "B"])
+                )  # same signature
+                self.handler.native_query.assert_called_once()
+                self.assertIs(res, expected_response)
+                self.assertIsNotNone(res.data_frame)
+                for col in list(df.columns):
+                    self.assertIn(col, res.data_frame.columns)
+
+            with self.subTest(method=name, case="exception_propagation"):
+                err = (
+                    OperationalError(f"{name} failure")
+                    if name != "meta_get_primary_keys"
+                    else OperationalError("pk failure")
+                )
+                self.handler.native_query = MagicMock(side_effect=err)
+                with self.assertRaises(type(err)):
+                    _ = method()
+
+        # access denied
+        with self.subTest(method="meta_get_column_statistics", case="permissions_error"):
+            permission_err = OperationalError("The SELECT permission was denied on object 'dm_db_stats_histogram'")
+            self.handler.native_query = MagicMock(side_effect=permission_err)
+            with self.assertRaises(OperationalError):
+                _ = self.handler.meta_get_column_statistics()
 
     def test_connect_validation(self):
         """
@@ -589,6 +922,259 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 continue
             self.assertEqual(result_value, input_value)
         # endregion
+
+
+class TestMSSQLHandlerODBC(unittest.TestCase):
+    """Tests for MSSQL handler with ODBC connection"""
+
+    def setUp(self):
+        self.connection_data = OrderedDict(
+            host="127.0.0.1",
+            port=1433,
+            user="example_user",
+            password="example_pass",
+            database="example_db",
+            driver="ODBC Driver 18 for SQL Server",
+            use_odbc=True,
+        )
+
+    def test_odbc_mode_enabled_with_driver_param(self):
+        """Test that ODBC mode is enabled when driver parameter is provided"""
+        handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+        self.assertTrue(handler.use_odbc)
+
+    def test_odbc_mode_enabled_with_use_odbc_param(self):
+        """Test that ODBC mode is enabled when use_odbc parameter is True"""
+        connection_data = self.connection_data.copy()
+        del connection_data["driver"]
+        connection_data["use_odbc"] = True
+
+        handler = SqlServerHandler("mssql_odbc", connection_data=connection_data)
+        self.assertTrue(handler.use_odbc)
+
+    def test_odbc_mode_disabled_by_default(self):
+        """Test that ODBC mode is disabled when neither driver nor use_odbc is provided"""
+        connection_data = OrderedDict(
+            host="127.0.0.1",
+            port=1433,
+            user="example_user",
+            password="example_pass",
+            database="example_db",
+        )
+        handler = SqlServerHandler("mssql", connection_data=connection_data)
+        self.assertFalse(handler.use_odbc)
+
+    def test_odbc_connection_string_construction(self):
+        """Test that ODBC connection string is constructed correctly"""
+        mock_pyodbc = MagicMock()
+        mock_connect = MagicMock()
+        mock_pyodbc.connect = mock_connect
+
+        # Mock pyodbc in sys.modules so it can be imported
+        sys.modules["pyodbc"] = mock_pyodbc
+
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+            handler.connect()
+            self.assertTrue(mock_connect.called, "mock_connect was not called")
+            call_args = mock_connect.call_args
+            conn_str = call_args[0][0] if call_args[0] else ""
+
+            self.assertIn("DRIVER={ODBC Driver 18 for SQL Server}", conn_str)
+            self.assertIn("SERVER=127.0.0.1,1433", conn_str)
+            self.assertIn("DATABASE=example_db", conn_str)
+            self.assertIn("UID=example_user", conn_str)
+            self.assertIn("PWD=example_pass", conn_str)
+        finally:
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
+
+    def test_odbc_connection_with_encryption_params(self):
+        """Test that encryption parameters are added to connection string"""
+        mock_pyodbc = MagicMock()
+        mock_connect = MagicMock()
+        mock_pyodbc.connect = mock_connect
+
+        sys.modules["pyodbc"] = mock_pyodbc
+
+        connection_data = self.connection_data.copy()
+        connection_data["encrypt"] = "yes"
+        connection_data["trust_server_certificate"] = "yes"
+
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=connection_data)
+            handler.connect()
+            self.assertTrue(mock_connect.called, "mock_connect was not called")
+            conn_str = mock_connect.call_args[0][0]
+            self.assertIn("Encrypt=yes", conn_str)
+            self.assertIn("TrustServerCertificate=yes", conn_str)
+        finally:
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
+
+    def test_odbc_import_error_handling(self):
+        """Test that ImportError is raised with helpful message when pyodbc is not installed"""
+        orig_pyodbc = sys.modules.get("pyodbc")
+
+        try:
+            # Remove pyodbc from sys.modules to simulate it not being installed
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
+
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+
+            original_import = builtins.__import__
+
+            def mock_import(name, *args, **kwargs):
+                if name == "pyodbc":
+                    raise ImportError("No module named 'pyodbc'")
+                return original_import(name, *args, **kwargs)
+
+            with patch("builtins.__import__", side_effect=mock_import):
+                with self.assertRaises(ImportError) as context:
+                    handler._connect_odbc()
+
+                self.assertIn("pyodbc is not installed", str(context.exception))
+                self.assertIn("pip install", str(context.exception).lower())
+        finally:
+            if orig_pyodbc is not None:
+                sys.modules["pyodbc"] = orig_pyodbc
+            elif "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
+
+    def test_odbc_driver_not_found_error(self):
+        """Test that ConnectionError is raised with helpful message when ODBC driver is not found"""
+        mock_pyodbc = MagicMock()
+        mock_pyodbc.Error = Exception
+        mock_error = Exception("Can't open lib 'ODBC Driver 18 for SQL Server' : file not found")
+        mock_pyodbc.connect.side_effect = mock_error
+
+        sys.modules["pyodbc"] = mock_pyodbc
+
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+            with self.assertRaises((ConnectionError, Exception)):
+                handler.connect()
+        finally:
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
+
+    def test_odbc_native_query_with_row_objects(self):
+        """Test that native_query correctly handles pyodbc Row objects"""
+
+        class MockRow:
+            def __init__(self, *values):
+                self.values = values
+
+            def __iter__(self):
+                return iter(self.values)
+
+            def __getitem__(self, idx):
+                return self.values[idx]
+
+        mock_pyodbc = MagicMock()
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        mock_cursor.fetchall.return_value = [MockRow(1, "test1"), MockRow(2, "test2")]
+        mock_cursor.description = [
+            ("id", None, None, None, None, None, None),
+            ("name", None, None, None, None, None, None),
+        ]
+
+        sys.modules["pyodbc"] = mock_pyodbc
+
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+            handler.connect = MagicMock(return_value=mock_conn)
+            handler.is_connected = True
+            mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+            query_str = "SELECT * FROM test_table"
+            response = handler.native_query(query_str)
+
+            # Verify cursor was called without as_dict parameter (ODBC doesn't support it)
+            mock_conn.cursor.assert_called_once_with()
+            mock_cursor.execute.assert_called_once_with(query_str)
+
+            self.assertIsInstance(response, Response)
+            self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+            self.assertIsInstance(response.data_frame, DataFrame)
+            self.assertEqual(list(response.data_frame.columns), ["id", "name"])
+        finally:
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
+
+    def test_odbc_connection_string_with_additional_args(self):
+        """Test that additional connection string arguments are appended"""
+        connection_data = self.connection_data.copy()
+        connection_data["connection_string_args"] = "ApplicationIntent=ReadOnly;MultiSubnetFailover=Yes"
+
+        mock_pyodbc = MagicMock()
+        mock_connect = MagicMock()
+        mock_pyodbc.connect = mock_connect
+
+        sys.modules["pyodbc"] = mock_pyodbc
+
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=connection_data)
+            handler.connect()
+
+            self.assertTrue(mock_connect.called, "mock_connect was not called")
+            conn_str = mock_connect.call_args[0][0]
+            self.assertIn("ApplicationIntent=ReadOnly", conn_str)
+            self.assertIn("MultiSubnetFailover=Yes", conn_str)
+        finally:
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
+
+    def test_odbc_vs_pymssql_type_inference(self):
+        """Test that type inference works correctly for ODBC connections"""
+        mock_pyodbc = MagicMock()
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        class MockRow:
+            def __init__(self, *values):
+                self.values = values
+
+            def __iter__(self):
+                return iter(self.values)
+
+            def __getitem__(self, idx):
+                return self.values[idx]
+
+        mock_cursor.fetchall.return_value = [
+            MockRow(123, 45.67, "text", datetime.datetime(2024, 1, 1)),
+        ]
+        mock_cursor.description = [
+            ("int_col", None, None, None, None, None, None),
+            ("float_col", None, None, None, None, None, None),
+            ("text_col", None, None, None, None, None, None),
+            ("datetime_col", None, None, None, None, None, None),
+        ]
+
+        sys.modules["pyodbc"] = mock_pyodbc
+
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+            handler.connect = MagicMock(return_value=mock_conn)
+            handler.is_connected = True
+            mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+            response = handler.native_query("SELECT * FROM test")
+
+            self.assertIsInstance(response, Response)
+            self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+            self.assertIsNotNone(response.mysql_types)
+            self.assertTrue(len(response.mysql_types) > 0)
+        finally:
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
 
 
 if __name__ == "__main__":

@@ -69,8 +69,8 @@ class ToMarkdown:
                 ext = os.path.splitext(parsed_url.path)[1]
                 if ext:
                     return ext
-            except requests.RequestException:
-                raise RuntimeError(f"Unable to retrieve file extension from URL: {file_path_or_url}")
+            except requests.RequestException as e:
+                raise RuntimeError(f"Unable to retrieve file extension from URL: {file_path_or_url}") from e
         else:
             return os.path.splitext(file_path_or_url)[1]
 

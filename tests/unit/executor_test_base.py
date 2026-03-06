@@ -16,6 +16,7 @@ from prometheus_client import REGISTRY
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.utilities import log
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 logger = log.getLogger(__name__)
@@ -71,16 +72,6 @@ class BaseUnitTest:
         db.init()
         cls.db = db
 
-        from multiprocessing import dummy
-
-        # We might not have torch installed. So ignore any errors
-        try:
-            mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
-            mp_patcher.side_effect = lambda x: dummy
-        except Exception:
-            mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
-            mp_patcher.side_effect = lambda x: dummy
-
     @staticmethod
     def teardown_class(cls):
         # remove tmp db file
@@ -88,14 +79,15 @@ class BaseUnitTest:
         shutil.rmtree(cls.storage_dir, ignore_errors=True)
 
         # remove environ for next tests
-        if 'MINDSDB_DB_CON' in os.environ:
-            del os.environ["MINDSDB_DB_CON"]
+        for env_var_name in ("MINDSDB_DB_CON", "MINDSDB_STORAGE_DIR", "MINDSDB_CONFIG_PATH"):
+            if env_var_name in os.environ:
+                del os.environ[env_var_name]
 
         # remove import of mindsdb for next tests
         unload_module("mindsdb")
 
     def setup_method(self):
-        self._dummy_db_path = os.path.join(tempfile.mkdtemp(), '_mindsdb_duck_db')
+        self._dummy_db_path = os.path.join(tempfile.mkdtemp(), "_mindsdb_duck_db")
         self.clear_db(self.db)
         self.reset_prom_collectors()
 
@@ -109,30 +101,54 @@ class BaseUnitTest:
 
         # fill with data
         from mindsdb.interfaces.database.integrations import integration_controller
+        from sqlalchemy.exc import IntegrityError as SQLAlchemyIntegrityError
+
         integration_controller.create_permanent_integrations()
 
-        r = db.Integration(name="dummy_data", data={'db_path': self._dummy_db_path}, engine="dummy_data")
-        db.session.add(r)
+        # Insert dummy_data if it doesn't exist (idempotent with race condition handling)
+        dummy_record = db.Integration.query.filter_by(
+            name="dummy_data", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+        ).first()
+        if dummy_record is None:
+            try:
+                dummy_record = db.Integration(
+                    name="dummy_data",
+                    data={"db_path": self._dummy_db_path},
+                    engine="dummy_data",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(dummy_record)
+                db.session.flush()
+            except SQLAlchemyIntegrityError:
+                db.session.rollback()
+                dummy_record = db.Integration.query.filter_by(
+                    name="dummy_data", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+                ).first()
 
-        # Lightwood should always be last (else tests break, why?)
-        r = db.Integration(name="lightwood", data={}, engine="lightwood")
-        db.session.add(r)
-
-        db.session.flush()
-
-        self.lw_integration_id = r.id
-
-        # default project
-        r = db.Project(name="mindsdb")
-        db.session.add(r)
+        # default project (idempotent with race condition handling)
+        project_record = db.Project.query.filter_by(
+            name="mindsdb", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+        ).first()
+        if project_record is None:
+            try:
+                project_record = db.Project(
+                    name="mindsdb",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(project_record)
+                db.session.flush()
+            except SQLAlchemyIntegrityError:
+                db.session.rollback()
 
         db.session.commit()
         return db
 
     def set_data(self, table, data):
         con = duckdb.connect(self._dummy_db_path)
-        con.execute('DROP TABLE IF EXISTS {}'.format(table))
-        con.execute('CREATE TABLE {} AS SELECT * FROM data'.format(table))
+        con.execute("DROP TABLE IF EXISTS {}".format(table))
+        con.execute("CREATE TABLE {} AS SELECT * FROM data".format(table))
 
     def wait_predictor(self, project, name, timeout=100, filters=None):
         """
@@ -191,22 +207,22 @@ class BaseExecutorTest(BaseUnitTest):
 
     def _import_handler(self, integration_controller, handler_name, handler_dir):
         handler_meta = {
-            'import': {
-                'success': None,
-                'error_message': None,
-                'folder': handler_dir.name,
-                'dependencies': [],
+            "import": {
+                "success": None,
+                "error_message": None,
+                "folder": handler_dir.name,
+                "dependencies": [],
             },
-            'path': handler_dir,
-            'name': handler_name,
-            'permanent': False,
+            "path": handler_dir,
+            "name": handler_name,
+            "permanent": False,
         }
         integration_controller.handlers_import_status[handler_name] = handler_meta
-        integration_controller.import_handler(handler_name, '')
+        integration_controller.import_handler(handler_name, "")
 
     def set_executor(
         self,
-        mock_lightwood=False,
+        mock_predict=False,
         mock_model_controller=False,
         import_dummy_ml=False,
         import_dummy_llm=False,
@@ -218,13 +234,16 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.api.executor.command_executor import (
             ExecuteCommands,
         )
+
         # clear cache of previous test case to apply mocks of current test case
         from mindsdb.integrations.libs.process_cache import process_cache
+
         process_cache.cache = {}
         from mindsdb.interfaces.database.integrations import integration_controller
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
         from mindsdb.utilities.context import context as ctx
+        from mindsdb.interfaces.storage import db
 
         self.file_controller = FileController()
 
@@ -241,30 +260,42 @@ class BaseExecutorTest(BaseUnitTest):
             test_handler_path = os.path.dirname(__file__)
             sys.path.append(test_handler_path)
 
-            handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
-            self._import_handler(integration_controller, 'dummy_ml', handler_dir)
+            handler_dir = Path(test_handler_path) / "dummy_ml_handler"
+            self._import_handler(integration_controller, "dummy_ml", handler_dir)
 
-            if not integration_controller.get_handler_meta('dummy_ml')['import']['success']:
-                error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
+            if not integration_controller.get_handler_meta("dummy_ml")["import"]["success"]:
+                error = integration_controller.handlers_import_status["dummy_ml"]["import"]["error_message"]
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
-        if import_dummy_llm:
+            r_dummy_ml = db.Integration.query.filter_by(
+                name="dummy_ml", company_id=DEFAULT_COMPANY_ID, user_id=DEFAULT_USER_ID
+            ).first()
+            if r_dummy_ml is None:
+                r_dummy_ml = db.Integration(
+                    name="dummy_ml",
+                    data={},
+                    engine="dummy_ml",
+                    company_id=DEFAULT_COMPANY_ID,
+                    user_id=DEFAULT_USER_ID,
+                )
+                db.session.add(r_dummy_ml)
+                db.session.commit()
+            self.dummy_ml_integration_id = r_dummy_ml.id
+
             test_handler_path = os.path.dirname(__file__)
             sys.path.append(test_handler_path)
 
-            handler_dir = Path(test_handler_path) / 'dummy_llm_handler'
-            self._import_handler(integration_controller, 'dummy_llm', handler_dir)
+            handler_dir = Path(test_handler_path) / "dummy_llm_handler"
+            self._import_handler(integration_controller, "dummy_llm", handler_dir)
 
-            if not integration_controller.handlers_import_status['dummy_llm']['import']['success']:
-                error = integration_controller.handlers_import_status['dummy_llm']['import']['error_message']
+            if not integration_controller.handlers_import_status["dummy_llm"]["import"]["success"]:
+                error = integration_controller.handlers_import_status["dummy_llm"]["import"]["error_message"]
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
-        if mock_lightwood:
+        if mock_predict:
             predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")
             self.mock_predict = predict_patcher.__enter__()
-
-            create_patcher = mock.patch("mindsdb.integrations.handlers.lightwood_handler.Handler.create")
-            self.mock_create = create_patcher.__enter__()
+            self.mock_create = mock.Mock()
 
         ctx.set_default()
         sql_session = SessionController()
@@ -280,7 +311,7 @@ class BaseExecutorTest(BaseUnitTest):
 
     def teardown_method(self):
         # Don't want cache to pick up a stale version with the wrong duckdb_path.
-        self.command_executor.session.integration_controller.delete('dummy_data')
+        self.command_executor.session.integration_controller.delete("dummy_data")
         if os.path.exists(self._dummy_db_path):
             os.unlink(self._dummy_db_path)
         os.rmdir(os.path.dirname(self._dummy_db_path))
@@ -290,7 +321,7 @@ class BaseExecutorTest(BaseUnitTest):
         df.to_parquet(file_path)
         self.file_controller.save_file(name, file_path, name)
 
-    def set_handler(self, mock_handler, name, tables, engine="postgres"):
+    def set_handler(self, mock_handler, name, tables, engine="postgres", schema=None):
         # integration
         # delete by name
         r = self.db.Integration.query.filter_by(name=name).first()
@@ -300,8 +331,10 @@ class BaseExecutorTest(BaseUnitTest):
         # create
         r = self.db.Integration(
             name=name,
-            data={'password': 'secret'},
-            engine=engine
+            data={"password": "secret"},
+            engine=engine,
+            company_id=DEFAULT_COMPANY_ID,
+            user_id=DEFAULT_USER_ID,
         )
         self.db.session.add(r)
         self.db.session.commit()
@@ -318,17 +351,18 @@ class BaseExecutorTest(BaseUnitTest):
             for table in tables:
                 tables_ar.append(
                     {
-                        "table_schema": "public",
+                        "table_schema": schema or "public",
                         "table_name": table,
                         "table_type": "BASE TABLE",
                     }
                 )
 
-            return handler_response(
-                pd.DataFrame(tables_ar)
-            )
+            return handler_response(pd.DataFrame(tables_ar))
 
         mock_handler().get_tables.side_effect = get_tables_f
+        mock_handler().cache_single_instance = False
+        mock_handler().cache_thread_safe = True
+        mock_handler().cache_usage_lock = True
 
         def get_columns_f(table_name):
             type = "varchar"
@@ -349,10 +383,16 @@ class BaseExecutorTest(BaseUnitTest):
         def native_query_f(query):
             con = duckdb.connect(database=":memory:")
 
+            if schema is not None:
+                con.execute(f"CREATE SCHEMA {schema}")
+
             for table_name, df in tables.items():
                 # it is not possible to insert/delete from a dataframe itself, but possible if create table from it
-                con.register(f'{table_name}_df', df)
-                con.execute(f'CREATE TABLE {table_name} AS SELECT * FROM {table_name}_df;')
+                con.register(f"{table_name}_df", df)
+                if schema is None:
+                    con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM {table_name}_df;")
+                else:
+                    con.execute(f"CREATE TABLE {schema}.{table_name} AS SELECT * FROM {table_name}_df;")
 
             try:
                 con.execute(query)
@@ -361,7 +401,7 @@ class BaseExecutorTest(BaseUnitTest):
                 # region for insert/update/delete duckdb returns rowcount as 'Count' value in result, rather than using the
                 # cursor.rowcount attr.
                 match (columns, data):
-                    case ['Count'], [(affected_rows,)]:
+                    case ["Count"], [(affected_rows,)]:
                         result_df = pd.DataFrame()
                     case _:
                         affected_rows = None
@@ -396,6 +436,8 @@ class BaseExecutorTest(BaseUnitTest):
         r = self.db.Project(
             id=1,
             name=project["name"],
+            company_id=DEFAULT_COMPANY_ID,
+            user_id=DEFAULT_USER_ID,
         )
         self.db.session.add(r)
         self.db.session.commit()
@@ -409,11 +451,9 @@ class BaseExecutorDummyML(BaseExecutorTest):
     def setup_method(self):
         super().setup_method(import_dummy_ml=True)
 
-    def run_sql(self, sql, throw_error=True, database='mindsdb'):
+    def run_sql(self, sql, throw_error=True, database="mindsdb"):
         self.command_executor.session.database = database
-        ret = self.command_executor.execute_command(
-            parse_sql(sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(sql))
         if throw_error:
             assert ret.error_code is None
         if ret.data is not None:
@@ -443,7 +483,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
 
     def setup_method(self):
         super().setup_method()
-        self.set_executor(mock_lightwood=True, mock_model_controller=True)
+        self.set_executor(mock_predict=True, mock_model_controller=True, import_dummy_ml=True)
 
     def set_predictor(self, predictor):
         # fill model_interface mock with predictor data for test case
@@ -464,12 +504,15 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         # add predictor to table
         r = self.db.Predictor(
             name=predictor["name"],
-            data={"dtypes": predictor["dtypes"]},
+            data={},
+            dtype_dict=predictor["dtype_dict"],
             learn_args=predictor["problem_definition"],
             to_predict=predictor["predict"],
-            integration_id=self.lw_integration_id,
+            integration_id=self.dummy_ml_integration_id,
             project_id=1,
             status="complete",
+            company_id=DEFAULT_COMPANY_ID,
+            user_id=DEFAULT_USER_ID,
         )
         self.db.session.add(r)
         self.db.session.commit()
@@ -480,7 +523,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
             df._predict_df = df[:]
 
             explain_arr = []
-            data = df.to_dict('records')
+            data = df.to_dict("records")
 
             predicted_value = predictor["predicted_value"]
             target = predictor["predict"]
@@ -529,7 +572,6 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
             "updated_at": dt.datetime(2022, 5, 12, 16, 40, 26),
             "created_at": dt.datetime(2022, 4, 4, 14, 48, 39),
         }
-        predictor["dtype_dict"] = predictor["dtypes"]
         predictor_record.update(predictor)
 
         def get_model_data_f(name, *args):
@@ -543,9 +585,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.mock_model_controller.get_model_data.side_effect = get_model_data_f
 
     def execute(self, sql):
-        ret = self.command_executor.execute_command(
-            parse_sql(sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(sql))
         if ret.error_code is not None:
             raise Exception()
         return ret

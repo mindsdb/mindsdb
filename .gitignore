@@ -4,7 +4,7 @@ var
 etc
 .idea
 mindsdb/logs
-mindsdb/logs
+.hypothesis/
 logs
 tests/temp
 tests/integration/flows/config/*
@@ -65,4 +65,9 @@ node_modules
 mindsdb/**/pyproject.toml
 mindsdb/**/uv.lock
 
+<<<<<<< HEAD
 config.json
+=======
+# dsi tests
+reports/
+>>>>>>> upstream/main

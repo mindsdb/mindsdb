@@ -15,13 +15,13 @@ This sections provides instructions on how to start MindsDB with its MCP API ena
 To enable the HTTP API explicitly, you can use the [`MINDSDB_APIS` environment variable](/setup/environment-vars#mindsdb-apis):
 
 ```bash
-export MINDSDB_APIS='http,mysql,postgres'
+export MINDSDB_APIS='http,mysql'
 ```
 
 Or, specify it when starting MindsDB:
 
 ```bash
-python -m mindsdb --api http,mysql,postgres
+python -m mindsdb --api http,mysql
 ```
 
 <Tip>

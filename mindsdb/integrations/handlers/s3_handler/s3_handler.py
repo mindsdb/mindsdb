@@ -100,7 +100,7 @@ class S3Handler(APIHandler):
         self.session = None
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.cache_thread_safe = True
         self.bucket = self.connection_data.get("bucket")
         self._regions = {}
 

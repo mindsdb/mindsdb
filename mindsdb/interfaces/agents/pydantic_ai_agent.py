@@ -244,7 +244,8 @@ class PydanticAIAgent:
 
             # Get current prompt (last user message)
             current_prompt = ""
-            for _, row in reversed(df.iterrows()):
+            for index in reversed(range(len(df))):
+                row = df.iloc[index]
                 if row.get("role") == "user":
                     current_prompt = str(row.get("content", ""))
                     break

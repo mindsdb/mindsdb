@@ -15,7 +15,8 @@ from mindsdb_sql_parser.ast import (
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import SubSelectStep, QueryStep
-from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
+from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.utilities.types.column import Column
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.executor.exceptions import KeyColumnDoesNotExist
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -66,22 +67,24 @@ class SubSelectStepCall(BaseStepCall):
 
         df = result.to_df()
 
-        # Check if query has aggregations and result is already aggregated (single row)
-        # If so, and the query is just selecting the aggregated columns, skip query_df
-        # to avoid re-aggregating already aggregated data
-        if isinstance(query, Select) and len(df) == 1:
-            has_aggregation = has_aggregate_function(query.targets)
-            if (
-                has_aggregation
-                and query.where is None
-                and query.group_by is None
-                and query.order_by is None
-                and query.limit is None
-            ):
-                # Query is just aggregations with no WHERE, GROUP BY, ORDER BY, or LIMIT
-                # The result is already aggregated, so just return it as-is
-                database = result.columns[0].database if result.columns else None
-                return ResultSet.from_df(df, database, table_name)
+        if step.skip_for_aggregation:
+            # Check if query has aggregations and result is already aggregated (single row)
+            # If so, and the query is just selecting the aggregated columns, skip query_df
+            # to avoid re-aggregating already aggregated data
+            # TODO remove `len(df) == 1` condition
+            if isinstance(query, Select) and len(df) == 1:
+                has_aggregation = has_aggregate_function(query.targets)
+                if (
+                    has_aggregation
+                    and query.where is None
+                    and query.group_by is None
+                    and query.order_by is None
+                    and query.limit is None
+                ):
+                    # Query is just aggregations with no WHERE, GROUP BY, ORDER BY, or LIMIT
+                    # The result is already aggregated, so just return it as-is
+                    database = result.columns[0].database if result.columns else None
+                    return ResultSet.from_df(df, database, table_name)
 
         res = query_df(df, query, session=self.session)
 

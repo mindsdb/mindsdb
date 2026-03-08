@@ -65,40 +65,42 @@ class GithubIssuesTable(APIResource):
                 issues_kwargs['since'] = condition.value
                 condition.applied = True
 
-        self.handler.connect()
+        repos = self.handler.get_repos(conditions)
 
         data = []
         count = 0
-        for an_issue in self.handler.connection\
-                .get_repo(self.handler.repository) \
-                .get_issues(**issues_kwargs):
-            item = {
-                "number": an_issue.number,
-                "title": an_issue.title,
-                "state": an_issue.state,
-                "creator": an_issue.user.login,
-                "labels": ",".join(
-                    [label.name for label in an_issue.labels]
-                ),
-                "assignees": ",".join(
-                    [
-                        assignee.login
-                        for assignee in an_issue.assignees
-                    ]
-                ),
-                "comments": an_issue.comments,
-                "body": an_issue.body,
-                "created": an_issue.created_at,
-                "updated": an_issue.updated_at,
-                "closed": an_issue.closed_at,
-            }
+        for repo in repos:
+            for an_issue in repo.get_issues(**issues_kwargs):
+                item = {
+                    "number": an_issue.number,
+                    "title": an_issue.title,
+                    "state": an_issue.state,
+                    "creator": an_issue.user.login,
+                    "labels": ",".join(
+                        [label.name for label in an_issue.labels]
+                    ),
+                    "assignees": ",".join(
+                        [
+                            assignee.login
+                            for assignee in an_issue.assignees
+                        ]
+                    ),
+                    "comments": an_issue.comments,
+                    "body": an_issue.body,
+                    "created": an_issue.created_at,
+                    "updated": an_issue.updated_at,
+                    "closed": an_issue.closed_at,
+                    "repository": repo.full_name,
+                }
 
-            if 'closed_by' in targets:
-                item['closed_by'] = an_issue.closed_by.login if an_issue.closed_by else None
+                if not targets or 'closed_by' in targets:
+                    item['closed_by'] = an_issue.closed_by.login if an_issue.closed_by else None
 
-            data.append(item)
+                data.append(item)
 
-            count += 1
+                count += 1
+                if limit <= count:
+                    break
             if limit <= count:
                 break
 
@@ -117,7 +119,11 @@ class GithubIssuesTable(APIResource):
             If the query contains an unsupported condition
         """
 
-        if self.handler.connection_data.get("api_key", None) is None:
+        has_auth = (
+            self.handler.connection_data.get("api_key") is not None
+            or self.handler.connection_data.get("access_token") is not None
+        )
+        if not has_auth:
             raise ValueError(
                 "Need an authenticated connection in order to insert a GitHub issue"
             )
@@ -127,7 +133,10 @@ class GithubIssuesTable(APIResource):
             self._add(issue)
 
     def _add(self, issue: dict):
-        current_repo = self.handler.connection.get_repo(self.handler.repository)
+        self.handler.connect()
+        current_repo = self.handler.connection.get_repo(
+            issue.get("repository") or self.handler.repository
+        )
 
         insert_kwargs = {}
 
@@ -226,6 +235,7 @@ class GithubIssuesTable(APIResource):
             "created",
             "updated",
             "closed",
+            "repository",
         ]
 
 
@@ -258,6 +268,7 @@ class GithubPullRequestsTable(APIResource):
         ValueError
             If the query contains an unsupported condition
         """
+        logger.info(f"Listing pull requests with conditions: {conditions}, sort: {sort}, targets: {targets}")
 
         if limit is None:
             limit = 20
@@ -281,63 +292,67 @@ class GithubPullRequestsTable(APIResource):
                 issues_kwargs[condition.column] = condition.value
                 condition.applied = True
 
-        self.handler.connect()
+        repos = self.handler.get_repos(conditions)
 
         data = []
         count = 0
-        for a_pull in self.handler.connection\
-                .get_repo(self.handler.repository) \
-                .get_pulls(**issues_kwargs):
+        for repo in repos:
+            for a_pull in repo.get_pulls(**issues_kwargs):
 
-            item = {
-                "number": a_pull.number,
-                "title": a_pull.title,
-                "state": a_pull.state,
-                "creator": a_pull.user.login,
-                "labels": ",".join(
-                    [label.name for label in a_pull.labels]
-                ),
-                "milestone": a_pull.milestone.title if a_pull.milestone else None,
-                "assignees": ",".join(
-                    [
-                        assignee.login
-                        for assignee in a_pull.assignees
-                    ]
-                ),
-                "reviewers": ",".join(
-                    [
-                        reviewer.login
-                        for reviewer in a_pull.requested_reviewers
-                    ]
-                ),
-                "teams": ",".join(
-                    [
-                        team.name
-                        for team in a_pull.requested_teams
-                    ]
-                ),
-                "draft": a_pull.draft,
-                "body": a_pull.body,
-                "base": a_pull.base.ref if a_pull.base else None,
-                "head": a_pull.head.ref if a_pull.head else None,
-                "created": a_pull.created_at,
-                "updated": a_pull.updated_at,
-                "merged": a_pull.merged_at,
-                "closed": a_pull.closed_at,
-            }
+                item = {
+                    "number": a_pull.number,
+                    "title": a_pull.title,
+                    "state": a_pull.state,
+                    "creator": a_pull.user.login,
+                    "labels": ",".join(
+                        [label.name for label in a_pull.labels]
+                    ),
+                    "milestone": a_pull.milestone.title if a_pull.milestone else None,
+                    "assignees": ",".join(
+                        [
+                            assignee.login
+                            for assignee in a_pull.assignees
+                        ]
+                    ),
+                    "reviewers": ",".join(
+                        [
+                            reviewer.login
+                            for reviewer in a_pull.requested_reviewers
+                        ]
+                    ),
+                    "teams": ",".join(
+                        [
+                            team.name
+                            for team in a_pull.requested_teams
+                        ]
+                    ),
+                    "draft": a_pull.draft,
+                    "body": a_pull.body,
+                    "base": a_pull.base.ref if a_pull.base else None,
+                    "head": a_pull.head.ref if a_pull.head else None,
+                    "created": a_pull.created_at,
+                    "updated": a_pull.updated_at,
+                    "merged": a_pull.merged_at,
+                    "closed": a_pull.closed_at,
+                    "repository": repo.full_name,
+                }
 
-            # downloaded columns, use them only if explicitly requested
-            for field in ('comments', 'review_comments', 'mergeable', 'mergeable_state', 'rebaseable',
-                          'commits', 'additions', 'deletions', 'changed_files'):
-                if field in targets:
-                    item[field] = getattr(a_pull, field)
-            if 'is_merged' in targets:
-                item['is_merged'] = a_pull.merged
-            if 'merged_by' in targets:
-                item['is_merged'] = a_pull.merged_by.login if a_pull.merged_by else None
+                # downloaded columns, use them only if explicitly requested
+                # (empty targets means SELECT * — fetch all)
+                fetch_all = not targets
+                for field in ('comments', 'review_comments', 'mergeable', 'mergeable_state', 'rebaseable',
+                              'commits', 'additions', 'deletions', 'changed_files'):
+                    if fetch_all or field in targets:
+                        item[field] = getattr(a_pull, field)
+                if fetch_all or 'is_merged' in targets:
+                    item['is_merged'] = a_pull.merged
+                if fetch_all or 'merged_by' in targets:
+                    item['merged_by'] = a_pull.merged_by.login if a_pull.merged_by else None
 
-            data.append(item)
-            count += 1
+                data.append(item)
+                count += 1
+                if limit <= count:
+                    break
             if limit <= count:
                 break
 
@@ -380,6 +395,7 @@ class GithubPullRequestsTable(APIResource):
             "updated",
             "merged",
             "closed",
+            "repository",
         ]
 
 
@@ -425,22 +441,24 @@ class GithubCommitsTable(APIResource):
                 commits_kwargs["author"] = condition.value
                 condition.applied = True
 
-        self.handler.connect()
+        repos = self.handler.get_repos(conditions)
 
         data = []
-        for a_commit in self.handler.connection.get_repo(
-                self.handler.repository
-        ).get_commits(**commits_kwargs):
+        for repo in repos:
+            for a_commit in repo.get_commits(**commits_kwargs):
 
-            item = {
-                "sha": a_commit.sha,
-                "author": a_commit.commit.author.name,
-                "date": a_commit.commit.author.date,
-                "message": a_commit.commit.message,
-            }
+                item = {
+                    "sha": a_commit.sha,
+                    "author": a_commit.commit.author.name,
+                    "date": a_commit.commit.author.date,
+                    "message": a_commit.commit.message,
+                    "repository": repo.full_name,
+                }
 
-            data.append(item)
+                data.append(item)
 
+                if limit <= len(data):
+                    break
             if limit <= len(data):
                 break
 
@@ -455,7 +473,7 @@ class GithubCommitsTable(APIResource):
             List of columns
         """
 
-        return ["sha", "author", "date", "message"]
+        return ["sha", "author", "date", "message", "repository"]
 
 
 class GithubReleasesTable(APIResource):
@@ -481,28 +499,30 @@ class GithubReleasesTable(APIResource):
 
         limit = limit or 20
 
-        self.handler.connect()
+        repos = self.handler.get_repos(conditions)
 
         data = []
-        for a_release in self.handler.connection.get_repo(
-                self.handler.repository
-        ).get_releases():
+        for repo in repos:
+            for a_release in repo.get_releases():
 
-            item = {
-                "id": self.check_none(a_release.id),
-                "author": self.check_none(a_release.author.login),
-                "body": self.check_none(a_release.body),
-                "created_at": self.check_none(str(a_release.created_at)),
-                "html_url": self.check_none(a_release.html_url),
-                "published_at": self.check_none(str(a_release.published_at)),
-                "tag_name": self.check_none(a_release.tag_name),
-                "title": self.check_none(a_release.title),
-                "url": self.check_none(a_release.url),
-                "zipball_url": self.check_none(a_release.zipball_url)
-            }
+                item = {
+                    "id": self.check_none(a_release.id),
+                    "author": self.check_none(a_release.author.login),
+                    "body": self.check_none(a_release.body),
+                    "created_at": self.check_none(str(a_release.created_at)),
+                    "html_url": self.check_none(a_release.html_url),
+                    "published_at": self.check_none(str(a_release.published_at)),
+                    "tag_name": self.check_none(a_release.tag_name),
+                    "title": self.check_none(a_release.title),
+                    "url": self.check_none(a_release.url),
+                    "zipball_url": self.check_none(a_release.zipball_url),
+                    "repository": repo.full_name,
+                }
 
-            data.append(item)
+                data.append(item)
 
+                if limit <= len(data):
+                    break
             if limit <= len(data):
                 break
 
@@ -530,7 +550,8 @@ class GithubReleasesTable(APIResource):
             "tag_name",
             "title",
             "url",
-            "zipball_url"
+            "zipball_url",
+            "repository",
         ]
 
 
@@ -557,22 +578,26 @@ class GithubBranchesTable(APIResource):
 
         limit = limit or 20
 
-        self.handler.connect()
+        repos = self.handler.get_repos(conditions)
 
         data = []
-        for branch in self.handler.connection.get_repo(self.handler.repository).get_branches():
-            raw_data = branch.raw_data
+        for repo in repos:
+            for branch in repo.get_branches():
+                raw_data = branch.raw_data
 
-            item = {
-                "name": self.check_none(raw_data["name"]),
-                "url": "https://github.com/" + self.handler.repository + "/tree/" + raw_data["name"],
-                "commit_sha": self.check_none(raw_data["commit"]["sha"]),
-                "commit_url": self.check_none(raw_data["commit"]["url"]),
-                "protected": self.check_none(raw_data["protected"])
-            }
+                item = {
+                    "name": self.check_none(raw_data["name"]),
+                    "url": "https://github.com/" + repo.full_name + "/tree/" + raw_data["name"],
+                    "commit_sha": self.check_none(raw_data["commit"]["sha"]),
+                    "commit_url": self.check_none(raw_data["commit"]["url"]),
+                    "protected": self.check_none(raw_data["protected"]),
+                    "repository": repo.full_name,
+                }
 
-            data.append(item)
+                data.append(item)
 
+                if limit <= len(data):
+                    break
             if limit <= len(data):
                 break
 
@@ -595,7 +620,8 @@ class GithubBranchesTable(APIResource):
             "url",
             "commit_sha",
             "commit_url",
-            "protected"
+            "protected",
+            "repository",
         ]
 
 
@@ -622,40 +648,44 @@ class GithubContributorsTable(APIResource):
 
         limit = limit or 20
 
-        self.handler.connect()
+        repos = self.handler.get_repos(conditions)
 
         data = []
-        for contributor in self.handler.connection.get_repo(self.handler.repository).get_contributors():
-            raw_data = contributor.raw_data
+        for repo in repos:
+            for contributor in repo.get_contributors():
+                raw_data = contributor.raw_data
 
-            item = {
-                "avatar_url": self.check_none(raw_data["avatar_url"]),
-                "html_url": self.check_none(raw_data["html_url"]),
-                "followers_url": self.check_none(raw_data["followers_url"]),
-                "subscriptions_url": self.check_none(raw_data["subscriptions_url"]),
-                "organizations_url": self.check_none(raw_data["organizations_url"]),
-                "repos_url": self.check_none(raw_data["repos_url"]),
-                "events_url": self.check_none(raw_data["events_url"]),
-                "received_events_url": self.check_none(raw_data["received_events_url"]),
-                "site_admin": self.check_none(raw_data["site_admin"]),
-                "name": self.check_none(raw_data["name"]),
-                "company": self.check_none(raw_data["company"]),
-                "blog": self.check_none(raw_data["blog"]),
-                "location": self.check_none(raw_data["location"]),
-                "email": self.check_none(raw_data["email"]),
-                "hireable": self.check_none(raw_data["hireable"]),
-                "bio": self.check_none(raw_data["bio"]),
-                "twitter_username": self.check_none(raw_data["twitter_username"]),
-                "public_repos": self.check_none(raw_data["public_repos"]),
-                "public_gists": self.check_none(raw_data["public_repos"]),
-                "followers": self.check_none(raw_data["followers"]),
-                "following": self.check_none(raw_data["following"]),
-                "created_at": self.check_none(raw_data["created_at"]),
-                "updated_at": self.check_none(raw_data["updated_at"])
-            }
+                item = {
+                    "avatar_url": self.check_none(raw_data["avatar_url"]),
+                    "html_url": self.check_none(raw_data["html_url"]),
+                    "followers_url": self.check_none(raw_data["followers_url"]),
+                    "subscriptions_url": self.check_none(raw_data["subscriptions_url"]),
+                    "organizations_url": self.check_none(raw_data["organizations_url"]),
+                    "repos_url": self.check_none(raw_data["repos_url"]),
+                    "events_url": self.check_none(raw_data["events_url"]),
+                    "received_events_url": self.check_none(raw_data["received_events_url"]),
+                    "site_admin": self.check_none(raw_data["site_admin"]),
+                    "name": self.check_none(raw_data["name"]),
+                    "company": self.check_none(raw_data["company"]),
+                    "blog": self.check_none(raw_data["blog"]),
+                    "location": self.check_none(raw_data["location"]),
+                    "email": self.check_none(raw_data["email"]),
+                    "hireable": self.check_none(raw_data["hireable"]),
+                    "bio": self.check_none(raw_data["bio"]),
+                    "twitter_username": self.check_none(raw_data["twitter_username"]),
+                    "public_repos": self.check_none(raw_data["public_repos"]),
+                    "public_gists": self.check_none(raw_data["public_repos"]),
+                    "followers": self.check_none(raw_data["followers"]),
+                    "following": self.check_none(raw_data["following"]),
+                    "created_at": self.check_none(raw_data["created_at"]),
+                    "updated_at": self.check_none(raw_data["updated_at"]),
+                    "repository": repo.full_name,
+                }
 
-            data.append(item)
+                data.append(item)
 
+                if limit <= len(data):
+                    break
             if limit <= len(data):
                 break
 
@@ -696,7 +726,8 @@ class GithubContributorsTable(APIResource):
             "followers",
             "following",
             "created_at",
-            "updated_at"
+            "updated_at",
+            "repository",
         ]
 
 
@@ -723,34 +754,38 @@ class GithubProjectsTable(APIResource):
 
         limit = limit or 20
 
-        self.handler.connect()
+        repos = self.handler.get_repos(conditions)
 
         data = []
-        for project in self.handler.connection.get_repo(self.handler.repository).get_projects():
-            raw_data = project.raw_data
+        for repo in repos:
+            for project in repo.get_projects():
+                raw_data = project.raw_data
 
-            item = {
-                "owner_url": self.check_none(raw_data["owner_url"]),
-                "url": self.check_none(raw_data["url"]),
-                "html_url": self.check_none(raw_data["html_url"]),
-                "columns_url": self.check_none(raw_data["columns_url"]),
-                "id": self.check_none(raw_data["id"]),
-                "node_id": self.check_none(raw_data["node_id"]),
-                "name": self.check_none(raw_data["name"]),
-                "body": self.check_none(raw_data["body"]),
-                "number": self.check_none(raw_data["number"]),
-                "state": self.check_none(raw_data["state"]),
-                "created_at": self.check_none(raw_data["created_at"]),
-                "updated_at": self.check_none(raw_data["updated_at"]),
-                "creator_login": self.check_none(raw_data["creator"]["login"]),
-                "creator_id": self.check_none(raw_data["creator"]["id"]),
-                "creator_url": self.check_none(raw_data["creator"]["url"]),
-                "creator_html_url": self.check_none(raw_data["creator"]["html_url"]),
-                "creator_site_admin": self.check_none(raw_data["creator"]["site_admin"])
-            }
+                item = {
+                    "owner_url": self.check_none(raw_data["owner_url"]),
+                    "url": self.check_none(raw_data["url"]),
+                    "html_url": self.check_none(raw_data["html_url"]),
+                    "columns_url": self.check_none(raw_data["columns_url"]),
+                    "id": self.check_none(raw_data["id"]),
+                    "node_id": self.check_none(raw_data["node_id"]),
+                    "name": self.check_none(raw_data["name"]),
+                    "body": self.check_none(raw_data["body"]),
+                    "number": self.check_none(raw_data["number"]),
+                    "state": self.check_none(raw_data["state"]),
+                    "created_at": self.check_none(raw_data["created_at"]),
+                    "updated_at": self.check_none(raw_data["updated_at"]),
+                    "creator_login": self.check_none(raw_data["creator"]["login"]),
+                    "creator_id": self.check_none(raw_data["creator"]["id"]),
+                    "creator_url": self.check_none(raw_data["creator"]["url"]),
+                    "creator_html_url": self.check_none(raw_data["creator"]["html_url"]),
+                    "creator_site_admin": self.check_none(raw_data["creator"]["site_admin"]),
+                    "repository": repo.full_name,
+                }
 
-            data.append(item)
+                data.append(item)
 
+                if limit <= len(data):
+                    break
             if limit <= len(data):
                 break
 
@@ -785,7 +820,8 @@ class GithubProjectsTable(APIResource):
             "creator_id",
             "creator_url",
             "creator_html_url",
-            "creator_site_admin"
+            "creator_site_admin",
+            "repository",
         ]
 
 
@@ -812,33 +848,37 @@ class GithubMilestonesTable(APIResource):
 
         limit = limit or 20
 
-        self.handler.connect()
+        repos = self.handler.get_repos(conditions)
 
         data = []
-        for milestone in self.handler.connection.get_repo(self.handler.repository).get_milestones():
-            raw_data = milestone.raw_data
+        for repo in repos:
+            for milestone in repo.get_milestones():
+                raw_data = milestone.raw_data
 
-            item = {
-                "url": self.check_none(raw_data["url"]),
-                "html_url": self.check_none(raw_data["html_url"]),
-                "labels_url": self.check_none(raw_data["labels_url"]),
-                "id": self.check_none(raw_data["id"]),
-                "node_id": self.check_none(raw_data["node_id"]),
-                "number": self.check_none(raw_data["number"]),
-                "title": self.check_none(raw_data["title"]),
-                "description": self.check_none(raw_data["description"]),
-                "creator": self.check_none(raw_data["creator"]),
-                "open_issues": self.check_none(raw_data["open_issues"]),
-                "closed_issues": self.check_none(raw_data["closed_issues"]),
-                "state": self.check_none(raw_data["state"]),
-                "created_at": self.check_none(raw_data["created_at"]),
-                "updated_at": self.check_none(raw_data["updated_at"]),
-                "due_on": self.check_none(raw_data["due_on"]),
-                "closed_at": self.check_none(raw_data["closed_at"])
-            }
+                item = {
+                    "url": self.check_none(raw_data["url"]),
+                    "html_url": self.check_none(raw_data["html_url"]),
+                    "labels_url": self.check_none(raw_data["labels_url"]),
+                    "id": self.check_none(raw_data["id"]),
+                    "node_id": self.check_none(raw_data["node_id"]),
+                    "number": self.check_none(raw_data["number"]),
+                    "title": self.check_none(raw_data["title"]),
+                    "description": self.check_none(raw_data["description"]),
+                    "creator": self.check_none(raw_data["creator"]),
+                    "open_issues": self.check_none(raw_data["open_issues"]),
+                    "closed_issues": self.check_none(raw_data["closed_issues"]),
+                    "state": self.check_none(raw_data["state"]),
+                    "created_at": self.check_none(raw_data["created_at"]),
+                    "updated_at": self.check_none(raw_data["updated_at"]),
+                    "due_on": self.check_none(raw_data["due_on"]),
+                    "closed_at": self.check_none(raw_data["closed_at"]),
+                    "repository": repo.full_name,
+                }
 
-            data.append(item)
+                data.append(item)
 
+                if limit <= len(data):
+                    break
             if limit <= len(data):
                 break
 
@@ -872,7 +912,194 @@ class GithubMilestonesTable(APIResource):
             "created_at",
             "updated_at",
             "due_on",
-            "closed_at"
+            "closed_at",
+            "repository",
+        ]
+
+
+class GithubCheckRunsTable(APIResource):
+    """GitHub Check Runs table — requires WHERE sha='...' or branch='...'"""
+
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
+
+        limit = limit or 20
+
+        sha = None
+        branch = None
+        check_name = None
+
+        for condition in conditions:
+            if condition.column == 'sha' and condition.op == FilterOperator.EQUAL:
+                sha = condition.value
+                condition.applied = True
+            elif condition.column == 'branch' and condition.op == FilterOperator.EQUAL:
+                branch = condition.value
+                condition.applied = True
+            elif condition.column == 'name' and condition.op == FilterOperator.EQUAL:
+                check_name = condition.value
+                condition.applied = True
+
+        if not sha and not branch:
+            raise ValueError(
+                "check_runs requires WHERE sha = '...' or branch = '...' to identify the commit"
+            )
+
+        repos = self.handler.get_repos(conditions)
+
+        data = []
+        for repo in repos:
+            if branch and not sha:
+                branch_obj = repo.get_branch(branch)
+                sha = branch_obj.commit.sha
+
+            commit = repo.get_commit(sha)
+            check_kwargs = {}
+            if check_name:
+                check_kwargs['check_name'] = check_name
+
+            for cr in commit.get_check_runs(**check_kwargs):
+                item = {
+                    "id": cr.id,
+                    "name": cr.name,
+                    "status": cr.status,
+                    "conclusion": cr.conclusion,
+                    "started_at": cr.started_at,
+                    "completed_at": cr.completed_at,
+                    "head_sha": cr.head_sha,
+                    "output_title": cr.output.title if cr.output else None,
+                    "output_summary": cr.output.summary if cr.output else None,
+                    "app_name": cr.app.name if cr.app else None,
+                    "repository": repo.full_name,
+                }
+                data.append(item)
+
+                if limit <= len(data):
+                    break
+            if limit <= len(data):
+                break
+
+        return pd.DataFrame(data, columns=self.get_columns())
+
+    def get_columns(self) -> List[str]:
+        return [
+            "id", "name", "status", "conclusion",
+            "started_at", "completed_at", "head_sha",
+            "output_title", "output_summary", "app_name",
+            "repository",
+        ]
+
+
+class GithubCommitStatusesTable(APIResource):
+    """GitHub Commit Statuses table — requires WHERE sha='...' or branch='...'"""
+
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
+
+        limit = limit or 20
+
+        sha = None
+        branch = None
+
+        for condition in conditions:
+            if condition.column == 'sha' and condition.op == FilterOperator.EQUAL:
+                sha = condition.value
+                condition.applied = True
+            elif condition.column == 'branch' and condition.op == FilterOperator.EQUAL:
+                branch = condition.value
+                condition.applied = True
+
+        if not sha and not branch:
+            raise ValueError(
+                "commit_statuses requires WHERE sha = '...' or branch = '...' to identify the commit"
+            )
+
+        repos = self.handler.get_repos(conditions)
+
+        data = []
+        for repo in repos:
+            if branch and not sha:
+                branch_obj = repo.get_branch(branch)
+                sha = branch_obj.commit.sha
+
+            commit = repo.get_commit(sha)
+            for status in commit.get_statuses():
+                item = {
+                    "id": status.id,
+                    "state": status.state,
+                    "target_url": status.target_url,
+                    "description": status.description,
+                    "context": status.context,
+                    "created_at": status.created_at,
+                    "updated_at": status.updated_at,
+                    "creator": status.creator.login if status.creator else None,
+                    "sha": sha,
+                    "repository": repo.full_name,
+                }
+                data.append(item)
+
+                if limit <= len(data):
+                    break
+            if limit <= len(data):
+                break
+
+        return pd.DataFrame(data, columns=self.get_columns())
+
+    def get_columns(self) -> List[str]:
+        return [
+            "id", "state", "target_url", "description", "context",
+            "created_at", "updated_at", "creator", "sha",
+            "repository",
+        ]
+
+
+class GithubPagesBuildsTable(APIResource):
+    """GitHub Pages Builds table"""
+
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
+
+        limit = limit or 20
+
+        repos = self.handler.get_repos(conditions)
+
+        data = []
+        for repo in repos:
+            for build in repo.get_pages_builds():
+                item = {
+                    "url": build.url,
+                    "status": build.status,
+                    "error_message": build.error.get("message") if build.error else None,
+                    "pusher": build.pusher.login if build.pusher else None,
+                    "commit": build.commit,
+                    "duration": build.duration,
+                    "created_at": build.created_at,
+                    "updated_at": build.updated_at,
+                    "repository": repo.full_name,
+                }
+                data.append(item)
+
+                if limit <= len(data):
+                    break
+            if limit <= len(data):
+                break
+
+        return pd.DataFrame(data, columns=self.get_columns())
+
+    def get_columns(self) -> List[str]:
+        return [
+            "url", "status", "error_message", "pusher", "commit",
+            "duration", "created_at", "updated_at",
+            "repository",
         ]
 
 
@@ -918,8 +1145,7 @@ class GithubFilesTable(APIResource):
              sort: List[SortColumn] = None,
              targets: List[str] = None) -> pd.DataFrame:
 
-        self.handler.connect()
-        repo = self.handler.connection.get_repo(self.handler.repository)
+        repos = self.handler.get_repos(conditions)
 
         # TODO sort
 
@@ -950,8 +1176,96 @@ class GithubFilesTable(APIResource):
             file_matches = None
         if len(file_not_matches) == 0:
             file_not_matches = None
-        res = self.get_path(repo, path, file_matches, file_not_matches, limit)
-        return pd.DataFrame(res, columns=self.get_columns())
+
+        all_res = []
+        for repo in repos:
+            res = self.get_path(repo, path, file_matches, file_not_matches, limit - len(all_res))
+            for item in res:
+                item["repository"] = repo.full_name
+            all_res.extend(res)
+            if len(all_res) >= limit:
+                break
+        return pd.DataFrame(all_res, columns=self.get_columns())
 
     def get_columns(self) -> list:
-        return ['path', 'name', 'content']
+        return ['path', 'name', 'content', 'repository']
+
+
+class GithubRepositoriesTable(APIResource):
+    """Lists repositories accessible to the authenticated user/token."""
+
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
+
+        limit = limit or 50
+
+        repos_kwargs = {}
+
+        for condition in conditions:
+            if condition.column == 'visibility' and condition.op == FilterOperator.EQUAL:
+                repos_kwargs['visibility'] = condition.value
+                condition.applied = True
+            elif condition.column == 'type' and condition.op == FilterOperator.EQUAL:
+                repos_kwargs['type'] = condition.value
+                condition.applied = True
+
+        if sort is not None:
+            for col in sort:
+                if col.column in ('created', 'updated', 'pushed', 'full_name'):
+                    repos_kwargs['sort'] = col.column
+                    repos_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                    sort.applied = True
+                    break
+
+        self.handler.connect()
+        user = self.handler.connection.get_user()
+
+        data = []
+        for repo in user.get_repos(**repos_kwargs):
+            item = {
+                "full_name": repo.full_name,
+                "name": repo.name,
+                "owner": repo.owner.login if repo.owner else None,
+                "description": repo.description,
+                "language": repo.language,
+                "private": repo.private,
+                "fork": repo.fork,
+                "archived": repo.archived,
+                "default_branch": repo.default_branch,
+                "stargazers_count": repo.stargazers_count,
+                "forks_count": repo.forks_count,
+                "open_issues_count": repo.open_issues_count,
+                "created_at": repo.created_at,
+                "updated_at": repo.updated_at,
+                "pushed_at": repo.pushed_at,
+                "html_url": repo.html_url,
+            }
+            data.append(item)
+
+            if limit <= len(data):
+                break
+
+        return pd.DataFrame(data, columns=self.get_columns())
+
+    def get_columns(self) -> List[str]:
+        return [
+            "full_name",
+            "name",
+            "owner",
+            "description",
+            "language",
+            "private",
+            "fork",
+            "archived",
+            "default_branch",
+            "stargazers_count",
+            "forks_count",
+            "open_issues_count",
+            "created_at",
+            "updated_at",
+            "pushed_at",
+            "html_url",
+        ]

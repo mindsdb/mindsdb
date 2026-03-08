@@ -194,34 +194,37 @@ class GHTable(APIResource):
                     method_kwargs[condition.column] = condition.value
                     condition.applied = True
 
-        connection = self.handler.connect()
-        method = getattr(connection.get_repo(self.handler.repository), self.method.name)
+        repos = self.handler.get_repos(conditions)
 
         data = []
         count = 0
-        for record in method(**method_kwargs):
-            item = {}
-            for name, output_type in self.output_columns.items():
+        for repo in repos:
+            method = getattr(repo, self.method.name)
+            for record in method(**method_kwargs):
+                item = {}
+                for name, output_type in self.output_columns.items():
 
-                # workaround to prevent making addition request per property.
-                if name in targets:
-                    # request only if is required
-                    value = getattr(record, name)
-                else:
-                    value = getattr(record, '_' + name).value
-                if value is not None:
-                    if output_type.name == 'list':
-                        value = ",".join([
-                                str(self.repr_value(i, output_type.sub_type))
-                                for i in value
-                        ])
+                    # workaround to prevent making addition request per property.
+                    if name in targets:
+                        # request only if is required
+                        value = getattr(record, name)
                     else:
-                        value = self.repr_value(value, output_type.name)
-                item[name] = value
+                        value = getattr(record, '_' + name).value
+                    if value is not None:
+                        if output_type.name == 'list':
+                            value = ",".join([
+                                    str(self.repr_value(i, output_type.sub_type))
+                                    for i in value
+                            ])
+                        else:
+                            value = self.repr_value(value, output_type.name)
+                    item[name] = value
 
-            data.append(item)
+                data.append(item)
 
-            count += 1
+                count += 1
+                if limit <= count:
+                    break
             if limit <= count:
                 break
 

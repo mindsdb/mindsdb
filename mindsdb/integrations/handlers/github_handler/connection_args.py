@@ -6,8 +6,8 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 connection_args = OrderedDict(
     repository={
         "type": ARG_TYPE.STR,
-        "description": " GitHub repository name.",
-        "required": True,
+        "description": "GitHub repository name (owner/repo). Optional if specified per query via WHERE clause.",
+        "required": False,
         "label": "Repository",
     },
     api_key={
@@ -16,6 +16,33 @@ connection_args = OrderedDict(
         "required": False,
         "label": "Api key",
         "secret": True
+    },
+    client_id={
+        "type": ARG_TYPE.STR,
+        "description": "GitHub App OAuth client ID. Used with client_secret for token refresh.",
+        "required": False,
+        "label": "Client ID",
+    },
+    client_secret={
+        "type": ARG_TYPE.PWD,
+        "description": "GitHub App OAuth client secret. Used with client_id for token refresh.",
+        "required": False,
+        "label": "Client Secret",
+        "secret": True,
+    },
+    access_token={
+        "type": ARG_TYPE.PWD,
+        "description": "OAuth access token from GitHub App authorization flow.",
+        "required": False,
+        "label": "Access Token",
+        "secret": True,
+    },
+    refresh_token={
+        "type": ARG_TYPE.PWD,
+        "description": "OAuth refresh token for automatic token renewal.",
+        "required": False,
+        "label": "Refresh Token",
+        "secret": True,
     },
     github_url={
         "type": ARG_TYPE.STR,

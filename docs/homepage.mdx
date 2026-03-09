@@ -8,11 +8,11 @@ mode: "custom"
 <br></br>
 <br></br>
 
-<p align="center">
-  <b>Documentation</b>
+<p align="center" style={{ color: "black", fontSize: "2.5rem", fontWeight: "bold", lineHeight: "1.2" }}>
+  Documentation
 </p>
 
-<p align="center">
+<p align="center" style={{ color: "black" }}>
   Get started with our platform by exploring the sections below.
 </p>
 
@@ -22,12 +22,19 @@ mode: "custom"
 <br></br>
 <br></br>
 
-<Columns cols={2}>
-  <Card title="MindsDB Documentation" icon="rocket" href="/mindsdb">
-    MindsDB is an open-source query engine for AI.
-  </Card>
-
-  <Card title="Minds Documentation" icon="rocket" href="https://docs.mdb.ai/">
-    Minds is an AI agent that can answer questions over enterprise data.
-  </Card>
-</Columns>
+<div style={{ display: "flex", justifyContent: "center", gap: "1rem", flexWrap: "wrap" }}>
+  <div style={{ width: "500px" }}>
+    <Card title="Developer Experience" href="/mindsdb">
+      I want to use MindsDB to build Al features that can learn from data and answer questions intelligently.
+        <br></br><br></br>
+      Go to MindsDB Documentation.
+    </Card>
+  </div>
+  <div style={{ width: "500px" }}>
+    <Card title="BI & Analytics" href="https://docs.mdb.ai/">
+      I want to use MindsDB to explore data and get insights without writing code.
+        <br></br><br></br>
+      Go to Minds Documentation.
+    </Card>
+  </div>
+</div>

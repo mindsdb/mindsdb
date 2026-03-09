@@ -11,6 +11,11 @@
   "navigation": {
       "tabs": [
         {
+          "tab": "Home",
+          "hidden": true,
+          "pages": ["homepage"]
+        },
+        {
           "tab": "Documentation",
           "groups": [
             {
@@ -1463,6 +1468,10 @@
     {
       "source": "/mcp/cursor_usage",
       "destination": "/model-context-protocol/cursor_usage"
+    },
+    {
+      "source": "/use-cases/overview",
+      "destination": "/homepage"
     }
   ]
 }

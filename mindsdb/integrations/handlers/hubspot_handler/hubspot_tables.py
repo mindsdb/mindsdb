@@ -1081,29 +1081,30 @@ class HubSpotAPIResource(APIResource):
     # Reference: https://developers.hubspot.com/docs/api-reference/search/guide
     SEARCHABLE_COLUMNS: Set[str] = set()
 
+    # Aggregate function names → pandas equivalents
+    _AGG_FUNC_MAP: Dict[str, str] = {
+        "sum": "sum", "count": "count", "avg": "mean", "mean": "mean",
+        "max": "max", "min": "min",
+    }
+
     def select(self, query: ASTNode) -> pd.DataFrame:
-        """
-        Override select to handle server-side filtering properly.
-        """
+        """Select data, applying WHERE, GROUP BY, ORDER BY, LIMIT and function evaluation."""
         table_name = self.__class__.__name__
-        logger.debug(f"[{table_name}] select() called — query: {query}")
 
         conditions, order_by, result_limit = self._extract_query_params(query)
+        group_by_cols = self._get_group_by_columns(query)
+        # Targets include columns referenced inside functions and GROUP BY
         targets = self._get_targets(query)
-        original_targets = list(targets)
+        fetch_targets = list(dict.fromkeys(targets + group_by_cols))
         normalized_conditions = _normalize_filter_conditions(conditions)
-        logger.debug(
-            f"[{table_name}] select() params — targets={targets}, "
-            f"conditions={normalized_conditions}, limit={result_limit}, order_by={order_by}"
-        )
-        self._validate_query_columns(targets, normalized_conditions, order_by)
+
+        self._validate_query_columns(fetch_targets, normalized_conditions, order_by)
 
         for condition in normalized_conditions:
             if len(condition) >= 3 and condition[0] == "in":
                 in_vals = condition[2] if isinstance(condition[2], list) else [condition[2]]
                 if not in_vals or all(v is None for v in in_vals):
-                    logger.debug(f"[{table_name}] select() — empty or all-None IN values, returning empty DataFrame")
-                    return pd.DataFrame(columns=original_targets or self.get_columns())
+                    return pd.DataFrame(columns=fetch_targets or self.get_columns())
 
         if self.SEARCHABLE_COLUMNS:
             filters = (
@@ -1111,44 +1112,52 @@ class HubSpotAPIResource(APIResource):
                 if normalized_conditions
                 else None
             )
-            sorts = _build_hubspot_search_sorts(order_by, self.SEARCHABLE_COLUMNS) if order_by else None
+            # Don't push ORDER BY to search when GROUP BY is present (need raw rows)
+            sorts = (
+                _build_hubspot_search_sorts(order_by, self.SEARCHABLE_COLUMNS)
+                if order_by and not group_by_cols
+                else None
+            )
             use_search = filters is not None or sorts is not None
         else:
             filters = None
             sorts = None
             use_search = False
 
-        logger.debug(f"[{table_name}] select() — use_search={use_search}, filters={filters}")
-
         fetch_columns = self._get_fetch_columns(
-            targets=targets,
+            targets=fetch_targets,
             normalized_conditions=normalized_conditions,
-            order_by=order_by,
+            order_by=order_by if not group_by_cols else [],
             use_search=use_search,
         )
-        logger.debug(f"[{table_name}] select() — fetch_columns={fetch_columns}")
 
         result = self.list(
             conditions=conditions if not use_search else None,
-            limit=result_limit,
-            sort=order_by if not use_search else None,
+            limit=result_limit if not group_by_cols else None,
+            sort=order_by if not use_search and not group_by_cols else None,
             targets=fetch_columns,
             search_filters=filters,
             search_sorts=sorts,
             allow_search=use_search,
         )
 
-        if use_search:
-            logger.debug("Filters/sorts pushed to HubSpot API, skipping post-filter/sort")
-            return self._apply_column_selection(result, original_targets)
-
-        if normalized_conditions and not result.empty:
+        # Post-filter for non-search queries
+        if not use_search and normalized_conditions and not result.empty:
             result = self._apply_post_filter(result, normalized_conditions)
 
+        # GROUP BY + aggregation
+        if group_by_cols and not result.empty:
+            result = self._apply_aggregation(result, query, group_by_cols)
+
+        # ORDER BY (after aggregation so we can sort on aggregate columns)
         if order_by and not result.empty:
             result = self._apply_post_sort(result, order_by)
 
-        return self._apply_column_selection(result, original_targets)
+        # LIMIT (applied after aggregation/sort)
+        if result_limit is not None and not result.empty:
+            result = result.head(result_limit)
+
+        return self._apply_column_selection(result, query.targets or [])
 
     def _extract_query_params(self, query: ASTNode) -> Tuple[List, List, Optional[int]]:
         """Extract conditions, order_by, and limit from query AST."""
@@ -1281,14 +1290,53 @@ class HubSpotAPIResource(APIResource):
             logger.warning(f"Error applying post-sort: {e}")
             return df
 
-    def _apply_column_selection(self, df: pd.DataFrame, targets: List[str]) -> pd.DataFrame:
-        """Apply column selection if specific columns requested."""
+    def _apply_column_selection(self, df: pd.DataFrame, targets) -> pd.DataFrame:
+        """Apply column selection, resolving AST target nodes and aliases."""
         if not targets or df.empty:
             return df
 
-        existing_targets = [t for t in targets if t in df.columns]
-        if existing_targets:
-            return df[existing_targets]
+        def _alias_str(alias) -> Optional[str]:
+            """Convert an alias (str or Identifier) to a plain string."""
+            if alias is None:
+                return None
+            if isinstance(alias, str):
+                return alias
+            if isinstance(alias, sql_ast.Identifier):
+                return alias.parts[-1]
+            return str(alias)
+
+        selected: List[str] = []
+        for target in targets:
+            if isinstance(target, sql_ast.Star):
+                return df
+            # AST node with an alias — the alias becomes the output column name
+            alias = _alias_str(getattr(target, "alias", None))
+            if alias and alias in df.columns:
+                selected.append(alias)
+                continue
+            # Plain identifier
+            if isinstance(target, sql_ast.Identifier):
+                col = to_internal_property(target.parts[-1])
+                if col in df.columns:
+                    selected.append(col)
+                continue
+            # Function without alias — resolved agg column
+            if isinstance(target, sql_ast.Function):
+                func_name = (getattr(target, "op", None) or getattr(target, "name", "")).lower()
+                inner_cols = self._extract_target_columns(target)
+                candidate = f"{func_name}({inner_cols[0]})" if inner_cols else func_name
+                if candidate in df.columns:
+                    selected.append(candidate)
+                elif inner_cols and inner_cols[0] in df.columns:
+                    selected.append(inner_cols[0])
+                continue
+            # Plain string
+            if isinstance(target, str) and target in df.columns:
+                selected.append(target)
+
+        selected = list(dict.fromkeys(selected))
+        if selected:
+            return df[selected]
         return df
 
     def _validate_query_columns(
@@ -1297,15 +1345,24 @@ class HubSpotAPIResource(APIResource):
         normalized_conditions: List[List[Any]],
         order_by: List[SortColumn],
     ) -> None:
+        # Names that are SQL aggregate/scalar functions — skip validation
+        _FUNC_NAMES = {"sum", "count", "avg", "mean", "max", "min", "date_trunc", "lower", "upper", "coalesce"}
+
         requested = set()
-        requested.update(targets or [])
+        for col in targets or []:
+            if col.lower() not in _FUNC_NAMES:
+                requested.add(col)
 
         for condition in normalized_conditions:
             if len(condition) >= 2:
-                requested.add(condition[1])
+                col = condition[1]
+                if col.lower() not in _FUNC_NAMES:
+                    requested.add(col)
 
         for sort_item in order_by or []:
-            requested.add(to_internal_property(sort_item.column))
+            col = to_internal_property(sort_item.column)
+            if col.lower() not in _FUNC_NAMES:
+                requested.add(col)
 
         if not requested:
             return
@@ -1320,6 +1377,88 @@ class HubSpotAPIResource(APIResource):
         raise ValueError(
             f"Column(s) {missing_cols} do not exist for this HubSpot table. Available columns: {available_cols}."
         )
+
+    def _get_group_by_columns(self, query: ASTNode) -> List[str]:
+        """Extract GROUP BY column names from query AST."""
+        if not query.group_by:
+            return []
+        cols = []
+        for item in query.group_by:
+            if isinstance(item, sql_ast.Identifier):
+                cols.append(to_internal_property(item.parts[-1]))
+            elif isinstance(item, sql_ast.Function):
+                # e.g. DATE_TRUNC('month', closedate) — include the inner column
+                inner_cols = self._extract_target_columns(item)
+                cols.extend(inner_cols)
+        return list(dict.fromkeys(cols))
+
+    def _apply_aggregation(
+        self, df: pd.DataFrame, query: ASTNode, group_by_cols: List[str]
+    ) -> pd.DataFrame:
+        """Apply GROUP BY + aggregation to a DataFrame based on query targets."""
+        if not group_by_cols:
+            return df
+
+        # Collect (input_col, agg_func, output_alias) triples from SELECT targets
+        agg_specs: List[Tuple[str, str, str]] = []
+        for target in query.targets or []:
+            if not isinstance(target, sql_ast.Function):
+                continue
+            func_name = (getattr(target, "op", None) or getattr(target, "name", "")).lower()
+            pandas_agg = self._AGG_FUNC_MAP.get(func_name)
+            if pandas_agg is None:
+                continue
+            inner_cols = self._extract_target_columns(target)
+            raw_alias = getattr(target, "alias", None)
+            alias = (
+                raw_alias.parts[-1] if isinstance(raw_alias, sql_ast.Identifier)
+                else str(raw_alias) if raw_alias is not None and not isinstance(raw_alias, str)
+                else raw_alias
+            )
+            if inner_cols:
+                col = inner_cols[0]
+                out_name = alias or f"{func_name}({col})"
+                agg_specs.append((col, pandas_agg, out_name))
+            elif func_name == "count":
+                # COUNT(*) — use first group_by col as proxy
+                out_name = alias or "count"
+                agg_specs.append((group_by_cols[0], "count", out_name))
+
+        if not agg_specs:
+            # No aggregate functions — just deduplicate by group keys
+            return df[group_by_cols].drop_duplicates().reset_index(drop=True)
+
+        # Validate group-by columns exist
+        valid_group_cols = [c for c in group_by_cols if c in df.columns]
+        if not valid_group_cols:
+            return df
+
+        agg_dict: Dict[str, List[str]] = {}
+        for col, pandas_agg, _ in agg_specs:
+            if col in df.columns:
+                agg_dict.setdefault(col, []).append(pandas_agg)
+
+        if not agg_dict:
+            return df[valid_group_cols].drop_duplicates().reset_index(drop=True)
+
+        grouped = df.groupby(valid_group_cols, as_index=False).agg(agg_dict)
+        # Flatten multi-level columns from groupby + agg
+        if isinstance(grouped.columns, pd.MultiIndex):
+            grouped.columns = ["_".join(filter(None, c)) for c in grouped.columns]
+
+        # Rename output columns to requested aliases
+        rename_map: Dict[str, str] = {}
+        for col, pandas_agg, out_name in agg_specs:
+            # pandas names the result column as col_agg in multi-level flattened case
+            candidate = f"{col}_{pandas_agg}"
+            if candidate in grouped.columns and candidate != out_name:
+                rename_map[candidate] = out_name
+            elif col in grouped.columns and col != out_name:
+                rename_map[col] = out_name
+        if rename_map:
+            grouped = grouped.rename(columns=rename_map)
+
+        return grouped.reset_index(drop=True)
 
     def _get_fetch_columns(
         self,

@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 import pandas as pd
 from pandas.api import types as pd_types
 from hubspot import HubSpot
@@ -851,162 +851,259 @@ class HubspotHandler(MetaAPIHandler):
         )
         return Response(RESPONSE_TYPE.ERROR, error_message=error_msg)
 
-    def _execute_join_query(self, ast: Select) -> Response:
-        """Execute a JOIN query using the HubSpot associations API.
+    def _flatten_join_tree(self, from_node) -> List[Tuple[str, str, Any]]:
+        """Flatten nested Join AST nodes into an ordered list of (table_name, alias, on_condition).
 
-        Only JOINs that go through an association table (e.g. company_contacts) are
-        supported.  When a caller writes a direct FK join between two core CRM tables
-        (e.g. contacts JOIN companies ON c.primary_company_id = co.id) this method
-        returns a descriptive error with a suggested rewrite.
-
-        In mindsdb_sql_parser a single JOIN query is represented as:
-            ast.from_table = Join(left=<table_ident>, right=<table_ident>, condition=<on_expr>)
-        Multiple JOINs nest Join nodes: Join(left=Join(...), right=<table_ident>, ...).
+        The first entry always has on_condition=None (it is the FROM table).
+        Subsequent entries carry the ON condition linking them to the previous table.
         """
-        logger.debug(f"[HubSpotHandler] _execute_join_query() called — ast: {ast}")
         from mindsdb_sql_parser.ast import Join as SQLJoin
-        from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
-        from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_utils import (
-            get_primary_association_columns,
-        )
 
-        join = ast.from_table  # This is already a Join node (checked in native_query)
+        result: List[Tuple[str, str, Any]] = []
 
-        # Reject nested/multiple JOINs (left side is another Join)
-        if isinstance(join.left, SQLJoin):
-            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
-
-        # Resolve table names and aliases from the Join node
-        left_id = join.left    # Identifier for the left (FROM) table
-        right_id = join.right  # Identifier for the right (JOIN) table
-
-        def _get_alias_str(ident: Identifier) -> str:
+        def _get_alias(ident: Identifier) -> str:
             alias = getattr(ident, "alias", None)
             if alias is None:
                 return ident.parts[-1].lower()
             if isinstance(alias, str):
                 return alias.lower()
-            # alias is itself an Identifier object
             return alias.parts[-1].lower()
 
-        left_name = left_id.parts[-1].lower()
-        left_alias = _get_alias_str(left_id)
+        def _walk(node, on_cond=None):
+            if isinstance(node, SQLJoin):
+                _walk(node.left, None)
+                right_name = node.right.parts[-1].lower()
+                right_alias = _get_alias(node.right)
+                result.append((right_name, right_alias, node.condition))
+            elif isinstance(node, Identifier):
+                result.append((node.parts[-1].lower(), _get_alias(node), on_cond))
 
-        right_name = right_id.parts[-1].lower()
-        right_alias = _get_alias_str(right_id)
+        _walk(from_node)
+        return result
 
-        logger.debug(f"[HubSpotHandler] _execute_join_query() — left={left_name} (alias={left_alias}), right={right_name} (alias={right_alias})")
-        # If both sides are core CRM tables (no association table involved), reject the
-        # direct FK join and guide the user towards the association table pattern.
-        if left_name in self.CORE_TABLES and right_name in self.CORE_TABLES:
-            logger.debug("[HubSpotHandler] _execute_join_query() — direct FK join between core tables detected, returning error suggestion")
-            return self._suggest_association_query(ast, left_name, left_alias, right_name, right_alias)
+    def _execute_join_query(self, ast: Select) -> Response:
+        """Execute a JOIN query using the HubSpot associations API.
 
-        # Parse ON condition: must be a simple equality between two qualified identifiers
-        on = join.condition
-        if not isinstance(on, BinaryOperation) or on.op != "=":
-            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
+        Supported patterns (via association tables only):
+          2-way: CORE JOIN ASSOC  or  ASSOC JOIN CORE
+          3-way: CORE JOIN ASSOC JOIN CORE
 
-        on_left, on_right = on.args
-        if not (isinstance(on_left, Identifier) and isinstance(on_right, Identifier)):
-            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
+        Direct CORE JOIN CORE (using FK columns like primary_company_id) is rejected
+        with a helpful error showing the correct 3-way association table rewrite.
+        """
+        logger.debug(f"[HubSpotHandler] _execute_join_query() called")
+        from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, extract_comparison_conditions
 
-        def _alias_col(ident: Identifier):
-            parts = ident.parts
-            if len(parts) >= 2:
-                return parts[0].lower(), parts[-1].lower()
-            return None, parts[0].lower()
+        tables = self._flatten_join_tree(ast.from_table)
+        if len(tables) < 2 or len(tables) > 3:
+            return Response(RESPONSE_TYPE.ERROR, error_message="Only 2- and 3-table joins via association tables are supported.")
 
-        ol_alias, ol_col = _alias_col(on_left)
-        or_alias, or_col = _alias_col(on_right)
+        alias_to_name: Dict[str, str] = {alias: name for name, alias, _ in tables}
+        is_main_alias = tables[0][1]  # alias of the FROM table (gets unqualified WHERE conditions)
 
-        alias_to_table = {left_alias: left_name, right_alias: right_name}
-        ol_table = alias_to_table.get(ol_alias) if ol_alias else None
-        or_table = alias_to_table.get(or_alias) if or_alias else None
+        def _parse_on(on_cond) -> Optional[Tuple[Optional[str], str, Optional[str], str]]:
+            """Parse an ON equality into (left_alias, left_col, right_alias, right_col) or None."""
+            if not isinstance(on_cond, BinaryOperation) or on_cond.op != "=":
+                return None
+            a, b = on_cond.args
+            if not (isinstance(a, Identifier) and isinstance(b, Identifier)):
+                return None
+            def _split(ident):
+                parts = ident.parts
+                return (parts[0].lower(), parts[-1].lower()) if len(parts) >= 2 else (None, parts[0].lower())
+            la, lc = _split(a)
+            ra, rc = _split(b)
+            return la, lc, ra, rc
 
-        # Determine which side carries the association column (e.g. primary_company_id)
-        assoc_info = None
-        if ol_table and or_col == "id":
-            if ol_col in get_primary_association_columns(ol_table):
-                assoc_info = {"assoc_table": ol_table, "assoc_col": ol_col, "ref_table": or_table}
-        if assoc_info is None and or_table and ol_col == "id":
-            if or_col in get_primary_association_columns(or_table):
-                assoc_info = {"assoc_table": or_table, "assoc_col": or_col, "ref_table": ol_table}
+        # --- 2-table join ---
+        if len(tables) == 2:
+            (t1_name, t1_alias, _), (t2_name, t2_alias, on2) = tables
 
-        if assoc_info is None:
-            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
+            # Reject direct core+core joins
+            if t1_name in self.CORE_TABLES and t2_name in self.CORE_TABLES:
+                return self._suggest_association_query(ast, t1_name, t1_alias, t2_name, t2_alias)
 
-        assoc_table_name = assoc_info["assoc_table"]
-        assoc_col = assoc_info["assoc_col"]
-        ref_table_name = assoc_info["ref_table"]
+            # One must be an association table, parse the ON condition
+            parsed = _parse_on(on2)
+            if not parsed:
+                return Response(RESPONSE_TYPE.ERROR, error_message="Unsupported JOIN condition.")
 
-        if assoc_table_name not in self._tables or ref_table_name not in self._tables:
-            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
+            la, lc, ra, rc = parsed
+            # Determine which side is the assoc table and which is the core table
+            if t1_name in self._association_tables:
+                assoc_name, assoc_alias, assoc_col = t1_name, t1_alias, lc if la == t1_alias else rc
+                core_name, core_alias, core_col = t2_name, t2_alias, rc if la == t1_alias else lc
+            else:
+                assoc_name, assoc_alias, assoc_col = t2_name, t2_alias, rc if ra == t2_alias else lc
+                core_name, core_alias, core_col = t1_name, t1_alias, lc if ra == t2_alias else rc
 
-        # Map each role back to query alias for WHERE splitting
-        ref_alias = right_alias if ref_table_name == right_name else left_alias
-        assoc_alias = left_alias if assoc_table_name == left_name else right_alias
-        is_assoc_main = assoc_table_name == left_name  # left = the FROM table
+            if assoc_name not in self._tables or core_name not in self._tables:
+                return Response(RESPONSE_TYPE.ERROR, error_message="Unknown table in JOIN.")
 
-        # Split WHERE conditions by table alias
-        ref_where = self._rewrite_where_for_table(ast.where, ref_alias)
-        assoc_where = self._rewrite_where_for_table(ast.where, assoc_alias, is_main_table=is_assoc_main)
+            limit = ast.limit.value if ast.limit else None
+            core_where = self._rewrite_where_for_table(ast.where, core_alias, is_main_table=(core_alias == is_main_alias))
+            assoc_where = self._rewrite_where_for_table(ast.where, assoc_alias, is_main_table=(assoc_alias == is_main_alias))
+
+            # Fetch core table (filtered side)
+            core_df = self._tables[core_name].select(Select(targets=[Star()], from_table=Identifier(core_name), where=core_where))
+            if core_df.empty or core_col not in core_df.columns:
+                return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+            core_ids = core_df[core_col].dropna().astype(str).tolist()
+            if not core_ids:
+                return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+            # Fetch association table filtered by core ids
+            assoc_conditions: List[FilterCondition] = [FilterCondition(assoc_col, FilterOperator.IN, core_ids)]
+            if assoc_where is not None:
+                try:
+                    for cond in extract_comparison_conditions(assoc_where):
+                        assoc_conditions.append(FilterCondition(cond[1], FilterOperator(cond[0].upper()), cond[2]))
+                except Exception:
+                    pass
+
+            assoc_df = self._tables[assoc_name].list(conditions=assoc_conditions, limit=limit)
+            if assoc_df.empty:
+                return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+            # Merge: join core_df into assoc_df on the ON columns, prefix duplicate cols
+            merged = assoc_df.merge(core_df, left_on=assoc_col, right_on=core_col, how="inner", suffixes=("", f"_{core_alias}"))
+            result_df = self._resolve_select_targets(ast.targets, merged, alias_to_name, tables)
+            if limit:
+                result_df = result_df.head(limit)
+            return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
+
+        # --- 3-table join ---
+        (t1_name, t1_alias, _), (t2_name, t2_alias, on2), (t3_name, t3_alias, on3) = tables
+
+        # Must be CORE + ASSOC + CORE pattern
+        if t2_name not in self._association_tables:
+            # Could be reversed ordering; reject with guidance
+            if t1_name in self.CORE_TABLES and t2_name in self.CORE_TABLES:
+                return self._suggest_association_query(ast, t1_name, t1_alias, t2_name, t2_alias)
+            return Response(RESPONSE_TYPE.ERROR, error_message="Only CORE JOIN ASSOC JOIN CORE pattern is supported.")
+
+        parsed2 = _parse_on(on2)
+        parsed3 = _parse_on(on3)
+        if not parsed2 or not parsed3:
+            return Response(RESPONSE_TYPE.ERROR, error_message="Unsupported JOIN condition — expected simple equality.")
+
+        # ON2: links t1 → t2 (assoc). Determine which assoc column maps to t1.id
+        la2, lc2, ra2, rc2 = parsed2
+        t1_fk_col = rc2 if la2 == t2_alias else lc2   # column in assoc table pointing to t1
+        t1_pk_col = lc2 if la2 == t1_alias else rc2   # column in t1 (usually "id")
+
+        # ON3: links t2 (assoc) → t3. Determine which assoc column maps to t3.id
+        la3, lc3, ra3, rc3 = parsed3
+        t3_fk_col = lc3 if la3 == t2_alias else rc3   # column in assoc table pointing to t3
+        t3_pk_col = rc3 if la3 == t2_alias else lc3   # column in t3 (usually "id")
+
+        if t1_name not in self._tables or t2_name not in self._tables or t3_name not in self._tables:
+            return Response(RESPONSE_TYPE.ERROR, error_message="Unknown table in JOIN.")
 
         limit = ast.limit.value if ast.limit else None
+        t1_where = self._rewrite_where_for_table(ast.where, t1_alias, is_main_table=(t1_alias == is_main_alias))
+        t2_where = self._rewrite_where_for_table(ast.where, t2_alias, is_main_table=(t2_alias == is_main_alias))
+        t3_where = self._rewrite_where_for_table(ast.where, t3_alias, is_main_table=(t3_alias == is_main_alias))
 
-        # --- Step 1: fetch the reference table rows (e.g. companies WHERE name='HubSpot') ---
-        ref_table = self._tables[ref_table_name]
-        ref_query = Select(
-            targets=[Star()],
-            from_table=Identifier(ref_table_name),
-            where=ref_where,
-        )
-        ref_df = ref_table.select(ref_query)
-
-        if ref_df.empty or "id" not in ref_df.columns:
+        # Step 1: fetch t1 with WHERE
+        t1_df = self._tables[t1_name].select(Select(targets=[Star()], from_table=Identifier(t1_name), where=t1_where))
+        if t1_df.empty or t1_pk_col not in t1_df.columns:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        ref_ids = ref_df["id"].dropna().astype(str).tolist()
-        if not ref_ids:
+        t1_ids = t1_df[t1_pk_col].dropna().astype(str).tolist()
+        if not t1_ids:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        # --- Step 2: fetch assoc table rows filtered by the association column ---
-        assoc_table = self._tables[assoc_table_name]
-        assoc_conditions: List[FilterCondition] = [
-            FilterCondition(assoc_col, FilterOperator.IN, ref_ids)
-        ]
-
-        # Also pass any WHERE conditions that belong to the assoc table
-        if assoc_where is not None:
-            from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+        # Step 2: fetch assoc table filtered by t1 ids
+        assoc_conditions: List[FilterCondition] = [FilterCondition(t1_fk_col, FilterOperator.IN, t1_ids)]
+        if t2_where is not None:
             try:
-                for cond in extract_comparison_conditions(assoc_where):
-                    assoc_conditions.append(
-                        FilterCondition(cond[1], FilterOperator(cond[0].upper()), cond[2])
-                    )
+                for cond in extract_comparison_conditions(t2_where):
+                    assoc_conditions.append(FilterCondition(cond[1], FilterOperator(cond[0].upper()), cond[2]))
             except Exception:
                 pass
 
-        assoc_df = assoc_table.list(conditions=assoc_conditions, limit=limit, sort=None, targets=None)
-
-        if assoc_df.empty:
+        t2_df = self._tables[t2_name].list(conditions=assoc_conditions)
+        if t2_df.empty or t3_fk_col not in t2_df.columns:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        # --- Step 3: select only the requested target columns ---
-        requested = [
-            t.parts[-1]
-            for t in (ast.targets or [])
-            if isinstance(t, Identifier) and not isinstance(t, Star)
-        ]
-        if requested:
-            available = [c for c in requested if c in assoc_df.columns]
-            if available:
-                assoc_df = assoc_df[available]
+        t3_ids = t2_df[t3_fk_col].dropna().astype(str).tolist()
+        if not t3_ids:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        if limit and len(assoc_df) > limit:
-            assoc_df = assoc_df[:limit]
+        # Step 3: fetch t3 filtered by ids found in assoc table
+        t3_conditions: List[FilterCondition] = [FilterCondition(t3_pk_col, FilterOperator.IN, t3_ids)]
+        if t3_where is not None:
+            try:
+                for cond in extract_comparison_conditions(t3_where):
+                    t3_conditions.append(FilterCondition(cond[1], FilterOperator(cond[0].upper()), cond[2]))
+            except Exception:
+                pass
 
-        return Response(RESPONSE_TYPE.TABLE, data_frame=assoc_df)
+        t3_df = self._tables[t3_name].list(conditions=t3_conditions)
+        if t3_df.empty:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+        # Merge all three: t1 ← t2 → t3
+        merged = t2_df.merge(t1_df, left_on=t1_fk_col, right_on=t1_pk_col, how="inner", suffixes=("", f"_{t1_alias}"))
+        merged = merged.merge(t3_df, left_on=t3_fk_col, right_on=t3_pk_col, how="inner", suffixes=("", f"_{t3_alias}"))
+
+        result_df = self._resolve_select_targets(ast.targets, merged, alias_to_name, tables)
+        if limit:
+            result_df = result_df.head(limit)
+        return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
+
+    def _resolve_select_targets(
+        self,
+        targets,
+        df: pd.DataFrame,
+        alias_to_name: Dict[str, str],
+        join_tables: List[Tuple[str, str, Any]],
+    ) -> pd.DataFrame:
+        """Resolve SELECT target list against a merged DataFrame.
+
+        Handles qualified names (alias.col), unqualified names, and Star.
+        Returns a DataFrame with only the requested columns (renamed to alias.col if needed).
+        """
+        if not targets:
+            return df
+
+        cols: List[str] = []
+        renames: Dict[str, str] = {}
+        has_star = any(isinstance(t, Star) for t in targets)
+        if has_star:
+            return df
+
+        for t in targets:
+            if isinstance(t, Identifier):
+                alias = getattr(t, "alias", None)
+                parts = t.parts
+                if len(parts) >= 2:
+                    tbl_alias, col = parts[0].lower(), parts[-1]
+                    if col in df.columns:
+                        cols.append(col)
+                        if alias:
+                            renames[col] = alias
+                    else:
+                        # Try suffixed variant (e.g. "id_co")
+                        suffixed = f"{col}_{tbl_alias}"
+                        if suffixed in df.columns:
+                            cols.append(suffixed)
+                            renames[suffixed] = alias or col
+                else:
+                    col = parts[0]
+                    if col in df.columns:
+                        cols.append(col)
+                        if alias:
+                            renames[col] = alias
+
+        available = list(dict.fromkeys(c for c in cols if c in df.columns))
+        if available:
+            df = df[available]
+        if renames:
+            df = df.rename(columns=renames)
+        return df.reset_index(drop=True)
 
     def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
         """Return primary key metadata for the data catalog.

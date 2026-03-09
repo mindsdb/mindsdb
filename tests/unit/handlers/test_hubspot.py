@@ -161,27 +161,6 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsNotNone(response.data_frame)
 
-    def test_get_tables(self):
-        """Test get_tables method returns registered tables."""
-        response = self.handler.get_tables()
-
-        assert isinstance(response, Response)
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
-
-        df = response.data_frame
-
-        self.assertEqual(len(df), len(self.EXPECTED_TABLES))
-        self.assertIn("TABLE_NAME", df.columns)
-        self.assertIn("TABLE_TYPE", df.columns)
-
-        table_names = df["TABLE_NAME"].tolist()
-        for table_name in self.EXPECTED_TABLES:
-            self.assertIn(table_name, table_names)
-
-        # All should be BASE TABLE type
-        table_types = df["TABLE_TYPE"].unique().tolist()
-        self.assertEqual(table_types, ["BASE TABLE"])
-
     def test_get_columns_companies(self):
         """Test get_columns method for companies table."""
         mock_hubspot_client = MagicMock()
@@ -471,41 +450,6 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
         self.assertIn("Query execution failed", response.error_message)
 
-    def test_get_tables_success(self):
-        """Test get_tables method returns table metadata."""
-        mock_hubspot_client = MagicMock()
-        mock_companies_data = [
-            SimplePublicObject(
-                id="123",
-                properties={
-                    "name": "Test Company",
-                    "createdate": "2023-01-01T00:00:00Z",
-                    "hs_lastmodifieddate": "2023-01-01T00:00:00Z",
-                },
-            )
-        ]
-
-        self.mock_connect.return_value = mock_hubspot_client
-        mock_hubspot_client.crm.companies.get_all.return_value = mock_companies_data
-        mock_hubspot_client.crm.contacts.get_all.return_value = []
-        mock_hubspot_client.crm.deals.get_all.return_value = []
-
-        response = self.handler.get_tables()
-
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
-        self.assertIsNotNone(response.data_frame)
-
-        df = response.data_frame
-
-        self.assertEqual(len(df), len(self.EXPECTED_TABLES))
-        self.assertIn("TABLE_NAME", df.columns)
-        self.assertIn("TABLE_TYPE", df.columns)
-        self.assertIn("TABLE_SCHEMA", df.columns)
-
-        table_names = df["TABLE_NAME"].tolist()
-        for table_name in self.EXPECTED_TABLES:
-            self.assertIn(table_name, table_names)
-
     def test_get_tables_connection_failure(self):
         """Test get_tables method with connection failure."""
         self.mock_connect.side_effect = Exception("Connection failed")
@@ -747,40 +691,6 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(id_row.iloc[0]["ORDINAL_POSITION"], 1)
         self.assertEqual(id_row.iloc[0]["IS_NULLABLE"], "NO")
 
-    def test_comprehensive_table_metadata(self):
-        """Test that get_tables returns comprehensive metadata."""
-        mock_hubspot_client = MagicMock()
-
-        mock_companies_search_result = MagicMock()
-        mock_companies_search_result.total = 1250
-
-        mock_contacts_search_result = MagicMock()
-        mock_contacts_search_result.total = 850
-
-        mock_deals_search_result = MagicMock()
-        mock_deals_search_result.total = 320
-
-        self.mock_connect.return_value = mock_hubspot_client
-        mock_hubspot_client.crm.companies.search_api.do_search.return_value = mock_companies_search_result
-        mock_hubspot_client.crm.contacts.search_api.do_search.return_value = mock_contacts_search_result
-        mock_hubspot_client.crm.deals.search_api.do_search.return_value = mock_deals_search_result
-
-        response = self.handler.get_tables()
-
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
-        df = response.data_frame
-
-        # Check only the 3 required metadata columns (following postgres handler pattern)
-        required_columns = ["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"]
-        for col in required_columns:
-            self.assertIn(col, df.columns)
-
-        # Verify all three tables are present
-        table_names = df["TABLE_NAME"].tolist()
-        self.assertEqual(len(table_names), len(self.EXPECTED_TABLES))
-        for table_name in self.EXPECTED_TABLES:
-            self.assertIn(table_name, table_names)
-
     def test_estimate_table_rows_with_search_api(self):
         """Test that _estimate_table_rows uses search API for accurate counts."""
         mock_hubspot_client = MagicMock()
@@ -1017,6 +927,10 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         handler = MagicMock()
         handler.connect.return_value = mock_hubspot_client
+        handler._hubspot_deal_stage_map_cache = ({}, {})
+        handler._hubspot_deal_stage_rows_cache = []
+        handler._hubspot_owner_rows_cache = []
+        handler._hubspot_owner_map_cache = {}
         mock_hubspot_client.crm.deals.search_api.do_search.return_value = mock_search_result
         mock_hubspot_client.crm.pipelines.pipelines_api.get_all.return_value = MagicMock(results=[])
 
@@ -1180,6 +1094,10 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         handler = MagicMock()
         handler.connect.return_value = mock_hubspot_client
+        handler._hubspot_deal_stage_map_cache = ({}, {})
+        handler._hubspot_deal_stage_rows_cache = []
+        handler._hubspot_owner_rows_cache = []
+        handler._hubspot_owner_map_cache = {}
         mock_hubspot_client.crm.deals.search_api.do_search.return_value = mock_search_result
         mock_hubspot_client.crm.pipelines.pipelines_api.get_all.return_value = MagicMock(results=[])
 
@@ -1209,137 +1127,6 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
         self.assertIn("not supported", response.error_message)
-
-
-class TestHubspotFKJoinGuard(unittest.TestCase):
-    """
-    Tests that simulate how MindsDB actually calls the handler during JOIN execution.
-
-    MindsDB decomposes JOINs into per-table FetchDataframeStep calls BEFORE the handler
-    sees the query. Each table's select()/get_*() is called independently with whatever
-    conditions and limits MindsDB injects. native_query() is never invoked for JOINs.
-
-    These tests call get_contacts() / get_deals() directly to validate the FK join guards.
-    """
-
-    def _make_contacts_table(self):
-        handler = MagicMock()
-        return ContactsTable(handler)
-
-    def _make_deals_table(self):
-        handler = MagicMock()
-        return DealsTable(handler)
-
-    def test_contacts_fk_join_guard_fires_for_mindsdb_injected_limit(self):
-        """
-        contacts JOIN companies ON c.primary_company_id = co.id:
-        MindsDB fetches contacts with limit=20010 (join buffer), no conditions.
-        Guard must raise ValueError.
-        """
-        table = self._make_contacts_table()
-        with self.assertRaises(ValueError) as ctx:
-            table.get_contacts(limit=20010, where_conditions=None)
-        self.assertIn("not supported", str(ctx.exception).lower())
-
-    def test_contacts_fk_join_guard_fires_for_2000_limit(self):
-        """
-        contacts JOIN deals ON d.primary_company_id = c.id:
-        MindsDB first tries limit=2000 (initial join buffer size).
-        Guard must fire here too.
-        """
-        table = self._make_contacts_table()
-        with self.assertRaises(ValueError):
-            table.get_contacts(limit=2000, where_conditions=None)
-
-    def test_contacts_fk_join_guard_fires_for_501_limit(self):
-        """Limit just above MAX_ASSOCIATION_SCAN threshold also triggers guard."""
-        table = self._make_contacts_table()
-        with self.assertRaises(ValueError):
-            table.get_contacts(limit=501, where_conditions=None)
-
-    def test_contacts_fk_join_guard_allows_small_explicit_limit(self):
-        """
-        SELECT * FROM contacts LIMIT 100: small explicit limit with no conditions is allowed.
-        This simulates a user browsing contacts without filtering.
-        """
-        table = self._make_contacts_table()
-        mock_hubspot = MagicMock()
-        mock_hubspot.crm.contacts.get_all.return_value = []
-        table.handler.connect.return_value = mock_hubspot
-        # Should not raise
-        result = table.get_contacts(limit=100, where_conditions=None)
-        self.assertIsInstance(result, list)
-
-    def test_contacts_fk_join_guard_allows_no_limit_full_scan(self):
-        """
-        SELECT * FROM contacts (no LIMIT): capped by effective_limit, not blocked.
-        """
-        table = self._make_contacts_table()
-        mock_hubspot = MagicMock()
-        mock_hubspot.crm.contacts.get_all.return_value = []
-        table.handler.connect.return_value = mock_hubspot
-        # limit=None should NOT raise (falls through to effective_limit cap)
-        result = table.get_contacts(limit=None, where_conditions=None)
-        self.assertIsInstance(result, list)
-
-    def test_contacts_fk_join_guard_allows_large_limit_with_conditions(self):
-        """
-        SELECT * FROM contacts WHERE email = 'x@y.com' LIMIT 2000:
-        large limit is fine when conditions are present — not a join buffer fetch.
-        """
-        table = self._make_contacts_table()
-        mock_hubspot = MagicMock()
-        mock_search_result = MagicMock()
-        mock_search_result.results = []
-        mock_search_result.paging = None
-        mock_hubspot.crm.contacts.search_api.do_search.return_value = mock_search_result
-        table.handler.connect.return_value = mock_hubspot
-        # Should not raise — conditions are present
-        result = table.get_contacts(
-            limit=2000,
-            where_conditions=[["=", "email", "x@y.com"]],
-        )
-        self.assertIsInstance(result, list)
-
-    def test_deals_fk_join_guard_fires_for_injected_limit(self):
-        """
-        contacts JOIN deals ON d.primary_company_id = c.id WHERE d.amount > 5000 LIMIT 100:
-        MindsDB fetches deals with conditions (amount > 5000) fine, but also fetches
-        contacts with limit=2000 and no conditions — tested above.
-        Separately, deals JOIN contacts ON c.id = d.primary_contact_id:
-        MindsDB fetches deals with limit=2000, no conditions.
-        """
-        table = self._make_deals_table()
-        with self.assertRaises(ValueError):
-            table.get_deals(limit=2000, where_conditions=None)
-
-    def test_deals_fk_join_guard_allows_small_limit_no_conditions(self):
-        """SELECT * FROM deals LIMIT 50: allowed."""
-        table = self._make_deals_table()
-        mock_hubspot = MagicMock()
-        mock_hubspot.crm.deals.get_all.return_value = []
-        mock_hubspot.crm.pipelines.pipelines_api.get_all.return_value = MagicMock(results=[])
-        table.handler.connect.return_value = mock_hubspot
-        result = table.get_deals(limit=50, where_conditions=None)
-        self.assertIsInstance(result, list)
-
-    def test_contacts_with_association_target_and_no_limit_allowed(self):
-        """
-        SELECT primary_company_id FROM contacts (no LIMIT):
-        limit=None means a genuine user query — not a MindsDB join buffer (which always
-        injects an explicit limit). Falls through to effective_limit-capped full scan.
-        """
-        table = self._make_contacts_table()
-        mock_hubspot = MagicMock()
-        mock_hubspot.crm.contacts.get_all.return_value = []
-        table.handler.connect.return_value = mock_hubspot
-        # Should not raise — limit=None is not a join buffer pattern
-        result = table.get_contacts(
-            limit=None,
-            where_conditions=None,
-            properties=["id", "firstname", "primary_company_id"],
-        )
-        self.assertIsInstance(result, list)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ sidebarTitle: DataStax
 
 This is the implementation of the DataStax data handler for MindsDB.
 
-[DataStax](https://www.datastax.com/) Astra DB is a cloud database-as-a-service based on Apache Cassandra. DataStax also offers DataStax Enterprise (DSE), an on-premises database built on Apache Cassandra, and Astra Streaming, a messaging and event streaming cloud service based on Apache Pulsar.
+https://docs.datastax.com/en/astra-db-serverless/index.html[DataStax Astra DB] is a cloud database-as-a-service based on Apache Cassandra. DataStax also offers on-premises solutions, DataStax Enterprise (DSE) and Hyper-Converged Database (HCD), as well as Astra Streaming, a messaging and event streaming cloud service based on Apache Pulsar.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
 2. To connect DataStax to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-3. Install or ensure access to DataStax.
+3. Create an [Astra DB database](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
 
 ## Implementation
 
@@ -21,9 +21,9 @@ DataStax Astra DB is API-compatible with Apache Cassandra and ScyllaDB. Therefor
 
 The required arguments to establish a connection are as follows:
 
-* `user` is the user to authenticate.
-* `password` is the password to authenticate the user.
-* `secure_connect_bundle` is the path to the `secure_connect_bundle` zip file.
+* `user`: The literal string `token`
+* `password`: An [Astra application token](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html)
+* `secure_connect_bundle`: The path to your database's [Secure Connect Bundle](https://docs.datastax.com/en/astra-db-serverless/databases/secure-connect-bundle.html) zip file
 
 ## Usage
 
@@ -34,12 +34,11 @@ CREATE DATABASE astra_connection
 WITH
     engine = "astra",
     parameters = {
-        "user": "user",
-        "password": "pass",
+        "user": "token",
+        "password": "application_token",
         "secure_connect_bundle": "/home/Downloads/file.zip"
     };
 ```
-
 
 or, reference the bundle from Datastax s3 as:
 
@@ -47,8 +46,8 @@ or, reference the bundle from Datastax s3 as:
 CREATE DATABASE astra_connection
 WITH ENGINE = "astra",
 PARAMETERS = {
-    "user": "user",
-    "password": "pass",
+    "user": "token",
+    "password": "application_token",
     "secure_connect_bundle": "https://datastax-cluster-config-prod.s3.us-east-2.amazonaws.com/32312-b9eb-4e09-a641-213eaesa12-1/secure-connect-demo.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AK..."
 }  
 ```

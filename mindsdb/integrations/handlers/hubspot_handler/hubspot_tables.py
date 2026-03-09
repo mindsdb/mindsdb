@@ -989,15 +989,28 @@ def _execute_hubspot_search(
     Execute paginated HubSpot search with filters.
     Automatically chunks oversized IN filters (HubSpot max: 100 values).
     """
+    logger.debug(f"[_execute_hubspot_search] called — object_type={object_type}, limit={limit}, filters={filters}")
     for i, f in enumerate(filters or []):
         if f.get("operator") in {"IN", "NOT_IN"} and len(f.get("values", [])) > HUBSPOT_IN_MAX:
             values = f["values"]
             chunks = [values[j: j + HUBSPOT_IN_MAX] for j in range(0, len(values), HUBSPOT_IN_MAX)]
+            # When no explicit limit is provided, cap the number of chunks we process.
+            # Without this cap, a caller that passes id IN [10000 ids] with limit=None
+            # would fire 100+ sequential HubSpot API calls and run indefinitely.
+            MAX_CHUNKS_WITHOUT_LIMIT = 10  # = up to 1 000 rows
+            effective_limit = limit
+            if limit is None and len(chunks) > MAX_CHUNKS_WITHOUT_LIMIT:
+                effective_limit = MAX_CHUNKS_WITHOUT_LIMIT * HUBSPOT_IN_MAX
+                logger.warning(
+                    f"Large IN filter ({len(values)} values) with no LIMIT: "
+                    f"results capped at {effective_limit}. "
+                    "Add a LIMIT clause or use association tables for efficient joins."
+                )
             collected: List[Dict[str, Any]] = []
             for chunk in chunks:
-                if limit is not None and len(collected) >= limit:
+                if effective_limit is not None and len(collected) >= effective_limit:
                     break
-                chunk_limit = limit - len(collected) if limit is not None else None
+                chunk_limit = effective_limit - len(collected) if effective_limit is not None else None
                 chunked_filters = filters[:i] + [{**f, "values": chunk}] + filters[i + 1:]
                 collected.extend(
                     _execute_hubspot_search(
@@ -1010,9 +1023,12 @@ def _execute_hubspot_search(
     collected: List[Dict[str, Any]] = []
     remaining = limit if limit is not None else float("inf")
     after = None
+    page_num = 0
 
     while remaining > 0:
+        page_num += 1
         page_limit = min(int(remaining) if remaining != float("inf") else 200, 200)
+        logger.debug(f"[_execute_hubspot_search] page {page_num} — fetching up to {page_limit} results (after={after}, collected={len(collected)})")
         search_request = {
             "limit": page_limit,
         }
@@ -1043,12 +1059,14 @@ def _execute_hubspot_search(
         next_page = getattr(paging, "next", None) if paging else None
         after = getattr(next_page, "after", None) if next_page else None
 
+        logger.debug(f"[_execute_hubspot_search] page {page_num} — got {len(results)} results, after={after}")
         if after is None:
             break
 
         if remaining != float("inf"):
             remaining = limit - len(collected)
 
+    logger.debug(f"[_execute_hubspot_search] done — total collected={len(collected)}")
     return collected
 
 
@@ -1067,16 +1085,24 @@ class HubSpotAPIResource(APIResource):
         """
         Override select to handle server-side filtering properly.
         """
+        table_name = self.__class__.__name__
+        logger.debug(f"[{table_name}] select() called — query: {query}")
+
         conditions, order_by, result_limit = self._extract_query_params(query)
         targets = self._get_targets(query)
         original_targets = list(targets)
         normalized_conditions = _normalize_filter_conditions(conditions)
+        logger.debug(
+            f"[{table_name}] select() params — targets={targets}, "
+            f"conditions={normalized_conditions}, limit={result_limit}, order_by={order_by}"
+        )
         self._validate_query_columns(targets, normalized_conditions, order_by)
 
         for condition in normalized_conditions:
             if len(condition) >= 3 and condition[0] == "in":
                 in_vals = condition[2] if isinstance(condition[2], list) else [condition[2]]
-                if in_vals and all(v is None for v in in_vals):
+                if not in_vals or all(v is None for v in in_vals):
+                    logger.debug(f"[{table_name}] select() — empty or all-None IN values, returning empty DataFrame")
                     return pd.DataFrame(columns=original_targets or self.get_columns())
 
         if self.SEARCHABLE_COLUMNS:
@@ -1092,12 +1118,15 @@ class HubSpotAPIResource(APIResource):
             sorts = None
             use_search = False
 
+        logger.debug(f"[{table_name}] select() — use_search={use_search}, filters={filters}")
+
         fetch_columns = self._get_fetch_columns(
             targets=targets,
             normalized_conditions=normalized_conditions,
             order_by=order_by,
             use_search=use_search,
         )
+        logger.debug(f"[{table_name}] select() — fetch_columns={fetch_columns}")
 
         result = self.list(
             conditions=conditions if not use_search else None,
@@ -1910,6 +1939,7 @@ class ContactsTable(HubSpotAPIResource):
         allow_search: bool = True,
         **kwargs,
     ) -> List[Dict]:
+        logger.debug(f"[ContactsTable] get_contacts() called — limit={limit}, conditions={where_conditions}, properties={properties}")
         normalized_conditions = _normalize_filter_conditions(where_conditions)
         hubspot = self.handler.connect()
         requested_properties = properties or []
@@ -1917,15 +1947,47 @@ class ContactsTable(HubSpotAPIResource):
         columns = requested_properties or default_properties
         association_targets, hubspot_columns = _prepare_association_request("contacts", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
+        logger.debug(f"[ContactsTable] get_contacts() — association_targets={association_targets}, hubspot_columns={hubspot_columns}")
 
         # Optimization: if filtering by primary_company_id, bypass full contact
         # scan and use the associations API to fetch only the relevant contacts.
         company_ids = _extract_association_condition(normalized_conditions, "primary_company_id")
         if company_ids:
+            logger.debug(f"[ContactsTable] get_contacts() — company_ids filter detected ({len(company_ids)} ids), using associations API")
             return self._get_contacts_by_company_ids(
                 hubspot, company_ids, hubspot_columns, hubspot_properties, columns, limit
             )
 
+        # Guard: fetching association columns (primary_company_id) without any
+        # WHERE filter means MindsDB's join executor is doing a full table scan
+        # to resolve a direct FK join — e.g.:
+        #   FROM contacts c JOIN companies co ON c.primary_company_id = co.id
+        # MindsDB injects a large LIMIT (e.g. 20010) for its in-memory join
+        # buffer, so we also block large-limit scans, not just limit=None.
+        # Small explicit limits (≤ MAX_ASSOCIATION_SCAN) are allowed so that
+        # a user can still browse a few contacts with their association columns.
+        # Return empty immediately. Users should rewrite the query using the
+        # appropriate association table, e.g.:
+        #   FROM companies co
+        #   JOIN company_contacts cc ON cc.company_id = co.id
+        #   JOIN contacts c ON c.id = cc.contact_id
+        MAX_ASSOCIATION_SCAN = 500
+        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+            msg = (
+                "Direct FK joins between HubSpot objects using foreign key columns "
+                "(e.g. primary_company_id) are not supported. The HubSpot API represents "
+                "relationships through association tables.\n\n"
+                "Please rewrite your query using the association table, e.g.:\n"
+                "SELECT c.firstname, c.lastname, c.email\n"
+                "FROM companies co\n"
+                "JOIN company_contacts cc ON cc.company_id = co.id\n"
+                "JOIN contacts c ON c.id = cc.contact_id\n"
+                "WHERE co.name = 'HubSpot'"
+            )
+            logger.warning(f"[ContactsTable] get_contacts() — FK join guard triggered (limit={limit}), raising error")
+            raise ValueError(msg)
+
+        logger.debug(f"[ContactsTable] get_contacts() — proceeding with scan/search. allow_search={allow_search}, search_filters={search_filters}, normalized_conditions={normalized_conditions}")
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -1941,6 +2003,7 @@ class ContactsTable(HubSpotAPIResource):
             if filters is not None or search_sorts is not None:
                 if association_targets:
                     logger.debug("HubSpot search API does not include associations for contacts.")
+                logger.debug(f"[ContactsTable] get_contacts() — calling _search_contacts_by_conditions with filters={filters}, limit={limit}")
                 search_results = self._search_contacts_by_conditions(
                     hubspot,
                     filters,
@@ -1953,19 +2016,22 @@ class ContactsTable(HubSpotAPIResource):
                 logger.info(f"Retrieved {len(search_results)} contacts from HubSpot via search API")
                 return search_results
 
+        logger.debug(f"[ContactsTable] get_contacts() — falling back to full scan (get_all), effective_limit={limit if limit is not None else 10_000}")
         contacts = hubspot.crm.contacts.get_all(**api_kwargs)
         contacts_dict = []
-        # When fetching contacts with associations (needed for primary_company_id),
-        # each page requires an extra API call. Without an explicit limit this
-        # becomes an unbounded scan (e.g. during JOIN processing where the outer
-        # LIMIT is not propagated to the sub-table query). Cap at a large but
-        # finite number so the query does not run indefinitely.
-        effective_limit = limit if limit is not None else (10_000 if association_targets else None)
+        # Without an explicit LIMIT MindsDB's join executor does not propagate the
+        # outer LIMIT to sub-table queries, leading to unbounded full-table scans.
+        # Cap the scan so that JOIN queries don't run indefinitely.  Queries that
+        # genuinely need more than MAX_SCAN_ROWS rows should supply an explicit LIMIT.
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = limit if limit is not None else MAX_SCAN_ROWS
+        logger.debug(f"[ContactsTable] get_contacts() — full scan capped at {effective_limit}")
         try:
             for contact in contacts:
                 row = self._contact_to_dict(contact, hubspot_columns, association_targets)
                 contacts_dict.append(row)
                 if effective_limit is not None and len(contacts_dict) >= effective_limit:
+                    logger.debug(f"[ContactsTable] get_contacts() — reached effective_limit={effective_limit}, stopping scan")
                     break
         except Exception as e:
             logger.error(f"Failed to iterate HubSpot contacts: {str(e)}")
@@ -1988,6 +2054,7 @@ class ContactsTable(HubSpotAPIResource):
         HubSpot's batch associations API + batch read, instead of scanning
         all contacts (~100x faster for large accounts).
         """
+        logger.debug(f"[ContactsTable] _get_contacts_by_company_ids() called — company_ids={company_ids}, limit={limit}")
         from hubspot.crm.associations.models import (
             BatchInputPublicObjectId,
             PublicObjectId,
@@ -2025,8 +2092,10 @@ class ContactsTable(HubSpotAPIResource):
                 logger.warning(f"Failed to fetch associations for companies {chunk}: {e}")
 
         if not contact_company_map:
+            logger.debug("[ContactsTable] _get_contacts_by_company_ids() — no contacts found for given company_ids, returning []")
             return []
 
+        logger.debug(f"[ContactsTable] _get_contacts_by_company_ids() — found {len(contact_company_map)} contact ids from associations API")
         all_contact_ids = list(contact_company_map.keys())
         if limit is not None:
             all_contact_ids = all_contact_ids[:limit]
@@ -2064,6 +2133,7 @@ class ContactsTable(HubSpotAPIResource):
         columns: List[str],
         association_targets: List[str],
     ) -> List[Dict[str, Any]]:
+        logger.debug(f"[ContactsTable] _search_contacts_by_conditions() called — filters={filters}, limit={limit}, sorts={sorts}")
         return _execute_hubspot_search(
             hubspot.crm.contacts.search_api,
             filters or [],
@@ -2405,6 +2475,20 @@ class DealsTable(HubSpotAPIResource):
         hubspot_columns = self._strip_virtual_columns(hubspot_columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+            msg = (
+                "Direct FK joins on HubSpot deals using foreign key columns "
+                "(e.g. primary_company_id, primary_contact_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table, e.g.:\n"
+                "FROM companies co\n"
+                "JOIN company_deals cd ON cd.company_id = co.id\n"
+                "JOIN deals d ON d.id = cd.deal_id"
+            )
+            logger.warning(f"[DealsTable] get_deals() — FK join guard triggered (limit={limit}), raising error")
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -2649,6 +2733,20 @@ class TicketsTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("tickets", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+            msg = (
+                "Direct FK joins on HubSpot tickets using foreign key columns "
+                "(e.g. primary_company_id, primary_contact_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table, e.g.:\n"
+                "FROM companies co\n"
+                "JOIN company_tickets ct ON ct.company_id = co.id\n"
+                "JOIN tickets t ON t.id = ct.ticket_id"
+            )
+            logger.warning(f"[TicketsTable] get_tickets() — FK join guard triggered (limit={limit}), raising error")
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -2888,6 +2986,17 @@ class TasksTable(HubSpotAPIResource):
         columns = requested_properties or default_properties
         association_targets, hubspot_columns = _prepare_association_request("tasks", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
+
+        MAX_ASSOCIATION_SCAN = 500
+        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+            msg = (
+                "Direct FK joins on HubSpot tasks using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            logger.warning(f"[TasksTable] get_tasks() — FK join guard triggered (limit={limit}), raising error")
+            raise ValueError(msg)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
@@ -3134,6 +3243,17 @@ class CallsTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("calls", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+            msg = (
+                "Direct FK joins on HubSpot calls using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            logger.warning(f"[CallsTable] get_calls() — FK join guard triggered (limit={limit}), raising error")
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -3377,6 +3497,17 @@ class EmailsTable(HubSpotAPIResource):
         columns = requested_properties or default_properties
         association_targets, hubspot_columns = _prepare_association_request("emails", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
+
+        MAX_ASSOCIATION_SCAN = 500
+        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+            msg = (
+                "Direct FK joins on HubSpot emails using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            logger.warning(f"[EmailsTable] get_emails() — FK join guard triggered (limit={limit}), raising error")
+            raise ValueError(msg)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
@@ -3622,6 +3753,17 @@ class MeetingsTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("meetings", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+            msg = (
+                "Direct FK joins on HubSpot meetings using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            logger.warning(f"[MeetingsTable] get_meetings() — FK join guard triggered (limit={limit}), raising error")
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -3860,6 +4002,17 @@ class NotesTable(HubSpotAPIResource):
         columns = requested_properties or default_properties
         association_targets, hubspot_columns = _prepare_association_request("notes", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
+
+        MAX_ASSOCIATION_SCAN = 500
+        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+            msg = (
+                "Direct FK joins on HubSpot notes using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            logger.warning(f"[NotesTable] get_notes() — FK join guard triggered (limit={limit}), raising error")
+            raise ValueError(msg)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
@@ -4100,6 +4253,17 @@ class LeadsTable(HubSpotAPIResource):
         columns = requested_properties or default_properties
         association_targets, hubspot_columns = _prepare_association_request("leads", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
+
+        MAX_ASSOCIATION_SCAN = 500
+        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+            msg = (
+                "Direct FK joins on HubSpot leads using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            logger.warning(f"[LeadsTable] get_leads() — FK join guard triggered (limit={limit}), raising error")
+            raise ValueError(msg)
 
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:

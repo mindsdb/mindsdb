@@ -33,8 +33,25 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Select, Identifier, BinaryOperation, Star
 
 logger = log.getLogger(__name__)
+
+# Maps (from_table, to_table) → (association_table_name, from_id_col, to_id_col)
+# Used to suggest the correct association-table pattern when users write direct FK joins.
+_DIRECT_JOIN_ASSOC_MAP = {
+    ("companies", "contacts"): ("company_contacts", "company_id", "contact_id"),
+    ("companies", "deals"): ("company_deals", "company_id", "deal_id"),
+    ("companies", "tickets"): ("company_tickets", "company_id", "ticket_id"),
+    ("contacts", "companies"): ("contact_companies", "contact_id", "company_id"),
+    ("contacts", "deals"): ("contact_deals", "contact_id", "deal_id"),
+    ("contacts", "tickets"): ("contact_tickets", "contact_id", "ticket_id"),
+    ("deals", "companies"): ("deal_companies", "deal_id", "company_id"),
+    ("deals", "contacts"): ("deal_contacts", "deal_id", "contact_id"),
+    ("tickets", "companies"): ("ticket_companies", "ticket_id", "company_id"),
+    ("tickets", "contacts"): ("ticket_contacts", "ticket_id", "contact_id"),
+    ("tickets", "deals"): ("ticket_deals", "ticket_id", "deal_id"),
+}
 
 
 def _extract_hubspot_error_message(error: Exception) -> str:
@@ -226,15 +243,28 @@ class HubspotHandler(MetaAPIHandler):
 
     def native_query(self, query: Optional[str] = None) -> Response:
         """Receive and process a raw query."""
+        logger.debug(f"[HubSpotHandler] native_query() called — query: {query}")
         if not query:
             return Response(RESPONSE_TYPE.ERROR, error_message="Query cannot be None or empty")
 
         try:
             ast = parse_sql(query)
+        except Exception as e:
+            logger.error(f"Failed to execute native query: {str(e)}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}")
+
+        try:
+            from mindsdb_sql_parser.ast import Join as SQLJoin
+            if isinstance(ast, Select) and isinstance(ast.from_table, SQLJoin):
+                logger.debug("[HubSpotHandler] native_query() — routing to _execute_join_query")
+                return self._execute_join_query(ast)
+            logger.debug("[HubSpotHandler] native_query() — routing to query()")
             return self.query(ast)
         except Exception as e:
             logger.error(f"Failed to execute native query: {str(e)}")
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}")
+
+    CORE_TABLES = frozenset({"companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"})
 
     def get_tables(self) -> Response:
         """Return list of tables available in the HubSpot integration."""
@@ -242,7 +272,7 @@ class HubspotHandler(MetaAPIHandler):
             self.connect()
 
             tables_data = []
-            all_tables = list(self._tables.keys())
+            all_tables = [t for t in self._tables.keys() if t in self.CORE_TABLES]
             for table_name in all_tables:
                 try:
                     if table_name in self._association_tables:
@@ -718,3 +748,262 @@ class HubspotHandler(MetaAPIHandler):
             return "VARCHAR"
         else:
             return "VARCHAR"
+
+    def _rewrite_where_for_table(self, where_node: Any, table_alias: str, is_main_table: bool = False) -> Any:
+        """Extract WHERE conditions for a specific table alias, stripping the alias prefix.
+
+        Returns a new WHERE AST node with aliases stripped, or None if no conditions
+        reference the given alias.
+        """
+        if where_node is None:
+            return None
+
+        if isinstance(where_node, BinaryOperation):
+            if where_node.op.lower() == "and":
+                left = self._rewrite_where_for_table(where_node.args[0], table_alias, is_main_table)
+                right = self._rewrite_where_for_table(where_node.args[1], table_alias, is_main_table)
+                if left is not None and right is not None:
+                    return BinaryOperation("and", args=[left, right])
+                return left if left is not None else right
+            else:
+                # Leaf comparison node
+                arg0 = where_node.args[0] if where_node.args else None
+                if isinstance(arg0, Identifier):
+                    parts = arg0.parts
+                    if len(parts) >= 2:
+                        alias = parts[0].lower()
+                        col = parts[-1]
+                        if alias == table_alias.lower():
+                            new_args = [Identifier(col)] + list(where_node.args[1:])
+                            return BinaryOperation(where_node.op, args=new_args)
+                        return None
+                    elif len(parts) == 1 and is_main_table:
+                        # Unqualified condition — assign to the main (FROM) table
+                        return where_node
+        return None
+
+    def _format_select_targets(self, targets) -> str:
+        """Render SELECT target list back to a SQL string fragment."""
+        if not targets:
+            return "*"
+        parts = []
+        for t in targets:
+            if isinstance(t, Star):
+                parts.append("*")
+            elif isinstance(t, Identifier):
+                parts.append(".".join(str(p) for p in t.parts))
+        return ", ".join(parts) if parts else "*"
+
+    def _suggest_association_query(
+        self, ast: Select, left_name: str, left_alias: str, right_name: str, right_alias: str
+    ) -> Response:
+        """Return a helpful error directing the user to use association tables.
+
+        Analyses the WHERE clause to determine which table is being filtered so the
+        suggestion puts the filtered table first (making the join efficient).
+        """
+        # Decide which table is "filtered" (has WHERE conditions) — put it first
+        where_on_right = self._rewrite_where_for_table(ast.where, right_alias) is not None
+        where_on_left = self._rewrite_where_for_table(ast.where, left_alias, is_main_table=True) is not None
+
+        if where_on_right and not where_on_left:
+            from_name, from_alias = right_name, right_alias
+            to_name, to_alias = left_name, left_alias
+        else:
+            from_name, from_alias = left_name, left_alias
+            to_name, to_alias = right_name, right_alias
+
+        assoc_info = _DIRECT_JOIN_ASSOC_MAP.get((from_name, to_name))
+        if assoc_info is None:
+            # Try the reverse direction
+            assoc_info = _DIRECT_JOIN_ASSOC_MAP.get((to_name, from_name))
+
+        if assoc_info is None:
+            error_msg = (
+                f"Direct JOINs between '{left_name}' and '{right_name}' are not supported. "
+                "Please use HubSpot association tables to join these objects."
+            )
+            return Response(RESPONSE_TYPE.ERROR, error_message=error_msg)  # type: ignore[arg-type]
+
+        assoc_table, from_id_col, to_id_col = assoc_info
+        assoc_alias = assoc_table[:2]  # short alias, e.g. "cc" for company_contacts
+
+        col_str = self._format_select_targets(ast.targets)
+        where_clause = f"\nWHERE {ast.where}" if ast.where else ""
+        limit_clause = f"\nLIMIT {ast.limit.value}" if ast.limit else ""
+
+        suggested = (
+            f"SELECT {col_str}\n"
+            f"FROM `my_hubspot`.{from_name} {from_alias}\n"
+            f"JOIN `my_hubspot`.{assoc_table} {assoc_alias} "
+            f"ON {assoc_alias}.{from_id_col} = {from_alias}.id\n"
+            f"JOIN `my_hubspot`.{to_name} {to_alias} "
+            f"ON {to_alias}.id = {assoc_alias}.{to_id_col}"
+            f"{where_clause}"
+            f"{limit_clause}"
+        )
+
+        error_msg = (
+            f"Direct JOINs between HubSpot objects using foreign key columns (e.g. primary_company_id) "
+            f"are not supported. The HubSpot API represents relationships through association tables.\n\n"
+            f"Please rewrite your query using the '{assoc_table}' association table:\n\n"
+            f"{suggested}"
+        )
+        return Response(RESPONSE_TYPE.ERROR, error_message=error_msg)
+
+    def _execute_join_query(self, ast: Select) -> Response:
+        """Execute a JOIN query using the HubSpot associations API.
+
+        Only JOINs that go through an association table (e.g. company_contacts) are
+        supported.  When a caller writes a direct FK join between two core CRM tables
+        (e.g. contacts JOIN companies ON c.primary_company_id = co.id) this method
+        returns a descriptive error with a suggested rewrite.
+
+        In mindsdb_sql_parser a single JOIN query is represented as:
+            ast.from_table = Join(left=<table_ident>, right=<table_ident>, condition=<on_expr>)
+        Multiple JOINs nest Join nodes: Join(left=Join(...), right=<table_ident>, ...).
+        """
+        logger.debug(f"[HubSpotHandler] _execute_join_query() called — ast: {ast}")
+        from mindsdb_sql_parser.ast import Join as SQLJoin
+        from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+        from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_utils import (
+            get_primary_association_columns,
+        )
+
+        join = ast.from_table  # This is already a Join node (checked in native_query)
+
+        # Reject nested/multiple JOINs (left side is another Join)
+        if isinstance(join.left, SQLJoin):
+            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
+
+        # Resolve table names and aliases from the Join node
+        left_id = join.left    # Identifier for the left (FROM) table
+        right_id = join.right  # Identifier for the right (JOIN) table
+
+        def _get_alias_str(ident: Identifier) -> str:
+            alias = getattr(ident, "alias", None)
+            if alias is None:
+                return ident.parts[-1].lower()
+            if isinstance(alias, str):
+                return alias.lower()
+            # alias is itself an Identifier object
+            return alias.parts[-1].lower()
+
+        left_name = left_id.parts[-1].lower()
+        left_alias = _get_alias_str(left_id)
+
+        right_name = right_id.parts[-1].lower()
+        right_alias = _get_alias_str(right_id)
+
+        logger.debug(f"[HubSpotHandler] _execute_join_query() — left={left_name} (alias={left_alias}), right={right_name} (alias={right_alias})")
+        # If both sides are core CRM tables (no association table involved), reject the
+        # direct FK join and guide the user towards the association table pattern.
+        if left_name in self.CORE_TABLES and right_name in self.CORE_TABLES:
+            logger.debug("[HubSpotHandler] _execute_join_query() — direct FK join between core tables detected, returning error suggestion")
+            return self._suggest_association_query(ast, left_name, left_alias, right_name, right_alias)
+
+        # Parse ON condition: must be a simple equality between two qualified identifiers
+        on = join.condition
+        if not isinstance(on, BinaryOperation) or on.op != "=":
+            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
+
+        on_left, on_right = on.args
+        if not (isinstance(on_left, Identifier) and isinstance(on_right, Identifier)):
+            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
+
+        def _alias_col(ident: Identifier):
+            parts = ident.parts
+            if len(parts) >= 2:
+                return parts[0].lower(), parts[-1].lower()
+            return None, parts[0].lower()
+
+        ol_alias, ol_col = _alias_col(on_left)
+        or_alias, or_col = _alias_col(on_right)
+
+        alias_to_table = {left_alias: left_name, right_alias: right_name}
+        ol_table = alias_to_table.get(ol_alias) if ol_alias else None
+        or_table = alias_to_table.get(or_alias) if or_alias else None
+
+        # Determine which side carries the association column (e.g. primary_company_id)
+        assoc_info = None
+        if ol_table and or_col == "id":
+            if ol_col in get_primary_association_columns(ol_table):
+                assoc_info = {"assoc_table": ol_table, "assoc_col": ol_col, "ref_table": or_table}
+        if assoc_info is None and or_table and ol_col == "id":
+            if or_col in get_primary_association_columns(or_table):
+                assoc_info = {"assoc_table": or_table, "assoc_col": or_col, "ref_table": ol_table}
+
+        if assoc_info is None:
+            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
+
+        assoc_table_name = assoc_info["assoc_table"]
+        assoc_col = assoc_info["assoc_col"]
+        ref_table_name = assoc_info["ref_table"]
+
+        if assoc_table_name not in self._tables or ref_table_name not in self._tables:
+            return Response(RESPONSE_TYPE.ERROR, error_message="Multijoin queries are not supported")
+
+        # Map each role back to query alias for WHERE splitting
+        ref_alias = right_alias if ref_table_name == right_name else left_alias
+        assoc_alias = left_alias if assoc_table_name == left_name else right_alias
+        is_assoc_main = assoc_table_name == left_name  # left = the FROM table
+
+        # Split WHERE conditions by table alias
+        ref_where = self._rewrite_where_for_table(ast.where, ref_alias)
+        assoc_where = self._rewrite_where_for_table(ast.where, assoc_alias, is_main_table=is_assoc_main)
+
+        limit = ast.limit.value if ast.limit else None
+
+        # --- Step 1: fetch the reference table rows (e.g. companies WHERE name='HubSpot') ---
+        ref_table = self._tables[ref_table_name]
+        ref_query = Select(
+            targets=[Star()],
+            from_table=Identifier(ref_table_name),
+            where=ref_where,
+        )
+        ref_df = ref_table.select(ref_query)
+
+        if ref_df.empty or "id" not in ref_df.columns:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+        ref_ids = ref_df["id"].dropna().astype(str).tolist()
+        if not ref_ids:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+        # --- Step 2: fetch assoc table rows filtered by the association column ---
+        assoc_table = self._tables[assoc_table_name]
+        assoc_conditions: List[FilterCondition] = [
+            FilterCondition(assoc_col, FilterOperator.IN, ref_ids)
+        ]
+
+        # Also pass any WHERE conditions that belong to the assoc table
+        if assoc_where is not None:
+            from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+            try:
+                for cond in extract_comparison_conditions(assoc_where):
+                    assoc_conditions.append(
+                        FilterCondition(cond[1], FilterOperator(cond[0].upper()), cond[2])
+                    )
+            except Exception:
+                pass
+
+        assoc_df = assoc_table.list(conditions=assoc_conditions, limit=limit, sort=None, targets=None)
+
+        if assoc_df.empty:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+        # --- Step 3: select only the requested target columns ---
+        requested = [
+            t.parts[-1]
+            for t in (ast.targets or [])
+            if isinstance(t, Identifier) and not isinstance(t, Star)
+        ]
+        if requested:
+            available = [c for c in requested if c in assoc_df.columns]
+            if available:
+                assoc_df = assoc_df[available]
+
+        if limit and len(assoc_df) > limit:
+            assoc_df = assoc_df[:limit]
+
+        return Response(RESPONSE_TYPE.TABLE, data_frame=assoc_df)

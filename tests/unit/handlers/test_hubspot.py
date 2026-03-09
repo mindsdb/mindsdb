@@ -1012,6 +1012,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.mock_connect.return_value = mock_hubspot_client
         mock_hubspot_client.crm.deals.search_api.do_search.return_value = mock_search_result
+        mock_hubspot_client.crm.pipelines.pipelines_api.get_all.return_value = MagicMock(results=[])
 
         query = "SELECT * FROM deals WHERE dealstage IN ('closedwon', 'closedlost')"
         response = self.handler.native_query(query)
@@ -1170,6 +1171,18 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(search_request["sorts"][0]["propertyName"], "closedate")
         self.assertEqual(search_request["sorts"][0]["direction"], "DESCENDING")
         self.assertEqual(search_request["properties"], ["dealname"])
+
+    def test_multijoin_query_handling(self):
+        """Test that multijoin queries return appropriate error since not supported."""
+        query = """
+        SELECT c.name, o.dealname
+        FROM companies c
+        JOIN deals o ON c.id = o.company_id
+        """
+        response = self.handler.native_query(query)
+
+        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+        self.assertIn("not supported", response.error_message)
 
 
 if __name__ == "__main__":

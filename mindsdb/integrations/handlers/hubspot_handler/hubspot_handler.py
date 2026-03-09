@@ -272,7 +272,7 @@ class HubspotHandler(MetaAPIHandler):
             self.connect()
 
             tables_data = []
-            all_tables = [t for t in self._tables.keys() if t in self.CORE_TABLES]
+            all_tables = list(self._tables.keys())
             for table_name in all_tables:
                 try:
                     if table_name in self._association_tables:
@@ -1007,3 +1007,119 @@ class HubspotHandler(MetaAPIHandler):
             assoc_df = assoc_df[:limit]
 
         return Response(RESPONSE_TYPE.TABLE, data_frame=assoc_df)
+
+    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        """Return primary key metadata for the data catalog.
+
+        Every object table has ``id`` as its PK.
+        Association tables have a composite PK on both ID columns.
+        """
+        try:
+            self.connect()
+        except Exception as e:
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve primary keys: {e}")
+
+        all_tables = list(self._tables.keys())
+        if table_names:
+            all_tables = [t for t in all_tables if t in table_names]
+
+        rows: List[Dict[str, Any]] = []
+
+        for table_name in all_tables:
+            if table_name in self._association_tables:
+                # Association tables have a composite PK on both ID columns
+                id_cols = [c for c in self._tables[table_name].get_columns() if c.endswith("_id")]
+                for pos, col in enumerate(id_cols, start=1):
+                    rows.append({
+                        "TABLE_NAME": table_name,
+                        "COLUMN_NAME": col,
+                        "ORDINAL_POSITION": pos,
+                        "CONSTRAINT_NAME": f"pk_{table_name}",
+                    })
+            elif table_name == "deal_stages":
+                for pos, col in enumerate(["pipeline_id", "stage_id"], start=1):
+                    rows.append({
+                        "TABLE_NAME": table_name,
+                        "COLUMN_NAME": col,
+                        "ORDINAL_POSITION": pos,
+                        "CONSTRAINT_NAME": f"pk_{table_name}",
+                    })
+            else:
+                rows.append({
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": "id",
+                    "ORDINAL_POSITION": 1,
+                    "CONSTRAINT_NAME": f"pk_{table_name}",
+                })
+
+        df = pd.DataFrame(rows) if rows else pd.DataFrame(
+            columns=["TABLE_NAME", "COLUMN_NAME", "ORDINAL_POSITION", "CONSTRAINT_NAME"]
+        )
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        """Return foreign key metadata for the data catalog.
+
+        Exposes two sets of relationships so the agent can generate correct JOINs:
+
+        1. Association table FKs — e.g. company_contacts.company_id → companies.id
+        2. Object-table primary_*_id FKs — e.g. contacts.primary_company_id → companies.id
+        """
+        try:
+            self.connect()
+        except Exception as e:
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve foreign keys: {e}")
+
+        from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_utils import (
+            PRIMARY_ASSOCIATIONS_CONFIG,
+        )
+
+        _ASSOC_TARGET_TO_TABLE = {
+            "companies": "companies",
+            "contacts": "contacts",
+            "deals": "deals",
+            "tickets": "tickets",
+        }
+
+        all_tables = set(self._tables.keys())
+        if table_names:
+            all_tables = set(table_names).intersection(all_tables)
+
+        rows: List[Dict[str, Any]] = []
+
+        # 1. Association table FKs — aggregated from each table's meta_get_foreign_keys()
+        for table_name in sorted(all_tables):
+            if table_name not in self._association_tables:
+                continue
+            table_obj = self._tables[table_name]
+            if hasattr(table_obj, "meta_get_foreign_keys"):
+                for fk in table_obj.meta_get_foreign_keys(table_name):
+                    col = fk.get("COLUMN_NAME")
+                    rows.append({
+                        "CHILD_TABLE_NAME": fk.get("TABLE_NAME", table_name),
+                        "CHILD_COLUMN_NAME": col,
+                        "PARENT_TABLE_NAME": fk.get("REFERENCED_TABLE_NAME"),
+                        "PARENT_COLUMN_NAME": fk.get("REFERENCED_COLUMN_NAME", "id"),
+                        "CONSTRAINT_NAME": f"fk_{table_name}_{col}",
+                    })
+
+        # 2. Object-table primary_*_id FKs (derived from PRIMARY_ASSOCIATIONS_CONFIG)
+        for table_name in sorted(all_tables):
+            if table_name in self._association_tables or table_name in self._non_object_tables:
+                continue
+            for target_type, column_name in PRIMARY_ASSOCIATIONS_CONFIG.get(table_name, []):
+                parent_table = _ASSOC_TARGET_TO_TABLE.get(target_type)
+                if parent_table is None:
+                    continue
+                rows.append({
+                    "CHILD_TABLE_NAME": table_name,
+                    "CHILD_COLUMN_NAME": column_name,
+                    "PARENT_TABLE_NAME": parent_table,
+                    "PARENT_COLUMN_NAME": "id",
+                    "CONSTRAINT_NAME": f"fk_{table_name}_{column_name}",
+                })
+
+        df = pd.DataFrame(rows) if rows else pd.DataFrame(
+            columns=["CHILD_TABLE_NAME", "CHILD_COLUMN_NAME", "PARENT_TABLE_NAME", "PARENT_COLUMN_NAME", "CONSTRAINT_NAME"]
+        )
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)

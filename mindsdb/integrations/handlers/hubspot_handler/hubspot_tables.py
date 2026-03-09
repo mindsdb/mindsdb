@@ -1679,10 +1679,12 @@ class CompaniesTable(HubSpotAPIResource):
 
         companies = hubspot.crm.companies.get_all(**api_kwargs)
         companies_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for company in companies:
             try:
                 companies_dict.append(self._company_to_dict(company, columns))
-                if limit is not None and len(companies_dict) >= limit:
+                if len(companies_dict) >= effective_limit:
                     break
             except Exception as e:
                 logger.warning(f"Error processing company {getattr(company, 'id', 'unknown')}: {str(e)}")
@@ -1972,7 +1974,7 @@ class ContactsTable(HubSpotAPIResource):
         #   JOIN company_contacts cc ON cc.company_id = co.id
         #   JOIN contacts c ON c.id = cc.contact_id
         MAX_ASSOCIATION_SCAN = 500
-        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
             msg = (
                 "Direct FK joins between HubSpot objects using foreign key columns "
                 "(e.g. primary_company_id) are not supported. The HubSpot API represents "
@@ -2023,8 +2025,12 @@ class ContactsTable(HubSpotAPIResource):
         # outer LIMIT to sub-table queries, leading to unbounded full-table scans.
         # Cap the scan so that JOIN queries don't run indefinitely.  Queries that
         # genuinely need more than MAX_SCAN_ROWS rows should supply an explicit LIMIT.
+        # Cap full scans at MAX_SCAN_ROWS regardless of whether limit was explicit.
+        # MindsDB's in-memory join executor injects large limits (e.g. 20010, 20000)
+        # for its join buffer, causing multi-minute full table scans.  Applying min()
+        # ensures those injected limits are treated the same as limit=None.
         MAX_SCAN_ROWS = 10_000
-        effective_limit = limit if limit is not None else MAX_SCAN_ROWS
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         logger.debug(f"[ContactsTable] get_contacts() — full scan capped at {effective_limit}")
         try:
             for contact in contacts:
@@ -2476,7 +2482,7 @@ class DealsTable(HubSpotAPIResource):
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         MAX_ASSOCIATION_SCAN = 500
-        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
             msg = (
                 "Direct FK joins on HubSpot deals using foreign key columns "
                 "(e.g. primary_company_id, primary_contact_id) are not supported. "
@@ -2520,10 +2526,16 @@ class DealsTable(HubSpotAPIResource):
 
         deals = hubspot.crm.deals.get_all(**api_kwargs)
         deals_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
+        logger.debug(f"[DealsTable] get_deals() — full scan capped at {effective_limit}")
         for deal in deals:
             try:
                 row = self._deal_to_dict(deal, hubspot_columns, association_targets)
                 deals_dict.append(row)
+                if len(deals_dict) >= effective_limit:
+                    logger.debug(f"[DealsTable] get_deals() — reached effective_limit={effective_limit}, stopping scan")
+                    break
             except Exception as e:
                 logger.error(f"Error processing deal {getattr(deal, 'id', 'unknown')}: {str(e)}")
                 raise ValueError(f"Failed to process deal {getattr(deal, 'id', 'unknown')}.") from e
@@ -2734,7 +2746,7 @@ class TicketsTable(HubSpotAPIResource):
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         MAX_ASSOCIATION_SCAN = 500
-        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
             msg = (
                 "Direct FK joins on HubSpot tickets using foreign key columns "
                 "(e.g. primary_company_id, primary_contact_id, primary_deal_id) are not supported. "
@@ -2776,10 +2788,14 @@ class TicketsTable(HubSpotAPIResource):
 
         tickets = hubspot.crm.tickets.get_all(**api_kwargs)
         tickets_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for ticket in tickets:
             try:
                 row = self._ticket_to_dict(ticket, hubspot_columns, association_targets)
                 tickets_dict.append(row)
+                if len(tickets_dict) >= effective_limit:
+                    break
             except Exception as e:
                 logger.warning(f"Error processing ticket {getattr(ticket, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -2988,7 +3004,7 @@ class TasksTable(HubSpotAPIResource):
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         MAX_ASSOCIATION_SCAN = 500
-        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
             msg = (
                 "Direct FK joins on HubSpot tasks using foreign key columns "
                 "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
@@ -3028,10 +3044,14 @@ class TasksTable(HubSpotAPIResource):
 
         tasks = self.handler._get_objects_all("tasks", **api_kwargs)
         tasks_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for task in tasks:
             try:
                 row = self._task_to_dict(task, hubspot_columns, association_targets)
                 tasks_dict.append(row)
+                if len(tasks_dict) >= effective_limit:
+                    break
             except Exception as e:
                 logger.warning(f"Error processing task {getattr(task, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -3244,7 +3264,7 @@ class CallsTable(HubSpotAPIResource):
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         MAX_ASSOCIATION_SCAN = 500
-        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
             msg = (
                 "Direct FK joins on HubSpot calls using foreign key columns "
                 "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
@@ -3283,10 +3303,14 @@ class CallsTable(HubSpotAPIResource):
 
         calls = self.handler._get_objects_all("calls", **api_kwargs)
         calls_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for call in calls:
             try:
                 row = self._call_to_dict(call, hubspot_columns, association_targets)
                 calls_dict.append(row)
+                if len(calls_dict) >= effective_limit:
+                    break
             except Exception as e:
                 logger.warning(f"Error processing call {getattr(call, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -3499,7 +3523,7 @@ class EmailsTable(HubSpotAPIResource):
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         MAX_ASSOCIATION_SCAN = 500
-        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
             msg = (
                 "Direct FK joins on HubSpot emails using foreign key columns "
                 "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
@@ -3538,10 +3562,14 @@ class EmailsTable(HubSpotAPIResource):
 
         emails = self.handler._get_objects_all("emails", **api_kwargs)
         emails_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for email in emails:
             try:
                 row = self._email_to_dict(email, hubspot_columns, association_targets)
                 emails_dict.append(row)
+                if len(emails_dict) >= effective_limit:
+                    break
             except Exception as e:
                 logger.warning(f"Error processing email {getattr(email, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -3754,7 +3782,7 @@ class MeetingsTable(HubSpotAPIResource):
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         MAX_ASSOCIATION_SCAN = 500
-        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
             msg = (
                 "Direct FK joins on HubSpot meetings using foreign key columns "
                 "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
@@ -3793,10 +3821,14 @@ class MeetingsTable(HubSpotAPIResource):
 
         meetings = self.handler._get_objects_all("meetings", **api_kwargs)
         meetings_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for meeting in meetings:
             try:
                 row = self._meeting_to_dict(meeting, hubspot_columns, association_targets)
                 meetings_dict.append(row)
+                if len(meetings_dict) >= effective_limit:
+                    break
             except Exception as e:
                 logger.warning(f"Error processing meeting {getattr(meeting, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -4004,7 +4036,7 @@ class NotesTable(HubSpotAPIResource):
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         MAX_ASSOCIATION_SCAN = 500
-        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
             msg = (
                 "Direct FK joins on HubSpot notes using foreign key columns "
                 "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
@@ -4043,10 +4075,14 @@ class NotesTable(HubSpotAPIResource):
 
         notes = self.handler._get_objects_all("notes", **api_kwargs)
         notes_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for note in notes:
             try:
                 row = self._note_to_dict(note, hubspot_columns, association_targets)
                 notes_dict.append(row)
+                if len(notes_dict) >= effective_limit:
+                    break
             except Exception as e:
                 logger.warning(f"Error processing note {getattr(note, 'id', 'unknown')}: {str(e)}")
                 continue
@@ -4255,7 +4291,7 @@ class LeadsTable(HubSpotAPIResource):
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
         MAX_ASSOCIATION_SCAN = 500
-        if association_targets and not normalized_conditions and (limit is None or limit > MAX_ASSOCIATION_SCAN):
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
             msg = (
                 "Direct FK joins on HubSpot leads using foreign key columns "
                 "(e.g. primary_contact_id, primary_company_id) are not supported. "
@@ -4294,10 +4330,14 @@ class LeadsTable(HubSpotAPIResource):
 
         leads = self.handler._get_objects_all("leads", **api_kwargs)
         leads_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for lead in leads:
             try:
                 row = self._lead_to_dict(lead, hubspot_columns, association_targets)
                 leads_dict.append(row)
+                if len(leads_dict) >= effective_limit:
+                    break
             except Exception as e:
                 logger.warning(f"Error processing lead {getattr(lead, 'id', 'unknown')}: {str(e)}")
                 continue

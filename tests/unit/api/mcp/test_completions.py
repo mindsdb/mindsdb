@@ -26,6 +26,7 @@ _PATCH_SESSION = "mindsdb.api.mcp.completions.SessionController"
 def _run(coro):
     return asyncio.run(coro)
 
+
 def _complete(ref, argument: dict, context_arguments: dict | None = None) -> list[str]:
     """Run a completion request and return the list of completion values."""
 

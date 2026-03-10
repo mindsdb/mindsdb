@@ -58,6 +58,7 @@ def _make_kb(name, project, metadata_cols=None, content_cols=None, id_col="id"):
 class TestListDatabases:
     def test_returns_only_data_type_databases(self):
         from mindsdb.api.mcp.mcp_instance import mcp
+
         with patch(_PATCH_SESSION) as SC:
             SC.return_value.database_controller.get_list.return_value = [
                 {"name": "pg_prod", "type": "data"},
@@ -121,9 +122,11 @@ class TestDbTableColumns:
             {"COLUMN_NAME": "id", "MYSQL_DATA_TYPE": "int"},
             {"COLUMN_NAME": "email", "MYSQL_DATA_TYPE": "varchar(255)"},
         ]
-        with patch(_PATCH_SESSION) as SC, \
-             patch(_PATCH_TABLE_RESPONSE, HandlerTableResponse), \
-             patch(_PATCH_RESPONSE_TYPE, RESPONSE_TYPE):
+        with (
+            patch(_PATCH_SESSION) as SC,
+            patch(_PATCH_TABLE_RESPONSE, HandlerTableResponse),
+            patch(_PATCH_RESPONSE_TYPE, RESPONSE_TYPE),
+        ):
             SC.return_value.integration_controller.get_data_handler.return_value.get_columns.return_value = (
                 _make_columns_table_response(rows)
             )

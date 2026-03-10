@@ -101,15 +101,11 @@ class DatabaseController:
 
     def get_integration(self, integration_id):
         # get integration by id
-        integration = self.integration_controller.get_by_id(integration_id)
-        if integration and integration.get("type", "data") == "data":
-            return {
-                "name": integration["name"],
-                "type": integration["type"],
-                "engine": integration["engine"],
-                "id": integration["id"],
-            }
-        return None
+
+        # TODO get directly from db?
+        for rec in self.get_list():
+            if rec["id"] == integration_id and rec["type"] == "data":
+                return {"name": rec["name"], "type": rec["type"], "engine": rec["engine"], "id": rec["id"]}
 
     def exists(self, db_name: str) -> bool:
         return db_name.lower() in self.get_dict()

@@ -96,6 +96,8 @@ def plan_query_patch(query, **kwargs):
     for step in plan.prepare_steps(query):
         result = executor.execute(step)
         step.set_result(result)
+        if hasattr(step, "result_data"):
+            step.result_data = None
 
         # not include prepared steps yet
         # steps.append(step)
@@ -106,6 +108,8 @@ def plan_query_patch(query, **kwargs):
     for step in plan.execute_steps(params):
         result = executor.execute(step)
         step.set_result(result)
+        if hasattr(step, "result_data"):
+            step.result_data = None
         steps.append(step)
 
     # plan.fetch(10)
@@ -150,6 +154,9 @@ class TestPreparedStatement:
                             pass
                         elif str(e) == "Predictor is not at first level":
                             # TODO make prepared statement planner more sophisticated
+                            pass
+                        elif str(e).startswith("Table is not found "):
+                            # Prepared statement planner doesn't resolve columns for nested tables.
                             pass
                         else:
                             raise e

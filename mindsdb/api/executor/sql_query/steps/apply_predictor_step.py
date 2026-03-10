@@ -19,7 +19,8 @@ from mindsdb.api.executor.planner.steps import (
     ApplyPredictorStep,
 )
 
-from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
+from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.utilities.types.column import Column
 from mindsdb.utilities.cache import get_cache, dataframe_checksum
 
 from .base import BaseStepCall
@@ -37,6 +38,11 @@ class ApplyPredictorBaseCall(BaseStepCall):
         agent = self.session.agents_controller.get_agent(predictor_name, project_name)
         if agent is not None:
             messages = df.to_dict("records")
+            if params is None:
+                params = {}
+            if "query_str" in self.context:
+                params["original_query"] = self.context["query_str"]
+
             predictions = self.session.agents_controller.get_completion(
                 agent, messages=messages, project_name=project_name, params=params
             )

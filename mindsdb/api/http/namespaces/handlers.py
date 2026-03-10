@@ -20,9 +20,25 @@ from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities.exception import EntityExistsError
+from mindsdb.utilities.config import config
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+
+def _resolve_handler_readme_path(handler_folder: str) -> Path:
+    handler_folder_name = Path(handler_folder).name
+    if handler_folder_name != handler_folder or ".." in handler_folder:
+        raise ValueError(f"Handler folder '{handler_folder}' is invalid.")
+
+    mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent
+    base_handlers_path = mindsdb_path.joinpath("integrations/handlers").resolve()
+    readme_path = base_handlers_path.joinpath(handler_folder_name).joinpath("README.md").resolve()
+
+    if base_handlers_path not in readme_path.parents:
+        raise ValueError(f"Handler folder '{handler_folder}' is invalid.")
+
+    return readme_path
 
 
 @ns_conf.route("/")
@@ -81,6 +97,52 @@ class HandlerInfo(Resource):
         del row["path"]
         del row["icon"]
         return row
+
+
+@ns_conf.route("/<handler_name>/readme")
+class HandlerReadme(Resource):
+    @ns_conf.param("handler_name", "Handler name")
+    @api_endpoint_metrics("GET", "/handlers/handler/readme")
+    def get(self, handler_name):
+        try:
+            handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+        except Exception:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                "Readme not found",
+                f"Handler '{handler_name}' not found",
+            )
+
+        def make_response(*, error_message=None, readme=None):
+            return {"name": handler_name, "readme": readme, "error_message": error_message}
+
+        if handler_meta is None:
+            error_message = f"Handler '{handler_name}' not found"
+            logger.warning(error_message)
+            return make_response(error_message=error_message)
+
+        handler_folder = handler_meta.get("import", {}).get("folder")
+        if handler_folder is None:
+            error_message = f"Handler '{handler_name}' does not define a folder"
+            logger.warning(error_message)
+            return make_response(error_message=error_message)
+
+        try:
+            readme_path = _resolve_handler_readme_path(handler_folder)
+        except ValueError as exc:
+            error_message = str(exc)
+            logger.warning(error_message)
+            return make_response(error_message=error_message)
+
+        try:
+            with open(readme_path, "r", encoding="utf-8") as readme_file:
+                readme_content = readme_file.read()
+        except FileNotFoundError:
+            error_message = f"README.md for handler '{handler_name}' not found"
+            logger.warning(error_message)
+            return make_response(error_message=error_message)
+
+        return make_response(readme=readme_content)
 
 
 @ns_conf.route("/<handler_name>/install")
@@ -176,6 +238,17 @@ class BYOMUpload(Resource):
     @ns_conf.doc("post_file")
     @api_endpoint_metrics("POST", "/handlers/byom/handler")
     def post(self, name):
+        if config["byom"]["enabled"] is not True:
+            return http_error(
+                HTTPStatus.FORBIDDEN,
+                "BYOM is disabled",
+                "BYOM is disabled"
+                if config.is_cloud
+                else (
+                    "BYOM is disabled on this server. To enable this feature, set the environment variable "
+                    "MINDSDB_BYOM_ENABLED=true, or change the value in the configuration file config['byom']['enabled'] = True"
+                ),
+            )
         params = prepare_formdata()
 
         code_file_path = params["code"]
@@ -207,6 +280,17 @@ class BYOMUpload(Resource):
             - code
             - modules
         """
+        if config["byom"]["enabled"] is not True:
+            return http_error(
+                HTTPStatus.FORBIDDEN,
+                "BYOM is disabled",
+                "BYOM is disabled"
+                if config.is_cloud
+                else (
+                    "BYOM is disabled on this server. To enable this feature, set the environment variable "
+                    "MINDSDB_BYOM_ENABLED=true, or change the value in the configuration file config['byom']['enabled'] = True"
+                ),
+            )
 
         params = prepare_formdata()
 

@@ -38,6 +38,12 @@ Now, you can use this established connection to query your table as follows,
 SELECT * FROM sheets_datasource.example_tbl
 ~~~~
 
+and for columns that contain special characters as follows,
+
+~~~~sql
+SELECT `column name` FROM sheets_datasource.example_tbl
+~~~~
+
 The name of the table will be the name of the relevant sheet, provided as an input to the `sheet_name` parameter.
 
 At the moment, only `SELECT` queries are allowed to be executed through `duckdb`. This, however, has no restriction on running machine learning algorithms against your data in Airtable using `CREATE PREDICTOR` statements.

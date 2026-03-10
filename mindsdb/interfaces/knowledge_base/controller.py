@@ -26,10 +26,8 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get
 
 from mindsdb.integrations.utilities.rag.settings import RerankerMode
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
-from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
+from mindsdb.interfaces.agents.utils.constants import DEFAULT_EMBEDDINGS_MODEL_PROVIDER, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
@@ -39,6 +37,8 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
+from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
@@ -47,6 +47,13 @@ from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMRe
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
+
+
+def _require_agent_extra(feature: str):
+    if create_chat_model is None:
+        raise ImportError(
+            f"{feature} requires the optional agent dependencies. Install them via `pip install mindsdb[kb]`."
+        )
 
 
 class KnowledgeBaseInputParams(BaseModel):
@@ -175,12 +182,19 @@ def rotate_provider_api_key(params):
     provider = params.get("provider").lower()
 
     if provider == "snowflake":
+        if "snowflake_account_id" in params:
+            # `snowflake_account_id` is the old name
+            params["account_id"] = params.pop("snowflake_account_id")
+
+        if "private_key" not in params:
+            return
+
         api_key = params.get("api_key")
         api_key2 = get_validated_jwt(
             api_key,
-            account=params.get("snowflake_account_id"),
+            account=params.get("account_id"),
             user=params.get("user"),
-            private_key=params.get("private_key"),
+            private_key=params["private_key"],
         )
         if api_key2 != api_key:
             # update keys
@@ -247,10 +261,13 @@ class KnowledgeBaseTable:
                 meta_data = pd.json_normalize(df["metadata"])
                 # exclude absent columns and used colunns
                 df_columns = list(df.columns)
-                meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
+                existed_meta_columns = list(set(meta_columns).intersection(meta_data.columns).difference(df_columns))
 
-                # add columns
-                df = df.join(meta_data[meta_columns])
+                # add existed columns
+                df = df.join(meta_data[existed_meta_columns])
+                # add absent columns
+                for col in set(meta_columns).difference(existed_meta_columns):
+                    df[col] = None
 
                 # put metadata in the end
                 df_columns.remove("metadata")
@@ -466,7 +483,7 @@ class KnowledgeBaseTable:
         dynamic_columns = self._kb.params.get("inserted_metadata", [])
 
         columns = set(user_columns) | set(dynamic_columns)
-        return [col.lower() for col in columns]
+        return list(columns)
 
     def score_documents(self, query_text, documents, reranking_model_params):
         rotate_provider_api_key(reranking_model_params)
@@ -699,7 +716,15 @@ class KnowledgeBaseTable:
             return
 
         if len(df) > MAX_INSERT_BATCH_SIZE:
-            raise ValueError("Input data is too large, please load data in batches")
+            # auto-batching
+            batch_size = MAX_INSERT_BATCH_SIZE
+
+            chunk_num = 0
+            while chunk_num * batch_size < len(df):
+                df2 = df[chunk_num * batch_size : (chunk_num + 1) * batch_size]
+                self.insert(df2, params=params)
+                chunk_num += 1
+            return
 
         try:
             run_query_id = ctx.run_query_id
@@ -710,6 +735,8 @@ class KnowledgeBaseTable:
 
         except AttributeError:
             ...
+
+        df.replace({np.nan: None}, inplace=True)
 
         # First adapt column names to identify content and metadata columns
         adapted_df, normalized_columns = self._adapt_column_names(df)
@@ -944,6 +971,14 @@ class KnowledgeBaseTable:
         if model_id is None:
             messages = list(df[TableField.CONTENT.value])
             embedding_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
+            new_api_key = rotate_provider_api_key(embedding_params)
+            if new_api_key:
+                # update key
+                if "embedding_model" not in self._kb.params:
+                    self._kb.params["embedding_model"] = {}
+                self._kb.params["embedding_model"]["api_key"] = new_api_key
+                flag_modified(self._kb, "params")
+                db.session.commit()
 
             llm_client = LLMClient(embedding_params, session=self.session)
             results = llm_client.embeddings(messages)
@@ -1017,9 +1052,7 @@ class KnowledgeBaseTable:
             ValueError: If the configuration is invalid or required components are missing
         """
         # Get embedding model from knowledge base
-        from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
-            construct_model_from_args,
-        )
+        from mindsdb.interfaces.knowledge_base.embedding_model_utils import construct_embedding_model_from_args
         from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
         from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 
@@ -1028,14 +1061,26 @@ class KnowledgeBaseTable:
             # Extract embedding model args from knowledge base table
             embedding_args = self._kb.embedding_model.learn_args.get("using", {})
             # Construct the embedding model directly
-            embeddings_model = construct_model_from_args(embedding_args)
+            embeddings_model = construct_embedding_model_from_args(embedding_args, session=self.session)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         elif embedding_model_params:
-            embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
+            embeddings_model = construct_embedding_model_from_args(
+                adapt_embedding_model_params(embedding_model_params), session=self.session
+            )
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
-            embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
-            logger.debug("Using default embedding model as knowledge base has no embedding model")
+            # Use default embedding model with default provider
+            # Default to OpenAI's text-embedding-3-small for OpenAI provider, otherwise let the provider choose
+            default_model_name = "text-embedding-3-small" if DEFAULT_EMBEDDINGS_MODEL_PROVIDER == "openai" else None
+            default_embedding_args = {
+                "provider": DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
+            }
+            if default_model_name:
+                default_embedding_args["model_name"] = default_model_name
+            embeddings_model = construct_embedding_model_from_args(default_embedding_args, session=self.session)
+            logger.debug(
+                f"Using default embedding model ({DEFAULT_EMBEDDINGS_MODEL_PROVIDER}) as knowledge base has no embedding model"
+            )
 
         # Update retrieval config with knowledge base parameters
         kb_params = {"vector_store_config": {"kb_table": self}}
@@ -1051,6 +1096,7 @@ class KnowledgeBaseTable:
                     llm_args["provider"] = get_llm_provider(llm_args)
                 else:
                     llm_args["provider"] = rag_config.llm_provider
+                _require_agent_extra("Building knowledge base retrieval pipelines")
                 rag_config.llm = create_chat_model(llm_args)
 
             # Create RAG pipeline
@@ -1112,14 +1158,14 @@ class KnowledgeBaseTable:
         # Convert everything else to string
         return str(value)
 
-    def create_index(self):
+    def create_index(self, params: dict = None):
         """
         Create an index on the knowledge base table
         :param index_name: name of the index
         :param params: parameters for the index
         """
         db_handler = self.get_vector_db()
-        db_handler.create_index(self._kb.vector_database_table)
+        db_handler.create_index(self._kb.vector_database_table, **params)
 
 
 class KnowledgeBaseController:
@@ -1171,9 +1217,6 @@ class KnowledgeBaseController:
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
 
-        # fill variables
-        params = variables_controller.fill_parameters(params)
-
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
@@ -1201,9 +1244,10 @@ class KnowledgeBaseController:
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
         params["embedding_model"] = embedding_params
+        rotate_provider_api_key(embedding_params)
 
         # if model_name is None:  # Legacy
-        self._check_embedding_model(
+        embed_info = self._check_embedding_model(
             project.name,
             params=embedding_params,
             kb_name=name,
@@ -1237,13 +1281,13 @@ class KnowledgeBaseController:
                     if vector_size is not None:
                         vector_db_params["vector_size"] = vector_size
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
-
-            else:
-                # create chroma db with same name
-                vector_table_name = "default_collection"
-                vector_db_name = self._create_persistent_chroma(name)
-                # memorize to remove it later
                 params["default_vector_storage"] = vector_db_name
+            else:
+                raise ValueError(
+                    "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
+                    "One of the options is to use pgvector: "
+                    "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
+                )
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:
@@ -1257,7 +1301,15 @@ class KnowledgeBaseController:
                 f"Unable to find database named {vector_db_name}, please make sure {vector_db_name} is defined"
             )
         # create table in vectordb before creating KB
+        if "default_vector_storage" in params:
+            # if vector db is a default - drop previous table, if exists
+            try:
+                vector_store_handler.drop_table(vector_table_name)
+            except Exception:
+                ...
         vector_store_handler.create_table(vector_table_name)
+        self._check_vector_table(embed_info, vector_store_handler, vector_table_name)
+
         if keyword_search_enabled:
             vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)
         vector_database_id = self.session.integration_controller.get(vector_db_name)["id"]
@@ -1282,6 +1334,27 @@ class KnowledgeBaseController:
         db.session.commit()
         return kb
 
+    def _check_vector_table(self, embed_info, vector_store_handler, vector_table_name):
+        query = Select(
+            targets=[Identifier(TableField.EMBEDDINGS.value)],
+            from_table=Identifier(parts=[vector_table_name]),
+            limit=Constant(1),
+        )
+        dimension = None
+        if hasattr(vector_store_handler, "get_dimension"):
+            dimension = vector_store_handler.get_dimension(vector_table_name)
+        else:
+            df = vector_store_handler.dispatch_select(query, [])
+            if len(df) > 0:
+                value = df[TableField.EMBEDDINGS.value][0]
+                if isinstance(value, str):
+                    value = json.loads(value)
+                dimension = len(value)
+        if dimension is not None and dimension != embed_info["dimension"]:
+            raise ValueError(
+                f"Dimension of embedding model doesn't match to dimension of vector table: {embed_info['dimension']} != {dimension}"
+            )
+
     def update(
         self,
         name: str,
@@ -1296,9 +1369,6 @@ class KnowledgeBaseController:
         :param params: The parameters to update
         :param preprocessing_config: Optional preprocessing configuration to validate and store
         """
-
-        # fill variables
-        params = variables_controller.fill_parameters(params)
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
@@ -1410,8 +1480,8 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _check_embedding_model(self, project_name, params: dict = None, kb_name=""):
-        """check embedding model for knowledge base"""
+    def _check_embedding_model(self, project_name, params: dict = None, kb_name="") -> dict:
+        """check embedding model for knowledge base, return embedding model info"""
 
         # if mindsdb model from old KB exists - drop it
         model_name = f"kb_embedding_{kb_name}"
@@ -1426,7 +1496,7 @@ class KnowledgeBaseController:
             raise ValueError("'provider' parameter is required for embedding model")
 
         # check available providers
-        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "ollama")
+        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "ollama", "snowflake")
         if params["provider"] not in avail_providers:
             raise ValueError(
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
@@ -1435,7 +1505,8 @@ class KnowledgeBaseController:
         llm_client = LLMClient(params, session=self.session)
 
         try:
-            llm_client.embeddings(["test"])
+            resp = llm_client.embeddings(["test"])
+            return {"dimension": len(resp[0])}
         except Exception as e:
             raise RuntimeError(f"Problem with embedding model config: {e}") from e
 
@@ -1465,9 +1536,10 @@ class KnowledgeBaseController:
         # drop objects if they were created automatically
         if "default_vector_storage" in kb.params:
             try:
-                handler = self.session.datahub.get(kb.params["default_vector_storage"]).integration_handler
-                handler.drop_table(kb.vector_database_table)
-                self.session.integration_controller.delete(kb.params["default_vector_storage"])
+                dn = self.session.datahub.get(kb.params["default_vector_storage"])
+                dn.integration_handler.drop_table(kb.vector_database_table)
+                if dn.ds_type != "pgvector":
+                    self.session.integration_controller.delete(kb.params["default_vector_storage"])
             except EntityNotExistsError:
                 pass
         if "created_embedding_model" in kb.params:
@@ -1538,10 +1610,10 @@ class KnowledgeBaseController:
 
         return data
 
-    def create_index(self, table_name, project_name):
+    def create_index(self, table_name, project_name, params=None):
         project_id = self.session.database_controller.get_project(project_name).id
         kb_table = self.get_table(table_name, project_id)
-        kb_table.create_index()
+        kb_table.create_index(params)
 
     def evaluate(self, table_name: str, project_name: str, params: dict = None) -> pd.DataFrame:
         """

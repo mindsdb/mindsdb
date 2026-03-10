@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import Optional, List, Dict, Any, Tuple
 import pandas as pd
 from pandas.api import types as pd_types
@@ -23,7 +24,11 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
 from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_tables import (
     ASSOCIATION_TABLE_CLASSES,
 )
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_utils import (
+    PRIMARY_ASSOCIATIONS_CONFIG,
+)
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, extract_comparison_conditions
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -34,6 +39,8 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import Select, Identifier, BinaryOperation, Star
+from mindsdb_sql_parser.ast import Join as SQLJoin
+
 
 logger = log.getLogger(__name__)
 
@@ -254,7 +261,6 @@ class HubspotHandler(MetaAPIHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}")
 
         try:
-            from mindsdb_sql_parser.ast import Join as SQLJoin
             if isinstance(ast, Select) and isinstance(ast.from_table, SQLJoin):
                 logger.debug("[HubSpotHandler] native_query() — routing to _execute_join_query")
                 return self._execute_join_query(ast)
@@ -264,7 +270,9 @@ class HubspotHandler(MetaAPIHandler):
             logger.error(f"Failed to execute native query: {str(e)}")
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}")
 
-    CORE_TABLES = frozenset({"companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"})
+    CORE_TABLES = frozenset(
+        {"companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"}
+    )
 
     def get_tables(self) -> Response:
         """Return list of tables available in the HubSpot integration."""
@@ -469,8 +477,6 @@ class HubspotHandler(MetaAPIHandler):
                             most_common_frequencies = None
                             non_null_values = [v for v in column_values if v is not None]
                             if non_null_values:
-                                from collections import Counter
-
                                 value_counts = Counter(non_null_values)
                                 top_5 = value_counts.most_common(5)
                                 if top_5:
@@ -852,12 +858,7 @@ class HubspotHandler(MetaAPIHandler):
         return Response(RESPONSE_TYPE.ERROR, error_message=error_msg)
 
     def _flatten_join_tree(self, from_node) -> List[Tuple[str, str, Any]]:
-        """Flatten nested Join AST nodes into an ordered list of (table_name, alias, on_condition).
-
-        The first entry always has on_condition=None (it is the FROM table).
-        Subsequent entries carry the ON condition linking them to the previous table.
-        """
-        from mindsdb_sql_parser.ast import Join as SQLJoin
+        """Flatten nested Join AST nodes into an ordered list of (table_name, alias, on_condition)."""
 
         result: List[Tuple[str, str, Any]] = []
 
@@ -882,24 +883,17 @@ class HubspotHandler(MetaAPIHandler):
         return result
 
     def _execute_join_query(self, ast: Select) -> Response:
-        """Execute a JOIN query using the HubSpot associations API.
-
-        Supported patterns (via association tables only):
-          2-way: CORE JOIN ASSOC  or  ASSOC JOIN CORE
-          3-way: CORE JOIN ASSOC JOIN CORE
-
-        Direct CORE JOIN CORE (using FK columns like primary_company_id) is rejected
-        with a helpful error showing the correct 3-way association table rewrite.
-        """
+        """Execute a JOIN query using the HubSpot associations API."""
         logger.debug(f"[HubSpotHandler] _execute_join_query() called")
-        from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, extract_comparison_conditions
 
         tables = self._flatten_join_tree(ast.from_table)
         if len(tables) < 2 or len(tables) > 3:
-            return Response(RESPONSE_TYPE.ERROR, error_message="Only 2- and 3-table joins via association tables are supported.")
+            return Response(
+                RESPONSE_TYPE.ERROR, error_message="Only 2- and 3-table joins via association tables are supported."
+            )
 
         alias_to_name: Dict[str, str] = {alias: name for name, alias, _ in tables}
-        is_main_alias = tables[0][1]  # alias of the FROM table (gets unqualified WHERE conditions)
+        is_main_alias = tables[0][1]
 
         def _parse_on(on_cond) -> Optional[Tuple[Optional[str], str, Optional[str], str]]:
             """Parse an ON equality into (left_alias, left_col, right_alias, right_col) or None."""
@@ -908,14 +902,15 @@ class HubspotHandler(MetaAPIHandler):
             a, b = on_cond.args
             if not (isinstance(a, Identifier) and isinstance(b, Identifier)):
                 return None
+
             def _split(ident):
                 parts = ident.parts
                 return (parts[0].lower(), parts[-1].lower()) if len(parts) >= 2 else (None, parts[0].lower())
+
             la, lc = _split(a)
             ra, rc = _split(b)
             return la, lc, ra, rc
 
-        # --- 2-table join ---
         if len(tables) == 2:
             (t1_name, t1_alias, _), (t2_name, t2_alias, on2) = tables
 
@@ -923,13 +918,11 @@ class HubspotHandler(MetaAPIHandler):
             if t1_name in self.CORE_TABLES and t2_name in self.CORE_TABLES:
                 return self._suggest_association_query(ast, t1_name, t1_alias, t2_name, t2_alias)
 
-            # One must be an association table, parse the ON condition
             parsed = _parse_on(on2)
             if not parsed:
                 return Response(RESPONSE_TYPE.ERROR, error_message="Unsupported JOIN condition.")
 
             la, lc, ra, rc = parsed
-            # Determine which side is the assoc table and which is the core table
             if t1_name in self._association_tables:
                 assoc_name, assoc_alias, assoc_col = t1_name, t1_alias, lc if la == t1_alias else rc
                 core_name, core_alias, core_col = t2_name, t2_alias, rc if la == t1_alias else lc
@@ -941,11 +934,17 @@ class HubspotHandler(MetaAPIHandler):
                 return Response(RESPONSE_TYPE.ERROR, error_message="Unknown table in JOIN.")
 
             limit = ast.limit.value if ast.limit else None
-            core_where = self._rewrite_where_for_table(ast.where, core_alias, is_main_table=(core_alias == is_main_alias))
-            assoc_where = self._rewrite_where_for_table(ast.where, assoc_alias, is_main_table=(assoc_alias == is_main_alias))
+            core_where = self._rewrite_where_for_table(
+                ast.where, core_alias, is_main_table=(core_alias == is_main_alias)
+            )
+            assoc_where = self._rewrite_where_for_table(
+                ast.where, assoc_alias, is_main_table=(assoc_alias == is_main_alias)
+            )
 
             # Fetch core table (filtered side)
-            core_df = self._tables[core_name].select(Select(targets=[Star()], from_table=Identifier(core_name), where=core_where))
+            core_df = self._tables[core_name].select(
+                Select(targets=[Star()], from_table=Identifier(core_name), where=core_where)
+            )
             if core_df.empty or core_col not in core_df.columns:
                 return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
@@ -966,19 +965,17 @@ class HubspotHandler(MetaAPIHandler):
             if assoc_df.empty:
                 return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-            # Merge: join core_df into assoc_df on the ON columns, prefix duplicate cols
-            merged = assoc_df.merge(core_df, left_on=assoc_col, right_on=core_col, how="inner", suffixes=("", f"_{core_alias}"))
+            merged = assoc_df.merge(
+                core_df, left_on=assoc_col, right_on=core_col, how="inner", suffixes=("", f"_{core_alias}")
+            )
             result_df = self._resolve_select_targets(ast.targets, merged, alias_to_name, tables)
             if limit:
                 result_df = result_df.head(limit)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
 
-        # --- 3-table join ---
         (t1_name, t1_alias, _), (t2_name, t2_alias, on2), (t3_name, t3_alias, on3) = tables
 
-        # Must be CORE + ASSOC + CORE pattern
         if t2_name not in self._association_tables:
-            # Could be reversed ordering; reject with guidance
             if t1_name in self.CORE_TABLES and t2_name in self.CORE_TABLES:
                 return self._suggest_association_query(ast, t1_name, t1_alias, t2_name, t2_alias)
             return Response(RESPONSE_TYPE.ERROR, error_message="Only CORE JOIN ASSOC JOIN CORE pattern is supported.")
@@ -988,15 +985,13 @@ class HubspotHandler(MetaAPIHandler):
         if not parsed2 or not parsed3:
             return Response(RESPONSE_TYPE.ERROR, error_message="Unsupported JOIN condition — expected simple equality.")
 
-        # ON2: links t1 → t2 (assoc). Determine which assoc column maps to t1.id
         la2, lc2, ra2, rc2 = parsed2
-        t1_fk_col = rc2 if la2 == t2_alias else lc2   # column in assoc table pointing to t1
-        t1_pk_col = lc2 if la2 == t1_alias else rc2   # column in t1 (usually "id")
+        t1_fk_col = rc2 if la2 == t2_alias else lc2
+        t1_pk_col = lc2 if la2 == t1_alias else rc2
 
-        # ON3: links t2 (assoc) → t3. Determine which assoc column maps to t3.id
         la3, lc3, ra3, rc3 = parsed3
-        t3_fk_col = lc3 if la3 == t2_alias else rc3   # column in assoc table pointing to t3
-        t3_pk_col = rc3 if la3 == t2_alias else lc3   # column in t3 (usually "id")
+        t3_fk_col = lc3 if la3 == t2_alias else rc3
+        t3_pk_col = rc3 if la3 == t2_alias else lc3
 
         if t1_name not in self._tables or t2_name not in self._tables or t3_name not in self._tables:
             return Response(RESPONSE_TYPE.ERROR, error_message="Unknown table in JOIN.")
@@ -1006,7 +1001,6 @@ class HubspotHandler(MetaAPIHandler):
         t2_where = self._rewrite_where_for_table(ast.where, t2_alias, is_main_table=(t2_alias == is_main_alias))
         t3_where = self._rewrite_where_for_table(ast.where, t3_alias, is_main_table=(t3_alias == is_main_alias))
 
-        # Step 1: fetch t1 with WHERE
         t1_df = self._tables[t1_name].select(Select(targets=[Star()], from_table=Identifier(t1_name), where=t1_where))
         if t1_df.empty or t1_pk_col not in t1_df.columns:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
@@ -1015,7 +1009,6 @@ class HubspotHandler(MetaAPIHandler):
         if not t1_ids:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        # Step 2: fetch assoc table filtered by t1 ids
         assoc_conditions: List[FilterCondition] = [FilterCondition(t1_fk_col, FilterOperator.IN, t1_ids)]
         if t2_where is not None:
             try:
@@ -1032,7 +1025,6 @@ class HubspotHandler(MetaAPIHandler):
         if not t3_ids:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        # Step 3: fetch t3 filtered by ids found in assoc table
         t3_conditions: List[FilterCondition] = [FilterCondition(t3_pk_col, FilterOperator.IN, t3_ids)]
         if t3_where is not None:
             try:
@@ -1045,7 +1037,6 @@ class HubspotHandler(MetaAPIHandler):
         if t3_df.empty:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        # Merge all three: t1 ← t2 → t3
         merged = t2_df.merge(t1_df, left_on=t1_fk_col, right_on=t1_pk_col, how="inner", suffixes=("", f"_{t1_alias}"))
         merged = merged.merge(t3_df, left_on=t3_fk_col, right_on=t3_pk_col, how="inner", suffixes=("", f"_{t3_alias}"))
 
@@ -1124,33 +1115,40 @@ class HubspotHandler(MetaAPIHandler):
 
         for table_name in all_tables:
             if table_name in self._association_tables:
-                # Association tables have a composite PK on both ID columns
                 id_cols = [c for c in self._tables[table_name].get_columns() if c.endswith("_id")]
                 for pos, col in enumerate(id_cols, start=1):
-                    rows.append({
-                        "TABLE_NAME": table_name,
-                        "COLUMN_NAME": col,
-                        "ORDINAL_POSITION": pos,
-                        "CONSTRAINT_NAME": f"pk_{table_name}",
-                    })
+                    rows.append(
+                        {
+                            "TABLE_NAME": table_name,
+                            "COLUMN_NAME": col,
+                            "ORDINAL_POSITION": pos,
+                            "CONSTRAINT_NAME": f"pk_{table_name}",
+                        }
+                    )
             elif table_name == "deal_stages":
                 for pos, col in enumerate(["pipeline_id", "stage_id"], start=1):
-                    rows.append({
-                        "TABLE_NAME": table_name,
-                        "COLUMN_NAME": col,
-                        "ORDINAL_POSITION": pos,
-                        "CONSTRAINT_NAME": f"pk_{table_name}",
-                    })
+                    rows.append(
+                        {
+                            "TABLE_NAME": table_name,
+                            "COLUMN_NAME": col,
+                            "ORDINAL_POSITION": pos,
+                            "CONSTRAINT_NAME": f"pk_{table_name}",
+                        }
+                    )
             else:
-                rows.append({
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": "id",
-                    "ORDINAL_POSITION": 1,
-                    "CONSTRAINT_NAME": f"pk_{table_name}",
-                })
+                rows.append(
+                    {
+                        "TABLE_NAME": table_name,
+                        "COLUMN_NAME": "id",
+                        "ORDINAL_POSITION": 1,
+                        "CONSTRAINT_NAME": f"pk_{table_name}",
+                    }
+                )
 
-        df = pd.DataFrame(rows) if rows else pd.DataFrame(
-            columns=["TABLE_NAME", "COLUMN_NAME", "ORDINAL_POSITION", "CONSTRAINT_NAME"]
+        df = (
+            pd.DataFrame(rows)
+            if rows
+            else pd.DataFrame(columns=["TABLE_NAME", "COLUMN_NAME", "ORDINAL_POSITION", "CONSTRAINT_NAME"])
         )
         return Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
@@ -1166,10 +1164,6 @@ class HubspotHandler(MetaAPIHandler):
             self.connect()
         except Exception as e:
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve foreign keys: {e}")
-
-        from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_utils import (
-            PRIMARY_ASSOCIATIONS_CONFIG,
-        )
 
         _ASSOC_TARGET_TO_TABLE = {
             "companies": "companies",
@@ -1192,15 +1186,16 @@ class HubspotHandler(MetaAPIHandler):
             if hasattr(table_obj, "meta_get_foreign_keys"):
                 for fk in table_obj.meta_get_foreign_keys(table_name):
                     col = fk.get("COLUMN_NAME")
-                    rows.append({
-                        "CHILD_TABLE_NAME": fk.get("TABLE_NAME", table_name),
-                        "CHILD_COLUMN_NAME": col,
-                        "PARENT_TABLE_NAME": fk.get("REFERENCED_TABLE_NAME"),
-                        "PARENT_COLUMN_NAME": fk.get("REFERENCED_COLUMN_NAME", "id"),
-                        "CONSTRAINT_NAME": f"fk_{table_name}_{col}",
-                    })
+                    rows.append(
+                        {
+                            "CHILD_TABLE_NAME": fk.get("TABLE_NAME", table_name),
+                            "CHILD_COLUMN_NAME": col,
+                            "PARENT_TABLE_NAME": fk.get("REFERENCED_TABLE_NAME"),
+                            "PARENT_COLUMN_NAME": fk.get("REFERENCED_COLUMN_NAME", "id"),
+                            "CONSTRAINT_NAME": f"fk_{table_name}_{col}",
+                        }
+                    )
 
-        # 2. Object-table primary_*_id FKs (derived from PRIMARY_ASSOCIATIONS_CONFIG)
         for table_name in sorted(all_tables):
             if table_name in self._association_tables or table_name in self._non_object_tables:
                 continue
@@ -1208,15 +1203,27 @@ class HubspotHandler(MetaAPIHandler):
                 parent_table = _ASSOC_TARGET_TO_TABLE.get(target_type)
                 if parent_table is None:
                     continue
-                rows.append({
-                    "CHILD_TABLE_NAME": table_name,
-                    "CHILD_COLUMN_NAME": column_name,
-                    "PARENT_TABLE_NAME": parent_table,
-                    "PARENT_COLUMN_NAME": "id",
-                    "CONSTRAINT_NAME": f"fk_{table_name}_{column_name}",
-                })
+                rows.append(
+                    {
+                        "CHILD_TABLE_NAME": table_name,
+                        "CHILD_COLUMN_NAME": column_name,
+                        "PARENT_TABLE_NAME": parent_table,
+                        "PARENT_COLUMN_NAME": "id",
+                        "CONSTRAINT_NAME": f"fk_{table_name}_{column_name}",
+                    }
+                )
 
-        df = pd.DataFrame(rows) if rows else pd.DataFrame(
-            columns=["CHILD_TABLE_NAME", "CHILD_COLUMN_NAME", "PARENT_TABLE_NAME", "PARENT_COLUMN_NAME", "CONSTRAINT_NAME"]
+        df = (
+            pd.DataFrame(rows)
+            if rows
+            else pd.DataFrame(
+                columns=[
+                    "CHILD_TABLE_NAME",
+                    "CHILD_COLUMN_NAME",
+                    "PARENT_TABLE_NAME",
+                    "PARENT_COLUMN_NAME",
+                    "CONSTRAINT_NAME",
+                ]
+            )
         )
         return Response(RESPONSE_TYPE.TABLE, data_frame=df)

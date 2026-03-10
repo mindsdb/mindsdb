@@ -1,9 +1,10 @@
 import os
+import json
 import time
 import tempfile
 import threading
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Generator
 
 import psutil
 
@@ -54,12 +55,11 @@ def set_process_mark(folder: str, mark: str) -> None:
     return mark
 
 
-def delete_process_mark(folder: str = "learn", mark: Optional[str] = None):
+def delete_process_mark(folder: str = "learn", mark: str | None = None):
     if mark is None:
         mark = _get_process_mark_id()
     p = get_tmp_dir().joinpath(f"processes/{folder}/").joinpath(mark)
-    if p.exists():
-        p.unlink()
+    p.unlink(missing_ok=True)
 
 
 def clean_process_marks():
@@ -72,14 +72,14 @@ def clean_process_marks():
         if path.is_dir() is False:
             return
         for file in path.iterdir():
-            file.unlink()
+            file.unlink(missing_ok=True)
 
 
-def get_processes_dir_files_generator() -> Tuple[Path, int, int]:
+def get_processes_dir_files_generator() -> Generator[tuple[Path, int, int], None, None]:
     """Get files from processes dir
 
     Yields:
-        Tuple[Path, int, int]: file object, process is and thread id
+        tuple(Path, int, int): file object, process id and thread id
     """
     p = get_tmp_dir().joinpath("processes/")
     if p.exists() is False:
@@ -94,11 +94,11 @@ def get_processes_dir_files_generator() -> Tuple[Path, int, int]:
             yield file, process_id, thread_id
 
 
-def clean_unlinked_process_marks() -> List[int]:
+def clean_unlinked_process_marks() -> list[int]:
     """delete marks that does not have corresponded processes/threads
 
     Returns:
-        List[int]: list with ids of unexisting processes
+        list[int]: list with ids of unexisting processes
     """
     deleted_pids = []
 
@@ -114,7 +114,7 @@ def clean_unlinked_process_marks() -> List[int]:
             except StopIteration:
                 logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
                 deleted_pids.append(process_id)
-                file.unlink()
+                file.unlink(missing_ok=True)
 
         except psutil.AccessDenied:
             logger.warning(f"access to {process_id} denied")
@@ -123,13 +123,15 @@ def clean_unlinked_process_marks() -> List[int]:
         except psutil.NoSuchProcess:
             logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
             deleted_pids.append(process_id)
-            file.unlink()
+            file.unlink(missing_ok=True)
     return deleted_pids
 
 
-def create_pid_file():
+def create_pid_file(config):
     """
     Create mindsdb process pid file. Check if previous process exists and is running
+    If pid_file_content is provided, it will be used to create the pid file with the content as key-value pairs.
+    If pid_file_content is not provided, the pid file will be created with the pid number only.
     """
 
     if os.environ.get("USE_PIDFILE") != "1":
@@ -140,17 +142,46 @@ def create_pid_file():
     pid_file = p.joinpath("pid")
     if pid_file.exists():
         # if process exists raise exception
-        pid = pid_file.read_text().strip()
+        pid_file_data_str = pid_file.read_text().strip()
+        pid = None
         try:
-            psutil.Process(int(pid))
-            raise Exception(f"Found PID file with existing process: {pid} {pid_file}")
-        except (psutil.Error, ValueError):
-            ...
+            pid_file_data = json.loads(pid_file_data_str)
+            if isinstance(pid_file_data, dict):
+                pid = pid_file_data.get("pid")
+            else:
+                pid = pid_file_data
+        except json.JSONDecodeError:
+            # is it just pid number (old approach)?
+            try:
+                pid = int(pid_file_data_str)
+            except Exception:
+                pass
+            logger.warning(f"Found existing PID file {pid_file} but it is not a valid JSON, removing")
 
-        logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
-        pid_file.unlink()
+        if pid is not None:
+            try:
+                psutil.Process(int(pid))
+                raise Exception(f"Found PID file with existing process: {pid} {pid_file}")
+            except (psutil.Error, ValueError):
+                pass
+            logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
 
-    pid_file.write_text(str(os.getpid()))
+        pid_file.unlink(missing_ok=True)
+
+    pid_file_content = config["pid_file_content"]
+    if pid_file_content is None or len(pid_file_content) == 0:
+        pid_file_data_str = str(os.getpid())
+    else:
+        pid_file_data = {"pid": os.getpid()}
+        for key, value in pid_file_content.items():
+            value_path = value.split(".")
+            value_obj = config
+            for path_part in value_path:
+                value_obj = value_obj.get(path_part) if value_obj else None
+            pid_file_data[key] = value_obj
+
+        pid_file_data_str = json.dumps(pid_file_data)
+    pid_file.write_text(pid_file_data_str)
 
 
 def delete_pid_file():
@@ -166,12 +197,23 @@ def delete_pid_file():
     if not pid_file.exists():
         return
 
-    pid = pid_file.read_text().strip()
-    if pid != str(os.getpid()):
+    pid_file_data_str = pid_file.read_text().strip()
+    pid = None
+    try:
+        pid_file_data = json.loads(pid_file_data_str)
+        if isinstance(pid_file_data, dict):
+            pid = pid_file_data.get("pid")
+        else:
+            # It's a simple number (old format or pid_file_content=None format)
+            pid = pid_file_data
+    except json.JSONDecodeError:
+        logger.warning(f"Found existing PID file {pid_file} but it is not a valid JSON")
+
+    if pid is not None and str(pid) != str(os.getpid()):
         logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
         return
 
-    pid_file.unlink()
+    pid_file.unlink(missing_ok=True)
 
 
 def __is_within_directory(directory, target):

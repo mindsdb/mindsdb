@@ -1,7 +1,6 @@
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.exceptions import ParsingException
 from mindsdb_sql_parser.ast.base import ASTNode
-
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.sql_query.result_set import Column

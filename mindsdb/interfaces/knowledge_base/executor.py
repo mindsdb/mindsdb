@@ -167,6 +167,19 @@ class KnowledgeBaseQueryExecutor:
 
         where = None
         for condition in conditions:
+            arg0 = condition.args[0]
+
+            # is it json operator on metadata
+            if isinstance(arg0, BinaryOperation) and arg0.op in ("->", "->>"):
+                op_arg0, op_arg1 = arg0.args
+                if (
+                    isinstance(op_arg0, Identifier)
+                    and isinstance(op_arg1, Constant)
+                    and op_arg0.parts[-1].lower() == "metadata"
+                ):
+                    # replace to metadata column
+                    condition.args[0] = Identifier(parts=[op_arg1.value])
+
             if where is None:
                 where = condition
             else:

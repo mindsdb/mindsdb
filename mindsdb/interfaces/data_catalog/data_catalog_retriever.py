@@ -84,11 +84,11 @@ class DataCatalogRetriever:
         tables_metadata_str = ""
 
         # Convert all DataFrame column names to uppercase for consistency.
-        tables_df.columns = tables_df.columns.str.upper()
-        columns_df.columns = columns_df.columns.str.upper()
-        column_stats_df.columns = column_stats_df.columns.str.upper()
-        primary_keys_df.columns = primary_keys_df.columns.str.upper()
-        foreign_keys_df.columns = foreign_keys_df.columns.str.upper()
+        tables_df.columns = tables_df.columns.astype(str).str.upper()
+        columns_df.columns = columns_df.columns.astype(str).str.upper()
+        column_stats_df.columns = column_stats_df.columns.astype(str).str.upper()
+        primary_keys_df.columns = primary_keys_df.columns.astype(str).str.upper()
+        foreign_keys_df.columns = foreign_keys_df.columns.astype(str).str.upper()
 
         for _, table_row in tables_df.iterrows():
             table_columns_df = columns_df[columns_df["TABLE_NAME"] == table_row["TABLE_NAME"]]
@@ -173,10 +173,14 @@ class DataCatalogRetriever:
         """
         Construct a formatted string representation of the columns for a single table.
         """
-        columns_str = "\n\nColumns:"
+        columns_str = "\n\nColumns:\n"
         for _, column_row in columns_df.iterrows():
             # Ideally, there should be only one stats row per column.
-            stats_row = column_stats_df[column_stats_df["COLUMN_NAME"] == column_row["COLUMN_NAME"]].iloc[0]
+            stats_row = column_stats_df[column_stats_df["COLUMN_NAME"] == column_row["COLUMN_NAME"]]
+            if len(stats_row) == 0:
+                stats_row = pd.Series()
+            else:
+                stats_row = stats_row.iloc[0]
             columns_str += self._construct_metadata_string_for_column(
                 column_row,
                 stats_row,

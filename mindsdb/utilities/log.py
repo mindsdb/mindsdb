@@ -1,5 +1,9 @@
+import re
+import os
 import json
 import logging
+import threading
+from typing import Any
 from logging.config import dictConfig
 
 from mindsdb.utilities.config import config as app_config
@@ -50,6 +54,131 @@ FORMATTERS = {
 }
 
 
+class LogSanitizer:
+    """Log Sanitizer"""
+
+    SENSITIVE_KEYS = {
+        "password",
+        "passwd",
+        "pwd",
+        "token",
+        "access_token",
+        "refresh_token",
+        "bearer_token",
+        "api_key",
+        "apikey",
+        "api-key",
+        "openai_api_key",
+        "secret",
+        "secret_key",
+        "client_secret",
+        "credentials",
+        "auth",
+        "authorization",
+        "private_key",
+        "private-key",
+        "session_id",
+        "sessionid",
+        "credit_card",
+        "card_number",
+        "cvv",
+    }
+
+    def __init__(self, mask: str | None = None):
+        self.mask = mask or "********"
+        self._compile_patterns()
+
+    def _compile_patterns(self):
+        self.search_pattern = re.compile(
+            r"\b(" + "|".join(re.escape(key) for key in self.SENSITIVE_KEYS) + r")\b", re.IGNORECASE
+        )
+        self.patterns = []
+        for key in self.SENSITIVE_KEYS:
+            # Patterns for: key=value, key: value, "key": "value", 'key': 'value'
+            # Note: negative lookahead (?!%) excludes Python format placeholders like %s, %d, etc.
+            patterns = [
+                re.compile(f'{key}["\s]*[:=]["\s]*(?!%)([^\s,}}\\]"\n]+)', re.IGNORECASE),
+                re.compile(f'"{key}"["\s]*:["\s]*"([^"]+)"', re.IGNORECASE),
+                re.compile(f"'{key}'['\s]*:['\s]*'([^']+)'", re.IGNORECASE),
+            ]
+            self.patterns.extend(patterns)
+
+    def _replace(self, m) -> str:
+        return m.group(0).replace(m.group(1), self.mask)
+
+    def sanitize_text(self, text: str) -> str:
+        if self.search_pattern.search(text):
+            for pattern in self.patterns:
+                text = pattern.sub(self._replace, text)
+        return text
+
+    def sanitize_dict(self, data: dict) -> dict:
+        if not isinstance(data, dict):
+            return data
+
+        sanitized = {}
+        for key, value in data.items():
+            if any(sensitive in str(key).lower() for sensitive in self.SENSITIVE_KEYS):
+                sanitized[key] = self.mask
+            elif isinstance(value, dict):
+                sanitized[key] = self.sanitize_dict(value)
+            elif isinstance(value, list):
+                sanitized[key] = [self.sanitize_dict(item) if isinstance(item, dict) else item for item in value]
+            else:
+                sanitized[key] = value
+        return sanitized
+
+    def sanitize(self, data: Any) -> Any:
+        if isinstance(data, dict):
+            return self.sanitize_dict(data)
+        elif isinstance(data, str):
+            return self.sanitize_text(data)
+        elif isinstance(data, (list, tuple)):
+            return type(data)(self.sanitize(item) for item in data)
+        return data
+
+
+class SanitizingMixin:
+    """Mixin for sanitizing log records."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sanitizer = LogSanitizer()
+
+    def sanitize_record(self, record):
+        """Sanitize a log record before emitting."""
+        if (
+            hasattr(record, "args")
+            and isinstance(record.args, (list, tuple))
+            and len(record.args) > 0
+            and isinstance(record.msg, str)
+        ):
+            record.msg = record.msg % record.args
+            record.args = []
+
+        if isinstance(record.msg, str):
+            record.msg = self.sanitizer.sanitize_text(record.msg)
+        elif isinstance(record.msg, dict):
+            record.msg = self.sanitizer.sanitize_dict(record.msg)
+
+        if hasattr(record, "args") and record.args:
+            record.args = self.sanitizer.sanitize(record.args)
+
+        return record
+
+
+class StreamSanitizingHandler(SanitizingMixin, logging.StreamHandler):
+    def emit(self, record):
+        record = self.sanitize_record(record)
+        super().emit(record)
+
+
+class FileSanitizingHandler(SanitizingMixin, logging.handlers.RotatingFileHandler):
+    def emit(self, record):
+        record = self.sanitize_record(record)
+        super().emit(record)
+
+
 def get_console_handler_config_level() -> int:
     console_handler_config = app_config["logging"]["handlers"]["console"]
     return getattr(logging, console_handler_config["level"])
@@ -73,7 +202,7 @@ def get_handlers_config(process_name: str) -> dict:
     console_handler_config_level = getattr(logging, console_handler_config["level"])
     if console_handler_config["enabled"] is True:
         handlers_config["console"] = {
-            "class": "logging.StreamHandler",
+            "class": "mindsdb.utilities.log.StreamSanitizingHandler",
             "formatter": console_handler_config.get("formatter", "default"),
             "level": console_handler_config_level,
         }
@@ -89,7 +218,7 @@ def get_handlers_config(process_name: str) -> dict:
             else:
                 file_name = f"{file_name}_{process_name}"
         handlers_config["file"] = {
-            "class": "logging.handlers.RotatingFileHandler",
+            "class": "mindsdb.utilities.log.FileSanitizingHandler",
             "formatter": "file",
             "level": file_handler_config_level,
             "filename": app_config.paths["log"] / file_name,
@@ -416,3 +545,92 @@ def log_system_info(logger: logging.Logger) -> None:
 
     except Exception as e:
         logger.debug(f"Failed to get system information: {e}")
+
+
+def resources_log_thread(stop_event: threading.Event, interval: int = 60):
+    """Log resources information to the logger
+
+    Args:
+        stop_event (Event): Event to stop the thread
+        interval (int): Interval in seconds to log resources information
+
+    Returns:
+        None
+
+    Note:
+        Output shows:
+            - RAM: total, available, used memory in GB and memory usage percentage
+            - Consumed RAM: sum of rss, and percentage of total memory used
+            - CPU usage: average CPU usage for last period
+            - Active queries: number of active SQL queries
+    """
+    from mindsdb.utilities.fs import get_tmp_dir
+
+    logger = getLogger(__name__)
+    while stop_event.wait(timeout=interval) is False:
+        try:
+            import psutil
+
+            main_process = psutil.Process(os.getpid())
+            children = main_process.children(recursive=True)
+
+            total_memory_info = {
+                "main_process": {
+                    "pid": main_process.pid,
+                    "name": main_process.name(),
+                    "memory_info": main_process.memory_info(),
+                    "memory_percent": main_process.memory_percent(),
+                },
+                "children": [],
+                "total_memory": {"rss": 0, "vms": 0, "percent": 0},
+            }
+
+            for child in children:
+                try:
+                    child_info = {
+                        "pid": child.pid,
+                        "name": child.name(),
+                        "memory_info": child.memory_info(),
+                        "memory_percent": child.memory_percent(),
+                    }
+                    total_memory_info["children"].append(child_info)
+
+                    total_memory_info["total_memory"]["rss"] += child.memory_info().rss
+                    total_memory_info["total_memory"]["vms"] += child.memory_info().vms
+                    total_memory_info["total_memory"]["percent"] += child.memory_percent()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            total_memory_info["total_memory"]["rss"] += main_process.memory_info().rss
+            total_memory_info["total_memory"]["vms"] += main_process.memory_info().vms
+            total_memory_info["total_memory"]["percent"] += main_process.memory_percent()
+
+            memory = psutil.virtual_memory()
+            total_memory_gb = memory.total / (1024**3)
+            available_memory_gb = memory.available / (1024**3)
+            used_memory_gb = memory.used / (1024**3)
+            memory_percent = memory.percent
+            cpu_usage = psutil.cpu_percent()
+
+            active_http_queries = 0
+            p = get_tmp_dir().joinpath("processes/http_query/")
+            if p.exists() and p.is_dir():
+                for _ in p.iterdir():
+                    active_http_queries += 1
+
+            active_mysql_queries = 0
+            p = get_tmp_dir().joinpath("processes/mysql_query/")
+            if p.exists() and p.is_dir():
+                for _ in p.iterdir():
+                    active_mysql_queries += 1
+
+            level = app_config["logging"]["resources_log"]["level"]
+            logger.log(
+                logging.getLevelName(level),
+                f"RAM: {total_memory_gb:.1f}GB total, {available_memory_gb:.1f}GB available, {used_memory_gb:.1f}GB used ({memory_percent:.1f}%)\n"
+                f"Consumed RAM: {total_memory_info['total_memory']['rss'] / (1024**2):.1f}Mb, {total_memory_info['total_memory']['percent']:.2f}%\n"
+                f"CPU usage: {cpu_usage}% {interval}s\n"
+                f"Active queries: {active_http_queries}/HTTP {active_mysql_queries}/MySQL",
+            )
+        except Exception as e:
+            logger.debug(f"Failed to get memory information: {e}")

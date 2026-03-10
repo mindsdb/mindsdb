@@ -4,11 +4,7 @@ import pandas as pd
 
 from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition,
-    FilterOperator,
-    SortColumn
-)
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 from mindsdb.utilities import log
 
 
@@ -26,7 +22,7 @@ class ConfluenceSpacesTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'spaces' resource of the Confluence API.
@@ -50,9 +46,7 @@ class ConfluenceSpacesTable(APIResource):
                     ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'id'.")
 
                 condition.applied = True
 
@@ -64,9 +58,7 @@ class ConfluenceSpacesTable(APIResource):
                     keys = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'key'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'key'.")
 
                 condition.applied = True
 
@@ -75,9 +67,7 @@ class ConfluenceSpacesTable(APIResource):
                     space_type = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'type'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'type'.")
 
                 condition.applied = True
 
@@ -86,9 +76,7 @@ class ConfluenceSpacesTable(APIResource):
                     status = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'status'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'status'.")
 
                 condition.applied = True
 
@@ -106,12 +94,7 @@ class ConfluenceSpacesTable(APIResource):
                     break
 
         spaces = client.get_spaces(
-            ids=ids,
-            keys=keys,
-            space_type=space_type,
-            status=status,
-            sort_condition=sort_condition,
-            limit=limit
+            ids=ids, keys=keys, space_type=space_type, status=status, sort_condition=sort_condition, limit=limit
         )
 
         spaces_df = pd.json_normalize(spaces, sep="_")
@@ -153,7 +136,7 @@ class ConfluencePagesTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'pages' resource of the Confluence API.
@@ -177,9 +160,7 @@ class ConfluencePagesTable(APIResource):
                     page_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'page_id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'page_id'.")
 
                 condition.applied = True
 
@@ -191,9 +172,7 @@ class ConfluencePagesTable(APIResource):
                     space_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'spaceId'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'spaceId'.")
 
                 condition.applied = True
 
@@ -205,9 +184,7 @@ class ConfluencePagesTable(APIResource):
                     statuses = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'status'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'status'.")
 
                 condition.applied = True
 
@@ -216,9 +193,7 @@ class ConfluencePagesTable(APIResource):
                     title = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'title'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'title'.")
 
                 condition.applied = True
 
@@ -226,7 +201,7 @@ class ConfluencePagesTable(APIResource):
         if sort:
             for sort_column in sort:
                 if sort_column.column in ["id", "title", "createdAt"]:
-                    sort_condition = sort_column.column if sort_column != "createdAt" else "created-date"
+                    sort_condition = sort_column.column if sort_column.column != "createdAt" else "created-date"
                     if not sort_column.ascending:
                         sort_condition = f"-{sort_condition}"
 
@@ -239,7 +214,7 @@ class ConfluencePagesTable(APIResource):
             statuses=statuses,
             title=title,
             sort_condition=sort_condition,
-            limit=limit
+            limit=limit,
         )
 
         pages_df = pd.json_normalize(pages, sep="_")
@@ -290,7 +265,7 @@ class ConfluenceBlogPostsTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'blogposts' resource of the Confluence API.
@@ -314,9 +289,7 @@ class ConfluenceBlogPostsTable(APIResource):
                     post_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'id'.")
 
                 condition.applied = True
 
@@ -328,9 +301,7 @@ class ConfluenceBlogPostsTable(APIResource):
                     space_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'spaceKey'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'spaceKey'.")
 
                 condition.applied = True
 
@@ -342,9 +313,7 @@ class ConfluenceBlogPostsTable(APIResource):
                     statuses = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'status'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'status'.")
 
                 condition.applied = True
 
@@ -353,9 +322,7 @@ class ConfluenceBlogPostsTable(APIResource):
                     title = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'title'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'title'.")
 
                 condition.applied = True
 
@@ -363,7 +330,7 @@ class ConfluenceBlogPostsTable(APIResource):
         if sort:
             for sort_column in sort:
                 if sort_column.column in ["id", "title", "createdAt"]:
-                    sort_condition = sort_column.column if sort_column != "createdAt" else "created-date"
+                    sort_condition = sort_column.column if sort_column.column != "createdAt" else "created-date"
                     if not sort_column.ascending:
                         sort_condition = f"-{sort_condition}"
 
@@ -376,7 +343,7 @@ class ConfluenceBlogPostsTable(APIResource):
             statuses=statuses,
             title=title,
             sort_condition=sort_condition,
-            limit=limit
+            limit=limit,
         )
 
         blogposts_df = pd.json_normalize(blogposts, sep="_")
@@ -422,7 +389,7 @@ class ConfluenceWhiteboardsTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'whiteboards' resource of the Confluence API.
@@ -446,9 +413,7 @@ class ConfluenceWhiteboardsTable(APIResource):
                     whiteboard_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'id'.")
 
                 condition.applied = True
 
@@ -499,7 +464,7 @@ class ConfluenceDatabasesTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'databases' resource of the Confluence API.
@@ -523,9 +488,7 @@ class ConfluenceDatabasesTable(APIResource):
                     database_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'id'.")
 
                 condition.applied = True
 
@@ -576,7 +539,7 @@ class ConfluenceTasksTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'tasks' resource of the Confluence API.
@@ -608,9 +571,7 @@ class ConfluenceTasksTable(APIResource):
                     task_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'id'.")
 
                 condition.applied = True
 
@@ -622,9 +583,7 @@ class ConfluenceTasksTable(APIResource):
                     space_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'spaceId'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'spaceId'.")
 
                 condition.applied = True
 
@@ -636,9 +595,7 @@ class ConfluenceTasksTable(APIResource):
                     page_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'pageId'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'pageId'.")
 
                 condition.applied = True
 
@@ -650,9 +607,7 @@ class ConfluenceTasksTable(APIResource):
                     blogpost_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'blogPostId'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'blogPostId'.")
 
                 condition.applied = True
 
@@ -664,9 +619,7 @@ class ConfluenceTasksTable(APIResource):
                     created_by_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'createdBy'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'createdBy'.")
 
                 condition.applied = True
 
@@ -678,9 +631,7 @@ class ConfluenceTasksTable(APIResource):
                     assigned_to_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'assignedTo'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'assignedTo'.")
 
                 condition.applied = True
 
@@ -692,9 +643,7 @@ class ConfluenceTasksTable(APIResource):
                     completed_by_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'completedBy'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'completedBy'.")
 
                 condition.applied = True
 
@@ -703,9 +652,7 @@ class ConfluenceTasksTable(APIResource):
                     status = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'status'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'status'.")
 
                 condition.applied = True
 
@@ -718,7 +665,7 @@ class ConfluenceTasksTable(APIResource):
             assigned_to_ids=assigned_to_ids,
             completed_by_ids=completed_by_ids,
             status=status,
-            limit=limit
+            limit=limit,
         )
         tasks_df = pd.json_normalize(tasks, sep="_")
 

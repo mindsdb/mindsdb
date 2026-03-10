@@ -183,11 +183,10 @@ class AgentTaskManager(InMemoryTaskManager):
                 if isinstance(item, dict) and "artifact" in item and "parts" in item["artifact"]:
                     item["artifact"]["parts"] = [to_serializable(p) for p in item["artifact"]["parts"]]
                 yield to_serializable(item)
-        except Exception as e:
-            error_text = "An error occurred while streaming the response:"
-            logger.exception(error_text)
-            # Ensure all parts are plain dicts
-            parts = [{"type": "text", "text": f"{error_text} {e}"}]
+        except TimeoutError as e:
+            logger.error(f"Timeout error while streaming the response: {e}")
+            error_text = "The request timed out. The agent is taking longer than expected to respond. Please try again or increase the timeout."
+            parts = [{"type": "text", "text": error_text}]
             parts = [to_serializable(part) for part in parts]
             artifact = {
                 "parts": parts,
@@ -199,6 +198,59 @@ class AgentTaskManager(InMemoryTaskManager):
                 "error": {
                     "id": task_send_params.id,
                     "artifact": artifact,
+                    "error_type": "timeout",
+                },
+            }
+            yield error_result
+        except ConnectionError as e:
+            logger.error(f"Connection error while streaming the response: {e}")
+            error_text = "Failed to connect to the agent. Please check if the agent is running and accessible."
+            parts = [{"type": "text", "text": error_text}]
+            parts = [to_serializable(part) for part in parts]
+            artifact = {
+                "parts": parts,
+                "index": 0,
+                "append": False,
+            }
+            error_result = {
+                "id": request.id,
+                "error": {
+                    "id": task_send_params.id,
+                    "artifact": artifact,
+                    "error_type": "connection",
+                },
+            }
+            yield error_result
+        except Exception as e:
+            logger.exception("An error occurred while streaming the response:")
+            # Provide more specific error messages based on error type
+            if "API key" in str(e) or "authentication" in str(e).lower():
+                error_text = f"Authentication error: {str(e)}"
+                error_category = "authentication"
+            elif "404" in str(e) or "not found" in str(e).lower():
+                error_text = f"Resource not found: {str(e)}"
+                error_category = "not_found"
+            elif "rate limit" in str(e).lower() or "429" in str(e):
+                error_text = f"Rate limit exceeded: {str(e)}"
+                error_category = "rate_limit"
+            else:
+                error_text = f"An error occurred while streaming the response: {str(e)}"
+                error_category = "general"
+
+            # Ensure all parts are plain dicts
+            parts = [{"type": "text", "text": error_text}]
+            parts = [to_serializable(part) for part in parts]
+            artifact = {
+                "parts": parts,
+                "index": 0,
+                "append": False,
+            }
+            error_result = {
+                "id": request.id,
+                "error": {
+                    "id": task_send_params.id,
+                    "artifact": artifact,
+                    "error_type": error_category,
                 },
             }
             yield error_result

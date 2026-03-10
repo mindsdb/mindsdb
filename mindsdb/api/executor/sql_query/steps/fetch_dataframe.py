@@ -13,6 +13,7 @@ from mindsdb_sql_parser.ast import (
 from mindsdb.api.executor.planner.steps import FetchDataframeStep
 from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.exceptions import UnknownError
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
@@ -52,6 +53,10 @@ def get_fill_param_fnc(steps_data):
     def fill_params(node, callstack=None, **kwargs):
         if not isinstance(node, Parameter):
             return
+
+        if not isinstance(node.value, Result):
+            # is simple parameter and not set
+            raise ValueError(f"Parameter is not set: {node.value}")
 
         rs = steps_data[node.value.step_num]
         items = [Constant(i) for i in rs.get_column_values(col_idx=0)]

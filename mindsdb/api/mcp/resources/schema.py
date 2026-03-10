@@ -51,6 +51,8 @@ def db_tables(database_name: str) -> list[TableInfo]:
     ctx.set_default()
     session = SessionController()
     datanode = session.datahub.get(database_name)
+    if datanode is None:
+        raise ValueError(f"Database '{database_name}' is not found.")
     all_tables = datanode.get_tables()
     all_tables = [
         {

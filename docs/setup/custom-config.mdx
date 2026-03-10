@@ -77,6 +77,7 @@ The `locks` parameter is used to store lock files to prevent race conditions whe
 
 ```bash
     "auth":{
+        "http_auth_type": "session" | "token"| "session_or_token",
         "http_auth_enabled": true,
         "username": "username",
         "password": "password"
@@ -85,13 +86,17 @@ The `locks` parameter is used to store lock files to prevent race conditions whe
 
 The `auth` parameter controls the authentication settings for APIs in MindsDB.
 
+Users can define the authentication type by setting the `http_auth_type` parameter to one of the following values:
+
+* `session_or_token` is the default value. When a user logs in to MindsDB, the session cookie is set and the token is returned in the response. To use the MindsDB API, users can utilize either one or both of these methods.
+
+* `session` sets the session cookie when a user logs in. The session lifetime can be set with the `http_permanent_session_lifetime` parameter.
+
+* `token` returns the token in the response, which is valid indefinitely.
+
+The authentication type can also be set via the `MINDSDB_HTTP_AUTH_TYPE` environment variable with the same values as defined above.
+
 If the `http_auth_enabled` parameter is set to `true`, then the `username` and `password` parameters are required. Otherwise these are optional.
-
-In local instances of MindsDB, users can enable simple HTTP authentication based on bearer tokens, as follows:
-
-1. Enable the authentication for the HTTP API by setting the `http_auth_enabled` parameter to `true` and providing values for the `username` and `password` parameters. Alternatively, users can set the environment variables - `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` - to store these values..
-
-2. Bearer tokens are valid indefinitely.
 
 #### `gui`
 

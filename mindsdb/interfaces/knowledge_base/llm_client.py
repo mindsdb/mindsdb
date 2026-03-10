@@ -57,7 +57,9 @@ class LLMClient:
         self.provider = params.get("provider", "openai")
 
         if "api_key" not in params:
-            params["api_key"] = get_api_key(self.provider, params, strict=False)
+            api_key = get_api_key(self.provider, params, strict=False)
+            if api_key is not None:
+                params["api_key"] = api_key
 
         self.engine = "openai"
 
@@ -79,7 +81,7 @@ class LLMClient:
             kwargs = params.copy()
             kwargs.pop("model_name")
             kwargs.pop("provider", None)
-            if kwargs["api_key"] is None:
+            if kwargs.get("api_key") is None:
                 kwargs["api_key"] = "n/a"
             self.client = OpenAI(**kwargs)
         else:

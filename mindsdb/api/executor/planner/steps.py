@@ -123,11 +123,12 @@ class FetchDataframeStep(PlanStep):
 class FetchDataframeStepPartition(FetchDataframeStep):
     """Fetches a dataframe from external integration in partitions"""
 
-    def __init__(self, steps=None, *args, **kwargs):
+    def __init__(self, steps=None, condition=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if steps is None:
             steps = []
         self.steps = steps
+        self.condition = condition
 
 
 class ApplyPredictorStep(PlanStep):

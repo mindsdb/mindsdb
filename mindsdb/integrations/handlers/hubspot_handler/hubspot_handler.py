@@ -766,25 +766,25 @@ class HubspotHandler(MetaAPIHandler):
 
         if isinstance(where_node, BinaryOperation):
             if where_node.op.lower() == "and":
-                left = self._rewrite_where_for_table(where_node.args[0], table_alias, is_main_table)
-                right = self._rewrite_where_for_table(where_node.args[1], table_alias, is_main_table)
-                if left is not None and right is not None:
-                    return BinaryOperation("and", args=[left, right])
-                return left if left is not None else right
+                left_cond = self._rewrite_where_for_table(where_node.args[0], table_alias, is_main_table)
+                right_cond = self._rewrite_where_for_table(where_node.args[1], table_alias, is_main_table)
+                if left_cond is not None and right_cond is not None:
+                    return BinaryOperation("and", args=[left_cond, right_cond])
+                return left_cond if left_cond is not None else right_cond
             else:
-                # Leaf comparison node
-                arg0 = where_node.args[0] if where_node.args else None
-                if isinstance(arg0, Identifier):
-                    parts = arg0.parts
-                    if len(parts) >= 2:
-                        alias = parts[0].lower()
-                        col = parts[-1]
-                        if alias == table_alias.lower():
-                            new_args = [Identifier(col)] + list(where_node.args[1:])
-                            return BinaryOperation(where_node.op, args=new_args)
+                # Leaf comparison — check if it belongs to this table
+                left_arg = where_node.args[0] if where_node.args else None
+                if isinstance(left_arg, Identifier):
+                    ident_parts = left_arg.parts
+                    if len(ident_parts) >= 2:
+                        ref_alias = ident_parts[0].lower()
+                        col_name = ident_parts[-1]
+                        if ref_alias == table_alias.lower():
+                            stripped_args = [Identifier(col_name)] + list(where_node.args[1:])
+                            return BinaryOperation(where_node.op, args=stripped_args)
                         return None
-                    elif len(parts) == 1 and is_main_table:
-                        # Unqualified condition — assign to the main (FROM) table
+                    elif len(ident_parts) == 1 and is_main_table:
+                        # Unqualified condition belongs to the primary (FROM) table
                         return where_node
         return None
 
@@ -808,10 +808,10 @@ class HubspotHandler(MetaAPIHandler):
         Analyses the WHERE clause to determine which table is being filtered so the
         suggestion puts the filtered table first (making the join efficient).
         """
-        # Decide which table is "filtered" (has WHERE conditions) — put it first
         where_on_right = self._rewrite_where_for_table(ast.where, right_alias) is not None
         where_on_left = self._rewrite_where_for_table(ast.where, left_alias, is_main_table=True) is not None
 
+        # Put the filtered table first so the suggestion is efficient
         if where_on_right and not where_on_left:
             from_name, from_alias = right_name, right_alias
             to_name, to_alias = left_name, left_alias
@@ -821,7 +821,7 @@ class HubspotHandler(MetaAPIHandler):
 
         assoc_info = _DIRECT_JOIN_ASSOC_MAP.get((from_name, to_name))
         if assoc_info is None:
-            # Try the reverse direction
+            # Try reverse direction
             assoc_info = _DIRECT_JOIN_ASSOC_MAP.get((to_name, from_name))
 
         if assoc_info is None:
@@ -832,7 +832,8 @@ class HubspotHandler(MetaAPIHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message=error_msg)  # type: ignore[arg-type]
 
         assoc_table, from_id_col, to_id_col = assoc_info
-        assoc_alias = assoc_table[:2]  # short alias, e.g. "cc" for company_contacts
+        # 2-char alias, e.g. "cc" for company_contacts
+        assoc_alias = assoc_table[:2]
 
         col_str = self._format_select_targets(ast.targets)
         where_clause = f"\nWHERE {ast.where}" if ast.where else ""
@@ -860,7 +861,7 @@ class HubspotHandler(MetaAPIHandler):
     def _flatten_join_tree(self, from_node) -> List[Tuple[str, str, Any]]:
         """Flatten nested Join AST nodes into an ordered list of (table_name, alias, on_condition)."""
 
-        result: List[Tuple[str, str, Any]] = []
+        entries: List[Tuple[str, str, Any]] = []
 
         def _get_alias(ident: Identifier) -> str:
             alias = getattr(ident, "alias", None)
@@ -870,187 +871,222 @@ class HubspotHandler(MetaAPIHandler):
                 return alias.lower()
             return alias.parts[-1].lower()
 
-        def _walk(node, on_cond=None):
+        def _walk(node, join_condition=None):
             if isinstance(node, SQLJoin):
                 _walk(node.left, None)
-                right_name = node.right.parts[-1].lower()
-                right_alias = _get_alias(node.right)
-                result.append((right_name, right_alias, node.condition))
+                right_table = node.right.parts[-1].lower()
+                right_table_alias = _get_alias(node.right)
+                entries.append((right_table, right_table_alias, node.condition))
             elif isinstance(node, Identifier):
-                result.append((node.parts[-1].lower(), _get_alias(node), on_cond))
+                entries.append((node.parts[-1].lower(), _get_alias(node), join_condition))
 
         _walk(from_node)
-        return result
+        return entries
+
+    def _parse_on_condition(self, on_node) -> Optional[Tuple[Optional[str], str, Optional[str], str]]:
+        """Parse an ON equality into (left_alias, left_col, right_alias, right_col), or None if invalid."""
+        if not isinstance(on_node, BinaryOperation) or on_node.op != "=":
+            return None
+        left_ident, right_ident = on_node.args
+        if not (isinstance(left_ident, Identifier) and isinstance(right_ident, Identifier)):
+            return None
+
+        def _split(ident):
+            parts = ident.parts
+            return (parts[0].lower(), parts[-1].lower()) if len(parts) >= 2 else (None, parts[0].lower())
+
+        left_alias, left_col = _split(left_ident)
+        right_alias, right_col = _split(right_ident)
+        return left_alias, left_col, right_alias, right_col
 
     def _execute_join_query(self, ast: Select) -> Response:
         """Execute a JOIN query using the HubSpot associations API."""
-        logger.debug(f"[HubSpotHandler] _execute_join_query() called")
+        logger.debug("[HubSpotHandler] _execute_join_query() called")
 
-        tables = self._flatten_join_tree(ast.from_table)
-        if len(tables) < 2 or len(tables) > 3:
+        join_entries = self._flatten_join_tree(ast.from_table)
+        if len(join_entries) < 2 or len(join_entries) > 3:
             return Response(
                 RESPONSE_TYPE.ERROR, error_message="Only 2- and 3-table joins via association tables are supported."
             )
 
-        alias_to_name: Dict[str, str] = {alias: name for name, alias, _ in tables}
-        is_main_alias = tables[0][1]
+        alias_map: Dict[str, str] = {alias: name for name, alias, _ in join_entries}
+        primary_alias = join_entries[0][1]
 
-        def _parse_on(on_cond) -> Optional[Tuple[Optional[str], str, Optional[str], str]]:
-            """Parse an ON equality into (left_alias, left_col, right_alias, right_col) or None."""
-            if not isinstance(on_cond, BinaryOperation) or on_cond.op != "=":
-                return None
-            a, b = on_cond.args
-            if not (isinstance(a, Identifier) and isinstance(b, Identifier)):
-                return None
+        if len(join_entries) == 2:
+            (left_table, left_alias, _), (right_table, right_alias, right_on) = join_entries
 
-            def _split(ident):
-                parts = ident.parts
-                return (parts[0].lower(), parts[-1].lower()) if len(parts) >= 2 else (None, parts[0].lower())
+            # Reject direct core-to-core joins without an association table
+            if left_table in self.CORE_TABLES and right_table in self.CORE_TABLES:
+                return self._suggest_association_query(ast, left_table, left_alias, right_table, right_alias)
 
-            la, lc = _split(a)
-            ra, rc = _split(b)
-            return la, lc, ra, rc
-
-        if len(tables) == 2:
-            (t1_name, t1_alias, _), (t2_name, t2_alias, on2) = tables
-
-            # Reject direct core+core joins
-            if t1_name in self.CORE_TABLES and t2_name in self.CORE_TABLES:
-                return self._suggest_association_query(ast, t1_name, t1_alias, t2_name, t2_alias)
-
-            parsed = _parse_on(on2)
-            if not parsed:
+            on_parsed = self._parse_on_condition(right_on)
+            if not on_parsed:
                 return Response(RESPONSE_TYPE.ERROR, error_message="Unsupported JOIN condition.")
 
-            la, lc, ra, rc = parsed
-            if t1_name in self._association_tables:
-                assoc_name, assoc_alias, assoc_col = t1_name, t1_alias, lc if la == t1_alias else rc
-                core_name, core_alias, core_col = t2_name, t2_alias, rc if la == t1_alias else lc
+            on_left_alias, on_left_col, on_right_alias, on_right_col = on_parsed
+            if left_table in self._association_tables:
+                assoc_name, assoc_alias, assoc_join_col = (
+                    left_table,
+                    left_alias,
+                    on_left_col if on_left_alias == left_alias else on_right_col,
+                )
+                core_name, core_alias, core_join_col = (
+                    right_table,
+                    right_alias,
+                    on_right_col if on_left_alias == left_alias else on_left_col,
+                )
             else:
-                assoc_name, assoc_alias, assoc_col = t2_name, t2_alias, rc if ra == t2_alias else lc
-                core_name, core_alias, core_col = t1_name, t1_alias, lc if ra == t2_alias else rc
+                assoc_name, assoc_alias, assoc_join_col = (
+                    right_table,
+                    right_alias,
+                    on_right_col if on_right_alias == right_alias else on_left_col,
+                )
+                core_name, core_alias, core_join_col = (
+                    left_table,
+                    left_alias,
+                    on_left_col if on_right_alias == right_alias else on_right_col,
+                )
 
             if assoc_name not in self._tables or core_name not in self._tables:
                 return Response(RESPONSE_TYPE.ERROR, error_message="Unknown table in JOIN.")
 
-            limit = ast.limit.value if ast.limit else None
-            core_where = self._rewrite_where_for_table(
-                ast.where, core_alias, is_main_table=(core_alias == is_main_alias)
+            row_limit = ast.limit.value if ast.limit else None
+            core_filter = self._rewrite_where_for_table(
+                ast.where, core_alias, is_main_table=(core_alias == primary_alias)
             )
-            assoc_where = self._rewrite_where_for_table(
-                ast.where, assoc_alias, is_main_table=(assoc_alias == is_main_alias)
+            assoc_filter = self._rewrite_where_for_table(
+                ast.where, assoc_alias, is_main_table=(assoc_alias == primary_alias)
             )
 
-            # Fetch core table (filtered side)
-            core_df = self._tables[core_name].select(
-                Select(targets=[Star()], from_table=Identifier(core_name), where=core_where)
+            # Fetch the filtered core table rows
+            core_rows = self._tables[core_name].select(
+                Select(targets=[Star()], from_table=Identifier(core_name), where=core_filter)
             )
-            if core_df.empty or core_col not in core_df.columns:
+            if core_rows.empty or core_join_col not in core_rows.columns:
                 return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-            core_ids = core_df[core_col].dropna().astype(str).tolist()
-            if not core_ids:
+            core_id_list = core_rows[core_join_col].dropna().astype(str).tolist()
+            if not core_id_list:
                 return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-            # Fetch association table filtered by core ids
-            assoc_conditions: List[FilterCondition] = [FilterCondition(assoc_col, FilterOperator.IN, core_ids)]
-            if assoc_where is not None:
+            # Fetch association rows filtered by the core IDs
+            assoc_filters: List[FilterCondition] = [FilterCondition(assoc_join_col, FilterOperator.IN, core_id_list)]
+            if assoc_filter is not None:
                 try:
-                    for cond in extract_comparison_conditions(assoc_where):
-                        assoc_conditions.append(FilterCondition(cond[1], FilterOperator(cond[0].upper()), cond[2]))
+                    for filter_cond in extract_comparison_conditions(assoc_filter):
+                        assoc_filters.append(
+                            FilterCondition(filter_cond[1], FilterOperator(filter_cond[0].upper()), filter_cond[2])
+                        )
                 except Exception:
                     pass
 
-            assoc_df = self._tables[assoc_name].list(conditions=assoc_conditions, limit=limit)
-            if assoc_df.empty:
+            assoc_rows = self._tables[assoc_name].list(conditions=assoc_filters, limit=row_limit)
+            if assoc_rows.empty:
                 return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-            merged = assoc_df.merge(
-                core_df, left_on=assoc_col, right_on=core_col, how="inner", suffixes=("", f"_{core_alias}")
+            joined_df = assoc_rows.merge(
+                core_rows, left_on=assoc_join_col, right_on=core_join_col, how="inner", suffixes=("", f"_{core_alias}")
             )
-            result_df = self._resolve_select_targets(ast.targets, merged, alias_to_name, tables)
-            if limit:
-                result_df = result_df.head(limit)
-            return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
+            output_df = self._resolve_select_targets(ast.targets, joined_df, alias_map, join_entries)
+            if row_limit:
+                output_df = output_df.head(row_limit)
+            return Response(RESPONSE_TYPE.TABLE, data_frame=output_df)
 
-        (t1_name, t1_alias, _), (t2_name, t2_alias, on2), (t3_name, t3_alias, on3) = tables
+        (left_table, left_alias, _), (assoc_table, assoc_alias, left_on), (right_table, right_alias, right_on) = (
+            join_entries
+        )
 
-        if t2_name not in self._association_tables:
-            if t1_name in self.CORE_TABLES and t2_name in self.CORE_TABLES:
-                return self._suggest_association_query(ast, t1_name, t1_alias, t2_name, t2_alias)
+        if assoc_table not in self._association_tables:
+            if left_table in self.CORE_TABLES and assoc_table in self.CORE_TABLES:
+                return self._suggest_association_query(ast, left_table, left_alias, assoc_table, assoc_alias)
             return Response(RESPONSE_TYPE.ERROR, error_message="Only CORE JOIN ASSOC JOIN CORE pattern is supported.")
 
-        parsed2 = _parse_on(on2)
-        parsed3 = _parse_on(on3)
-        if not parsed2 or not parsed3:
+        left_on_parsed = self._parse_on_condition(left_on)
+        right_on_parsed = self._parse_on_condition(right_on)
+        if not left_on_parsed or not right_on_parsed:
             return Response(RESPONSE_TYPE.ERROR, error_message="Unsupported JOIN condition — expected simple equality.")
 
-        la2, lc2, ra2, rc2 = parsed2
-        t1_fk_col = rc2 if la2 == t2_alias else lc2
-        t1_pk_col = lc2 if la2 == t1_alias else rc2
+        lop_left_alias, lop_left_col, _, lop_right_col = left_on_parsed
+        left_assoc_col = lop_right_col if lop_left_alias == assoc_alias else lop_left_col
+        left_id_col = lop_left_col if lop_left_alias == left_alias else lop_right_col
 
-        la3, lc3, ra3, rc3 = parsed3
-        t3_fk_col = lc3 if la3 == t2_alias else rc3
-        t3_pk_col = rc3 if la3 == t2_alias else lc3
+        rop_left_alias, rop_left_col, _, rop_right_col = right_on_parsed
+        right_assoc_col = rop_left_col if rop_left_alias == assoc_alias else rop_right_col
+        right_id_col = rop_right_col if rop_left_alias == assoc_alias else rop_left_col
 
-        if t1_name not in self._tables or t2_name not in self._tables or t3_name not in self._tables:
+        if left_table not in self._tables or assoc_table not in self._tables or right_table not in self._tables:
             return Response(RESPONSE_TYPE.ERROR, error_message="Unknown table in JOIN.")
 
-        limit = ast.limit.value if ast.limit else None
-        t1_where = self._rewrite_where_for_table(ast.where, t1_alias, is_main_table=(t1_alias == is_main_alias))
-        t2_where = self._rewrite_where_for_table(ast.where, t2_alias, is_main_table=(t2_alias == is_main_alias))
-        t3_where = self._rewrite_where_for_table(ast.where, t3_alias, is_main_table=(t3_alias == is_main_alias))
+        row_limit = ast.limit.value if ast.limit else None
+        left_filter = self._rewrite_where_for_table(ast.where, left_alias, is_main_table=(left_alias == primary_alias))
+        assoc_filter = self._rewrite_where_for_table(
+            ast.where, assoc_alias, is_main_table=(assoc_alias == primary_alias)
+        )
+        right_filter = self._rewrite_where_for_table(
+            ast.where, right_alias, is_main_table=(right_alias == primary_alias)
+        )
 
-        t1_df = self._tables[t1_name].select(Select(targets=[Star()], from_table=Identifier(t1_name), where=t1_where))
-        if t1_df.empty or t1_pk_col not in t1_df.columns:
+        left_rows = self._tables[left_table].select(
+            Select(targets=[Star()], from_table=Identifier(left_table), where=left_filter)
+        )
+        if left_rows.empty or left_id_col not in left_rows.columns:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        t1_ids = t1_df[t1_pk_col].dropna().astype(str).tolist()
-        if not t1_ids:
+        left_id_list = left_rows[left_id_col].dropna().astype(str).tolist()
+        if not left_id_list:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        assoc_conditions: List[FilterCondition] = [FilterCondition(t1_fk_col, FilterOperator.IN, t1_ids)]
-        if t2_where is not None:
+        # Fetch association rows filtered by left-side IDs
+        assoc_filters: List[FilterCondition] = [FilterCondition(left_assoc_col, FilterOperator.IN, left_id_list)]
+        if assoc_filter is not None:
             try:
-                for cond in extract_comparison_conditions(t2_where):
-                    assoc_conditions.append(FilterCondition(cond[1], FilterOperator(cond[0].upper()), cond[2]))
+                for filter_cond in extract_comparison_conditions(assoc_filter):
+                    assoc_filters.append(
+                        FilterCondition(filter_cond[1], FilterOperator(filter_cond[0].upper()), filter_cond[2])
+                    )
             except Exception:
                 pass
 
-        t2_df = self._tables[t2_name].list(conditions=assoc_conditions)
-        if t2_df.empty or t3_fk_col not in t2_df.columns:
+        assoc_rows = self._tables[assoc_table].list(conditions=assoc_filters)
+        if assoc_rows.empty or right_assoc_col not in assoc_rows.columns:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        t3_ids = t2_df[t3_fk_col].dropna().astype(str).tolist()
-        if not t3_ids:
+        right_id_list = assoc_rows[right_assoc_col].dropna().astype(str).tolist()
+        if not right_id_list:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        t3_conditions: List[FilterCondition] = [FilterCondition(t3_pk_col, FilterOperator.IN, t3_ids)]
-        if t3_where is not None:
+        right_filters: List[FilterCondition] = [FilterCondition(right_id_col, FilterOperator.IN, right_id_list)]
+        if right_filter is not None:
             try:
-                for cond in extract_comparison_conditions(t3_where):
-                    t3_conditions.append(FilterCondition(cond[1], FilterOperator(cond[0].upper()), cond[2]))
+                for filter_cond in extract_comparison_conditions(right_filter):
+                    right_filters.append(
+                        FilterCondition(filter_cond[1], FilterOperator(filter_cond[0].upper()), filter_cond[2])
+                    )
             except Exception:
                 pass
 
-        t3_df = self._tables[t3_name].list(conditions=t3_conditions)
-        if t3_df.empty:
+        right_rows = self._tables[right_table].list(conditions=right_filters)
+        if right_rows.empty:
             return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
 
-        merged = t2_df.merge(t1_df, left_on=t1_fk_col, right_on=t1_pk_col, how="inner", suffixes=("", f"_{t1_alias}"))
-        merged = merged.merge(t3_df, left_on=t3_fk_col, right_on=t3_pk_col, how="inner", suffixes=("", f"_{t3_alias}"))
+        joined_df = assoc_rows.merge(
+            left_rows, left_on=left_assoc_col, right_on=left_id_col, how="inner", suffixes=("", f"_{left_alias}")
+        )
+        joined_df = joined_df.merge(
+            right_rows, left_on=right_assoc_col, right_on=right_id_col, how="inner", suffixes=("", f"_{right_alias}")
+        )
 
-        result_df = self._resolve_select_targets(ast.targets, merged, alias_to_name, tables)
-        if limit:
-            result_df = result_df.head(limit)
-        return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
+        output_df = self._resolve_select_targets(ast.targets, joined_df, alias_map, join_entries)
+        if row_limit:
+            output_df = output_df.head(row_limit)
+        return Response(RESPONSE_TYPE.TABLE, data_frame=output_df)
 
     def _resolve_select_targets(
         self,
         targets,
         df: pd.DataFrame,
-        alias_to_name: Dict[str, str],
-        join_tables: List[Tuple[str, str, Any]],
+        alias_map: Dict[str, str],
+        join_entries: List[Tuple[str, str, Any]],
     ) -> pd.DataFrame:
         """Resolve SELECT target list against a merged DataFrame.
 
@@ -1060,38 +1096,38 @@ class HubspotHandler(MetaAPIHandler):
         if not targets:
             return df
 
-        cols: List[str] = []
+        selected_cols: List[str] = []
         renames: Dict[str, str] = {}
-        has_star = any(isinstance(t, Star) for t in targets)
-        if has_star:
+        is_select_all = any(isinstance(target, Star) for target in targets)
+        if is_select_all:
             return df
 
-        for t in targets:
-            if isinstance(t, Identifier):
-                alias = getattr(t, "alias", None)
-                parts = t.parts
-                if len(parts) >= 2:
-                    tbl_alias, col = parts[0].lower(), parts[-1]
-                    if col in df.columns:
-                        cols.append(col)
-                        if alias:
-                            renames[col] = alias
+        for target in targets:
+            if isinstance(target, Identifier):
+                output_alias = getattr(target, "alias", None)
+                ident_parts = target.parts
+                if len(ident_parts) >= 2:
+                    table_alias, col_name = ident_parts[0].lower(), ident_parts[-1]
+                    if col_name in df.columns:
+                        selected_cols.append(col_name)
+                        if output_alias:
+                            renames[col_name] = output_alias
                     else:
-                        # Try suffixed variant (e.g. "id_co")
-                        suffixed = f"{col}_{tbl_alias}"
-                        if suffixed in df.columns:
-                            cols.append(suffixed)
-                            renames[suffixed] = alias or col
+                        # Column may have been suffixed during merge (e.g. "id_co")
+                        suffixed_col = f"{col_name}_{table_alias}"
+                        if suffixed_col in df.columns:
+                            selected_cols.append(suffixed_col)
+                            renames[suffixed_col] = output_alias or col_name
                 else:
-                    col = parts[0]
-                    if col in df.columns:
-                        cols.append(col)
-                        if alias:
-                            renames[col] = alias
+                    col_name = ident_parts[0]
+                    if col_name in df.columns:
+                        selected_cols.append(col_name)
+                        if output_alias:
+                            renames[col_name] = output_alias
 
-        available = list(dict.fromkeys(c for c in cols if c in df.columns))
-        if available:
-            df = df[available]
+        valid_cols = list(dict.fromkeys(c for c in selected_cols if c in df.columns))
+        if valid_cols:
+            df = df[valid_cols]
         if renames:
             df = df.rename(columns=renames)
         return df.reset_index(drop=True)

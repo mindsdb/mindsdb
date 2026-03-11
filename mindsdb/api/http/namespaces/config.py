@@ -16,6 +16,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.functions import decrypt, encrypt
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.response import HandlerStatusResponse
+from mindsdb.interfaces.knowledge_base.default_storage_resolver import resolve_default_storage_engines
 
 
 logger = log.getLogger(__name__)
@@ -34,6 +35,10 @@ class GetConfig(Resource):
             if value is not None:
                 resp[key] = value
 
+        knowledge_bases_config = copy.deepcopy(config["knowledge_bases"])
+        knowledge_bases_config.update(resolve_default_storage_engines(ca.integration_controller, config))
+        resp["knowledge_bases"] = knowledge_bases_config
+
         api_status = get_api_status()
         api_configs = copy.deepcopy(config["api"])
         for api_name, api_config in api_configs.items():
@@ -47,12 +52,18 @@ class GetConfig(Resource):
     def put(self):
         data = request.json
 
-        allowed_arguments = {"auth", "default_llm", "default_embedding_model", "default_reranking_model"}
+        allowed_arguments = {
+            "auth",
+            "default_llm",
+            "default_embedding_model",
+            "default_reranking_model",
+            "knowledge_bases",
+        }
         unknown_arguments = list(set(data.keys()) - allowed_arguments)
         if len(unknown_arguments) > 0:
             return http_error(HTTPStatus.BAD_REQUEST, "Wrong arguments", f"Unknown argumens: {unknown_arguments}")
 
-        nested_keys_to_validate = {"auth"}
+        nested_keys_to_validate = {"auth", "knowledge_bases"}
         for key in data.keys():
             if key in nested_keys_to_validate:
                 unknown_arguments = list(set(data[key].keys()) - set(Config()[key].keys()))

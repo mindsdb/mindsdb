@@ -223,6 +223,7 @@ class Config:
             "knowledge_bases": {
                 "disable_autobatch": False,
                 "disable_pgvector_autobatch": True,
+                "storage": [],
             },
         }
         # endregion
@@ -253,6 +254,7 @@ class Config:
             "ml_task_queue": {},
             "gui": {},
             "byom": {},
+            "knowledge_bases": {},
         }
 
         # region storage root path
@@ -426,6 +428,12 @@ class Config:
             self._env_config["byom"]["enabled"] = True
         elif mindsdb_byom_enabled != "":
             raise ValueError(f"Wrong value of env var MINDSDB_BYOM_ENABLED={mindsdb_byom_enabled}")
+
+        knowledge_bases_storage = os.environ.get("KNOWLEDGE_BASES_STORAGE", "")
+        if knowledge_bases_storage != "":
+            self._env_config["knowledge_bases"]["storage"] = [
+                item.strip() for item in knowledge_bases_storage.split(",") if item.strip()
+            ]
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.

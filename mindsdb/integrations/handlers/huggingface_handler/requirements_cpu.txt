@@ -1,0 +1,7 @@
+# Needs to be installed with `pip install --extra-index-url https://download.pytorch.org/whl/ .[huggingface_cpu]`
+datasets==2.16.1
+evaluate==0.4.3
+nltk==3.9.1
+huggingface-hub==0.29.3
+torch==2.8.0+cpu
+transformers >= 4.42.4

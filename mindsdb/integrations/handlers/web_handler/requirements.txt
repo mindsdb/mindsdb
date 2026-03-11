@@ -1,0 +1,2 @@
+html2text
+# bs4  # in main dependencies list

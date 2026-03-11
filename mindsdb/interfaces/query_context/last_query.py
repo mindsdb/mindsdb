@@ -224,7 +224,7 @@ class LastQuery:
                 and query.offset is None
                 and query.cte is None
             ):
-                query = query.from_table
+                query = copy.deepcopy(query.from_table)
                 query.parentheses = False
                 query.alias = None
 

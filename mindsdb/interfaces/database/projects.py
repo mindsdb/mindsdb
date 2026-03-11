@@ -203,17 +203,17 @@ class Project:
 
                     if isinstance(arg1, Identifier):
                         name = arg1.parts[-1].lower()
-                        if name in white_list:
-                            arg1 = white_list[name]
                         # don't move condition for join with Star
-                        elif name in black_list or not (has_star and not is_join):
-                            continue
-                    if isinstance(arg2, Identifier):
-                        name = arg2.parts[-1].lower()
-                        if name in white_list:
-                            arg2 = white_list[name]
                         if name in black_list or not (has_star and not is_join):
                             continue
+                        elif name in white_list:
+                            arg1 = white_list[name]
+                    if isinstance(arg2, Identifier):
+                        name = arg2.parts[-1].lower()
+                        if name in black_list or not (has_star and not is_join):
+                            continue
+                        elif name in white_list:
+                            arg2 = white_list[name]
 
                     # condition can be moved into view
                     condition2 = BinaryOperation(condition.op, [arg1, arg2])

@@ -2,7 +2,6 @@ import time
 from typing import Optional
 
 from flask import request
-from hubspot import HubSpot
 from hubspot.utils.oauth import get_auth_url
 
 from mindsdb.utilities import log
@@ -13,7 +12,7 @@ logger = log.getLogger(__name__)
 _STORAGE_KEY = "hubspot_oauth_tokens"
 _DEFAULT_REDIRECT_PATH = "/verify-auth"
 _TOKEN_EXPIRY_BUFFER = 0.95
-_DEFAULT_SCOPES = ("oauth",)
+_DEFAULT_SCOPES = ("oauth", "crm.objects.contacts.read", "crm.objects.companies.read")
 
 
 class HubSpotOAuth2Manager:
@@ -80,32 +79,44 @@ class HubSpotOAuth2Manager:
 
     def _exchange_code(self, code: str) -> str:
         """Exchange an authorization code for access and refresh tokens."""
-        response = HubSpot().auth.oauth.tokens_api.create(
-            grant_type="authorization_code",
-            code=code,
-            redirect_uri=self._get_redirect_uri(),
-            client_id=self.client_id,
-            client_secret=self.client_secret,
+        import requests
+
+        response = requests.post(
+            "https://api.hubapi.com/oauth/v1/token",
+            data={
+                "grant_type": "authorization_code",
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "redirect_uri": self._get_redirect_uri(),
+                "code": code,
+            },
         )
-        return self._persist_tokens(response)
+        response.raise_for_status()
+        return self._persist_tokens(response.json())
 
     def _refresh_token(self, refresh_token: str) -> str:
         """Obtain a new access token using the stored refresh token."""
-        response = HubSpot().auth.oauth.tokens_api.create(
-            grant_type="refresh_token",
-            refresh_token=refresh_token,
-            redirect_uri=self._get_redirect_uri(),
-            client_id=self.client_id,
-            client_secret=self.client_secret,
-        )
-        return self._persist_tokens(response)
+        import requests
 
-    def _persist_tokens(self, token_response) -> str:
+        response = requests.post(
+            "https://api.hubapi.com/oauth/v1/token",
+            data={
+                "grant_type": "refresh_token",
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "redirect_uri": self._get_redirect_uri(),
+                "refresh_token": refresh_token,
+            },
+        )
+        response.raise_for_status()
+        return self._persist_tokens(response.json())
+
+    def _persist_tokens(self, token_response: dict) -> str:
         """Save token data to encrypted handler storage and return the access token."""
         tokens = {
-            "access_token": token_response.access_token,
-            "refresh_token": token_response.refresh_token,
-            "expires_at": time.time() + token_response.expires_in * _TOKEN_EXPIRY_BUFFER,
+            "access_token": token_response.get("access_token"),
+            "refresh_token": token_response.get("refresh_token"),
+            "expires_at": time.time() + int(token_response.get("expires_in", 0)) * _TOKEN_EXPIRY_BUFFER,
         }
         self.handler_storage.encrypted_json_set(_STORAGE_KEY, tokens)
         return tokens["access_token"]

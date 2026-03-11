@@ -1,14 +1,13 @@
 import sys
 import types
 
-from unittest.mock import patch
 import datetime as dt
+from unittest.mock import patch
+from dataclasses import dataclass
 
 import pandas as pd
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
-
-from dataclasses import dataclass
 
 
 # import modules virtually if it is not installed

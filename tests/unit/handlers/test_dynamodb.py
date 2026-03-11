@@ -10,6 +10,7 @@ from mindsdb_sql_parser.ast.select.star import Star
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from base_handler_test import BaseHandlerTestSetup
+<<<<<<< HEAD
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -22,6 +23,10 @@ try:
     DYNAMODB_HANDLER_AVAILABLE = True
 except ImportError:
     DYNAMODB_HANDLER_AVAILABLE = False
+=======
+from mindsdb.integrations.libs.response import TableResponse, HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
+from mindsdb.integrations.handlers.dynamodb_handler.dynamodb_handler import DynamoDBHandler
+>>>>>>> releases/26.1.0
 
 
 @pytest.mark.skipif(not DYNAMODB_HANDLER_AVAILABLE, reason="dynamodb_handler not installed (community handler)")
@@ -89,7 +94,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_query_select_success(self):
         """
-        Test if the `query` method returns a response object with a data frame containing the query result.
+        Test if the `query` method returns a TableResponse object with a data frame containing the query result.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
         """
         mock_boto3_client = Mock()
@@ -106,7 +111,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         )
         response = self.handler.query(query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -143,7 +148,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_get_tables(self):
         """
-        Test if the `get_tables` method returns a response object with a list of tables.
+        Test if the `get_tables` method returns a TableResponse object with a list of tables.
         """
         mock_boto3_client = Mock()
         mock_boto3_client.list_tables.return_value = {"TableNames": ["table1", "table2"]}
@@ -151,7 +156,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.handler.connection = mock_boto3_client
         response = self.handler.get_tables()
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -161,7 +166,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_get_columns(self):
         """
-        Test if the `get_columns` method returns a response object with a list of columns for a given table.
+        Test if the `get_columns` method returns a TableResponse object with a list of columns for a given table.
         """
         mock_boto3_client = Mock()
         mock_boto3_client.describe_table.return_value = {
@@ -180,7 +185,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.handler.connection = mock_boto3_client
         response = self.handler.get_columns("table1")
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame

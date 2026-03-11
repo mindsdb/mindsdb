@@ -6,6 +6,7 @@ import pytest
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
+<<<<<<< HEAD
 
 try:
     from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
@@ -33,6 +34,20 @@ from mindsdb.integrations.utilities.sql_utils import (
     FilterOperator,
     SortColumn,
 )
+=======
+from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
+from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
+from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
+    ConfluenceBlogPostsTable,
+    ConfluenceDatabasesTable,
+    ConfluencePagesTable,
+    ConfluenceSpacesTable,
+    ConfluenceWhiteboardsTable,
+    ConfluenceTasksTable,
+)
+from mindsdb.integrations.libs.response import TableResponse, HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
+>>>>>>> releases/26.1.0
 
 
 @pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")
@@ -112,21 +127,21 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_get_tables(self):
         """
-        Test that the `get_tables` method returns a list of table names.
+        Test that the `get_tables` method returns a TableResponse with a list of table names.
         """
         response = self.handler.get_tables()
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertEqual(response.data_frame.columns.tolist(), ["table_name", "table_type"])
 
     def test_get_columns(self):
         """
-        Test that the `get_columns` method returns a list of columns for a table.
+        Test that the `get_columns` method returns a TableResponse with a list of columns for a table.
         """
         response = self.handler.get_columns("spaces")
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertEqual(response.data_frame.columns.tolist(), ["Field", "Type"])
 

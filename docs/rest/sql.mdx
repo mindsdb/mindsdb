@@ -20,6 +20,29 @@ String that contains the SQL query that needs to be executed.
 
 </ParamField>
 
+<ParamField body='response_format' type='string'>
+
+Format of the response. Available options:
+- `null` (default) - returns all data in a single JSON response
+- `"sse"` - returns data as Server-Sent Events stream
+- `"jsonlines"` - returns data as JSON Lines stream (one JSON object per line)
+
+Use `"sse"` or `"jsonlines"` for streaming large result sets to avoid loading all data into memory at once.
+
+</ParamField>
+
+<ParamField body='context' type='object'>
+
+Optional context object, e.g., `{"db": "mindsdb"}` to specify the database.
+
+</ParamField>
+
+<ParamField body='params' type='object'>
+
+Optional parameters for parameterized queries, e.g., `{"name": "value"}`.
+
+</ParamField>
+
 ### Response
 
 <ResponseField name="column_names" type="array" required>  
@@ -55,9 +78,32 @@ curl --request POST \
 {
      "query": "SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;"
 }
-
+'
 ```
 
+```shell Shell (Streaming with SSE)
+curl --request POST \
+     --url https://cloud.mindsdb.com/api/sql/query \
+     --header 'Content-Type: application/json' \
+     --data '
+{
+     "query": "SELECT * FROM example_db.demo_data.home_rentals;",
+     "response_format": "sse"
+}
+'
+```
+
+```shell Shell (Streaming with JSON Lines)
+curl --request POST \
+     --url https://cloud.mindsdb.com/api/sql/query \
+     --header 'Content-Type: application/json' \
+     --data '
+{
+     "query": "SELECT * FROM example_db.demo_data.home_rentals;",
+     "response_format": "jsonlines"
+}
+'
+```
 
 ```python Python
 import requests
@@ -70,8 +116,8 @@ resp = requests.post(url, json={'query':
 
 <ResponseExample>
 
-```json Response
- {
+```json Response (Default)
+{
     "column_names": [
         "sqft",
         "rental_price"
@@ -90,7 +136,22 @@ resp = requests.post(url, json={'query':
         ]
     ],
     "type": "table"
-    }
+}
+```
+
+```text Response (SSE format)
+data: {"type": "table", "column_names": ["sqft", "rental_price"], "context": {"db": "mindsdb"}}
+
+data: [[917, 3901], [194, 2042]]
+
+data: [[543, 1871], [289, 1563]]
+
+```
+
+```text Response (JSON Lines format)
+{"type": "table", "column_names": ["sqft", "rental_price"], "context": {"db": "mindsdb"}}
+[[917, 3901], [194, 2042]]
+[[543, 1871], [289, 1563]]
 ```
 
 </ResponseExample>

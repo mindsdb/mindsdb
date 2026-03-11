@@ -13,7 +13,9 @@ import pymongo.results
 
 from base_handler_test import BaseHandlerTestSetup
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
+    TableResponse,
+    OkResponse,
+    ErrorResponse,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE,
 )
@@ -97,7 +99,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_query_failure_with_non_existent_collection(self):
         """
-        Test if the `query` method returns a response object with an error message on failed query due to non-existent collection.
+        Test if the `query` method returns an ErrorResponse object with an error message on failed query due to non-existent collection.
         """
         self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
             "movies"
@@ -112,7 +114,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, ErrorResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
         self.assertTrue(response.error_message)
 
@@ -148,7 +150,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_query_select_success(self):
         """
-        Test if the `query` method returns a response object with a data frame containing the query result.
+        Test if the `query` method returns a TableResponse object with a data frame containing the query result.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
         """
         self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
@@ -173,7 +175,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -183,7 +185,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_query_update_success(self):
         """
-        Test if the `query` method returns a response object with a 'OK' status.
+        Test if the `query` method returns an OkResponse object with a 'OK' status.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
         """
         self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
@@ -210,12 +212,12 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, OkResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.OK)
 
     def test_get_tables(self):
         """
-        Tests the `get_tables` method returns a response object with a list of tables (collections) in the database.
+        Tests the `get_tables` method returns a TableResponse object with a list of tables (collections) in the database.
         """
         self.mock_connect.return_value[self.dummy_connection_data["database"]].list_collection_names.return_value = [
             "theaters",
@@ -228,7 +230,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.get_tables()
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -241,7 +243,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def test_get_columns(self):
         """
-        Tests the `get_columns` method returns a response object with a list of columns (fields) for a given table (collection).
+        Tests the `get_columns` method returns a TableResponse object with a list of columns (fields) for a given table (collection).
         """
         self.mock_connect.return_value[self.dummy_connection_data["database"]]["movies"].find_one.return_value = {
             "_id": ObjectId("5f5b3f3b3f3b3f3b3f3b3f3b"),
@@ -252,7 +254,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.get_columns("movies")
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -296,7 +298,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(main_query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -362,7 +364,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(main_query)
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -397,7 +399,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -440,7 +442,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -503,7 +505,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -534,7 +536,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -566,7 +568,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -613,7 +615,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(main_query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -652,7 +654,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -698,7 +700,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -734,7 +736,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
@@ -781,7 +783,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.query(query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame

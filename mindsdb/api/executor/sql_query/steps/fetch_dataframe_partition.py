@@ -129,7 +129,7 @@ class FetchDataframePartitionCall(BaseStepCall):
                 break
 
             # break if process is too long or to many tries
-            if try_num > 3 or started_at - time.time() > 5:
+            if try_num > 3 or time.time() - started_at > 5:
                 # the last try without the limit
                 first_table_limit = None
                 continue

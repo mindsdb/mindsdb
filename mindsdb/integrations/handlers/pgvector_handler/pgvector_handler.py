@@ -131,7 +131,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         if isinstance(query, DropTables):
             query.tables = [self._check_table(table.parts[-1]) for table in query.tables]
             query_str, params = self.renderer.get_exec_params(query, with_failback=True)
-            return self.native_query(query_str, params, no_restrict=True)
+            return self.native_query(query_str, params, no_restrict=True, stream=False)
         return super().query(query)
 
     def native_query(self, query, params=None, no_restrict=False) -> Response:
@@ -146,7 +146,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         return super().native_query(query, params=params)
 
     def raw_query(self, query, params=None) -> Response:
-        resp = super().native_query(query, params)
+        resp = super().native_query(query, params, stream=False)
         if resp.resp_type == RESPONSE_TYPE.ERROR:
             raise RuntimeError(resp.error_message)
         if resp.resp_type == RESPONSE_TYPE.TABLE:

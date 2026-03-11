@@ -10,7 +10,6 @@ class QueryTask(BaseTask):
         self.query_id = self.object_id
 
     def run(self, stop_event):
-
         try:
             session = SessionController()
             SQLQuery(None, query_id=self.query_id, session=session, stop_event=stop_event)

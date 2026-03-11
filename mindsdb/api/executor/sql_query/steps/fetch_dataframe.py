@@ -11,12 +11,12 @@ from mindsdb_sql_parser.ast import (
 )
 
 from mindsdb.api.executor.planner.steps import FetchDataframeStep
-from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.exceptions import UnknownError
-from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.integrations.libs.response import TableResponse
 
 from .base import BaseStepCall
 
@@ -92,7 +92,7 @@ class FetchDataframeStepCall(BaseStepCall):
         if query is None:
             table_alias = (self.context.get("database"), "result", "result")
 
-            response: DataHubResponse = dn.query(step.raw_query, session=self.session)
+            response: TableResponse = dn.query(step.raw_query, session=self.session)
             df = response.data_frame
         else:
             if isinstance(step.query, (Union, Intersect)):
@@ -108,11 +108,15 @@ class FetchDataframeStepCall(BaseStepCall):
 
             query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
 
-            response: DataHubResponse = dn.query(query=query, session=self.session)
-            df = response.data_frame
-
+            response: TableResponse = dn.query(query=query, session=self.session)
+            response.set_columns_attrs(
+                table_name=table_alias[1],
+                table_alias=table_alias[2],
+                database=table_alias[0],
+            )
             if context_callback:
-                context_callback(df, response.columns)
+                context_callback(response.data_frame, response.columns)
+            return ResultSet.from_table_response(response)
 
         # if query registered, set progress
         if self.sql_query.run_query is not None:
@@ -122,5 +126,5 @@ class FetchDataframeStepCall(BaseStepCall):
             table_name=table_alias[1],
             table_alias=table_alias[2],
             database=table_alias[0],
-            mysql_types=response.mysql_types,
+            mysql_types=[column.type for column in response.columns],
         )

@@ -898,7 +898,7 @@ class IntegrationController:
         """
         handler_dir_name = f"{handler_name}_handler"
 
-        logger.info(
+        logger.debug(
             "Handler '%s' not found locally, attempting on-demand fetch from community repo...",
             handler_name,
         )
@@ -1005,11 +1005,13 @@ class IntegrationController:
     def get_handler_meta(self, handler_name):
         # returns metadata and tries to import it
         handler_meta = self.handlers_import_status.get(handler_name)
+        print("******** HANDLER META ********************")
+        print(handler_meta)
         if handler_meta is None:
             return None
         # Stub from the index: path=None means the handler hasn't been
         # fetched yet — download it on demand from the community repo.
-        if handler_meta.get("community") and handler_meta["path"] is None:
+        if handler_meta.get("support_level") == "community" and handler_meta["path"] is None:
             handler_meta = self._fetch_community_handler(handler_name)
         if handler_meta is None:
             return None

@@ -183,7 +183,8 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
         try:
             if entry:
-                entry.in_use_count += 1
+                with self.tables_cache_lock:
+                    entry.in_use_count += 1
 
             yield table
         finally:

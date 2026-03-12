@@ -904,7 +904,10 @@ class MetadataTable(APITable):
             filter_type = None
             for op, arg, val in conditions:
                 if arg == 'type':
-                    filter_type = val.lower()  # 'dimension' or 'metric'
+                    if isinstance(val, list):
+                        filter_type = [v.lower() for v in val]
+                    else:
+                        filter_type = val.lower()
                     break
 
             # Build the request
@@ -920,7 +923,7 @@ class MetadataTable(APITable):
             data = []
 
             # Add dimensions
-            if not filter_type or filter_type == 'dimension':
+            if not filter_type or filter_type == 'dimension' or (isinstance(filter_type, list) and 'dimension' in filter_type):
                 for dimension in response.dimensions:
                     # Sanitize column name (replace colons with underscores)
                     column_name = dimension.api_name.replace(':', '_')
@@ -936,7 +939,7 @@ class MetadataTable(APITable):
                     })
 
             # Add metrics
-            if not filter_type or filter_type == 'metric':
+            if not filter_type or filter_type == 'metric' or (isinstance(filter_type, list) and 'metric' in filter_type):
                 for metric in response.metrics:
                     # Sanitize column name (replace colons with underscores)
                     column_name = metric.api_name.replace(':', '_')

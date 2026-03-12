@@ -6,35 +6,6 @@ import pytest
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
-<<<<<<< HEAD
-
-try:
-    from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
-    from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
-    from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
-        ConfluenceBlogPostsTable,
-        ConfluenceDatabasesTable,
-        ConfluencePagesTable,
-        ConfluenceSpacesTable,
-        ConfluenceWhiteboardsTable,
-        ConfluenceTasksTable,
-    )
-
-    CONFLUENCE_HANDLER_AVAILABLE = True
-except ImportError:
-    CONFLUENCE_HANDLER_AVAILABLE = False
-
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE,
-)
-from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition,
-    FilterOperator,
-    SortColumn,
-)
-=======
 from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
 from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
 from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
@@ -47,7 +18,6 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
 )
 from mindsdb.integrations.libs.response import TableResponse, HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
->>>>>>> releases/26.1.0
 
 
 @pytest.mark.skipif(not CONFLUENCE_HANDLER_AVAILABLE, reason="confluence_handler not installed (community handler)")

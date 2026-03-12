@@ -10,23 +10,8 @@ from mindsdb_sql_parser.ast.select.star import Star
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from base_handler_test import BaseHandlerTestSetup
-<<<<<<< HEAD
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE,
-)
-
-try:
-    from mindsdb.integrations.handlers.dynamodb_handler.dynamodb_handler import DynamoDBHandler
-
-    DYNAMODB_HANDLER_AVAILABLE = True
-except ImportError:
-    DYNAMODB_HANDLER_AVAILABLE = False
-=======
 from mindsdb.integrations.libs.response import TableResponse, HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
 from mindsdb.integrations.handlers.dynamodb_handler.dynamodb_handler import DynamoDBHandler
->>>>>>> releases/26.1.0
 
 
 @pytest.mark.skipif(not DYNAMODB_HANDLER_AVAILABLE, reason="dynamodb_handler not installed (community handler)")

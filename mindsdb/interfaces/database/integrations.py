@@ -1005,8 +1005,6 @@ class IntegrationController:
     def get_handler_meta(self, handler_name):
         # returns metadata and tries to import it
         handler_meta = self.handlers_import_status.get(handler_name)
-        print("******** HANDLER META ********************")
-        print(handler_meta)
         if handler_meta is None:
             return None
         # Stub from the index: path=None means the handler hasn't been

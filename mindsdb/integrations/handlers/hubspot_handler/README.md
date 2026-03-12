@@ -111,11 +111,6 @@ Association tables are read-only and support `SELECT` only. They expose relation
 
 The handler provides `SHOW TABLES` and `information_schema.columns` support for all tables. Column statistics are sampled for core CRM and engagement tables.
 
-**Important Notes on Field Values:**
-- **Industry codes**: HubSpot uses predefined industry values (e.g., `COMPUTER_SOFTWARE`, `BIOTECHNOLOGY`, `FINANCIAL_SERVICES`). See [HubSpot's industry list](https://knowledge.hubspot.com/properties/hubspots-default-company-properties#industry) for all valid options.
-- **Deal stages**: Each HubSpot account has custom pipeline stages. Use the stage IDs from your account (e.g., `presentationscheduled`, `closedwon`, `closedlost`, or numeric IDs like `110382973`).
-- **Email validation**: Contact email addresses must be valid email formats (e.g., `user@example.com`).
-
 ## Example Usage
 
 ### Basic Connection

@@ -734,7 +734,7 @@ class IntegrationController:
             logger.warning("Could not scan community handlers dir: %s", e)
 
         try:
-            for entry in list_available_handlers(self.community_handlers_dir):
+            for entry in list_available_handlers():
                 handler_name = entry.get("name")
                 if not handler_name or handler_name in self.handlers_import_status:
                     continue

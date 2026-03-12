@@ -16,7 +16,6 @@ GITHUB_API_BASE = "https://api.github.com"
 DEFAULT_REPO = "mindsdb/mindsdb-community-handlers"
 DEFAULT_BRANCH = "main"
 DEFAULT_PATH_PREFIX = "community_handlers"
-
 _fetch_locks: dict = {}
 _fetch_locks_lock = threading.Lock()
 
@@ -169,19 +168,15 @@ def get_community_handlers_storage_dir(storage_root: Path) -> Path:
     return community_dir
 
 
-def list_available_handlers(storage_dir: Path) -> list:
+def list_available_handlers() -> list:
     """
-    Return handler metadata from the community index.json instead of
-    scanning the repository.
+    Return handler metadata from the community index.json.
 
-    Fetches a fresh copy from GitHub and caches it locally. Falls back to
-    the cached copy if the network call fails. Returns [] if neither is
-    available.
+    Always fetches a fresh copy from GitHub. Returns [] on any failure.
 
     Each dict has keys: name, title, folder, type, support_level,
     icon_path, description.
     """
-    cache_path = storage_dir / "index.json"
     repo, branch, _ = _get_repo_config()
     api_url = f"{GITHUB_API_BASE}/repos/{repo}/contents/index.json"
     params = {"ref": branch}
@@ -193,19 +188,9 @@ def list_available_handlers(storage_dir: Path) -> list:
             entry = resp.json()
             raw = base64.b64decode(entry["content"]).decode("utf-8")
             data = json.loads(raw)
-            # keep cached copy updated for next time
-            cache_path.write_text(raw, encoding="utf-8")
             return data.get("handlers", [])
         logger.warning("Could not fetch community index: HTTP %s", resp.status_code)
     except Exception as e:
-        logger.error("Could not fetch community handlers index: %s", e)
-
-    # Fallback: read from disk cache
-    if cache_path.exists():
-        try:
-            data = json.loads(cache_path.read_text(encoding="utf-8"))
-            return data.get("handlers", [])
-        except Exception as e:
-            logger.warning("Could not read cached community handlers index: %s", e)
+        logger.warning("Could not fetch community handlers index: %s", e)
 
     return []

@@ -16,6 +16,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.interfaces.database.log import LogDBController
+from mindsdb.integrations.libs.response import TableResponse
 
 from mindsdb.utilities import log
 
@@ -175,6 +176,7 @@ class JobsController:
         # create job record
         record = db.Jobs(
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             user_class=ctx.user_class,
             name=name,
             project_id=project.id,
@@ -236,7 +238,13 @@ class JobsController:
         # check if exists
         record = (
             db.session.query(db.Jobs)
-            .filter_by(company_id=ctx.company_id, name=name, project_id=project.id, deleted_at=sa.null())
+            .filter_by(
+                company_id=ctx.company_id,
+                user_id=ctx.user_id,
+                name=name,
+                project_id=project.id,
+                deleted_at=sa.null(),
+            )
             .first()
         )
         if record is None:
@@ -253,7 +261,9 @@ class JobsController:
         record.deleted_at = dt.datetime.now()
 
     def get_list(self, project_name=None):
-        query = db.session.query(db.Jobs).filter_by(company_id=ctx.company_id, deleted_at=sa.null())
+        query = db.session.query(db.Jobs).filter_by(
+            company_id=ctx.company_id, user_id=ctx.user_id, deleted_at=sa.null()
+        )
 
         project_controller = ProjectController()
         if project_name is not None:
@@ -292,7 +302,13 @@ class JobsController:
 
         record = (
             db.session.query(db.Jobs)
-            .filter_by(company_id=ctx.company_id, name=name, project_id=project.id, deleted_at=sa.null())
+            .filter_by(
+                company_id=ctx.company_id,
+                user_id=ctx.user_id,
+                name=name,
+                project_id=project.id,
+                deleted_at=sa.null(),
+            )
             .first()
         )
 
@@ -331,24 +347,24 @@ class JobsController:
                 ],
             ),
         )
-        response = logs_db_controller.query(query)
+        response: TableResponse = logs_db_controller.query(query)
 
-        names = [i["name"] for i in response.columns]
+        names = [i.name for i in response.columns]
         return response.data_frame[names].to_dict(orient="records")
 
 
 class JobsExecutor:
     def get_next_tasks(self):
         # filter next_run < now
-        query = (
-            db.session.query(db.Jobs)
-            .filter(
-                db.Jobs.next_run_at < dt.datetime.now(),
-                db.Jobs.deleted_at == sa.null(),
-                db.Jobs.active == True,  # noqa
-            )
-            .order_by(db.Jobs.next_run_at)
-        )
+        filters = [
+            db.Jobs.next_run_at < dt.datetime.now(),
+            db.Jobs.deleted_at == sa.null(),
+            db.Jobs.active == True,  # noqa
+            db.Jobs.company_id == ctx.company_id,
+        ]
+        if ctx.enforce_user_id:
+            filters.append(db.Jobs.user_id == ctx.user_id)
+        query = db.session.query(db.Jobs).filter(*filters).order_by(db.Jobs.next_run_at)
 
         return query.all()
 
@@ -386,7 +402,12 @@ class JobsExecutor:
         record = db.Jobs.query.get(record_id)
 
         try:
-            history_record = db.JobsHistory(job_id=record.id, start_at=record.next_run_at, company_id=record.company_id)
+            history_record = db.JobsHistory(
+                job_id=record.id,
+                start_at=record.next_run_at,
+                company_id=record.company_id,
+                user_id=record.user_id,
+            )
 
             db.session.add(history_record)
             db.session.commit()
@@ -400,8 +421,12 @@ class JobsExecutor:
 
             # check if it is an old lock
             history_record = db.JobsHistory.query.filter_by(
-                job_id=record.id, start_at=record.next_run_at, company_id=record.company_id
+                job_id=record.id,
+                start_at=record.next_run_at,
+                company_id=record.company_id,
+                user_id=record.user_id,
             ).first()
+
             if history_record.updated_at < dt.datetime.now() - dt.timedelta(seconds=30):
                 db.session.delete(history_record)
                 db.session.commit()
@@ -413,7 +438,10 @@ class JobsExecutor:
             # get previous run date
             history_prev = (
                 db.session.query(db.JobsHistory.start_at)
-                .filter(db.JobsHistory.job_id == record.id, db.JobsHistory.id != history_record.id)
+                .filter(
+                    db.JobsHistory.job_id == record.id,
+                    db.JobsHistory.id != history_record.id,
+                )
                 .order_by(db.JobsHistory.id.desc())
                 .first()
             )
@@ -440,7 +468,9 @@ class JobsExecutor:
         # set up environment
 
         ctx.set_default()
+
         ctx.company_id = record.company_id
+        ctx.user_id = record.user_id
         if record.user_class is not None:
             ctx.user_class = record.user_class
 
@@ -449,6 +479,7 @@ class JobsExecutor:
                 job_id=record.id,
                 start_at=dt.datetime.now(),
                 company_id=record.company_id,
+                user_id=record.user_id,
             )
             db.session.add(history_record)
             db.session.flush()
@@ -462,7 +493,9 @@ class JobsExecutor:
         project = project_controller.get(record.project_id)
         executed_sql = ""
 
-        from mindsdb.api.executor.controllers.session_controller import SessionController
+        from mindsdb.api.executor.controllers.session_controller import (
+            SessionController,
+        )
         from mindsdb.api.executor.command_executor import ExecuteCommands
 
         sql_session = SessionController()

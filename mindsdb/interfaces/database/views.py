@@ -17,15 +17,24 @@ class ViewController:
             raise EntityNotExistsError("Can not find project", project_name)
 
         project_id = project_databases_dict[project_name]["id"]
-        view_record = (
-            db.session.query(db.View.id)
-            .filter(db.View.name == name, db.View.company_id == ctx.company_id, db.View.project_id == project_id)
-            .first()
+        view_query = db.session.query(db.View.id).filter(
+            db.View.name == name,
+            db.View.company_id == ctx.company_id,
+            db.View.project_id == project_id,
         )
+        if ctx.enforce_user_id:
+            view_query = view_query.filter(db.View.user_id == ctx.user_id)
+        view_record = view_query.first()
         if view_record is not None:
             raise EntityExistsError("View already exists", name)
 
-        view_record = db.View(name=name, company_id=ctx.company_id, query=query, project_id=project_id)
+        view_record = db.View(
+            name=name,
+            company_id=ctx.company_id,
+            user_id=ctx.user_id,
+            query=query,
+            project_id=project_id,
+        )
         db.session.add(view_record)
         db.session.commit()
 
@@ -47,8 +56,11 @@ class ViewController:
         project_record = get_project_record(project_name)
 
         q = db.session.query(db.View).filter(
-            db.View.company_id == ctx.company_id, db.View.project_id == project_record.id
+            db.View.company_id == ctx.company_id,
+            db.View.project_id == project_record.id,
         )
+        if ctx.enforce_user_id:
+            q = q.filter(db.View.user_id == ctx.user_id)
         if strict_case:
             q = q.filter(db.View.name == name)
         else:
@@ -77,8 +89,11 @@ class ViewController:
         project_record = get_project_record(project_name)
 
         query = db.session.query(db.View).filter(
-            db.View.company_id == ctx.company_id, db.View.project_id == project_record.id
+            db.View.company_id == ctx.company_id,
+            db.View.project_id == project_record.id,
         )
+        if ctx.enforce_user_id:
+            query = query.filter(db.View.user_id == ctx.user_id)
         if strict_case:
             query = query.filter(db.View.name == name)
         else:
@@ -100,8 +115,11 @@ class ViewController:
             project_names[project.id] = project.name
 
         query = db.session.query(db.View).filter(
-            db.View.company_id == ctx.company_id, db.View.project_id.in_(list(project_names.keys()))
+            db.View.company_id == ctx.company_id,
+            db.View.project_id.in_(list(project_names.keys())),
         )
+        if ctx.enforce_user_id:
+            query = query.filter(db.View.user_id == ctx.user_id)
 
         data = []
 
@@ -124,21 +142,23 @@ class ViewController:
         project_record = get_project_record(project_name)
 
         if id is not None:
-            records = (
-                db.session.query(db.View)
-                .filter_by(id=id, project_id=project_record.id, company_id=ctx.company_id)
-                .all()
+            query = db.session.query(db.View).filter(
+                db.View.id == id,
+                db.View.project_id == project_record.id,
+                db.View.company_id == ctx.company_id,
             )
+            if ctx.enforce_user_id:
+                query = query.filter(db.View.user_id == ctx.user_id)
+            records = query.all()
         elif name is not None:
-            records = (
-                db.session.query(db.View)
-                .filter(
-                    func.lower(db.View.name) == name.lower(),
-                    db.View.project_id == project_record.id,
-                    db.View.company_id == ctx.company_id,
-                )
-                .all()
+            query = db.session.query(db.View).filter(
+                func.lower(db.View.name) == name.lower(),
+                db.View.project_id == project_record.id,
+                db.View.company_id == ctx.company_id,
             )
+            if ctx.enforce_user_id:
+                query = query.filter(db.View.user_id == ctx.user_id)
+            records = query.all()
         if len(records) == 0:
             if name is None:
                 name = f"id={id}"

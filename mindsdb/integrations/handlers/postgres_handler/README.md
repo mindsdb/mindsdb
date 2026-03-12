@@ -42,6 +42,11 @@ Optional connection parameters include the following:
 
 *    `schema`: The database schema to use. Default is public.
 *    `sslmode`: The SSL mode for the connection.
+*    `connection_parameters`:  allows passing any PostgreSQL libpq parameters, such as:
+    * SSL settings: sslrootcert, sslcert, sslkey, sslcrl, sslpassword
+    * Network and reliability options: connect_timeout, keepalives, keepalives_idle, keepalives_interval, keepalives_count
+    * Session options: application_name, options, client_encoding
+    * Any other libpq-supported parameter
 
 ## Usage
 

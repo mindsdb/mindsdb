@@ -322,7 +322,11 @@ class APIResource(APITable):
         raise NotImplementedError()
 
     def _extract_conditions(self, where: ASTNode) -> List[FilterCondition]:
-        return [FilterCondition(i[1], FilterOperator(i[0].upper()), i[2]) for i in extract_comparison_conditions(where)]
+        conditions = []
+        for i in extract_comparison_conditions(where, strict=False):
+            if isinstance(i, list):
+                conditions.append(FilterCondition(i[1], FilterOperator(i[0].upper()), i[2]))
+        return conditions
 
 
 class MetaAPIResource(APIResource):

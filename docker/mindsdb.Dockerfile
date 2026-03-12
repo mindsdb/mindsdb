@@ -18,8 +18,6 @@ COPY mindsdb/__about__.py mindsdb/
 # Which will mean the next stage can be cached, even if the cache for the above stage was invalidated.
 
 
-
-
 # Use the stage from above to install our deps with as much caching as possible
 FROM python:3.10 AS build
 WORKDIR /mindsdb

@@ -187,6 +187,7 @@ def list_available_handlers(storage_dir: Path) -> list:
     params = {"ref": branch}
 
     try:
+        logger.debug("Fetching community handlers index from GitHub: %s", api_url)
         resp = requests.get(api_url, params=params, headers=_github_headers(), timeout=30)
         if resp.status_code == 200:
             entry = resp.json()
@@ -197,7 +198,7 @@ def list_available_handlers(storage_dir: Path) -> list:
             return data.get("handlers", [])
         logger.warning("Could not fetch community index: HTTP %s", resp.status_code)
     except Exception as e:
-        logger.warning("Could not fetch community handlers index: %s", e)
+        logger.error("Could not fetch community handlers index: %s", e)
 
     # Fallback: read from disk cache
     if cache_path.exists():

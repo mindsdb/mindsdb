@@ -12,6 +12,8 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+# GitHub API configuration
+# It can be replaced later with making the repo public.
 GITHUB_API_BASE = "https://api.github.com"
 DEFAULT_REPO = "mindsdb/mindsdb-community-handlers"
 DEFAULT_BRANCH = "main"
@@ -22,7 +24,7 @@ _fetch_locks_lock = threading.Lock()
 
 def _get_fetch_lock(handler_dir_name: str) -> threading.Lock:
     """
-    Get (and create if needed) a threading.
+    Get and create if needed a threading.
     Lock for the given handler directory.
     This ensures that concurrent fetches for the same handler_dir_name are
     serializedlly, preventing race conditions on disk.
@@ -45,6 +47,7 @@ def _github_headers() -> dict:
     return headers
 
 
+# It can be removed later with making the repo public. TBD
 def _get_repo_config() -> tuple:
     """Returns (repo, branch, path_prefix)."""
     repo = os.environ.get("COMMUNITY_HANDLERS_REPO", DEFAULT_REPO)
@@ -112,6 +115,7 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
 
         # Use a temporary directory for downloading files before moving to the final location
         # This prevents leaving a partially downloaded handler on disk if something goes wrong.
+        # As a fail-safe measure, we remove any existing temp directory before starting, and ensure cleanup on exceptions.
         tmp_dir = storage_dir / f".tmp_{handler_dir_name}"
         if tmp_dir.exists():
             shutil.rmtree(tmp_dir)
@@ -138,6 +142,7 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
             # If dest_dir already exists, remove it first.
             # This ensures that we don't end up with a mix of old and new files if the handler is updated.
             if dest_dir.exists():
+                # remove the old directory before renaming the new one into place
                 shutil.rmtree(dest_dir)
             tmp_dir.rename(dest_dir)
 
@@ -172,8 +177,6 @@ def list_available_handlers() -> list:
     """
     Return handler metadata from the community index.json.
 
-    Always fetches a fresh copy from GitHub. Returns [] on any failure.
-
     Each dict has keys: name, title, folder, type, support_level,
     icon_path, description.
     """
@@ -192,5 +195,4 @@ def list_available_handlers() -> list:
         logger.warning("Could not fetch community index: HTTP %s", resp.status_code)
     except Exception as e:
         logger.warning("Could not fetch community handlers index: %s", e)
-
     return []

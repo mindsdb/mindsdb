@@ -194,15 +194,13 @@ class TestLLM(unittest.TestCase):
                     "".join(
                         [
                             indent(
-                                dedent(
-                                    """
+                                dedent("""\
                     # format chunks into prompts
                     roles = []
                     contents = []
 
                     for idx in range(0, len(chunks), 3):
-                    """
-                                ),
+                    """),
                                 " " * 4 * 2,
                             ),  # mind the base indent level
                             indent(
@@ -228,11 +226,11 @@ class TestLLM(unittest.TestCase):
         )  # noqa
         assert (
             df2["content"].iloc[1]
-            == "### Code prefix:\n# format chunks into prompts\n        roles = []\n        contents = []\n### Code suffix:\ninterleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))\n### Completion:"
+            == "### Code prefix:\n        # format chunks into prompts\n        roles = []\n        contents = []\n\n\n### Code suffix:\n                                interleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))\n\n### Completion:"
         )  # noqa
         assert (
             df2["content"].iloc[2]
-            == "for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]"
+            == "        for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]\n\n"
         )  # noqa
 
         df2 = ft_code_formatter(df, format="fim", chunk_size=110)
@@ -243,11 +241,11 @@ class TestLLM(unittest.TestCase):
         )  # noqa
         assert (
             df2["content"].iloc[1]
-            == "<PRE>\n# format chunks into prompts\n        roles = []\n        contents = []\n<SUF>\ninterleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))\n<MID>"
+            == "<PRE>\n        # format chunks into prompts\n        roles = []\n        contents = []\n\n\n<SUF>\n                                interleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))\n\n<MID>"
         )  # noqa
         assert (
             df2["content"].iloc[2]
-            == "for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]"
+            == "        for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]\n\n"
         )  # noqa
 
     def test_ft_cqa_formatter(self):

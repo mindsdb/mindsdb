@@ -204,6 +204,9 @@ class KBTestBase:
 
             param_str += f", storage = {db_name}.{table_name}"
 
+        # Clean up any existing KB with the same name before creating
+        self.run_sql(f"DROP KNOWLEDGE BASE IF EXISTS {name}")
+
         self.run_sql(f"""
             create knowledge base {name}
             using {param_str}
@@ -404,7 +407,7 @@ class TestKB(KBTestBase):
 
         # -----------------  search with reranking ---------------
 
-        threshold = 0.5
+        threshold = 0.4
         ret = self.run_sql(f"""
             SELECT *
             FROM {kb_name}

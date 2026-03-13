@@ -34,6 +34,15 @@ FROM information_schema.queries;
 ```
 </Tip>
 
+<Note>
+**Default Batch Inserts**
+The batch inserts into knowledge bases (see "Insert Data using Partitions") are enabled by default for all vector stores except PGVector. Note that in order for batch inserts to work by default, users must provide the `id_column` when creating the knowledge base.
+
+To enable default batch inserts for PGVector, set the `DISABLE_PGVECTOR_AUTOBATCH` environment variable or the `knowledge_bases.disable_pgvector_autobatch` configuration variable to `false` (it is set to `true` by default).
+
+To disable default batch inserts, set the `DISABLE_AUTOBATCH` environment variable or the `knowledge_bases.disable_autobatch` configuration variable to `true` (it is set to `false` by default).
+</Note>
+
 <Info>
 To speed up data insertion, you can use these performance optimization flags:
 

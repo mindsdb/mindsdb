@@ -1,13 +1,13 @@
 ---
-title: Setup
-sidebarTitle: Setup
+title: Usage
+sidebarTitle: Usage
 ---
 
 Here is how to connect and use REST API to MindsDB.
 
 ## Local MindsDB
 
-Here is an example in Python:
+This example shows how to execute SQL statements, either raw or parametrized, on MindsDB via REST APIs.
 
 ```
 import requests
@@ -16,9 +16,13 @@ import requests
 url = 'http://127.0.0.1:47334/api/sql/query'
 
 # query
-resp = requests.post(url, json={'query':
-                    'SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;'})
+resp = requests.post(url, json={
+                "query": "select * from my_datasource.my_table where name = :name and age = :age",
+                "params": {"name": "acme", "age": 1},
+            })
 
 # response
 print(resp.text) # alternative: print(resp.json())
 ```
+
+Note that you can either send a raw SQL and omit the `params` parameter, or send a parametrized SQL in the `query` parameter and provide the `params` parameter that defines the values.

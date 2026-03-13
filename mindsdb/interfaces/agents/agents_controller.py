@@ -1,7 +1,8 @@
 import datetime
-from typing import Dict, Iterator, List, Union, Tuple, Optional, Any
+from typing import Dict, Iterator, List, Union, Tuple, Optional, Any, Text
 import copy
 
+from pydantic import BaseModel
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
 import pandas as pd
@@ -13,6 +14,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.utilities.config import config
+from mindsdb.utilities.utils import validate_pydantic_params
 from mindsdb.utilities import log
 
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
@@ -24,6 +26,24 @@ from .pydantic_ai_agent import check_agent_llm
 logger = log.getLogger(__name__)
 
 default_project = config.get("default_project")
+
+
+class AgentParamsData(BaseModel):
+    knowledge_bases: List[str] = None
+    tables: List[str] = None
+
+    class Config:
+        extra = "forbid"
+
+
+class AgentParams(BaseModel):
+    prompt_template: str = None
+    model: Dict[Text, Any] | None = None
+    data: AgentParamsData = None
+    timeout: int = None
+
+    class Config:
+        extra = "forbid"
 
 
 class AgentsController:
@@ -186,12 +206,14 @@ class AgentsController:
         # No need to copy params since we're not preserving the original reference
         params = params or {}
 
+        # move into params
+        params["model"] = model
+
+        validate_pydantic_params(params, AgentParams, "agent")
+
         # check llm works
         llm_params = self.get_agent_llm_params(model)
         check_agent_llm(llm_params)
-
-        # move into params
-        params["model"] = model
 
         agent = db.Agents(
             name=name,
@@ -258,6 +280,8 @@ class AgentsController:
             existing_params["model"] = model
 
         if params is not None:
+            validate_pydantic_params(params, AgentParams, "agent")
+
             # Merge params on update
             existing_params.update(params)
             # Remove None values entirely.

@@ -3,6 +3,7 @@ import json
 
 from unittest.mock import patch, AsyncMock
 
+from sqlalchemy.orm.attributes import flag_modified
 import pandas as pd
 import pytest
 import sys
@@ -369,11 +370,15 @@ class TestAgent(BaseExecutorDummyML):
                     'model_name': "gpt-3.5-turbo",
                     'api_key': '-key-'
                 },
-                prompt_template="--",
-                is_demo=true;
+                prompt_template="--"
          """)
+
+        # mark as demo in db
+        agent = self.db.Agents.query.filter_by(name="my_demo_agent").first()
+        agent.params["is_demo"] = True
+        flag_modified(agent, "params")
         with pytest.raises(ExecutorException):
-            self.run_sql("drop agent my_agent")
+            self.run_sql("drop agent my_demo_agent")
 
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
     def test_agent_default_prompt_template(self, mock_openai):

@@ -360,7 +360,7 @@ if __name__ == "__main__":
 
         sys.exit(0)
 
-    if config.cmd_args.mcp_stdio or True:
+    if config.cmd_args.mcp_stdio:
         # StreamHandler writes to stderr by default, which MCP treats as notification messages.
         # Raise the log level to ERROR to suppress notification spam, and explicitly set the
         # stream to stderr in case the user has overridden it in their config.

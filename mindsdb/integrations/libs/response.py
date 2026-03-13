@@ -405,15 +405,20 @@ class TableResponse(DataHandlerResponse):
         if self._data is None:
             return
         self._data.columns = [name.upper() for name in self._data.columns]
+
+        for required_column in (INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME, INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE):
+            if required_column not in self._data.columns:
+                raise ValueError(
+                    f"Missed required for INFORMATION_SCHEMA.COLUMNS column {required_column}. "
+                    f"Columns set: {self._data.columns}"
+                )
+        for column_name in INF_SCHEMA_COLUMNS_NAMES_SET:
+            if column_name not in self._data.columns:
+                self._data[column_name] = None
+
         self._data[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self._data[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE].apply(
             map_type_fn
         )
-
-        # region validate df
-        current_columns_set = set(self._data.columns)
-        if INF_SCHEMA_COLUMNS_NAMES_SET != current_columns_set:
-            raise ValueError(f"Columns set for INFORMATION_SCHEMA.COLUMNS is wrong: {list(current_columns_set)}")
-        # endregion
 
         self._data = self._data.astype(
             {

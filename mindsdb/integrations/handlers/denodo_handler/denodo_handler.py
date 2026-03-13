@@ -148,8 +148,6 @@ class DenodoHandler(DatabaseHandler):
         """
         query = f"CALL GET_VIEW_COLUMNS('{self.database}', '{table_name}');"
         result = self.native_query(query)
-        df = result.data_frame.rename(
-            columns={"column_name": "COLUMN_NAME", "data_type": "DATA_TYPE"}
-        )
+        df = result.data_frame.rename(columns={"column_name": "COLUMN_NAME", "data_type": "DATA_TYPE"})
         result.data_frame = df
         return result

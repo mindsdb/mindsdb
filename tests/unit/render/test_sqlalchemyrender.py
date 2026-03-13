@@ -16,7 +16,7 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 
-class TestRender:
+class TestMysqlRender:
     def test_create_table(self):
         query = CreateTable(
             name="tbl1",
@@ -77,6 +77,8 @@ class TestRender:
         assert sql == """INSERT INTO tbl1 (a, b) VALUES (%s, %s)"""
         assert params == values
 
+
+class TestPostgresRender:
     def test_alias_in_case(self):
         sql = """
            select case mean when 0 then null else stdev/mean end cov from table1
@@ -184,6 +186,52 @@ class TestRender:
             SELECT * FROM tbl1
             JOIN tbl2 ON tbl1.x = tbl2.x
             JOIN tbl3 ON 1=1
+        """).strip()
+
+        assert rendered.replace("\n", "") == expected.replace("\n", " ")
+
+    def test_group_by_rollup(self):
+        # test statements wth GROUP BY ROLLUP
+        sql = "SELECT * FROM tbl1 GROUP BY a, b WITH ROLLUP"
+        ast = parse_sql(sql)
+
+        assert ast.group_by[-1].with_rollup is True
+
+        rendered = SqlalchemyRender("postgres").get_string(ast, with_failback=False)
+        expected = "SELECT * FROM tbl1 GROUP BY ROLLUP(a, b)"
+        assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()
+
+        rendered = SqlalchemyRender("mysql").get_string(ast, with_failback=False)
+        expected = "SELECT * FROM tbl1 GROUP BY a, b WITH ROLLUP"
+        assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()
+
+        # renderer for 'oracle' is not explicetly specified - should be rollup() in result
+        rendered = SqlalchemyRender("oracle").get_string(ast, with_failback=False)
+        expected = "SELECT * FROM tbl1 GROUP BY ROLLUP(a, b)"
+        assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()
+
+        # try query with differ ending
+        sql = "SELECT * FROM tbl1 GROUP BY a, b WITH ROLLUP LIMIT 100"
+        ast = parse_sql(sql)
+
+        assert ast.group_by[-1].with_rollup is True
+
+        rendered = SqlalchemyRender("postgres").get_string(ast, with_failback=False)
+        expected = "SELECT * FROM tbl1 GROUP BY ROLLUP(a, b) LIMIT 100"
+        assert rendered.replace("\n", "").replace("  ", " ").upper() == expected.upper()
+
+
+class TestMSSQLRender:
+    def test_mixed_join(self):
+        sql = """
+            select * from car_info order by year limit 10 offset 1
+        """
+        query = parse_sql(sql)
+        rendered = SqlalchemyRender("mssql").get_string(query, with_failback=False)
+
+        expected = dedent("""
+           SELECT * FROM car_info ORDER BY year
+           OFFSET 1 ROWS FETCH FIRST 10 ROWS ONLY
         """).strip()
 
         assert rendered.replace("\n", "") == expected.replace("\n", " ")

@@ -18,9 +18,11 @@ except ImportError:
 import pandas as pd
 from pandas import DataFrame
 
-from base_handler_test import BaseDatabaseHandlerTest
+from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
+    TableResponse,
+    OkResponse,
+    ErrorResponse,
     INF_SCHEMA_COLUMNS_NAMES_SET,
     RESPONSE_TYPE,
 )
@@ -165,9 +167,42 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             handler.connect()
             mock_init.assert_called_once_with(lib_dir="/path/to/oracle/client/lib")
 
-    def test_native_query_with_results(self):
+    def test_native_query_with_results_streaming(self):
         """
-        Tests the `native_query` method for a SELECT statement returning results.
+        Tests the `native_query` method for a SELECT statement returning results at server side execution.
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        # Server-side execution uses fetchmany, not fetchall
+        mock_cursor.fetchmany = MagicMock(side_effect=[[(1, "test1"), (2, "test2")], []])
+        mock_cursor.description = [
+            ("ID", None, None, None, None, None, None),
+            ("NAME", None, None, None, None, None, None),
+        ]
+
+        query_str = "SELECT ID, NAME FROM test_table"
+        data = self.handler.native_query(query_str, stream=True)
+
+        mock_conn.cursor.assert_called_once()
+        mock_cursor.execute.assert_called_once_with(query_str)
+
+        # Verify the response
+        self.assertIsInstance(data, TableResponse)
+        self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
+        self.assertIsNone(data._data)
+        data.fetchall()
+        self.assertIsInstance(data._data, DataFrame)
+        expected_columns = ["ID", "NAME"]
+        self.assertListEqual(list(data.data_frame.columns), expected_columns)
+        self.assertEqual(len(data.data_frame), 2)
+
+    def test_native_query_with_no_streaming(self):
+        """
+        Tests the `native_query` method for a SELECT statement returning results at client side execution.
         """
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -177,22 +212,21 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.fetchall.return_value = [(1, "test1"), (2, "test2")]
+        mock_cursor.fetchall = MagicMock(return_value=[(1, "test1"), (2, "test2")])
         mock_cursor.description = [
             ("ID", None, None, None, None, None, None),
             ("NAME", None, None, None, None, None, None),
         ]
 
         query_str = "SELECT ID, NAME FROM test_table"
-        data = self.handler.native_query(query_str)
+        data = self.handler.native_query(query_str, stream=False)
 
         mock_conn.cursor.assert_called_once()
         mock_cursor.execute.assert_called_once_with(query_str)
         mock_cursor.fetchall.assert_called_once()
         mock_conn.commit.assert_called_once()
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, TableResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
         expected_columns = ["ID", "NAME"]
@@ -222,8 +256,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.fetchall.assert_not_called()
         mock_conn.commit.assert_called_once()
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, OkResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.OK)
         self.assertEqual(data.affected_rows, 1)
 
@@ -252,7 +285,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.rollback.assert_called_once()
         mock_conn.commit.assert_not_called()
 
-        self.assertIsInstance(data, Response)
+        self.assertIsInstance(data, ErrorResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.ERROR)
         self.assertEqual(data.error_message, error_msg)
 
@@ -265,7 +298,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             orig_renderer = self.handler.renderer
 
         self.handler.native_query = MagicMock()
-        expected_response = Response(RESPONSE_TYPE.TABLE)
+        expected_response = TableResponse()
         self.handler.native_query.return_value = expected_response
         mock_ast = MagicMock()
 
@@ -299,7 +332,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ],
             columns=["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
         )
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        expected_response = TableResponse(data=expected_df)
 
         self.handler.native_query = MagicMock(return_value=expected_response)
 
@@ -364,7 +397,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ],
             columns=["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
         )
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        expected_response = TableResponse(data=expected_df)
 
         self.handler.native_query = MagicMock(return_value=expected_response)
 
@@ -448,7 +481,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         expected_df = DataFrame(expected_df_data, columns=query_columns)
 
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        expected_response = TableResponse(data=expected_df)
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"
@@ -573,7 +606,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("N_BINARY_DOUBLE", oracledb.DB_TYPE_NUMBER, 127, None, None, None, True),
         ]
 
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.DECIMAL,
@@ -590,7 +623,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.FLOAT,
         ]
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -612,9 +645,9 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
             ("T_BOOL", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOLEAN, MYSQL_DATA_TYPE.BOOLEAN]
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -680,7 +713,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("T_RAW", oracledb.DB_TYPE_RAW, 100, 100, None, None, True),
             ("T_BLOB", oracledb.DB_TYPE_LONG_RAW, None, None, None, None, True),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.TEXT,
             MYSQL_DATA_TYPE.TEXT,
@@ -692,7 +725,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.BINARY,
             MYSQL_DATA_TYPE.BINARY,
         ]
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -739,13 +772,13 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("D_TIMESTAMP", oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 6, True),
             ("D_TIMESTAMP_P", oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 9, True),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.DATE,
             MYSQL_DATA_TYPE.TIMESTAMP,
             MYSQL_DATA_TYPE.TIMESTAMP,
         ]
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -767,7 +800,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ),  # set 17 just to force cast to Int64
             ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         self.assertEqual(response.data_frame.dtypes[0], "Int64")
         self.assertEqual(response.data_frame.dtypes[1], "boolean")
         self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
@@ -800,12 +833,13 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("T_EMBEDDING", oracledb.DB_TYPE_VECTOR, None, None, None, None, True),
             ("T_JSON", oracledb.DB_TYPE_JSON, None, None, None, None, True),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.VECTOR, MYSQL_DATA_TYPE.JSON]
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
-        # endreion
+        # endregion
 
     def test_insert(self):
         """
@@ -813,9 +847,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         using insertmany for batch inserts.
         """
         mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_cursor.__exit__ = MagicMock(return_value=None)
+        mock_cursor = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
@@ -837,9 +869,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         Tests the insert method to ensure it correctly handles errors
         """
         mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_cursor.__exit__ = MagicMock(return_value=None)
+        mock_cursor = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
@@ -869,7 +899,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 "row_count",
             ],
         )
-        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        mock_response = TableResponse(data=expected_df)
         self.handler.native_query = MagicMock(return_value=mock_response)
 
         response = self.handler.meta_get_tables(table_names=table_names)
@@ -900,7 +930,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ],
         )
 
-        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        mock_response = TableResponse(data=expected_df)
         self.handler.native_query = MagicMock(return_value=mock_response)
 
         table_name = "TABLE1"
@@ -934,7 +964,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ],
         )
 
-        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        mock_response = TableResponse(data=expected_df)
         self.handler.native_query = MagicMock(return_value=mock_response)
         table_names = ["STATS_TABLE"]
         response = self.handler.meta_get_column_statistics(table_names=table_names)
@@ -975,7 +1005,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ],
         )
 
-        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        mock_response = TableResponse(data=expected_df)
         self.handler.native_query = MagicMock(return_value=mock_response)
 
         table_names = ["USERS", "ORDERS"]
@@ -1024,7 +1054,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ],
         )
 
-        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        mock_response = TableResponse(data=expected_df)
         self.handler.native_query = MagicMock(return_value=mock_response)
 
         table_names = ["ORDERS", "ORDER_ITEMS"]

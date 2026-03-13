@@ -76,7 +76,7 @@ class PATAuthMiddleware(BaseHTTPMiddleware):
 
 
 # Used by mysql protocol
-def check_auth(username, password, scramble_func, salt, company_id, config):
+def check_auth(username, password, scramble_func, salt, company_id, user_id, config):
     try:
         hardcoded_user = config["auth"].get("username")
         hardcoded_password = config["auth"].get("password")
@@ -99,6 +99,6 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
             return {"success": False}
 
         logger.info(f"Check auth, user={username}: Ok")
-        return {"success": True, "username": username}
+        return {"success": True, "username": username, "company_id": company_id, "user_id": user_id}
     except Exception:
         logger.exception(f"Check auth, user={username}: ERROR")

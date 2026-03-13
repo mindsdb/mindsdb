@@ -161,7 +161,7 @@ We would appreciate your feedback regarding usage & feature roadmap for the abov
 
         1. Check that you can run the existing handler tests with `python -m pytest tests/unit/ml_handlers/`. If you get the `ModuleNotFoundError` error, try adding the `__init__.py` file to any subdirectory that doesn't have it.
 
-        2. Copy the simple tests from a relevant handler. For regular data, use the [Ludwig](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ludwig_handler) handler. And for time series data, use the [StatsForecast](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/statsforecast_handler) handler.
+        2. Copy the simple tests from a relevant handler.
         
         3. Change the SQL query to reference your handler. Specifically, set `USING engine={HandlerName}`.
         
@@ -187,11 +187,11 @@ We would appreciate your feedback regarding usage & feature roadmap for the abov
 
         3. Change the contents of `.py` files to match your new handler. Also, change the name of the `statsforecast_handler.py` file to match your handler.
 
-        4. Modify the `requirements.txt` file to install your handler’s dependencies. You may get conflicts with other packages like Lightwood, but you can ignore them for now.
+        4. Modify the `requirements.txt` file to install your handler’s dependencies. You may get conflicts with other packages, but you can ignore them for now.
 
         5. Create a new blank class for your handler in the `{HandlerName}_handler.py` file. Like for other handlers, this should be a subclass of the `BaseMLEngine` class.
 
-        6. Add your new handler class to the testing DB. In the `tests/unit/executor_test_base.py` file starting at line 91, you can see how other handlers are added with `db.session.add(...)`. Copy that and modify it to add your handler. Please note to add your handler before Lightwood, otherwise the CI will break.
+        6. Add your new handler class to the testing DB. In the `tests/unit/executor_test_base.py` file starting at line 91, you can see how other handlers are added with `db.session.add(...)`. Copy that and modify it to add your handler.
 
         7. Run your new test. Please note that it should still fail but with a different exception message.
 
@@ -252,9 +252,7 @@ If you implement an NLP ML handler, create your unit tests following the structu
 
 To see some ML handlers that are currently in use, we encourage you to check out the following ML handlers inside the MindsDB repository:
 
-* [Lightwood](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/lightwood_handler)
 * [HuggingFace](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/huggingface_handler)
-* [Ludwig](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ludwig_handler)
 * [OpenAI](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler)
 
 And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers).

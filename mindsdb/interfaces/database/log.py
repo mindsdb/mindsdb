@@ -9,17 +9,19 @@ from mindsdb_sql_parser.ast import Select, Identifier, Star, BinaryOperation, Co
 from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.functions import resolve_table_identifier
-from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.utilities.exception import EntityNotExistsError
-import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
-from mindsdb.api.executor.datahub.classes.response import DataHubResponse
+from mindsdb.utilities.types.column import Column
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.integrations.libs.response import TableResponse
+import mindsdb.interfaces.storage.db as db
+from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.api.executor.datahub.classes.tables_row import (
     TABLES_ROW_TYPE,
     TablesRow,
 )
+from mindsdb.utilities.constants import DEFAULT_USER_ID, DEFAULT_COMPANY_ID
 
 
 class LogTable(ABC):
@@ -48,8 +50,8 @@ class LogTable(ABC):
         pass
 
     @staticmethod
-    def company_id_comparison(table_a: str, table_b: str) -> BinaryOperation:
-        """Make statement for 'safe' comparison of company_id of two tables
+    def company_id_and_user_id_comparison(table_a: str, table_b: str) -> BinaryOperation:
+        """Make statement for 'safe' comparison of company_id and user_id of two tables
 
         Args:
             table_a (str): name of first table
@@ -59,10 +61,22 @@ class LogTable(ABC):
             BinaryOperation: statement that can be used for 'safe' comparison
         """
         return BinaryOperation(
-            op="=",
+            op="and",
             args=(
-                Function(op="coalesce", args=(Identifier(f"{table_a}.company_id"), 0)),
-                Function(op="coalesce", args=(Identifier(f"{table_b}.company_id"), 0)),
+                BinaryOperation(
+                    op="=",
+                    args=(
+                        Function(op="coalesce", args=(Identifier(f"{table_a}.company_id"), DEFAULT_COMPANY_ID)),
+                        Function(op="coalesce", args=(Identifier(f"{table_b}.company_id"), DEFAULT_COMPANY_ID)),
+                    ),
+                ),
+                BinaryOperation(
+                    op="=",
+                    args=(
+                        Function(op="coalesce", args=(Identifier(f"{table_a}.user_id"), DEFAULT_USER_ID)),
+                        Function(op="coalesce", args=(Identifier(f"{table_b}.user_id"), DEFAULT_USER_ID)),
+                    ),
+                ),
             ),
         )
 
@@ -107,14 +121,23 @@ class LLMLogTable(LogTable):
                 condition=BinaryOperation(
                     op="and",
                     args=(
-                        LLMLogTable.company_id_comparison("llm_log", "predictor"),
+                        LLMLogTable.company_id_and_user_id_comparison("llm_log", "predictor"),
                         BinaryOperation(op="=", args=(Identifier("llm_log.model_id"), Identifier("predictor.id"))),
                     ),
                 ),
             ),
             where=BinaryOperation(
-                op="is" if ctx.company_id is None else "=",
-                args=(Identifier("llm_log.company_id"), Constant(ctx.company_id)),
+                op="and",
+                args=(
+                    BinaryOperation(
+                        op="is" if ctx.company_id is None else "=",
+                        args=(Identifier("llm_log.company_id"), Constant(ctx.company_id)),
+                    ),
+                    BinaryOperation(
+                        op="is" if ctx.user_id is None else "=",
+                        args=(Identifier("llm_log.user_id"), Constant(ctx.user_id)),
+                    ),
+                ),
             ),
             alias=Identifier("llm_log"),
         )
@@ -146,7 +169,7 @@ class JobsHistoryTable(LogTable):
                     condition=BinaryOperation(
                         op="and",
                         args=(
-                            LLMLogTable.company_id_comparison("jobs_history", "jobs"),
+                            LLMLogTable.company_id_and_user_id_comparison("jobs_history", "jobs"),
                             BinaryOperation(op="=", args=(Identifier("jobs_history.job_id"), Identifier("jobs.id"))),
                         ),
                     ),
@@ -156,14 +179,23 @@ class JobsHistoryTable(LogTable):
                 condition=BinaryOperation(
                     op="and",
                     args=(
-                        LLMLogTable.company_id_comparison("project", "jobs"),
+                        LLMLogTable.company_id_and_user_id_comparison("project", "jobs"),
                         BinaryOperation(op="=", args=(Identifier("project.id"), Identifier("jobs.project_id"))),
                     ),
                 ),
             ),
             where=BinaryOperation(
-                op="is" if ctx.company_id is None else "=",
-                args=(Identifier("jobs_history.company_id"), Constant(ctx.company_id)),
+                op="and",
+                args=(
+                    BinaryOperation(
+                        op="is" if ctx.company_id is None else "=",
+                        args=(Identifier("jobs_history.company_id"), Constant(ctx.company_id)),
+                    ),
+                    BinaryOperation(
+                        op="is" if ctx.user_id is None else "=",
+                        args=(Identifier("jobs_history.user_id"), Constant(ctx.user_id)),
+                    ),
+                ),
             ),
             alias=Identifier("jobs_history"),
         )
@@ -197,7 +229,7 @@ class LogDBController:
             for table_name in self._tables.keys()
         ]
 
-    def query(self, query: Select = None, native_query: str = None, session=None) -> DataHubResponse:
+    def query(self, query: Select = None, native_query: str = None, session=None) -> TableResponse:
         if native_query is not None:
             if query is not None:
                 raise Exception("'query' and 'native_query' arguments can not be used together")
@@ -259,6 +291,5 @@ class LogDBController:
                     df[df_column_name] = df[df_column_name].astype(column_type)
         # endregion
 
-        columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
-
-        return DataHubResponse(data_frame=df, columns=columns_info)
+        columns = [Column(name=k, dtype=v) for k, v in df.dtypes.items()]
+        return TableResponse(data=df, columns=columns, affected_rows=0)

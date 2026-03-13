@@ -10,9 +10,8 @@ on:
     types:
       - closed
     branches:
-      - 'main'
       - 'develop'
-      - 'release/*'
+      - 'releases/*'
 
 concurrency:
   group: ${{ github.workflow_ref }}

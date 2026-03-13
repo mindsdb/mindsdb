@@ -2,7 +2,6 @@ from http import HTTPStatus
 
 from flask import request
 from flask_restx import Resource
-from langchain_text_splitters import MarkdownHeaderTextSplitter
 from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
@@ -17,7 +16,6 @@ from mindsdb.interfaces.knowledge_base.preprocessing.constants import (
     DEFAULT_CONTEXT_DOCUMENT_LIMIT,
     DEFAULT_CRAWL_DEPTH,
     DEFAULT_WEB_FILTERS,
-    DEFAULT_MARKDOWN_HEADERS,
     DEFAULT_WEB_CRAWL_LIMIT,
 )
 from mindsdb.interfaces.knowledge_base.preprocessing.document_loader import DocumentLoader
@@ -202,14 +200,12 @@ class KnowledgeBaseResource(Resource):
             file_controller = FileController()
             file_splitter_config = FileSplitterConfig()
             file_splitter = FileSplitter(file_splitter_config)
-            markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=DEFAULT_MARKDOWN_HEADERS)
             mysql_proxy = FakeMysqlProxy()
 
             # Initialize DocumentLoader with required components
             document_loader = DocumentLoader(
                 file_controller=file_controller,
                 file_splitter=file_splitter,
-                markdown_splitter=markdown_splitter,
                 mysql_proxy=mysql_proxy,
             )
 
@@ -240,6 +236,26 @@ class KnowledgeBaseResource(Resource):
             # Process query if provided
             if kb_data.get("query"):
                 table.insert_query_result(kb_data["query"], project_name)
+
+            # update KB
+            update_kb_data = {}
+            if "params" in kb_data:
+                allowed_keys = [
+                    "id_column",
+                    "metadata_columns",
+                    "content_columns",
+                    "preprocessing",
+                    "reranking_model",
+                    "embedding_model",
+                ]
+                update_kb_data = {k: v for k, v in kb_data["params"].items() if k in allowed_keys}
+            if update_kb_data or "preprocessing" in kb_data:
+                session.kb_controller.update(
+                    knowledge_base_name,
+                    project.name,
+                    params=update_kb_data,
+                    preprocessing_config=kb_data.get("preprocessing"),
+                )
 
         except ExecutorException as e:
             logger.exception("Error during preprocessing and insertion:")

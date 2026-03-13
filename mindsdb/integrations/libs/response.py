@@ -480,13 +480,16 @@ def normalize_response(response) -> TableResponse | OkResponse | ErrorResponse:
         if mysql_types is None:
             mysql_types = [None] * len(columns)
 
-        return TableResponse(
+        table_response = TableResponse(
             data=response.data_frame,
             columns=[
                 Column(name=column_name, type=mysql_type) for column_name, mysql_type in zip(columns, mysql_types)
             ],
             data_generator=iter([]),  # empty generator for legacy responses
         )
+        if response.resp_type == RESPONSE_TYPE.COLUMNS_TABLE:
+            table_response.type = RESPONSE_TYPE.COLUMNS_TABLE
+        return table_response
 
     # Unknown type - return as-is (shouldn't happen normally)
     return response

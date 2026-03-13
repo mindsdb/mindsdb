@@ -9,6 +9,7 @@ on:
     branches:
       - 'main'
       - 'develop'
+      - 'releases/*'
 
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one

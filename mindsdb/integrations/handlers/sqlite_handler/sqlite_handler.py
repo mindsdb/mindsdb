@@ -14,7 +14,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 
@@ -26,7 +26,7 @@ class SQLiteHandler(DatabaseHandler):
     This handler handles connection and execution of the SQLite statements.
     """
 
-    name = 'sqlite'
+    name = "sqlite"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -38,9 +38,12 @@ class SQLiteHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'sqlite'
+        self.dialect = "sqlite"
         self.connection_data = connection_data
         self.kwargs = kwargs
+
+        # SQLite objects created in a thread can only be used in that same thread.
+        self.thread_safe = False
 
         self.connection = None
         self.is_connected = False
@@ -59,7 +62,7 @@ class SQLiteHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = sqlite3.connect(self.connection_data['db_file'])
+        self.connection = sqlite3.connect(self.connection_data["db_file"])
         self.is_connected = True
 
         return self.connection
@@ -87,12 +90,14 @@ class SQLiteHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
-            if not os.path.isfile(self.connection_data['db_file']):
-                raise FileNotFoundError(f"File '{self.connection_data['db_file']}' not found. Use ':memory:' to create an in-memory database if you don't have a file.")
+            if not os.path.isfile(self.connection_data["db_file"]):
+                raise FileNotFoundError(
+                    f"File '{self.connection_data['db_file']}' not found. Use ':memory:' to create an in-memory database if you don't have a file."
+                )
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to SQLite {self.connection_data["db_file"]}, {e}!')
+            logger.error(f"Error connecting to SQLite {self.connection_data['db_file']}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -121,21 +126,14 @@ class SQLiteHandler(DatabaseHandler):
             result = cursor.fetchall()
             if result:
                 response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
+                    RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description])
                 )
             else:
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["db_file"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.connection_data['db_file']}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:
@@ -152,7 +150,7 @@ class SQLiteHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        renderer = SqlalchemyRender('sqlite')
+        renderer = SqlalchemyRender("sqlite")
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
@@ -166,7 +164,7 @@ class SQLiteHandler(DatabaseHandler):
         query = "SELECT name from sqlite_master where type= 'table';"
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
@@ -181,5 +179,5 @@ class SQLiteHandler(DatabaseHandler):
         query = f"PRAGMA table_info([{table_name}]);"
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={'name': 'column_name', 'type': 'data_type'})
+        result.data_frame = df.rename(columns={"name": "column_name", "type": "data_type"})
         return result

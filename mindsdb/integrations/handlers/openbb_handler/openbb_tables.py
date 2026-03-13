@@ -8,6 +8,7 @@ from mindsdb.utilities import log
 
 from typing import Dict, List, Union
 from pydantic import ValidationError
+import ast as py_ast
 
 import pandas as pd
 
@@ -34,6 +35,28 @@ class OpenBBtable(APITable):
             raise TypeError(f"OpenBB command '{cmd}' is not callable.")
 
         return target
+
+    def _coerce_param_value(self, value):
+        """Coerce string literals to Python values while keeping plain strings intact."""
+        if not isinstance(value, str):
+            return value
+
+        candidate = value.strip()
+        if candidate == "":
+            return value
+
+        lowered = candidate.lower()
+        if lowered == "true":
+            return True
+        if lowered == "false":
+            return False
+        if lowered in ("none", "null"):
+            return None
+
+        try:
+            return py_ast.literal_eval(candidate)
+        except (ValueError, SyntaxError):
+            return value
 
     def _get_params_from_conditions(self, conditions: List) -> Dict:
         """Gets aggregate trade data API params from SQL WHERE conditions.
@@ -98,7 +121,7 @@ class OpenBBtable(APITable):
 
             # Resolve command safely and invoke with explicit keyword args.
             openbb_function = self._resolve_openbb_command(cmd)
-            openbb_object = openbb_function(**params)
+            openbb_object = openbb_function(**{key: self._coerce_param_value(val) for key, val in params.items()})
 
             # Transform the OBBject into a pandas DataFrame
             data = openbb_object.to_df()

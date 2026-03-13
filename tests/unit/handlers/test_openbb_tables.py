@@ -69,3 +69,28 @@ def test_openbb_command_resolution_rejects_private_segments():
 
     with pytest.raises(ValueError, match="Invalid OpenBB command segment"):
         table._resolve_openbb_command("obb.__class__")
+
+
+def test_openbb_select_coerces_literal_string_params():
+    table = OpenBBtable(_DummyHandler())
+    query = SimpleNamespace(where=object())
+
+    with patch(
+        "mindsdb.integrations.handlers.openbb_handler.openbb_tables.extract_comparison_conditions",
+        return_value=[
+            ["=", "cmd", "obb.equity.price.historical"],
+            ["=", "limit", "123"],
+            ["=", "adjusted", "true"],
+            ["=", "symbol", "'AAPL'"],
+            ["=", "ids", "[1, 2]"],
+            ["=", "raw_symbol", "AAPL"],
+        ],
+    ):
+        result = table.select(query)
+
+    row = result.iloc[0]
+    assert row["limit"] == 123
+    assert row["adjusted"] is True
+    assert row["symbol"] == "AAPL"
+    assert row["ids"] == [1, 2]
+    assert row["raw_symbol"] == "AAPL"

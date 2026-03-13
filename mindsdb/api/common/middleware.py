@@ -1,7 +1,6 @@
 import os
 import time
 import hmac
-import asyncio
 import secrets
 import hashlib
 from collections import deque
@@ -112,7 +111,6 @@ class RateLimitMiddleware:
         self.requests_per_minute = requests_per_minute
         self._window = 60.0  # seconds
         self._counters: dict[str, deque] = {}
-        self._lock = asyncio.Lock()
 
     def _get_client_key(self, scope: Scope) -> str:
         client = scope.get("client")
@@ -139,24 +137,30 @@ class RateLimitMiddleware:
         now = time.monotonic()
         window_start = now - self._window
 
-        async with self._lock:
-            timestamps = self._counters.setdefault(client_key, deque())
+        timestamps = self._counters.setdefault(client_key, deque())
 
-            # Del timestamps outside the current window
-            while timestamps and timestamps[0] <= window_start:
-                timestamps.popleft()
+        # Evict timestamps outside the current window
+        while timestamps and timestamps[0] <= window_start:
+            timestamps.popleft()
 
-            if len(timestamps) >= self.requests_per_minute:
-                retry_after = int(self._window - (now - timestamps[0])) + 1
-                response = JSONResponse(
-                    {"detail": f"Too Many Requests, retry after {str(retry_after)} seconds"},
-                    status_code=HTTPStatus.TOO_MANY_REQUESTS,
-                    headers={"Retry-After": str(retry_after)},
-                )
-                await response(scope, receive, send)
-                return
-
+        if len(timestamps) >= self.requests_per_minute:
+            retry_after = int(self._window - (now - timestamps[0])) + 1
+        else:
+            retry_after = None
             timestamps.append(now)
+
+        if retry_after is not None:
+            response = JSONResponse(
+                {"detail": f"Too Many Requests, retry after {retry_after} seconds"},
+                status_code=HTTPStatus.TOO_MANY_REQUESTS,
+                headers={"Retry-After": str(retry_after)},
+            )
+            await response(scope, receive, send)
+            return
+
+        stale_keys = [k for k, ts in self._counters.items() if not ts or ts[-1] <= window_start]
+        for k in stale_keys:
+            del self._counters[k]
 
         await self.app(scope, receive, send)
 

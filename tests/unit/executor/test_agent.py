@@ -320,9 +320,11 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT my_agent
             USING
-             provider='openai',
-             model = "gpt-3.5-turbo",
-             openai_api_key='--',
+             model={
+                "model_name": "gpt-3.5-turbo",
+                "provider": "openai",
+                "api_key": "--"
+             },            
              prompt_template="Answer the user input in a helpful way"
          """)
 
@@ -377,8 +379,10 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
           create agent retrieve_agent
            using
-          model='gpt-3.5-turbo',
-          provider='openai',
+          model={
+            "model_name": "gpt-3.5-turbo",
+            "provider": "openai"
+          },  
           prompt_template='Answer the user input in a helpful way using tools',
           data = {
                 "knowledge_bases": ["kb_review"]
@@ -445,9 +449,11 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT default_prompt_agent
             USING
-                provider='openai',
-                model = "gpt-3.5-turbo",
-                openai_api_key='--'
+                model={
+                  "model_name": "gpt-3.5-turbo",
+                  "provider": "openai",
+                  "api_key": "--"
+                }
          """)
         ret = self.run_sql("select * from default_prompt_agent where question = 'test question'")
         assert agent_response in ret.answer[0]
@@ -456,10 +462,11 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT default_retrieval_agent
             USING
-                provider='openai',
-                model = "gpt-3.5-turbo",
-                openai_api_key='--',
-                mode='retrieval'
+                model={
+                   "model_name": "gpt-3.5-turbo",
+                   "provider": "openai",
+                   "api_key": "--"
+                }
          """)
 
         mock_openai.reset_mock()
@@ -498,8 +505,10 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT my_agent
             USING
-              model = "gpt-3.5-turbo",
-              openai_api_key='--',
+              model={
+                "model_name": "gpt-3.5-turbo",
+                "api_key": '--'
+              },
               data = {
                 "knowledge_bases": ["kb_show*"],
                 "tables": ["files.show*"]
@@ -730,8 +739,10 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT my_agent
             USING
-              model = "gpt-3.5-turbo",
-              openai_api_key='--',
+              model={
+                "model_name": "gpt-3.5-turbo",
+                "api_key": '--'
+              },
               data = {
                  "knowledge_bases": ["kb1"],
                  "tables": ["files.file1", "files.file2.*"]
@@ -768,8 +779,10 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT my_agent
             USING
-              model = "gpt-3.5-turbo",
-              openai_api_key='--',
+              model={
+                "model_name": "gpt-3.5-turbo",
+                "api_key": '--'
+              },
               data = {
                  "tables": ["pg.public.*"] 
               }
@@ -803,8 +816,10 @@ class TestAgent(BaseExecutorDummyML):
             """
             CREATE AGENT override_agent
             USING
-                model = 'gpt-4o',
-                openai_api_key = 'sk-override',
+                model={
+                  "model_name": "gpt-4o",
+                  "api_key": 'sk-override'
+                },
                 prompt_template = 'Answer questions',
                 timeout = 60;
             """

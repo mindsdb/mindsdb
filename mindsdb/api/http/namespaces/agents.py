@@ -55,7 +55,7 @@ def create_agent(project_name, name, agent):
 
     try:
         created_agent = agents_controller.add_agent(
-            name=name, project_name=project_name, model_name=model_name, provider=provider, params=params
+            name=name, project_name=project_name, model={"model_name": model_name, "provider": provider}, params=params
         )
         return created_agent.as_dict(), HTTPStatus.CREATED
     except (ValueError, EntityExistsError):
@@ -188,8 +188,7 @@ class AgentResource(Resource):
                 agent_name,
                 project_name=project_name,
                 name=name,
-                model_name=model_name,
-                provider=provider,
+                model={"model_name": model_name, "provider": provider},
                 params=params,
             )
 

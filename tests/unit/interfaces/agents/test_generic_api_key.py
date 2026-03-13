@@ -105,8 +105,7 @@ class TestGenericApiKeyHandling(unittest.TestCase):
             agent = agent_controller.add_agent(
                 name="test_agent",
                 project_name="mindsdb",
-                model_name="gpt-4",
-                provider="openai",
+                model={"model_name": "gpt-4", "provider": "openai"},
                 params=params,
             )
 
@@ -151,8 +150,7 @@ class TestGenericApiKeyHandling(unittest.TestCase):
             agent = agent_controller.add_agent(
                 name="test_agent",
                 project_name="mindsdb",
-                model_name="gpt-4",
-                provider="openai",
+                model={"model_name": "gpt-4", "provider": "openai"},
                 params=params,
             )
 

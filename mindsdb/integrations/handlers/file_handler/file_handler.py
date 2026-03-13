@@ -216,10 +216,12 @@ class FileHandler(DatabaseHandler):
     def get_columns(self, table_name) -> Response:
         file_meta = self.file_controller.get_file_meta(table_name)
         if file_meta is None:
-            return Response(
+            result = Response(
                 RESPONSE_TYPE.TABLE,
                 data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
-            ).to_columns_table_response(map_type_fn=lambda _: MYSQL_DATA_TYPE.TEXT)
+            )
+            result.to_columns_table_response(map_type_fn=lambda _: MYSQL_DATA_TYPE.TEXT)
+            return result
         result = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
@@ -231,5 +233,6 @@ class FileHandler(DatabaseHandler):
                     for x in file_meta["columns"]
                 ]
             ),
-        ).to_columns_table_response(map_type_fn=lambda _: MYSQL_DATA_TYPE.TEXT)
+        )
+        result.to_columns_table_response(map_type_fn=lambda _: MYSQL_DATA_TYPE.TEXT)
         return result

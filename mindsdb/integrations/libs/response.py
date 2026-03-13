@@ -538,15 +538,20 @@ class HandlerResponse:
             raise ValueError(f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE}")
 
         self.data_frame.columns = [name.upper() for name in self.data_frame.columns]
+
+        for required_column in (INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME, INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE):
+            if required_column not in self.data_frame.columns:
+                raise ValueError(
+                    f"Missed required for INFORMATION_SCHEMA.COLUMNS column {required_column}. "
+                    f"Columns set: {self.data_frame.columns}"
+                )
+        for column_name in INF_SCHEMA_COLUMNS_NAMES_SET:
+            if column_name not in self.data_frame.columns:
+                self.data_frame[column_name] = None
+
         self.data_frame[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self.data_frame[
             INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE
         ].apply(map_type_fn)
-
-        # region validate df
-        current_columns_set = set(self.data_frame.columns)
-        if INF_SCHEMA_COLUMNS_NAMES_SET != current_columns_set:
-            raise ValueError(f"Columns set for INFORMATION_SCHEMA.COLUMNS is wrong: {list(current_columns_set)}")
-        # endregion
 
         self.data_frame = self.data_frame.astype(
             {

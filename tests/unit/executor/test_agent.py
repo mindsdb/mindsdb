@@ -1,4 +1,3 @@
-import time
 import os
 import json
 
@@ -18,16 +17,19 @@ def action_response(type="final_query", sql="", text=""):
     return json.dumps({"sql_query": sql, "type": type, "text": text, "short_description": "a tool"})
 
 
-def set_openai_completion(mock_openai, llm_response):
+def set_openai_completion(mock_openai, llm_response, add_planning=True):
     if isinstance(llm_response, str):
         llm_responses = [
             action_response(sql=f"select '{llm_response}' as answer"),
         ]
+    elif not isinstance(llm_response, list):
+        llm_responses = [llm_response]
     else:
         llm_responses = llm_response
 
-    # always add plan response
-    llm_responses.insert(0, '{"plan":"my plan is ...", "estimated_steps":3}')
+    if add_planning:
+        # add plan response
+        llm_responses.insert(0, '{"plan":"my plan is ...", "estimated_steps":3}')
 
     mock_openai.agent_calls = []
     calls = []
@@ -106,8 +108,8 @@ class TestAgent(BaseExecutorDummyML):
 
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
     def test_openai_provider(self, mock_openai):
-        agent_response = "how can I assist you today?"
-        set_openai_completion(mock_openai, agent_response)
+        # test response
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
 
         self.run_sql("""
             CREATE AGENT my_agent
@@ -119,6 +121,10 @@ class TestAgent(BaseExecutorDummyML):
              },
              prompt_template="Answer the user input in a helpful way"
          """)
+
+        agent_response = "how can I assist you today?"
+        set_openai_completion(mock_openai, agent_response)
+
         ret = self.run_sql("select * from my_agent where question = 'hi'")
 
         # check model params
@@ -178,10 +184,8 @@ class TestAgent(BaseExecutorDummyML):
 
         mock_config_get.side_effect = config_get_side_effect
 
-        agent_response = "how can I assist you today?"
-        set_openai_completion(mock_openai, agent_response)
-
         # Create an agent with only provider specified - should use default LLM params
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT default_params_agent
             USING
@@ -192,6 +196,8 @@ class TestAgent(BaseExecutorDummyML):
              },
              prompt_template="Answer the user input in a helpful way"
          """)
+        agent_response = "how can I assist you today?"
+        set_openai_completion(mock_openai, agent_response)
 
         # Check that the agent was created with the default parameters
         agent_info = self.run_sql("SELECT * FROM information_schema.agents WHERE name = 'default_params_agent'")
@@ -217,11 +223,8 @@ class TestAgent(BaseExecutorDummyML):
 
         # --- Test that agent creation works with minimal syntax using default_llm config ---
 
-        mock_openai.reset_mock()
-        agent_response = "how can I assist you today?"
-        set_openai_completion(mock_openai, agent_response)
-
         # Create an agent with minimal syntax - should use all default LLM params
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT minimal_syntax_agent
             USING
@@ -229,6 +232,10 @@ class TestAgent(BaseExecutorDummyML):
                 "tables": ['test.table1', 'test.table2']
               }
          """)
+
+        mock_openai.reset_mock()
+        agent_response = "how can I assist you today?"
+        set_openai_completion(mock_openai, agent_response)
 
         ret = self.run_sql("select * from minimal_syntax_agent where question = 'hi'")
         assert agent_response in ret.answer[0]
@@ -240,9 +247,7 @@ class TestAgent(BaseExecutorDummyML):
     @pytest.mark.skipif(sys.platform == "darwin", reason="Fails on macOS")
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
     def test_agent_stream(self, mock_openai):
-        agent_response = "how can I assist you today?"
-        set_openai_completion(mock_openai, agent_response)
-
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT my_agent
             USING
@@ -253,6 +258,9 @@ class TestAgent(BaseExecutorDummyML):
              },            
              prompt_template="Answer the user input in a helpful way"
          """)
+
+        agent_response = "how can I assist you today?"
+        set_openai_completion(mock_openai, agent_response)
 
         agents_controller = self.command_executor.session.agents_controller
         agent = agents_controller.get_agent("my_agent")
@@ -302,6 +310,7 @@ class TestAgent(BaseExecutorDummyML):
 
         os.environ["OPENAI_API_KEY"] = "--"
 
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
           create agent retrieve_agent
            using
@@ -312,8 +321,7 @@ class TestAgent(BaseExecutorDummyML):
           prompt_template='Answer the user input in a helpful way using tools',
           data = {
                 "knowledge_bases": ["kb_review"]
-          },
-          mode='retrieval'
+          }
         """)
 
         agent_response = "the answer is yes"
@@ -347,10 +355,12 @@ class TestAgent(BaseExecutorDummyML):
         self._drop_kb_storage(vector_table_name)
 
     # should not be possible to drop demo agent
-    def test_drop_demo_agent(self):
+    @patch("pydantic_ai.providers.openai.AsyncOpenAI")
+    def test_drop_demo_agent(self, mock_openai):
         """should not be possible to drop demo agent"""
         from mindsdb.api.executor.exceptions import ExecutorException
 
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT my_demo_agent
             USING
@@ -368,10 +378,9 @@ class TestAgent(BaseExecutorDummyML):
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
     def test_agent_default_prompt_template(self, mock_openai):
         """Test that agents work correctly with default prompt templates in different modes"""
-        agent_response = "default prompt template response"
-        set_openai_completion(mock_openai, agent_response)
 
         # Test non-retrieval mode with no prompt_template (should use default)
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT default_prompt_agent
             USING
@@ -381,10 +390,15 @@ class TestAgent(BaseExecutorDummyML):
                   "api_key": "--"
                 }
          """)
+
+        agent_response = "default prompt template response"
+        set_openai_completion(mock_openai, agent_response)
+
         ret = self.run_sql("select * from default_prompt_agent where question = 'test question'")
         assert agent_response in ret.answer[0]
 
         # Test retrieval mode with no prompt_template (should use default retrieval template)
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT default_retrieval_agent
             USING
@@ -428,6 +442,7 @@ class TestAgent(BaseExecutorDummyML):
             select id, planet_name content from files.show1
         """)
 
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT my_agent
             USING
@@ -540,6 +555,7 @@ class TestAgent(BaseExecutorDummyML):
                 select id, planet_name content from files.file{i} where id != 1000
             """)
 
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT my_agent
             USING
@@ -592,6 +608,7 @@ class TestAgent(BaseExecutorDummyML):
         assert "important user instruction №42" in mock_openai.agent_calls[0]
 
         # --- ALTER AGENT ---
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             ALTER AGENT my_agent
             USING
@@ -662,6 +679,7 @@ class TestAgent(BaseExecutorDummyML):
 
         self.save_file("file1", df)
 
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT my_agent
             USING
@@ -702,6 +720,7 @@ class TestAgent(BaseExecutorDummyML):
         df = get_dataset_planets()
         self.set_handler(mock_pg, name="pg", tables={"planets": df}, schema="public")
 
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql("""
             CREATE AGENT my_agent
             USING
@@ -731,13 +750,15 @@ class TestAgent(BaseExecutorDummyML):
         assert "Moon" in mock_openai.agent_calls[3]
         assert "Moon" in mock_openai.agent_calls[4]
 
+    @patch("pydantic_ai.providers.openai.AsyncOpenAI")
     @patch("mindsdb.interfaces.agents.pydantic_ai_agent.PydanticAIAgent._get_completion_stream")
-    def test_agent_query_param_override(self, mock_get_completion):
+    def test_agent_query_param_override(self, mock_get_completion, mock_openai):
         """
         Test that agent parameters can be overridden per-query using the USING clause in SELECT.
         """
         mock_get_completion.return_value = [{"type": "data", "content": "-"}]
 
+        set_openai_completion(mock_openai, action_response(text="hi"), add_planning=False)
         self.run_sql(
             """
             CREATE AGENT override_agent

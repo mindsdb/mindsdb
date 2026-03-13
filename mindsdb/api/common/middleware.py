@@ -103,8 +103,7 @@ class PATAuthMiddleware:
 
 
 class RateLimitMiddleware:
-    """Rate limiting middleware using a sliding window counter. Tracks requests per client IP.
-    """
+    """Rate limiting middleware using a sliding window counter. Tracks requests per client IP."""
 
     def __init__(self, app: ASGIApp, requests_per_minute: int) -> None:
         self.app = app

@@ -217,8 +217,7 @@ class FileHandler(DatabaseHandler):
         file_meta = self.file_controller.get_file_meta(table_name)
         if file_meta is None:
             result = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
+                RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
             )
             result.to_columns_table_response(map_type_fn=lambda _: MYSQL_DATA_TYPE.TEXT)
             return result

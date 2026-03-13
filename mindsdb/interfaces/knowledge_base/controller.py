@@ -1357,7 +1357,7 @@ class KnowledgeBaseController:
             params = params or {}
             params["preprocessing"] = preprocessing_config
 
-        self._check_kb_input_params(params)
+        validate_pydantic_params(params, KnowledgeBaseInputParams, "knowledge base")
 
         # get project id
         project = self.session.database_controller.get_project(project_name)

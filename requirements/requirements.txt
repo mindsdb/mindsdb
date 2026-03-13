@@ -35,7 +35,7 @@ a2wsgi ~= 1.10.10  # WSGI wrapper for flask+starlette
 starlette>=0.49.1
 sse-starlette==2.3.3
 pydantic_core>=2.33.2
-pyjwt==2.10.1
+pyjwt==2.12.0
 # files reading
 pymupdf==1.25.2
 filetype

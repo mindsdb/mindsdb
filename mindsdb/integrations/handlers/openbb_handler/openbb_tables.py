@@ -15,6 +15,26 @@ logger = log.getLogger(__name__)
 
 
 class OpenBBtable(APITable):
+    def _resolve_openbb_command(self, cmd: str):
+        """Resolve a validated OpenBB command to a callable."""
+        if not isinstance(cmd, str):
+            raise TypeError("OpenBB command must be a string.")
+
+        parts = cmd.split(".")
+        if len(parts) < 2 or parts[0] != "obb":
+            raise ValueError("OpenBB command must start with 'obb.'")
+
+        target = self.handler
+        for part in parts:
+            if not part.isidentifier() or part.startswith("_"):
+                raise ValueError(f"Invalid OpenBB command segment: {part}")
+            target = getattr(target, part)
+
+        if not callable(target):
+            raise TypeError(f"OpenBB command '{cmd}' is not callable.")
+
+        return target
+
     def _get_params_from_conditions(self, conditions: List) -> Dict:
         """Gets aggregate trade data API params from SQL WHERE conditions.
 
@@ -76,21 +96,9 @@ class OpenBBtable(APITable):
                 logger.error(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
                 raise Exception(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
 
-            args = ""
-            # If there are parameters create arguments as a string
-            if params:
-                for arg, val in params.items():
-                    args += f"{arg}={val},"
-
-                # Remove the additional ',' added at the end
-                if args:
-                    args = args[:-1]
-
-            # Recreate the OpenBB command with the arguments
-            openbb_cmd = f"self.handler.{cmd}({args})"
-
-            # Execute the OpenBB command and return the OBBject
-            openbb_object = eval(openbb_cmd)
+            # Resolve command safely and invoke with explicit keyword args.
+            openbb_function = self._resolve_openbb_command(cmd)
+            openbb_object = openbb_function(**params)
 
             # Transform the OBBject into a pandas DataFrame
             data = openbb_object.to_df()

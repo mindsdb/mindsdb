@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "willow",
+  "theme": "almond",
   "name": "MindsDB",
   "colors": {
     "primary": "#3f8394",
@@ -10,6 +10,11 @@
   "favicon": "/favicon.png",
   "navigation": {
       "tabs": [
+        {
+          "tab": "Home",
+          "hidden": true,
+          "pages": ["homepage"]
+        },
         {
           "tab": "Documentation",
           "groups": [
@@ -726,7 +731,8 @@
   },
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "dark": "/logo/dark.svg",
+    "href": "/homepage"
   },
   "api": {
     "mdx": {
@@ -1462,6 +1468,10 @@
     {
       "source": "/mcp/cursor_usage",
       "destination": "/model-context-protocol/cursor_usage"
+    },
+    {
+      "source": "/use-cases/overview",
+      "destination": "/homepage"
     }
   ]
 }

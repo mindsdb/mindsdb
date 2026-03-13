@@ -249,7 +249,11 @@ class Config:
                         "allow_origins": [],
                         "allow_origin_regex": r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
                         "allow_headers": ["*"],
-                    }
+                    },
+                    "rate_limit": {
+                        "enabled": False,
+                        "requests_per_minute": 60,
+                    },
                 },
             },
             "cache": {"type": "local"},
@@ -303,7 +307,7 @@ class Config:
             "logging": {"handlers": {"console": {}, "file": {}}},
             "api": {
                 "http": {},
-                "mcp": {"cors": {}},
+                "mcp": {"cors": {}, "rate_limit": {}},
             },
             "auth": {},
             "paths": {},
@@ -498,6 +502,12 @@ class Config:
         mindsdb_mcp_allow_origin_regex = os.environ.get("MINDSDB_MCP_ALLOW_ORIGIN_REGEXP", "")
         if mindsdb_mcp_allow_origin_regex != "":
             self._env_config["api"]["mcp"]["cors"]["allow_origin_regex"] = mindsdb_mcp_allow_origin_regex
+        mindsdb_mcp_rate_limit_enabled = get_bool_env_var("MINDSDB_MCP_RATE_LIMIT_ENABLED")
+        if mindsdb_mcp_rate_limit_enabled is not None:
+            self._env_config["api"]["mcp"]["rate_limit"]["enabled"] = mindsdb_mcp_rate_limit_enabled
+        mindsdb_mcp_rate_limit_rpm = os.environ.get("MINDSDB_MCP_RATE_LIMIT_RPM", "")
+        if mindsdb_mcp_rate_limit_rpm != "":
+            self._env_config["api"]["mcp"]["rate_limit"]["requests_per_minute"] = int(mindsdb_mcp_rate_limit_rpm)
         # endregion
 
     def fetch_auto_config(self) -> bool:

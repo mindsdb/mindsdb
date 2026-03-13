@@ -6,6 +6,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from mindsdb.utilities.config import config
+from mindsdb.api.common.middleware import RateLimitMiddleware
 from mindsdb.api.mcp.mcp_instance import mcp
 
 # region these imports required for correct initialization
@@ -34,6 +35,13 @@ def get_mcp_app():
         routes=list(sse_starlette.routes) + list(http_starlette.routes),
         lifespan=lifespan,
     )
+
+    # Rate limit should be added before CORS, so that CORS adds correct headers
+    if config["api"]["mcp"]["rate_limit"]["enabled"]:
+        combined_app.add_middleware(
+            RateLimitMiddleware,
+            requests_per_minute=config["api"]["mcp"]["rate_limit"]["requests_per_minute"],
+        )
 
     if config["api"]["mcp"]["cors"]["enabled"]:
         combined_app.add_middleware(

@@ -1,7 +1,10 @@
 import os
+import time
 import hmac
+import asyncio
 import secrets
 import hashlib
+from collections import deque
 from http import HTTPStatus
 from typing import Optional
 
@@ -97,6 +100,64 @@ class PATAuthMiddleware:
             return
 
         scope.setdefault("state", {})["user"] = config["auth"].get("username")
+        await self.app(scope, receive, send)
+
+
+class RateLimitMiddleware:
+    """Rate limiting middleware using a sliding window counter. Tracks requests per client IP.
+    """
+
+    def __init__(self, app: ASGIApp, requests_per_minute: int) -> None:
+        self.app = app
+        self.requests_per_minute = requests_per_minute
+        self._window = 60.0  # seconds
+        self._counters: dict[str, deque] = {}
+        self._lock = asyncio.Lock()
+
+    def _get_client_key(self, scope: Scope) -> str:
+        client = scope.get("client")
+        if client:
+            return client[0]
+        return "unknown"
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        if scope.get("method") == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+
+        # Clients usually repeat this request until
+        # the connection is established, so no rate limit it.
+        if scope.get("method") == "GET" and scope.get("path", "").endswith("/sse"):
+            await self.app(scope, receive, send)
+            return
+
+        client_key = self._get_client_key(scope)
+        now = time.monotonic()
+        window_start = now - self._window
+
+        async with self._lock:
+            timestamps = self._counters.setdefault(client_key, deque())
+
+            # Del timestamps outside the current window
+            while timestamps and timestamps[0] <= window_start:
+                timestamps.popleft()
+
+            if len(timestamps) >= self.requests_per_minute:
+                retry_after = int(self._window - (now - timestamps[0])) + 1
+                response = JSONResponse(
+                    {"detail": f"Too Many Requests, retry after {str(retry_after)} seconds"},
+                    status_code=HTTPStatus.TOO_MANY_REQUESTS,
+                    headers={"Retry-After": str(retry_after)},
+                )
+                await response(scope, receive, send)
+                return
+
+            timestamps.append(now)
+
         await self.app(scope, receive, send)
 
 

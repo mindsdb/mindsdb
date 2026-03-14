@@ -21,6 +21,15 @@ class TestNormalizeKbTableRef:
         assert '`mindsdb.my-kb`' not in result
         assert 'mindsdb.`my-kb`' in result
 
+    def test_three_part_qualified_name(self):
+        sql = "SELECT * FROM `db.schema.table`"
+        result = normalize_kb_table_ref(sql)
+        assert result == "SELECT * FROM db.schema.table"
+        
+        sql_with_hyphen = "SELECT * FROM `db.schema.my-table`"
+        result_with_hyphen = normalize_kb_table_ref(sql_with_hyphen)
+        assert result_with_hyphen == "SELECT * FROM db.schema.`my-table`"
+
     def test_plain_quoted_single_identifier_preserved(self):
         # Single identifier that needs quoting should stay quoted
         sql = "SELECT * FROM `my-kb` WHERE content = 'x'"

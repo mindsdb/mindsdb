@@ -111,7 +111,7 @@ def normalize_kb_table_ref(sql: str) -> str:
             return f"{prefix}{quoted}"
             
         # Qualified name — split and quote each part only if necessary
-        parts = inner.split('.', 1)
+        parts = inner.split('.')
         quoted = [
             p if re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', p) else f'`{p}`'
             for p in parts

@@ -82,6 +82,42 @@ def split_table_name(table_name: str) -> List[str]:
     return result
 
 
+def normalize_kb_table_ref(sql: str) -> str:
+    """
+    Normalize backtick-wrapped qualified table references in LLM-generated SQL.
+
+    The LLM sometimes wraps an entire qualified name in a single set of
+    backticks, e.g. `mindsdb.my_kb`, which the SQL parser treats as one
+    identifier with a literal dot rather than a schema.table pair. This
+    causes "Can't select from <name> in project: unknown" errors.
+
+    This function rewrites those references to unquoted or correctly
+    split form before the SQL reaches parse_sql().
+
+    Examples:
+        `mindsdb.my_kb`  →  mindsdb.my_kb
+        `mindsdb.my-kb`  →  mindsdb.`my-kb`
+        `plain_name`     →  plain_name        (unchanged, single identifier)
+        mindsdb.my_kb    →  mindsdb.my_kb     (unchanged, already correct)
+
+    See: https://github.com/mindsdb/mindsdb/issues/11156
+    """
+    def _replace_match(match: re.Match) -> str:
+        inner = match.group(1)
+        if '.' not in inner:
+            # Single identifier — only re-quote if it needs it
+            return inner if re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', inner) else f'`{inner}`'
+        # Qualified name — split and quote each part only if necessary
+        parts = inner.split('.', 1)
+        quoted = [
+            p if re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', p) else f'`{p}`'
+            for p in parts
+        ]
+        return '.'.join(quoted)
+
+    return re.sub(r'`([^`]+)`', _replace_match, sql)
+
+
 def _escape_identifiers(node: ASTNode, **kwargs) -> None:
     """Escape identifier and alias if possible
 
@@ -201,7 +237,7 @@ class MindsDBQuery:
 
     def execute_sql(self, sql: str, check_permissions=True, escape_identifiers: bool = False):
         sql = self._clean_query(sql)
-        ast_query = parse_sql(sql.strip("`"))
+        ast_query = parse_sql(normalize_kb_table_ref(sql.strip("`")))
         if escape_identifiers:
             query_traversal(ast_query, _escape_identifiers)
         if check_permissions:

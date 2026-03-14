@@ -45,6 +45,12 @@ class TestNormalizeKbTableRef:
         assert 'mindsdb.kb_a' in result
         assert 'mindsdb.kb_b' in result
 
+    def test_backticks_in_other_clauses_preserved(self):
+        # Backticks in SELECT (column names/aliases) or WHERE (string literals) must not be corrupted
+        sql = "SELECT `my.col` FROM mindsdb.test_kb WHERE content = '`some.value`'"
+        result = normalize_kb_table_ref(sql)
+        assert result == sql
+
     def test_ast_equivalence_after_normalization(self):
         bad = "SELECT * FROM `mindsdb.test_kb` WHERE content = 'x'"
         good = "SELECT * FROM mindsdb.test_kb WHERE content = 'x'"

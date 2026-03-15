@@ -1,0 +1,48 @@
+{
+  "name": "mindsdb/mindsdb",
+  "description": "Connect and unify data across various platforms and databases with [MindsDB as a single MCP server](https://docs.mindsdb.com/mcp/overview).",
+  "accepts": [
+    {
+      "network": "eip155:8453",
+      "asset": "USDC",
+      "address": "YOUR_WALLET_ADDRESS"
+    }
+  ],
+  "resources": [
+    {
+      "path": "/CREATE AGENT",
+      "price": "0.01",
+      "description": "Pay-per-call access to CREATE AGENT"
+    },
+    {
+      "path": "/CREATE KNOWLEDGE_BASE",
+      "price": "0.01",
+      "description": "Pay-per-call access to CREATE KNOWLEDGE_BASE"
+    },
+    {
+      "path": "/CREATE VIEW",
+      "price": "0.01",
+      "description": "Pay-per-call access to CREATE VIEW"
+    },
+    {
+      "path": "/SELECT",
+      "price": "0.01",
+      "description": "Pay-per-call access to SELECT"
+    },
+    {
+      "path": "/JOIN",
+      "price": "0.01",
+      "description": "Pay-per-call access to JOIN"
+    },
+    {
+      "path": "/mindsdb.connect",
+      "price": "0.01",
+      "description": "Pay-per-call access to mindsdb.connect"
+    },
+    {
+      "path": "/mindsdb.query",
+      "price": "0.01",
+      "description": "Pay-per-call access to mindsdb.query"
+    }
+  ]
+}

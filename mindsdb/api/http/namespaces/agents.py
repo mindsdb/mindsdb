@@ -54,9 +54,7 @@ def create_agent(project_name, name, agent):
         )
 
     try:
-        created_agent = agents_controller.add_agent(
-            name=name, project_name=project_name, model=model, params=params
-        )
+        created_agent = agents_controller.add_agent(name=name, project_name=project_name, model=model, params=params)
         return created_agent.as_dict(), HTTPStatus.CREATED
     except (ValueError, EntityExistsError):
         # Model doesn't exist.

@@ -375,6 +375,7 @@ class TestAgent(BaseExecutorDummyML):
         agent = self.db.Agents.query.filter_by(name="my_demo_agent").first()
         agent.params["is_demo"] = True
         flag_modified(agent, "params")
+        self.db.session.commit()
         with pytest.raises(ExecutorException):
             self.run_sql("drop agent my_demo_agent")
 

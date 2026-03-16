@@ -16,6 +16,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.utilities.config import config
 from mindsdb.utilities.utils import validate_pydantic_params
 from mindsdb.utilities import log
+from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery
 
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
@@ -205,15 +206,28 @@ class AgentsController:
 
         # No need to copy params since we're not preserving the original reference
         params = params or {}
-
-        # move into params
         params["model"] = model
 
+        # check agent params
         validate_pydantic_params(params, AgentParams, "agent")
 
         # check llm works
         llm_params = self.get_agent_llm_params(model)
         check_agent_llm(llm_params)
+
+        # check data
+        data = params.get("data", {})
+        if data:
+            tables = data.get("tables", [])
+            knowledge_bases = data.get("knowledge_bases", [])
+            if tables or knowledge_bases:
+                sql_toolkit = MindsDBQuery(tables=tables, knowledge_bases=knowledge_bases)
+
+                if tables and len(sql_toolkit.get_usable_table_names(lazy=False)) == 0:
+                    raise ValueError(f"No tables found: {tables}")
+
+                if knowledge_bases and len(sql_toolkit.get_usable_knowledge_base_names(lazy=False)) == 0:
+                    raise ValueError(f"No knowledge bases found: {knowledge_bases}")
 
         agent = db.Agents(
             name=name,

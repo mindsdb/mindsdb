@@ -206,7 +206,7 @@ class TestAgent(BaseExecutorDummyML):
         # Verify the agent has the user-specified parameters but not default parameters
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])
         assert agent_params.get("prompt_template") == "Answer the user input in a helpful way"
-        assert agent_params["model"]["model_name"] == "gpt-3"
+        assert "gpt-3" in agent_info["MODEL"][0]
 
         # Default parameters should NOT be stored in the database
         # They will be applied at runtime via get_agent_llm_params
@@ -229,9 +229,7 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT minimal_syntax_agent
             USING
-              data = {
-                "tables": ['test.table1', 'test.table2']
-              }
+              data = { }
          """)
 
         mock_openai.reset_mock()

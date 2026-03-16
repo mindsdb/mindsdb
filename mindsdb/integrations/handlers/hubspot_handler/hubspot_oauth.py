@@ -13,7 +13,6 @@ logger = log.getLogger(__name__)
 _STORAGE_KEY = "hubspot_oauth_tokens"
 _DEFAULT_REDIRECT_PATH = "/verify-auth"
 _TOKEN_EXPIRY_BUFFER = 0.95
-_DEFAULT_SCOPES = ("oauth",)
 
 
 class HubSpotOAuth2Manager:
@@ -27,13 +26,15 @@ class HubSpotOAuth2Manager:
         client_id: str,
         client_secret: str,
         scopes: Optional[str] = None,
+        optional_scopes: Optional[str] = None,
         redirect_uri: Optional[str] = None,
         code: Optional[str] = None,
     ) -> None:
         self.handler_storage = handler_storage
         self.client_id = client_id
         self.client_secret = client_secret
-        self.scopes = tuple(scopes.split()) if scopes else _DEFAULT_SCOPES
+        self.scopes = tuple(scopes.split()) if scopes else ("oauth",)
+        self.optional_scopes = tuple(optional_scopes.split()) if optional_scopes else None
         self.redirect_uri = redirect_uri
         self.code = code
 
@@ -44,7 +45,7 @@ class HubSpotOAuth2Manager:
             AuthException: User authorization required; auth_url is attached.
         """
         stored = self.handler_storage.encrypted_json_get(_STORAGE_KEY)
-
+        logger.debug(f"Retrieved stored token data: {stored}")
         if stored:
             if time.time() < stored.get("expires_at", 0):
                 return stored["access_token"]
@@ -61,6 +62,7 @@ class HubSpotOAuth2Manager:
 
         auth_url = get_auth_url(
             scope=self.scopes,
+            optional_scope=self.optional_scopes,
             client_id=self.client_id,
             redirect_uri=self._get_redirect_uri(),
         )
@@ -80,7 +82,7 @@ class HubSpotOAuth2Manager:
 
     def _exchange_code(self, code: str) -> str:
         """Exchange an authorization code for access and refresh tokens."""
-        response = HubSpot().auth.oauth.tokens_api.create(
+        response = HubSpot().oauth.tokens_api.create(
             grant_type="authorization_code",
             code=code,
             redirect_uri=self._get_redirect_uri(),
@@ -91,7 +93,7 @@ class HubSpotOAuth2Manager:
 
     def _refresh_token(self, refresh_token: str) -> str:
         """Obtain a new access token using the stored refresh token."""
-        response = HubSpot().auth.oauth.tokens_api.create(
+        response = HubSpot().oauth.tokens_api.create(
             grant_type="refresh_token",
             refresh_token=refresh_token,
             redirect_uri=self._get_redirect_uri(),

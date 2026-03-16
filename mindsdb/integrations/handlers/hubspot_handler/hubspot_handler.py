@@ -171,9 +171,12 @@ class HubspotHandler(MetaAPIHandler):
                     client_id=client_id,
                     client_secret=client_secret,
                     scopes=self.connection_data.get("scope"),
+                    optional_scopes=self.connection_data.get("optional_scope"),
                     redirect_uri=self.connection_data.get("redirect_uri"),
                     code=self.connection_data.get("code"),
                 )
+                logger.info("Attempting to obtain access token via OAuth flow")
+                logger.debug(oauth_manager)
                 self.connection = HubSpot(access_token=oauth_manager.get_access_token())
 
             else:

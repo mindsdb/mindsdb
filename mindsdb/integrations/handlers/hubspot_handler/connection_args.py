@@ -26,9 +26,15 @@ connection_args = OrderedDict(
     },
     scope={
         "type": ARG_TYPE.STR,
-        "description": ("Space-separated OAuth scopes requested for token generation."),
+        "description": "Space-separated required OAuth scopes (scope URL param). Defaults to 'oauth'.",
         "required": False,
-        "label": "Scopes",
+        "label": "Required Scopes",
+    },
+    optional_scope={
+        "type": ARG_TYPE.STR,
+        "description": "Space-separated optional OAuth scopes.",
+        "required": False,
+        "label": "Optional Scopes",
     },
     redirect_uri={
         "type": ARG_TYPE.STR,

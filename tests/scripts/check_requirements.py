@@ -104,6 +104,7 @@ MAIN_RULE_IGNORES = {
         "langchain-experimental",
         "lxml",
         "openpyxl",
+        "xlrd",
         "onnxruntime",
         "litellm",
         "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.

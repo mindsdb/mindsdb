@@ -78,6 +78,7 @@ dependencies = [
     # --- Misc ---
     "pyaml ~= 23.12",
     "html2text>=2025.4.15",
+    "xlrd>=2.0.2",
 ]
 
 [project.optional-dependencies]

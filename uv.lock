@@ -3145,6 +3145,7 @@ dependencies = [
     { name = "urllib3" },
     { name = "uvicorn" },
     { name = "walrus" },
+    { name = "xlrd" },
 ]
 
 [package.optional-dependencies]
@@ -3343,6 +3344,7 @@ requires-dist = [
     { name = "walrus", marker = "extra == 'test'", specifier = "~=0.9" },
     { name = "watchfiles", marker = "extra == 'dev'", specifier = "~=0.19" },
     { name = "wheel", marker = "extra == 'dev'" },
+    { name = "xlrd", specifier = ">=2.0.2" },
 ]
 provides-extras = ["agents", "kb", "opentelemetry", "langfuse", "postgres", "snowflake", "oracle", "bigquery", "databricks", "timescaledb", "salesforce", "hubspot", "netsuite", "mariadb", "mysql", "dev", "test"]
 
@@ -6790,6 +6792,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8f/cd/752bf4a3e13619e6eb6c2ca0df18890aa70b21f299a51c126079e3c1c7b6/xai_sdk-1.8.0.tar.gz", hash = "sha256:614301eed7f7e986897ac8d6836900391756d0cdee725370d21e1a2c1b4b8bc3", size = 391420, upload-time = "2026-03-05T06:50:47.091Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/98/cd/183e7541990f46474ce33aaf2b2573f8848e71871669e01ed1fb02e6bc3b/xai_sdk-1.8.0-py3-none-any.whl", hash = "sha256:af63766db7f8a070d57e15e052fb57fdfacacbc604590c4350ad1aef03dda374", size = 242349, upload-time = "2026-03-05T06:50:45.789Z" },
+]
+
+[[package]]
+name = "xlrd"
+version = "2.0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/07/5a/377161c2d3538d1990d7af382c79f3b2372e880b65de21b01b1a2b78691e/xlrd-2.0.2.tar.gz", hash = "sha256:08b5e25de58f21ce71dc7db3b3b8106c1fa776f3024c54e45b45b374e89234c9", size = 100167, upload-time = "2025-06-14T08:46:39.039Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/62/c8d562e7766786ba6587d09c5a8ba9f718ed3fa8af7f4553e8f91c36f302/xlrd-2.0.2-py2.py3-none-any.whl", hash = "sha256:ea762c3d29f4cca48d82df517b6d89fbce4db3107f9d78713e48cd321d5c9aa9", size = 96555, upload-time = "2025-06-14T08:46:37.766Z" },
 ]
 
 [[package]]

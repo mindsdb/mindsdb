@@ -11,21 +11,24 @@ HubSpot handler for MindsDB provides interfaces to connect to HubSpot via APIs a
   - [About HubSpot](#about-hubspot)
   - [Installation](#installation)
   - [Authentication](#authentication)
-    - [Access Token Authentication](#access-token-authentication)
+    - [Personal Access Token Authentication](#personal-access-token-authentication)
     - [OAuth Authentication](#oauth-authentication)
+  - [Supported Tables](#supported-tables)
+    - [Core CRM and Engagement Tables](#core-crm-and-engagement-tables)
+    - [Metadata Tables](#metadata-tables)
+    - [Association Tables](#association-tables)
   - [Data Catalog Support](#data-catalog-support)
-  - [Available Tables](#available-tables)
   - [Example Usage](#example-usage)
     - [Basic Connection](#basic-connection)
-    - [Data Catalog Operations](#data-catalog-operations)
     - [Querying Data](#querying-data)
     - [Data Manipulation](#data-manipulation)
+  - [Notes on Filters and Limits](#notes-on-filters-and-limits)
 
 ---
 
 ## About HubSpot
 
-HubSpot is a comprehensive CRM platform providing marketing, sales, content management, and customer service tools. This integration provides secure, enterprise-ready access to HubSpot's CRM data through MindsDB's unified interface.
+HubSpot is a comprehensive CRM platform providing marketing, sales, content management, and customer service tools. This integration exposes HubSpot CRM data through MindsDB's SQL interface.
 
 **Official Website:** https://www.hubspot.com/products
 **API Documentation:** https://developers.hubspot.com/docs/api/overview
@@ -40,23 +43,21 @@ pip install -r requirements.txt
 
 **Required Dependencies:**
 - `hubspot-api-client==12.0.0` - Official HubSpot Python client
-  
+
 ## Authentication
 
-The handler supports two authentication methods with enterprise-grade security:
+The handler supports two authentication methods:
 
-### Access Token Authentication
+### Personal Access Token Authentication
 
 Recommended for server-to-server integrations and production environments.
 
-**Steps to obtain access token:**
+**Steps to obtain an access token:**
 1. Navigate to your HubSpot account settings
-2. Go to Integrations → Private Apps
-3. Create a new private app or select existing one
-4. Configure required scopes (contacts, companies, deals)
+2. Go to Integrations -> Private Apps
+3. Create a new private app or select an existing one
+4. Configure required scopes for the tables you plan to access
 5. Copy the generated access token
-
-**Security Note:** Access tokens provide full API access. Store securely and rotate regularly.
 
 ### OAuth Authentication
 
@@ -65,42 +66,59 @@ Recommended for applications requiring user consent and dynamic scope management
 **Required OAuth Parameters:**
 - `client_id`: Your app's client identifier
 - `client_secret`: Your app's client secret (store securely)
-- OAuth flow implementation (handled externally)
 
-**Security Note:** Never expose client secrets in client-side code. Use server-side token exchange.
+OAuth token exchange and refresh are handled externally.
 
+## Supported Tables
+
+### Core CRM and Engagement Tables
+
+These tables support `SELECT`, `INSERT`, `UPDATE`, and `DELETE` operations.
+
+| Table Name | Description | Reference |
+|------------|-------------|-------------|
+| `companies` | Company records from HubSpot CRM | https://developers.hubspot.com/docs/api-reference/crm-companies-v3/guide |
+| `contacts` | Contact records from HubSpot CRM | https://developers.hubspot.com/docs/api-reference/crm-contacts-v3/guide |
+| `deals` | Deal records from HubSpot CRM | https://developers.hubspot.com/docs/api-reference/crm-deals-v3/guide |
+| `tickets` | Support ticket records | https://developers.hubspot.com/docs/api-reference/crm-tickets-v3/guide |
+| `tasks` | Task and follow-up records | https://developers.hubspot.com/docs/api-reference/crm-tasks-v3/guide |
+| `calls` | Call log records |  https://developers.hubspot.com/docs/api-reference/crm-calls-v3/guide |
+| `emails` | Email log records | https://developers.hubspot.com/docs/api-reference/crm-emails-v3/guide |
+| `meetings` | Meeting records | https://developers.hubspot.com/docs/api-reference/crm-meetings-v3/guide |
+| `notes` | Timeline notes | https://developers.hubspot.com/docs/api-reference/crm-notes-v3/guide |
+
+### Metadata Tables
+
+These tables are read-only and support `SELECT` only.
+
+| Table Name | Description | Reference |
+|------------|-------------|-------------|
+| `owners` | HubSpot owners with names and emails | https://developers.hubspot.com/docs/api-reference/crm-owners-v3/guide |
+| `pipelines` | Deal pipelines with names and stages | https://developers.hubspot.com/docs/api-reference/crm-pipelines-v3/guide |
+
+### Association Tables
+
+Association tables are read-only and support `SELECT` only. They expose relationships between objects and include `association_type` and `association_label` columns. 
+ 
+ Reference: https://developers.hubspot.com/docs/api-reference/crm-associations-v4/guide
+
+| Table Name | Description |
+|------------|-------------|
+| `company_contacts` | Company to contact associations |
+| `company_deals` | Company to deal associations |
+| `company_tickets` | Company to ticket associations |
+| `contact_companies` | Contact to company associations |
+| `contact_deals` | Contact to deal associations |
+| `contact_tickets` | Contact to ticket associations |
+| `deal_companies` | Deal to company associations |
+| `deal_contacts` | Deal to contact associations |
+| `ticket_companies` | Ticket to company associations |
+| `ticket_contacts` | Ticket to contact associations |
+| `ticket_deals` | Ticket to deal associations |
 
 ## Data Catalog Support
 
-The handler provides comprehensive data catalog capabilities:
-
-**Table Metadata:**
-- `TABLE_NAME`: Name of the table (companies, contacts, deals)
-- `TABLE_TYPE`: Always "BASE TABLE" for HubSpot entities
-- `TABLE_SCHEMA`: Schema identifier ("hubspot")
-- `TABLE_DESCRIPTION`: Human-readable description of table contents
-- `ROW_COUNT`: Estimated number of records (when available)
-
-**Column Metadata:**
-- `COLUMN_NAME`: Column identifier
-- `DATA_TYPE`: SQL data type (VARCHAR, INTEGER, TIMESTAMP, etc.)
-- `IS_NULLABLE`: Whether column accepts NULL values
-- `COLUMN_DEFAULT`: Default value (if any)
-- `COLUMN_DESCRIPTION`: Column purpose and HubSpot property mapping
-
-
-## Available Tables
-
-| Table Name | Description | Key Columns | Primary Operations |
-|------------|-------------|-------------|-------------------|
-| `companies` | Organization records from HubSpot CRM | id, name, domain, industry | SELECT, INSERT, UPDATE, DELETE |
-| `contacts` | Individual contact records | id, email, firstname, lastname | SELECT, INSERT, UPDATE, DELETE |
-| `deals` | Sales opportunity records | id, dealname, amount, stage | SELECT, INSERT, UPDATE, DELETE |
-
-**Important Notes on Field Values:**
-- **Industry codes**: HubSpot uses predefined industry values (e.g., `COMPUTER_SOFTWARE`, `BIOTECHNOLOGY`, `FINANCIAL_SERVICES`). See [HubSpot's industry list](https://knowledge.hubspot.com/properties/hubspots-default-company-properties#industry) for all valid options.
-- **Deal stages**: Each HubSpot account has custom pipeline stages. Use the stage IDs from your account (e.g., `presentationscheduled`, `closedwon`, `closedlost`, or numeric IDs like `110382973`).
-- **Email validation**: Contact email addresses must be valid email formats (e.g., `user@example.com`).
+The handler provides `SHOW TABLES` and `information_schema.columns` support for all tables. Column statistics are sampled for core CRM and engagement tables.
 
 ## Example Usage
 
@@ -116,7 +134,7 @@ PARAMETERS = {
 ```
 
 **Using OAuth (Advanced):**
-```sql  
+```sql
 CREATE DATABASE hubspot_datasource
 WITH ENGINE = 'hubspot',
 PARAMETERS = {
@@ -125,78 +143,56 @@ PARAMETERS = {
 };
 ```
 
-### Data Catalog Operations
-
-**List Available Tables:**
-```sql
-SHOW TABLES FROM hubspot_datasource;
-```
-
-**Get Detailed Column Information:**
-```sql
-SELECT * FROM information_schema.columns 
-WHERE table_schema = 'hubspot_datasource' 
-AND table_name = 'companies';
-```
-
 ### Querying Data
 
 **Basic Data Retrieval:**
 ```sql
--- Get all companies
 SELECT * FROM hubspot_datasource.companies LIMIT 10;
-
--- Get all contacts  
 SELECT * FROM hubspot_datasource.contacts LIMIT 10;
-
--- Get all deals
 SELECT * FROM hubspot_datasource.deals LIMIT 10;
 ```
 
+**Date Filters (Supported Functions):**
+```sql
+SELECT * FROM hubspot_datasource.deals
+WHERE closedate >= DATE_SUB(CURRENT_DATE, INTERVAL 2 YEAR);
+```
 
 ### Data Manipulation
 
 **Creating Records:**
 ```sql
--- Create new company
 INSERT INTO hubspot_datasource.companies (name, domain, industry, city, state)
 VALUES ('Acme Corp', 'acme.com', 'COMPUTER_SOFTWARE', 'New York', 'NY');
 
--- Create new contact  
 INSERT INTO hubspot_datasource.contacts (email, firstname, phone)
 VALUES ('john.doe@example.com', 'John', '+1234567890');
 
--- Create new deal
-INSERT INTO hubspot_datasource.deals (dealname, amount, dealstage, pipeline)
-VALUES ('New Deal', 5000, 'presentationscheduled', 'default');
+INSERT INTO hubspot_datasource.tasks (hs_task_subject, hs_task_status)
+VALUES ('Follow up with Acme', 'WAITING');
 ```
 
 **Updating Records:**
 ```sql
--- Update company information
-UPDATE hubspot_datasource.companies 
+UPDATE hubspot_datasource.companies
 SET industry = 'COMPUTER_SOFTWARE', city = 'Austin'
 WHERE name = 'Acme Corp';
 
--- Update contact details
-UPDATE hubspot_datasource.contacts
-SET phone = '+1-555-9999', company = 'Acme Corporation'  
-WHERE email = 'john.doe@acme.com';
-
--- Move deal through pipeline
 UPDATE hubspot_datasource.deals
 SET dealstage = '110382973', amount = '75000'
 WHERE dealname = 'New Deal';
 ```
 
 **Deleting Records:**
-```sql  
--- Archive old deals
-DELETE FROM hubspot_datasource.deals  
-WHERE dealstage = 'closedlost' 
+```sql
+DELETE FROM hubspot_datasource.deals
+WHERE dealstage = 'closedlost'
   AND createdate < '2023-01-01';
-
--- Remove test contacts
-DELETE FROM hubspot_datasource.contacts
-WHERE email = 'email';
 ```
+
+## Notes on Filters and Limits
+
+- Supported filter operators include `=`, `!=`, `<`, `<=`, `>`, `>=`, `IN`, and `NOT IN`.
+- Date helpers supported in filters include `CURDATE()`/`CURRENT_DATE`, `NOW()`/`CURRENT_TIMESTAMP`, `DATE_SUB`, and `DATE_ADD`.
+- Updates and deletes evaluate conditions against a sample of up to 200 records before applying changes.
+- Unsupported filters or order-by expressions are skipped rather than raising errors.

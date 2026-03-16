@@ -147,7 +147,7 @@ class PostgresHandler(MetaDatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.cache_thread_safe = True
 
     def __del__(self):
         if self.is_connected:
@@ -176,9 +176,6 @@ class PostgresHandler(MetaDatabaseHandler):
         if self.connection_args.get("autocommit"):
             config["autocommit"] = self.connection_args.get("autocommit")
 
-        # If schema is not provided set public as default one
-        if self.connection_args.get("schema"):
-            config["options"] = f"-c search_path={self.connection_args.get('schema')},public"
         return config
 
     @profiler.profile()
@@ -199,6 +196,12 @@ class PostgresHandler(MetaDatabaseHandler):
         try:
             self.connection = psycopg.connect(**config)
             self.is_connected = True
+
+            schema = self.connection_args.get("schema")
+            if schema:
+                with self.connection.cursor() as cur:
+                    cur.execute(f'SET search_path TO "{schema}", public;')
+                self.connection.commit()
             return self.connection
         except psycopg.Error as e:
             logger.error(f"Error connecting to PostgreSQL {self.database}, {e}!")
@@ -588,8 +591,11 @@ class PostgresHandler(MetaDatabaseHandler):
                 obj_description(pgc.oid, 'pg_class') AS table_description,
                 pgc.reltuples AS row_count
             FROM information_schema.tables t
-            JOIN pg_catalog.pg_class pgc ON pgc.relname = t.table_name
-            JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
+            JOIN pg_catalog.pg_namespace pgn
+            ON pgn.nspname = t.table_schema
+            JOIN pg_catalog.pg_class pgc
+            ON pgc.relname = t.table_name
+            AND pgc.relnamespace = pgn.oid
             WHERE t.table_schema = current_schema()
             AND t.table_type in ('BASE TABLE', 'VIEW')
             AND t.table_name NOT LIKE 'pg_%'
@@ -622,13 +628,14 @@ class PostgresHandler(MetaDatabaseHandler):
                 c.column_default,
                 (c.is_nullable = 'YES') AS is_nullable
             FROM information_schema.columns c
-            JOIN pg_catalog.pg_class pgc ON pgc.relname = c.table_name
-            JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
+            JOIN pg_namespace pgn ON pgn.nspname = c.table_schema
+            JOIN pg_class pgc
+            ON pgc.relname = c.table_name
+            AND pgc.relnamespace = pgn.oid
             WHERE c.table_schema = current_schema()
             AND pgc.relkind = 'r'  -- Only consider regular tables (avoids indexes, sequences, etc.)
             AND c.table_name NOT LIKE 'pg_%'
             AND c.table_name NOT LIKE 'sql_%'
-            AND pgn.nspname = c.table_schema
         """
 
         if table_names is not None and len(table_names) > 0:
@@ -728,10 +735,10 @@ class PostgresHandler(MetaDatabaseHandler):
                 tc.constraint_name
             FROM
                 information_schema.table_constraints AS tc
-            JOIN
-                information_schema.key_column_usage AS kcu
-            ON
-                tc.constraint_name = kcu.constraint_name
+            JOIN information_schema.key_column_usage AS kcu
+                ON tc.constraint_name = kcu.constraint_name
+                AND tc.constraint_schema = kcu.constraint_schema
+                AND tc.table_schema = kcu.table_schema
             WHERE
                 tc.constraint_type = 'PRIMARY KEY'
                 AND tc.table_schema = current_schema()
@@ -763,14 +770,13 @@ class PostgresHandler(MetaDatabaseHandler):
                 tc.constraint_name
             FROM
                 information_schema.table_constraints AS tc
-            JOIN
-                information_schema.key_column_usage AS kcu
-            ON
-                tc.constraint_name = kcu.constraint_name
-            JOIN
-                information_schema.constraint_column_usage AS ccu
-            ON
-                ccu.constraint_name = tc.constraint_name
+                JOIN information_schema.key_column_usage AS kcu
+                    ON tc.constraint_name   = kcu.constraint_name
+                    AND tc.constraint_schema = kcu.constraint_schema
+                    AND tc.table_schema      = kcu.table_schema
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name   = tc.constraint_name
+                    AND ccu.constraint_schema = tc.constraint_schema
             WHERE
                 tc.constraint_type = 'FOREIGN KEY'
                 AND tc.table_schema = current_schema()

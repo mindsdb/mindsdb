@@ -99,7 +99,74 @@ CREATE VIEW `MyView` (...);   -- error
 
 Here are some practical examples:
 
-* Views
+### Databases
+
+Note that when enclosing the object name in backticks, it preserves the case-sensitivity and special characters included in the name. Otherwise, the upper-case letters are automatically converted to lower-case letters.
+
+See the usage examples below.
+
+```sql
+CREATE DATABASE my_database WITH …;    -- creates my_database
+SELECT * FROM my_database.table_name;  -- selects from my_database
+DROP DATABASE my_database;             -- drops my_database
+
+CREATE DATABASE MY_DATABASE WITH …;    -- creates my_database (note that upper-case letters are converted to lower-case letters)
+SELECT * FROM my_database.table_name;  -- selects from my_database
+SELECT * FROM MY_DATABASE.table_name;  -- selects from my_database
+DROP DATABASE MY_DATABASE;             -- drops my_database
+
+CREATE DATABASE `My-database` WITH …;    -- creates My-database (note that the name must be enclosed in backticks because it contains a special character)
+SELECT * FROM `My-database`.table_name;  -- selects from My-database
+DROP DATABASE `My-database`;             -- drops My-database
+```
+
+```sql
+-- this works
+CREATE DATABASE demodata WITH …;
+SELECT * FROM demodata.table_name;
+SELECT * FROM `demodata`.table_name;
+DROP DATABASE demodata;
+
+-- this works and converts all letters to lower-case
+CREATE DATABASE demoData WITH …;
+SELECT * FROM demoData ...
+DROP DATABASE demoData;
+
+-- this works and keeps upper/lower-case letters because the name is enclosed in backticks
+CREATE DATABASE `DemoData` WITH …;
+SELECT * FROM `DemoData` ...
+DROP DATABASE `DemoData` ...
+```
+
+```sql
+CREATE DATABASE DemoData WITH …;     -- creates demodata
+CREATE DATABASE `DemoData` WITH …;   -- cannot create DemoData because demodata already exists
+DROP DATABASE `DemoData`;            -- cannot drop DemoData because DemoData does not exist
+DROP DATABASE DemoData;              -- drops demodata
+
+CREATE DATABASE `DemoData` WITH …;     -- creates DemoData
+CREATE DATABASE demodata WITH …;       -- cannot create demodata because DemoData already exists
+DROP DATABASE demodata;                -- cannot drop demodata because demodata does not exist
+DROP DATABASE `DemoData`;              -- drops demodata
+```
+
+```sql
+CREATE DATABASE demodata WITH …;   -- creates demodata
+SELECT * FROM DEMODATA.table_name; -- selects from demodata, because DEMODATA is converted to demodata
+DROP DATABASE demodata;            -- drops demodata
+
+CREATE DATABASE `DemoData` WITH …;    -- creates DemoData
+SELECT * FROM demodata.table_name;    -- cannot select from demodata
+SELECT * FROM `DemoData`.table_name;  -- selects from DemoData
+DROP DATABASE demodata;               -- cannot drop demodata because demodata does not exist
+DROP DATABASE `DemoData`;             -- drops DemoData
+
+CREATE DATABASE `Dèmo data 2` WITH …;
+SELECT * FROM `Dèmo data 2`.table_name;
+DROP DATABASE `Dèmo data 2`;
+```
+
+### Views
 
 ```sql
 CREATE VIEW my_view (...);   -- creates "my_view"
@@ -115,23 +182,7 @@ SELECT * FROM `My_View`;   -- selects from “My_View”
 DROP VIEW `My_View`;   -- deletes “My_View”
 ```
 
-* Databases
-
-```sql
-CREATE DATABASE my_database WITH …;   -- creates "my_database"
-CREATE DATABASE MY_DATABASE WITH …;   -- also creates "my_database"
-CREATE DATABASE `my-database` WITH …;   -- creates "my-database"
-CREATE DATABASE `MY_DATABASE` WITH …;   -- error
-```
-
-If an older object named `MY_DATABASE` exists, you can still use it:
-
-```sql
-SELECT * FROM `MY_DATABASE`.table_name;   -- selects from “MY_DATABASE”
-DROP DATABASE `MY_DATABASE`;   -- deletes “MY_DATABASE”
-```
-
-* Agents
+### Agents
 
 ```sql
 CREATE AGENT my_agent USING ...;   -- creates "my_agent"

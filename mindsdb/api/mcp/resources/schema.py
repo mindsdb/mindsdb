@@ -36,7 +36,12 @@ def _get_database_names() -> list[str]:
 @mcp.resource(
     "schema://databases",
     mime_type="application/json",
-    description="List of connected data source names available for querying.",
+    description=(
+        "Initial list of connected data source names available for querying. "
+        "This resource may be cached by the client. "
+        "To get the current list of databases during a session, use the `query` tool: "
+        "SHOW DATABASES"
+    ),
 )
 def list_databases() -> list[str]:
     return _get_database_names()
@@ -45,7 +50,13 @@ def list_databases() -> list[str]:
 @mcp.resource(
     "schema://databases/{database_name}/tables",
     mime_type="application/json",
-    description="List of tables in the specified connected database.",
+    description=(
+        "Initial list of tables in the specified connected database. "
+        "This resource may be cached by the client. "
+        "To get the current list of tables during a session (e.g. after CREATE/DROP TABLE), "
+        "use the `query` tool: "
+        "SHOW TABLES FROM {database_name}"
+    ),
 )
 def db_tables(database_name: str) -> list[TableInfo]:
     ctx.set_default()
@@ -68,7 +79,14 @@ def db_tables(database_name: str) -> list[TableInfo]:
 @mcp.resource(
     "schema://databases/{database_name}/tables/{table_name}/columns",
     mime_type="application/json",
-    description="Column names and types for a specific table in a connected database.",
+    description=(
+        "Initial column names and types for a specific table in a connected database. "
+        "This resource may be cached by the client. "
+        "To get the current column list during a session (e.g. after ALTER TABLE), "
+        "use the `query` tool: "
+        "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
+        "WHERE TABLE_SCHEMA = '{database_name}' AND TABLE_NAME = '{table_name}'"
+    ),
 )
 def db_table_columns(database_name: str, table_name: str) -> list[ColumnInfo]:
     ctx.set_default()
@@ -91,7 +109,12 @@ def db_table_columns(database_name: str, table_name: str) -> list[ColumnInfo]:
 
 @mcp.resource(
     "schema://knowledge_bases",
-    description="List of knowledge bases with their project, column configuration, and ID column.",
+    description=(
+        "Initial list of knowledge bases with their project, column configuration, and ID column. "
+        "This resource may be cached by the client. "
+        "To get the current list of knowledge bases during a session, use the `query` tool: "
+        "SHOW KNOWLEDGE BASES"
+    ),
 )
 def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
     ctx.set_default()

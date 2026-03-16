@@ -173,6 +173,18 @@ class AgentsController:
 
         return all_agents.all()
 
+    def _check_agent_data(self, data):
+        tables = data.get("tables", [])
+        knowledge_bases = data.get("knowledge_bases", [])
+        if tables or knowledge_bases:
+            sql_toolkit = MindsDBQuery(tables=tables, knowledge_bases=knowledge_bases)
+
+            if tables and len(sql_toolkit.get_usable_table_names(lazy=False)) == 0:
+                raise ValueError(f"No tables found: {tables}")
+
+            if knowledge_bases and len(sql_toolkit.get_usable_knowledge_base_names(lazy=False)) == 0:
+                raise ValueError(f"No knowledge bases found: {knowledge_bases}")
+
     def add_agent(
         self,
         name: str,
@@ -225,16 +237,7 @@ class AgentsController:
         # check data
         data = params.get("data", {})
         if data:
-            tables = data.get("tables", [])
-            knowledge_bases = data.get("knowledge_bases", [])
-            if tables or knowledge_bases:
-                sql_toolkit = MindsDBQuery(tables=tables, knowledge_bases=knowledge_bases)
-
-                if tables and len(sql_toolkit.get_usable_table_names(lazy=False)) == 0:
-                    raise ValueError(f"No tables found: {tables}")
-
-                if knowledge_bases and len(sql_toolkit.get_usable_knowledge_base_names(lazy=False)) == 0:
-                    raise ValueError(f"No knowledge bases found: {knowledge_bases}")
+            self._check_agent_data(data)
 
         agent = db.Agents(
             name=name,
@@ -256,7 +259,7 @@ class AgentsController:
         project_name: str = default_project,
         name: str = None,
         model: dict = None,
-        params: Dict[str, str] = None,
+        params: Dict[str, Any] = None,
     ):
         """
         Updates an agent in the database.
@@ -292,15 +295,19 @@ class AgentsController:
                 raise EntityExistsError(f"Agent with updated name already exists: {name}")
             existing_agent.name = name
 
+        params = params or {}
+
         if model:
+            params["model"] = model
             # check llm works
             llm_params = self.get_agent_llm_params(model)
             check_agent_llm(llm_params)
 
-            # move into params
-            existing_params["model"] = model
+        data = params.get("data", {})
+        if data:
+            self._check_agent_data(data)
 
-        if params is not None:
+        if params:
             validate_pydantic_params(params, AgentParams, "agent")
 
             # Merge params on update

@@ -28,14 +28,14 @@ def create_agent(project_name, name, agent):
     if name is None:
         return http_error(HTTPStatus.BAD_REQUEST, "Missing field", 'Missing "name" field for agent')
 
-    model_name = agent.get("model_name")
-    provider = agent.get("provider")
-
     params = agent.get("params", {})
+    if agent.get("model"):
+        model = agent["model"]
+    else:
+        model = {"model_name": agent.get("model_name"), "provider": agent.get("provider")}
+
     if agent.get("data"):
         params["data"] = agent["data"]
-    if agent.get("model"):
-        params["model"] = agent["model"]
     if agent.get("prompt_template"):
         params["prompt_template"] = agent["prompt_template"]
 
@@ -55,7 +55,7 @@ def create_agent(project_name, name, agent):
 
     try:
         created_agent = agents_controller.add_agent(
-            name=name, project_name=project_name, model={"model_name": model_name, "provider": provider}, params=params
+            name=name, project_name=project_name, model=model, params=params
         )
         return created_agent.as_dict(), HTTPStatus.CREATED
     except (ValueError, EntityExistsError):
@@ -63,14 +63,14 @@ def create_agent(project_name, name, agent):
         return http_error(
             HTTPStatus.NOT_FOUND,
             "Resource not found",
-            f'The model "{model_name}" does not exist. Please ensure that the name is correct and try again.',
+            f'The model "{model}" does not exist. Please ensure that the name is correct and try again.',
         )
     except NotImplementedError:
         # Free users trying to create agent.
         return http_error(
             HTTPStatus.UNAUTHORIZED,
             "Unavailable to free users",
-            f'The model "{model_name}" does not exist. Please ensure that the name is correct and try again.',
+            f'The model "{model}" does not exist. Please ensure that the name is correct and try again.',
         )
 
 
@@ -174,13 +174,15 @@ class AgentResource(Resource):
 
         # Update
         try:
-            model_name = agent.get("model_name", None)
-            provider = agent.get("provider")
             params = agent.get("params", {})
+
+            if agent.get("model"):
+                model = agent["model"]
+            else:
+                model = {"model_name": agent.get("model_name"), "provider": agent.get("provider")}
+
             if agent.get("data"):
                 params["data"] = agent["data"]
-            if agent.get("model"):
-                params["model"] = agent["model"]
             if agent.get("prompt_template"):
                 params["prompt_template"] = agent["prompt_template"]
 
@@ -188,7 +190,7 @@ class AgentResource(Resource):
                 agent_name,
                 project_name=project_name,
                 name=name,
-                model={"model_name": model_name, "provider": provider},
+                model=model,
                 params=params,
             )
 

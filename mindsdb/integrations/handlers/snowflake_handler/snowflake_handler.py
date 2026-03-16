@@ -21,6 +21,11 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
+from .auth_types import (
+    PasswordAuthType,
+    KeyPairAuthType,
+)
+
 try:
     import pyarrow as pa
 
@@ -172,6 +177,11 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
     name = "snowflake"
 
+    _auth_types = {
+        "key_pair": KeyPairAuthType(),
+        "password": PasswordAuthType(),
+    }
+
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data")
@@ -184,6 +194,10 @@ class SnowflakeHandler(MetaDatabaseHandler):
         """
         Establishes a connection to a Snowflake account.
 
+        Supports two authentication methods:
+        1. User/password authentication (legacy)
+        2. Key pair authentication (recommended)
+
         Raises:
             ValueError: If the required connection parameters are not provided.
             snowflake.connector.errors.Error: If an error occurs while connecting to the Snowflake account.
@@ -195,23 +209,17 @@ class SnowflakeHandler(MetaDatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        # Mandatory connection parameters
-        if not all(key in self.connection_data for key in ["account", "user", "password", "database"]):
-            raise ValueError("Required parameters (account, user, password, database) must be provided.")
+        auth_type_key = self.connection_data.get("auth_type")
+        if auth_type_key is None:
+            supported = ", ".join(self._auth_types.keys())
+            raise ValueError(f"auth_type is required. Supported values: {supported}.")
 
-        config = {
-            "account": self.connection_data.get("account"),
-            "user": self.connection_data.get("user"),
-            "password": self.connection_data.get("password"),
-            "database": self.connection_data.get("database"),
-            "schema": self.connection_data.get("schema", "PUBLIC"),
-        }
+        auth_type = self._auth_types.get(auth_type_key)
+        if not auth_type:
+            supported = ", ".join(self._auth_types.keys())
+            raise ValueError(f"Invalid auth_type '{auth_type_key}'. Supported values: {supported}.")
 
-        # Optional connection parameters
-        optional_params = ["warehouse", "role"]
-        for param in optional_params:
-            if param in self.connection_data:
-                config[param] = self.connection_data[param]
+        config = auth_type.get_config(**self.connection_data)
 
         try:
             self.connection = connector.connect(**config)
@@ -239,7 +247,6 @@ class SnowflakeHandler(MetaDatabaseHandler):
         Returns:
             StatusResponse: An object containing the success status and an error message if an error occurs.
         """
-
         response = StatusResponse(False)
         need_to_close = not self.is_connected
 

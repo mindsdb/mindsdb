@@ -91,7 +91,7 @@ def test_hybrid_search_merges_results(mock_kb_table):
     # Use patch to prevent the test from trying to create a real embedding
     with patch.object(mock_kb_table, "_content_to_embeddings", return_value=[0.1, 0.2, 0.3]) as mock_embedding:
         # A simple query that will trigger the logic we want to test
-        query_str = "SELECT * FROM my_kb WHERE content = 'test query' AND hybrid_search = TRUE"
+        query_str = "SELECT * FROM my_kb WHERE content = 'test query' AND hybrid_search_alpha = 0.5"
         query = parse_sql(query_str, dialect="mindsdb")
 
         # ACT

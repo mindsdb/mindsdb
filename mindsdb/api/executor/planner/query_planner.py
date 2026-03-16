@@ -78,13 +78,13 @@ class QueryPlanner:
         if integrations is not None:
             for integration in integrations:
                 if isinstance(integration, dict):
-                    integration_name = integration["name"].lower()
+                    integration_name = integration["name"]
                     # it is project of system database
                     if integration["type"] != "data":
                         _projects.add(integration_name)
                         continue
                 else:
-                    integration_name = integration.lower()
+                    integration_name = integration
                     integration = {"name": integration}
                 self.integrations[integration_name] = integration
 
@@ -175,9 +175,12 @@ class QueryPlanner:
                 return
 
             # cut integration part
-            if len(node.parts) > 1 and node.parts[0].lower() == database:
-                node.parts.pop(0)
-                node.is_quoted.pop(0)
+            if len(node.parts) > 1:
+                if (node.is_quoted[0] and node.parts[0] == database) or (
+                    not node.is_quoted[0] and node.parts[0].lower() == database.lower()
+                ):
+                    node.parts.pop(0)
+                    node.is_quoted.pop(0)
 
             if not hasattr(parent_query, "from_table"):
                 return
@@ -258,8 +261,14 @@ class QueryPlanner:
 
         err_msg_suffix = ""
         if len(parts) > 1:
-            if parts[0].lower() in self.databases:
-                database = parts.pop(0).lower()
+            # if not quoted  check in lower case
+            part = parts[0]
+            if part not in self.databases and not node.is_quoted[0]:
+                part = part.lower()
+
+            if part in self.databases:
+                database = part
+                parts.pop(0)
             else:
                 err_msg_suffix = f"'{parts[0].lower()}' is not valid database name."
 

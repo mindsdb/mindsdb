@@ -2,6 +2,7 @@ import datetime
 from typing import Dict, Iterator, List, Union, Tuple, Optional, Any, Text
 import copy
 
+from enum import Enum
 from pydantic import BaseModel
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
@@ -37,11 +38,17 @@ class AgentParamsData(BaseModel):
         extra = "forbid"
 
 
+class AgentMode(Enum):
+    TEXT = "text"
+    SQL = "sql"
+
+
 class AgentParams(BaseModel):
     prompt_template: str = None
     model: Dict[Text, Any] | None = None
     data: AgentParamsData = None
     timeout: int = None
+    mode: AgentMode = AgentMode.TEXT
 
     class Config:
         extra = "forbid"

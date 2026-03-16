@@ -27,14 +27,13 @@ def test_prepare(client):
 @pytest.mark.deprecated(
     "MindsDB models are no longer used with agents. However, Minds still uses models, so this test is kept for now"
 )
-def test_post_agent_depreciated(client):
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+def test_post_agent_depreciated(check_agent_llm, client):
     create_request = {
         "agent": {
             "name": "test_post_agent_depreciated",
-            "model_name": "test_model",
-            "params": {"k1": "v1"},
-            "provider": "mindsdb",
-            "skills": ["test_skill"],
+            "model": {"provider": "openai", "model_name": "test_model"},
+            "params": {"timeout": 10},
         }
     }
 
@@ -45,9 +44,8 @@ def test_post_agent_depreciated(client):
 
     expected_agent = {
         "name": "test_post_agent_depreciated",
-        "model_name": "test_model",
-        "provider": "mindsdb",
-        "params": {"k1": "v1"},
+        "model": {"provider": "openai", "model_name": "test_model"},
+        "params": {"timeout": 10},
         "id": created_agent["id"],
         "project_id": created_agent["project_id"],
         "created_at": created_agent["created_at"],
@@ -57,7 +55,9 @@ def test_post_agent_depreciated(client):
     assert created_agent == expected_agent
 
 
-def test_post_agent(client):
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_data")
+def test_post_agent(check_agent_data, check_agent_llm, client):
     create_request = {
         "agent": {
             "name": "TEST_post_agent",
@@ -161,7 +161,9 @@ def test_get_agents_project_not_found(client):
     assert get_response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_get_agent(client):
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_data")
+def test_get_agent(check_agent_data, check_agent_llm, client):
     create_request = {
         "agent": {
             "name": "test_get_agent",
@@ -236,13 +238,13 @@ def test_get_agent_project_not_found(client):
 @pytest.mark.deprecated(
     "MindsDB models are no longer used with agents. However, Minds still uses models, so this test is kept for now"
 )
-def test_put_agent_update_depreciated(client):
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+def test_put_agent_update_depreciated(check_agent_llm, client):
     create_request = {
         "agent": {
             "name": "test_put_agent_update_depreciated",
-            "model_name": "test_model",
-            "params": {"k1": "v1", "k2": "v2"},
-            "provider": "mindsdb",
+            "model": {"provider": "openai", "model_name": "test_model"},
+            "params": {"timeout": 10},
         }
     }
 
@@ -251,7 +253,7 @@ def test_put_agent_update_depreciated(client):
 
     update_request = {
         "agent": {
-            "params": {"k1": "v1.1", "k2": None, "k3": "v3"},
+            "params": {"timeout": 20},
         }
     }
 
@@ -262,9 +264,8 @@ def test_put_agent_update_depreciated(client):
 
     expected_agent = {
         "name": "test_put_agent_update_depreciated",
-        "model_name": "test_model",
-        "params": {"k1": "v1.1", "k3": "v3"},
-        "provider": "mindsdb",
+        "model": {"provider": "openai", "model_name": "test_model"},
+        "params": {"timeout": 20},
         "id": updated_agent["id"],
         "project_id": updated_agent["project_id"],
         "created_at": updated_agent["created_at"],
@@ -277,7 +278,9 @@ def test_put_agent_update_depreciated(client):
 @pytest.mark.deprecated(
     "MindsDB models are no longer used with agents. However, Minds still uses models, so this test is kept for now"
 )
-def test_put_agent_update(client):
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_data")
+def test_put_agent_update(check_agent_data, check_agent_llm, client):
     create_request = {
         "agent": {
             "name": "test_put_agent_update",
@@ -292,7 +295,7 @@ def test_put_agent_update(client):
 
     update_request = {
         "agent": {
-            "params": {"k1": "v1.1", "k2": None, "k3": "v3"},
+            "params": {"timeout": 5},
             "data": {
                 "tables": ["example_db.customers", "example_db.orders"],
                 "knowledge_bases": ["example_kb"],
@@ -307,7 +310,7 @@ def test_put_agent_update(client):
 
     expected_agent = {
         "name": "test_put_agent_update",
-        "params": {"k1": "v1.1", "k3": "v3"},
+        "params": {"timeout": 5},
         "id": updated_agent["id"],
         "project_id": updated_agent["project_id"],
         "created_at": updated_agent["created_at"],
@@ -356,7 +359,9 @@ def test_put_agent_no_agent(client):
 #     assert '404' in response.status
 
 
-def test_delete_agent(client):
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_data")
+def test_delete_agent(check_agent_data, check_agent_llm, client):
     create_request = {
         "agent": {
             "name": "test_delete_agent",
@@ -385,13 +390,14 @@ def test_delete_agent_not_found(client):
     assert delete_response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_agent_completions(client):
+@patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+def test_agent_completions(check_agent_llm, client):
     create_request = {
         "agent": {
             "name": "test_agent",
             "model_name": "test_model",
             "provider": "mindsdb",
-            "params": {"prompt_template": "Test message!", "user_column": "content"},
+            "params": {"prompt_template": "Test message!"},
         }
     }
 

@@ -30,6 +30,19 @@ logger = log.getLogger(__name__)
 default_project = config.get("default_project")
 
 
+def check_agent_data(data):
+    tables = data.get("tables", [])
+    knowledge_bases = data.get("knowledge_bases", [])
+    if tables or knowledge_bases:
+        sql_toolkit = MindsDBQuery(tables=tables, knowledge_bases=knowledge_bases)
+
+        if tables and len(sql_toolkit.get_usable_table_names(lazy=False)) == 0:
+            raise ValueError(f"No tables found: {tables}")
+
+        if knowledge_bases and len(sql_toolkit.get_usable_knowledge_base_names(lazy=False)) == 0:
+            raise ValueError(f"No knowledge bases found: {knowledge_bases}")
+
+
 class AgentParamsData(BaseModel):
     knowledge_bases: List[str] = None
     tables: List[str] = None
@@ -173,18 +186,6 @@ class AgentsController:
 
         return all_agents.all()
 
-    def _check_agent_data(self, data):
-        tables = data.get("tables", [])
-        knowledge_bases = data.get("knowledge_bases", [])
-        if tables or knowledge_bases:
-            sql_toolkit = MindsDBQuery(tables=tables, knowledge_bases=knowledge_bases)
-
-            if tables and len(sql_toolkit.get_usable_table_names(lazy=False)) == 0:
-                raise ValueError(f"No tables found: {tables}")
-
-            if knowledge_bases and len(sql_toolkit.get_usable_knowledge_base_names(lazy=False)) == 0:
-                raise ValueError(f"No knowledge bases found: {knowledge_bases}")
-
     def add_agent(
         self,
         name: str,
@@ -237,7 +238,7 @@ class AgentsController:
         # check data
         data = params.get("data", {})
         if data:
-            self._check_agent_data(data)
+            check_agent_data(data)
 
         agent = db.Agents(
             name=name,
@@ -305,7 +306,7 @@ class AgentsController:
 
         data = params.get("data", {})
         if data:
-            self._check_agent_data(data)
+            check_agent_data(data)
 
         if params:
             validate_pydantic_params(params, AgentParams, "agent")

@@ -31,8 +31,10 @@ def create_agent(project_name, name, agent):
     params = agent.get("params", {})
     if agent.get("model"):
         model = agent["model"]
-    else:
+    elif "model_name" in agent:
         model = {"model_name": agent.get("model_name"), "provider": agent.get("provider")}
+    else:
+        model = None
 
     if agent.get("data"):
         params["data"] = agent["data"]
@@ -176,8 +178,10 @@ class AgentResource(Resource):
 
             if agent.get("model"):
                 model = agent["model"]
-            else:
+            elif "model_name" in agent:
                 model = {"model_name": agent.get("model_name"), "provider": agent.get("provider")}
+            else:
+                model = None
 
             if agent.get("data"):
                 params["data"] = agent["data"]

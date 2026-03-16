@@ -885,7 +885,7 @@ class IntegrationController:
 
         return info
 
-    def _fetch_community_handler(self, handler_name: str) -> Optional[dict]:
+    def _fetch_community_handler(self, handler_name: str, handler_folder: str = None) -> Optional[dict]:
         """
         Attempt to fetch a community handler from GitHub by its logical name.
 
@@ -896,7 +896,6 @@ class IntegrationController:
         Returns None if the handler does not exist in the community repo or
         if a network/API error occurs (logged as a warning).
         """
-        handler_dir_name = f"{handler_name}_handler"
 
         logger.debug(
             "Handler '%s' not found locally, attempting on-demand fetch from community repo...",
@@ -904,7 +903,7 @@ class IntegrationController:
         )
 
         try:
-            handler_dir = fetch_handler(handler_dir_name, self.community_handlers_dir)
+            handler_dir = fetch_handler(handler_folder, self.community_handlers_dir)
         except RuntimeError as e:
             logger.warning("Failed to fetch community handler '%s': %s", handler_name, e)
             return None
@@ -919,7 +918,7 @@ class IntegrationController:
             logger.warning(
                 "Fetched community handler dir '%s' but could not determine handler name "
                 "(missing or malformed __init__.py)",
-                handler_dir_name,
+                handler_folder,
             )
         return handler_meta
 
@@ -990,7 +989,8 @@ class IntegrationController:
     def get_handlers_import_status(self):
         result = {}
         for handler_name in list(self.handlers_import_status.keys()):
-            handler_meta = self.get_handler_meta(handler_name)
+            handler_folder = self.handlers_import_status[handler_name].get("import", {}).get("folder")
+            handler_meta = self.get_handler_meta(handler_name, handler_folder)
             result[handler_name] = handler_meta
 
         return result
@@ -1002,7 +1002,7 @@ class IntegrationController:
         # returns metadata
         return self.handlers_import_status.get(handler_name)
 
-    def get_handler_meta(self, handler_name):
+    def get_handler_meta(self, handler_name, handler_folder=None):
         # returns metadata and tries to import it
         handler_meta = self.handlers_import_status.get(handler_name)
         if handler_meta is None:
@@ -1010,7 +1010,7 @@ class IntegrationController:
         # Stub from the index: path=None means the handler hasn't been
         # fetched yet — download it on demand from the community repo.
         if handler_meta.get("support_level") == "community" and handler_meta["path"] is None:
-            handler_meta = self._fetch_community_handler(handler_name)
+            handler_meta = self._fetch_community_handler(handler_name, handler_folder)
         if handler_meta is None:
             return None
         if handler_meta["import"]["success"] is None:

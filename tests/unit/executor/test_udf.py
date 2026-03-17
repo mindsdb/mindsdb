@@ -8,6 +8,7 @@ import pytest
 
 from mindsdb_sql_parser.ast.mindsdb import CreateMLEngine
 from mindsdb_sql_parser.ast import Identifier
+
 from tests.unit.executor_test_base import BaseExecutorDummyML
 
 

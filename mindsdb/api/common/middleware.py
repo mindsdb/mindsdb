@@ -1,7 +1,9 @@
 import os
+import time
 import hmac
 import secrets
 import hashlib
+from collections import deque
 from http import HTTPStatus
 from typing import Optional
 
@@ -18,13 +20,14 @@ SECRET_KEY = os.environ.get("AUTH_SECRET_KEY") or secrets.token_urlsafe(32)
 # We store token (fingerprints) in memory, which means everyone is logged out if the process restarts
 TOKENS = []
 
+
 def get_pat_fingerprint(token: str) -> str:
     """Hash the token with HMAC-SHA256 using secret_key as pepper."""
     return hmac.new(SECRET_KEY.encode(), token.encode(), hashlib.sha256).hexdigest()
 
 
-if config['auth']["token"]:
-    TOKENS.append(get_pat_fingerprint(config['auth']["token"]))
+if config["auth"]["token"]:
+    TOKENS.append(get_pat_fingerprint(config["auth"]["token"]))
 
 
 def generate_pat() -> str:
@@ -96,6 +99,68 @@ class PATAuthMiddleware:
             return
 
         scope.setdefault("state", {})["user"] = config["auth"].get("username")
+        await self.app(scope, receive, send)
+
+
+class RateLimitMiddleware:
+    """Rate limiting middleware using a sliding window counter. Tracks requests per client IP."""
+
+    def __init__(self, app: ASGIApp, requests_per_minute: int) -> None:
+        self.app = app
+        self.requests_per_minute = requests_per_minute
+        self._window = 60.0  # seconds
+        self._counters: dict[str, deque] = {}
+
+    def _get_client_key(self, scope: Scope) -> str:
+        client = scope.get("client")
+        if client:
+            return client[0]
+        return "unknown"
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        if scope.get("method") == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+
+        # Clients usually repeat this request until
+        # the connection is established, so no rate limit it.
+        if scope.get("method") == "GET" and scope.get("path", "").endswith("/sse"):
+            await self.app(scope, receive, send)
+            return
+
+        client_key = self._get_client_key(scope)
+        now = time.monotonic()
+        window_start = now - self._window
+
+        timestamps = self._counters.setdefault(client_key, deque())
+
+        # Evict timestamps outside the current window
+        while timestamps and timestamps[0] <= window_start:
+            timestamps.popleft()
+
+        if len(timestamps) >= self.requests_per_minute:
+            retry_after = int(self._window - (now - timestamps[0])) + 1
+        else:
+            retry_after = None
+            timestamps.append(now)
+
+        if retry_after is not None:
+            response = JSONResponse(
+                {"detail": f"Too Many Requests, retry after {retry_after} seconds"},
+                status_code=HTTPStatus.TOO_MANY_REQUESTS,
+                headers={"Retry-After": str(retry_after)},
+            )
+            await response(scope, receive, send)
+            return
+
+        stale_keys = [k for k, ts in self._counters.items() if not ts or ts[-1] <= window_start]
+        for k in stale_keys:
+            del self._counters[k]
+
         await self.app(scope, receive, send)
 
 

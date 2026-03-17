@@ -8,8 +8,16 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+from mindsdb.utilities.config import config
+from mindsdb.api.common.middleware import RateLimitMiddleware
 from mindsdb.api.mcp.mcp_instance import mcp
-from mindsdb.api.mcp import tools  # noqa: F401 — registers all tools via @mcp.tool
+
+# region these imports required for correct initialization
+from mindsdb.api.mcp import tools  # noqa: F401
+from mindsdb.api.mcp import resources  # noqa: F401
+from mindsdb.api.mcp import prompts  # noqa: F401
+from mindsdb.api.mcp import completions  # noqa: F401
+# endregion
 
 
 def _get_status(request: Request) -> JSONResponse:
@@ -51,6 +59,23 @@ def get_mcp_app():
         middleware=middleware,
         lifespan=lifespan,
     )
+
+    # Rate limit should be added before CORS, so that CORS adds correct headers
+    if config["api"]["mcp"]["rate_limit"]["enabled"]:
+        combined_app.add_middleware(
+            RateLimitMiddleware,
+            requests_per_minute=config["api"]["mcp"]["rate_limit"]["requests_per_minute"],
+        )
+
+    if config["api"]["mcp"]["cors"]["enabled"]:
+        combined_app.add_middleware(
+            CORSMiddleware,
+            allow_origins=config["api"]["mcp"]["cors"]["allow_origins"],
+            allow_origin_regex=config["api"]["mcp"]["cors"]["allow_origin_regex"],
+            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+            allow_headers=config["api"]["mcp"]["cors"]["allow_headers"],
+            expose_headers=["mcp-session-id"],
+        )
 
     combined_app.add_route("/status", _get_status, methods=["GET"])
 

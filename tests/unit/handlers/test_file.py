@@ -17,8 +17,8 @@ from mindsdb_sql_parser.ast import (
 )
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
-from mindsdb.integrations.libs.response import RESPONSE_TYPE
-
+from mindsdb.integrations.libs.response import RESPONSE_TYPE, INF_SCHEMA_COLUMNS_NAMES_SET, INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.integrations.utilities.files.file_reader import (
     FileReader,
     FileProcessingError,
@@ -406,8 +406,25 @@ def test_get_columns():
     file_handler = FileHandler(file_controller=MockFileController())
     response = file_handler.get_columns("mock")
 
-    assert response.type == RESPONSE_TYPE.TABLE
+    assert response.type == RESPONSE_TYPE.COLUMNS_TABLE
 
-    expected_df = pandas.DataFrame([{"Field": x, "Type": "str"} for x in file_records[0][2]])
+    data = []
+    for name in file_records[0][2]:
+        row = {}
+        for key_name in INF_SCHEMA_COLUMNS_NAMES_SET:
+            if key_name == INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME:
+                row[key_name] = name
+            elif key_name == INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE:
+                row[key_name] = "str"
+            elif key_name == INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE:
+                row[key_name] = MYSQL_DATA_TYPE.TEXT
+            else:
+                row[key_name] = None
+        data.append(row)
 
-    assert response.data_frame.equals(expected_df)
+    expected_df = pandas.DataFrame(data)
+    assert set(response.data_frame.columns) == set(expected_df.columns)
+    expected_df = expected_df[response.data_frame.columns]
+
+    # Use 'compare' to ignore dtypes (object != string)
+    assert response.data_frame.compare(expected_df).empty

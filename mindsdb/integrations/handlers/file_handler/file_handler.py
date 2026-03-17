@@ -7,11 +7,15 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import CreateTable, DropTables, Insert, Select, Identifier
 from mindsdb_sql_parser.ast.base import ASTNode
 
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.api.executor.utilities.sql import query_dfs
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.response import RESPONSE_TYPE
-from mindsdb.integrations.libs.response import HandlerResponse as Response
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.response import (
+    RESPONSE_TYPE,
+    HandlerResponse as Response,
+    HandlerStatusResponse as StatusResponse,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
+)
 from mindsdb.utilities import log
 
 
@@ -211,16 +215,23 @@ class FileHandler(DatabaseHandler):
 
     def get_columns(self, table_name) -> Response:
         file_meta = self.file_controller.get_file_meta(table_name)
+        if file_meta is None:
+            result = Response(
+                RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
+            )
+            result.to_columns_table_response(map_type_fn=lambda _: MYSQL_DATA_TYPE.TEXT)
+            return result
         result = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 [
                     {
-                        "Field": x["name"].strip() if isinstance(x, dict) else x.strip(),
-                        "Type": "str",
+                        "COLUMN_NAME": x["name"].strip() if isinstance(x, dict) else x.strip(),
+                        "DATA_TYPE": "str",
                     }
                     for x in file_meta["columns"]
                 ]
             ),
         )
+        result.to_columns_table_response(map_type_fn=lambda _: MYSQL_DATA_TYPE.TEXT)
         return result

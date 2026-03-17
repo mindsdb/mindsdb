@@ -1,2 +1,1 @@
-from . import databases
-from . import query
+from mindsdb.api.mcp.tools import query  # noqa: F401

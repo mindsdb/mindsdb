@@ -20,9 +20,6 @@ class TableResponse(BaseModel):
     data: list[list]
 
 
-QueryResponseAnswer = Annotated[
-    Union[OkResponse, ErrorResponse, TableResponse],
-    Field(discriminator="type")
-]
+QueryResponseAnswer = Annotated[Union[OkResponse, ErrorResponse, TableResponse], Field(discriminator="type")]
 
 response_adapter = TypeAdapter(QueryResponseAnswer)

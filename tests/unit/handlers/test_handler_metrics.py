@@ -1,6 +1,6 @@
 import datetime
 import pandas as pd
-from unit.executor_test_base import BaseExecutorDummyML
+from tests.unit.executor_test_base import BaseExecutorDummyML
 
 
 class TestHandlerMetrics(BaseExecutorDummyML):

@@ -1,3 +1,5 @@
+import os
+import tempfile
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
 
 
@@ -28,10 +30,18 @@ def test_load_html():
 
 
 def test_load_md():
-    loader = FileLoader('./mindsdb/integrations/handlers/langchain_handler/README.md')
-    docs = loader.load()
-    assert len(docs) == 1
-    assert 'This documentation describes the integration of MindsDB with LangChain' in docs[0].page_content
+    # Create a temporary markdown file to test parsing
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+        f.write("# LangChain Integration\nThis documentation describes the integration of MindsDB with LangChain")
+        temp_path = f.name
+        
+    try:
+        loader = FileLoader(temp_path)
+        docs = loader.load()
+        assert len(docs) == 1
+        assert 'This documentation describes the integration of MindsDB with LangChain' in docs[0].page_content
+    finally:
+        os.remove(temp_path)
 
 
 def test_load_text():

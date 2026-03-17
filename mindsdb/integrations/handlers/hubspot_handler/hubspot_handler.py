@@ -211,11 +211,9 @@ class HubspotHandler(MetaAPIHandler):
         """Checks whether the API client is connected to Hubspot."""
         response = StatusResponse(False)
 
-        # CRITICAL FIX: MindsDB calls `check_connection` during `CREATE DATABASE`
-        # with a temporary handler_storage. If we exchange the OAuth code here,
-        # the tokens are lost, and subsequent queries fail with BAD_AUTH_CODE.
-        # We must defer the code exchange until a real query (like get_tables)
-        # is made with persistent storage.
+        # Defer OAuth code-for-token exchange: CREATE DATABASE runs check_connection
+        # with ephemeral handler_storage, so tokens written here would be discarded;
+        # later requests then fail with BAD_AUTH_CODE. Exchange only when a request
         if self.connection_data.get("code") and not self.is_connected:
             from mindsdb.integrations.handlers.hubspot_handler.hubspot_oauth import _STORAGE_KEY
 

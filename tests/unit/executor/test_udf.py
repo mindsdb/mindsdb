@@ -1,13 +1,12 @@
 import os
-from textwrap import dedent
 from tempfile import TemporaryDirectory
+from textwrap import dedent
 from unittest.mock import patch
 
 import pandas as pd
 import pytest
-
-from mindsdb_sql_parser.ast.mindsdb import CreateMLEngine
 from mindsdb_sql_parser.ast import Identifier
+from mindsdb_sql_parser.ast.mindsdb import CreateMLEngine
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
 
@@ -36,7 +35,6 @@ class TestBYOM(BaseExecutorDummyML):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_udf(self, data_handler, byom_type):
-
         df = pd.DataFrame(
             [
                 {"a": 3, "b": 4, "c": "a", "d": "b"},
@@ -80,7 +78,6 @@ class TestBYOM(BaseExecutorDummyML):
         assert ret["x"][0] == 3
 
     def test_byom(self, byom_type):
-
         code = dedent("""
             from datetime import datetime
             import pandas as pd

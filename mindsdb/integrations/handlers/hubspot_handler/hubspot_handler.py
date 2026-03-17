@@ -174,6 +174,7 @@ class HubspotHandler(MetaAPIHandler):
                     optional_scopes=self.connection_data.get("optional_scope"),
                     redirect_uri=self.connection_data.get("redirect_uri"),
                     code=self.connection_data.get("code"),
+                    datasource_name=self.name,
                 )
                 logger.info("Attempting to obtain access token via OAuth flow")
                 logger.debug(oauth_manager)
@@ -209,6 +210,21 @@ class HubspotHandler(MetaAPIHandler):
     def check_connection(self) -> StatusResponse:
         """Checks whether the API client is connected to Hubspot."""
         response = StatusResponse(False)
+
+        # CRITICAL FIX: MindsDB calls `check_connection` during `CREATE DATABASE`
+        # with a temporary handler_storage. If we exchange the OAuth code here,
+        # the tokens are lost, and subsequent queries fail with BAD_AUTH_CODE.
+        # We must defer the code exchange until a real query (like get_tables)
+        # is made with persistent storage.
+        if self.connection_data.get("code") and not self.is_connected:
+            from mindsdb.integrations.handlers.hubspot_handler.hubspot_oauth import _STORAGE_KEY
+
+            if not self.handler_storage.encrypted_json_get(_STORAGE_KEY):
+                logger.info(
+                    "Deferring HubSpot check_connection because OAuth code exchange must happen in a persistent context."
+                )
+                response.success = True
+                return response
 
         try:
             self.connect()

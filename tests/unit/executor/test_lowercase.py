@@ -211,11 +211,7 @@ class TestLowercase(BaseExecutorDummyML):
 
         self.run_sql("""
           create database my_kb_storage 
-           with 
-           engine='chromadb',
-           PARAMETERS = {
-               'persist_directory': 'my_kb_storage'
-           }
+           with  engine='duckdb_faiss'
         """)
 
         kb_params = """

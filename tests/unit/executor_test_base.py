@@ -59,6 +59,8 @@ class BaseUnitTest:
         with open(cfg_file, "w") as fd:
             json.dump(config, fd)
 
+        cls._original_storage_dir_env = os.environ.get("MINDSDB_STORAGE_DIR")
+        cls._original_config_path_env = os.environ.get("MINDSDB_CONFIG_PATH")
         os.environ["MINDSDB_STORAGE_DIR"] = cls.storage_dir
         os.environ["MINDSDB_CONFIG_PATH"] = cfg_file
 
@@ -82,6 +84,11 @@ class BaseUnitTest:
         for env_var_name in ("MINDSDB_DB_CON", "MINDSDB_STORAGE_DIR", "MINDSDB_CONFIG_PATH"):
             if env_var_name in os.environ:
                 del os.environ[env_var_name]
+
+        if cls._original_storage_dir_env is not None:
+            os.environ["MINDSDB_STORAGE_DIR"] = cls._original_storage_dir_env
+        if cls._original_config_path_env is not None:
+            os.environ["MINDSDB_CONFIG_PATH"] = cls._original_config_path_env
 
         # remove import of mindsdb for next tests
         unload_module("mindsdb")
@@ -339,11 +346,10 @@ class BaseExecutorTest(BaseUnitTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        from mindsdb.integrations.libs.response import RESPONSE_TYPE
-        from mindsdb.integrations.libs.response import HandlerResponse as Response
+        from mindsdb.integrations.libs.response import TableResponse
 
         def handler_response(df, affected_rows: None | int = None):
-            response = Response(RESPONSE_TYPE.TABLE, df, affected_rows=affected_rows)
+            response = TableResponse(data=df, affected_rows=affected_rows)
             return response
 
         def get_tables_f():

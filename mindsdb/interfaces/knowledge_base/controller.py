@@ -1,4 +1,5 @@
 import copy
+import os
 from typing import Dict, List, Optional, Any, Text, Tuple, Union
 import json
 import decimal
@@ -1270,12 +1271,33 @@ class KnowledgeBaseController:
 
         # search for the vector database table
         if storage is None:
-            vector_db_name, vector_table_name = self._resolve_default_vector_storage(
-                kb_name=name,
-                is_sparse=is_sparse,
-                vector_size=vector_size,
-            )
-            params["default_vector_storage"] = vector_db_name
+            cloud_pg_vector = os.environ.get("KB_PGVECTOR_URL")
+            if cloud_pg_vector:
+                vector_table_name = name
+                # Add sparse vector support for pgvector
+                vector_db_params = {}
+                # Check both explicit parameter and model configuration
+                if is_sparse:
+                    vector_db_params["is_sparse"] = True
+                    if vector_size is not None:
+                        vector_db_params["vector_size"] = vector_size
+                vector_db_name = self._create_persistent_pgvector(vector_db_params)
+                params["default_vector_storage"] = vector_db_name
+            else:
+                # try faiss
+                module = self.session.integration_controller.get_handler_module("duckdb_faiss")
+                if module is None or module.Handler is None:
+                    raise ValueError(
+                        "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
+                        "One of the options is to use pgvector: "
+                        "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
+                    )
+
+                # create faiss db with same name
+                vector_table_name = "data"
+                vector_db_name = self._create_persistent_faiss(name)
+                # memorize to remove it later
+                params["default_vector_storage"] = vector_db_name
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:
@@ -1479,6 +1501,16 @@ class KnowledgeBaseController:
                 f"but the requested knowledge base requires vector_size={requested_vector_size}."
             )
 
+    def _create_persistent_faiss(self, kb_name: str):
+        vector_store_name = f"store_{kb_name}"
+
+        # check if exists
+        if self.session.integration_controller.get(vector_store_name):
+            return vector_store_name
+
+        self.session.integration_controller.add(vector_store_name, "duckdb_faiss", {})
+        return vector_store_name
+
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):
         """Create default vector database for knowledge base, if not specified"""
 
@@ -1553,7 +1585,7 @@ class KnowledgeBaseController:
         except Exception as e:
             raise RuntimeError(f"Problem with embedding model config: {e}") from e
 
-    def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
+    def delete(self, name: str, project_name: str, if_exists: bool = False) -> None:
         """
         Delete a knowledge base from the database
         """
@@ -1672,3 +1704,26 @@ class KnowledgeBaseController:
         scores = EvaluateBase.run(self.session, kb_table, params)
 
         return scores
+
+    def release_lock(self, knowledge_base: Identifier, project_name):
+        # works only for FAISS dbs.
+        # if FAISS vector db is used in KB: remove this db from handlers cache.
+        #   it will clear internal cache of tables in faiss handler and release locks for faiss files
+        #   return unloaded database name
+
+        if len(knowledge_base.parts) > 1:
+            project_name, kb_name = knowledge_base.parts[-2:]
+        else:
+            kb_name = knowledge_base.parts[-1]
+
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb = self.get(kb_name, project_id)
+        if kb is None or kb.vector_database_id is None:
+            return
+        database = db.Integration.query.get(kb.vector_database_id)
+        if database is None:
+            return
+
+        if database.engine == "duckdb_faiss":
+            self.session.integration_controller.handlers_cache.delete(database.name)
+            return database.name

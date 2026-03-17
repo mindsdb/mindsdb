@@ -1445,13 +1445,39 @@ class KnowledgeBaseController:
     def _create_persistent_pgvector(self, params=None):
         """Create default vector database for knowledge base, if not specified"""
         vector_store_name = "kb_pgvector_store"
+        requested_params = params or {}
 
         # check if exists
-        if self.session.integration_controller.get(vector_store_name):
+        existing_store = self.session.integration_controller.get(vector_store_name)
+        if existing_store:
+            self._validate_pgvector_store_compatibility(
+                vector_store_name,
+                existing_store.get("connection_data") or {},
+                requested_params,
+            )
             return vector_store_name
 
-        self.session.integration_controller.add(vector_store_name, "pgvector", params or {})
+        self.session.integration_controller.add(vector_store_name, "pgvector", requested_params)
         return vector_store_name
+
+    @staticmethod
+    def _validate_pgvector_store_compatibility(vector_store_name: str, existing_params: dict, requested_params: dict):
+        existing_is_sparse = bool(existing_params.get("is_sparse", False))
+        requested_is_sparse = bool(requested_params.get("is_sparse", False))
+        existing_vector_size = existing_params.get("vector_size")
+        requested_vector_size = requested_params.get("vector_size")
+
+        if existing_is_sparse != requested_is_sparse:
+            raise ValueError(
+                f"Existing pgvector store '{vector_store_name}' is configured with is_sparse={existing_is_sparse}, "
+                f"but the requested knowledge base requires is_sparse={requested_is_sparse}."
+            )
+
+        if existing_vector_size != requested_vector_size:
+            raise ValueError(
+                f"Existing pgvector store '{vector_store_name}' is configured with vector_size={existing_vector_size}, "
+                f"but the requested knowledge base requires vector_size={requested_vector_size}."
+            )
 
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):
         """Create default vector database for knowledge base, if not specified"""

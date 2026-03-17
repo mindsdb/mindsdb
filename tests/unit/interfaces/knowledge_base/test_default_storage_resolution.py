@@ -52,3 +52,52 @@ def test_resolve_default_vector_storage_uses_faiss_from_config():
         integration_controller.get_handler_meta.assert_called_with("duckdb_faiss")
     finally:
         config.update({"knowledge_bases": {"storage": previous_storage}})
+
+
+def test_create_persistent_pgvector_reuses_existing_store_when_compatible():
+    controller, integration_controller = _make_controller({})
+    integration_controller.get.return_value = {
+        "name": "kb_pgvector_store",
+        "connection_data": {"is_sparse": True, "vector_size": 30522},
+    }
+
+    vector_store_name = controller._create_persistent_pgvector({"is_sparse": True, "vector_size": 30522})
+
+    assert vector_store_name == "kb_pgvector_store"
+    integration_controller.add.assert_not_called()
+
+
+def test_create_persistent_pgvector_raises_on_incompatible_sparse_config():
+    controller, integration_controller = _make_controller({})
+    integration_controller.get.return_value = {
+        "name": "kb_pgvector_store",
+        "connection_data": {"is_sparse": False},
+    }
+
+    try:
+        controller._create_persistent_pgvector({"is_sparse": True, "vector_size": 30522})
+    except ValueError as exc:
+        assert "is_sparse=False" in str(exc)
+        assert "is_sparse=True" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for incompatible pgvector sparse config")
+
+    integration_controller.add.assert_not_called()
+
+
+def test_create_persistent_pgvector_raises_on_incompatible_vector_size():
+    controller, integration_controller = _make_controller({})
+    integration_controller.get.return_value = {
+        "name": "kb_pgvector_store",
+        "connection_data": {"is_sparse": True, "vector_size": 1024},
+    }
+
+    try:
+        controller._create_persistent_pgvector({"is_sparse": True, "vector_size": 30522})
+    except ValueError as exc:
+        assert "vector_size=1024" in str(exc)
+        assert "vector_size=30522" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for incompatible pgvector vector_size")
+
+    integration_controller.add.assert_not_called()

@@ -1,21 +1,28 @@
 from typing import Optional
+import platform
 
 import pandas as pd
-import pyodbc
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from sqlalchemy_access.base import AccessDialect
-from mindsdb.integrations.libs.base import DatabaseHandler
-
 from mindsdb_sql_parser.ast.base import ASTNode
-
 from mindsdb.utilities import log
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
+
+try:
+    import pyodbc
+    from sqlalchemy_access.base import AccessDialect
+
+    IMPORT_ERROR = None
+except ImportError as e:
+    pyodbc = None
+    AccessDialect = None
+    IMPORT_ERROR = e
 
 logger = log.getLogger(__name__)
 
@@ -25,7 +32,7 @@ class AccessHandler(DatabaseHandler):
     This handler handles connection and execution of the Microsoft Access statements.
     """
 
-    name = 'access'
+    name = "access"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -37,7 +44,7 @@ class AccessHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'access'
+        self.dialect = "access"
         self.connection_data = connection_data
         self.kwargs = kwargs
 
@@ -48,18 +55,29 @@ class AccessHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> StatusResponse:
+    def connect(self):
         """
         Set up the connection required by the handler.
         Returns:
-            HandlerStatusResponse
+            pyodbc.Connection: A connection object to the Access database.
         """
-
         if self.is_connected is True:
             return self.connection
 
+        if IMPORT_ERROR is not None:
+            raise RuntimeError(
+                f"Microsoft Access handler requires pyodbc and sqlalchemy-access packages. "
+                f"Install them with: pip install pyodbc sqlalchemy-access. Error: {IMPORT_ERROR}"
+            )
+
+        if platform.system() != "Windows":
+            raise RuntimeError(
+                "Microsoft Access handler is only supported on Windows. "
+                "The Microsoft Access ODBC driver is not available on other operating systems."
+            )
+
         self.connection = pyodbc.connect(
-            r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' + self.connection_data['db_file']
+            r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=" + self.connection_data["db_file"]
         )
         self.is_connected = True
 
@@ -69,7 +87,6 @@ class AccessHandler(DatabaseHandler):
         """
         Close any existing connections.
         """
-
         if self.is_connected is False:
             return
 
@@ -83,7 +100,6 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -91,7 +107,7 @@ class AccessHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to SQLite {self.connection_data["db_file"]}, {e}!')
+            logger.error(f"Error connecting to Microsoft Access database {self.connection_data['db_file']}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -109,7 +125,6 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         need_to_close = self.is_connected is False
 
         connection = self.connect()
@@ -120,21 +135,15 @@ class AccessHandler(DatabaseHandler):
                 if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame.from_records(
-                            result,
-                            columns=[x[0] for x in cursor.description]
-                        )
+                        data_frame=pd.DataFrame.from_records(result, columns=[x[0] for x in cursor.description]),
                     )
 
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.connection_data["db_file"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.connection_data['db_file']}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -150,6 +159,11 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+        if IMPORT_ERROR is not None:
+            raise RuntimeError(
+                f"Microsoft Access handler requires pyodbc and sqlalchemy-access packages. "
+                f"Install them with: pip install pyodbc sqlalchemy-access. Error: {IMPORT_ERROR}"
+            )
 
         renderer = SqlalchemyRender(AccessDialect)
         query_str = renderer.get_string(query, with_failback=True)
@@ -161,15 +175,11 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         connection = self.connect()
         with connection.cursor() as cursor:
-            df = pd.DataFrame([table.table_name for table in cursor.tables(tableType='Table')], columns=['table_name'])
+            df = pd.DataFrame([table.table_name for table in cursor.tables(tableType="Table")], columns=["table_name"])
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response
 
@@ -181,17 +191,13 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         connection = self.connect()
         with connection.cursor() as cursor:
             df = pd.DataFrame(
                 [(column.column_name, column.type_name) for column in cursor.columns(table=table_name)],
-                columns=['column_name', 'data_type']
+                columns=["column_name", "data_type"],
             )
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response

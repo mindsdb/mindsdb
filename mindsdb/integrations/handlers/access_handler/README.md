@@ -9,6 +9,10 @@ https://www.techopedia.com/definition/1218/microsoft-access
 ## Implementation
 This handler was implemented using `pyodbc`, the Python ODBC bridge.
 
+**Platform Requirements:**
+- **Windows Only**: This handler requires the Microsoft Access ODBC driver, which is only available on Windows operating systems.
+- The Microsoft Access Driver (*.mdb, *.accdb) must be installed on the system.
+
 The only required argument to establish a connection is `db_file`. This points to the database file that the connection is to be made to.
 
 ## Usage

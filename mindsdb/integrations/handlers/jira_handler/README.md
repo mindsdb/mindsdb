@@ -22,17 +22,18 @@ CREATE DATABASE jira_datasource
 WITH
     ENGINE = 'jira',
     PARAMETERS = {
-        "api_base": "https://example.atlassian.net",
+        "url": "https://example.atlassian.net",
         "username": "john.doe@example.com",
-        "password": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+        "api_token": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
     };
 ```
 
 Required connection parameters include the following:
 
-* `api_base`: The base URL for your Jira instance/server.
+* `url`: The base URL for your Jira instance/server.
 * `username`: The email address associated with your Jira account.
-* `password`: The API token generated for your Jira account.
+* `api_token`: The API token generated for your Jira account.
+* `cloud`: (Optional) Set to `true` for Jira Cloud or `false` for Jira Server. Defaults to `true`.
 
 <Tip>
 Refer this [guide](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/) for instructions on how to create API tokens for your account.

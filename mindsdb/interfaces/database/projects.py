@@ -8,7 +8,7 @@ import sqlalchemy as sa
 import numpy as np
 
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier, BinaryOperation
+from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier, BinaryOperation, Join
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.interfaces.storage import db
@@ -22,6 +22,7 @@ import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -32,31 +33,39 @@ class Project:
         p = Project()
         p.record = db_record
         p.name = db_record.name
-        p.company_id = ctx.company_id
+        p.company_id = db_record.company_id
+        p.user_id = db_record.user_id
         p.id = db_record.id
         p.metadata = db_record.metadata_
         return p
 
     def create(self, name: str):
-        company_id = ctx.company_id if ctx.company_id is not None else "0"
+        company_id = ctx.company_id if ctx.company_id is not None else DEFAULT_COMPANY_ID
+        user_id = ctx.user_id if ctx.user_id is not None else DEFAULT_USER_ID
 
         existing_record = db.Integration.query.filter(
-            db.Integration.name == name, db.Integration.company_id == ctx.company_id
+            db.Integration.name == name,
+            db.Integration.company_id == company_id,
+            db.Integration.user_id == user_id,
         ).first()
         if existing_record is not None:
             raise EntityExistsError("Database exists with this name ", name)
 
         existing_record = db.Project.query.filter(
-            (db.Project.name == name) & (db.Project.company_id == company_id) & (db.Project.deleted_at == sa.null())
+            db.Project.name == name,
+            db.Project.company_id == company_id,
+            db.Project.user_id == user_id,
+            db.Project.deleted_at == sa.null(),
         ).first()
         if existing_record is not None:
             raise EntityExistsError("Project already exists", name)
 
-        record = db.Project(name=name, company_id=company_id)
+        record = db.Project(name=name, company_id=company_id, user_id=user_id)
 
         self.record = record
         self.name = name
         self.company_id = company_id
+        self.user_id = user_id
 
         db.session.add(record)
         db.session.commit()
@@ -84,7 +93,8 @@ class Project:
             db.session.delete(self.record)
             self.record = None
             self.name = None
-            self.company_id = None
+            self.company_id = DEFAULT_COMPANY_ID
+            self.user_id = DEFAULT_USER_ID
             self.id = None
         db.session.commit()
 
@@ -115,7 +125,17 @@ class Project:
 
             query_context_controller.set_context(query_context_controller.IGNORE_CONTEXT)
             try:
-                SQLQuery(ast_query, session=session, database=self.name)
+                resp = SQLQuery(ast_query, session=session, database=self.name)
+                columns = [col.name for col in resp.fetched_data.columns]
+                seen, duplicates = set(), set()
+                for col in columns:
+                    if col in seen:
+                        duplicates.add(col)
+                    else:
+                        seen.add(col)
+                if len(duplicates) > 0:
+                    raise ValueError(f"Found duplicated columns in the view: {', '.join(duplicates)}")
+
             finally:
                 query_context_controller.release_context(query_context_controller.IGNORE_CONTEXT)
 
@@ -175,29 +195,35 @@ class Project:
                 #     column is not in black list AND (query has star(*) OR column in white list)
 
                 has_star = False
-                white_list, black_list = [], []
+                white_list, black_list = {}, []
                 for target in view_query.targets:
                     if isinstance(target, Star):
                         has_star = True
                     if isinstance(target, Identifier):
                         name = target.parts[-1].lower()
                         if target.alias is None or target.alias.parts[-1].lower() == name:
-                            white_list.append(name)
+                            white_list[name] = target
                     elif target.alias is not None:
                         black_list.append(target.alias.parts[-1].lower())
 
+                is_join = isinstance(view_query.from_table, Join)
                 view_where = view_query.where
                 for condition in conditions:
                     arg1, arg2 = condition.args
 
                     if isinstance(arg1, Identifier):
                         name = arg1.parts[-1].lower()
-                        if name in black_list or not (has_star or name in white_list):
+                        # don't move condition for join with Star
+                        if name in black_list or not (has_star and not is_join):
                             continue
+                        elif name in white_list:
+                            arg1 = white_list[name]
                     if isinstance(arg2, Identifier):
                         name = arg2.parts[-1].lower()
-                        if name in black_list or not (has_star or name in white_list):
+                        if name in black_list or not (has_star and not is_join):
                             continue
+                        elif name in white_list:
+                            arg2 = white_list[name]
 
                     # condition can be moved into view
                     condition2 = BinaryOperation(condition.op, [arg1, arg2])
@@ -214,7 +240,13 @@ class Project:
 
         # combine outer query with view's query
         view_query.parentheses = True
+
+        # keep alias (column of the query might relate to it)
+        alias = query.from_table.alias if query.from_table.alias is not None else query.from_table
+        view_query.alias = Identifier(parts=[alias.parts[-1]])
+
         query.from_table = view_query
+
         return query
 
     def query_view(self, query: Select, session) -> pd.DataFrame:
@@ -251,10 +283,14 @@ class Project:
             and predictor_record.training_stop_at is None
             and predictor_record.status != "error"
         ):
-            training_time = round((datetime.datetime.now() - predictor_record.training_start_at).total_seconds(), 3)
+            training_time = round(
+                (datetime.datetime.now() - predictor_record.training_start_at).total_seconds(),
+                3,
+            )
         elif predictor_record.training_start_at is not None and predictor_record.training_stop_at is not None:
             training_time = round(
-                (predictor_record.training_stop_at - predictor_record.training_start_at).total_seconds(), 3
+                (predictor_record.training_stop_at - predictor_record.training_start_at).total_seconds(),
+                3,
             )
 
         # regon Hide sensitive info
@@ -299,12 +335,23 @@ class Project:
         if predictor_data.get("accuracies", None) is not None:
             if len(predictor_data["accuracies"]) > 0:
                 predictor_meta["accuracy"] = float(np.mean(list(predictor_data["accuracies"].values())))
-        return {"name": predictor_record.name, "metadata": predictor_meta, "created_at": predictor_record.created_at}
+        return {
+            "name": predictor_record.name,
+            "metadata": predictor_meta,
+            "created_at": predictor_record.created_at,
+        }
 
     def get_model(self, name: str):
         record = (
             db.session.query(db.Predictor, db.Integration)
-            .filter_by(project_id=self.id, active=True, name=name, deleted_at=sa.null(), company_id=ctx.company_id)
+            .filter_by(
+                project_id=self.id,
+                active=True,
+                name=name,
+                deleted_at=sa.null(),
+                company_id=ctx.company_id,
+                user_id=ctx.user_id,
+            )
             .join(db.Integration, db.Integration.id == db.Predictor.integration_id)
             .order_by(db.Predictor.name, db.Predictor.id)
             .first()
@@ -314,10 +361,16 @@ class Project:
         return self._get_model_data(record[0], record[1])
 
     def get_model_by_id(self, model_id: int):
+        query = db.session.query(db.Predictor, db.Integration).filter_by(
+            project_id=self.id,
+            id=model_id,
+            deleted_at=sa.null(),
+            company_id=ctx.company_id,
+        )
+        if ctx.enforce_user_id:
+            query = query.filter(db.Predictor.user_id == ctx.user_id)
         record = (
-            db.session.query(db.Predictor, db.Integration)
-            .filter_by(project_id=self.id, id=model_id, deleted_at=sa.null(), company_id=ctx.company_id)
-            .join(db.Integration, db.Integration.id == db.Predictor.integration_id)
+            query.join(db.Integration, db.Integration.id == db.Predictor.integration_id)
             .order_by(db.Predictor.name, db.Predictor.id)
             .first()
         )
@@ -327,8 +380,12 @@ class Project:
 
     def get_models(self, active: bool = True, with_secrets: bool = True):
         query = db.session.query(db.Predictor, db.Integration).filter_by(
-            project_id=self.id, deleted_at=sa.null(), company_id=ctx.company_id
+            project_id=self.id,
+            deleted_at=sa.null(),
+            company_id=ctx.company_id,
         )
+        if ctx.enforce_user_id:
+            query = query.filter(db.Predictor.user_id == ctx.user_id)
         if isinstance(active, bool):
             query = query.filter_by(active=active)
 
@@ -344,16 +401,14 @@ class Project:
         return data
 
     def get_agents(self):
-        records = (
-            db.session.query(db.Agents)
-            .filter(
-                db.Agents.project_id == self.id,
-                db.Agents.company_id == ctx.company_id,
-                db.Agents.deleted_at == sa.null(),
-            )
-            .order_by(db.Agents.name)
-            .all()
+        query = db.session.query(db.Agents).filter(
+            db.Agents.project_id == self.id,
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == sa.null(),
         )
+        if ctx.enforce_user_id:
+            query = query.filter(db.Agents.user_id == ctx.user_id)
+        records = query.order_by(db.Agents.name).all()
         data = [
             {
                 "name": record.name,
@@ -365,7 +420,9 @@ class Project:
         return data
 
     def get_knowledge_bases(self):
-        from mindsdb.api.executor.controllers.session_controller import SessionController
+        from mindsdb.api.executor.controllers.session_controller import (
+            SessionController,
+        )
 
         session = SessionController()
 
@@ -375,12 +432,10 @@ class Project:
         }
 
     def get_views(self):
-        records = (
-            db.session.query(db.View)
-            .filter_by(project_id=self.id, company_id=ctx.company_id)
-            .order_by(db.View.name, db.View.id)
-            .all()
-        )
+        query = db.session.query(db.View).filter_by(project_id=self.id, company_id=ctx.company_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.View.user_id == ctx.user_id)
+        records = query.order_by(db.View.name, db.View.id).all()
         data = [
             {
                 "name": view_record.name,
@@ -401,10 +456,9 @@ class Project:
         Returns:
             dict | None: A dictionary with view information if found, otherwise None.
         """
-        query = db.session.query(db.View).filter(
-            db.View.project_id == self.id,
-            db.View.company_id == ctx.company_id,
-        )
+        query = db.session.query(db.View).filter(db.View.project_id == self.id, db.View.company_id == ctx.company_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.View.user_id == ctx.user_id)
         if strict_case:
             query = query.filter(db.View.name == name)
         else:
@@ -455,9 +509,10 @@ class Project:
 
         match str(table["type"]).upper():
             case "MODEL":
-                predictor_record = db.Predictor.query.filter_by(
-                    company_id=ctx.company_id, project_id=self.id, name=table_name
-                ).first()
+                query = db.Predictor.query.filter_by(company_id=ctx.company_id, project_id=self.id, name=table_name)
+                if ctx.enforce_user_id:
+                    query = query.filter(db.Predictor.user_id == ctx.user_id)
+                predictor_record = query.first()
                 columns = []
                 if predictor_record is not None:
                     if isinstance(predictor_record.dtype_dict, dict):
@@ -468,24 +523,41 @@ class Project:
                         if not isinstance(columns, list):
                             columns = [columns]
             case "VIEW":
-                query = Select(targets=[Star()], from_table=Identifier(table_name), limit=Constant(1))
+                query = Select(
+                    targets=[Star()],
+                    from_table=Identifier(table_name),
+                    limit=Constant(1),
+                )
 
-                from mindsdb.api.executor.controllers.session_controller import SessionController
+                from mindsdb.api.executor.controllers.session_controller import (
+                    SessionController,
+                )
 
                 session = SessionController()
                 session.database = self.name
                 df = self.query_view(query, session)
                 columns = df.columns
             case "AGENT":
-                agent = db.Agents.query.filter_by(
-                    company_id=ctx.company_id, project_id=self.id, name=table_name
-                ).first()
+                query = db.Agents.query.filter_by(company_id=ctx.company_id, project_id=self.id, name=table_name)
+                if ctx.enforce_user_id:
+                    query = query.filter(db.Agents.user_id == ctx.user_id)
+                agent = query.first()
                 if agent is not None:
-                    from mindsdb.interfaces.agents.constants import ASSISTANT_COLUMN, USER_COLUMN
+                    from mindsdb.interfaces.agents.utils.constants import (
+                        ASSISTANT_COLUMN,
+                        USER_COLUMN,
+                    )
 
                     columns = [ASSISTANT_COLUMN, USER_COLUMN]
             case "KNOWLEDGE_BASE":
-                columns = ["id", "chunk_id", "chunk_content", "metadata", "relevance", "distance"]
+                columns = [
+                    "id",
+                    "chunk_id",
+                    "chunk_content",
+                    "metadata",
+                    "relevance",
+                    "distance",
+                ]
             case "TABLE":
                 # like 'mindsdb.models'
                 pass
@@ -500,10 +572,16 @@ class ProjectController:
         pass
 
     def get_list(self) -> List[Project]:
-        company_id = ctx.company_id if ctx.company_id is not None else "0"
-        records = db.Project.query.filter(
-            (db.Project.company_id == company_id) & (db.Project.deleted_at == sa.null())
-        ).order_by(db.Project.name)
+        company_id = ctx.company_id if ctx.company_id is not None else DEFAULT_COMPANY_ID
+        user_id = ctx.user_id if ctx.user_id is not None else DEFAULT_USER_ID
+
+        filters = [
+            (db.Project.company_id == company_id),
+            (db.Project.deleted_at == sa.null()),
+        ]
+        if ctx.enforce_user_id:
+            filters.append(db.Project.user_id == user_id)
+        records = db.Project.query.filter(*filters).order_by(db.Project.name)
 
         return [Project.from_record(x) for x in records]
 
@@ -534,8 +612,11 @@ class ProjectController:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' can't be provided at the same time")
 
-        company_id = ctx.company_id if ctx.company_id is not None else "0"
+        company_id = ctx.company_id if ctx.company_id is not None else DEFAULT_COMPANY_ID
+        user_id = ctx.user_id if ctx.user_id is not None else DEFAULT_USER_ID
         q = db.Project.query.filter_by(company_id=company_id)
+        if ctx.enforce_user_id:
+            q = q.filter(db.Project.user_id == user_id)
 
         if id is not None:
             q = q.filter_by(id=id)

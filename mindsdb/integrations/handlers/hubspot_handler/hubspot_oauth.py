@@ -111,9 +111,6 @@ class HubSpotOAuth2Manager:
 
     def _exchange_code(self, code: str) -> str:
         """Exchange an authorization code for access and refresh tokens."""
-        logger.error(
-            f"DEBUG EXCHANGING CODE: code={code}, redirect_uri={self._get_redirect_uri()}, client_id={self.client_id}"
-        )
         response = HubSpot().oauth.tokens_api.create(
             grant_type="authorization_code",
             code=code,

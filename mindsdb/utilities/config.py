@@ -255,11 +255,11 @@ class Config:
                         "requests_per_minute": 60,
                     },
                     "oauth": {
-                        "enabled": False,       # MINDSDB_MCP_OAUTH_ENABLED
-                        "issuer_url": "",       # MINDSDB_MCP_OAUTH_ISSUER_URL
-                        "client_id": "",        # MINDSDB_MCP_OAUTH_CLIENT_ID
-                        "client_secret": "",    # MINDSDB_MCP_OAUTH_CLIENT_SECRET
-                        "scope": "mcp:tools",   # MINDSDB_MCP_OAUTH_SCOPE
+                        "enabled": False,  # MINDSDB_MCP_OAUTH_ENABLED
+                        "issuer_url": "",  # MINDSDB_MCP_OAUTH_ISSUER_URL
+                        "client_id": "",  # MINDSDB_MCP_OAUTH_CLIENT_ID
+                        "client_secret": "",  # MINDSDB_MCP_OAUTH_CLIENT_SECRET
+                        "scope": "mcp:tools",  # MINDSDB_MCP_OAUTH_SCOPE
                     },
                 },
             },

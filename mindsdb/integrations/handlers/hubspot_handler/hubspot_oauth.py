@@ -1,4 +1,5 @@
 import time
+import urllib.parse
 from typing import Optional
 
 from flask import request
@@ -29,6 +30,7 @@ class HubSpotOAuth2Manager:
         optional_scopes: Optional[str] = None,
         redirect_uri: Optional[str] = None,
         code: Optional[str] = None,
+        datasource_name: Optional[str] = None,
     ) -> None:
         self.handler_storage = handler_storage
         self.client_id = client_id
@@ -37,6 +39,7 @@ class HubSpotOAuth2Manager:
         self.optional_scopes = tuple(optional_scopes.split()) if optional_scopes else None
         self.redirect_uri = redirect_uri
         self.code = code
+        self.datasource_name = datasource_name
 
     def get_access_token(self) -> str:
         """
@@ -58,14 +61,40 @@ class HubSpotOAuth2Manager:
 
         runtime_code = self._get_runtime_code()
         if runtime_code:
-            return self._exchange_code(runtime_code)
+            try:
+                return self._exchange_code(runtime_code)
+            except Exception as e:
+                # OAuth codes are single-use and expire quickly.
+                # If the exchange fails (BAD_AUTH_CODE), don't retry — prompt re-authorization.
+                logger.warning("HubSpot code exchange failed (code may be expired/used): %s", e)
 
+        redirect_uri = self._get_redirect_uri()
         auth_url = get_auth_url(
             scope=self.scopes,
             optional_scope=self.optional_scopes,
             client_id=self.client_id,
-            redirect_uri=self._get_redirect_uri(),
+            redirect_uri=redirect_uri,
         )
+        # Fix for HubSpot's strict URL parsing. Python's URL encode translates spaces to `+`, but
+        # HubSpot's optional_scopes requires `%20` or `,`.
+        auth_url = auth_url.replace("+", "%20")
+
+        # Append state with datasource info so the frontend can complete the connection
+        # even when localStorage context is missing (e.g. script-initiated flows).
+        if self.datasource_name:
+            state_data = urllib.parse.urlencode(
+                {
+                    "datasource_name": self.datasource_name,
+                    "integrations_name": "hubspot",
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                    "redirect_uri": redirect_uri,
+                    "scope": " ".join(self.scopes) if self.scopes else "oauth",
+                    "optional_scope": " ".join(self.optional_scopes) if self.optional_scopes else "",
+                }
+            )
+            auth_url += f"&state={urllib.parse.quote(state_data)}"
+
         raise AuthException(
             f"HubSpot authorization required. Please visit: {auth_url}",
             auth_url=auth_url,

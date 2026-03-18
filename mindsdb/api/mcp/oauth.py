@@ -48,7 +48,7 @@ class IntrospectionTokenVerifier(TokenVerifier):
                   is unreachable, or any other error occurs.
         """
         # to prevent SSRF attacks it must start from https, or be local server
-        if not self.introspection_endpoint.startswith(("https://", "http://localhost", "http://127.0.0.1")):
+        if not self.introspection_endpoint.startswith(("https://", "http://localhost:", "http://127.0.0.1:")):
             return None
 
         timeout = httpx.Timeout(10.0, connect=5.0)
@@ -58,6 +58,7 @@ class IntrospectionTokenVerifier(TokenVerifier):
             timeout=timeout,
             limits=limits,
             verify=True,
+            follow_redirects=False,
         ) as client:
             try:
                 form_data = {

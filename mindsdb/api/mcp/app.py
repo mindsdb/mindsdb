@@ -8,6 +8,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+from mcp.server.auth.middleware.bearer_auth import BearerAuthBackend
+from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
+
 from mindsdb.utilities.config import config
 from mindsdb.api.common.middleware import RateLimitMiddleware
 from mindsdb.api.mcp.mcp_instance import mcp
@@ -34,25 +37,15 @@ def get_mcp_app():
         async with http_starlette.router.lifespan_context(http_starlette):
             yield
 
-    middleware = [
-        Middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-            allow_headers=["*"],
-            expose_headers=["mcp-session-id"],
-        ),
-    ]
+    middleware = []
 
     # Preserve AuthenticationMiddleware from http_starlette so that
     # RequireAuthMiddleware can read scope["user"] set by BearerAuthBackend.
     if mcp._token_verifier is not None:
-        from mcp.server.auth.middleware.bearer_auth import BearerAuthBackend
-        from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
         middleware = [
             Middleware(AuthenticationMiddleware, backend=BearerAuthBackend(mcp._token_verifier)),
             Middleware(AuthContextMiddleware),
-        ] + middleware
+        ]
 
     combined_app = Starlette(
         routes=list(sse_starlette.routes) + list(http_starlette.routes),

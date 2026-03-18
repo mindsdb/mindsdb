@@ -7,9 +7,7 @@ import pandas as pd
 import pytest
 from mindsdb_sql_parser.ast import Identifier
 from mindsdb_sql_parser.ast.mindsdb import CreateMLEngine
-
 from tests.unit.executor_test_base import BaseExecutorDummyML
-
 
 @pytest.mark.skip(reason="BYOM feature is currently disabled in MindsDB")
 @pytest.mark.parametrize("byom_type", ["inhouse", "venv"])

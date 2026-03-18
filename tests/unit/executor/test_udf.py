@@ -108,4 +108,3 @@ class TestBYOM(BaseExecutorDummyML):
             where input_col = 'my_input'
         """)
         assert ret["output_col"][0] == "my_input>my_response"
-        

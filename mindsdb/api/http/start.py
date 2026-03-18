@@ -42,7 +42,9 @@ def _mount_optional_api(name: str, mount_path: str, get_app_fn, routes) -> objec
         )
         return
 
-    optional_app.add_middleware(PATAuthMiddleware)
+    if name.upper() != 'MCP' or config["api"]["mcp"]["oauth"]["enabled"] is False:
+        optional_app.add_middleware(PATAuthMiddleware)
+
     routes.append(Mount(mount_path, app=optional_app))
     return optional_app
 

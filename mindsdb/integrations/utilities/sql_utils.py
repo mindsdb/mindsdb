@@ -1,3 +1,4 @@
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Any
 import pandas as pd
@@ -103,6 +104,44 @@ def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False):
     """
     conditions = []
 
+    def _resolve_special_value(node: ASTNode) -> Any:
+        if isinstance(node, ast.Constant):
+            return node.value
+
+        if isinstance(node, ast.Tuple):
+            return [_resolve_special_value(item) for item in node.items]
+
+        if isinstance(node, ast.Identifier):
+            special_name = node.parts[-1].upper()
+            if special_name == "CURRENT_DATE":
+                return date.today().isoformat()
+            if special_name in {"CURRENT_TIMESTAMP", "NOW"}:
+                return datetime.now(timezone.utc).isoformat()
+
+        if isinstance(node, ast.Function):
+            special_name = node.op.upper()
+            if special_name == "CURRENT_DATE":
+                return date.today().isoformat()
+            if special_name in {"CURRENT_TIMESTAMP", "NOW"}:
+                return datetime.now(timezone.utc).isoformat()
+
+        if isinstance(node, ast.BinaryOperation) and node.op == "-":
+            parts: list[Any] = []
+
+            def _flatten_date_parts(value: ASTNode) -> bool:
+                if isinstance(value, ast.Constant):
+                    parts.append(value.value)
+                    return True
+                if isinstance(value, ast.BinaryOperation) and value.op == "-":
+                    return _flatten_date_parts(value.args[0]) and _flatten_date_parts(value.args[1])
+                return False
+
+            if _flatten_date_parts(node) and len(parts) == 3 and all(isinstance(part, (int, float)) for part in parts):
+                year, month, day = (int(part) for part in parts)
+                return f"{year:04d}-{month:02d}-{day:02d}"
+
+        raise NotImplementedError(f"Not implemented arg2: {node}")
+
     def _extract_comparison_conditions(node: ASTNode, **kwargs):
         if isinstance(node, ast.BinaryOperation):
             op = node.op.lower()
@@ -126,12 +165,7 @@ def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False):
                 # Only support [identifier] =/</>/>=/<=/etc [constant] comparisons.
                 raise NotImplementedError(f"Not implemented arg1: {arg1}")
 
-            if isinstance(arg2, ast.Constant):
-                value = arg2.value
-            elif isinstance(arg2, ast.Tuple):
-                value = [i.value for i in arg2.items]
-            else:
-                raise NotImplementedError(f"Not implemented arg2: {arg2}")
+            value = _resolve_special_value(arg2)
 
             conditions.append([op, arg1.parts[-1], value])
         if isinstance(node, ast.BetweenOperation):

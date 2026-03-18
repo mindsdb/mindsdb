@@ -158,6 +158,17 @@ class APIResource(APITable):
         self.table_name = table_name
         super().__init__(*args, **kwargs)
 
+    @staticmethod
+    def _extract_sort_column_name(field: ASTNode) -> str:
+        """Return the sortable column name for supported ORDER BY expressions."""
+        if isinstance(field, Identifier):
+            return field.parts[-1]
+
+        if hasattr(field, "arg") and isinstance(field.arg, Identifier):
+            return field.arg.parts[-1]
+
+        raise NotImplementedError(f"Unsupported ORDER BY field: {field}")
+
     def select(self, query: Select) -> pd.DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it.
 
@@ -178,7 +189,12 @@ class APIResource(APITable):
         if query.order_by and len(query.order_by) > 0:
             sort = []
             for an_order in query.order_by:
-                sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
+                sort.append(
+                    SortColumn(
+                        self._extract_sort_column_name(an_order.field),
+                        an_order.direction.upper() != "DESC",
+                    )
+                )
 
         targets = []
         for col in query.targets:

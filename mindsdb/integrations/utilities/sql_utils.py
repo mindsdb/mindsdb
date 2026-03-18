@@ -222,13 +222,22 @@ def filter_dataframe(df: pd.DataFrame, conditions: list):
 
 
 def sort_dataframe(df, order_by: list):
+    def _extract_sort_column_name(field: ASTNode) -> str:
+        if isinstance(field, ast.Identifier):
+            return field.parts[-1]
+
+        if isinstance(field, ast.TypeCast) and isinstance(field.arg, ast.Identifier):
+            return field.arg.parts[-1]
+
+        raise NotImplementedError(f"Unsupported ORDER BY field: {field}")
+
     cols = []
     ascending = []
     for order in order_by:
         if not isinstance(order, ast.OrderBy):
             continue
 
-        col = order.field.parts[-1]
+        col = _extract_sort_column_name(order.field)
         if col not in df.columns:
             continue
 

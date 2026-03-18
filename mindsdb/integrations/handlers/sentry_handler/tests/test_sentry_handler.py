@@ -1,14 +1,21 @@
 import unittest
+from datetime import date
 from unittest.mock import Mock
 
 import pandas as pd
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.sentry_handler.sentry_client import SentryClient
 from mindsdb.integrations.handlers.sentry_handler.sentry_tables import (
     SentryIssuesTable,
     SentryProjectsTable,
 )
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
+from mindsdb.integrations.utilities.sql_utils import (
+    FilterCondition,
+    FilterOperator,
+    SortColumn,
+    extract_comparison_conditions,
+)
 
 
 class MockResponse:
@@ -166,3 +173,55 @@ class SentryTablesTest(unittest.TestCase):
             "Sentry issues query filter cannot be combined with status or level filters",
         ):
             table._build_query_string(conditions)
+
+    def test_issues_table_applies_local_last_seen_filter(self):
+        client = Mock()
+        client.resolve_project.return_value = {"id": 99, "slug": "mktplace"}
+        client.list_issues.return_value = [
+            {
+                "id": "1001",
+                "shortId": "MKTPLACE-1",
+                "title": "Today issue",
+                "type": "error",
+                "culprit": "checkout.views.create_order",
+                "status": "unresolved",
+                "level": "error",
+                "count": "12",
+                "userCount": "7",
+                "firstSeen": "2026-03-17T10:00:00Z",
+                "lastSeen": "2026-03-18T10:00:00Z",
+                "permalink": "https://sentry.io/organizations/talentify/issues/1001/",
+            },
+            {
+                "id": "1002",
+                "shortId": "MKTPLACE-2",
+                "title": "Old issue",
+                "type": "error",
+                "culprit": "checkout.views.create_order",
+                "status": "unresolved",
+                "level": "error",
+                "count": "3",
+                "userCount": "2",
+                "firstSeen": "2026-03-16T10:00:00Z",
+                "lastSeen": "2026-03-17T10:00:00Z",
+                "permalink": "https://sentry.io/organizations/talentify/issues/1002/",
+            },
+        ]
+        table = SentryIssuesTable(HandlerStub(client))
+        conditions = [
+            FilterCondition("level", FilterOperator.EQUAL, "error"),
+            FilterCondition("last_seen", FilterOperator.GREATER_THAN_OR_EQUAL, "2026-03-18"),
+        ]
+
+        df = table.list(conditions=conditions, limit=20, sort=[SortColumn("last_seen", ascending=False)])
+
+        self.assertEqual(["Today issue"], list(df["title"]))
+        self.assertTrue(conditions[0].applied)
+        self.assertTrue(conditions[1].applied)
+
+    def test_extract_comparison_conditions_supports_current_date_and_date_literal(self):
+        current_date_where = parse_sql("SELECT * FROM issues WHERE last_seen::DATE = CURRENT_DATE").where
+        literal_date_where = parse_sql("SELECT * FROM issues WHERE last_seen >= '2026-03-18'").where
+
+        self.assertEqual([["=", "last_seen", date.today().isoformat()]], extract_comparison_conditions(current_date_where))
+        self.assertEqual([[">=", "last_seen", "2026-03-18"]], extract_comparison_conditions(literal_date_where))

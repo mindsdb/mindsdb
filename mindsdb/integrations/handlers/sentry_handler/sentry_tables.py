@@ -95,7 +95,8 @@ class SentryIssuesTable(APIResource):
             limit=fetch_limit,
         )
         rows = [self._flatten_issue(issue) for issue in issues]
-        return pd.DataFrame(rows, columns=self.get_columns())
+        df = pd.DataFrame(rows, columns=self.get_columns())
+        return self._apply_local_filters(df, conditions or [])
 
     @staticmethod
     def _build_query_string(conditions: list[FilterCondition]) -> str:
@@ -117,7 +118,7 @@ class SentryIssuesTable(APIResource):
                 condition.applied = True
                 continue
 
-            raise ValueError(f"Unsupported where argument {condition.column}")
+            continue
 
         if query_value is not None and structured_filters:
             raise ValueError("Sentry issues query filter cannot be combined with status or level filters")
@@ -126,6 +127,44 @@ class SentryIssuesTable(APIResource):
             return query_value
 
         return " ".join(structured_filters)
+
+    @staticmethod
+    def _apply_local_filters(df: pd.DataFrame, conditions: list[FilterCondition]) -> pd.DataFrame:
+        if df.empty:
+            return df
+
+        for condition in conditions:
+            if condition.applied:
+                continue
+            if condition.column not in {"first_seen", "last_seen"}:
+                continue
+            if condition.column not in df.columns:
+                continue
+
+            series = pd.to_datetime(df[condition.column], utc=True, errors="coerce")
+            value = pd.to_datetime(condition.value, utc=True, errors="coerce")
+            if pd.isna(value):
+                raise ValueError(f"Unsupported where value for {condition.column}: {condition.value}")
+
+            if isinstance(condition.value, str) and len(condition.value) == 10 and condition.op == FilterOperator.EQUAL:
+                mask = series.dt.strftime("%Y-%m-%d") == condition.value
+            elif condition.op == FilterOperator.EQUAL:
+                mask = series == value
+            elif condition.op == FilterOperator.GREATER_THAN:
+                mask = series > value
+            elif condition.op == FilterOperator.GREATER_THAN_OR_EQUAL:
+                mask = series >= value
+            elif condition.op == FilterOperator.LESS_THAN:
+                mask = series < value
+            elif condition.op == FilterOperator.LESS_THAN_OR_EQUAL:
+                mask = series <= value
+            else:
+                raise ValueError(f"Unsupported where operation for {condition.column}")
+
+            df = df[mask.fillna(False)]
+            condition.applied = True
+
+        return df
 
     @staticmethod
     def _flatten_issue(issue: dict[str, Any]) -> dict[str, Any]:

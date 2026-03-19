@@ -346,8 +346,8 @@ class SQLQuery:
         return handler(self, steps_data=steps_data).call(step)
 
     def release_kb_lock(self, steps):
-        # find knowledge bases that used as tables to insert.
-        #  then and release locks of vector for these knowledge bases
+        # find knowledge bases that are used as tables to insert.
+        #  then release locks of vector for these knowledge bases
         for step in steps:
             if isinstance(step, InsertToTable):
                 self.session.kb_controller.release_lock(step.table, project_name=self.database)

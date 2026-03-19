@@ -12,15 +12,22 @@ connection_args = OrderedDict(
     },
     username={
         "type": ARG_TYPE.STR,
-        "description": "The username for the Confluence account.",
+        "description": "The username for the Confluence account. Not required when using api_token.",
         "label": "Username",
-        "required": True
+        "required": False
     },
     password={
         "type": ARG_TYPE.STR,
         "description": "The API token for the Confluence account.",
         "label": "Password",
-        "required": True,
+        "required": False,
+        "secret": True
+    },
+    api_token={
+        "type": ARG_TYPE.STR,
+        "description": "Personal Access Token for Bearer auth. When provided, username and password are not required.",
+        "label": "API Token (PAT)",
+        "required": False,
         "secret": True
     }
 )

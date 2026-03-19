@@ -121,6 +121,10 @@ class FormatDetector:
 
         self.parameters = {}
 
+    def close(self):
+        if self.file_obj is not None:
+            self.file_obj.close()
+
     def get_format(self) -> str:
         if self.format is not None:
             return self.format

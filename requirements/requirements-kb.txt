@@ -3,4 +3,3 @@ pgvector==0.3.6 # Required for knowledge bases
 langchain-core==0.3.77
 litellm==1.63.14
 faiss-cpu==1.13.2 # default vector storage
-portalocker # required for faiss handler

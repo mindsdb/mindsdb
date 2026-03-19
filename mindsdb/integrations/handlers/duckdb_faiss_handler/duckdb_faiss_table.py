@@ -263,15 +263,18 @@ class DuckDBFaissTable:
             embedding = orjson.loads(embedding)
 
         where_clause = self._translate_filters(meta_filters)
-        count_query = Select(
+        ids_query = Select(
             targets=[Identifier("faiss_id")],
             from_table=Identifier("meta_data"),
             where=where_clause,
         )
 
         with self.connection.cursor() as cur:
-            sql = self.handler.renderer.get_string(count_query, with_failback=True)
+            sql = self.handler.renderer.get_string(ids_query, with_failback=True)
             meta_df = cur.execute(sql).fetchdf()
+
+        if meta_df.empty:
+            return self._empty_result()
 
         faiss_ids = meta_df["faiss_id"].tolist()
         results = []

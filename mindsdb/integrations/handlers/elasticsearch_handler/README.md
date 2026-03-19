@@ -1,118 +1,130 @@
 ---
-title: ElasticSearch
-sidebarTitle: ElasticSearch
+title: Elasticsearch
+sidebarTitle: Elasticsearch
 ---
 
-This documentation describes the integration of MindsDB with [ElasticSearch](https://www.elastic.co/), a distributed, multitenant-capable full-text search engine with an HTTP web interface and schema-free JSON documents..
-The integration allows MindsDB to access data from ElasticSearch and enhance ElasticSearch with AI capabilities.
+This documentation describes the integration of MindsDB with [Elasticsearch](https://www.elastic.co/elasticsearch/), a distributed search and analytics engine.
+The integration allows MindsDB to access data stored in Elasticsearch indices and enhance Elasticsearch with AI capabilities.
+
+## Architecture
+
+This handler uses a **SQL-first architecture** with automatic fallback:
+
+1. **Primary**: Elasticsearch SQL API for maximum performance and compatibility
+2. **Fallback**: Search API for array-containing indexes with automatic array-to-JSON conversion
+3. **Security**: SSL/TLS support with certificate validation
+4. **Efficiency**: Memory-efficient pagination for large datasets
+
+The handler automatically detects when SQL queries encounter array fields and seamlessly falls back to the Search API, converting arrays to JSON strings for SQL compatibility. This approach provides the best performance while handling all Elasticsearch data types.
 
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
-2. To connect ElasticSearch to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-3. Install or ensure access to ElasticSearch.
+2. To connect Elasticsearch to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
+3. **If installing from source**: Python 3.11 or 3.12 is recommended. Install with: `pip install -e '.[elasticsearch]'`
 
 ## Connection
 
-Establish a connection to ElasticSearch from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/elasticsearch_handler) as an engine.
+Establish a connection to your Elasticsearch cluster from MindsDB by executing the following SQL command:
 
 ```sql
-CREATE DATABASE elasticsearch_datasource
-WITH ENGINE = 'elasticsearch',
-PARAMETERS={
-   'cloud_id': 'xyz',                               -- optional, if hosts are provided
-   'hosts': 'https://xyz.xyz.gcp.cloud.es.io:123',  -- optional, if cloud_id is provided
-   'api_key': 'xyz',                                -- optional, if user and password are provided
-   'user': 'elastic',                               -- optional, if api_key is provided
-   'password': 'xyz'                                -- optional, if api_key is provided
-};
-```
-
-The connection parameters include the following:
-
-* `cloud_id`: The Cloud ID provided with the ElasticSearch deployment. Required only when `hosts` is not provided.
-* `hosts`: The ElasticSearch endpoint provided with the ElasticSearch deployment. Required only when `cloud_id` is not provided.
-* `api_key`: The API key that you generated for the ElasticSearch deployment. Required only when `user` and `password` are not provided.
-* `user` and `password`: The user and password used to authenticate. Required only when `api_key` is not provided.
-
-<Tip>
-If you want to connect to the local instance of ElasticSearch, use the below statement:
-
-```sql
-CREATE DATABASE elasticsearch_datasource
+CREATE DATABASE elasticsearch_conn
 WITH ENGINE = 'elasticsearch',
 PARAMETERS = {
-   "hosts": "127.0.0.1:9200",
-   "user": "user",
-   "password": "password"
+    "hosts": "localhost:9200",
+    "user": "elastic", 
+    "password": "changeme"
 };
 ```
 
-Required connection parameters include the following (at least one of these parameters should be provided):
+Required connection parameters include the following:
 
-* `hosts`: The IP address and port where ElasticSearch is deployed.
-* `user`: The user used to autheticate access.
-* `password`: The password used to autheticate access.
-</Tip>
+* `hosts`: The Elasticsearch host(s) in format "host:port". For multiple hosts, use comma separation like "host1:port1,host2:port2".
+
+Optional connection parameters include the following:
+
+* `user`: The username for Elasticsearch authentication.
+* `password`: The password for Elasticsearch authentication.
+* `api_key`: API key for authentication (alternative to user/password).
+* `cloud_id`: Elastic Cloud deployment ID for hosted Elasticsearch.
+* `ca_certs`: Path to CA certificate file for SSL verification.
+* `client_cert`: Path to client certificate file for SSL authentication.
+* `client_key`: Path to client private key file for SSL authentication.
+* `verify_certs`: Boolean to enable/disable SSL certificate verification (default: true).
+* `timeout`: Request timeout in seconds.
 
 ## Usage
+
+The following usage examples utilize the connection to Elasticsearch made via the `CREATE DATABASE` statement and named `elasticsearch_conn`.
 
 Retrieve data from a specified index by providing the integration name and index name:
 
 ```sql
 SELECT *
-FROM elasticsearch_datasource.my_index
+FROM elasticsearch_conn.products
 LIMIT 10;
 ```
 
-<Note>
-The above examples utilize `elasticsearch_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
-</Note>
+Query with filtering and aggregation:
+
+```sql
+SELECT category, COUNT(*) as product_count, AVG(price) as avg_price
+FROM elasticsearch_conn.products 
+WHERE price > 100
+GROUP BY category
+ORDER BY product_count DESC;
+```
+
+Run queries with array fields (automatically converted to JSON strings):
+
+```sql
+SELECT product_name, tags, categories 
+FROM elasticsearch_conn.products 
+WHERE product_id = '12345';
+```
 
 <Tip>
-At the moment, the Elasticsearch SQL API has certain limitations that have an impact on the queries that can be issued via MindsDB. The most notable of these limitations are listed below:
-1. Only `SELECT` queries are supported at the moment.
-2. Array fields are not supported.
-3. Nested fields cannot be queried directly. However, they can be accessed using the `.` operator.
+**Array Field Support**
 
-For a detailed guide on the limitations of the Elasticsearch SQL API, refer to the [official documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html).
+The Elasticsearch handler automatically detects and converts array fields to JSON strings for SQL compatibility. This prevents "Arrays not supported" errors while preserving the original data structure.
 </Tip>
 
-## Troubleshooting Guide
+## Troubleshooting
 
 <Warning>
 `Database Connection Error`
 
-* **Symptoms**: Failure to connect MindsDB with the Elasticsearch server.
+* **Symptoms**: Failure to connect MindsDB with the Elasticsearch cluster.
 * **Checklist**:
-    1. Make sure the Elasticsearch server is active.
-    2. Confirm that server, cloud ID and credentials are correct.
+    1. Make sure the Elasticsearch cluster is active and accessible.
+    2. Confirm that host, port, user, and password are correct. Try a direct Elasticsearch connection.
     3. Ensure a stable network between MindsDB and Elasticsearch.
+    4. Check if authentication is required and credentials are valid.
 </Warning>
 
 <Warning>
-`Transport Error` or `Request Error`
+`Arrays Not Supported Error`
 
-* **Symptoms**: Errors related to the issuing of unsupported queries to Elasticsearch.
-* **Checklist**:
-    1. Ensure the query is a `SELECT` query.
-    2. Avoid querying array fields.
-    3. Access nested fields using the `.` operator.
-    4. Refer to the [official documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html) for more information if needed.
+* **Symptoms**: SQL queries failing with "Arrays are not supported" message.
+* **Solution**: This is automatically handled by the integration. Array fields are converted to JSON strings for SQL compatibility.
+* **Note**: If you still encounter this error, the handler will automatically fall back to the Search API.
 </Warning>
 
 <Warning>
-`SQL statement cannot be parsed by mindsdb_sql`
+`SHOW TABLES returns empty or fails`
 
-* **Symptoms**: SQL queries failing or not recognizing index names containing special characters.
-* **Checklist**:
-    1. Ensure table names with special characters are enclosed in backticks.
-    2. Examples:
-        * Incorrect: SELECT * FROM integration.travel-data
-        * Incorrect: SELECT * FROM integration.'travel-data'
-        * Correct: SELECT * FROM integration.\`travel-data\`
+* **Symptoms**: `SHOW TABLES FROM elasticsearch_conn` returns no results or fails.
+* **Solution**: Use the information_schema alternative:
+    ```sql
+    SELECT table_name FROM information_schema.tables 
+    WHERE table_schema = 'elasticsearch_conn';
+    ```
 </Warning>
 
-This [troubleshooting guide](https://www.elastic.co/guide/en/elasticsearch/reference/current/troubleshooting.html) provided by Elasticsearch might also be helpful.
+## Limitations
+
+* **JOINs**: Not supported due to Elasticsearch architecture limitations.
+* **Complex Subqueries**: Limited by Elasticsearch's SQL capabilities.
+* **Real-time Data**: Elasticsearch has near-real-time search characteristics due to refresh intervals.

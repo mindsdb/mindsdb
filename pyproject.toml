@@ -1,19 +1,248 @@
 [build-system]
-
 # @TODO: We should figure out version limitations for these
 requires = [
     "setuptools",
     "wheel",
 ]
+build-backend = "setuptools.build_meta"
 
+[project]
+name = "mindsdb"
+requires-python = ">=3.10,<3.14"
+description = "AI Query Engine for federated data"
+dynamic = ["readme", "license", "authors", "classifiers", "version"]
 
+# ── Core dependencies ─────────────────────────────────────────────────────────
+# Only DIRECT dependencies — transitive deps are resolved by uv lock.
+# To add a dep:     uv add <package>
+# To remove a dep:  uv remove <package>
+# To upgrade a dep: uv lock --upgrade-package <package>
+# To export:        uv export --format requirements-txt --no-hashes > requirements.txt
 
+dependencies = [
+    # --- Packaging ---
+    "packaging",
+    # --- Web framework ---
+    "flask ~= 3.1",
+    "flask-restx >= 1.3.0, < 2.0.0",
+    "uvicorn >= 0.30.0, < 1.0.0",
+    "flask-compress >= 1.0.0",
+    "a2wsgi ~= 1.10.10",
+    "starlette >= 0.49.1",
+    "sse-starlette ~= 2.3",
+    "python-multipart >= 0.0.22",
+    # --- Data processing ---
+    "pandas >= 2.2.3, < 3.0.0",
+    "numpy ~= 2.0",
+    "pyarrow <= 19.0.0",
+    "dill ~= 0.3",
+    "dateparser ~= 1.2",
+    "pytz",
+    "python-dateutil",
+    "lark",
+    # --- Database ---
+    "sqlalchemy >= 2.0.0, < 3.0.0",
+    "alembic >= 1.3.3",
+    "psycopg[binary]",
+    "psycopg2-binary",
+    "redis >= 5.0.0, < 6.0.0",
+    "walrus ~= 0.9",
+    "duckdb == 1.3.0; sys_platform == 'win32'",
+    "duckdb ~= 1.3.2; sys_platform != 'win32'",
+    # --- Cloud / storage ---
+    "boto3 >= 1.34.131",
+    "appdirs >= 1.0.0",
+    # --- HTTP / API ---
+    "requests ~= 2.32",
+    "urllib3 >= 2.6.3",
+    # --- Auth / security ---
+    "cryptography >= 42.0.0",
+    "pyjwt ~= 2.10",
+    # --- Validation / serialization ---
+    "pydantic ~= 2.12",
+    "orjson ~= 3.11",
+    # --- MindsDB core ---
+    "mindsdb-sql-parser ~= 0.13.8",
+    "mind-castle >= 0.4.9",
+    "psutil ~= 7.0",
+    "sly ~= 0.4.0",
+    # --- File handling ---
+    "pymupdf ~= 1.25",
+    "filetype",
+    "openpyxl",
+    "aipdf ~= 0.0.7",
+    "bs4",
+    # --- Observability ---
+    "prometheus-client ~= 0.20",
+    "sentry-sdk[flask] ~= 2.14",
+    # --- Misc ---
+    "pyaml ~= 23.12",
+    "html2text>=2025.4.15",
+    "xlrd>=2.0.2",
+]
 
+[project.optional-dependencies]
+
+# Agent stack
+# Generates: requirements/requirements-agents.txt
+# Regenerate: uv export --format requirements-txt --extra agents --no-hashes > requirements/requirements-agents.txt
+agents = [
+    "openai >= 2.9.0, < 3.0.0",
+
+    # When using agents, some LLMs may require the 'transformers' library (like Ollama):
+    "transformers >= 4.42.4",
+
+    # Required for KB
+    "mindsdb-evaluator == 0.0.21",
+    "litellm ~= 1.80",
+    "mcp >= 1.25.0",
+
+    # A2A requirements
+    "httpx ~= 0.28",
+    "jwcrypto ~= 1.5",
+    "pydantic-ai >= 1.66.0, < 2.0.0",
+]
+
+#  Knowledge Base
+# Generates: requirements/requirements-kb.txt
+# Regenerate: uv export --format requirements-txt --extra kb --no-hashes > requirements/requirements-kb.txt
+kb = [
+    "lxml ~= 5.3", # Do we need this? It is a dependency of aipdf
+    "pgvector ~= 0.3",
+    "litellm ~= 1.80", 
+]
+
+# Opentelemetry
+# Generates: requirements/requirements-opentelemetry.txt
+# Regenerate: uv export --format requirements-txt --extra opentelemetry --no-hashes > requirements/requirements-opentelemetry.txt
+opentelemetry = [
+    "opentelemetry-api >= 1.27",
+    "opentelemetry-sdk >= 1.27",
+    "opentelemetry-exporter-otlp >= 1.27",
+    "opentelemetry-instrumentation-requests >= 0.48b0",
+    "opentelemetry-instrumentation-flask >= 0.48b0",
+    "opentelemetry-distro >= 0.48b0",
+]
+
+langfuse = [
+    "langfuse ~= 3.14",
+]
+
+#  Supported handlers
+# Each generates: mindsdb/integrations/handlers/<n>_handler/requirements.txt
+# Adding a new handler:
+#   1. Complete the manual promotion checklist in handler_tiers.toml
+#   2. Add the extra below
+#   3. Add handler name to handler_tiers.toml [tiers.supported]
+#   4. Run: uv export --format requirements-txt --extra <n> --no-hashes > mindsdb/integrations/handlers/<n>_handler/requirements.txt
+
+postgres = [
+    "psycopg2-binary >= 2.9.9",
+]
+
+snowflake = [
+    "snowflake-connector-python >= 3.10.0",
+]
+
+oracle = [
+    "oracledb >= 2.0.0",
+]
+
+bigquery = [
+    "google-cloud-bigquery >= 3.0.0",
+]
+
+databricks = [
+    "databricks-sql-connector >= 3.0.0",
+]
+
+timescaledb = [
+    "psycopg2-binary >= 2.9.9",
+]
+
+salesforce = [
+    "simple-salesforce >= 1.12.5",
+]
+
+hubspot = [
+    "hubspot-api-client >= 8.0.0",
+]
+
+netsuite = [
+    # Uses requests from core dependencies — no additional deps required
+]
+
+mariadb = [
+    "mariadb >= 1.1.10",
+]
+
+mysql = [
+    "mysql-connector-python >= 9.1.0",
+]
+
+#  Dev packages
+# Generates: requirements/requirements-dev.txt
+# Regenerate: uv export --format requirements-txt --extra dev --no-hashes > requirements/requirements-dev.txt
+dev = [
+    "pre-commit >= 2.16.0",
+    "watchfiles ~= 0.19",
+    "setuptools ~= 78.1",
+    "wheel",
+    "deptry ~= 0.20",
+    "twine",
+    "importlib-metadata ~= 7.2",
+    "ruff ~= 0.11",
+]
+
+#  Tests
+# Generates: requirements/requirements-test.txt
+# Regenerate: uv export --format requirements-txt --extra test --no-hashes > requirements/requirements-test.txt
+test = [
+    "scipy ~= 1.15.3",
+    "docker >= 5.0.3",
+    "openai >= 2.9.0, < 3.0.0",
+    "pytest >= 8.3.5, < 9.0.0",
+    "pytest-subtests",
+    "pytest-xdist",
+    "pytest-cov",
+    "pytest-json-report ~= 1.5",
+    "pytest-metadata ~= 3.1",
+    "python-dotenv ~= 1.1",
+    "responses",
+    "coveralls",
+    "locust",
+    "ollama >= 0.1.7",
+    "anthropic >= 0.21.3",
+    "langchain-google-genai >= 2.0.0",
+    "filelock ~= 3.20",
+    "mysql-connector-python ~= 9.1",
+    "walrus ~= 0.9",
+    "pymongo ~= 4.8",
+    "appdirs >= 1.0.0",
+    # mindsdb-sdk removed: depends on PyPI mindsdb which pins pandas==2.2.x,
+    # conflicting with pandas>=2.3 required by pydantic-ai>=1.66
+]
+
+#  uv configuration
+[tool.uv]
+# Strict environment sync (CI/production — installs exactly what's in uv.lock):
+#   uv sync --locked --extra agents --extra kb
+#
+# Additive install (dev — adds an extra WITHOUT removing packages from other extras):
+#   uv pip install -e ".[agents]"
+#   uv pip install -e ".[kb]"
+#
+# Use `uv lock --check` in CI to verify uv.lock matches pyproject.toml.
+#
+# To regenerate a requirements file after changing extras:
+#   uv export --format requirements-txt --extra <name> --no-hashes > requirements/requirements-<name>.txt
+
+#  Ruff
 [tool.ruff]
 exclude = [
   ".venv",
   "build",
-  "tests/unused"
+  "tests/unused",
 ]
 line-length = 120
 target-version = "py310"
@@ -22,7 +251,7 @@ target-version = "py310"
 ignore = [
     "E501",     # Line too long
     "C901",     # Function is too complex
-    "E721"      # Do not compare types, use 'isinstance()': https://www.flake8rules.com/rules/E721.html      
+    "E721",     # Do not compare types, use 'isinstance()'
 ]
 
 [tool.ruff.lint.per-file-ignores]

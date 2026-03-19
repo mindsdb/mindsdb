@@ -1,0 +1,53 @@
+# Snyk (https://snyk.io) policy file
+# Controls ignores, exclusions, and language settings.
+# See: https://docs.snyk.io/manage-risk/policies/the-.snyk-file
+version: v1.25.0
+
+# ============================================================
+# Snyk Code Exclusions
+# ============================================================
+
+exclude:
+  global:
+    # ----- Test fixtures and sample data -----
+    - tests/fixtures/**
+    - "*.test.py"
+    - "*.spec.py"
+
+    # ----- Documentation and static assets -----
+    - docs/**
+    - assets/**
+    - "mindsdb hacktoberfest/**"
+
+    # ----- Development tooling -----
+    - .devcontainer/**
+    - scripts/**
+    - docker/**
+
+# ============================================================
+# Python Version Setting
+# ============================================================
+# MindsDB targets Python 3.10+ as of current releases.
+language-settings:
+  python: "3.10"
+
+# ============================================================
+# Known Issue Ignores (with expiration)
+# ============================================================
+# Use sparingly. Each ignore MUST have:
+#   - A reason explaining why it's safe to ignore
+#   - An expiration date (max 90 days)
+#   - A JIRA/GitHub issue link for tracking
+#
+# Example:
+# ignore:
+#   SNYK-PYTHON-EXAMPLE-12345:
+#     - '*':
+#       reason: "Not exploitable in our context - tracked in MINDSDB-1234"
+#       expires: 2026-05-16T00:00:00.000Z
+ignore: {}
+
+# ============================================================
+# Patches
+# ============================================================
+patch: {}

@@ -59,7 +59,8 @@ class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             from
                 information_schema.columns
             where
-                table_name = '{self.mock_table}';
+                table_name = '{self.mock_table}'
+                and table_schema = DATABASE();
         """
 
     def create_handler(self):

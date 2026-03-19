@@ -4,7 +4,10 @@ import numpy as np
 import psutil
 from pathlib import Path
 
-import portalocker
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 import faiss  # faiss or faiss-gpu
 
@@ -121,11 +124,11 @@ class FaissIndex:
     def _lock_index(self):
         if not self.lock_required:
             return
-        if os.name != "nt":
+        if os.name != "nt" and fcntl:
             self.index_fd = open(self.path, "rb")
             try:
-                portalocker.lock(self.index_fd, portalocker.LOCK_EX | portalocker.LOCK_NB)
-            except portalocker.exceptions.AlreadyLocked:
+                fcntl.flock(self.index_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
                 raise ValueError(f"Index is already used: {self.path}")
 
     def _load_index(self):

@@ -396,7 +396,7 @@ class BigQueryHandler(MetaDatabaseHandler):
                 tc.table_name,
                 kcu.column_name,
                 kcu.ordinal_position,
-                tc.constraint_name,
+                tc.constraint_name
             FROM
                 `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
             JOIN

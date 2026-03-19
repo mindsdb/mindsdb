@@ -73,7 +73,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             from
                 information_schema.columns
             where
-                table_name = '{self.mock_table}';
+                table_name = '{self.mock_table}'
+                and table_schema = DATABASE();
         """
 
     def create_handler(self):
@@ -457,7 +458,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             from
                 information_schema.columns
             where
-                table_name = '{table_name}';
+                table_name = '{table_name}'
+                and table_schema = DATABASE();
         """
         self.assertEqual(call_args, expected_sql)
         self.assertEqual(response, expected_response)

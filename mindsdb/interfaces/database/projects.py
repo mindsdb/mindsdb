@@ -125,7 +125,17 @@ class Project:
 
             query_context_controller.set_context(query_context_controller.IGNORE_CONTEXT)
             try:
-                SQLQuery(ast_query, session=session, database=self.name)
+                resp = SQLQuery(ast_query, session=session, database=self.name)
+                columns = [col.name for col in resp.fetched_data.columns]
+                seen, duplicates = set(), set()
+                for col in columns:
+                    if col in seen:
+                        duplicates.add(col)
+                    else:
+                        seen.add(col)
+                if len(duplicates) > 0:
+                    raise ValueError(f"Found duplicated columns in the view: {', '.join(duplicates)}")
+
             finally:
                 query_context_controller.release_context(query_context_controller.IGNORE_CONTEXT)
 

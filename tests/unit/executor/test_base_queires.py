@@ -920,6 +920,19 @@ class TestSelect(BaseExecutorDummyML):
         assert len(ret) > 1
         assert ret["format"][0] == "a"
 
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_view_duplicated_cols(self, data_handler):
+        self.set_handler(data_handler, name="pg", tables={"stores": get_stores_df(), "regions": get_regions_df()})
+
+        with pytest.raises(Exception):
+            # `id` exists in both tables, should raise an exception
+            self.run_sql("""
+                create view v1 (
+                   select * from pg.stores s
+                   join pg.regions r on r.id = s.region_id
+                )
+            """)
+
 
 class TestSet(BaseExecutorTest):
     @pytest.mark.parametrize("var", ["var", "@@var", "@@session.var", "session var"])

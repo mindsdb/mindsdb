@@ -5,6 +5,8 @@ from textwrap import dedent
 
 import pytest
 
+from mindsdb.utilities.config import config
+
 
 def get_file():
     return io.BytesIO(
@@ -18,8 +20,25 @@ def get_file():
     )
 
 
+def test_disabled_byom(client):
+    """Test disabled byom"""
+    config._config["byom"]["enabled"] = False
+    os.environ["MINDSDB_BYOM_ENABLED"] = "false"
+    response = client.put(
+        "/api/handlers/byom/model1",
+        data={
+            "code": (get_file(), "/tmp/test_module.py"),
+            "modules": (io.BytesIO(b""), "req.txt"),
+            "mode": "custom_function",
+        },
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
 def test_path_traversal(client):
     """Test uploading a file"""
+    config._config["byom"]["enabled"] = True
+    os.environ["MINDSDB_BYOM_ENABLED"] = "true"
     path = "../../../../../../../../../../tmp/test_module.py"
     response = client.put(
         "/api/handlers/byom/model1",
@@ -36,6 +55,8 @@ def test_path_traversal(client):
 @pytest.mark.slow
 def test_conflict(client):
     """Test that it is not possible to create two engins with the same name"""
+    config._config["byom"]["enabled"] = True
+    os.environ["MINDSDB_BYOM_ENABLED"] = "true"
     path = "test_module.py"
     response = client.put(
         "/api/handlers/byom/model1",

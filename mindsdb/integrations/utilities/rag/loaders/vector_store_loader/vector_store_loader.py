@@ -1,11 +1,9 @@
-
-from langchain_core.embeddings import Embeddings
-from langchain_community.vectorstores import Chroma, PGVector
-from langchain_core.vectorstores import VectorStore
+from typing import Any
 
 from pydantic import BaseModel
 
 from mindsdb.integrations.utilities.rag.settings import VectorStoreType, VectorStoreConfig
+from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.base_vector_store import VectorStore
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.MDBVectorStore import MDBVectorStore
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.pgvector import PGVectorMDB
 from mindsdb.utilities import log
@@ -15,7 +13,7 @@ logger = log.getLogger(__name__)
 
 
 class VectorStoreLoader(BaseModel):
-    embedding_model: Embeddings
+    embedding_model: Any  # Embedding model interface
     vector_store: VectorStore = None
     config: VectorStoreConfig = None
 
@@ -29,7 +27,11 @@ class VectorStoreLoader(BaseModel):
         Loads the vector store based on the provided config and embeddings model
         :return:
         """
-        if self.config.is_sparse is not None and self.config.vector_size is not None and self.config.kb_table is not None:
+        if (
+            self.config.is_sparse is not None
+            and self.config.vector_size is not None
+            and self.config.kb_table is not None
+        ):
             # Only use PGVector store for sparse vectors.
             db_handler = self.config.kb_table.get_vector_db()
             db_args = db_handler.connection_args
@@ -41,15 +43,14 @@ class VectorStoreLoader(BaseModel):
                 collection_name=self.config.kb_table._kb.vector_database_table,
                 embedding_function=self.embedding_model,
                 is_sparse=self.config.is_sparse,
-                vector_size=self.config.vector_size
+                vector_size=self.config.vector_size,
             )
         return MDBVectorStore(kb_table=self.config.kb_table)
 
 
 class VectorStoreFactory:
     @staticmethod
-    def create(embedding_model: Embeddings, config: VectorStoreConfig):
-
+    def create(embedding_model: Any, config: VectorStoreConfig) -> VectorStore:
         if config.vector_store_type == VectorStoreType.CHROMA:
             return VectorStoreFactory._load_chromadb_store(embedding_model, config)
         elif config.vector_store_type == VectorStoreType.PGVECTOR:
@@ -58,7 +59,10 @@ class VectorStoreFactory:
             raise ValueError(f"Invalid vector store type, must be one either {VectorStoreType.__members__.keys()}")
 
     @staticmethod
-    def _load_chromadb_store(embedding_model: Embeddings, settings) -> Chroma:
+    def _load_chromadb_store(embedding_model: Any, settings) -> VectorStore:
+        # Chroma still uses langchain, import only when needed
+        from langchain_community.vectorstores import Chroma
+
         return Chroma(
             persist_directory=settings.persist_directory,
             collection_name=settings.collection_name,
@@ -66,12 +70,13 @@ class VectorStoreFactory:
         )
 
     @staticmethod
-    def _load_pgvector_store(embedding_model: Embeddings, settings) -> PGVector:
+    def _load_pgvector_store(embedding_model: Any, settings) -> VectorStore:
         from .pgvector import PGVectorMDB
+
         return PGVectorMDB(
             connection_string=settings.connection_string,
             collection_name=settings.collection_name,
             embedding_function=embedding_model,
             is_sparse=settings.is_sparse,
-            vector_size=settings.vector_size
+            vector_size=settings.vector_size,
         )

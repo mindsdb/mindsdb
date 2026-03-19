@@ -1,7 +1,5 @@
 import sys
 import types
-import os
-import pytest
 
 from unittest.mock import patch
 import datetime as dt
@@ -28,7 +26,6 @@ except ImportError:
 
 
 class TestApiHandler(BaseExecutorDummyML):
-    @pytest.mark.skipif(os.environ.get("RUNNER_OS", None) is None, reason="Fixme: Fails localy for some reason")
     @patch("github.Github")
     def test_github(self, Github):
         """
@@ -76,6 +73,7 @@ class TestApiHandler(BaseExecutorDummyML):
 
         get_issues.return_value = [Issue(*row) for row in data]
 
+        # - group without limit -
         ret = self.run_sql("""
             select max(number) number, title from gh.issues
             where state = 'open'
@@ -84,12 +82,26 @@ class TestApiHandler(BaseExecutorDummyML):
         """)
 
         # state was used for github
-        kwargs = get_issues.call_args_list[0][1]
+        kwargs = get_issues.call_args_list[-1][1]
         assert kwargs["state"] == "open"
 
         # between was used outside of handler, output is only one row with number=125
         assert len(ret) == 1
         assert ret["number"][0] == 125
+
+        # - group with limit -
+        ret = self.run_sql("""
+            select count(*) items from gh.issues
+            where state = 'open'
+        """)
+
+        # state was used for github
+        kwargs = get_issues.call_args_list[-1][1]
+        assert kwargs["state"] == "open"
+
+        # between was used outside of handler, output is only one row with number=125
+        assert len(ret) == 1
+        assert ret["items"][0] == 3
 
         # --- insert ---
         self.run_sql("""

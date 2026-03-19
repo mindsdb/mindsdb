@@ -3,13 +3,14 @@ name: Build and deploy to dev
 permissions:
   contents: read
   pull-requests: write
+  pages: write
+  id-token: write
 
 on:
   pull_request:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
-      - 'develop'
       - 'releases/*'
 
 # Cancel any existing runs of this workflow on the same branch/pr

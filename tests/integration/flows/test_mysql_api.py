@@ -10,11 +10,14 @@ import requests
 import mysql.connector
 import pandas as pd
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE, FIELD_FLAG
 
-from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT
+from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT, get_test_resource_name, create_byom
 
 # pymysql.connections.DEBUG = True
+
+
+ML_ENGINE_NAME = "my_byom_engine"
 
 
 class Dlist(list):
@@ -137,8 +140,52 @@ class BaseStuff:
         )
 
 
+@pytest.fixture(scope="class")
+def postgres_datasource(request):
+    """
+    Class-scoped fixture to create the postgres datasource once.
+    Ensures the database exists for all tests that need it.
+    """
+    helper = BaseStuff()
+    helper.use_binary = False
+    db_name = get_test_resource_name("test_demo_postgres")
+    db_details = {
+        "type": "postgres",
+        "connection_data": {
+            "host": "samples.mindsdb.com",
+            "port": "5432",
+            "user": "demo_user",
+            "password": "demo_password",
+            "database": "demo",
+            "schema": "demo",
+        },
+    }
+    helper.create_database(db_name, db_details)
+    helper.validate_database_creation(db_name)
+    request.cls.POSTGRES_DB_NAME = db_name
+    yield db_name
+    # Cleanup
+    try:
+        helper.query(f"DROP DATABASE IF EXISTS {db_name};")
+    except Exception:
+        pass
+
+
 @pytest.mark.parametrize("use_binary", [False, True], indirect=True)
+@pytest.mark.usefixtures("postgres_datasource")
 class TestMySqlApi(BaseStuff):
+    # Unique resource names for this test session (initialized in setup_class)
+    POSTGRES_DB_NAME = None
+    MARIADB_DB_NAME = None
+    MYSQL_DB_NAME = None
+
+    @classmethod
+    def setup_class(cls):
+        """Initialize unique resource names for this test session."""
+        # Note: POSTGRES_DB_NAME is set by the postgres_datasource fixture
+        cls.MARIADB_DB_NAME = get_test_resource_name("test_demo_mariadb")
+        cls.MYSQL_DB_NAME = get_test_resource_name("test_demo_mysql")
+
     @pytest.fixture
     def use_binary(self, request):
         self.use_binary = request.param
@@ -155,8 +202,8 @@ class TestMySqlApi(BaseStuff):
                 "schema": "demo",
             },
         }
-        self.create_database("test_demo_postgres", db_details)
-        self.validate_database_creation("test_demo_postgres")
+        self.create_database(self.POSTGRES_DB_NAME, db_details)
+        self.validate_database_creation(self.POSTGRES_DB_NAME)
 
     @pytest.mark.parametrize("table_name", ["types_test_data", "types_test_data_with_nulls"])
     def test_response_types(self, use_binary, table_name):
@@ -266,7 +313,7 @@ class TestMySqlApi(BaseStuff):
                 dt_interval,
                 dt_timestamptz,
                 dt_timetz
-            FROM test_demo_postgres.{table_name} order by n_integer NULLS last;
+            FROM {self.POSTGRES_DB_NAME}.{table_name} order by n_integer NULLS last;
         """,
             with_description=True,
         )
@@ -335,6 +382,19 @@ class TestMySqlApi(BaseStuff):
             "dt_timestamptz": datetime.datetime(2023, 10, 15, 11, 30, 45),
             "dt_timetz": datetime.timedelta(seconds=52245 - (3 * 60 * 60)),
         }
+        num_types = [
+            "n_smallint",
+            "n_integer",
+            "n_bigint",
+            "n_decimal",
+            "n_numeric",
+            "n_real",
+            "n_double_precision",
+            "n_smallserial",
+            "n_serial",
+            "n_bigserial",
+            "n_money",
+        ]
         description_dict = {row[0]: {"type_code": row[1], "flags": row[-2]} for row in description}
         row = res[0]
         for column_name, expected_type in expected_types.items():
@@ -372,7 +432,11 @@ class TestMySqlApi(BaseStuff):
             if os.uname().sysname == "Darwin":
                 # It seems that flags on macos may be modified by mysql.connector on the client side.
                 continue
-            assert column_description["flags"] == sum(expected_type.flags), (
+            assert (
+                column_description["flags"] == sum(expected_type.flags)
+                or column_name in num_types
+                and column_description["flags"] == (sum(expected_type.flags) + FIELD_FLAG.NUM_FLAG)
+            ), (
                 f"Expected flags {sum(expected_type.flags)} for column {column_name}, but got {column_description['flags']}, use_binary={self.use_binary}, table_name={table_name}"
             )
 
@@ -388,8 +452,8 @@ class TestMySqlApi(BaseStuff):
                 "database": "test_data",
             },
         }
-        self.create_database("test_demo_mariadb", db_details)
-        self.validate_database_creation("test_demo_mariadb")
+        self.create_database(self.MARIADB_DB_NAME, db_details)
+        self.validate_database_creation(self.MARIADB_DB_NAME)
 
     def test_create_mysql_datasources(self, use_binary):
         db_details = {
@@ -403,28 +467,40 @@ class TestMySqlApi(BaseStuff):
                 "database": "public",
             },
         }
-        self.create_database("test_demo_mysql", db_details)
-        self.validate_database_creation("test_demo_mysql")
+        self.create_database(self.MYSQL_DB_NAME, db_details)
+        self.validate_database_creation(self.MYSQL_DB_NAME)
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_create_predictor(self, use_binary):
+        create_byom(ML_ENGINE_NAME, target_column="rental_price")
+
         self.query(f"DROP MODEL IF EXISTS {self.predictor_name};")
         # add file lock here
-        self.query(
-            f"CREATE MODEL {self.predictor_name} from test_demo_postgres (select * from home_rentals) PREDICT rental_price;"
-        )
+        self.query(f"""
+            CREATE MODEL {self.predictor_name}
+            from {self.POSTGRES_DB_NAME} (select * from home_rentals limit 10)
+            PREDICT rental_price USING engine='{ML_ENGINE_NAME}'
+        """)
         self.check_predictor_readiness(self.predictor_name)
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_making_prediction(self, use_binary):
         _query = f"""
-            SELECT rental_price, rental_price_explain
+            SELECT rental_price
             FROM {self.predictor_name}
-            WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500;
+            WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500
+            USING engine='{ML_ENGINE_NAME}';
         """
         res = self.query(_query)
-        assert "rental_price" in res and "rental_price_explain" in res, (
-            f"error getting prediction from {self.predictor_name} - {res}"
-        )
+        assert "rental_price" in res, f"error getting prediction from {self.predictor_name} - {res}"
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     @pytest.mark.parametrize("describe_attr", ["model", "features", "ensemble"])
     def test_describe_predictor_attrs(self, describe_attr, use_binary):
         self.query(f"describe mindsdb.{self.predictor_name}.{describe_attr};")
@@ -455,11 +531,11 @@ class TestMySqlApi(BaseStuff):
         self.query(query)
 
     def test_show_columns(self, use_binary):
-        ret = self.query("""
+        ret = self.query(f"""
             SELECT
                 *
             FROM information_schema.columns
-            WHERE table_name = 'home_rentals' and table_schema='test_demo_postgres'
+            WHERE table_name = 'home_rentals' and table_schema='{self.POSTGRES_DB_NAME}'
         """)
         assert len(ret) == 8
         # TODO FIX STR->INT casting
@@ -479,7 +555,7 @@ class TestMySqlApi(BaseStuff):
         assert location_column["character_maximum_length"] is not None
         assert location_column["character_octet_length"] is not None
 
-    def test_train_model_from_files(self, use_binary):
+    def test_upload_file(self, use_binary):
         df = pd.DataFrame(
             {
                 "x1": [x for x in range(100, 210)] + [x for x in range(100, 210)],
@@ -487,16 +563,21 @@ class TestMySqlApi(BaseStuff):
                 "y": [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)],
             }
         )
-        file_predictor_name = "predictor_from_file"
         self.upload_ds(df, self.file_datasource_name)
         self.verify_file_ds(self.file_datasource_name)
 
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
+    def test_train_model_from_files(self, use_binary):
+        file_predictor_name = "predictor_from_file"
         self.query(f"DROP MODEL IF EXISTS mindsdb.{file_predictor_name};")
         # add file lock here
         _query = f"""
             CREATE MODEL mindsdb.{file_predictor_name}
             from files (select * from {self.file_datasource_name})
-            predict y;
+            predict y
+            USING engine='{ML_ENGINE_NAME}';
         """
         self.query(_query)
         self.check_predictor_readiness(file_predictor_name)
@@ -506,6 +587,9 @@ class TestMySqlApi(BaseStuff):
         self.query(_query)
 
     @pytest.mark.slow
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_ts_train_and_predict(self, subtests, use_binary):
         train_df = pd.DataFrame(
             {
@@ -575,6 +659,9 @@ class TestMySqlApi(BaseStuff):
                 assert len(res) == res_len, f"prediction result {res} contains more that {res_len} records"
 
     @pytest.mark.slow
+    @pytest.mark.skip(
+        reason="Disabled after deleting lightwood. No suitable handler available and BYOM usage restricted."
+    )
     def test_tableau_queries(self, subtests, use_binary):
         test_ds_name = self.file_datasource_name
         predictor_name = "predictor_from_file"

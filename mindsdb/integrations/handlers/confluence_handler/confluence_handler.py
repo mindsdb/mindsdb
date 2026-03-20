@@ -66,9 +66,7 @@ class ConfluenceHandler(APIHandler):
         api_token = self.connection_data.get("api_token")
         if api_token:
             if not self.connection_data.get("api_base"):
-                raise ValueError(
-                    "Required parameter (api_base) must be provided when using api_token."
-                )
+                raise ValueError("Required parameter (api_base) must be provided when using api_token.")
         elif not all(
             key in self.connection_data and self.connection_data.get(key)
             for key in ["api_base", "username", "password"]

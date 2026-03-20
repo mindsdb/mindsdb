@@ -70,7 +70,10 @@ class TestHandlersCache:
         cache.set(MockDatabaseHandler("test_handler_a", cache_thread_safe=True))
 
         assert len(cache.handlers) == 1
-        assert first_key()[2] == 0  # Thread id for thread safe handler
+        assert first_key()[0] == "test_handler_a"
+        assert first_key()[1] == ctx.company_id
+        assert first_key()[2] == ctx.user_id
+        assert first_key()[3] == 0  # Thread id for thread safe handler (index 3 after name, company_id, user_id)
         assert len(cache.handlers[first_key()]) == 2
 
         handler_1 = cache.get("test_handler_a")

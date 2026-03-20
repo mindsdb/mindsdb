@@ -52,7 +52,7 @@ connection_args = OrderedDict(
     schema={
         "type": ARG_TYPE.STR,
         "description": "The schema to use when connecting to the Snowflake account.",
-        "required": False,
+        "required": True,
         "label": "Schema",
     },
     warehouse={

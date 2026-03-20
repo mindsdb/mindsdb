@@ -10,17 +10,7 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
     FileSplitterConfig,
 )
-
-try:
-    from mindsdb.interfaces.agents.langchain_agent import create_chat_model
-except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
-    if getattr(exc, "name", "") and "langchain" in exc.name:
-        create_chat_model = None
-        _LANGCHAIN_IMPORT_ERROR = exc
-    else:
-        raise
-else:
-    _LANGCHAIN_IMPORT_ERROR = None
+from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     PreprocessingConfig,
     ProcessedChunk,
@@ -34,13 +24,6 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 _DEFAULT_CONTENT_COLUMN_NAME = "content"
-
-
-def _require_agent_extra(feature: str):
-    if create_chat_model is None:
-        raise ImportError(
-            f"{feature} requires the optional agent dependencies. Install them via `pip install mindsdb[kb]`."
-        ) from _LANGCHAIN_IMPORT_ERROR
 
 
 class DocumentPreprocessor:
@@ -152,7 +135,6 @@ Please give a short succinct context to situate this chunk within the overall do
         self.splitter = FileSplitter(
             FileSplitterConfig(chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap)
         )
-        _require_agent_extra("Contextual preprocessing")
         self.llm = create_chat_model(
             {
                 "model_name": self.config.llm_config.model_name,

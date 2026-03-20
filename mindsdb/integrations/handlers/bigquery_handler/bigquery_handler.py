@@ -139,7 +139,8 @@ class BigQueryHandler(MetaDatabaseHandler):
             )
             query = connection.query(query, job_config=job_config)
             result = query.to_dataframe()
-            if not result.empty:
+            has_table_result = isinstance(result, pd.DataFrame) and (not result.empty or len(result.columns) > 0)
+            if has_table_result:
                 response = Response(RESPONSE_TYPE.TABLE, result)
             else:
                 response = Response(RESPONSE_TYPE.OK)
@@ -396,7 +397,7 @@ class BigQueryHandler(MetaDatabaseHandler):
                 tc.table_name,
                 kcu.column_name,
                 kcu.ordinal_position,
-                tc.constraint_name,
+                tc.constraint_name
             FROM
                 `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
             JOIN

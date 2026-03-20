@@ -78,7 +78,7 @@ class TestBigQueryHandler(unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
 
         mock_query = MagicMock()
-        mock_query.to_dataframe.return_value = None
+        mock_query.to_dataframe.return_value = pd.DataFrame({"col": [1, 2, 3]})
         mock_conn.query.return_value = mock_query
 
         query_str = "SELECT * FROM table"
@@ -89,8 +89,7 @@ class TestBigQueryHandler(unittest.TestCase):
             mock_query_job_config_instance = mock_query_job_config.return_value
             data = self.handler.native_query(query_str)
             mock_conn.query.assert_called_once_with(query_str, job_config=mock_query_job_config_instance)
-            assert isinstance(data, DataHandlerResponse)
-            self.assertFalse(data.error_code)
+            assert isinstance(data, TableResponse)
 
     def test_native_query_empty_select_returns_table(self):
         mock_conn = MagicMock()

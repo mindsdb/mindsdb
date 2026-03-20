@@ -4,54 +4,75 @@ from typing import Any
 from mindsdb.utilities.config import config
 
 
-def get_knowledge_base_storage_config(config_obj=None) -> list[str]:
+def _normalize_engine_name(engine: str | None) -> str | None:
+    if engine is None:
+        return None
+    normalized = engine.strip().lower()
+    if normalized in ("duckdb_faiss", "faiss"):
+        return "faiss"
+    if normalized == "pgvector":
+        return "pgvector"
+    return normalized or None
+
+
+def _get_env_available_engines() -> list[str]:
+    env_value = os.environ.get("KNOWLEDGE_BASES_STORAGE", "")
+    if env_value == "":
+        return []
+    engines = []
+    for item in env_value.split(","):
+        engine = _normalize_engine_name(item)
+        if engine and engine not in engines:
+            engines.append(engine)
+    return engines
+
+
+def get_knowledge_base_storage_config(config_obj=None) -> str | None:
     config_obj = config_obj or config
-    storage = config_obj.get("knowledge_bases", {}).get("storage", [])
+    storage = config_obj.get("knowledge_bases", {}).get("storage", None)
 
     if storage is None:
-        return []
-    if isinstance(storage, str):
-        storage = [storage]
-    if not isinstance(storage, list):
-        raise ValueError("knowledge_bases.storage must be a list of storage engine names")
+        return None
 
-    normalized = []
-    seen = set()
-    for item in storage:
-        if not isinstance(item, str):
-            raise ValueError("knowledge_bases.storage must contain only string values")
-        engine = item.strip()
-        if engine and engine not in seen:
-            normalized.append(engine)
-            seen.add(engine)
+    if isinstance(storage, list):
+        if len(storage) == 0:
+            return None
+        storage = storage[0]
 
-    return normalized
+    if not isinstance(storage, str):
+        raise ValueError("knowledge_bases.storage must be a string value")
+
+    return _normalize_engine_name(storage)
 
 
 def resolve_default_storage_engines(integration_controller, config_obj=None) -> dict[str, Any]:
     configured_storage = get_knowledge_base_storage_config(config_obj)
+    pgvector_enabled = os.environ.get("KB_PGVECTOR_URL") is not None
+    available_vector_engines = _get_env_available_engines()
+    if not available_vector_engines and pgvector_enabled:
+        available_vector_engines = ["pgvector"]
 
-    fallback_storage = []
-    if not configured_storage and os.environ.get("KB_PGVECTOR_URL"):
-        fallback_storage = ["pgvector"]
+    if configured_storage and configured_storage not in available_vector_engines:
+        available_vector_engines = [configured_storage] + available_vector_engines
 
-    candidate_storage = configured_storage or fallback_storage
+    default_engine = configured_storage or (available_vector_engines[0] if available_vector_engines else None)
+
+    candidate_storage = []
+    if default_engine:
+        candidate_storage.append(default_engine)
+    for engine in available_vector_engines:
+        if engine not in candidate_storage:
+            candidate_storage.append(engine)
+
     resolved_storage = []
-    default_engine = None
 
     for engine in candidate_storage:
-        handler_meta = integration_controller.get_handler_meta(engine)
-        available = bool(handler_meta and handler_meta["import"]["success"])
-
-        if available and default_engine is None:
-            default_engine = engine
-
         resolved_storage.append(
             {
                 "engine": engine,
-                "available": available,
-                "default": available and engine == default_engine,
-                "source": "config" if engine in configured_storage else "fallback",
+                "available": engine in available_vector_engines,
+                "default": engine == default_engine,
+                "source": "config" if configured_storage == engine else "fallback",
             }
         )
 
@@ -59,4 +80,6 @@ def resolve_default_storage_engines(integration_controller, config_obj=None) -> 
         "storage": configured_storage,
         "resolved_storage": resolved_storage,
         "default_storage": default_engine,
+        "available_vector_engines": available_vector_engines,
+        "pgvector_enabled": pgvector_enabled,
     }

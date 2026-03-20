@@ -52,10 +52,10 @@ class TestConfig:
                 {
                     "MINDSDB_CONFIG_PATH": str(config_file),
                     "MINDSDB_STORAGE_DIR": tmpdir,
-                    "KNOWLEDGE_BASES_STORAGE": "duckdb_faiss, pgvector,duckdb_faiss",
+                    "KNOWLEDGE_BASES_STORAGE": "faiss, pgvector",
                 },
                 clear=False,
             ):
                 cfg = Config()
 
-                assert cfg["knowledge_bases"]["storage"] == ["duckdb_faiss", "pgvector", "duckdb_faiss"]
+                assert cfg["knowledge_bases"]["storage"] == "faiss"

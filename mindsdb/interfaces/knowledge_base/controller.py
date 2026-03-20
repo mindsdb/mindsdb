@@ -1467,39 +1467,13 @@ class KnowledgeBaseController:
     def _create_persistent_pgvector(self, params=None):
         """Create default vector database for knowledge base, if not specified"""
         vector_store_name = "kb_pgvector_store"
-        requested_params = params or {}
 
         # check if exists
-        existing_store = self.session.integration_controller.get(vector_store_name)
-        if existing_store:
-            self._validate_pgvector_store_compatibility(
-                vector_store_name,
-                existing_store.get("connection_data") or {},
-                requested_params,
-            )
+        if self.session.integration_controller.get(vector_store_name):
             return vector_store_name
 
-        self.session.integration_controller.add(vector_store_name, "pgvector", requested_params)
+        self.session.integration_controller.add(vector_store_name, "pgvector", params or {})
         return vector_store_name
-
-    @staticmethod
-    def _validate_pgvector_store_compatibility(vector_store_name: str, existing_params: dict, requested_params: dict):
-        existing_is_sparse = bool(existing_params.get("is_sparse", False))
-        requested_is_sparse = bool(requested_params.get("is_sparse", False))
-        existing_vector_size = existing_params.get("vector_size")
-        requested_vector_size = requested_params.get("vector_size")
-
-        if existing_is_sparse != requested_is_sparse:
-            raise ValueError(
-                f"Existing pgvector store '{vector_store_name}' is configured with is_sparse={existing_is_sparse}, "
-                f"but the requested knowledge base requires is_sparse={requested_is_sparse}."
-            )
-
-        if existing_vector_size != requested_vector_size:
-            raise ValueError(
-                f"Existing pgvector store '{vector_store_name}' is configured with vector_size={existing_vector_size}, "
-                f"but the requested knowledge base requires vector_size={requested_vector_size}."
-            )
 
     def _create_persistent_faiss(self, kb_name: str):
         vector_store_name = f"store_{kb_name}"
@@ -1533,8 +1507,7 @@ class KnowledgeBaseController:
         if default_engine is None:
             raise ValueError(
                 "Vector table is not defined. Set it by `storage=vector_db.vector_table` or configure "
-                "`knowledge_bases.storage`. One of the options is to use pgvector: "
-                "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
+                "`knowledge_bases.storage` as one of: pgvector, faiss."
             )
 
         if default_engine == "pgvector":
@@ -1546,8 +1519,8 @@ class KnowledgeBaseController:
             vector_db_name = self._create_persistent_pgvector(vector_db_params)
             return vector_db_name, kb_name
 
-        if default_engine == "duckdb_faiss":
-            vector_db_name = self._create_persistent_chroma(kb_name, engine="duckdb_faiss")
+        if default_engine in ("duckdb_faiss", "faiss"):
+            vector_db_name = self._create_persistent_faiss(kb_name)
             return vector_db_name, kb_name
 
         raise ValueError(

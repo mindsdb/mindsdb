@@ -226,7 +226,7 @@ class Config:
             "knowledge_bases": {
                 "disable_autobatch": False,
                 "disable_pgvector_autobatch": True,
-                "storage": [],
+                "storage": None,
             },
         }
         # endregion
@@ -434,9 +434,7 @@ class Config:
 
         knowledge_bases_storage = os.environ.get("KNOWLEDGE_BASES_STORAGE", "")
         if knowledge_bases_storage != "":
-            self._env_config["knowledge_bases"]["storage"] = [
-                item.strip() for item in knowledge_bases_storage.split(",") if item.strip()
-            ]
+            self._env_config["knowledge_bases"]["storage"] = knowledge_bases_storage.split(",")[0].strip()
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.

@@ -1,7 +1,10 @@
+import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+from mindsdb.interfaces.knowledge_base.default_storage_resolver import resolve_default_storage_engines
 from mindsdb.utilities.config import config
 
 
@@ -15,12 +18,11 @@ def _make_controller(handler_meta_by_name):
 
 
 def test_resolve_default_vector_storage_uses_pgvector_from_config():
-    previous_storage = config["knowledge_bases"].get("storage", [])
-    controller, integration_controller = _make_controller({"pgvector": {"import": {"success": True}}})
+    previous_storage = config["knowledge_bases"].get("storage", None)
+    controller, _ = _make_controller({"pgvector": {"import": {"success": True}}})
 
     try:
-        config.update({"knowledge_bases": {"storage": ["pgvector"]}})
-
+        config.update({"knowledge_bases": {"storage": "pgvector"}})
         vector_db_name = "kb_pgvector_store"
         controller._create_persistent_pgvector = MagicMock(return_value=vector_db_name)
 
@@ -29,37 +31,32 @@ def test_resolve_default_vector_storage_uses_pgvector_from_config():
         assert vector_db == vector_db_name
         assert vector_table == "kb_docs"
         controller._create_persistent_pgvector.assert_called_once_with({})
-        integration_controller.get_handler_meta.assert_called_with("pgvector")
     finally:
         config.update({"knowledge_bases": {"storage": previous_storage}})
 
 
 def test_resolve_default_vector_storage_uses_faiss_from_config():
-    previous_storage = config["knowledge_bases"].get("storage", [])
-    controller, integration_controller = _make_controller({"duckdb_faiss": {"import": {"success": True}}})
+    previous_storage = config["knowledge_bases"].get("storage", None)
+    controller, _ = _make_controller({"duckdb_faiss": {"import": {"success": True}}})
 
     try:
-        config.update({"knowledge_bases": {"storage": ["duckdb_faiss"]}})
+        config.update({"knowledge_bases": {"storage": "faiss"}})
 
-        vector_db_name = "kb_docs_duckdb_faiss"
-        controller._create_persistent_chroma = MagicMock(return_value=vector_db_name)
+        vector_db_name = "store_kb_docs"
+        controller._create_persistent_faiss = MagicMock(return_value=vector_db_name)
 
         vector_db, vector_table = controller._resolve_default_vector_storage("kb_docs")
 
         assert vector_db == vector_db_name
         assert vector_table == "kb_docs"
-        controller._create_persistent_chroma.assert_called_once_with("kb_docs", engine="duckdb_faiss")
-        integration_controller.get_handler_meta.assert_called_with("duckdb_faiss")
+        controller._create_persistent_faiss.assert_called_once_with("kb_docs")
     finally:
         config.update({"knowledge_bases": {"storage": previous_storage}})
 
 
-def test_create_persistent_pgvector_reuses_existing_store_when_compatible():
+def test_create_persistent_pgvector_reuses_existing_store():
     controller, integration_controller = _make_controller({})
-    integration_controller.get.return_value = {
-        "name": "kb_pgvector_store",
-        "connection_data": {"is_sparse": True, "vector_size": 30522},
-    }
+    integration_controller.get.return_value = {"name": "kb_pgvector_store"}
 
     vector_store_name = controller._create_persistent_pgvector({"is_sparse": True, "vector_size": 30522})
 
@@ -67,37 +64,16 @@ def test_create_persistent_pgvector_reuses_existing_store_when_compatible():
     integration_controller.add.assert_not_called()
 
 
-def test_create_persistent_pgvector_raises_on_incompatible_sparse_config():
-    controller, integration_controller = _make_controller({})
-    integration_controller.get.return_value = {
-        "name": "kb_pgvector_store",
-        "connection_data": {"is_sparse": False},
-    }
+def test_resolver_uses_pgvector_url_fallback_when_storage_is_empty():
+    previous_storage = config["knowledge_bases"].get("storage", None)
+    controller, _ = _make_controller({})
 
     try:
-        controller._create_persistent_pgvector({"is_sparse": True, "vector_size": 30522})
-    except ValueError as exc:
-        assert "is_sparse=False" in str(exc)
-        assert "is_sparse=True" in str(exc)
-    else:
-        raise AssertionError("Expected ValueError for incompatible pgvector sparse config")
-
-    integration_controller.add.assert_not_called()
-
-
-def test_create_persistent_pgvector_raises_on_incompatible_vector_size():
-    controller, integration_controller = _make_controller({})
-    integration_controller.get.return_value = {
-        "name": "kb_pgvector_store",
-        "connection_data": {"is_sparse": True, "vector_size": 1024},
-    }
-
-    try:
-        controller._create_persistent_pgvector({"is_sparse": True, "vector_size": 30522})
-    except ValueError as exc:
-        assert "vector_size=1024" in str(exc)
-        assert "vector_size=30522" in str(exc)
-    else:
-        raise AssertionError("Expected ValueError for incompatible pgvector vector_size")
-
-    integration_controller.add.assert_not_called()
+        config.update({"knowledge_bases": {"storage": None}})
+        with patch.dict(os.environ, {"KB_PGVECTOR_URL": "postgresql://user:pass@host/db"}, clear=False):
+            resolved = resolve_default_storage_engines(controller.session.integration_controller, config)
+            assert resolved["default_storage"] == "pgvector"
+            assert resolved["available_vector_engines"] == ["pgvector"]
+            assert resolved["pgvector_enabled"] is True
+    finally:
+        config.update({"knowledge_bases": {"storage": previous_storage}})

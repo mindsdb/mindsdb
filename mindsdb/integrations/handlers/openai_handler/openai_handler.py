@@ -1140,6 +1140,6 @@ class OpenAIHandler(BaseMLEngine):
         """
         if args is not None and args.get("provider") == "azure":
             return AzureOpenAI(
-                api_key=api_key, azure_endpoint=base_url, api_version=args.get("api_version"), organization=org
+                api_key=api_key, azure_endpoint=base_url, api_version=args.get("api_version"), organization=org, timeout=60.0
             )
-        return OpenAI(api_key=api_key, base_url=base_url, organization=org)
+        return OpenAI(api_key=api_key, base_url=base_url, organization=org, timeout=60.0)

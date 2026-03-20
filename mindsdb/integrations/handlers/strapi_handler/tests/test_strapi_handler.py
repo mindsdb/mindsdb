@@ -1,8 +1,9 @@
 import unittest
 from unittest.mock import patch, Mock
-import pandas as pd
 from mindsdb.integrations.handlers.strapi_handler.strapi_handler import StrapiHandler
+from mindsdb.integrations.handlers.strapi_handler.strapi_tables import extract_or_conditions, StrapiTable
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
+from mindsdb_sql_parser import parse_sql
 
 
 class StrapiHandlerTest(unittest.TestCase):
@@ -12,7 +13,7 @@ class StrapiHandlerTest(unittest.TestCase):
             'host': 'localhost',
             'port': '1337',
             'api_token': 'test_token_123',
-            'plural_api_ids': ['products', 'sellers']
+            'endpoints': ['products', 'sellers']
         }
         self.handler = StrapiHandler(name='myshop', connection_data=self.connection_data)
         
@@ -65,7 +66,7 @@ class StrapiHandlerTest(unittest.TestCase):
         self.assertTrue(self.handler.check_connection())
 
     def test_1_get_table(self):
-        # Mock the plural_api_ids from connection data
+        # Mock the endpoints from connection data
         result = self.handler.get_tables()
         self.assertIsNotNone(result)
         assert result is not RESPONSE_TYPE.ERROR
@@ -170,6 +171,29 @@ class StrapiHandlerTest(unittest.TestCase):
         result = self.handler.native_query(query)
         self.assertIsNotNone(result)
         assert result.type is not RESPONSE_TYPE.ERROR
+
+    def test_7_where_precedence_or_and(self):
+        query = parse_sql('SELECT * FROM products WHERE a = 1 OR (b = 2 AND c = 4)')
+        table = StrapiTable(handler=self.handler, name='products', defer_schema_fetch=True)
+
+        conditions = extract_or_conditions(query.where)
+        filters = table._build_filters(conditions)
+
+        self.assertIn('filters[$or][0][a][$eq]', filters)
+        self.assertIn('filters[$or][1][$and][0][b][$eq]', filters)
+        self.assertIn('filters[$or][1][$and][1][c][$eq]', filters)
+
+    def test_8_where_precedence_or_or(self):
+        query = parse_sql('SELECT * FROM products WHERE a = 1 OR (b = 2 OR c = 4)')
+        table = StrapiTable(handler=self.handler, name='products', defer_schema_fetch=True)
+
+        conditions = extract_or_conditions(query.where)
+        filters = table._build_filters(conditions)
+
+        self.assertIn('filters[$or][0][a][$eq]', filters)
+        self.assertIn('filters[$or][1][b][$eq]', filters)
+        self.assertIn('filters[$or][2][c][$eq]', filters)
+        self.assertFalse(any('[$and]' in key for key in filters))
 
 
 if __name__ == '__main__':

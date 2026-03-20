@@ -1,4 +1,3 @@
-from typing import List
 from mindsdb.integrations.handlers.strapi_handler.strapi_tables import StrapiTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE, HandlerStatusResponse as StatusResponse
@@ -13,10 +12,6 @@ logger = log.getLogger(__name__)
 
 
 class StrapiHandler(APIHandler):
-    # Class-level caches
-    _connection_cache = {}
-    _table_schemas = {}  # Cache table schemas to avoid repeated API calls
-
     def __init__(self, name: str, **kwargs) -> None:
         """initializer method
 
@@ -24,6 +19,9 @@ class StrapiHandler(APIHandler):
             name (str): handler name
         """
         super().__init__(name)
+
+        self._connection_cache = {}
+        self._table_schemas = {}
 
         args = kwargs.get("connection_data", {})
         # Handle both complete URLs and host+port combinations
@@ -45,7 +43,7 @@ class StrapiHandler(APIHandler):
         else:
             self._base_url = None
         self._api_token = args.get("api_token")
-        self._plural_api_ids = args.get("plural_api_ids", [])
+        self._endpoints = args.get("endpoints", [])
 
         self._connection_key = f"{self._base_url}_{self._api_token}"
 
@@ -53,9 +51,9 @@ class StrapiHandler(APIHandler):
         self.is_connected = self._connection_cache.get(self._connection_key, False)
 
         # Register tables but defer schema fetching
-        for pluralApiId in self._plural_api_ids:
-            table_instance = StrapiTable(handler=self, name=pluralApiId, defer_schema_fetch=True)
-            self._register_table(table_name=pluralApiId, table_class=table_instance)
+        for endpoint in self._endpoints:
+            table_instance = StrapiTable(handler=self, name=endpoint, defer_schema_fetch=True)
+            self._register_table(table_name=endpoint, table_class=table_instance)
 
     def check_connection(self) -> StatusResponse:
         """checking the connection
@@ -95,7 +93,7 @@ class StrapiHandler(APIHandler):
         Returns:
             RESPONSE_TYPE.TABLE
         """
-        result = self._plural_api_ids
+        result = self._endpoints
 
         df = pd.DataFrame(result, columns=["table_name"])
         df["table_type"] = "BASE TABLE"
@@ -104,7 +102,7 @@ class StrapiHandler(APIHandler):
 
     def get_table(self, table_name: str):
         """Create table instance on demand"""
-        if table_name in self._plural_api_ids:
+        if table_name in self._endpoints:
             return StrapiTable(handler=self, name=table_name)
         raise ValueError(f"Table {table_name} not found in your Strapi collections.")
 
@@ -181,11 +179,11 @@ connection_args = OrderedDict(
         "required": True,
         "label": "Port",
     },
-    plural_api_ids={
+    endpoints={
         "type": list,
-        "description": "Plural API id to use for querying.",
+        "description": "Collection endpoints to use for querying.",
         "required": True,
-        "label": "Plural API id",
+        "label": "Endpoints",
     },
 )
 
@@ -193,5 +191,5 @@ connection_args_example = OrderedDict(
     host="localhost",
     port=1337,
     api_token="c56c000d867e95848c",
-    plural_api_ids=["posts", "portfolios"],
+    endpoints=["posts", "portfolios"],
 )

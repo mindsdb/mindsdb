@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any
 import pandas as pd
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql_parser import ast
@@ -10,16 +10,19 @@ import json
 
 
 def extract_or_conditions(node: ASTNode) -> list:
-    """Extract conditions from a WHERE clause handling both AND and OR operations.
+    """Extract WHERE conditions as DNF (OR of AND groups).
 
     Args:
         node: The AST node representing the WHERE clause
 
     Returns:
-        List of condition groups:
-        - For AND conditions: [[condition1], [condition2], ...] (each condition in separate group)
-        - For OR conditions: [[condition1, condition2, ...]] (all conditions in one group)
-        - Mixed: Properly nested structure
+        List of conjunction groups where each inner list is ANDed and
+        outer list is ORed.
+
+        Examples:
+        - a = 1 AND b = 2 -> [[(a=1), (b=2)]]
+        - a = 1 OR b = 2 -> [[(a=1)], [(b=2)]]
+        - a = 1 OR (b = 2 AND c = 4) -> [[(a=1)], [(b=2), (c=4)]]
     """
     
     def extract_single_condition(node: ASTNode) -> tuple:
@@ -40,42 +43,28 @@ def extract_or_conditions(node: ASTNode) -> list:
             if isinstance(field, ast.Identifier) and isinstance(min_val, ast.Constant) and isinstance(max_val, ast.Constant):
                 return ('between', field.parts[-1], [min_val.value, max_val.value])
             else:
-                raise NotImplementedError(f"BETWEEN with non-constant values not supported")
+                raise NotImplementedError("BETWEEN with non-constant values not supported")
 
         raise NotImplementedError(f"Unsupported condition type: {type(node)}")
     
     def extract_conditions_recursive(node: ASTNode) -> list:
         if isinstance(node, ast.BinaryOperation):
             if node.op.lower() == 'or':
-                # For OR operations, combine conditions into one group
                 left_conditions = extract_conditions_recursive(node.args[0])
                 right_conditions = extract_conditions_recursive(node.args[1])
-                
-                # Flatten all conditions into a single group for OR
-                combined_conditions = []
-                for group in left_conditions:
-                    if isinstance(group, list):
-                        combined_conditions.extend(group)
-                    else:
-                        combined_conditions.append(group)
-                for group in right_conditions:
-                    if isinstance(group, list):
-                        combined_conditions.extend(group)
-                    else:
-                        combined_conditions.append(group)
-                
-                return [combined_conditions]  # Single group with all OR conditions
-                
-            elif node.op.lower() == 'and':
-                # For AND operations, keep conditions in separate groups
-                left_conditions = extract_conditions_recursive(node.args[0])
-                right_conditions = extract_conditions_recursive(node.args[1])
-                
-                # Combine the groups (AND means separate groups)
                 return left_conditions + right_conditions
                 
+            elif node.op.lower() == 'and':
+                left_conditions = extract_conditions_recursive(node.args[0])
+                right_conditions = extract_conditions_recursive(node.args[1])
+
+                combined = []
+                for left_group in left_conditions:
+                    for right_group in right_conditions:
+                        combined.append(left_group + right_group)
+                return combined
+                
             else:
-                # For comparison operations, return as single condition in a group
                 condition = extract_single_condition(node)
                 return [[condition]]  # Single condition in its own group
 
@@ -88,7 +77,7 @@ def extract_or_conditions(node: ASTNode) -> list:
     try:
         conditions = extract_conditions_recursive(node)
         return conditions
-    except Exception as e:
+    except Exception:
         return [[]]
 
 
@@ -140,7 +129,7 @@ class StrapiTable(APITable):
                 # If no data, set basic Strapi columns
                 self.columns = ["id", "documentId", "createdAt", "updatedAt"]
                 self.handler._table_schemas[schema_key] = self.columns
-        except Exception as e:
+        except Exception:
             # Set basic Strapi columns as fallback
             self.columns = ["id", "documentId", "createdAt", "updatedAt"]
             self.handler._table_schemas[schema_key] = self.columns
@@ -148,76 +137,58 @@ class StrapiTable(APITable):
         self._schema_fetched = True
 
     def _build_filters(self, conditions: List[List[tuple]]) -> Dict[str, Any]:
-        """Build Strapi filters from SQL conditions
+        """Build Strapi filters from DNF condition groups.
         
         Args:
-            conditions: List of condition groups from WHERE clause
-                    - Each group represents conditions that should be ORed together
-                    - Different groups are ANDed together
+            conditions: DNF groups where each inner list is ANDed and
+                groups are ORed.
         
         Returns:
             Dict of Strapi filter parameters
         """
-        filters = {}
-        or_groups = []
-        and_conditions = {}
+        if not conditions:
+            return {}
 
-        for condition_group in conditions:
-            if not isinstance(condition_group, list):
-                continue
-                
-            # If group has multiple conditions, it's an OR group
-            if len(condition_group) > 1:
-                or_group_conditions = []
-                for condition in condition_group:
-                    if isinstance(condition, tuple) and len(condition) == 3:
-                        op, field, value = condition
+        # Keep the fast-path for direct documentId lookup.
+        if len(conditions) == 1 and len(conditions[0]) == 1:
+            op, field, value = conditions[0][0]
+            if field == 'documentId' and op == '=':
+                return {'documentId': value}
 
-                        # Handle special case for documentId
-                        if field == 'documentId' and op == '=':
-                            return {'documentId': value}
-                        
-                        condition_dict = self._build_single_condition(op, field, value)
-                        or_group_conditions.append(condition_dict)
-                
-                or_groups.append(or_group_conditions)
-                
-            # If group has single condition, it's an AND condition
-            elif len(condition_group) == 1:
-                condition = condition_group[0]
-                if isinstance(condition, tuple) and len(condition) == 3:
-                    op, field, value = condition
+        def to_filter_node(condition: tuple) -> Dict[str, Dict[str, Any]]:
+            op, field, value = condition
+            return self._build_single_condition(op, field, value)
 
-                    # Handle special case for documentId
-                    if field == 'documentId' and op == '=':
-                        return {'documentId': value}
-                    
-                    condition_dict = self._build_single_condition(op, field, value)
-                    # Add to AND conditions (these will be separate filter parameters)
-                    for field_name, field_filters in condition_dict.items():
-                        for op_key, field_value in field_filters.items():
-                            filters[f'filters[{field_name}][{op_key}]'] = field_value
-        
-        # Handle OR groups
-        if or_groups:
-            if len(or_groups) == 1 and len(and_conditions) == 0:
-                # Single OR group, no AND conditions
-                or_conditions = or_groups[0]
-                for idx, condition in enumerate(or_conditions):
-                    for field, field_filters in condition.items():
-                        for op_key, value in field_filters.items():
-                            filters[f'filters[$or][{idx}][{field}][{op_key}]'] = value
+        # Build nested Strapi filter tree preserving boolean precedence.
+        if len(conditions) == 1:
+            and_group = conditions[0]
+            if len(and_group) == 1:
+                filter_tree = to_filter_node(and_group[0])
             else:
-                # Multiple OR groups or mixed with AND - more complex case
-                # This would require more sophisticated handling
-                # For now, handle the first OR group
-                if or_groups:
-                    or_conditions = or_groups[0]
-                    for idx, condition in enumerate(or_conditions):
-                        for field, field_filters in condition.items():
-                            for op_key, value in field_filters.items():
-                                filters[f'filters[$or][{idx}][{field}][{op_key}]'] = value
-        
+                filter_tree = {'$and': [to_filter_node(condition) for condition in and_group]}
+        else:
+            or_nodes = []
+            for and_group in conditions:
+                if len(and_group) == 1:
+                    or_nodes.append(to_filter_node(and_group[0]))
+                else:
+                    or_nodes.append({'$and': [to_filter_node(condition) for condition in and_group]})
+            filter_tree = {'$or': or_nodes}
+
+        filters = {}
+
+        def flatten(node: Any, path: List[str]) -> None:
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    flatten(value, path + [key])
+            elif isinstance(node, list):
+                for index, value in enumerate(node):
+                    flatten(value, path + [str(index)])
+            else:
+                key = 'filters' + ''.join(f'[{part}]' for part in path)
+                filters[key] = node
+
+        flatten(filter_tree, [])
         return filters
 
     def _build_single_condition(self, op: str, field: str, value: Any) -> Dict[str, Dict[str, Any]]:
@@ -340,7 +311,7 @@ class StrapiTable(APITable):
                 # Extract OR conditions - now always returns list of lists
                 conditions = extract_or_conditions(query.where)
                 filters = self._build_filters(conditions)
-            except Exception as e:
+            except Exception:
                 # Fallback to empty filters
                 filters = {}
 

@@ -44,8 +44,8 @@ def check_agent_data(data):
 
 
 class AgentParamsData(BaseModel):
-    knowledge_bases: List[str] = None
-    tables: List[str] = None
+    knowledge_bases: List[str] | None = None
+    tables: List[str] | None = None
 
     class Config:
         extra = "forbid"

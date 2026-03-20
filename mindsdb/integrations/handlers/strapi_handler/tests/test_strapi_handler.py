@@ -7,61 +7,60 @@ from mindsdb_sql_parser import parse_sql
 
 
 class StrapiHandlerTest(unittest.TestCase):
-
     def setUp(self):
         self.connection_data = {
-            'host': 'localhost',
-            'port': '1337',
-            'api_token': 'test_token_123',
-            'endpoints': ['products', 'sellers']
+            "host": "localhost",
+            "port": "1337",
+            "api_token": "test_token_123",
+            "endpoints": ["products", "sellers"],
         }
-        self.handler = StrapiHandler(name='myshop', connection_data=self.connection_data)
-        
+        self.handler = StrapiHandler(name="myshop", connection_data=self.connection_data)
+
         # Mock data for testing (matching real Strapi API response structure)
         self.mock_products_data = [
             {
-                'id': 45,
-                'documentId': 'mvaprjyy72ayx7z4v592sdnr',
-                'title': 'Mens Casual Premium Slim Fit T-Shirts',
-                'desc': 'Slim-fitting style, contrast raglan long sleeve, lightweight & breathable fabric.',
-                'price': 22.3,
-                'createdAt': '2025-09-09T08:57:55.574Z',
-                'updatedAt': '2025-09-09T09:53:41.392Z',
-                'publishedAt': '2025-09-09T09:53:41.412Z'
+                "id": 45,
+                "documentId": "mvaprjyy72ayx7z4v592sdnr",
+                "title": "Mens Casual Premium Slim Fit T-Shirts",
+                "desc": "Slim-fitting style, contrast raglan long sleeve, lightweight & breathable fabric.",
+                "price": 22.3,
+                "createdAt": "2025-09-09T08:57:55.574Z",
+                "updatedAt": "2025-09-09T09:53:41.392Z",
+                "publishedAt": "2025-09-09T09:53:41.412Z",
             },
             {
-                'id': 46,
-                'documentId': 'abc123def456ghi789',
-                'title': 'Womens Cotton Jacket',
-                'desc': 'Great outerwear for Spring/Autumn/Winter.',
-                'price': 55.99,
-                'createdAt': '2025-09-09T08:58:55.574Z',
-                'updatedAt': '2025-09-09T09:54:41.392Z',
-                'publishedAt': '2025-09-09T09:54:41.412Z'
-            }
+                "id": 46,
+                "documentId": "abc123def456ghi789",
+                "title": "Womens Cotton Jacket",
+                "desc": "Great outerwear for Spring/Autumn/Winter.",
+                "price": 55.99,
+                "createdAt": "2025-09-09T08:58:55.574Z",
+                "updatedAt": "2025-09-09T09:54:41.392Z",
+                "publishedAt": "2025-09-09T09:54:41.412Z",
+            },
         ]
-        
+
         self.mock_sellers_data = [
             {
-                'id': 1,
-                'documentId': 'seller123',
-                'name': 'Test Seller',
-                'email': 'seller@test.com',
-                'sellerid': 'seller001',
-                'createdAt': '2025-09-09T08:57:55.574Z',
-                'updatedAt': '2025-09-09T09:53:41.392Z',
-                'publishedAt': '2025-09-09T09:53:41.412Z'
+                "id": 1,
+                "documentId": "seller123",
+                "name": "Test Seller",
+                "email": "seller@test.com",
+                "sellerid": "seller001",
+                "createdAt": "2025-09-09T08:57:55.574Z",
+                "updatedAt": "2025-09-09T09:53:41.392Z",
+                "publishedAt": "2025-09-09T09:53:41.412Z",
             }
         ]
 
-    @patch('mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.get')
+    @patch("mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.get")
     def test_0_check_connection(self, mock_get):
         # Mock successful connection response
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {'data': {'name': 'test-strapi', 'version': '4.0.0'}}
+        mock_response.json.return_value = {"data": {"name": "test-strapi", "version": "4.0.0"}}
         mock_get.return_value = mock_response
-        
+
         # Ensure the connection is successful
         self.assertTrue(self.handler.check_connection())
 
@@ -71,101 +70,101 @@ class StrapiHandlerTest(unittest.TestCase):
         self.assertIsNotNone(result)
         assert result is not RESPONSE_TYPE.ERROR
 
-    @patch('mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.get')
+    @patch("mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.get")
     def test_2_get_columns(self, mock_get):
         # Mock response for schema fetching (single record with limit=1)
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            'data': [self.mock_products_data[0]]  # Return first product for schema discovery
+            "data": [self.mock_products_data[0]]  # Return first product for schema discovery
         }
         mock_get.return_value = mock_response
-        
-        result = self.handler.get_columns('products')
+
+        result = self.handler.get_columns("products")
         assert result is not RESPONSE_TYPE.ERROR
 
-    @patch('mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.get')
+    @patch("mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.get")
     def test_3_get_data(self, mock_get):
         # Mock responses: first call for schema (limit=1), second call for actual data
         schema_response = Mock()
         schema_response.status_code = 200
-        schema_response.json.return_value = {'data': [self.mock_products_data[0]]}
-        
+        schema_response.json.return_value = {"data": [self.mock_products_data[0]]}
+
         data_response = Mock()
         data_response.status_code = 200
-        data_response.json.return_value = {'data': self.mock_products_data}
-        
+        data_response.json.return_value = {"data": self.mock_products_data}
+
         # Return schema response first, then data response
         mock_get.side_effect = [schema_response, data_response]
-        
+
         # Ensure that you can retrieve data from a table
-        data = self.handler.native_query('SELECT * FROM products')
+        data = self.handler.native_query("SELECT * FROM products")
         assert data.type is not RESPONSE_TYPE.ERROR
 
-    @patch('mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.get')
+    @patch("mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.get")
     def test_4_get_data_with_condition(self, mock_get):
         # Mock responses: first call for schema (limit=1), second call for specific documentId
         schema_response = Mock()
         schema_response.status_code = 200
-        schema_response.json.return_value = {'data': [self.mock_products_data[0]]}
-        
+        schema_response.json.return_value = {"data": [self.mock_products_data[0]]}
+
         specific_response = Mock()
         specific_response.status_code = 200
         specific_response.json.return_value = {
-            'data': self.mock_products_data[0]  # Return single product (not in array for specific ID)
+            "data": self.mock_products_data[0]  # Return single product (not in array for specific ID)
         }
-        
+
         # Return schema response first, then specific product response
         mock_get.side_effect = [schema_response, specific_response]
-        
+
         # Ensure that you can retrieve data with a condition
         data = self.handler.native_query("SELECT * FROM products WHERE documentId = 'mvaprjyy72ayx7z4v592sdnr'")
         assert data.type is not RESPONSE_TYPE.ERROR
 
-    @patch('mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.request')
+    @patch("mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.request")
     def test_5_insert_data(self, mock_request):
         # Mock response for successful data insertion
         mock_response = Mock()
         mock_response.status_code = 201
         mock_response.json.return_value = {
-            'data': {
-                'id': 2,
-                'documentId': 'newdocid123',
-                'name': 'Ram',
-                'email': 'ram@gmail.com',
-                'sellerid': 'ramu4',
-                'createdAt': '2025-09-09T08:57:55.574Z',
-                'updatedAt': '2025-09-09T09:53:41.392Z',
-                'publishedAt': '2025-09-09T09:53:41.412Z'
+            "data": {
+                "id": 2,
+                "documentId": "newdocid123",
+                "name": "Ram",
+                "email": "ram@gmail.com",
+                "sellerid": "ramu4",
+                "createdAt": "2025-09-09T08:57:55.574Z",
+                "updatedAt": "2025-09-09T09:53:41.392Z",
+                "publishedAt": "2025-09-09T09:53:41.412Z",
             }
         }
         mock_request.return_value = mock_response
-        
+
         # Ensure that data insertion is successful
         query = "INSERT INTO myshop.sellers (name, email, sellerid) VALUES ('Ram', 'ram@gmail.com', 'ramu4')"
         result = self.handler.native_query(query)
         self.assertIsNotNone(result)
         assert result.type is not RESPONSE_TYPE.ERROR
 
-    @patch('mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.request')
+    @patch("mindsdb.integrations.handlers.strapi_handler.strapi_handler.requests.request")
     def test_6_update_data(self, mock_request):
         # Mock response for successful data update
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            'data': {
-                'id': 45,
-                'documentId': 'mvaprjyy72ayx7z4v592sdnr',
-                'title': 'Updated Product Title',  # Updated title
-                'desc': 'Slim-fitting style, contrast raglan long sleeve, lightweight & breathable fabric.',
-                'price': 22.3,
-                'createdAt': '2025-09-09T08:57:55.574Z',
-                'updatedAt': '2025-09-09T09:53:41.392Z',
-                'publishedAt': '2025-09-09T09:53:41.412Z'
+            "data": {
+                "id": 45,
+                "documentId": "mvaprjyy72ayx7z4v592sdnr",
+                "title": "Updated Product Title",  # Updated title
+                "desc": "Slim-fitting style, contrast raglan long sleeve, lightweight & breathable fabric.",
+                "price": 22.3,
+                "createdAt": "2025-09-09T08:57:55.574Z",
+                "updatedAt": "2025-09-09T09:53:41.392Z",
+                "publishedAt": "2025-09-09T09:53:41.412Z",
             }
         }
         mock_request.return_value = mock_response
-        
+
         # Ensure that data updating is successful
         query = "UPDATE products SET title = 'Updated Product Title' WHERE documentId = 'mvaprjyy72ayx7z4v592sdnr'"
         result = self.handler.native_query(query)
@@ -173,28 +172,28 @@ class StrapiHandlerTest(unittest.TestCase):
         assert result.type is not RESPONSE_TYPE.ERROR
 
     def test_7_where_precedence_or_and(self):
-        query = parse_sql('SELECT * FROM products WHERE a = 1 OR (b = 2 AND c = 4)')
-        table = StrapiTable(handler=self.handler, name='products', defer_schema_fetch=True)
+        query = parse_sql("SELECT * FROM products WHERE a = 1 OR (b = 2 AND c = 4)")
+        table = StrapiTable(handler=self.handler, name="products", defer_schema_fetch=True)
 
         conditions = extract_or_conditions(query.where)
         filters = table._build_filters(conditions)
 
-        self.assertIn('filters[$or][0][a][$eq]', filters)
-        self.assertIn('filters[$or][1][$and][0][b][$eq]', filters)
-        self.assertIn('filters[$or][1][$and][1][c][$eq]', filters)
+        self.assertIn("filters[$or][0][a][$eq]", filters)
+        self.assertIn("filters[$or][1][$and][0][b][$eq]", filters)
+        self.assertIn("filters[$or][1][$and][1][c][$eq]", filters)
 
     def test_8_where_precedence_or_or(self):
-        query = parse_sql('SELECT * FROM products WHERE a = 1 OR (b = 2 OR c = 4)')
-        table = StrapiTable(handler=self.handler, name='products', defer_schema_fetch=True)
+        query = parse_sql("SELECT * FROM products WHERE a = 1 OR (b = 2 OR c = 4)")
+        table = StrapiTable(handler=self.handler, name="products", defer_schema_fetch=True)
 
         conditions = extract_or_conditions(query.where)
         filters = table._build_filters(conditions)
 
-        self.assertIn('filters[$or][0][a][$eq]', filters)
-        self.assertIn('filters[$or][1][b][$eq]', filters)
-        self.assertIn('filters[$or][2][c][$eq]', filters)
-        self.assertFalse(any('[$and]' in key for key in filters))
+        self.assertIn("filters[$or][0][a][$eq]", filters)
+        self.assertIn("filters[$or][1][b][$eq]", filters)
+        self.assertIn("filters[$or][2][c][$eq]", filters)
+        self.assertFalse(any("[$and]" in key for key in filters))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

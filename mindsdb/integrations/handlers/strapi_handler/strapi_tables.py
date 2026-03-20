@@ -24,7 +24,7 @@ def extract_or_conditions(node: ASTNode) -> list:
         - a = 1 OR b = 2 -> [[(a=1)], [(b=2)]]
         - a = 1 OR (b = 2 AND c = 4) -> [[(a=1)], [(b=2), (c=4)]]
     """
-    
+
     def extract_single_condition(node: ASTNode) -> tuple:
         if isinstance(node, ast.BinaryOperation):
             op = node.op.lower()
@@ -39,22 +39,26 @@ def extract_or_conditions(node: ASTNode) -> list:
             field = node.args[0]  # The field being tested
             min_val = node.args[1]  # Lower bound
             max_val = node.args[2]  # Upper bound
-            
-            if isinstance(field, ast.Identifier) and isinstance(min_val, ast.Constant) and isinstance(max_val, ast.Constant):
-                return ('between', field.parts[-1], [min_val.value, max_val.value])
+
+            if (
+                isinstance(field, ast.Identifier)
+                and isinstance(min_val, ast.Constant)
+                and isinstance(max_val, ast.Constant)
+            ):
+                return ("between", field.parts[-1], [min_val.value, max_val.value])
             else:
                 raise NotImplementedError("BETWEEN with non-constant values not supported")
 
         raise NotImplementedError(f"Unsupported condition type: {type(node)}")
-    
+
     def extract_conditions_recursive(node: ASTNode) -> list:
         if isinstance(node, ast.BinaryOperation):
-            if node.op.lower() == 'or':
+            if node.op.lower() == "or":
                 left_conditions = extract_conditions_recursive(node.args[0])
                 right_conditions = extract_conditions_recursive(node.args[1])
                 return left_conditions + right_conditions
-                
-            elif node.op.lower() == 'and':
+
+            elif node.op.lower() == "and":
                 left_conditions = extract_conditions_recursive(node.args[0])
                 right_conditions = extract_conditions_recursive(node.args[1])
 
@@ -63,15 +67,15 @@ def extract_or_conditions(node: ASTNode) -> list:
                     for right_group in right_conditions:
                         combined.append(left_group + right_group)
                 return combined
-                
+
             else:
                 condition = extract_single_condition(node)
                 return [[condition]]  # Single condition in its own group
 
         elif isinstance(node, BetweenOperation):
-                condition = extract_single_condition(node)
-                return [[condition]]  # Single condition in its own group
-        
+            condition = extract_single_condition(node)
+            return [[condition]]  # Single condition in its own group
+
         raise NotImplementedError(f"Unsupported node type: {type(node)}")
 
     try:
@@ -83,15 +87,16 @@ def extract_or_conditions(node: ASTNode) -> list:
 
 # Mapping SQL operators to Strapi filter operators
 OPERATOR_MAP = {
-    '=': '$eq',
-    '!=': '$ne',
-    '>': '$gt',
-    '>=': '$gte',
-    '<': '$lt',
-    '<=': '$lte',
-    'IN': '$in',
-    'NOT IN': '$notIn'
+    "=": "$eq",
+    "!=": "$ne",
+    ">": "$gt",
+    ">=": "$gte",
+    "<": "$lt",
+    "<=": "$lte",
+    "IN": "$in",
+    "NOT IN": "$notIn",
 }
+
 
 class StrapiTable(APITable):
     def __init__(self, handler: APIHandler, name: str, defer_schema_fetch: bool = False):
@@ -138,11 +143,11 @@ class StrapiTable(APITable):
 
     def _build_filters(self, conditions: List[List[tuple]]) -> Dict[str, Any]:
         """Build Strapi filters from DNF condition groups.
-        
+
         Args:
             conditions: DNF groups where each inner list is ANDed and
                 groups are ORed.
-        
+
         Returns:
             Dict of Strapi filter parameters
         """
@@ -152,8 +157,8 @@ class StrapiTable(APITable):
         # Keep the fast-path for direct documentId lookup.
         if len(conditions) == 1 and len(conditions[0]) == 1:
             op, field, value = conditions[0][0]
-            if field == 'documentId' and op == '=':
-                return {'documentId': value}
+            if field == "documentId" and op == "=":
+                return {"documentId": value}
 
         def to_filter_node(condition: tuple) -> Dict[str, Dict[str, Any]]:
             op, field, value = condition
@@ -165,15 +170,15 @@ class StrapiTable(APITable):
             if len(and_group) == 1:
                 filter_tree = to_filter_node(and_group[0])
             else:
-                filter_tree = {'$and': [to_filter_node(condition) for condition in and_group]}
+                filter_tree = {"$and": [to_filter_node(condition) for condition in and_group]}
         else:
             or_nodes = []
             for and_group in conditions:
                 if len(and_group) == 1:
                     or_nodes.append(to_filter_node(and_group[0]))
                 else:
-                    or_nodes.append({'$and': [to_filter_node(condition) for condition in and_group]})
-            filter_tree = {'$or': or_nodes}
+                    or_nodes.append({"$and": [to_filter_node(condition) for condition in and_group]})
+            filter_tree = {"$or": or_nodes}
 
         filters = {}
 
@@ -185,7 +190,7 @@ class StrapiTable(APITable):
                 for index, value in enumerate(node):
                     flatten(value, path + [str(index)])
             else:
-                key = 'filters' + ''.join(f'[{part}]' for part in path)
+                key = "filters" + "".join(f"[{part}]" for part in path)
                 filters[key] = node
 
         flatten(filter_tree, [])
@@ -193,74 +198,70 @@ class StrapiTable(APITable):
 
     def _build_single_condition(self, op: str, field: str, value: Any) -> Dict[str, Dict[str, Any]]:
         """Build a single condition dictionary for Strapi filters
-        
+
         Args:
             op: SQL operator
             field: Field name
             value: Field value
-            
+
         Returns:
             Dictionary with field and its filter conditions
         """
         condition = {}
-        
-        if op.upper() == 'BETWEEN':
+
+        if op.upper() == "BETWEEN":
             if isinstance(value, (list, tuple)) and len(value) == 2:
                 # BETWEEN translates to field >= min AND field <= max
-                condition[field] = {
-                    '$gte': value[0],
-                    '$lte': value[1]
-                }
+                condition[field] = {"$gte": value[0], "$lte": value[1]}
             else:
                 raise ValueError("BETWEEN operator requires exactly 2 values")
-        
-        elif op.upper() == 'LIKE':
+
+        elif op.upper() == "LIKE":
             if not isinstance(value, str):
                 raise ValueError("LIKE operator requires a string value")
-            
+
             # Remove quotes if present
-            if (value.startswith("'") and value.endswith("'")) or \
-            (value.startswith('"') and value.endswith('"')):
+            if (value.startswith("'") and value.endswith("'")) or (value.startswith('"') and value.endswith('"')):
                 value = value[1:-1]
-            
+
             # Handle LIKE patterns
-            if value.startswith('%') and value.endswith('%'):
+            if value.startswith("%") and value.endswith("%"):
                 value = value[1:-1]  # Remove % from both ends
-                condition[field] = {'$contains': value}
-            elif value.startswith('%'):
+                condition[field] = {"$contains": value}
+            elif value.startswith("%"):
                 value = value[1:]  # Remove leading %
-                condition[field] = {'$endsWith': value}
-            elif value.endswith('%'):
+                condition[field] = {"$endsWith": value}
+            elif value.endswith("%"):
                 value = value[:-1]  # Remove trailing %
-                condition[field] = {'$startsWith': value}
+                condition[field] = {"$startsWith": value}
             else:
-                condition[field] = {'$eq': value}
-        
-        elif op.upper() == 'IS':
+                condition[field] = {"$eq": value}
+
+        elif op.upper() == "IS":
             if value is None:
-                condition[field] = {'$null': True}
+                condition[field] = {"$null": True}
             else:
                 raise ValueError(f"IS operator with non-null value not supported: {value}")
-        
-        elif op.upper() == 'IS NOT':
+
+        elif op.upper() == "IS NOT":
             if value is None:
-                condition[field] = {'$notNull': True}
+                condition[field] = {"$notNull": True}
             else:
                 raise ValueError(f"IS NOT operator with non-null value not supported: {value}")
-        
-        elif op.upper() in ('IN', 'NOT IN'):
+
+        elif op.upper() in ("IN", "NOT IN"):
             if isinstance(value, (list, tuple)):
-                strapi_op = '$in' if op.upper() == 'IN' else '$notIn'
+                strapi_op = "$in" if op.upper() == "IN" else "$notIn"
                 condition[field] = {strapi_op: list(value)}
             else:
                 raise ValueError(f"{op} operator requires a list or tuple value")
-        
+
         elif op.upper() in OPERATOR_MAP:
             condition[field] = {OPERATOR_MAP[op.upper()]: value}
-        
+
         else:
             raise ValueError(f"Unsupported operator {op} in WHERE clause")
-        
+
         return condition
 
     def _fetch_by_id(self, document_id: str, selected_columns: list) -> pd.DataFrame:
@@ -273,8 +274,7 @@ class StrapiTable(APITable):
         Returns:
             pd.DataFrame: The resulting DataFrame
         """
-        df = self.handler.call_strapi_api(
-            method='GET', endpoint=f'/api/{self.name}/{document_id}')
+        df = self.handler.call_strapi_api(method="GET", endpoint=f"/api/{self.name}/{document_id}")
 
         if len(df) > 0:
             return df[selected_columns]
@@ -316,43 +316,39 @@ class StrapiTable(APITable):
                 filters = {}
 
         # If we got a documentId filter, use the specific endpoint
-        if 'documentId' in filters:
-            return self._fetch_by_id(filters['documentId'], selected_columns)
-        
+        if "documentId" in filters:
+            return self._fetch_by_id(filters["documentId"], selected_columns)
+
         # Initialize pagination parameters with optimized page size
         # Use Strapi's default maximum page size of 100 for REST API
         page_size = 100
         limit = query.limit.value if query.limit else None
         result_df = pd.DataFrame(columns=selected_columns)
-        
+
         # If limit is specified and smaller than page_size, use limit as page_size to minimize API calls
         if limit and limit < page_size:
             page_size = limit
 
         # Prepare initial parameters including filters
         params = {
-            'pagination[page]': 1,
-            'pagination[pageSize]': page_size,
-            **filters  # Add any WHERE clause filters
+            "pagination[page]": 1,
+            "pagination[pageSize]": page_size,
+            **filters,  # Add any WHERE clause filters
         }
 
         page = 1
         total_fetched = 0
-        
+
         # Fetch data in optimized pagination loop
         while True:
-            params['pagination[page]'] = page
-            
-            df = self.handler.call_strapi_api(
-                method='GET',
-                endpoint=f'/api/{self.name}',
-                params=params
-            )
+            params["pagination[page]"] = page
+
+            df = self.handler.call_strapi_api(method="GET", endpoint=f"/api/{self.name}", params=params)
 
             # Break if no data returned
             if len(df) == 0:
                 break
-            
+
             # Apply limit constraint if specified
             rows_to_take = len(df)
             if limit:
@@ -360,20 +356,20 @@ class StrapiTable(APITable):
                 if remaining_needed <= 0:
                     break
                 rows_to_take = min(rows_to_take, remaining_needed)
-            
+
             # Take only the needed rows and add to result
             df_slice = df.head(rows_to_take) if rows_to_take < len(df) else df
             result_df = pd.concat([result_df, df_slice[selected_columns]], ignore_index=True)
-            
+
             total_fetched += rows_to_take
-            
+
             # Break conditions:
             # 1. If we got fewer rows than page_size, we've reached the end
             # 2. If we have a limit and we've reached it
             # 3. If we took fewer rows than available due to limit constraint
             if len(df) < page_size or (limit and total_fetched >= limit) or rows_to_take < len(df):
                 break
-                
+
             page += 1
 
         return result_df
@@ -385,25 +381,21 @@ class StrapiTable(APITable):
         """
         # Loop through all rows in the VALUES clause
         for row_values in query.values:
-            data = {'data': {}}
+            data = {"data": {}}
 
             for column, value in zip(query.columns, row_values):
                 # Clean column name (remove backticks if present)
                 column_name = column.name
-                if column_name.startswith('`') and column_name.endswith('`'):
+                if column_name.startswith("`") and column_name.endswith("`"):
                     column_name = column_name[1:-1]
-                    
+
                 if isinstance(value, Constant):
-                    data['data'][column_name] = value.value
+                    data["data"][column_name] = value.value
                 else:
-                    data['data'][column_name] = value
-            
+                    data["data"][column_name] = value
+
             # Make individual API call for each row
-            self.handler.call_strapi_api(
-                method='POST', 
-                endpoint=f'/api/{self.name}', 
-                json_data=json.dumps(data)
-            )
+            self.handler.call_strapi_api(method="POST", endpoint=f"/api/{self.name}", json_data=json.dumps(data))
 
     def update(self, query: ast.Update) -> None:
         """triggered at the UPDATE query
@@ -414,15 +406,17 @@ class StrapiTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         # Get documentId from query
         for op, arg1, arg2 in conditions:
-            if arg1 == "documentId" and op == '=':
+            if arg1 == "documentId" and op == "=":
                 _documentId = arg2
             else:
                 raise ValueError("`documentId` must be used in WHERE clause for UPDATE")
-        data = {'data': {}}
+        data = {"data": {}}
         for key, value in query.update_columns.items():
             if isinstance(value, Constant):
-                data['data'][key] = value.value
-        self.handler.call_strapi_api(method='PUT', endpoint=f'/api/{self.name}/{_documentId}', json_data=json.dumps(data))
+                data["data"][key] = value.value
+        self.handler.call_strapi_api(
+            method="PUT", endpoint=f"/api/{self.name}/{_documentId}", json_data=json.dumps(data)
+        )
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns

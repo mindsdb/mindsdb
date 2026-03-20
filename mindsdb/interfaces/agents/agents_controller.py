@@ -57,10 +57,10 @@ class AgentMode(Enum):
 
 
 class AgentParams(BaseModel):
-    prompt_template: str = None
+    prompt_template: str | None = None
     model: Dict[Text, Any] | None = None
-    data: AgentParamsData = None
-    timeout: int = None
+    data: AgentParamsData | None = None
+    timeout: int | None = None
     mode: AgentMode = AgentMode.TEXT
 
     class Config:

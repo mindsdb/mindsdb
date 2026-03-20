@@ -364,7 +364,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertIn('"Amount"', executed_copy)
 
     def test_meta_get_column_statistics_returns_non_table_response(self):
-        error_response = Response(RESPONSE_TYPE.ERROR, error_message="boom")
+        error_response = ErrorResponse(error_message="boom")
         self.handler.native_query = MagicMock(return_value=error_response)
 
         result = self.handler.meta_get_column_statistics()

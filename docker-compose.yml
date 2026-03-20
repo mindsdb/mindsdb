@@ -36,6 +36,7 @@ services:
     environment:
       MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
       KB_PGVECTOR_URL: "postgresql://postgres:postgres@postgres/kb"  # Use pgvector as the default store for knowledge bases
+      KNOWLEDGE_BASES_STORAGE: "pgvector,faiss"  # Available engines exposed to API/UI
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level

@@ -134,7 +134,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
             return self.native_query(query_str, params, no_restrict=True, stream=False)
         return super().query(query)
 
-    def native_query(self, query, params=None, no_restrict=False) -> Response:
+    def native_query(self, query, params=None, no_restrict=False, stream: bool = True, **kwargs) -> Response:
         """
         Altered `native_query` method of postgres handler.
         Restrict usage of native query from executor with shared pg vector connection
@@ -143,7 +143,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         # Prevent execute native queries
         if self._is_shared_db and not no_restrict:
             return Response(RESPONSE_TYPE.OK)
-        return super().native_query(query, params=params)
+        return super().native_query(query, params=params, stream=stream, **kwargs)
 
     def raw_query(self, query, params=None) -> Response:
         resp = super().native_query(query, params, stream=False)

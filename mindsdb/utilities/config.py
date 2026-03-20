@@ -432,9 +432,8 @@ class Config:
         elif mindsdb_byom_enabled != "":
             raise ValueError(f"Wrong value of env var MINDSDB_BYOM_ENABLED={mindsdb_byom_enabled}")
 
-        knowledge_bases_storage = os.environ.get("KNOWLEDGE_BASES_STORAGE", "")
-        if knowledge_bases_storage != "":
-            self._env_config["knowledge_bases"]["storage"] = knowledge_bases_storage.split(",")[0].strip()
+        # KNOWLEDGE_BASES_STORAGE is used to expose available engines to the API/UI layer.
+        # It must not force-overwrite the selected default storage in config.auto.json.
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.

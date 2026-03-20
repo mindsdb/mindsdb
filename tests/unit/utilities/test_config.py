@@ -58,4 +58,4 @@ class TestConfig:
             ):
                 cfg = Config()
 
-                assert cfg["knowledge_bases"]["storage"] == "faiss"
+                assert cfg["knowledge_bases"]["storage"] is None

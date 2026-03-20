@@ -1,5 +1,4 @@
 import copy
-import os
 from typing import Dict, List, Optional, Any, Text, Tuple, Union
 import json
 import decimal
@@ -1271,33 +1270,12 @@ class KnowledgeBaseController:
 
         # search for the vector database table
         if storage is None:
-            cloud_pg_vector = os.environ.get("KB_PGVECTOR_URL")
-            if cloud_pg_vector:
-                vector_table_name = name
-                # Add sparse vector support for pgvector
-                vector_db_params = {}
-                # Check both explicit parameter and model configuration
-                if is_sparse:
-                    vector_db_params["is_sparse"] = True
-                    if vector_size is not None:
-                        vector_db_params["vector_size"] = vector_size
-                vector_db_name = self._create_persistent_pgvector(vector_db_params)
-                params["default_vector_storage"] = vector_db_name
-            else:
-                # try faiss
-                module = self.session.integration_controller.get_handler_module("duckdb_faiss")
-                if module is None or module.Handler is None:
-                    raise ValueError(
-                        "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
-                        "One of the options is to use pgvector: "
-                        "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
-                    )
-
-                # create faiss db with same name
-                vector_table_name = "data"
-                vector_db_name = self._create_persistent_faiss(name)
-                # memorize to remove it later
-                params["default_vector_storage"] = vector_db_name
+            vector_db_name, vector_table_name = self._resolve_default_vector_storage(
+                kb_name=name,
+                is_sparse=is_sparse,
+                vector_size=vector_size,
+            )
+            params["default_vector_storage"] = vector_db_name
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:

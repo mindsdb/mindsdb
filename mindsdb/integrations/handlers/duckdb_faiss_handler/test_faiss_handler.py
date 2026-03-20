@@ -3,10 +3,10 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from tests.unit.executor.test_knowledge_base import TestKB as BaseTestKB, set_litellm_embedding
+from tests.unit.executor.test_knowledge_base import TestKB, set_litellm_embedding
 
 
-class TestFAISS(BaseTestKB):
+class TestFAISS(TestKB):
     "Run unit tests using FAISS handler as storage"
 
     def _get_storage_table(self, kb_name):

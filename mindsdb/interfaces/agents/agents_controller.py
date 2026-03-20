@@ -300,6 +300,14 @@ class AgentsController:
 
         if model:
             params["model"] = model
+
+        if params:
+            validate_pydantic_params(params, AgentParams, "agent")
+        else:
+            # do nothing
+            return existing_agent
+
+        if model:
             # check llm works
             llm_params = self.get_agent_llm_params(model)
             check_agent_llm(llm_params)
@@ -308,17 +316,14 @@ class AgentsController:
         if data:
             check_agent_data(data)
 
-        if params:
-            validate_pydantic_params(params, AgentParams, "agent")
-
-            # Merge params on update
-            existing_params.update(params)
-            # Remove None values entirely.
-            params = {k: v for k, v in existing_params.items() if v is not None}
-            existing_agent.params = params
-            # Some versions of SQL Alchemy won't handle JSON updates correctly without this.
-            # See: https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.attributes.flag_modified
-            flag_modified(existing_agent, "params")
+        # Merge params on update
+        existing_params.update(params)
+        # Remove None values entirely.
+        params = {k: v for k, v in existing_params.items() if v is not None}
+        existing_agent.params = params
+        # Some versions of SQL Alchemy won't handle JSON updates correctly without this.
+        # See: https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.attributes.flag_modified
+        flag_modified(existing_agent, "params")
         db.session.commit()
 
         return existing_agent

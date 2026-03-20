@@ -2,6 +2,7 @@ import copy
 import datetime as dt
 import json
 import os
+import pytest
 import sys
 import tempfile
 import shutil
@@ -15,9 +16,18 @@ import pandas as pd
 from prometheus_client import REGISTRY
 from mindsdb_sql_parser import parse_sql
 
+from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.utilities.config import Config
+
 from mindsdb.utilities import log
 from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.integrations.utilities.community_handler_fetcher import (
+    community_handlers_enabled,
+    fetch_handler,
+    get_community_handlers_storage_dir,
+)
 
 logger = log.getLogger(__name__)
 
@@ -212,7 +222,7 @@ class BaseExecutorTest(BaseUnitTest):
         super().setup_method()
         self.set_executor(import_dummy_ml=import_dummy_ml)
 
-    def _import_handler(self, integration_controller, handler_name, handler_dir):
+    def _import_handler(self, integration_controller, handler_name, handler_dir, is_community=False):
         handler_meta = {
             "import": {
                 "success": None,
@@ -223,9 +233,45 @@ class BaseExecutorTest(BaseUnitTest):
             "path": handler_dir,
             "name": handler_name,
             "permanent": False,
+            "community": is_community,
         }
         integration_controller.handlers_import_status[handler_name] = handler_meta
-        integration_controller.import_handler(handler_name, "")
+        # For community handlers: import_handler uses spec_from_file_location (path-based).
+        # For built-in handlers: pass "" as base_import so importlib resolves from sys.path.
+        if is_community:
+            integration_controller.import_handler(handler_name)
+        else:
+            integration_controller.import_handler(handler_name, "")
+
+    def setup_community_handler(self, handler_name: str):
+        """
+        Register and import a community handler for testing.
+
+        Requires MINDSDB_COMMUNITY_HANDLERS=true — this mirrors the production
+        gate and also exercises the fetch mechanism when the env var is set.
+        Skips the test if the env var is not set or the handler cannot be fetched.
+        """
+
+        if not community_handlers_enabled():
+            pytest.skip(
+                f"Community handler '{handler_name}' test skipped: set MINDSDB_COMMUNITY_HANDLERS=true to enable"
+            )
+
+        storage_root = Path(Config()["paths"]["root"])
+        storage_dir = get_community_handlers_storage_dir(storage_root)
+        handler_dir_name = f"{handler_name}_handler"
+        handler_dir = storage_dir / handler_dir_name
+
+        if not (handler_dir / "__init__.py").exists():
+            try:
+                handler_dir = fetch_handler(handler_dir_name, storage_dir)
+            except Exception as e:
+                pytest.skip(f"Could not fetch community handler '{handler_name}': {e}")
+
+        if handler_dir is None or not (handler_dir / "__init__.py").exists():
+            pytest.skip(f"Community handler '{handler_name}' not available")
+
+        self._import_handler(integration_controller, handler_name, handler_dir, is_community=True)
 
     def set_executor(
         self,

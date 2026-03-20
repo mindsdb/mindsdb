@@ -9,22 +9,27 @@ from requests import Response, Request
 from bs4 import BeautifulSoup
 
 from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists
-from mindsdb.integrations.handlers.web_handler.web_handler import WebHandler
-from mindsdb.integrations.handlers.web_handler.web_handler import CrawlerTable
-from mindsdb.integrations.handlers.web_handler import urlcrawl_helpers as helpers
+
+try:
+    from mindsdb.integrations.handlers.web_handler.web_handler import WebHandler
+    from mindsdb.integrations.handlers.web_handler.web_handler import CrawlerTable
+    from mindsdb.integrations.handlers.web_handler import urlcrawl_helpers as helpers
+
+    WEB_HANDLER_AVAILABLE = True
+except ImportError:
+    WEB_HANDLER_AVAILABLE = False
+
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 
-from mindsdb.integrations.utilities.sql_utils import (FilterCondition, FilterOperator)
-
-
+@pytest.mark.skipif(not WEB_HANDLER_AVAILABLE, reason="web_handler not installed (community handler)")
 class TestWebsHandler(unittest.TestCase):
-
     def setUp(self) -> None:
-        self.handler = WebHandler(name='test_web_handler')
+        self.handler = WebHandler(name="test_web_handler")
 
     def test_crawler_already_registered(self):
         with self.assertRaises(TableAlreadyExists):
-            self.handler._register_table('crawler', CrawlerTable)
+            self.handler._register_table("crawler", CrawlerTable)
 
 
 PDF_CONTENT = (
@@ -43,6 +48,7 @@ HTML_SAMPLE_1 = "<h1>Heading One</h1><h2>Heading Two</h2>"
 MARKDOWN_SAMPLE_1 = "# Heading One \n\n ## Heading Two"
 
 
+@pytest.mark.skipif(not WEB_HANDLER_AVAILABLE, reason="web_handler not installed (community handler)")
 class TestWebHelpers(unittest.TestCase):
     @patch("requests.Response")
     def test_pdf_to_markdown(self, mock_response) -> None:
@@ -60,14 +66,15 @@ class TestWebHelpers(unittest.TestCase):
             helpers.pdf_to_markdown(response)
 
     def test_url_validation(self):
-        assert helpers.is_valid('https://google.com') is True
-        assert helpers.is_valid('google.com') is False
+        assert helpers.is_valid("https://google.com") is True
+        assert helpers.is_valid("google.com") is False
 
     def test_get_readable_text_from_soup(self) -> None:
         soup = BeautifulSoup(HTML_SAMPLE_1, "html.parser")
         import re
-        expected = re.sub(r'\s+', ' ', MARKDOWN_SAMPLE_1).strip()
-        actual = re.sub(r'\s+', ' ', helpers.get_readable_text_from_soup(soup)).strip()
+
+        expected = re.sub(r"\s+", " ", MARKDOWN_SAMPLE_1).strip()
+        actual = re.sub(r"\s+", " ", helpers.get_readable_text_from_soup(soup)).strip()
 
         assert expected == actual
 
@@ -104,12 +111,9 @@ class TestWebHelpers(unittest.TestCase):
 
 def html_get(url, **kwargs):
     # generate html page with 10 sub-links in the same domain
-    if not url.endswith('/'):
-        url = url + '/'
-    links = [
-        f"<a href='{urljoin(url, str(i))}'>link {i}</a>\n"
-        for i in range(10)
-    ]
+    if not url.endswith("/"):
+        url = url + "/"
+    links = [f"<a href='{urljoin(url, str(i))}'>link {i}</a>\n" for i in range(10)]
 
     html = f"""
     <html>
@@ -128,24 +132,23 @@ def html_get(url, **kwargs):
     return resp
 
 
+@pytest.mark.skipif(not WEB_HANDLER_AVAILABLE, reason="web_handler not installed (community handler)")
 class TestWebHandler(unittest.TestCase):
-
-    @patch('requests.Session.get')
+    @patch("requests.Session.get")
     def test_web_cases(self, mock_get):
-
         mock_get.side_effect = html_get
 
         crawler_table = CrawlerTable(handler=MagicMock())
 
         # filters
-        single_url = FilterCondition('url', FilterOperator.EQUAL, 'https://docs.mindsdb.com/')
-        two_urls = FilterCondition('url', FilterOperator.IN, ('https://docs.mindsdb.com/', 'https://docs.python.org/'))
+        single_url = FilterCondition("url", FilterOperator.EQUAL, "https://docs.mindsdb.com/")
+        two_urls = FilterCondition("url", FilterOperator.IN, ("https://docs.mindsdb.com/", "https://docs.python.org/"))
 
-        depth_0 = FilterCondition('crawl_depth', FilterOperator.EQUAL, 0)
-        depth_1 = FilterCondition('crawl_depth', FilterOperator.EQUAL, 1)
-        depth_2 = FilterCondition('crawl_depth', FilterOperator.EQUAL, 2)
+        depth_0 = FilterCondition("crawl_depth", FilterOperator.EQUAL, 0)
+        depth_1 = FilterCondition("crawl_depth", FilterOperator.EQUAL, 1)
+        depth_2 = FilterCondition("crawl_depth", FilterOperator.EQUAL, 2)
 
-        per_url_2 = FilterCondition('per_url_limit', FilterOperator.EQUAL, 2)
+        per_url_2 = FilterCondition("per_url_limit", FilterOperator.EQUAL, 2)
 
         # ---- single url -----
 

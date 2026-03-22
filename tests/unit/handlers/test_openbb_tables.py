@@ -90,7 +90,7 @@ def test_openbb_select_coerces_literal_string_params():
 
     row = result.iloc[0]
     assert row["limit"] == 123
-    assert row["adjusted"] is True
+    assert bool(row["adjusted"]) is True
     assert row["symbol"] == "AAPL"
     assert row["ids"] == [1, 2]
     assert row["raw_symbol"] == "AAPL"

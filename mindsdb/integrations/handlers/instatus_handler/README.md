@@ -92,7 +92,7 @@ WHERE id = '<status-page-id>';
 
 ```sql
 INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl, faviconUrl, websiteUrl, language, useLargeHeader, brandColor, okColor, disruptedColor, degradedColor, downColor, noticeColor, unknownColor, googleAnalytics, subscribeBySms, smsService, twilioSid, twilioToken, twilioSender, nexmoKey, nexmoSecret, nexmoSender, htmlInMeta, htmlAboveHeader, htmlBelowHeader, htmlAboveFooter, htmlBelowFooter, htmlBelowSummary, cssGlobal, launchDate, dateFormat, dateFormatShort, timeFormat)
-VALUES ('yourname@gmail.com', 'mindsdb', 'mindsdb-instatus', '["Website", "App", "API"]', 'https://instatus.com/sample.png', 'https://instatus.com/favicon-32x32.png', 'https://instatus.com', 'en', true, '#111', '#33B17E', '#FF8C03', '#ECC94B', '#DC123D', '#70808F', '#DFE0E1', 'UA-00000000-1', true, 'twilio', 'YOUR_TWILIO_SID', 'YOUR_TWILIO_TOKEN', 'YOUR_TWILIO_SENDER', null, null, null, null, null, null, null, null, null, null, null, 'MMMMMM d, yyyy', 'MMM yyyy', 'p');
+VALUES ('yourname@gmail.com', 'mindsdb', 'mindsdb-instatus', '["Website", "App", "API"]', 'https://instatus.com/sample.png', 'https://instatus.com/favicon-32x32.png', 'https://instatus.com', 'en', 'true', '#111', '#33B17E', '#FF8C03', '#ECC94B', '#DC123D', '#70808F', '#DFE0E1', 'UA-00000000-1', 'true', 'twilio', 'YOUR_TWILIO_SID', 'YOUR_TWILIO_TOKEN', 'YOUR_TWILIO_SENDER', null, null, null, null, null, null, null, null, null, null, null, null, 'MMMMMM d, yyyy', 'MMM yyyy', 'p');
 ```
 
 Note:

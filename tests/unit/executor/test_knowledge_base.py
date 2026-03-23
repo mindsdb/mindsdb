@@ -167,7 +167,7 @@ class BaseTestKB(BaseExecutorDummyML):
         return pd.DataFrame(data, columns=["ral", "english", "italian"])
 
 
-class TestKB(BaseTestKB):
+class TestKBNOAutoBatch(BaseTestKB):
     def setup_method(self):
         super().setup_method()
         from mindsdb.utilities.config import config
@@ -1205,6 +1205,38 @@ class TestKB(BaseTestKB):
         ret = self.run_sql("select * from kb1 where id = 1")
         assert len(ret) == 1
         assert ret["chunk_content"][0] == "dog"
+
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_reranking(self, mock_litellm_embedding, mock_get_scores):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb("kb_ral", content_columns=["english"], reranking_model={
+            "provider": "openai",
+            "model_name": "gpt-3",
+            "api_key": "embed-key-1",
+        })
+
+        df = self._get_ral_table()
+        self.save_file("ral", df)
+
+        ret = self.run_sql(
+            """
+                insert into kb_ral
+                select * from files.ral
+            """
+        )
+
+        # rank from greater to lower
+        mock_get_scores.side_effect = lambda query, docs: [1-i/4 for i in range(len(docs))]
+        ret = self.run_sql("select * from kb_ral where content='white'")
+        assert 'white' in ret['chunk_content'].iloc[0]
+
+        # reverse rank: from lower to greater. the most semantic result have to be moved back
+        mock_get_scores.side_effect = lambda query, docs: [i/4 for i in range(len(docs))]
+        ret = self.run_sql("select * from kb_ral where content='white'")
+        assert 'white' not in ret['chunk_content'].iloc[0]
+
 
 
 class TestKBAutoBatch(BaseTestKB):

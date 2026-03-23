@@ -81,11 +81,11 @@ class LLMClient:
             azure_api_endpoint = params.get("base_url") or os.environ.get("AZURE_OPENAI_ENDPOINT")
             azure_api_version = params.get("api_version") or os.environ.get("AZURE_OPENAI_API_VERSION")
             self.client = AzureOpenAI(
-                api_key=azure_api_key, azure_endpoint=azure_api_endpoint, api_version=azure_api_version, max_retries=2
+                api_key=azure_api_key, azure_endpoint=azure_api_endpoint, api_version=azure_api_version, max_retries=2, timeout=60.0
             )
         elif self.provider == "openai":
             openai_api_key = params.get("api_key") or os.getenv("OPENAI_API_KEY")
-            kwargs = {"api_key": openai_api_key, "max_retries": 2}
+            kwargs = {"api_key": openai_api_key, "max_retries": 2, "timeout": 60.0}
             base_url = params.get("base_url")
             if base_url:
                 kwargs["base_url"] = base_url
@@ -96,6 +96,7 @@ class LLMClient:
             kwargs.pop("provider", None)
             if kwargs.get("api_key") is None:
                 kwargs["api_key"] = "n/a"
+            kwargs.setdefault("timeout", 60.0)
             self.client = OpenAI(**kwargs)
         else:
             # try to use litellm

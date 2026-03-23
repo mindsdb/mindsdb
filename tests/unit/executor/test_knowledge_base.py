@@ -1034,6 +1034,11 @@ class TestKBNOAutoBatch(BaseTestKB):
         assert kb.params["reranking_model"]["provider"] == "ollama"
         assert "api_key" not in kb.params["reranking_model"]
 
+        # disable reranking model and ensure config is cleared
+        self.run_sql("ALTER KNOWLEDGE BASE kb1 USING reranking_model = false")
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+        assert kb.params["reranking_model"] == {}
+
     @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
     @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
     def test_ollama(self, mock_openai, mock_get_scores):

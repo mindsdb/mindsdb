@@ -482,7 +482,6 @@ class TestKBNOAutoBatch(BaseTestKB):
         set_litellm_embedding(mock_litellm_embedding)
 
         df = self._get_ral_table()
-        self.save_file("ral", df)
 
         df = pd.concat([df] * 30)
         # unique ids
@@ -1279,6 +1278,42 @@ class TestKBNOAutoBatch(BaseTestKB):
         """)
         assert "white" in ret["chunk_content"].iloc[0]
 
+    # @pytest.mark.slow
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_create_index(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        df = self._get_ral_table()
+
+        df = pd.concat([df] * 30)
+        # unique ids
+        df["id"] = list(map(str, range(len(df))))
+        self.save_file("ral", df)
+
+        # create kb, fill it
+        self._create_kb("kb_ral", content_columns=["english"])
+
+        self.run_sql("insert into kb_ral select * from files.ral")
+
+        # create index
+        self.run_sql(
+            """
+            CREATE INDEX ON KNOWLEDGE_BASE kb_ral WITH (nlist=1)
+            """
+        )
+
+        # check kb works after index was created
+        ret = self.run_sql("select * from kb_ral where content='white'")
+        assert "white" in ret["chunk_content"].iloc[0]
+
+        self.run_sql(
+            """
+            CREATE INDEX ON KNOWLEDGE_BASE kb_ral
+            WITH (nlist=1, type='ivf', train_count=50)
+            """
+        )
+        ret = self.run_sql("select * from kb_ral where content='white'")
+        assert "white" in ret["chunk_content"].iloc[0]
 
 
 class TestKBAutoBatch(BaseTestKB):

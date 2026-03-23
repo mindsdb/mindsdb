@@ -13,6 +13,7 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     EmailsTable,
     MeetingsTable,
     NotesTable,
+    LeadsTable,
     OwnersTable,
     DealStagesTable,
     to_hubspot_property,
@@ -135,6 +136,7 @@ class HubspotHandler(MetaAPIHandler):
         self._register_table("emails", EmailsTable(self))
         self._register_table("meetings", MeetingsTable(self))
         self._register_table("notes", NotesTable(self))
+        self._register_table("leads", LeadsTable(self))
         self._register_table("owners", OwnersTable(self))
         self._register_table("deal_stages", DealStagesTable(self))
 
@@ -601,13 +603,14 @@ class HubspotHandler(MetaAPIHandler):
             "ticket_deals": "HubSpot ticket to deal associations",
             "owners": "HubSpot owners with names and emails",
             "deal_stages": "HubSpot deal pipeline stages with labels",
+            "leads": "HubSpot leads data including lead status, source and other lead properties",
         }
         return descriptions.get(table_name, f"HubSpot {table_name} data")
 
     def _estimate_table_rows(self, table_name: str) -> Optional[int]:
         """Get actual count of rows in a table using HubSpot Search API."""
         try:
-            if table_name in ["companies", "contacts", "deals", "tickets"]:
+            if table_name in ["companies", "contacts", "deals", "tickets", "leads"]:
                 result = getattr(self.connection.crm, table_name).search_api.do_search(
                     public_object_search_request={"limit": 1}
                 )

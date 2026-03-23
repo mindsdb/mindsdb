@@ -1,10 +1,17 @@
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from mindsdb.api.mcp.oauth import build_oauth_components
+from mindsdb.utilities.config import config
 
 
 def _create_mcp() -> FastMCP:
     token_verifier, auth_settings = build_oauth_components()
+
+    dns_rebinding_protection = config["api"]["mcp"]["dns_rebinding_protection"]
+    transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=dns_rebinding_protection
+    )
 
     return FastMCP(
         name="MindsDB",
@@ -24,6 +31,7 @@ def _create_mcp() -> FastMCP:
         debug=False,
         token_verifier=token_verifier,
         auth=auth_settings,
+        transport_security=transport_security,
     )
 
 

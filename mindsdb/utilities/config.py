@@ -261,6 +261,7 @@ class Config:
                         "client_secret": "",  # MINDSDB_MCP_OAUTH_CLIENT_SECRET
                         "scope": "mcp:tools",  # MINDSDB_MCP_OAUTH_SCOPE
                     },
+                    "dns_rebinding_protection": False,  # MINDSDB_MCP_DNS_REBINDING_PROTECTION
                 },
             },
             "cache": {"type": "local"},
@@ -531,6 +532,9 @@ class Config:
         mindsdb_mcp_oauth_scope = os.environ.get("MINDSDB_MCP_OAUTH_SCOPE", "")
         if mindsdb_mcp_oauth_scope != "":
             self._env_config["api"]["mcp"]["oauth"]["scope"] = mindsdb_mcp_oauth_scope
+        mindsdb_mcp_dns_rebinding_protection = get_bool_env_var("MINDSDB_MCP_DNS_REBINDING_PROTECTION")
+        if mindsdb_mcp_dns_rebinding_protection is not None:
+            self._env_config["api"]["mcp"]["dns_rebinding_protection"] = mindsdb_mcp_dns_rebinding_protection
         # endregion
 
     def fetch_auto_config(self) -> bool:

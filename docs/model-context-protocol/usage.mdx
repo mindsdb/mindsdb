@@ -89,3 +89,7 @@ MCP resources expose schema information for discovery:
 - **HTTP (SSE)**: `http://127.0.0.1:47334/mcp/sse`
 - **HTTP (Streamable)**: `http://127.0.0.1:47334/mcp/streamable`
 - **Stdio**: run with `--mcp-stdio` flag for local stdio-based transport
+
+## Configuration
+
+CORS, rate limiting, DNS rebinding protection, and OAuth settings for the MCP server are configured via the `api.mcp` section of `config.json` or the corresponding environment variables. See [Extend the Default MindsDB Configuration](/setup/custom-config#mcp-api) for the full parameter reference.

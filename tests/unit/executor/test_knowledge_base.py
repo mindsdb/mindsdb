@@ -31,12 +31,13 @@ def task_monitor():
     worker.join()
 
 
-def dummy_embeddings(string, dimension=None):
+def dummy_embeddings(string, dimension=None, base=None):
     # Imitates embedding generation: create vectors which are similar for similar words in inputs
     if dimension is None:
         dimension = 25**2
     embeds = [0] * dimension
-    base = 25
+    if base is None:
+        base = 25
 
     string = string.lower().replace(",", " ").replace(".", " ")
     for word in string.split():
@@ -59,10 +60,10 @@ def dummy_embeddings(string, dimension=None):
     return embeds
 
 
-def set_litellm_embedding(mock_litellm_embedding, dimension=None):
+def set_litellm_embedding(mock_litellm_embedding, dimension=None, base=None):
     def resp_f(input, *args, **kwargs):
         mock_response = MagicMock()
-        mock_response.data = [{"embedding": dummy_embeddings(s, dimension)} for s in input]
+        mock_response.data = [{"embedding": dummy_embeddings(s, dimension, base)} for s in input]
         return mock_response
 
     mock_litellm_embedding.side_effect = resp_f
@@ -1211,16 +1212,20 @@ class TestKBNOAutoBatch(BaseTestKB):
     def test_reranking(self, mock_litellm_embedding, mock_get_scores):
         set_litellm_embedding(mock_litellm_embedding)
 
-        self._create_kb("kb_ral", content_columns=["english"], reranking_model={
-            "provider": "openai",
-            "model_name": "gpt-3",
-            "api_key": "embed-key-1",
-        })
+        self._create_kb(
+            "kb_ral",
+            content_columns=["english"],
+            reranking_model={
+                "provider": "openai",
+                "model_name": "gpt-3",
+                "api_key": "embed-key-1",
+            },
+        )
 
         df = self._get_ral_table()
         self.save_file("ral", df)
 
-        ret = self.run_sql(
+        self.run_sql(
             """
                 insert into kb_ral
                 select * from files.ral
@@ -1228,14 +1233,46 @@ class TestKBNOAutoBatch(BaseTestKB):
         )
 
         # rank from greater to lower
-        mock_get_scores.side_effect = lambda query, docs: [1-i/4 for i in range(len(docs))]
+        mock_get_scores.side_effect = lambda query, docs: [1 - i / 4 for i in range(len(docs))]
         ret = self.run_sql("select * from kb_ral where content='white'")
-        assert 'white' in ret['chunk_content'].iloc[0]
+        assert "white" in ret["chunk_content"].iloc[0]
 
         # reverse rank: from lower to greater. the most semantic result have to be moved back
-        mock_get_scores.side_effect = lambda query, docs: [i/4 for i in range(len(docs))]
+        mock_get_scores.side_effect = lambda query, docs: [i / 4 for i in range(len(docs))]
         ret = self.run_sql("select * from kb_ral where content='white'")
-        assert 'white' not in ret['chunk_content'].iloc[0]
+        assert "white" not in ret["chunk_content"].iloc[0]
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_hybrid_search(self, mock_litellm_embedding):
+        df = self._get_ral_table()
+        self.save_file("ral", df)
+
+        set_litellm_embedding(mock_litellm_embedding)
+
+        self._create_kb("kb_hybrid", content_columns=["english"])
+
+        self.run_sql("insert into kb_hybrid  select * from files.ral")
+
+        # changing embedding config, making semantic search irrelevant
+        set_litellm_embedding(mock_litellm_embedding, base=20)
+
+        # white is not at the top
+        ret = self.run_sql("select * from kb_hybrid where content='white'")
+        assert "white" not in ret["chunk_content"].iloc[0]
+
+        # but it is when hybrid search is used
+        ret = self.run_sql("""
+            select * from kb_hybrid where content='white'
+            and hybrid_search_alpha = 0
+        """)
+        assert "white" in ret["chunk_content"].iloc[0]
+
+        # checking alpha=0.5
+        ret = self.run_sql("""
+            select * from kb_hybrid where content='white'
+            and hybrid_search = true
+        """)
+        assert "white" in ret["chunk_content"].iloc[0]
 
 
 

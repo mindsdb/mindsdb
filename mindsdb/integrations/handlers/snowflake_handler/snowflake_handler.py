@@ -363,7 +363,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         return self.lowercase_columns(result, query)
 
     def lowercase_columns(self, result, query):
-        if not isinstance(query, Select) or result.data_frame is None:
+        if not isinstance(query, Select) or not isinstance(result, TableResponse):
             return result
 
         quoted_columns = []
@@ -376,12 +376,11 @@ class SnowflakeHandler(MetaDatabaseHandler):
                     if column.is_quoted[-1]:
                         quoted_columns.append(column.parts[-1])
 
-        rename_columns = {}
-        for col in result.data_frame.columns:
-            if col.isupper() and col not in quoted_columns:
-                rename_columns[col] = col.lower()
-        if rename_columns:
-            result.data_frame = result.data_frame.rename(columns=rename_columns)
+        for col in result.columns:
+            col_name = col.alias or col.name
+            if col_name.isupper() and col_name not in quoted_columns:
+                col.alias = col_name.lower()
+
         return result
 
     def get_tables(self) -> DataHandlerResponse:
@@ -698,10 +697,10 @@ class SnowflakeHandler(MetaDatabaseHandler):
                 df = df[["pk_table_name", "pk_column_name", "fk_table_name", "fk_column_name"]]
                 df = df.rename(
                     columns={
-                        "pk_table_name": "child_table_name",
-                        "pk_column_name": "child_column_name",
-                        "fk_table_name": "parent_table_name",
-                        "fk_column_name": "parent_column_name",
+                        "pk_table_name": "parent_table_name",
+                        "pk_column_name": "parent_column_name",
+                        "fk_table_name": "child_table_name",
+                        "fk_column_name": "child_column_name",
                     }
                 )
 

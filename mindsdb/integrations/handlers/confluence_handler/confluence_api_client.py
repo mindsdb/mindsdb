@@ -4,13 +4,14 @@ import requests
 
 
 class ConfluenceAPIClient:
-    def __init__(self, url: str, username: str, password: str):
+    def __init__(self, url: str, username: str = None, password: str = None, api_token: str = None):
         self.url = url
-        self.username = username
-        self.password = password
         self.session = requests.Session()
-        self.session.auth = (self.username, self.password)
         self.session.headers.update({"Accept": "application/json"})
+        if api_token:
+            self.session.headers["Authorization"] = f"Bearer {api_token}"
+        else:
+            self.session.auth = (username, password)
 
     def get_spaces(
         self,

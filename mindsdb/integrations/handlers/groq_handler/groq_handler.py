@@ -138,7 +138,7 @@ class GroqHandler(OpenAIHandler):
         Returns:
             List: List of supported models.
         """
-        client = openai.OpenAI(api_key=api_key, base_url=base_url, organization=org)
+        client = openai.OpenAI(api_key=api_key, base_url=base_url, organization=org, timeout=60.0)
         return client.models.list()
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None):

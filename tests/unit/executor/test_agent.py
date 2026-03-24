@@ -340,11 +340,7 @@ class TestAgent(BaseExecutorDummyML):
     def _create_kb_storage(self, kb_name):
         self.run_sql(f"""
           create database db_{kb_name} 
-           with 
-           engine='chromadb',
-           PARAMETERS = {{
-               'persist_directory': '{kb_name}'
-           }}
+           with engine='duckdb_faiss'
         """)
         return f"db_{kb_name}.default_collection"
 

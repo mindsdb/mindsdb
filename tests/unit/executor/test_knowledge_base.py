@@ -1,6 +1,7 @@
 import time
 import json
 import tempfile
+import datetime as dt
 
 from unittest.mock import patch, MagicMock
 import threading
@@ -628,8 +629,8 @@ class TestKBNOAutoBatch(BaseTestKB):
             for size in ("big", "middle", "small"):
                 for shape in ("square", "triangle", "circle"):
                     i += 1
-                    lines.append([i, i, f"{color} {size} {shape}", color, size, shape])
-        df = pd.DataFrame(lines, columns=["id", "num", "content", "color", "size", "shape"])
+                    lines.append([i, i, f"{color} {size} {shape}", color, size, shape, dt.date(2000, 1, i)])
+        df = pd.DataFrame(lines, columns=["id", "num", "content", "color", "size", "shape", "valid_date"])
 
         self.save_file("items", df)
 
@@ -737,6 +738,43 @@ class TestKBNOAutoBatch(BaseTestKB):
                 assert "big" in content
             else:
                 assert "small" in content
+
+        # -- metadata: like, not like
+        for query in ("trian%", "%riangl%", "%angle"):
+            ret = self.run_sql(f"select * from kb_alg where shape like '{query}'")
+
+            # only triangle
+            assert set(ret["shape"]) == {"triangle"}
+
+        # -- metadata: '>=', '>', '<=', '<'
+
+        ret = self.run_sql(f"select * from kb_alg where color > 'red'")
+        # only white
+        assert set(ret["color"]) == {"white"}
+
+        ret = self.run_sql(f"select * from kb_alg where color < 'red'")
+        # only green
+        assert set(ret["color"]) == {"green"}
+
+        ret = self.run_sql(f"select * from kb_alg where color <= 'red' and color > 'green'")
+        # only red
+        assert set(ret["color"]) == {"red"}
+
+        # filter by int
+        ret = self.run_sql(f"select * from kb_alg where num >= 10")
+        assert ret["num"].min() == 10
+
+        # filter by date
+        ret = self.run_sql(f"select * from kb_alg where valid_date >= '2000-01-15'")
+        assert ret["valid_date"].min() > "2000-01-14" and ret["valid_date"].min() < "2000-01-16"
+
+        ret = self.run_sql(f"select * from kb_alg where valid_date < '2000-01-15'")
+        assert ret["valid_date"].max() > "2000-01-13" and ret["valid_date"].min() < "2000-01-15"
+
+        # -- filter by id and content
+        ret = self.run_sql(f"select * from kb_alg where content = 'green' and id < 22")
+        assert ret["color"][0] == "green"
+        assert ret["id"].max() < 22
 
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_select_allowed_columns(self, mock_litellm_embedding):

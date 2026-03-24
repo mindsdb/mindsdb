@@ -58,28 +58,44 @@ class ConfluenceHandler(APIHandler):
             ValueError: If the required connection parameters are not provided.
 
         Returns:
-            atlassian.confluence.Confluence: A connection object to the Confluence API.
+            ConfluenceAPIClient: A connection object to the Confluence API.
         """
         if self.is_connected is True:
             return self.connection
 
-        if not all(
-            key in self.connection_data and self.connection_data.get(key)
-            for key in ["api_base", "username", "password"]
-        ):
-            raise ValueError(
-                "Required parameters (api_base, username, password) must be provided and should not be empty."
-            )
+        api_base = self.connection_data.get("api_base")
+        username = self.connection_data.get("username")
+        password = self.connection_data.get("password")
+        token = self.connection_data.get("token")
+        auth_method = self.connection_data.get("auth_method")
 
-        self.connection = ConfluenceAPIClient(
-            url=self.connection_data.get("api_base"),
-            username=self.connection_data.get("username"),
-            password=self.connection_data.get("password"),
-        )
+        if not api_base:
+            raise ValueError("Required parameter 'api_base' must be provided and should not be empty.")
+
+        if token or auth_method == "bearer":
+            if not token:
+                raise ValueError("Required parameter 'token' must be provided for bearer authentication.")
+
+            self.connection = ConfluenceAPIClient(
+                url=api_base,
+                token=token,
+                auth_method="bearer",
+            )
+        else:
+            if not username or not password:
+                raise ValueError(
+                    "Required parameters for basic auth (api_base, username, password) must be provided and should not be empty."
+                )
+
+            self.connection = ConfluenceAPIClient(
+                url=api_base,
+                username=username,
+                password=password,
+            )
 
         self.is_connected = True
         return self.connection
-
+        
     def check_connection(self) -> StatusResponse:
         """
         Checks the status of the connection to the Confluence API.

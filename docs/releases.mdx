@@ -37,21 +37,20 @@ The following are the release types and their naming conventions.
 
 The `main` branch of the [MindsDB repository](https://github.com/mindsdb/mindsdb) contains the latest stable version of MindsDB and represents the GA (General Availability) release.
 
-MindsDB follows the [Gitflow branching model](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow) to manage development and releases as follows.
+MindsDB adheres to the release process as follows.
 
 <Steps>
-  <Step title="Development Phase">
-    All code changes are first committed to the `develop` branch.
-  </Step>
   <Step title="Release Preparation">
-    When a release is approaching, a short-lived `release` branch is created from the `develop` branch.
-      * This branch is used for final testing and validation.
-      * Pre-GA artifacts are built at this stage, including both the Python package and the Docker image, and shared for broader testing and feedback.
+    A short-lived `release/x.x.x` branch is created for each release where all code changes for that release are pushed.
   </Step>
-  <Step title="Release Finalization">
-    After successful testing and validation:
-      * The `release` branch is merged into the `main` branch, making it an official GA release.
-      * The final GA versions of the Python package and Docker image are released, while the pre-GA version are removed.
+  <Step title="Development Phase">
+    Developers create feature PRs that target the `release/x.x.x` branch. This branch is used for testing and validation of the release.
+  </Step>
+  <Step title="Pre-GA Release">
+    Pre-GA artifacts are built, including both the Python package and the Docker image, and shared for broader testing and feedback.
+  </Step>
+  <Step title="GA Release">
+    After successful testing and validation, the `release/x.x.x` branch is merged into the `main` branch, making it an official GA release. The final GA versions of the Python package and Docker image are released.
   </Step>
 </Steps>
 

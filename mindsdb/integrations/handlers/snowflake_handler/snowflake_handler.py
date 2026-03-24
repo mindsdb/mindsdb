@@ -209,7 +209,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        auth_type_key = self.connection_data.get("auth_type")
+        auth_type_key = self.connection_data.get("auth_type", "password")
         if auth_type_key is None:
             supported = ", ".join(self._auth_types.keys())
             raise ValueError(f"auth_type is required. Supported values: {supported}.")
@@ -295,32 +295,36 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
                     batches = []
                     memory_estimation_check_done = False
-
+                    batches_rowcount = 0
+                    total_rowcount = cur.rowcount or 0
                     for batch_df in batches_iter:
                         batches.append(batch_df)
                         # region check the size of first batch (if it is big enough) to get an estimate of the full
-                        # dataset size. If i does not fit in memory - raise an error.
+                        # dataset size. If it does not fit in memory - raise an error.
                         # NOTE batch size cannot be set on client side. Also, Snowflake will download
                         # 'CLIENT_PREFETCH_THREADS' count of chunks in parallel (by default 4), therefore this check
                         # can not work in some cases.
-                        batches_rowcount = sum([len(x) for x in batches])
+                        batches_rowcount += len(batch_df)
                         if memory_estimation_check_done is False and batches_rowcount > 1000:
                             memory_estimation_check_done = True
                             available_memory_kb = psutil.virtual_memory().available >> 10
                             batches_size_kb = sum(
                                 [(x.memory_usage(index=True, deep=True).sum() >> 10) for x in batches]
                             )
-                            total_rowcount = cur.rowcount
                             rest_rowcount = total_rowcount - batches_rowcount
                             rest_estimated_size_kb = int((rest_rowcount / batches_rowcount) * batches_size_kb)
-                            if (available_memory_kb * 0.9) < rest_estimated_size_kb:
-                                logger.error(
-                                    "Attempt to get too large dataset:\n"
-                                    f"batches_rowcount={batches_rowcount}, size_kb={batches_size_kb}\n"
-                                    f"total_rowcount={total_rowcount}, estimated_size_kb={rest_estimated_size_kb}\n"
-                                    f"available_memory_kb={available_memory_kb}"
+                            # for pd.concat required at least x2 memory
+                            max_allowed_memory_kb = available_memory_kb / 2.4
+                            if max_allowed_memory_kb < rest_estimated_size_kb:
+                                error_message = (
+                                    "The query result is too large to fit into available memory. "
+                                    f"The dataset contains {total_rowcount} rows with an estimated size "
+                                    f"of {rest_estimated_size_kb} KB, but only {max_allowed_memory_kb:.0f} KB "
+                                    f"of memory is allowed fot the dataset. Please narrow down the query by adding filters "
+                                    f"or a LIMIT clause to reduce the result set size."
                                 )
-                                raise MemoryError("Not enought memory")
+                                logger.error(error_message)
+                                raise MemoryError(error_message)
                         # endregion
                     if len(batches) > 0:
                         response = _make_table_response(result=pandas.concat(batches, ignore_index=True), cursor=cur)
@@ -484,8 +488,9 @@ class SnowflakeHandler(MetaDatabaseHandler):
             query += f" AND TABLE_NAME IN ({table_names_str})"
 
         result = self.native_query(query)
-        result.data_frame["ROW_COUNT"] = result.data_frame["ROW_COUNT"].astype(int)
-
+        if result.data_frame is not None and "ROW_COUNT" in result.data_frame.columns:
+            # Snowflake can return NULL for ROW_COUNT (e.g., for views); preserve as <NA>.
+            result.data_frame["ROW_COUNT"] = result.data_frame["ROW_COUNT"].astype("Int64")
         return result
 
     def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
@@ -531,7 +536,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         TODO:  Add most_common_values and most_common_frequencies
         """
         columns_query = """
-            SELECT TABLE_NAME, COLUMN_NAME
+            SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = current_schema()
         """
@@ -548,25 +553,32 @@ class SnowflakeHandler(MetaDatabaseHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message="No columns found.")
 
         columns_df = columns_result.data_frame
-        grouped = columns_df.groupby("TABLE_NAME")
+        grouped = columns_df.groupby(["TABLE_SCHEMA", "TABLE_NAME"])
         all_stats = []
 
-        for table_name, group in grouped:
+        for (table_schema, table_name), group in grouped:
             select_parts = []
             for _, row in group.iterrows():
                 col = row["COLUMN_NAME"]
+                data_type = row["DATA_TYPE"]
                 # Ensure column names in the query are properly quoted if they contain special characters or are case-sensitive
                 quoted_col = f'"{col}"'
                 select_parts.extend(
                     [
                         f'COUNT_IF({quoted_col} IS NULL) AS "nulls_{col}"',
                         f'APPROX_COUNT_DISTINCT({quoted_col}) AS "distincts_{col}"',
-                        f'MIN({quoted_col}) AS "min_{col}"',
-                        f'MAX({quoted_col}) AS "max_{col}"',
                     ]
                 )
+                # We can sort and find min/max for array but is expensive for large tables, avoid for now
+                if data_type not in {"ARRAY", "OBJECT", "VARIANT"}:
+                    select_parts.extend(
+                        [
+                            f'MIN({quoted_col}) AS "min_{col}"',
+                            f'MAX({quoted_col}) AS "max_{col}"',
+                        ]
+                    )
 
-            quoted_table_name = f'"{table_name}"'
+            quoted_table_name = f'"{table_schema}"."{table_name}"'
             stats_query = f"""
             SELECT COUNT(*) AS "total_rows", {", ".join(select_parts)}
             FROM {quoted_table_name}

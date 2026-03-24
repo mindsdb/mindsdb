@@ -14,7 +14,7 @@ except Exception as e:  # pragma: no cover - surfaced to UI
 title = "Oracle NetSuite"
 name = "netsuite"
 type = HANDLER_TYPE.DATA
-icon_path = "netsuite.svg"
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",

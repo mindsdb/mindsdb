@@ -73,7 +73,7 @@ def test_resolver_uses_pgvector_url_fallback_when_storage_is_empty():
         with patch.dict(os.environ, {"KB_PGVECTOR_URL": "postgresql://user:pass@host/db"}, clear=False):
             resolved = resolve_default_storage_engines(config)
             assert resolved["default_storage"] == "pgvector"
-            assert resolved["available_vector_engines"] == ["pgvector"]
+            assert resolved["available_vector_engines"] == ["faiss", "pgvector"]
             assert resolved["pgvector_enabled"] is True
     finally:
         config.update({"knowledge_bases": {"storage": previous_storage}})

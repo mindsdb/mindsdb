@@ -17,13 +17,19 @@ def _normalize_engine_name(engine: str | None) -> str | None:
 
 def _get_env_available_engines() -> list[str]:
     env_value = os.environ.get("KNOWLEDGE_BASES_STORAGE", "")
-    if env_value == "":
-        return []
-    engines = []
-    for item in env_value.split(","):
-        engine = _normalize_engine_name(item)
-        if engine and engine not in engines:
-            engines.append(engine)
+    engines: list[str] = []
+
+    if env_value != "":
+        for item in env_value.split(","):
+            engine = _normalize_engine_name(item)
+            if engine and engine not in engines:
+                engines.append(engine)
+        return engines
+
+    # Default available engines when explicit env override is not provided.
+    engines.append("faiss")
+    if os.environ.get("KB_PGVECTOR_URL"):
+        engines.append("pgvector")
     return engines
 
 
@@ -53,13 +59,15 @@ def resolve_default_storage_engines(config_obj=None) -> dict[str, Any]:
     configured_storage = get_knowledge_base_storage_config(config_obj)
     pgvector_enabled = os.environ.get("KB_PGVECTOR_URL") is not None
     available_vector_engines = _get_env_available_engines()
-    if not available_vector_engines and pgvector_enabled:
-        available_vector_engines = ["pgvector"]
 
     if configured_storage and configured_storage not in available_vector_engines:
         available_vector_engines = [configured_storage] + available_vector_engines
 
-    default_engine = configured_storage or (available_vector_engines[0] if available_vector_engines else None)
+    default_engine = configured_storage
+    if default_engine is None and pgvector_enabled:
+        default_engine = "pgvector"
+    if default_engine is None and available_vector_engines:
+        default_engine = available_vector_engines[0]
 
     candidate_storage = []
     if default_engine:

@@ -1,9 +1,9 @@
 packaging
 flask == 3.0.3
-werkzeug == 3.0.6
+werkzeug == 3.1.6
 flask-restx >= 1.3.0, < 2.0.0
 pandas == 2.2.3
-python-multipart == 0.0.20
+python-multipart == 0.0.22
 cryptography>=35.0
 psycopg[binary]
 psutil~=7.0
@@ -35,18 +35,19 @@ a2wsgi ~= 1.10.10  # WSGI wrapper for flask+starlette
 starlette>=0.49.1
 sse-starlette==2.3.3
 pydantic_core>=2.33.2
-pyjwt==2.10.1
+pyjwt==2.12.0
 # files reading
 pymupdf==1.25.2
 filetype
 charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
+xlrd>=2.0.1 # used by pandas to read legacy .xls files
 aipdf==0.0.7.0
 pyarrow<=19.0.0 # used by pandas to read feather files in Files handler
-orjson==3.11.3
+orjson==3.11.6
 
 mind-castle >= 0.4.9
-pydantic-ai~=0.7.6 # Required for Pydantic AI agents
+pydantic-ai>=0.0.14 # Required for Pydantic AI agents
 
 bs4 # for rag HTMLDocumentLoader
 urllib3>=2.6.3 # not directly required, pinned by Snyk to avoid a vulnerability

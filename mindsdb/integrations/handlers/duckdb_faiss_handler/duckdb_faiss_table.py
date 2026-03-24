@@ -79,10 +79,12 @@ class DuckDBFaissTable:
     def _create_kw_index(self):
         with self.connection.cursor() as cur:
             cur.execute("PRAGMA create_fts_index('meta_data', 'id', 'content')")
+            self.is_kw_index_enabled = True
 
     def _drop_kw_index(self):
         with self.connection.cursor() as cur:
             cur.execute("pragma drop_fts_index('meta_data')")
+            self.is_kw_index_enabled = False
 
     def _sync(self, dump_faiss=True):
         if dump_faiss:

@@ -104,10 +104,12 @@ MAIN_RULE_IGNORES = {
         "langchain-experimental",
         "lxml",
         "openpyxl",
+        "xlrd",
         "onnxruntime",
         "litellm",
         "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
         "urllib3",  # pinned by Snyk to avoid a vulnerability
+        "faiss-cpu",
     ],
 }
 
@@ -135,7 +137,7 @@ LINDORM_DEP002_IGNORE_HANDLER_DEPS = ["protobuf"]
 
 HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS = ["torch"]
 
-RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers", "faiss-cpu"]
+RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers"]
 
 SOLR_DEP002_IGNORE_HANDLER_DEPS = ["sqlalchemy-solr"]
 

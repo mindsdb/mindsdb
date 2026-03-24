@@ -156,8 +156,16 @@ class S3Handler(APIHandler):
 
         # detect region for bucket
         if bucket not in self._regions:
-            client = self.connect()
-            self._regions[bucket] = client.get_bucket_location(Bucket=bucket)["LocationConstraint"]
+            region_name = self.connection_data.get("region_name")
+            if region_name:
+                self._regions[bucket] = region_name
+            else:
+                client = self.connect()
+                location = client.get_bucket_location(Bucket=bucket)["LocationConstraint"]
+                # AWS returns None for us-east-1 region (default/classic region)
+                if location is None or location == "":
+                    location = "us-east-1"
+                self._regions[bucket] = location
 
         region = self._regions[bucket]
         duckdb_conn.execute(f"SET s3_region='{region}'")

@@ -185,6 +185,15 @@ class TestTableOperations(unittest.TestCase):
         self.assertIsInstance(data, DataHandlerResponse)
         self.assertNotIsInstance(data, ErrorResponse)
 
+    def test_native_query_empty_select_returns_table(self):
+        self.mock_cursor.set_results([], ["id", "name"])
+
+        response = self.handler.native_query("SELECT id, name FROM table WHERE 1 = 0")
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(list(response.data_frame.columns), ["id", "name"])
+        self.assertEqual(len(response.data_frame), 0)
+
     def test_get_tables(self):
         """
         Tests if the `get_tables` method to confirm it correctly calls `native_query` with the appropriate SQL commands.
@@ -204,6 +213,14 @@ class TestTableOperations(unittest.TestCase):
                 and table_schema = current_schema()
         """
         self.handler.native_query.assert_called_once_with(expected_query)
+
+    def test_get_tables_returns_non_table_response_without_transform(self):
+        expected = ErrorResponse(error_message="boom")
+        self.handler.native_query = MagicMock(return_value=expected)
+
+        result = self.handler.get_tables()
+
+        self.assertIs(result, expected)
 
     def test_get_columns(self):
         """

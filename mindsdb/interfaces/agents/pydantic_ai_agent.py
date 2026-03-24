@@ -87,10 +87,6 @@ class PydanticAIAgent:
         self.llm: Optional[object] = None
         self.embedding_model: Optional[object] = None
 
-        self.log_callback_handler: Optional[object] = None
-        self.langfuse_callback_handler: Optional[object] = None
-        self.mdb_langfuse_callback_handler: Optional[object] = None
-
         self.langfuse_client_wrapper = LangfuseClientWrapper()
         self.agent_mode = self.agent.params.get("mode", "text")
 

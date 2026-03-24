@@ -358,6 +358,7 @@ class PlanJoinTablesQuery:
                 else:
                     self.has_ambiguous_columns = True
 
+        query.cte = None  # already used before
         query_traversal(query, _check_identifiers)
 
         self.check_query_conditions(query)
@@ -370,6 +371,8 @@ class PlanJoinTablesQuery:
 
         # create plan
         # TODO add optimization: one integration without predictor
+
+        planned_steps_before_join = len(self.planner.plan.steps)
 
         self.step_stack = []
         for item in join_sequence:
@@ -400,20 +403,25 @@ class PlanJoinTablesQuery:
         query_in.where = query.where
 
         if self.query_context["optimize_inner_join"]:
-            self.planner.plan.steps = self.optimize_inner_join(self.planner.plan.steps)
+            self.planner.plan.steps = self.optimize_inner_join(self.planner.plan.steps, planned_steps_before_join)
 
         self.close_partition()
         return self.planner.plan.steps[-1]
 
-    def optimize_inner_join(self, steps_in):
+    def optimize_inner_join(self, steps_in, min_step_num):
         steps_out = []
 
         partition_step = None
         partition_used = False
 
-        for step in steps_in:
+        for i, step in enumerate(steps_in):
             if partition_step is None:
-                if isinstance(step, FetchDataframeStep) and not partition_used and step.query.limit is not None:
+                if (
+                    i >= min_step_num
+                    and isinstance(step, FetchDataframeStep)
+                    and not partition_used
+                    and step.query.limit is not None
+                ):
                     limit = step.query.limit.value
                     step.query.limit = None
                     partition_used = True

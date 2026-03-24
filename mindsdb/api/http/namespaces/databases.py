@@ -69,7 +69,7 @@ class DatabasesResource(Resource):
                 status = HandlerStatusResponse(success=False, error_message=str(import_error))
 
             if status.success is not True:
-                if hasattr(status, "redirect_url") and isinstance(status, str):
+                if hasattr(status, "redirect_url") and isinstance(status.redirect_url, str):
                     return {
                         "status": "redirect_required",
                         "redirect_url": status.redirect_url,
@@ -136,7 +136,7 @@ class DatabasesStatusResource(Resource):
                 shutil.rmtree(temp_dir)
 
         if not status.success:
-            if hasattr(status, "redirect_url") and isinstance(status, str):
+            if hasattr(status, "redirect_url") and isinstance(status.redirect_url, str):
                 return {
                     "status": "redirect_required",
                     "redirect_url": status.redirect_url,

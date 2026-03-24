@@ -748,31 +748,31 @@ class TestKBNOAutoBatch(BaseTestKB):
 
         # -- metadata: '>=', '>', '<=', '<'
 
-        ret = self.run_sql(f"select * from kb_alg where color > 'red'")
+        ret = self.run_sql("select * from kb_alg where color > 'red'")
         # only white
         assert set(ret["color"]) == {"white"}
 
-        ret = self.run_sql(f"select * from kb_alg where color < 'red'")
+        ret = self.run_sql("select * from kb_alg where color < 'red'")
         # only green
         assert set(ret["color"]) == {"green"}
 
-        ret = self.run_sql(f"select * from kb_alg where color <= 'red' and color > 'green'")
+        ret = self.run_sql("select * from kb_alg where color <= 'red' and color > 'green'")
         # only red
         assert set(ret["color"]) == {"red"}
 
         # filter by int
-        ret = self.run_sql(f"select * from kb_alg where num >= 10")
+        ret = self.run_sql("select * from kb_alg where num >= 10")
         assert ret["num"].min() == 10
 
         # filter by date
-        ret = self.run_sql(f"select * from kb_alg where valid_date >= '2000-01-15'")
+        ret = self.run_sql("select * from kb_alg where valid_date >= '2000-01-15'")
         assert ret["valid_date"].min() > "2000-01-14" and ret["valid_date"].min() < "2000-01-16"
 
-        ret = self.run_sql(f"select * from kb_alg where valid_date < '2000-01-15'")
+        ret = self.run_sql("select * from kb_alg where valid_date < '2000-01-15'")
         assert ret["valid_date"].max() > "2000-01-13" and ret["valid_date"].min() < "2000-01-15"
 
         # -- filter by id and content
-        ret = self.run_sql(f"select * from kb_alg where content = 'green' and id < 22")
+        ret = self.run_sql("select * from kb_alg where content = 'green' and id < 22")
         assert ret["color"][0] == "green"
         assert ret["id"].max() < 22
 

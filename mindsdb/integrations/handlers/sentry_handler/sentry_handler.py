@@ -40,6 +40,7 @@ class SentryHandler(APIHandler):
             auth_token=self.connection_data["auth_token"],
             organization_slug=self.connection_data["organization_slug"],
             project_slug=self.connection_data["project_slug"],
+            environment=self.connection_data["environment"],
             base_url=self.connection_data.get("base_url") or "https://sentry.io",
         )
         self.connection.validate_connection()
@@ -64,7 +65,7 @@ class SentryHandler(APIHandler):
         return self.query(ast)
 
     def _validate_connection_data(self) -> None:
-        required_keys = ["auth_token", "organization_slug", "project_slug"]
+        required_keys = ["auth_token", "organization_slug", "project_slug", "environment"]
         missing = [key for key in required_keys if not self.connection_data.get(key)]
         if missing:
             raise ValueError(

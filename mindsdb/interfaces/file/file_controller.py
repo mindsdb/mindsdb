@@ -169,6 +169,7 @@ class FileController:
         """
         file_reader = FileReader(path=source_path)
         tables = file_reader.get_contents()
+        file_reader.close()
 
         pages_files = {}
         pages_index = {}

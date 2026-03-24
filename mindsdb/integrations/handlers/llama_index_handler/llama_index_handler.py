@@ -170,7 +170,7 @@ class LlamaIndexHandler(BaseMLEngine):
         # only way this works is by sending the key through openai
 
         if Settings.llm is None:
-            llm = OpenAI(api_key=openai_api_key)
+            llm = OpenAI(api_key=openai_api_key, timeout=60.0, max_retries=3)
             Settings.llm = llm
         if Settings.embed_model is None:
             embed_model = OpenAIEmbedding()

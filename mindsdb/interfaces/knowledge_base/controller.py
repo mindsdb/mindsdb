@@ -1479,7 +1479,7 @@ class KnowledgeBaseController:
         return vector_store_name
 
     def _resolve_default_vector_storage(self, kb_name: str, is_sparse: bool = False, vector_size: int = None):
-        resolved_storage = resolve_default_storage_engines(self.session.integration_controller, config)
+        resolved_storage = resolve_default_storage_engines(config)
         default_engine = resolved_storage["default_storage"]
 
         if default_engine is None:

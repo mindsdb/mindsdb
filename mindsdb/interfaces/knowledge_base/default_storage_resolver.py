@@ -27,6 +27,10 @@ def _get_env_available_engines() -> list[str]:
     return engines
 
 
+def get_env_available_engines() -> list[str]:
+    return _get_env_available_engines()
+
+
 def get_knowledge_base_storage_config(config_obj=None) -> str | None:
     config_obj = config_obj or config
     storage = config_obj.get("knowledge_bases", {}).get("storage", None)
@@ -45,7 +49,7 @@ def get_knowledge_base_storage_config(config_obj=None) -> str | None:
     return _normalize_engine_name(storage)
 
 
-def resolve_default_storage_engines(integration_controller, config_obj=None) -> dict[str, Any]:
+def resolve_default_storage_engines(config_obj=None) -> dict[str, Any]:
     configured_storage = get_knowledge_base_storage_config(config_obj)
     pgvector_enabled = os.environ.get("KB_PGVECTOR_URL") is not None
     available_vector_engines = _get_env_available_engines()

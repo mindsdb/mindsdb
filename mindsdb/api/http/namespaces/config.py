@@ -16,7 +16,10 @@ from mindsdb.utilities import log
 from mindsdb.utilities.functions import decrypt, encrypt
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.response import HandlerStatusResponse
-from mindsdb.interfaces.knowledge_base.default_storage_resolver import resolve_default_storage_engines
+from mindsdb.interfaces.knowledge_base.default_storage_resolver import (
+    get_env_available_engines,
+    resolve_default_storage_engines,
+)
 
 
 logger = log.getLogger(__name__)
@@ -36,7 +39,8 @@ class GetConfig(Resource):
                 resp[key] = value
 
         knowledge_bases_config = copy.deepcopy(config["knowledge_bases"])
-        knowledge_bases_config.update(resolve_default_storage_engines(ca.integration_controller, config))
+        knowledge_bases_config.update(resolve_default_storage_engines(config))
+        knowledge_bases_config["engines"] = get_env_available_engines()
         resp["knowledge_bases"] = knowledge_bases_config
 
         api_status = get_api_status()

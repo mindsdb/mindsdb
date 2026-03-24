@@ -46,6 +46,7 @@ sheets
 shopify
 slack
 snowflake
+sentry
 statsforecast
 strava
 stripe

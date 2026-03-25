@@ -4,10 +4,10 @@ from unittest.mock import patch
 
 
 @patch("mindsdb.integrations.handlers.duckdb_faiss_handler.duckdb_faiss_handler.DuckDBFaissHandler")
-@patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+@patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
 def test_update_kb_embeddings(mock_embedding, handler, client):
     # for test of embeddings
-    mock_embedding().data = [{"embedding": [0.1, 0.2]}]
+    mock_embedding().embeddings.return_value = [{"embedding": [0.1, 0.2]}]
 
     integration_data = {
         "database": {
@@ -54,5 +54,5 @@ def test_update_kb_embeddings(mock_embedding, handler, client):
     )
 
     assert update_response.status_code == HTTPStatus.OK
-    kwargs = mock_embedding.call_args_list[0][1]
+    kwargs = mock_embedding.call_args_list[0][0][0]
     assert kwargs["api_key"] == "embed-key-2"

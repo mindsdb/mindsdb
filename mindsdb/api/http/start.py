@@ -81,8 +81,10 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
     try:
         well_known_routes = import_module("mindsdb.api.mcp").get_mcp_well_known_routes()
         routes.extend(well_known_routes)
-    except Exception:
+    except ImportError:
         pass
+    except Exception as e:
+        logger.warning(f"Error during registering of mcp well-known routes: {e}")
 
     @asynccontextmanager
     async def lifespan(_):

@@ -8,6 +8,9 @@ from mcp.server.auth.provider import AccessToken, TokenVerifier
 from mcp.shared.auth_utils import check_resource_allowed, resource_url_from_server_url
 
 from mindsdb.utilities.config import config
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class IntrospectionTokenVerifier(TokenVerifier):
@@ -92,7 +95,8 @@ class IntrospectionTokenVerifier(TokenVerifier):
                     resource=self.resource_url,
                 )
 
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error during token verification: {e}")
                 return None
 
     def _validate_resource(self, token_data: dict[str, Any]) -> bool:

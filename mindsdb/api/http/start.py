@@ -42,7 +42,9 @@ def _mount_optional_api(name: str, mount_path: str, get_app_fn, routes) -> objec
         )
         return
 
-    optional_app.add_middleware(PATAuthMiddleware)
+    if name.upper() != "MCP" or config["api"]["mcp"]["oauth"]["enabled"] is False:
+        optional_app.add_middleware(PATAuthMiddleware)
+
     routes.append(Mount(mount_path, app=optional_app))
     return optional_app
 
@@ -73,6 +75,16 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
         mounted = _mount_optional_api(name, path, factory, routes)
         if mounted is not None:
             sub_apps.append(mounted)
+
+    # RFC 9728: /.well-known/oauth-protected-resource must be at the server root,
+    # not under the /mcp mount, so we register it here before the Flask fallback.
+    try:
+        well_known_routes = import_module("mindsdb.api.mcp").get_mcp_well_known_routes()
+        routes.extend(well_known_routes)
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning(f"Error during registering of mcp well-known routes: {e}")
 
     @asynccontextmanager
     async def lifespan(_):

@@ -254,6 +254,14 @@ class Config:
                         "enabled": False,
                         "requests_per_minute": 60,
                     },
+                    "oauth": {
+                        "enabled": False,  # MINDSDB_MCP_OAUTH_ENABLED
+                        "issuer_url": "",  # MINDSDB_MCP_OAUTH_ISSUER_URL
+                        "client_id": "",  # MINDSDB_MCP_OAUTH_CLIENT_ID
+                        "client_secret": "",  # MINDSDB_MCP_OAUTH_CLIENT_SECRET
+                        "scope": "mcp:tools",  # MINDSDB_MCP_OAUTH_SCOPE
+                    },
+                    "dns_rebinding_protection": False,  # MINDSDB_MCP_DNS_REBINDING_PROTECTION
                 },
             },
             "cache": {"type": "local"},
@@ -307,7 +315,7 @@ class Config:
             "logging": {"handlers": {"console": {}, "file": {}}},
             "api": {
                 "http": {},
-                "mcp": {"cors": {}, "rate_limit": {}},
+                "mcp": {"cors": {}, "rate_limit": {}, "oauth": {}},
             },
             "auth": {},
             "paths": {},
@@ -508,6 +516,25 @@ class Config:
         mindsdb_mcp_rate_limit_rpm = os.environ.get("MINDSDB_MCP_RATE_LIMIT_RPM", "")
         if mindsdb_mcp_rate_limit_rpm != "":
             self._env_config["api"]["mcp"]["rate_limit"]["requests_per_minute"] = int(mindsdb_mcp_rate_limit_rpm)
+
+        mindsdb_mcp_oauth_enabled = get_bool_env_var("MINDSDB_MCP_OAUTH_ENABLED")
+        if mindsdb_mcp_oauth_enabled is not None:
+            self._env_config["api"]["mcp"]["oauth"]["enabled"] = mindsdb_mcp_oauth_enabled
+        mindsdb_mcp_oauth_issuer_url = os.environ.get("MINDSDB_MCP_OAUTH_ISSUER_URL", "")
+        if mindsdb_mcp_oauth_issuer_url != "":
+            self._env_config["api"]["mcp"]["oauth"]["issuer_url"] = mindsdb_mcp_oauth_issuer_url
+        mindsdb_mcp_oauth_client_id = os.environ.get("MINDSDB_MCP_OAUTH_CLIENT_ID", "")
+        if mindsdb_mcp_oauth_client_id != "":
+            self._env_config["api"]["mcp"]["oauth"]["client_id"] = mindsdb_mcp_oauth_client_id
+        mindsdb_mcp_oauth_client_secret = os.environ.get("MINDSDB_MCP_OAUTH_CLIENT_SECRET", "")
+        if mindsdb_mcp_oauth_client_secret != "":
+            self._env_config["api"]["mcp"]["oauth"]["client_secret"] = mindsdb_mcp_oauth_client_secret
+        mindsdb_mcp_oauth_scope = os.environ.get("MINDSDB_MCP_OAUTH_SCOPE", "")
+        if mindsdb_mcp_oauth_scope != "":
+            self._env_config["api"]["mcp"]["oauth"]["scope"] = mindsdb_mcp_oauth_scope
+        mindsdb_mcp_dns_rebinding_protection = get_bool_env_var("MINDSDB_MCP_DNS_REBINDING_PROTECTION")
+        if mindsdb_mcp_dns_rebinding_protection is not None:
+            self._env_config["api"]["mcp"]["dns_rebinding_protection"] = mindsdb_mcp_dns_rebinding_protection
         # endregion
 
     def fetch_auto_config(self) -> bool:

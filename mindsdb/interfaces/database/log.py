@@ -20,6 +20,7 @@ from mindsdb.api.executor.datahub.classes.tables_row import (
     TABLES_ROW_TYPE,
     TablesRow,
 )
+from mindsdb.utilities.constants import DEFAULT_USER_ID, DEFAULT_COMPANY_ID
 
 
 class LogTable(ABC):
@@ -48,8 +49,8 @@ class LogTable(ABC):
         pass
 
     @staticmethod
-    def company_id_comparison(table_a: str, table_b: str) -> BinaryOperation:
-        """Make statement for 'safe' comparison of company_id of two tables
+    def company_id_and_user_id_comparison(table_a: str, table_b: str) -> BinaryOperation:
+        """Make statement for 'safe' comparison of company_id and user_id of two tables
 
         Args:
             table_a (str): name of first table
@@ -59,10 +60,22 @@ class LogTable(ABC):
             BinaryOperation: statement that can be used for 'safe' comparison
         """
         return BinaryOperation(
-            op="=",
+            op="and",
             args=(
-                Function(op="coalesce", args=(Identifier(f"{table_a}.company_id"), "0")),
-                Function(op="coalesce", args=(Identifier(f"{table_b}.company_id"), "0")),
+                BinaryOperation(
+                    op="=",
+                    args=(
+                        Function(op="coalesce", args=(Identifier(f"{table_a}.company_id"), DEFAULT_COMPANY_ID)),
+                        Function(op="coalesce", args=(Identifier(f"{table_b}.company_id"), DEFAULT_COMPANY_ID)),
+                    ),
+                ),
+                BinaryOperation(
+                    op="=",
+                    args=(
+                        Function(op="coalesce", args=(Identifier(f"{table_a}.user_id"), DEFAULT_USER_ID)),
+                        Function(op="coalesce", args=(Identifier(f"{table_b}.user_id"), DEFAULT_USER_ID)),
+                    ),
+                ),
             ),
         )
 
@@ -107,14 +120,23 @@ class LLMLogTable(LogTable):
                 condition=BinaryOperation(
                     op="and",
                     args=(
-                        LLMLogTable.company_id_comparison("llm_log", "predictor"),
+                        LLMLogTable.company_id_and_user_id_comparison("llm_log", "predictor"),
                         BinaryOperation(op="=", args=(Identifier("llm_log.model_id"), Identifier("predictor.id"))),
                     ),
                 ),
             ),
             where=BinaryOperation(
-                op="is" if ctx.company_id is None else "=",
-                args=(Identifier("llm_log.company_id"), Constant(ctx.company_id)),
+                op="and",
+                args=(
+                    BinaryOperation(
+                        op="is" if ctx.company_id is None else "=",
+                        args=(Identifier("llm_log.company_id"), Constant(ctx.company_id)),
+                    ),
+                    BinaryOperation(
+                        op="is" if ctx.user_id is None else "=",
+                        args=(Identifier("llm_log.user_id"), Constant(ctx.user_id)),
+                    ),
+                ),
             ),
             alias=Identifier("llm_log"),
         )
@@ -146,7 +168,7 @@ class JobsHistoryTable(LogTable):
                     condition=BinaryOperation(
                         op="and",
                         args=(
-                            LLMLogTable.company_id_comparison("jobs_history", "jobs"),
+                            LLMLogTable.company_id_and_user_id_comparison("jobs_history", "jobs"),
                             BinaryOperation(op="=", args=(Identifier("jobs_history.job_id"), Identifier("jobs.id"))),
                         ),
                     ),
@@ -156,14 +178,23 @@ class JobsHistoryTable(LogTable):
                 condition=BinaryOperation(
                     op="and",
                     args=(
-                        LLMLogTable.company_id_comparison("project", "jobs"),
+                        LLMLogTable.company_id_and_user_id_comparison("project", "jobs"),
                         BinaryOperation(op="=", args=(Identifier("project.id"), Identifier("jobs.project_id"))),
                     ),
                 ),
             ),
             where=BinaryOperation(
-                op="is" if ctx.company_id is None else "=",
-                args=(Identifier("jobs_history.company_id"), Constant(ctx.company_id)),
+                op="and",
+                args=(
+                    BinaryOperation(
+                        op="is" if ctx.company_id is None else "=",
+                        args=(Identifier("jobs_history.company_id"), Constant(ctx.company_id)),
+                    ),
+                    BinaryOperation(
+                        op="is" if ctx.user_id is None else "=",
+                        args=(Identifier("jobs_history.user_id"), Constant(ctx.user_id)),
+                    ),
+                ),
             ),
             alias=Identifier("jobs_history"),
         )

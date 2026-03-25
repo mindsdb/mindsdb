@@ -86,6 +86,7 @@ class QueryPlanner:
         predictor_namespace=None,
         predictor_metadata: list = None,
         default_namespace: str = None,
+        kb_metadata: dict = None,
     ):
         self.query = query
         self.plan = QueryPlan()
@@ -143,7 +144,7 @@ class QueryPlanner:
 
         self.projects = list(_projects)
         self.databases = list(self.integrations.keys()) + self.projects
-
+        self.kb_metadata = kb_metadata or {}
         self.statement = None
 
         self.cte_results = {}
@@ -456,19 +457,28 @@ class QueryPlanner:
         # split to select from api database
         #     keep only limit and where
         #     the rest goes to outer select
+        if query.group_by is not None:
+            targets = [Star()]
+            order_by = None
+            limit = None
+        else:
+            targets = query.targets
+            order_by = query.order_by
+            limit = query.limit
+
         query2 = Select(
-            targets=query.targets,
+            targets=targets,
             from_table=query.from_table,
             where=query.where,
-            order_by=query.order_by,
-            limit=query.limit,
+            order_by=order_by,
+            limit=limit,
         )
+
         prev_step = self.plan_integration_select(query2)
 
-        # clear limit and where
-        query.limit = None
+        # clear where
         query.where = None
-        return self.plan_sub_select(query, prev_step)
+        return self.plan_sub_select(query, prev_step, skip_for_aggregation=True)
 
     def plan_nested_select(self, select):
         # query_info = self.get_query_info(select)
@@ -829,7 +839,7 @@ class QueryPlanner:
         else:
             raise PlanningException(f"Unsupported from_table {type(from_table)}")
 
-    def plan_sub_select(self, query, prev_step, add_absent_cols=False):
+    def plan_sub_select(self, query, prev_step, add_absent_cols=False, skip_for_aggregation=False):
         if (
             query.group_by is not None
             or query.order_by is not None
@@ -850,7 +860,13 @@ class QueryPlanner:
 
             query2 = copy.deepcopy(query)
             query2.from_table = None
-            sup_select = SubSelectStep(query2, prev_step.result, table_name=table_name, add_absent_cols=add_absent_cols)
+            sup_select = SubSelectStep(
+                query2,
+                prev_step.result,
+                table_name=table_name,
+                add_absent_cols=add_absent_cols,
+                skip_for_aggregation=skip_for_aggregation,
+            )
             self.plan.add_step(sup_select)
             return sup_select
         return prev_step
@@ -892,7 +908,74 @@ class QueryPlanner:
 
         plan = self.handle_partitioning(self.plan)
 
+        if not plan.is_resumable:
+            # optimizations for insert from selects
+            plan = self.check_insert_from_select(self.plan)
+
+        self.plan = plan
         return plan
+
+    def check_insert_from_select(self, plan: QueryPlan):
+        # special case: register insert from select (it is the same as mark resumable)
+        if not (
+            len(plan.steps) == 2
+            and isinstance(plan.steps[0], FetchDataframeStep)
+            and isinstance(plan.steps[1], InsertToTable)
+        ):
+            return plan
+
+        plan.is_resumable = True
+
+        select_step, insert_step = plan.steps
+
+        # -- to check if it is an insert into KB and to partition it --
+        # check if the first table is a KB
+        table = insert_step.table
+        kb_name = _resolve_identifier_part(table)
+        if len(table.parts) > 1:
+            project_name = _resolve_identifier_part(table, 0)
+        else:
+            project_name = self.default_namespace
+
+        kb_info = self.kb_metadata.get((project_name, kb_name))
+        if kb_info is None:
+            return plan
+
+        # Knowledge base storage is not pgvector or pgvector is enabled in config
+        if config["knowledge_bases"]["disable_autobatch"]:
+            return plan
+
+        if config["knowledge_bases"]["disable_pgvector_autobatch"] and kb_info["vector_db_engine"] == "pgvector":
+            return plan
+
+        if not isinstance(select_step.query, Select):
+            # we can't make probe select for this query
+            return plan
+
+        # convert
+        default_batch_size = 1000
+        track_column = kb_info.get("id_column", "id")
+
+        probe_select = copy.deepcopy(select_step.query)
+        probe_select.limit = Constant(1)
+        probe_select.targets = [Identifier(parts=[track_column])]
+
+        fetch_step = FetchDataframeStepPartition(
+            step_num=0,
+            integration=select_step.integration,
+            query=select_step.query,
+            params={"batch_size": default_batch_size, "track_column": track_column},
+            steps=[insert_step],
+        )
+
+        new_plan = QueryPlan(
+            steps=[fetch_step],
+            is_resumable=True,
+            is_async=True,
+            probe_query={"database": select_step.integration, "query": probe_select},
+            failback_plan=plan,
+        )
+        return new_plan
 
     def handle_partitioning(self, plan: QueryPlan) -> QueryPlan:
         """
@@ -960,14 +1043,6 @@ class QueryPlanner:
 
         if plan.is_resumable and isinstance(step, InsertToTable):
             plan.is_async = True
-        else:
-            # special case: register insert from select (it is the same as mark resumable)
-            if (
-                len(steps_in) == 2
-                and isinstance(steps_in[0], FetchDataframeStep)
-                and isinstance(steps_in[1], InsertToTable)
-            ):
-                plan.is_resumable = True
 
         plan.steps = steps_out
         return plan

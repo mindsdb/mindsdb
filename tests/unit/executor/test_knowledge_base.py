@@ -61,13 +61,11 @@ def dummy_embeddings(string, dimension=None, base=None):
     return embeds
 
 
-def set_litellm_embedding(mock_litellm_embedding, dimension=None, base=None):
+def set_embedding(mock_embedding, dimension=None, base=None):
     def resp_f(input, *args, **kwargs):
-        mock_response = MagicMock()
-        mock_response.data = [{"embedding": dummy_embeddings(s, dimension, base)} for s in input]
-        return mock_response
+        return [dummy_embeddings(s, dimension, base) for s in input]
 
-    mock_litellm_embedding.side_effect = resp_f
+    mock_embedding().embeddings.side_effect = resp_f
 
 
 class BaseTestKB(BaseExecutorDummyML):
@@ -95,7 +93,7 @@ class BaseTestKB(BaseExecutorDummyML):
 
         if embedding_model is None:
             embedding_model = {
-                "provider": "bedrock",
+                "provider": "openai",
                 "model_name": "dummy_model",
                 "api_key": "dummy_key",
             }
@@ -176,9 +174,9 @@ class TestKBNOAutoBatch(BaseTestKB):
 
         config["knowledge_bases"]["disable_autobatch"] = True
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_kb(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_kb(self, mock_embedding):
+        set_embedding(mock_embedding)
 
         self._create_kb("kb_review")
 
@@ -196,9 +194,9 @@ class TestKBNOAutoBatch(BaseTestKB):
         # only one default collection there
         assert len(ret) == 1
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_kb_metadata(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_kb_metadata(self, mock_embedding):
+        set_embedding(mock_embedding)
 
         record = {
             "review": "all is good, haven't used yet",
@@ -409,9 +407,9 @@ class TestKBNOAutoBatch(BaseTestKB):
         # Fallback pattern should be descending
         assert scores[0] > scores[1] > scores[2]
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_join_kb_table(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_join_kb_table(self, mock_embedding):
+        set_embedding(mock_embedding)
 
         df = self._get_ral_table()
         self.save_file("ral", df)
@@ -477,10 +475,10 @@ class TestKBNOAutoBatch(BaseTestKB):
         assert set(ret["id"]) == {"9016", "9023"}
 
     @pytest.mark.slow
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_kb_partitions(self, mock_handler, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    def test_kb_partitions(self, mock_handler, mock_embedding):
+        set_embedding(mock_embedding)
 
         df = self._get_ral_table()
 
@@ -620,9 +618,9 @@ class TestKBNOAutoBatch(BaseTestKB):
             # """
             # )
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_kb_algebra(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_kb_algebra(self, mock_embedding):
+        set_embedding(mock_embedding)
 
         lines, i = [], 0
         for color in ("white", "red", "green"):
@@ -776,9 +774,9 @@ class TestKBNOAutoBatch(BaseTestKB):
         assert ret["color"][0] == "green"
         assert ret["id"].max() < 22
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_select_allowed_columns(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_select_allowed_columns(self, mock_embedding):
+        set_embedding(mock_embedding)
 
         # -- no metadata are specified, generated from inserts --
         self._create_kb("kb1")
@@ -821,9 +819,9 @@ class TestKBNOAutoBatch(BaseTestKB):
 
     @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
     @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_evaluate(self, mock_litellm_embedding, mock_get_scores, mock_openai):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_evaluate(self, mock_embedding, mock_get_scores, mock_openai):
+        set_embedding(mock_embedding)
 
         question, answer = "2+2", "4"
         agent_response = f"""
@@ -941,13 +939,13 @@ class TestKBNOAutoBatch(BaseTestKB):
         assert len(df) > 0
 
     @patch("mindsdb.utilities.config.Config.get")
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
     @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
-    def test_save_default_params(self, mock_get_scores, mock_litellm_embedding, mock_config_get):
+    def test_save_default_params(self, mock_get_scores, mock_embedding, mock_config_get):
         # reranking result
         mock_get_scores.side_effect = lambda query, docs: [0.8 for _ in docs]
 
-        set_litellm_embedding(mock_litellm_embedding)
+        set_embedding(mock_embedding)
 
         def config_get_side_effect(key, default=None):
             if key == "default_embedding_model":
@@ -981,10 +979,10 @@ class TestKBNOAutoBatch(BaseTestKB):
 
         assert "openai_model" not in ret["RERANKING_MODEL"][0]
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_relevance_filtering_gt_operator(self, mock_litellm_embedding):
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_relevance_filtering_gt_operator(self, mock_embedding):
         """Test relevance filtering with GREATER_THAN operator"""
-        set_litellm_embedding(mock_litellm_embedding)
+        set_embedding(mock_embedding)
 
         test_data = [
             {"id": "1", "content": "This is about machine learning and AI"},
@@ -1015,9 +1013,9 @@ class TestKBNOAutoBatch(BaseTestKB):
         assert isinstance(ret, pd.DataFrame)
 
     @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_alter_kb(self, mock_litellm_embedding, mock_get_scores):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_alter_kb(self, mock_embedding, mock_get_scores):
+        set_embedding(mock_embedding)
 
         self._create_kb(
             "kb1",
@@ -1096,9 +1094,9 @@ class TestKBNOAutoBatch(BaseTestKB):
         assert "api_key" not in ret["EMBEDDING_MODEL"][0]
         assert "api_key" not in ret["RERANKING_MODEL"][0]
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_kb_uppercase_source_columns(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_kb_uppercase_source_columns(self, mock_embedding):
+        set_embedding(mock_embedding)
 
         df = pd.DataFrame(
             [
@@ -1170,8 +1168,8 @@ class TestKBNOAutoBatch(BaseTestKB):
         assert len(ret) == 2
         assert ret["category"][0] == "Home"
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_dimension_mismatch(self, mock_litellm_embedding):
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_dimension_mismatch(self, mock_embedding):
         temp_dir = tempfile.mkdtemp()
 
         self.run_sql(f"""
@@ -1183,13 +1181,13 @@ class TestKBNOAutoBatch(BaseTestKB):
            }}
         """)
 
-        set_litellm_embedding(mock_litellm_embedding, dimension=1000)
+        set_embedding(mock_embedding, dimension=1000)
         self._create_kb("kb1", storage="my_faiss.table1")
 
         self.run_sql("insert into kb1 (content) values ('review')")
 
         # change dimension
-        set_litellm_embedding(mock_litellm_embedding, dimension=1500)
+        set_embedding(mock_embedding, dimension=1500)
 
         with pytest.raises(ValueError):
             self._create_kb("kb2", storage="my_faiss.table1")
@@ -1198,9 +1196,9 @@ class TestKBNOAutoBatch(BaseTestKB):
         self.run_sql("drop table my_faiss.table1")
         self.run_sql("drop database my_faiss")
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_duplicated_ids(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_duplicated_ids(self, mock_embedding):
+        set_embedding(mock_embedding)
 
         self._create_kb("kb1")
 
@@ -1230,9 +1228,9 @@ class TestKBNOAutoBatch(BaseTestKB):
         ret = self.run_sql("select * from kb1 where id = 2")
         assert len(ret) == 1
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_update(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_update(self, mock_embedding):
+        set_embedding(mock_embedding)
 
         self._create_kb("kb1")
 
@@ -1250,9 +1248,9 @@ class TestKBNOAutoBatch(BaseTestKB):
         assert ret["chunk_content"][0] == "dog"
 
     @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_reranking(self, mock_litellm_embedding, mock_get_scores):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_reranking(self, mock_embedding, mock_get_scores):
+        set_embedding(mock_embedding)
 
         self._create_kb(
             "kb_ral",
@@ -1284,19 +1282,19 @@ class TestKBNOAutoBatch(BaseTestKB):
         ret = self.run_sql("select * from kb_ral where content='white'")
         assert "white" not in ret["chunk_content"].iloc[0]
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_hybrid_search(self, mock_litellm_embedding):
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_hybrid_search(self, mock_embedding):
         df = self._get_ral_table()
         self.save_file("ral", df)
 
-        set_litellm_embedding(mock_litellm_embedding)
+        set_embedding(mock_embedding)
 
         self._create_kb("kb_hybrid", content_columns=["english"])
 
         self.run_sql("insert into kb_hybrid  select * from files.ral")
 
         # changing embedding config, making semantic search irrelevant
-        set_litellm_embedding(mock_litellm_embedding, base=20)
+        set_embedding(mock_embedding, base=20)
 
         # white is not at the top
         ret = self.run_sql("select * from kb_hybrid where content='white'")
@@ -1317,9 +1315,9 @@ class TestKBNOAutoBatch(BaseTestKB):
         assert "white" in ret["chunk_content"].iloc[0]
 
     # @pytest.mark.slow
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_create_index(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_create_index(self, mock_embedding):
+        set_embedding(mock_embedding)
 
         df = self._get_ral_table()
 
@@ -1355,9 +1353,9 @@ class TestKBNOAutoBatch(BaseTestKB):
 
 
 class TestKBAutoBatch(BaseTestKB):
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_no_autobatch(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_no_autobatch(self, mock_embedding):
+        set_embedding(mock_embedding)
         df = self._get_ral_table()
         self.save_file("ral", df)
 
@@ -1377,9 +1375,9 @@ class TestKBAutoBatch(BaseTestKB):
         ret = self.run_sql("select * from kb_ral limit 1")
         assert len(ret) == 1
 
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_autobatch(self, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_autobatch(self, mock_embedding):
+        set_embedding(mock_embedding)
         df = self._get_ral_table()
         self.save_file("ral", df)
 

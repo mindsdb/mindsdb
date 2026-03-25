@@ -33,7 +33,6 @@ logger = log.getLogger(__name__)
 
 
 class DuckDBFaissTable:
-    META_MAX_SELECTIVITY = 0.1
     META_BATCH_SIZE = 10_000
     VECTOR_MARGIN_K = 5
     VECTOR_GROWTH_MULTIPLIER = 5
@@ -159,7 +158,7 @@ class DuckDBFaissTable:
             Get predicted count of record after applying META_FILTERS using some of methods
             Selectivity = count / total records
 
-        2. If selectivity > META_MAX_SELECTIVITY:
+        2. selectivity * total_recors > LIMIT / selectivity:
             Use Vector-first search
         Else:
             Use Metadata-first search
@@ -176,7 +175,8 @@ class DuckDBFaissTable:
         matched_count = self.get_metadata_search_count(meta_filters)
         selectivity = matched_count / total
 
-        if selectivity > self.META_MAX_SELECTIVITY:
+        # compare forecast count of affected records for vector and metadata search and choose what will take less
+        if selectivity * total > limit / selectivity:
             df = self.vector_first_search(vector_filter, meta_filters, limit, selectivity)
         else:
             df = self.metadata_first_search(vector_filter, meta_filters, limit)

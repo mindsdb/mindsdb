@@ -3,10 +3,10 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from tests.unit.executor.test_knowledge_base import TestKB as BaseTestKB, set_litellm_embedding
+from tests.unit.executor.test_knowledge_base import TestKB, set_embedding
 
 
-class TestFAISS(BaseTestKB):
+class TestFAISS(TestKB):
     "Run unit tests using FAISS handler as storage"
 
     def _get_storage_table(self, kb_name):
@@ -32,15 +32,15 @@ class TestFAISS(BaseTestKB):
         return f"faiss_{kb_name}.kb_faiss"
 
     @pytest.mark.parametrize("index_type", ["ivf", "ivf_file"])
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_ivf_index(self, mock_litellm_embedding, index_type):
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_ivf_index(self, mock_embedding, index_type):
         """
         Run test two times:
          - make ivf index and then reindex to ivf_file
          - make ivf_file index and then reindex to ivf
         """
 
-        set_litellm_embedding(mock_litellm_embedding)
+        set_embedding(mock_embedding)
 
         df = self._get_ral_table()
 

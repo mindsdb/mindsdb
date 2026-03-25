@@ -491,86 +491,94 @@ class OracleHandler(MetaDatabaseHandler):
 
     def meta_get_tables(self, table_names: Optional[List[str]]) -> Response:
         """
-        Retrieves metadata about all non-system tables and views in the current schema of the Oracle database.
+        Retrieves metadata about all non-system tables and views accessible to the current user.
 
         Returns:
-            list[dict[str, Any]]: A list of dictionaries, each containing metadata about a table or view.
+            Response: A response object containing metadata about tables and views.
         """
         query = """
             SELECT
                 o.object_name AS table_name,
-                USER AS table_schema,
+                o.owner AS table_schema,
                 o.object_type AS table_type,
                 c.comments AS table_description,
                 t.num_rows AS row_count
             FROM
-                user_objects o
+                all_objects o
+            JOIN
+                all_users u ON o.owner = u.username
             LEFT JOIN
-                user_tab_comments c ON o.object_name = c.table_name
+                all_tab_comments c ON o.object_name = c.table_name AND o.owner = c.owner
             LEFT JOIN
-                user_tables t ON o.object_name = t.table_name AND o.object_type = 'TABLE'
+                all_tables t ON o.object_name = t.table_name AND o.owner = t.owner AND o.object_type = 'TABLE'
             WHERE
                 o.object_type IN ('TABLE', 'VIEW')
+                AND t.tablespace_name = 'USERS'
         """
         if table_names is not None and len(table_names) > 0:
             table_names = [f"'{t.upper()}'" for t in table_names]
             query += f" AND o.object_name IN ({','.join(table_names)})"
 
-        query += " ORDER BY o.object_name"
+        query += " ORDER BY o.owner, o.object_name"
 
         result = self.native_query(query)
         return result
 
     def meta_get_columns(self, table_names: Optional[List[str]]) -> Response:
-        """Retrieves metadata about the columns of specified tables in the Oracle database.
+        """Retrieves metadata about the columns of specified tables accessible to the current user.
 
         Args:
             table_names (list[str]): A list of table names for which to retrieve column metadata.
 
         Returns:
-            list[dict[str, Any]]: A list of dictionaries, each containing metadata about a column.
+            Response: A response object containing column metadata.
         """
         query = """
             SELECT
-                utc.table_name,
-                utc.column_name,
-                utc.data_type,
-                ucc.comments AS column_description,
-                utc.data_default AS column_default,
+                atc.table_name,
+                atc.column_name,
+                atc.data_type,
+                acc.comments AS column_description,
+                atc.data_default AS column_default,
                 CASE
-                    WHEN utc.nullable = 'Y' THEN 1
+                    WHEN atc.nullable = 'Y' THEN 1
                     ELSE 0
                 END AS is_nullable
             FROM
-                user_tab_columns utc
+                all_tab_columns atc
             JOIN
-                user_tables ut ON utc.table_name = ut.table_name
+                all_tables at ON atc.table_name = at.table_name AND atc.owner = at.owner
+            JOIN
+                all_users u ON atc.owner = u.username
             LEFT JOIN
-                user_col_comments ucc ON utc.table_name = ucc.table_name AND utc.column_name = ucc.column_name
+                all_col_comments acc ON atc.table_name = acc.table_name 
+                                        AND atc.column_name = acc.column_name 
+                                        AND atc.owner = acc.owner
+            WHERE
+                at.tablespace_name = 'USERS'
         """
         if table_names is not None and len(table_names) > 0:
             table_names = [f"'{t.upper()}'" for t in table_names]
-            query += f" WHERE utc.table_name IN ({','.join(table_names)})"
-        query += " ORDER BY utc.table_name, utc.column_id"
+            query += f" AND atc.table_name IN ({','.join(table_names)})"
+        query += " ORDER BY atc.owner, atc.table_name, atc.column_id"
         result = self.native_query(query)
         return result
 
     def meta_get_column_statistics(self, table_names: Optional[List[str]]) -> Response:
-        """Retrieves statistics about the columns of specified tables in the Oracle database.
+        """Retrieves statistics about the columns of specified tables accessible to the current user.
 
         Args:
             table_names (list[str]): A list of table names for which to retrieve column statistics.
 
         Returns:
-            list[dict[str, Any]]: A list of dictionaries, each containing statistics about a column.
+            Response: A response object containing column statistics.
         """
         table_filter = ""
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t.upper()}'" for t in table_names]
-            table_filter = f" WHERE cs.table_name IN ({','.join(quoted_names)})"
+            table_filter = f" AND cs.table_name IN ({','.join(quoted_names)})"
 
-        query = (
-            """
+        query = f"""
             SELECT
                 cs.table_name AS TABLE_NAME,
                 cs.column_name AS COLUMN_NAME,
@@ -584,26 +592,34 @@ class OracleHandler(MetaDatabaseHandler):
                 cs.histogram AS HISTOGRAM_TYPE,
                 h.bounds AS HISTOGRAM_BOUNDS
             FROM
-                user_tab_col_statistics cs
+                all_tab_col_statistics cs
+            JOIN
+                all_tables at ON cs.table_name = at.table_name AND cs.owner = at.owner
+            JOIN
+                all_users u ON cs.owner = u.username
             LEFT JOIN (
                 SELECT
+                    owner,
                     table_name,
                     column_name,
                     LISTAGG(endpoint_value, ', ') WITHIN GROUP (ORDER BY endpoint_number) AS bounds
                 FROM
-                    user_tab_histograms
+                    all_tab_histograms
                 GROUP BY
+                    owner,
                     table_name,
                     column_name
-            ) h ON cs.table_name = h.table_name AND cs.column_name = h.column_name
-            """
-            + table_filter
-            + """
+            ) h ON cs.table_name = h.table_name 
+                AND cs.column_name = h.column_name 
+                AND cs.owner = h.owner
+            WHERE
+                at.tablespace_name = 'USERS'
+                {table_filter}
             ORDER BY
+                cs.owner,
                 cs.table_name,
                 cs.column_name
-            """
-        )
+        """
 
         result = self.native_query(query)
 
@@ -629,13 +645,13 @@ class OracleHandler(MetaDatabaseHandler):
 
     def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> Response:
         """
-        Retrieves the primary keys for the specified tables in the Oracle database.
+        Retrieves the primary keys for the specified tables accessible to the current user.
 
         Args:
             table_names (list[str]): A list of table names for which to retrieve primary keys.
 
         Returns:
-            list[dict[str, Any]]: A list of dictionaries, each containing information about a primary key.
+            Response: A response object containing primary key information.
         """
 
         query = """
@@ -648,28 +664,32 @@ class OracleHandler(MetaDatabaseHandler):
                 all_constraints cons
             JOIN
                 all_cons_columns cols ON cons.constraint_name = cols.constraint_name AND cons.owner = cols.owner
+            JOIN
+                all_users u ON cons.owner = u.username
+            JOIN
+                all_tables t ON cols.table_name = t.table_name AND cols.owner = t.owner
             WHERE
                 cons.constraint_type = 'P'
-                AND cons.owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')
+                AND t.tablespace_name = 'USERS'
         """
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t.upper()}'" for t in table_names]
             query += f" AND cols.table_name IN ({','.join(quoted_names)})"
 
-        query += " ORDER BY cols.table_name, cols.position"
+        query += " ORDER BY cols.owner, cols.table_name, cols.position"
 
         result = self.native_query(query)
         return result
 
     def meta_get_foreign_keys(self, table_names: Optional[List[str]]) -> Response:
         """
-        Retrieves the foreign keys for the specified tables in the Oracle database.
+        Retrieves the foreign keys for the specified tables accessible to the current user.
 
         Args:
             table_names (list[str]): A list of table names for which to retrieve foreign keys.
 
         Returns:
-            list[dict[str, Any]]: A list of dictionaries, each containing information about a foreign key.
+            Response: A response object containing foreign key information.
         """
 
         query = """
@@ -685,14 +705,18 @@ class OracleHandler(MetaDatabaseHandler):
             all_cons_columns fk_cols ON fk_cons.owner = fk_cols.owner AND fk_cons.constraint_name = fk_cols.constraint_name
         JOIN
             all_cons_columns pk_cols ON fk_cons.owner = pk_cols.owner AND fk_cons.r_constraint_name = pk_cols.constraint_name
+        JOIN
+            all_users u ON fk_cons.owner = u.username
+        JOIN
+            all_tables t ON fk_cols.table_name = t.table_name AND fk_cols.owner = t.owner
         WHERE
             fk_cons.constraint_type = 'R'
-            AND fk_cons.owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')
+            AND t.tablespace_name = 'USERS'
         """
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t.upper()}'" for t in table_names]
             query += f" AND fk_cols.table_name IN ({','.join(quoted_names)})"
 
-        query += " ORDER BY fk_cols.table_name, fk_cols.position"
+        query += " ORDER BY fk_cols.owner, fk_cols.table_name, fk_cols.position"
         result = self.native_query(query)
         return result

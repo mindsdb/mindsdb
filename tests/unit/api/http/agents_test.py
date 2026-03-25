@@ -23,18 +23,6 @@ def test_prepare(client):
     response = client.post("/api/projects/mindsdb/models", json=train_data, follow_redirects=True)
     assert response.status_code == HTTPStatus.CREATED
 
-    # Create skills to use in depreciated tests.
-    # The skill-based approach is only used via Minds.
-    create_request = {"skill": {"name": "test_skill", "type": "Knowledge Base", "params": {"k1": "v1"}}}
-
-    create_response = client.post("/api/projects/mindsdb/skills", json=create_request, follow_redirects=True)
-    assert create_response.status_code == HTTPStatus.CREATED
-
-    create_request = {"skill": {"name": "test_skill_2", "type": "Knowledge Base", "params": {"k1": "v1"}}}
-
-    create_response = client.post("/api/projects/mindsdb/skills", json=create_request, follow_redirects=True)
-    assert create_response.status_code == HTTPStatus.CREATED
-
 
 @pytest.mark.deprecated(
     "MindsDB models are no longer used with agents. However, Minds still uses models, so this test is kept for now"
@@ -60,8 +48,6 @@ def test_post_agent_depreciated(client):
         "model_name": "test_model",
         "provider": "mindsdb",
         "params": {"k1": "v1"},
-        "skills": created_agent["skills"],
-        "skills_extra_parameters": created_agent["skills_extra_parameters"],
         "id": created_agent["id"],
         "project_id": created_agent["project_id"],
         "created_at": created_agent["created_at"],
@@ -69,8 +55,6 @@ def test_post_agent_depreciated(client):
     }
 
     assert created_agent == expected_agent
-    assert len(created_agent["skills"]) == 1
-    assert created_agent["skills"][0]["agent_ids"] == [created_agent["id"]]
 
 
 def test_post_agent(client):
@@ -148,24 +132,6 @@ def test_post_agent_model_not_found(client):
             "model_name": "not_the_model_youre_looking_for",
             "params": {"k1": "v1"},
             "provider": "mindsdb",
-            "skills": ["test_skill"],
-        }
-    }
-    create_response = client.post("/api/projects/mindsdb/agents", json=create_request, follow_redirects=True)
-    assert create_response.status_code == HTTPStatus.NOT_FOUND
-
-
-@pytest.mark.deprecated(
-    "MindsDB models are no longer used with agents. However, Minds still uses skills, so this test is kept for now"
-)
-def test_post_agent_skill_not_found(client):
-    create_request = {
-        "agent": {
-            "name": "test_post_agent_skill_not_found",
-            "model_name": "test_model",
-            "params": {"k1": "v1"},
-            "provider": "mindsdb",
-            "skills": ["overpowered_skill"],
         }
     }
     create_response = client.post("/api/projects/mindsdb/agents", json=create_request, follow_redirects=True)
@@ -277,7 +243,6 @@ def test_put_agent_update_depreciated(client):
             "model_name": "test_model",
             "params": {"k1": "v1", "k2": "v2"},
             "provider": "mindsdb",
-            "skills": ["test_skill"],
         }
     }
 
@@ -287,8 +252,6 @@ def test_put_agent_update_depreciated(client):
     update_request = {
         "agent": {
             "params": {"k1": "v1.1", "k2": None, "k3": "v3"},
-            "skills_to_add": ["test_skill_2"],
-            "skills_to_remove": ["test_skill"],
         }
     }
 
@@ -302,8 +265,6 @@ def test_put_agent_update_depreciated(client):
         "model_name": "test_model",
         "params": {"k1": "v1.1", "k3": "v3"},
         "provider": "mindsdb",
-        "skills": updated_agent["skills"],
-        "skills_extra_parameters": updated_agent["skills_extra_parameters"],
         "id": updated_agent["id"],
         "project_id": updated_agent["project_id"],
         "created_at": updated_agent["created_at"],
@@ -311,10 +272,6 @@ def test_put_agent_update_depreciated(client):
     }
 
     assert updated_agent == expected_agent
-
-    assert len(updated_agent["skills"]) == 1
-    skill = updated_agent["skills"][0]
-    assert skill["name"] == "test_skill_2"
 
 
 @pytest.mark.deprecated(
@@ -443,7 +400,7 @@ def test_agent_completions(client):
 
     completions_request = {"messages": [{"role": "user", "content": "Test message!"}]}
 
-    with patch("mindsdb.interfaces.agents.langchain_agent.LangchainAgent") as agent_mock:
+    with patch("mindsdb.interfaces.agents.pydantic_ai_agent.PydanticAIAgent") as agent_mock:
         agent_mock_instance = agent_mock.return_value
         agent_mock_instance.get_completion.return_value = pd.DataFrame([{"answer": "beepboop", "trace_id": "---"}])
         completions_response = client.post(

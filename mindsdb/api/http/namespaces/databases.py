@@ -207,15 +207,19 @@ class DatabaseResource(Resource):
                     'Missing "engine" field for new database. '
                     "If you want to create a project instead, use the POST /api/projects endpoint.",
                 )
-            new_integration_id = session.integration_controller.add(database_name, database["engine"], parameters)
+            try:
+                new_integration_id = session.integration_controller.add(
+                    database_name, database["engine"], parameters, check_connection=check_connection
+                )
+            except Exception as e:
+                return http_error(HTTPStatus.BAD_REQUEST, "Connection error", str(e) or "Connection error")
             new_integration = session.database_controller.get_integration(new_integration_id)
             return new_integration, HTTPStatus.CREATED
 
         try:
             session.integration_controller.modify(database_name, parameters, check_connection=check_connection)
         except Exception as e:
-            status = HandlerStatusResponse(success=False, error_message=str(e))
-            return http_error(HTTPStatus.BAD_REQUEST, "Connection error", status.error_message or "Connection error")
+            return http_error(HTTPStatus.BAD_REQUEST, "Connection error", str(e) or "Connection error")
 
         return session.integration_controller.get(database_name)
 

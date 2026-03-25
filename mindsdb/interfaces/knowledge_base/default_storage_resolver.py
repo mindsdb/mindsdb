@@ -55,43 +55,47 @@ def get_knowledge_base_storage_config(config_obj=None) -> str | None:
     return _normalize_engine_name(storage)
 
 
+def _unique_default_first(default: str | None, ordered: list[str]) -> list[str]:
+    """Return `ordered` with `default` first if set, dropping later duplicates."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for engine in ([default] if default else []) + ordered:
+        if engine not in seen:
+            seen.add(engine)
+            out.append(engine)
+    return out
+
+
 def resolve_default_storage_engines(config_obj=None) -> dict[str, Any]:
-    configured_storage = get_knowledge_base_storage_config(config_obj)
+    configured = get_knowledge_base_storage_config(config_obj)
     pgvector_enabled = os.environ.get("KB_PGVECTOR_URL") is not None
-    available_vector_engines = _get_env_available_engines()
+    available = _get_env_available_engines()
 
-    if configured_storage and configured_storage not in available_vector_engines:
-        available_vector_engines = [configured_storage] + available_vector_engines
+    if configured and configured not in available:
+        available = [configured, *available]
 
-    default_engine = configured_storage
-    if default_engine is None and pgvector_enabled:
-        default_engine = "pgvector"
-    if default_engine is None and available_vector_engines:
-        default_engine = available_vector_engines[0]
+    default = configured
+    if default is None:
+        default = "pgvector" if pgvector_enabled else None
+    if default is None and available:
+        default = available[0]
 
-    candidate_storage = []
-    if default_engine:
-        candidate_storage.append(default_engine)
-    for engine in available_vector_engines:
-        if engine not in candidate_storage:
-            candidate_storage.append(engine)
-
-    resolved_storage = []
-
-    for engine in candidate_storage:
-        resolved_storage.append(
-            {
-                "engine": engine,
-                "available": engine in available_vector_engines,
-                "default": engine == default_engine,
-                "source": "config" if configured_storage == engine else "fallback",
-            }
-        )
+    candidates = _unique_default_first(default, available)
+    available_set = set(available)
+    resolved_storage = [
+        {
+            "engine": name,
+            "available": name in available_set,
+            "default": name == default,
+            "source": "config" if configured == name else "fallback",
+        }
+        for name in candidates
+    ]
 
     return {
-        "storage": configured_storage,
+        "storage": configured,
         "resolved_storage": resolved_storage,
-        "default_storage": default_engine,
-        "available_vector_engines": available_vector_engines,
+        "default_storage": default,
+        "available_vector_engines": available,
         "pgvector_enabled": pgvector_enabled,
     }

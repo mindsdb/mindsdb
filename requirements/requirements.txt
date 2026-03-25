@@ -23,7 +23,7 @@ dateparser==1.2.0
 dill == 0.3.6
 numpy ~= 2.0
 pytz
-botocore >= 1.34.0  # need 1.34+ for urllib3 2.x (ssl_ import)
+botocore
 boto3 >= 1.34.131
 python-dateutil
 lark

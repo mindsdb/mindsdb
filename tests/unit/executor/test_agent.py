@@ -9,7 +9,7 @@ import pytest
 import sys
 from openai.types.chat import ChatCompletion
 from tests.unit.executor_test_base import BaseExecutorDummyML
-from tests.unit.executor.test_knowledge_base import set_litellm_embedding
+from tests.unit.executor.test_knowledge_base import set_embedding
 
 
 def action_response(type="final_query", sql="", text=""):
@@ -275,11 +275,7 @@ class TestAgent(BaseExecutorDummyML):
     def _create_kb_storage(self, kb_name):
         self.run_sql(f"""
           create database db_{kb_name} 
-           with 
-           engine='chromadb',
-           PARAMETERS = {{
-               'persist_directory': '{kb_name}'
-           }}
+           with engine='duckdb_faiss'
         """)
         return f"db_{kb_name}.default_collection"
 
@@ -290,10 +286,10 @@ class TestAgent(BaseExecutorDummyML):
 
         self.run_sql(f"drop database {db_name}")
 
-    @patch("litellm.embedding")
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
-    def test_agent_retrieval(self, mock_openai, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    def test_agent_retrieval(self, mock_openai, mock_embedding):
+        set_embedding(mock_embedding)
 
         vector_table_name = self._create_kb_storage("kb_review")
         self.run_sql(f"""
@@ -419,9 +415,9 @@ class TestAgent(BaseExecutorDummyML):
         assert agent_response in ret.answer[0]
 
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_agent_permissions(self, mock_litellm_embedding, mock_openai):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_agent_permissions(self, mock_embedding, mock_openai):
+        set_embedding(mock_embedding)
 
         vector_table_name = self._create_kb_storage("kb_show")
 
@@ -539,9 +535,9 @@ class TestAgent(BaseExecutorDummyML):
         self._drop_kb_storage(vector_table_name)
 
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_agent_new_syntax(self, mock_litellm_embedding, mock_openai):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_agent_new_syntax(self, mock_embedding, mock_openai):
+        set_embedding(mock_embedding)
         vector_table_name = self._create_kb_storage("kb")
         df = get_dataset_planets()
         # create 2 files and KBs
@@ -669,9 +665,9 @@ class TestAgent(BaseExecutorDummyML):
         self._drop_kb_storage(vector_table_name)
 
     @patch("pydantic_ai.providers.openai.AsyncOpenAI")
-    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_agent_accept_wrong_quoting(self, mock_litellm_embedding, mock_openai):
-        set_litellm_embedding(mock_litellm_embedding)
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_agent_accept_wrong_quoting(self, mock_embedding, mock_openai):
+        set_embedding(mock_embedding)
         vector_table_name = self._create_kb_storage("kb1")
         self.run_sql(f"""
             create knowledge base kb1

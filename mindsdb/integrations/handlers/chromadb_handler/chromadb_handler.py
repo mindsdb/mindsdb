@@ -215,16 +215,16 @@ class ChromaDBHandler(VectorStoreHandler):
 
         include = ["metadatas", "documents", "embeddings"]
 
-        # Identify Search Intent 
+        # Identify Search Intent
         vector_filter = None
         content_filter = None
-        
+
         if conditions is not None:
             # Embeddings
             v_filters = [c for c in conditions if c.column == TableField.EMBEDDINGS.value]
             if v_filters:
                 vector_filter = v_filters[0]
-            
+
             # Semantic Search
             c_filters = [c for c in conditions if c.column == TableField.CONTENT.value]
             if c_filters:
@@ -254,12 +254,12 @@ class ChromaDBHandler(VectorStoreHandler):
                 "where": filters,
                 "include": include + ["distances"],
             }
-            
+
             # Handle Vector Search
             if vector_filter:
                 query_payload["query_embeddings"] = vector_filter.value
-                
-            # Handle Text Search 
+
+            # Handle Text Search
             if content_filter:
                 val = content_filter.value
                 if isinstance(val, list):
@@ -339,7 +339,7 @@ class ChromaDBHandler(VectorStoreHandler):
             if op:
                 df = df[getattr(df[distance_col], op)(distance_filter.value)]
         return df
-    
+
     def _dataframe_metadata_to_chroma_metadata(self, metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
         """Convert DataFrame metadata to ChromaDB compatible metadata format"""
         if pd.isna(metadata) or metadata is None:

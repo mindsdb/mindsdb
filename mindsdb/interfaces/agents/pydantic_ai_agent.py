@@ -25,7 +25,7 @@ from mindsdb.interfaces.agents.utils.data_catalog_builder import DataCatalogBuil
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.langfuse import LangfuseClientWrapper
 from mindsdb.interfaces.agents.modes import sql as sql_mode, text_sql as text_sql_mode
-from mindsdb.interfaces.agents.modes.base import ResponseType, PlanResponse
+from mindsdb.interfaces.agents.modes.base import ResponseType, PlanResponse, TestResponse
 
 logger = log.getLogger(__name__)
 DEBUG_LOGGER = logger.debug
@@ -63,6 +63,12 @@ def langfuse_traced_stream(trace_name="api-completion", span_name="run-completio
         return wrapper
 
     return decorator
+
+
+def check_agent_llm(llm_params):
+    model = get_model_instance_from_kwargs(llm_params)
+    agent = Agent(model, output_type=TestResponse)
+    agent.run_sync("Say 'hi'")
 
 
 class PydanticAIAgent:

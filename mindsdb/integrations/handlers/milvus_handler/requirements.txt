@@ -1,2 +1,2 @@
 pymilvus==2.3
-protobuf==5.29.6 # not directly required, pinned by Snyk to avoid a vulnerability
+protobuf>=6.33.5 # not directly required, pinned by Snyk to avoid a vulnerability

@@ -6,7 +6,6 @@ from unittest.mock import patch, MagicMock
 from google.api_core.exceptions import BadRequest
 
 from mindsdb.integrations.libs.response import (
-    DataHandlerResponse,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE,
     TableResponse,

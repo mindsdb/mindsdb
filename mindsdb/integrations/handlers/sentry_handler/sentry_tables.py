@@ -173,12 +173,6 @@ class SentryIssuesTable(APIResource):
         if isinstance(type_value, dict):
             type_value = type_value.get("name")
 
-        environment = issue.get("environment")
-        if environment is None:
-            environments = issue.get("environments")
-            if isinstance(environments, list) and len(environments) == 1:
-                environment = environments[0]
-
         return {
             "issue_id": _normalize_int(issue.get("id")),
             "short_id": issue.get("shortId"),
@@ -187,7 +181,6 @@ class SentryIssuesTable(APIResource):
             "culprit": issue.get("culprit"),
             "status": issue.get("status"),
             "level": issue.get("level"),
-            "environment": environment,
             "count": _normalize_int(issue.get("count")),
             "user_count": _normalize_int(issue.get("userCount")),
             "first_seen": _normalize_timestamp(issue.get("firstSeen")),
@@ -205,7 +198,6 @@ class SentryIssuesTable(APIResource):
             "culprit",
             "status",
             "level",
-            "environment",
             "count",
             "user_count",
             "first_seen",

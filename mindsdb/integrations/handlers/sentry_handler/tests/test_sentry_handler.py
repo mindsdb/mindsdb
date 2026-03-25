@@ -1,11 +1,12 @@
 import unittest
 from datetime import date
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pandas as pd
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.sentry_handler.sentry_client import SentryClient
+from mindsdb.integrations.handlers.sentry_handler.sentry_handler import SentryHandler
 from mindsdb.integrations.handlers.sentry_handler.sentry_tables import (
     SentryIssuesTable,
     SentryProjectsTable,
@@ -70,6 +71,7 @@ class SentryClientTest(unittest.TestCase):
             auth_token="token",
             organization_slug="talentify",
             project_slug="mktplace",
+            environment="production",
             session=session,
             sleep=lambda _: None,
         )
@@ -90,6 +92,7 @@ class SentryClientTest(unittest.TestCase):
             auth_token="token",
             organization_slug="talentify",
             project_slug="mktplace",
+            environment="production",
             session=session,
             sleep=lambda _: None,
         )
@@ -98,6 +101,80 @@ class SentryClientTest(unittest.TestCase):
 
         self.assertEqual([{"id": "2", "slug": "mktplace"}], projects)
         self.assertEqual(2, len(session.calls))
+
+    def test_list_issues_prepends_environment_query_fragment(self):
+        session = MockSession([MockResponse(200, [])])
+        client = SentryClient(
+            auth_token="token",
+            organization_slug="talentify",
+            project_slug="mktplace",
+            environment="production",
+            session=session,
+            sleep=lambda _: None,
+        )
+
+        client.list_issues(project_id=99, query="status:unresolved level:error", limit=1)
+
+        self.assertEqual(
+            'environment:"production" status:unresolved level:error',
+            session.calls[0]["params"]["query"],
+        )
+
+    def test_list_issues_uses_environment_query_when_query_is_empty(self):
+        session = MockSession([MockResponse(200, [])])
+        client = SentryClient(
+            auth_token="token",
+            organization_slug="talentify",
+            project_slug="mktplace",
+            environment="production",
+            session=session,
+            sleep=lambda _: None,
+        )
+
+        client.list_issues(project_id=99, query="", limit=1)
+
+        self.assertEqual('environment:"production"', session.calls[0]["params"]["query"])
+
+
+class SentryHandlerTest(unittest.TestCase):
+    def test_validate_connection_requires_environment(self):
+        handler = SentryHandler(
+            "sentry",
+            {
+                "auth_token": "token",
+                "organization_slug": "talentify",
+                "project_slug": "mktplace",
+            },
+        )
+
+        with self.assertRaisesRegex(ValueError, "environment"):
+            handler._validate_connection_data()
+
+    def test_connect_passes_environment_to_client(self):
+        handler = SentryHandler(
+            "sentry",
+            {
+                "auth_token": "token",
+                "organization_slug": "talentify",
+                "project_slug": "mktplace",
+                "environment": "production",
+            },
+        )
+
+        with patch("mindsdb.integrations.handlers.sentry_handler.sentry_handler.SentryClient") as client_cls:
+            client = client_cls.return_value
+            client.validate_connection.return_value = {"id": 99}
+
+            handler.connect()
+
+        client_cls.assert_called_once_with(
+            auth_token="token",
+            organization_slug="talentify",
+            project_slug="mktplace",
+            environment="production",
+            base_url="https://sentry.io",
+        )
+        client.validate_connection.assert_called_once_with()
 
 
 class SentryTablesTest(unittest.TestCase):
@@ -142,7 +219,6 @@ class SentryTablesTest(unittest.TestCase):
                 "culprit": "checkout.views.create_order",
                 "status": "unresolved",
                 "level": "error",
-                "environments": ["production"],
                 "count": "12",
                 "userCount": "7",
                 "firstSeen": "2026-03-17T10:00:00Z",
@@ -159,7 +235,7 @@ class SentryTablesTest(unittest.TestCase):
         self.assertTrue(conditions[0].applied)
         self.assertEqual("Checkout failed", df.iloc[0]["title"])
         self.assertEqual(12, df.iloc[0]["count"])
-        self.assertEqual("production", df.iloc[0]["environment"])
+        self.assertNotIn("environment", df.columns)
 
     def test_issues_table_rejects_query_and_structured_filters_together(self):
         table = SentryIssuesTable(HandlerStub(Mock()))

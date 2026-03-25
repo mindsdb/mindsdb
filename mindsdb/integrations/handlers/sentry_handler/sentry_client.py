@@ -22,6 +22,7 @@ class SentryClient:
         auth_token: str,
         organization_slug: str,
         project_slug: str,
+        environment: str,
         base_url: str = "https://sentry.io",
         timeout: int = DEFAULT_TIMEOUT_SECONDS,
         max_retries: int = 3,
@@ -30,6 +31,7 @@ class SentryClient:
     ) -> None:
         self.organization_slug = organization_slug
         self.project_slug = project_slug
+        self.environment = environment
         self.base_url = base_url.rstrip("/")
         self.api_base = f"{self.base_url}/api/0"
         self.timeout = timeout
@@ -76,7 +78,7 @@ class SentryClient:
         total_limit = DEFAULT_ISSUES_LIMIT if limit is None else min(limit, MAX_ISSUES_LIMIT)
         return self._paginate(
             f"/organizations/{self.organization_slug}/issues/",
-            params={"project": project_id, "query": query},
+            params={"project": project_id, "query": self._apply_environment_query(query)},
             limit=total_limit,
             operation="issues",
         )
@@ -158,6 +160,18 @@ class SentryClient:
                 raise RuntimeError(f"Sentry {operation} request returned malformed JSON") from exc
 
         raise RuntimeError(f"Sentry {operation} request failed after retries")
+
+    def _apply_environment_query(self, query: str) -> str:
+        environment_fragment = f"environment:{self._quote_query_value(self.environment)}"
+        stripped_query = query.strip()
+        if not stripped_query:
+            return environment_fragment
+        return f"{environment_fragment} {stripped_query}"
+
+    @staticmethod
+    def _quote_query_value(value: str) -> str:
+        escaped_value = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped_value}"'
 
     @staticmethod
     def _extract_next_cursor(link_header: str | None) -> str | None:

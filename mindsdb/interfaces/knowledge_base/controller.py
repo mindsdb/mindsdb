@@ -6,7 +6,7 @@ import decimal
 
 import pandas as pd
 import numpy as np
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
@@ -37,6 +37,7 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.utils import validate_pydantic_params
 from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
 from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 
@@ -1023,21 +1024,6 @@ class KnowledgeBaseTable:
         res = self._df_to_embeddings(df)
         return res[TableField.EMBEDDINGS.value][0]
 
-    @staticmethod
-    def call_litellm_embedding(session, model_params, messages):
-        args = copy.deepcopy(model_params)
-
-        if "model_name" not in args:
-            raise ValueError("'model_name' must be provided for embedding model")
-
-        llm_model = args.pop("model_name")
-        engine = args.pop("provider")
-
-        module = session.integration_controller.get_handler_module("litellm")
-        if module is None or module.Handler is None:
-            raise ValueError(f'Unable to use "{engine}" provider. Litellm handler is not installed')
-        return module.Handler.embeddings(engine, llm_model, messages, args)
-
     def build_rag_pipeline(self, retrieval_config: dict):
         """
         Builds a RAG pipeline with returned sources
@@ -1179,26 +1165,6 @@ class KnowledgeBaseController:
     def __init__(self, session) -> None:
         self.session = session
 
-    def _check_kb_input_params(self, params):
-        # check names and types KB params
-        try:
-            KnowledgeBaseInputParams.model_validate(params)
-        except ValidationError as e:
-            problems = []
-            for error in e.errors():
-                parameter = ".".join([str(i) for i in error["loc"]])
-                param_type = error["type"]
-                if param_type == "extra_forbidden":
-                    msg = f"Parameter '{parameter}' is not allowed"
-                else:
-                    msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
-                problems.append(msg)
-
-            msg = "\n".join(problems)
-            if len(problems) > 1:
-                msg = "\n" + msg
-            raise ValueError(f"Problem with knowledge base parameters: {msg}") from e
-
     def add(
         self,
         name: str,
@@ -1223,7 +1189,7 @@ class KnowledgeBaseController:
             params = params or {}
             params["preprocessing"] = preprocessing_config
 
-        self._check_kb_input_params(params)
+        validate_pydantic_params(params, KnowledgeBaseInputParams, "knowledge base")
 
         # Check if vector_size is provided when using sparse vectors
         is_sparse = params.get("is_sparse")
@@ -1283,11 +1249,21 @@ class KnowledgeBaseController:
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
                 params["default_vector_storage"] = vector_db_name
             else:
-                raise ValueError(
-                    "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
-                    "One of the options is to use pgvector: "
-                    "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
-                )
+                # try faiss
+                module = self.session.integration_controller.get_handler_module("duckdb_faiss")
+                if module is None or module.Handler is None:
+                    raise ValueError(
+                        "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
+                        "One of the options is to use pgvector: "
+                        "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
+                    )
+
+                # create faiss db with same name
+                vector_table_name = "data"
+                vector_db_name = self._create_persistent_faiss(name)
+                # memorize to remove it later
+                params["default_vector_storage"] = vector_db_name
+
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:
@@ -1376,7 +1352,7 @@ class KnowledgeBaseController:
             params = params or {}
             params["preprocessing"] = preprocessing_config
 
-        self._check_kb_input_params(params)
+        validate_pydantic_params(params, KnowledgeBaseInputParams, "knowledge base")
 
         # get project id
         project = self.session.database_controller.get_project(project_name)
@@ -1463,6 +1439,16 @@ class KnowledgeBaseController:
             return vector_store_name
 
         self.session.integration_controller.add(vector_store_name, "pgvector", params or {})
+        return vector_store_name
+
+    def _create_persistent_faiss(self, kb_name: str):
+        vector_store_name = f"store_{kb_name}"
+
+        # check if exists
+        if self.session.integration_controller.get(vector_store_name):
+            return vector_store_name
+
+        self.session.integration_controller.add(vector_store_name, "duckdb_faiss", {})
         return vector_store_name
 
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):
@@ -1634,6 +1620,7 @@ class KnowledgeBaseController:
         # works only for FAISS dbs.
         # if FAISS vector db is used in KB: remove this db from handlers cache.
         #   it will clear internal cache of tables in faiss handler and release locks for faiss files
+        #   return unloaded database name
 
         if len(knowledge_base.parts) > 1:
             project_name, kb_name = knowledge_base.parts[-2:]
@@ -1650,3 +1637,4 @@ class KnowledgeBaseController:
 
         if database.engine == "duckdb_faiss":
             self.session.integration_controller.handlers_cache.delete(database.name)
+            return database.name

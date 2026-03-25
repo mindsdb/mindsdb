@@ -1023,21 +1023,6 @@ class KnowledgeBaseTable:
         res = self._df_to_embeddings(df)
         return res[TableField.EMBEDDINGS.value][0]
 
-    @staticmethod
-    def call_litellm_embedding(session, model_params, messages):
-        args = copy.deepcopy(model_params)
-
-        if "model_name" not in args:
-            raise ValueError("'model_name' must be provided for embedding model")
-
-        llm_model = args.pop("model_name")
-        engine = args.pop("provider")
-
-        module = session.integration_controller.get_handler_module("litellm")
-        if module is None or module.Handler is None:
-            raise ValueError(f'Unable to use "{engine}" provider. Litellm handler is not installed')
-        return module.Handler.embeddings(engine, llm_model, messages, args)
-
     def build_rag_pipeline(self, retrieval_config: dict):
         """
         Builds a RAG pipeline with returned sources

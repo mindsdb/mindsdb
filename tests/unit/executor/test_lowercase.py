@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
-from tests.unit.executor.test_agent import set_litellm_embedding
+from tests.unit.executor.test_agent import set_embedding
 
 
 class TestLowercase(BaseExecutorDummyML):
@@ -204,10 +204,10 @@ class TestLowercase(BaseExecutorDummyML):
                 self.run_sql(f"drop agent `{another_agent_name}`")
             self.run_sql(f"drop agent {another_agent_name}")
 
-    @patch("litellm.embedding")
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
     @patch("openai.OpenAI")
-    def test_knowledgebase_name_lowercase(self, mock_openai, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    def test_knowledgebase_name_lowercase(self, mock_openai, mock_embedding):
+        set_embedding(mock_embedding)
 
         self.run_sql("""
           create database my_kb_storage 

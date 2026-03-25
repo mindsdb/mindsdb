@@ -1,5 +1,6 @@
 import gc
 from importlib import import_module
+from contextlib import asynccontextmanager, AsyncExitStack
 
 gc.disable()
 
@@ -28,7 +29,7 @@ async def _health_check(request):
     return JSONResponse({"status": "ok"})
 
 
-def _mount_optional_api(name: str, mount_path: str, get_app_fn, routes):
+def _mount_optional_api(name: str, mount_path: str, get_app_fn, routes) -> object | None:
     try:
         optional_app = get_app_fn()
     except ImportError as exc:
@@ -41,8 +42,11 @@ def _mount_optional_api(name: str, mount_path: str, get_app_fn, routes):
         )
         return
 
-    optional_app.add_middleware(PATAuthMiddleware)
+    if name.upper() != "MCP" or config["api"]["mcp"]["oauth"]["enabled"] is False:
+        optional_app.add_middleware(PATAuthMiddleware)
+
     routes.append(Mount(mount_path, app=optional_app))
+    return optional_app
 
 
 def start(verbose, app: Flask = None, is_restart: bool = False):
@@ -58,23 +62,44 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
     process_cache.init()
 
     routes = []
+    sub_apps = []
 
     # Health check FIRST - async endpoint that bypasses WSGI worker pool
     # This ensures health checks respond even when all workers are blocked
     routes.append(Route("/api/util/ping", _health_check, methods=["GET"]))
 
-    _mount_optional_api(
-        "A2A",
-        "/a2a",
-        lambda: import_module("mindsdb.api.a2a").get_a2a_app(),
-        routes,
-    )
-    _mount_optional_api(
-        "MCP",
-        "/mcp",
-        lambda: import_module("mindsdb.api.mcp").get_mcp_app(),
-        routes,
-    )
+    for name, path, factory in [
+        ("A2A", "/a2a", lambda: import_module("mindsdb.api.a2a").get_a2a_app()),
+        ("MCP", "/mcp", lambda: import_module("mindsdb.api.mcp").get_mcp_app()),
+    ]:
+        mounted = _mount_optional_api(name, path, factory, routes)
+        if mounted is not None:
+            sub_apps.append(mounted)
+
+    # RFC 9728: /.well-known/oauth-protected-resource must be at the server root,
+    # not under the /mcp mount, so we register it here before the Flask fallback.
+    try:
+        well_known_routes = import_module("mindsdb.api.mcp").get_mcp_well_known_routes()
+        routes.extend(well_known_routes)
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning(f"Error during registering of mcp well-known routes: {e}")
+
+    @asynccontextmanager
+    async def lifespan(_):
+        """Propagate ASGI lifespan events to mounted sub-apps.
+
+        Starlette's Mount does not forward startup/shutdown lifespan events to
+        sub-applications automatically. This context manager manually enters the
+        lifespan context of each collected sub-app so their internal state
+        (e.g. StreamableHTTPSessionManager task group for MCP) is properly
+        initialized on startup and torn down on shutdown.
+        """
+        async with AsyncExitStack() as stack:
+            for sub_app in sub_apps:
+                await stack.enter_async_context(sub_app.router.lifespan_context(sub_app))
+            yield
 
     # Root app LAST so it won't shadow the others
     routes.append(
@@ -89,4 +114,10 @@ def start(verbose, app: Flask = None, is_restart: bool = False):
     )
 
     # Setting logging to None makes uvicorn use the existing logging configuration
-    uvicorn.run(Starlette(routes=routes, debug=verbose), host=host, port=int(port), log_level=None, log_config=None)
+    uvicorn.run(
+        Starlette(routes=routes, lifespan=lifespan, debug=verbose),
+        host=host,
+        port=int(port),
+        log_level=None,
+        log_config=None,
+    )

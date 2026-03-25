@@ -40,7 +40,7 @@ class TestConfig:
                 assert "Invalid MINDSDB_DB_CON value" in error_message
                 assert invalid_db_con in error_message
 
-    def test_knowledge_bases_storage_env_is_parsed(self):
+    def test_knowledge_bases_storage_env_does_not_override_storage_config(self):
         Config._Config__instance = None
 
         with tempfile.TemporaryDirectory() as tmpdir:

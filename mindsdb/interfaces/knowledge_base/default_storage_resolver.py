@@ -16,18 +16,7 @@ def _normalize_engine_name(engine: str | None) -> str | None:
 
 
 def _get_env_available_engines() -> list[str]:
-    env_value = os.environ.get("KNOWLEDGE_BASES_STORAGE", "")
-    engines: list[str] = []
-
-    if env_value != "":
-        for item in env_value.split(","):
-            engine = _normalize_engine_name(item)
-            if engine and engine not in engines:
-                engines.append(engine)
-        return engines
-
-    # Default available engines when explicit env override is not provided.
-    engines.append("faiss")
+    engines: list[str] = ["faiss"]
     if os.environ.get("KB_PGVECTOR_URL"):
         engines.append("pgvector")
     return engines

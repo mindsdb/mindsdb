@@ -539,8 +539,7 @@ class Config:
             self._env_config["api"]["mcp"]["dns_rebinding_protection"] = mindsdb_mcp_dns_rebinding_protection
         # endregion
 
-        # KNOWLEDGE_BASES_STORAGE is used to expose available engines to the API/UI layer.
-        # It must not force-overwrite the selected default storage in config.auto.json.
+        # Keep env-based KB defaults out of config.auto.json overrides.
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.

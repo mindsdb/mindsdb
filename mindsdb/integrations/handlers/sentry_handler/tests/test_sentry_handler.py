@@ -219,7 +219,6 @@ class SentryTablesTest(unittest.TestCase):
                 "culprit": "checkout.views.create_order",
                 "status": "unresolved",
                 "level": "error",
-                "environments": ["production"],
                 "count": "12",
                 "userCount": "7",
                 "firstSeen": "2026-03-17T10:00:00Z",
@@ -236,7 +235,7 @@ class SentryTablesTest(unittest.TestCase):
         self.assertTrue(conditions[0].applied)
         self.assertEqual("Checkout failed", df.iloc[0]["title"])
         self.assertEqual(12, df.iloc[0]["count"])
-        self.assertEqual("production", df.iloc[0]["environment"])
+        self.assertNotIn("environment", df.columns)
 
     def test_issues_table_rejects_query_and_structured_filters_together(self):
         table = SentryIssuesTable(HandlerStub(Mock()))

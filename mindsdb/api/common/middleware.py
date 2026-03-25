@@ -1,13 +1,15 @@
 import os
+import time
 import hmac
 import secrets
 import hashlib
+from collections import deque
 from http import HTTPStatus
 from typing import Optional
 
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.requests import Request
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
@@ -22,6 +24,10 @@ TOKENS = []
 def get_pat_fingerprint(token: str) -> str:
     """Hash the token with HMAC-SHA256 using secret_key as pepper."""
     return hmac.new(SECRET_KEY.encode(), token.encode(), hashlib.sha256).hexdigest()
+
+
+if config["auth"]["token"]:
+    TOKENS.append(get_pat_fingerprint(config["auth"]["token"]))
 
 
 def generate_pat() -> str:
@@ -56,23 +62,106 @@ def revoke_pat(raw_token: str) -> bool:
     return False
 
 
-class PATAuthMiddleware(BaseHTTPMiddleware):
-    def _extract_bearer(self, request: Request) -> Optional[str]:
-        h = request.headers.get("Authorization")
+class PATAuthMiddleware:
+    """Pure ASGI middleware (compatible with SSE / streaming responses).
+    The class is not inherited from starlette.middleware.base.BaseHTTPMiddleware
+    bacause it collect responses to buffer, which is not good for streaming
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    @staticmethod
+    def _extract_bearer(headers: dict) -> Optional[str]:
+        h = headers.get("authorization")
         if not h or not h.startswith("Bearer "):
             return None
         return h.split(" ", 1)[1].strip() or None
 
-    async def dispatch(self, request: Request, call_next):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
         if config.get("auth", {}).get("http_auth_enabled", False) is False:
-            return await call_next(request)
+            await self.app(scope, receive, send)
+            return
 
-        token = self._extract_bearer(request)
+        if scope.get("method") == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
+        token = self._extract_bearer(dict(request.headers))
         if not token or not verify_pat(token):
-            return JSONResponse({"detail": "Unauthorized"}, status_code=HTTPStatus.UNAUTHORIZED)
+            response = JSONResponse({"detail": "Unauthorized"}, status_code=HTTPStatus.UNAUTHORIZED)
+            await response(scope, receive, send)
+            return
 
-        request.state.user = config["auth"].get("username")
-        return await call_next(request)
+        scope.setdefault("state", {})["user"] = config["auth"].get("username")
+        await self.app(scope, receive, send)
+
+
+class RateLimitMiddleware:
+    """Rate limiting middleware using a sliding window counter. Tracks requests per client IP."""
+
+    def __init__(self, app: ASGIApp, requests_per_minute: int) -> None:
+        self.app = app
+        self.requests_per_minute = requests_per_minute
+        self._window = 60.0  # seconds
+        self._counters: dict[str, deque] = {}
+
+    def _get_client_key(self, scope: Scope) -> str:
+        client = scope.get("client")
+        if client:
+            return client[0]
+        return "unknown"
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        if scope.get("method") == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+
+        # Clients usually repeat this request until
+        # the connection is established, so no rate limit it.
+        if scope.get("method") == "GET" and scope.get("path", "").endswith("/sse"):
+            await self.app(scope, receive, send)
+            return
+
+        client_key = self._get_client_key(scope)
+        now = time.monotonic()
+        window_start = now - self._window
+
+        timestamps = self._counters.setdefault(client_key, deque())
+
+        # Evict timestamps outside the current window
+        while timestamps and timestamps[0] <= window_start:
+            timestamps.popleft()
+
+        if len(timestamps) >= self.requests_per_minute:
+            retry_after = int(self._window - (now - timestamps[0])) + 1
+        else:
+            retry_after = None
+            timestamps.append(now)
+
+        if retry_after is not None:
+            response = JSONResponse(
+                {"detail": f"Too Many Requests, retry after {retry_after} seconds"},
+                status_code=HTTPStatus.TOO_MANY_REQUESTS,
+                headers={"Retry-After": str(retry_after)},
+            )
+            await response(scope, receive, send)
+            return
+
+        stale_keys = [k for k, ts in self._counters.items() if not ts or ts[-1] <= window_start]
+        for k in stale_keys:
+            del self._counters[k]
+
+        await self.app(scope, receive, send)
 
 
 # Used by mysql protocol

@@ -60,6 +60,7 @@ class AnthropicHandler(BaseMLEngine):
         self.connection = Anthropic(
             api_key=api_key,
             timeout=60.0,
+            max_retries=3,
         )
 
         input_column = args["using"]["column"]

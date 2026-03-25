@@ -34,6 +34,7 @@ env:
     statsforecast
     duckdb_faiss
     confluence
+    openai
   # We measure 80% on this handlers, as they are the verified
   HANDLERS_TO_VERIFY: |
     mysql

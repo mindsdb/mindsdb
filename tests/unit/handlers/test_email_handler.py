@@ -18,9 +18,7 @@ class TestEmailClientUnit:
     @patch("mindsdb.integrations.handlers.email_handler.email_client.smtplib.SMTP")
     def test_init(self, mock_smtp, mock_imap):
         """Test EmailClient initialization"""
-        connection_data = EmailConnectionDetails(
-            email="test@example.com", password="password123"
-        )
+        connection_data = EmailConnectionDetails(email="test@example.com", password="password123")
         client = EmailClient(connection_data)
 
         assert client.email == "test@example.com"
@@ -37,9 +35,7 @@ class TestEmailClientUnit:
         mock_imap_instance.login.return_value = ("OK", [])
         mock_imap_instance.select.return_value = ("OK", [])
 
-        connection_data = EmailConnectionDetails(
-            email="test@example.com", password="password123"
-        )
+        connection_data = EmailConnectionDetails(email="test@example.com", password="password123")
         client = EmailClient(connection_data)
         client.select_mailbox("INBOX")
 
@@ -54,9 +50,7 @@ class TestEmailClientUnit:
         mock_imap.return_value = mock_imap_instance
         mock_imap_instance.login.return_value = ("NO", ["Authentication failed"])
 
-        connection_data = EmailConnectionDetails(
-            email="test@example.com", password="wrong_password"
-        )
+        connection_data = EmailConnectionDetails(email="test@example.com", password="wrong_password")
         client = EmailClient(connection_data)
 
         with pytest.raises(ValueError, match="Unable to login"):
@@ -68,15 +62,13 @@ class TestEmailClientUnit:
         """Test send_email with authentication error"""
         mock_smtp_instance = MagicMock()
         mock_smtp.return_value = mock_smtp_instance
-        mock_smtp_instance.login.side_effect = smtplib.SMTPAuthenticationError(
-            535, "Authentication failed"
-        )
-        connection_data = EmailConnectionDetails(
-            email="test@example.com", password="wrong_password"
-        )
+        mock_smtp_instance.login.side_effect = smtplib.SMTPAuthenticationError(535, "Authentication failed")
+        connection_data = EmailConnectionDetails(email="test@example.com", password="wrong_password")
         client = EmailClient(connection_data)
 
-        with pytest.raises(ValueError, match="Failed to send email to recipient@example.com: \\(535, 'Authentication failed'\\)"):
+        with pytest.raises(
+            ValueError, match="Failed to send email to recipient@example.com: \\(535, 'Authentication failed'\\)"
+        ):
             client.send_email("recipient@example.com", "Test", "Body")
 
     @patch("mindsdb.integrations.handlers.email_handler.email_client.imaplib.IMAP4_SSL")
@@ -90,9 +82,7 @@ class TestEmailClientUnit:
 
         mock_imap_instance.logout.return_value = ("BYE", [])
 
-        connection_data = EmailConnectionDetails(
-            email="test@example.com", password="password123"
-        )
+        connection_data = EmailConnectionDetails(email="test@example.com", password="password123")
         client = EmailClient(connection_data)
         client.logout()
 
@@ -109,9 +99,7 @@ class TestEmailClientUnit:
         mock_imap_instance.select.return_value = ("OK", [])
         mock_imap_instance.uid.return_value = (None, [b""])
 
-        connection_data = EmailConnectionDetails(
-            email="test@example.com", password="password123"
-        )
+        connection_data = EmailConnectionDetails(email="test@example.com", password="password123")
         client = EmailClient(connection_data)
 
         options = EmailSearchOptions(subject="NonexistentSubject")

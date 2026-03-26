@@ -13,6 +13,7 @@ from mindsdb_sql_parser.ast import (
 from mindsdb.api.executor.planner.steps import FetchDataframeStep
 from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.exceptions import UnknownError
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
@@ -50,29 +51,30 @@ def get_table_alias(table_obj, default_db_name):
 
 def get_fill_param_fnc(steps_data):
     def fill_params(node, callstack=None, **kwargs):
-        if isinstance(node, Parameter):
-            rs = steps_data[node.value.step_num]
-            items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
+        if not isinstance(node, Parameter):
+            return
 
-            is_single_item = True
-            if callstack:
-                node_prev = callstack[0]
-                if isinstance(node_prev, BinaryOperation):
-                    # Check case: 'something IN Parameter()'
-                    if node_prev.op.lower() == "in" and node_prev.args[1] is node:
-                        is_single_item = False
+        if not isinstance(node.value, Result):
+            # is simple parameter and not set
+            raise ValueError(f"Parameter is not set: {node.value}")
 
-            if is_single_item and len(items) == 1:
-                # extract one value for option 'col=(subselect)'
-                node = items[0]
-            else:
-                node = Tuple(items)
-            return node
+        rs = steps_data[node.value.step_num]
+        items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
 
-        if isinstance(node, Parameter):
-            rs = steps_data[node.value.step_num]
-            items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
-            return Tuple(items)
+        is_single_item = True
+        if callstack:
+            node_prev = callstack[0]
+            if isinstance(node_prev, BinaryOperation):
+                # Check case: 'something IN Parameter()'
+                if node_prev.op.lower() == "in" and node_prev.args[1] is node:
+                    is_single_item = False
+
+        if is_single_item and len(items) == 1:
+            # extract one value for option 'col=(subselect)'
+            node = items[0]
+        else:
+            node = Tuple(items)
+        return node
 
     return fill_params
 
@@ -90,8 +92,7 @@ class FetchDataframeStepCall(BaseStepCall):
         if query is None:
             table_alias = (self.context.get("database"), "result", "result")
 
-            # fetch raw_query
-            response: DataHubResponse = dn.query(native_query=step.raw_query, session=self.session)
+            response: DataHubResponse = dn.query(step.raw_query, session=self.session)
             df = response.data_frame
         else:
             if isinstance(step.query, (Union, Intersect)):
@@ -115,7 +116,7 @@ class FetchDataframeStepCall(BaseStepCall):
 
         # if query registered, set progress
         if self.sql_query.run_query is not None:
-            self.sql_query.run_query.set_progress(df, None)
+            self.sql_query.run_query.set_progress(processed_rows=len(df))
         return ResultSet.from_df(
             df,
             table_name=table_alias[1],

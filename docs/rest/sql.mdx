@@ -51,7 +51,6 @@ The type of the response table | error | ok
 curl --request POST \
      --url https://cloud.mindsdb.com/api/sql/query \
      --header 'Content-Type: application/json' \
-     --cookie '{session=273trgsehgrui3i2riurwehe}'\
      --data '
 {
      "query": "SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;"
@@ -63,9 +62,8 @@ curl --request POST \
 ```python Python
 import requests
 url = 'https://cloud.mindsdb.com/api/sql/query'
-cookies = {'session': '273trgsehgrui3i2riurwehe'}
 resp = requests.post(url, json={'query': 
-                    'SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;'}, cookies=cookies)
+                    'SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;'})
 ```
 
 </RequestExample>

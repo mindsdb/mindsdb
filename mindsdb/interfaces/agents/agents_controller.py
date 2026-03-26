@@ -2,7 +2,6 @@ import datetime
 from typing import Dict, Iterator, List, Union, Tuple, Optional, Any
 import copy
 
-from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
 import pandas as pd
@@ -10,18 +9,17 @@ import pandas as pd
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import Predictor
 from mindsdb.utilities.context import context as ctx
-from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.utilities.config import config
 from mindsdb.utilities import log
 
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
-from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
-from .langchain_agent import get_llm_provider
+from .utils.constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
+from .utils.pydantic_ai_model_factory import get_llm_provider
+
 
 logger = log.getLogger(__name__)
 
@@ -36,20 +34,16 @@ class AgentsController:
     def __init__(
         self,
         project_controller: ProjectController = None,
-        skills_controller: SkillsController = None,
         model_controller: ModelController = None,
     ):
         if project_controller is None:
             project_controller = ProjectController()
-        if skills_controller is None:
-            skills_controller = SkillsController()
         if model_controller is None:
             model_controller = ModelController()
         self.project_controller = project_controller
-        self.skills_controller = skills_controller
         self.model_controller = model_controller
 
-    def check_model_provider(self, model_name: str, provider: str = None) -> Tuple[dict, str]:
+    def check_model_provider(self, model_name: str, provider: str = None) -> Tuple[Optional[str], str]:
         """
         Checks if a model exists, and gets the provider of the model.
 
@@ -96,13 +90,15 @@ class AgentsController:
         """
 
         project = self.project_controller.get(name=project_name)
-        agent = db.Agents.query.filter(
+        agent_query = db.Agents.query.filter(
             db.Agents.name == agent_name,
             db.Agents.project_id == project.id,
             db.Agents.company_id == ctx.company_id,
             db.Agents.deleted_at == null(),
-        ).first()
-        return agent
+        )
+        if ctx.enforce_user_id:
+            agent_query = agent_query.filter(db.Agents.user_id == ctx.user_id)
+        return agent_query.first()
 
     def get_agent_by_id(self, id: int, project_name: str = default_project) -> db.Agents:
         """
@@ -117,13 +113,15 @@ class AgentsController:
         """
 
         project = self.project_controller.get(name=project_name)
-        agent = db.Agents.query.filter(
+        agent_query = db.Agents.query.filter(
             db.Agents.id == id,
             db.Agents.project_id == project.id,
             db.Agents.company_id == ctx.company_id,
             db.Agents.deleted_at == null(),
-        ).first()
-        return agent
+        )
+        if ctx.enforce_user_id:
+            agent_query = agent_query.filter(db.Agents.user_id == ctx.user_id)
+        return agent_query.first()
 
     def get_agents(self, project_name: str) -> List[dict]:
         """
@@ -137,6 +135,8 @@ class AgentsController:
         """
 
         all_agents = db.Agents.query.filter(db.Agents.company_id == ctx.company_id, db.Agents.deleted_at == null())
+        if ctx.enforce_user_id:
+            all_agents = all_agents.filter(db.Agents.user_id == ctx.user_id)
 
         if project_name is not None:
             project = self.project_controller.get(name=project_name)
@@ -145,61 +145,11 @@ class AgentsController:
 
         return all_agents.all()
 
-    def _create_default_sql_skill(
-        self,
-        name,
-        project_name,
-        include_tables: List[str] = None,
-        include_knowledge_bases: List[str] = None,
-    ):
-        # Create a default SQL skill
-        skill_name = f"{name}_sql_skill"
-        skill_params = {
-            "type": "sql",
-            "description": f"Auto-generated SQL skill for agent {name}",
-        }
-
-        # Add restrictions provided
-        if include_tables:
-            skill_params["include_tables"] = include_tables
-        if include_knowledge_bases:
-            skill_params["include_knowledge_bases"] = include_knowledge_bases
-
-        try:
-            # Check if skill already exists
-            existing_skill = self.skills_controller.get_skill(skill_name, project_name)
-            if existing_skill is None:
-                # Create the skill
-                skill_type = skill_params.pop("type")
-                self.skills_controller.add_skill(
-                    name=skill_name, project_name=project_name, type=skill_type, params=skill_params
-                )
-            else:
-                # Update the skill if parameters have changed
-                params_changed = False
-
-                # Check if skill parameters need to be updated
-                for param_key, param_value in skill_params.items():
-                    if existing_skill.params.get(param_key) != param_value:
-                        existing_skill.params[param_key] = param_value
-                        params_changed = True
-
-                # Update the skill if needed
-                if params_changed:
-                    flag_modified(existing_skill, "params")
-                    db.session.commit()
-
-        except Exception as e:
-            raise ValueError(f"Failed to auto-create or update SQL skill: {str(e)}")
-
-        return skill_name
-
     def add_agent(
         self,
         name: str,
         project_name: str = None,
         model_name: Union[str, dict] = None,
-        skills: List[Union[str, dict]] = None,
         provider: str = None,
         params: Dict[str, Any] = None,
     ) -> db.Agents:
@@ -210,8 +160,6 @@ class AgentsController:
             name (str): The name of the new agent
             project_name (str): The containing project
             model_name (str | dict): The name of the existing ML model the agent will use
-            skills (List[Union[str, dict]]): List of existing skill names to add to the new agent, or list of dicts
-                 with one of keys is "name", and other is additional parameters for relationship agent<>skill
             provider (str): The provider of the model
             params (Dict[str, str]): Parameters to use when running the agent
                 data: Dict, data sources for an agent, keys:
@@ -223,18 +171,18 @@ class AgentsController:
                 <provider>_api_key: API key for the provider (e.g., openai_api_key)
 
                 # Deprecated parameters:
-                database: The database to use for text2sql skills (default is 'mindsdb')
+                database: The database to use (default is 'mindsdb')
                 knowledge_base_database: The database to use for knowledge base queries (default is 'mindsdb')
-                include_tables: List of tables to include for text2sql skills
-                ignore_tables: List of tables to ignore for text2sql skills
-                include_knowledge_bases: List of knowledge bases to include for text2sql skills
-                ignore_knowledge_bases: List of knowledge bases to ignore for text2sql skills
+                include_tables: List of tables to include
+                ignore_tables: List of tables to ignore
+                include_knowledge_bases: List of knowledge bases to include
+                ignore_knowledge_bases: List of knowledge bases to ignore
 
         Returns:
             agent (db.Agents): The created agent
 
         Raises:
-            EntityExistsError: Agent with given name already exists, or skill/model with given name does not exist.
+            EntityExistsError: Agent with given name already exists, or model with given name does not exist.
         """
         if project_name is None:
             project_name = default_project
@@ -303,59 +251,16 @@ class AgentsController:
         if isinstance(include_knowledge_bases, str):
             include_knowledge_bases = [kb.strip() for kb in include_knowledge_bases.split(",")]
 
-        # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
-        if not skills and (include_tables or include_knowledge_bases):
-            skill = self._create_default_sql_skill(
-                name,
-                project_name,
-                include_tables=include_tables,
-                include_knowledge_bases=include_knowledge_bases,
-            )
-            skills = [skill]
-
         agent = db.Agents(
             name=name,
             project_id=project.id,
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             user_class=ctx.user_class,
             model_name=model_name,
             provider=provider,
             params=params,
         )
-
-        for skill in skills:
-            if isinstance(skill, str):
-                skill_name = skill
-                parameters = {}
-            else:
-                parameters = skill.copy()
-                skill_name = parameters.pop("name")
-
-            existing_skill = self.skills_controller.get_skill(skill_name, project_name)
-            if existing_skill is None:
-                db.session.rollback()
-                raise ValueError(f"Skill with name does not exist: {skill_name}")
-
-            # Run Data Catalog loader if enabled.
-            if include_tables:
-                self._run_data_catalog_loader_for_table_entries(include_tables, project_name, skill=existing_skill)
-            else:
-                self._run_data_catalog_loader_for_skill(existing_skill, project_name, tables=parameters.get("tables"))
-
-            if existing_skill.type == "sql":
-                # Add table restrictions if this is a text2sql skill
-                if include_tables:
-                    parameters["tables"] = include_tables
-
-                # Add knowledge base parameters to both the skill and the association parameters
-                if include_knowledge_bases:
-                    parameters["include_knowledge_bases"] = include_knowledge_bases
-                    if "include_knowledge_bases" not in existing_skill.params:
-                        existing_skill.params["include_knowledge_bases"] = include_knowledge_bases
-                        flag_modified(existing_skill, "params")
-
-            association = db.AgentSkillsAssociation(parameters=parameters, agent=agent, skill=existing_skill)
-            db.session.add(association)
 
         db.session.add(agent)
         db.session.commit()
@@ -368,9 +273,6 @@ class AgentsController:
         project_name: str = default_project,
         name: str = None,
         model_name: Union[str, dict] = None,
-        skills_to_add: List[Union[str, dict]] = None,
-        skills_to_remove: List[str] = None,
-        skills_to_rewrite: List[Union[str, dict]] = None,
         provider: str = None,
         params: Dict[str, str] = None,
     ):
@@ -382,10 +284,6 @@ class AgentsController:
             project_name (str): The containing project
             name (str): The updated name of the agent
             model_name (str | dict): The name of the existing ML model the agent will use
-            skills_to_add (List[Union[str, dict]]): List of skill names to add to the agent, or list of dicts
-                 with one of keys is "name", and other is additional parameters for relationship agent<>skill
-            skills_to_remove (List[str]): List of skill names to remove from the agent
-            skills_to_rewrite (List[Union[str, dict]]): new list of skills for the agent
             provider (str): The provider of the model
             params: (Dict[str, str]): Parameters to use when running the agent
 
@@ -394,18 +292,8 @@ class AgentsController:
 
         Raises:
             EntityExistsError: if agent with new name already exists
-            EntityNotExistsError: if agent with name or skill not found
-            ValueError: if conflict in skills list
+            EntityNotExistsError: if agent with name not found
         """
-
-        skills_to_add = skills_to_add or []
-        skills_to_remove = skills_to_remove or []
-        skills_to_rewrite = skills_to_rewrite or []
-
-        if len(skills_to_rewrite) > 0 and (len(skills_to_remove) > 0 or len(skills_to_add) > 0):
-            raise ValueError(
-                "'skills_to_rewrite' and 'skills_to_add' (or 'skills_to_remove') cannot be used at the same time"
-            )
 
         existing_agent = self.get_agent(agent_name, project_name=project_name)
         if existing_agent is None:
@@ -422,8 +310,6 @@ class AgentsController:
             raise ValueError("It is forbidden to change properties of the demo object")
 
         if name is not None and name != agent_name:
-            if not name.islower():
-                raise ValueError(f"The name must be in lower case: {name}")
             # Check to see if updated name already exists
             agent_with_new_name = self.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
@@ -437,113 +323,12 @@ class AgentsController:
                 model_name = None
 
             # check model and provider
-            model, provider = self.check_model_provider(model_name, provider)
+            _, provider = self.check_model_provider(model_name, provider)
             # Update model and provider
             existing_agent.model_name = model_name
             existing_agent.provider = provider
 
-        if "data" in params:
-            if len(skills_to_add) > 0 or len(skills_to_remove) > 0:
-                raise ValueError(
-                    "'data' parameter cannot be used with 'skills_to_remove' or 'skills_to_add' parameters"
-                )
-
-            include_knowledge_bases = params["data"].get("knowledge_bases")
-            include_tables = params["data"].get("tables")
-
-            skill = self._create_default_sql_skill(
-                agent_name,
-                project_name,
-                include_tables=include_tables,
-                include_knowledge_bases=include_knowledge_bases,
-            )
-            skills_to_rewrite = [{"name": skill}]
-
-        # check that all skills exist
-        skill_name_to_record_map = {}
-        for skill_meta in skills_to_add + skills_to_remove + skills_to_rewrite:
-            skill_name = skill_meta["name"] if isinstance(skill_meta, dict) else skill_meta
-            if skill_name not in skill_name_to_record_map:
-                skill_record = self.skills_controller.get_skill(skill_name, project_name)
-                if skill_record is None:
-                    raise EntityNotExistsError(f"Skill with name does not exist: {skill_name}")
-                skill_name_to_record_map[skill_name] = skill_record
-
-        if len(skills_to_add) > 0 or len(skills_to_remove) > 0:
-            skills_to_add = [{"name": x} if isinstance(x, str) else x for x in skills_to_add]
-            skills_to_add_names = [x["name"] for x in skills_to_add]
-
-            # there are no intersection between lists
-            if not set(skills_to_add_names).isdisjoint(set(skills_to_remove)):
-                raise ValueError("Conflict between skills to add and skills to remove.")
-
-            existing_agent_skills_names = [rel.skill.name for rel in existing_agent.skills_relationships]
-
-            # remove skills
-            for skill_name in skills_to_remove:
-                for rel in existing_agent.skills_relationships:
-                    if rel.skill.name == skill_name:
-                        db.session.delete(rel)
-
-            # add skills
-            for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
-                # Run Data Catalog loader if enabled for the new skill
-                self._run_data_catalog_loader_for_skill(
-                    skill_name,
-                    project_name,
-                    tables=next((x for x in skills_to_add if x["name"] == skill_name), {}).get("tables"),
-                )
-
-                skill_parameters = next(x for x in skills_to_add if x["name"] == skill_name).copy()
-                del skill_parameters["name"]
-                association = db.AgentSkillsAssociation(
-                    parameters=skill_parameters, agent=existing_agent, skill=skill_name_to_record_map[skill_name]
-                )
-                db.session.add(association)
-
-        elif len(skills_to_rewrite) > 0:
-            skill_name_to_parameters = {
-                x["name"]: {k: v for k, v in x.items() if k != "name"} for x in skills_to_rewrite
-            }
-            existing_skill_names = set()
-            for rel in existing_agent.skills_relationships:
-                if rel.skill.name not in skill_name_to_parameters:
-                    db.session.delete(rel)
-                else:
-                    existing_skill_names.add(rel.skill.name)
-                    skill_parameters = skill_name_to_parameters[rel.skill.name]
-
-                    # Run Data Catalog loader if enabled for the updated skill
-                    self._run_data_catalog_loader_for_skill(
-                        rel.skill.name, project_name, tables=skill_parameters.get("tables")
-                    )
-
-                    rel.parameters = skill_parameters
-                    flag_modified(rel, "parameters")
-            for new_skill_name in set(skill_name_to_parameters) - existing_skill_names:
-                # Run Data Catalog loader if enabled for the new skill
-                self._run_data_catalog_loader_for_skill(
-                    new_skill_name,
-                    project_name,
-                    tables=skill_name_to_parameters[new_skill_name].get("tables"),
-                )
-
-                association = db.AgentSkillsAssociation(
-                    parameters=skill_name_to_parameters[new_skill_name],
-                    agent=existing_agent,
-                    skill=skill_name_to_record_map[new_skill_name],
-                )
-                db.session.add(association)
-
         if params is not None:
-            if params.get("data", {}).get("tables"):
-                new_table_entries = set(params["data"]["tables"]) - set(
-                    existing_params.get("data", {}).get("tables", [])
-                )
-                if new_table_entries:
-                    # Run Data Catalog loader for new table entries if enabled.
-                    self._run_data_catalog_loader_for_table_entries(new_table_entries, project_name)
-
             # Merge params on update
             existing_params.update(params)
             # Remove None values entirely.
@@ -555,86 +340,6 @@ class AgentsController:
         db.session.commit()
 
         return existing_agent
-
-    def _run_data_catalog_loader_for_skill(
-        self,
-        skill: Union[str, db.Skills],
-        project_name: str,
-        tables: List[str] = None,
-    ):
-        """
-        Runs Data Catalog loader for a skill if enabled in the config.
-        This is used to load metadata for SQL skills when they are added or updated.
-        """
-        if not config.get("data_catalog", {}).get("enabled", False):
-            return
-
-        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, project_name)
-        if skill.type == "sql":
-            if "database" in skill.params:
-                valid_table_names = skill.params.get("tables") if skill.params.get("tables") else tables
-                data_catalog_loader = DataCatalogLoader(
-                    database_name=skill.params["database"], table_names=valid_table_names
-                )
-                data_catalog_loader.load_metadata()
-            else:
-                raise ValueError(
-                    "Data Catalog loading is enabled, but the provided parameters for the new skills are insufficient to load metadata. "
-                )
-
-    def _run_data_catalog_loader_for_table_entries(
-        self,
-        table_entries: List[str],
-        project_name: str,
-        skill: Union[str, db.Skills] = None,
-    ):
-        """
-        Runs Data Catalog loader for a list of table entries if enabled in the config.
-        This is used to load metadata for SQL skills when they are added or updated.
-        """
-        if not config.get("data_catalog", {}).get("enabled", False):
-            return
-
-        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, project_name)
-        if not skill or skill.type == "sql":
-            database_table_map = {}
-            for table_entry in table_entries:
-                parts = table_entry.split(".", 1)
-
-                # Ensure the table name is in 'database.table' format.
-                if len(parts) != 2:
-                    logger.warning(
-                        f"Invalid table name format: {table_entry}. Expected 'database.table' format."
-                        "Metadata will not be loaded for this entry."
-                    )
-                    continue
-
-                database, table = parts[0], parts[1]
-
-                # Wildcards in database names are not supported at the moment by data catalog loader.
-                if "*" in database:
-                    logger.warning(
-                        f"Invalid database name format: {database}. Wildcards are not supported."
-                        "Metadata will not be loaded for this entry."
-                    )
-                    continue
-
-                # Wildcards in table names are supported either.
-                # However, the table name itself can be a wildcard representing all tables.
-                if table == "*":
-                    table = None
-                elif "*" in table:
-                    logger.warning(
-                        f"Invalid table name format: {table}. Wildcards are not supported."
-                        "Metadata will not be loaded for this entry."
-                    )
-                    continue
-
-                database_table_map[database] = database_table_map.get(database, []) + [table]
-
-            for database_name, table_names in database_table_map.items():
-                data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
-                data_catalog_loader.load_metadata()
 
     def delete_agent(self, agent_name: str, project_name: str = default_project):
         """
@@ -653,24 +358,47 @@ class AgentsController:
             raise ValueError(f"Agent with name does not exist: {agent_name}")
         if isinstance(agent.params, dict) and agent.params.get("is_demo") is True:
             raise ValueError("Unable to delete demo object")
+
         agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
-    def get_agent_llm_params(self, agent_params: dict):
+    def get_agent_llm_params(self, agent):
         """
         Get agent LLM parameters by combining default config with user provided parameters.
-        Similar to how knowledge bases handle default parameters.
+        Uses the same pattern as knowledge bases get_model_params function.
         """
+
+        agent_params = agent.params
+
+        # Get model params from agent params (same structure as knowledge bases)
+        if "model" in agent_params:
+            model_params = agent_params.get("model", {})
+            if not isinstance(model_params, dict):
+                raise ValueError("Model parameters must be passed as a JSON object")
+        else:
+            # params for LLM can be arbitrary (backward compatibility)
+            model_params = copy.deepcopy(agent_params)
+            model_params.pop("mode", None)
+            model_params.pop("prompt_template", None)
+
+            _, provider = self.check_model_provider(agent.model_name, agent.provider)
+
+            if agent.model_name is not None:
+                model_params["model_name"] = agent.model_name
+            if provider is not None:
+                model_params["provider"] = provider
+
         combined_model_params = copy.deepcopy(config.get("default_llm", {}))
 
-        if "model" in agent_params:
-            model_params = agent_params["model"]
-        else:
-            # params for LLM can be arbitrary
-            model_params = agent_params
-
         if model_params:
+            # If provider mismatches - don't use default values (same as knowledge bases)
+            if "provider" in model_params and model_params["provider"] != combined_model_params.get("provider"):
+                return model_params
+
             combined_model_params.update(model_params)
+
+        # Remove use_default_llm flag if present
+        combined_model_params.pop("use_default_llm", None)
 
         return combined_model_params
 
@@ -679,7 +407,7 @@ class AgentsController:
         agent: db.Agents,
         messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: list[BaseTool] = None,
+        tools: list[Any] = None,
         stream: bool = False,
         params: dict | None = None,
     ) -> Union[Iterator[object], pd.DataFrame]:
@@ -690,7 +418,7 @@ class AgentsController:
             agent (db.Agents): Existing agent to get completion from
             messages (list[Dict[str, str]]): Chat history to send to the agent
             project_name (str): Project the agent belongs to (default mindsdb)
-            tools (list[BaseTool]): Tools to use while getting the completion
+            tools (list[Any]): Tools to use while getting the completion
             stream (bool): Whether to stream the response
             params (dict | None): params to redefine agent params
 
@@ -700,60 +428,16 @@ class AgentsController:
         Raises:
             ValueError: Agent's model does not exist.
         """
+        # Extract SQL context from params if present
+
+        from .pydantic_ai_agent import PydanticAIAgent
+
+        # Get agent parameters and combine with default LLM parameters at runtime
+        llm_params = self.get_agent_llm_params(agent)
+
+        pydantic_agent = PydanticAIAgent(agent, llm_params=llm_params)
+
         if stream:
-            return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools, params=params)
-        from .langchain_agent import LangchainAgent
-
-        model, provider = self.check_model_provider(agent.model_name, agent.provider)
-        # update old agents
-        if agent.provider is None and provider is not None:
-            agent.provider = provider
-            db.session.commit()
-
-        # Get agent parameters and combine with default LLM parameters at runtime
-        llm_params = self.get_agent_llm_params(agent.params)
-
-        lang_agent = LangchainAgent(agent, model, llm_params=llm_params)
-        return lang_agent.get_completion(messages, params=params)
-
-    def _get_completion_stream(
-        self,
-        agent: db.Agents,
-        messages: list[Dict[str, str]],
-        project_name: str = default_project,
-        tools: list[BaseTool] = None,
-        params: dict | None = None,
-    ) -> Iterator[object]:
-        """
-        Queries an agent to get a stream of completion chunks.
-
-        Parameters:
-            agent (db.Agents): Existing agent to get completion from
-            messages (list[Dict[str, str]]): Chat history to send to the agent
-            trace_id (str): ID of Langfuse trace to use
-            observation_id (str): ID of parent Langfuse observation to use
-            project_name (str): Project the agent belongs to (default mindsdb)
-            tools (list[BaseTool]): Tools to use while getting the completion
-            params (dict | None): params to redefine agent params
-
-        Returns:
-            chunks (Iterator[object]): Completion chunks as an iterator
-
-        Raises:
-            ValueError: Agent's model does not exist.
-        """
-        # For circular dependency.
-        from .langchain_agent import LangchainAgent
-
-        model, provider = self.check_model_provider(agent.model_name, agent.provider)
-
-        # update old agents
-        if agent.provider is None and provider is not None:
-            agent.provider = provider
-            db.session.commit()
-
-        # Get agent parameters and combine with default LLM parameters at runtime
-        llm_params = self.get_agent_llm_params(agent.params)
-
-        lang_agent = LangchainAgent(agent, model=model, llm_params=llm_params)
-        return lang_agent.get_completion(messages, stream=True, params=params)
+            return pydantic_agent.get_completion(messages, stream=True, params=params)
+        else:
+            return pydantic_agent.get_completion(messages, params=params)

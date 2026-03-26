@@ -1,0 +1,29 @@
+---
+title: How to Use Agents
+sidebarTitle: AI Agents
+---
+
+Currently, there is no JavaScript syntax for using Agents. To use Agents from JavaScript SDK, refer to the [Agents documentation in SQL](/mindsdb_sql/agents/agent) and execute SQL queries as below.
+
+```
+const query = `
+    CREATE AGENT my_agent
+    USING
+        model = {
+            "provider": "openai",
+            "model_name" : "gpt-4o",
+            "api_key": "sk-abc123"
+        },
+        data = {
+            "knowledge_bases": ["mindsdb.sales_kb", "mindsdb.orders_kb"],
+            "tables": ["postgres_conn.customers", "mysql_conn.products"]
+        },
+        prompt_template='
+            mindsdb.sales_kb stores sales analytics data
+            mindsdb.orders_kb stores order data
+            postgres_conn.customers stores customers data
+            mysql_conn.products stores products data
+        ';
+    `;
+const queryResult = await MindsDB.SQL.runQuery(query);
+```

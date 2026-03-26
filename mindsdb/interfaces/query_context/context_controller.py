@@ -7,7 +7,14 @@ import pandas as pd
 
 from mindsdb_sql_parser import Select, Star, OrderBy
 
-from mindsdb_sql_parser.ast import Identifier, BinaryOperation, Last, Constant, ASTNode
+from mindsdb_sql_parser.ast import (
+    Identifier,
+    BinaryOperation,
+    Last,
+    Constant,
+    ASTNode,
+    Function,
+)
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.cache import get_cache
 
@@ -16,6 +23,30 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import config
 
 from .last_query import LastQuery
+
+
+def get_column_case_insensitive(columns, name):
+    """Get the column name from a list of columns using case-insensitive search
+
+    Args:
+        columns: list of column names
+        name: name of the column to search for (case-insensitive)
+    Returns:
+        str: the actual column name from the list
+    Raises:
+        ValueError: if column is not found or multiple columns match
+    """
+    lower_names = [name.lower() for name in columns]
+    count = lower_names.count(name.lower())
+    if count == 0:
+        raise ValueError(f"Column '{name}' not found. Available columns: {columns}")
+    if count == 1:
+        return columns[lower_names.index(name.lower())]
+
+    raise ValueError(
+        f"Ambiguous column reference: multiple columns with name '{name}' found (case-insensitive match). "
+        f"Available columns: {columns}"
+    )
 
 
 class RunningQuery:
@@ -45,7 +76,7 @@ class RunningQuery:
             for df in dn.query_stream(query2, fetch_size=self.batch_size):
                 max_track_value = self.get_max_track_value(df)
                 yield df
-                self.set_progress(df, max_track_value)
+                self.set_progress(max_track_value=max_track_value)
 
         else:
             while True:
@@ -59,7 +90,7 @@ class RunningQuery:
 
                 max_track_value = self.get_max_track_value(df)
                 yield df
-                self.set_progress(df, max_track_value)
+                self.set_progress(max_track_value=max_track_value)
 
     def get_partition_query(self, step_num: int, query: Select, stream=False) -> Select:
         """
@@ -135,6 +166,7 @@ class RunningQuery:
     def add_to_task(self):
         task_record = db.Tasks(
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
             user_class=ctx.user_class,
             object_type=self.OBJECT_TYPE,
             object_id=self.record.id,
@@ -143,11 +175,14 @@ class RunningQuery:
         db.session.commit()
 
     def remove_from_task(self):
-        task = db.Tasks.query.filter(
+        task_query = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.object_id == self.record.id,
             db.Tasks.company_id == ctx.company_id,
-        ).first()
+        )
+        if ctx.enforce_user_id:
+            task_query = task_query.filter(db.Tasks.user_id == ctx.user_id)
+        task = task_query.first()
 
         if task is not None:
             db.session.delete(task)
@@ -173,29 +208,28 @@ class RunningQuery:
         """
         if "track_column" in self.record.parameters:
             track_column = self.record.parameters["track_column"]
-            return df[track_column].max()
+            return df[get_column_case_insensitive(df.columns, track_column)].max()
         else:
             # stream mode
             return None
 
-    def set_progress(self, df: pd.DataFrame, max_track_value: int):
+    def set_progress(self, processed_rows: int = None, max_track_value: int = None):
         """
         Store progres of the query, it is called after processing of batch
         """
 
-        if len(df) == 0:
-            return
+        if processed_rows is not None and processed_rows > 0:
+            self.record.processed_rows = self.record.processed_rows + processed_rows
+            db.session.commit()
 
-        self.record.processed_rows = self.record.processed_rows + len(df)
-
-        cur_value = self.record.context.get("track_value")
-        new_value = max_track_value
-        if new_value is not None:
-            if cur_value is None or new_value > cur_value:
-                self.record.context["track_value"] = new_value
-                flag_modified(self.record, "context")
-
-        db.session.commit()
+        if max_track_value is not None:
+            cur_value = self.record.context.get("track_value")
+            new_value = max_track_value
+            if new_value is not None:
+                if cur_value is None or new_value > cur_value:
+                    self.record.context["track_value"] = new_value
+                    flag_modified(self.record, "context")
+            db.session.commit()
 
     def on_error(self, error: Exception, step_num: int, steps_data: dict):
         """
@@ -313,16 +347,33 @@ class QueryContextController:
         def replace_lasts(node, **kwargs):
             # find last in where
             if isinstance(node, BinaryOperation):
-                if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Last):
+                arg1, arg2 = node.args
+                if not isinstance(arg1, Identifier):
+                    arg1, arg2 = arg2, arg1
+
+                # one of the args must be identifier
+                if not isinstance(arg1, Identifier):
+                    return
+
+                # another must be LAST or function with LAST in args
+                if isinstance(arg2, Last) or (
+                    isinstance(arg2, Function) and any(isinstance(arg, Last) for arg in arg2.args)
+                ):
                     node.args = [Constant(0), Constant(0)]
                     node.op = "="
+                    return node
 
         # find lasts
         query_traversal(query, replace_lasts)
         return query
 
     def _result_callback(
-        self, l_query: LastQuery, context_name: str, query_str: str, df: pd.DataFrame, columns_info: list
+        self,
+        l_query: LastQuery,
+        context_name: str,
+        query_str: str,
+        df: pd.DataFrame,
+        columns_info: list,
     ):
         """
         This function handlers result from executed query and updates context variables with new values
@@ -380,9 +431,10 @@ class QueryContextController:
         """
 
         context_name = self.gen_context_name(object_type, object_id)
-        for rec in (
-            db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id).all()
-        ):
+        query = db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.QueryContext.user_id == ctx.user_id)
+        for rec in query.all():
             db.session.delete(rec)
         db.session.commit()
 
@@ -481,7 +533,10 @@ class QueryContextController:
         """
         context_name = self.gen_context_name(object_type, object_id)
         vars = []
-        for rec in db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id):
+        query = db.session.query(db.QueryContext).filter_by(context_name=context_name, company_id=ctx.company_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.QueryContext.user_id == ctx.user_id)
+        for rec in query:
             if rec.values is not None:
                 vars.append(rec.values)
 
@@ -493,17 +548,26 @@ class QueryContextController:
         Find and return record for context and query string
         """
 
-        return (
-            db.session.query(db.QueryContext)
-            .filter_by(query=query_str, context_name=context_name, company_id=ctx.company_id)
-            .first()
+        query = db.session.query(db.QueryContext).filter_by(
+            query=query_str,
+            context_name=context_name,
+            company_id=ctx.company_id,
         )
+        if ctx.enforce_user_id:
+            query = query.filter(db.QueryContext.user_id == ctx.user_id)
+        return query.first()
 
     def __add_context_record(self, context_name: str, query_str: str, values: dict) -> db.QueryContext:
         """
         Creates record (for context and query string) with values and returns it
         """
-        rec = db.QueryContext(query=query_str, context_name=context_name, company_id=ctx.company_id, values=values)
+        rec = db.QueryContext(
+            query=query_str,
+            context_name=context_name,
+            company_id=ctx.company_id,
+            user_id=ctx.user_id,
+            values=values,
+        )
         db.session.add(rec)
         return rec
 
@@ -520,7 +584,10 @@ class QueryContextController:
         Get running query by id
         """
 
-        rec = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id).first()
+        query = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.Queries.user_id == ctx.user_id)
+        rec = query.first()
 
         if rec is None:
             raise RuntimeError(f"Query not found: {query_id}")
@@ -532,9 +599,13 @@ class QueryContextController:
         """
 
         # remove old queries
-        remove_query = db.session.query(db.Queries).filter(
-            db.Queries.company_id == ctx.company_id, db.Queries.finished_at < (dt.datetime.now() - dt.timedelta(days=1))
-        )
+        filters = [
+            db.Queries.company_id == ctx.company_id,
+            db.Queries.finished_at < (dt.datetime.now() - dt.timedelta(days=1)),
+        ]
+        if ctx.enforce_user_id:
+            filters.append(db.Queries.user_id == ctx.user_id)
+        remove_query = db.session.query(db.Queries).filter(*filters)
         for rec in remove_query.all():
             self.get_query(rec.id).remove_from_task()
             db.session.delete(rec)
@@ -543,6 +614,7 @@ class QueryContextController:
             sql=str(query),
             database=database,
             company_id=ctx.company_id,
+            user_id=ctx.user_id,
         )
 
         db.session.add(rec)
@@ -555,13 +627,18 @@ class QueryContextController:
         """
 
         query = db.session.query(db.Queries).filter(db.Queries.company_id == ctx.company_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.Queries.user_id == ctx.user_id)
         return [RunningQuery(record).get_info() for record in query]
 
     def cancel_query(self, query_id: int):
         """
         Cancels running query by id
         """
-        rec = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id).first()
+        query = db.Queries.query.filter(db.Queries.id == query_id, db.Queries.company_id == ctx.company_id)
+        if ctx.enforce_user_id:
+            query = query.filter(db.Queries.user_id == ctx.user_id)
+        rec = query.first()
         if rec is None:
             raise RuntimeError(f"Query not found: {query_id}")
 

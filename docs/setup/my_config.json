@@ -37,11 +37,6 @@
             "restart_on_failure": true,
             "max_restart_count": 1,
             "max_restart_interval_seconds": 60
-        },
-        "mongodb": {
-            "host": "127.0.0.1",
-            "port": "47336",
-            "database": "mindsdb"
         }
     },
     "cache": {

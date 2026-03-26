@@ -1,2 +1,2 @@
-pyodbc
-sqlalchemy-access
+pyodbc>=5.0.0; sys_platform == 'win32'
+sqlalchemy-access>=2.0.0; sys_platform == 'win32'

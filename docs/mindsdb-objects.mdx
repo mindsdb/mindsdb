@@ -1,0 +1,199 @@
+---
+title: Naming Standards for MindsDB Objects
+sidebarTitle: MindsDB Objects
+icon: "puzzle-piece-simple"
+---
+
+MindsDB allows you to create and manage a variety of entities within its ecosystem. All MindsDB objects follow the same naming conventions to ensure consistency and compatibility across the platform.
+
+## MindsDB Entities
+
+The following entities can be created in MindsDB:
+
+* Databases → [CREATE DATABASE](https://docs.mindsdb.com/mindsdb_sql/sql/create/database)
+
+* Knowledge Bases (KBs) → [CREATE KNOWLEDGE_BASE](https://docs.mindsdb.com/mindsdb_sql/knowledge_bases/create)
+
+* Tables → [CREATE TABLE](https://docs.mindsdb.com/mindsdb_sql/sql/create/table)
+
+* Views → [CREATE VIEW](https://docs.mindsdb.com/mindsdb_sql/sql/create/view)
+
+* Projects → [CREATE PROJECT](https://docs.mindsdb.com/mindsdb_sql/sql/create/project)
+
+* Jobs → [CREATE JOB](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs)
+
+* Triggers → [CREATE TRIGGER](https://docs.mindsdb.com/mindsdb_sql/sql/create/trigger)
+
+* Agents → [CREATE AGENT](https://docs.mindsdb.com/mindsdb_sql/agents/agent_syntax)
+
+## General Naming Rules
+
+When creating these entities, the following conventions apply:
+
+* **Case-insensitive names**  
+
+    Object names are not sensitive to letter casing. For example:
+
+    ```sql
+    CREATE VIEW my_view (...);   -- creates "my_view"
+    CREATE VIEW My_View (...);   -- also creates "my_view"
+    CREATE VIEW MY_VIEW (...);   -- also creates "my_view"
+    ```
+
+    All names are automatically converted to lowercase.
+
+* **Allowed characters**
+
+    Lowercase letters (`a–z`)
+    Numbers (`0–9`)
+    Underscores (`_`)  
+
+    Example:
+
+    ```sql
+    CREATE AGENT my_agent345 (...);   -- creates "my_agent345"
+    ```
+
+* **Special characters**
+
+    If you need special characters or spaces in object names, enclose them in backticks.  
+
+    ```sql
+    CREATE VIEW `my view` (...);   -- creates “my view”
+    CREATE VIEW `my-view!` (...);  -- creates “my-view!”
+    ```
+
+    However, names inside backticks must be lowercase. Using uppercase letters will result in an error because all object names must be in lowercase letters.
+
+    ```sql
+    CREATE VIEW `My View` (...);   -- error
+    ```
+
+<Warning>
+When working with entities from a data source connected to MindsDB, their original names are preserved and are not subject to MindsDB naming rules.
+
+For example, if you connect a Snowflake data source that contains a table named `ANALYTICS_101` with a column named `Date_Time`, you must reference them exactly as they appear in the source, utilizing backticks, as shown below:
+
+```sql
+SELECT `Date_Time`
+FROM snowflake_data.`ANALYTICS_101`;
+```
+</Warning>
+
+## Backward Compatibility
+
+Older objects created with uppercase letters are still supported for backward compatibility. To reference them, wrap the name in backticks.
+
+```sql
+SELECT * FROM `MyView`;   -- selects from “MyView”
+DROP VIEW `MyView`;   -- deletes “MyView”
+```
+
+You cannot create new objects with uppercase letters. For example:
+
+```sql
+CREATE VIEW `MyView` (...);   -- error
+```
+
+## Examples
+
+Here are some practical examples:
+
+### Databases
+
+Note that when enclosing the object name in backticks, it preserves the case-sensitivity and special characters included in the name. Otherwise, the upper-case letters are automatically converted to lower-case letters.
+
+See the usage examples below.
+
+```sql
+CREATE DATABASE my_database WITH …;    -- creates my_database
+SELECT * FROM my_database.table_name;  -- selects from my_database
+DROP DATABASE my_database;             -- drops my_database
+
+CREATE DATABASE MY_DATABASE WITH …;    -- creates my_database (note that upper-case letters are converted to lower-case letters)
+SELECT * FROM my_database.table_name;  -- selects from my_database
+SELECT * FROM MY_DATABASE.table_name;  -- selects from my_database
+DROP DATABASE MY_DATABASE;             -- drops my_database
+
+CREATE DATABASE `My-database` WITH …;    -- creates My-database (note that the name must be enclosed in backticks because it contains a special character)
+SELECT * FROM `My-database`.table_name;  -- selects from My-database
+DROP DATABASE `My-database`;             -- drops My-database
+```
+
+```sql
+-- this works
+CREATE DATABASE demodata WITH …;
+SELECT * FROM demodata.table_name;
+SELECT * FROM `demodata`.table_name;
+DROP DATABASE demodata;
+
+-- this works and converts all letters to lower-case
+CREATE DATABASE demoData WITH …;
+SELECT * FROM demoData ...
+DROP DATABASE demoData;
+
+-- this works and keeps upper/lower-case letters because the name is enclosed in backticks
+CREATE DATABASE `DemoData` WITH …;
+SELECT * FROM `DemoData` ...
+DROP DATABASE `DemoData` ...
+```
+
+```sql
+CREATE DATABASE DemoData WITH …;     -- creates demodata
+CREATE DATABASE `DemoData` WITH …;   -- cannot create DemoData because demodata already exists
+DROP DATABASE `DemoData`;            -- cannot drop DemoData because DemoData does not exist
+DROP DATABASE DemoData;              -- drops demodata
+
+CREATE DATABASE `DemoData` WITH …;     -- creates DemoData
+CREATE DATABASE demodata WITH …;       -- cannot create demodata because DemoData already exists
+DROP DATABASE demodata;                -- cannot drop demodata because demodata does not exist
+DROP DATABASE `DemoData`;              -- drops demodata
+```
+
+```sql
+CREATE DATABASE demodata WITH …;   -- creates demodata
+SELECT * FROM DEMODATA.table_name; -- selects from demodata, because DEMODATA is converted to demodata
+DROP DATABASE demodata;            -- drops demodata
+
+CREATE DATABASE `DemoData` WITH …;    -- creates DemoData
+SELECT * FROM demodata.table_name;    -- cannot select from demodata
+SELECT * FROM `DemoData`.table_name;  -- selects from DemoData
+DROP DATABASE demodata;               -- cannot drop demodata because demodata does not exist
+DROP DATABASE `DemoData`;             -- drops DemoData
+
+CREATE DATABASE `Dèmo data 2` WITH …;
+SELECT * FROM `Dèmo data 2`.table_name;
+DROP DATABASE `Dèmo data 2`;
+```
+
+### Views
+
+```sql
+CREATE VIEW my_view (...);   -- creates "my_view"
+CREATE VIEW My_View (...);   -- also creates "my_view"
+CREATE VIEW `my view` (...);   -- creates "my view"
+CREATE VIEW `My_View` (...);   -- error
+```
+
+If an older object named `My_View` exists, you can still use it:
+
+```sql
+SELECT * FROM `My_View`;   -- selects from “My_View”
+DROP VIEW `My_View`;   -- deletes “My_View”
+```
+
+### Agents
+
+```sql
+CREATE AGENT my_agent USING ...;   -- creates "my_agent"
+CREATE AGENT My_Agent USING ...;   -- also creates "my_agent"
+CREATE AGENT `my agent 1` USING ...;   -- creates "my agent 1"
+CREATE AGENT `My agent 1` USING ...;   -- error
+```
+
+If an older object named `My agent 1` exists, you can still use it:
+
+```sql
+SELECT * FROM `My agent 1`;   -- selects from “My agent 1”
+DROP AGENT `My agent 1`;   -- deletes “My agent 1”
+```

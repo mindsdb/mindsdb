@@ -2,14 +2,14 @@ import re
 import datetime as dt
 
 import sqlalchemy as sa
-from sqlalchemy.sql import operators
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased
+from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.dialects import mysql, postgresql, sqlite, mssql, oracle
 from sqlalchemy.schema import CreateTable, DropTable
-from sqlalchemy.sql import ColumnElement
-from sqlalchemy.sql import functions as sa_fnc
+from sqlalchemy.sql import operators, ColumnElement, functions as sa_fnc
+from sqlalchemy.sql.expression import ClauseElement
 
 from mindsdb_sql_parser import ast
 
@@ -47,7 +47,7 @@ def _compile_interval(element, compiler, **kw):
         if items[1].upper().endswith("S"):
             items[1] = items[1][:-1]
 
-    if compiler.dialect.driver in ["snowflake"]:
+    if getattr(compiler.dialect, "driver", None) == "snowflake" or compiler.dialect.name == "postgresql":
         # quote all
         args = " ".join(map(str, items))
         args = f"'{args}'"
@@ -56,6 +56,25 @@ def _compile_interval(element, compiler, **kw):
         items[0] = f"'{items[0]}'"
         args = " ".join(items)
     return "INTERVAL " + args
+
+
+# region definitions of custom clauses for GROUP BY ROLLUP
+# This will work also in DuckDB, as it use postgres dialect
+class GroupByRollup(ClauseElement):
+    def __init__(self, *columns):
+        self.columns = columns
+
+
+@compiles(GroupByRollup)
+def visit_group_by_rollup(element, compiler, **kw):
+    columns = ", ".join([compiler.process(col, **kw) for col in element.columns])
+    if compiler.dialect.name in ("mysql", "default"):
+        return f"{columns} WITH ROLLUP"
+    else:
+        return f"ROLLUP({columns})"
+
+
+# endregion
 
 
 class AttributedStr(str):
@@ -80,27 +99,27 @@ def get_is_quoted(identifier: ast.Identifier):
     return quoted
 
 
-class SqlalchemyRender:
-    def __init__(self, dialect_name):
-        dialects = {
-            "mysql": mysql,
-            "postgresql": postgresql,
-            "postgres": postgresql,
-            "sqlite": sqlite,
-            "mssql": mssql,
-            "oracle": oracle,
-            "Snowflake": oracle,
-        }
+dialects = {
+    "mysql": mysql,
+    "postgresql": postgresql,
+    "postgres": postgresql,
+    "sqlite": sqlite,
+    "mssql": mssql,
+    "oracle": oracle,
+}
 
+
+class SqlalchemyRender:
+    def __init__(self, dialect_name: str | Dialect):
         if isinstance(dialect_name, str):
             dialect = dialects[dialect_name].dialect
         else:
             dialect = dialect_name
 
         # override dialect's preparer
-        if hasattr(dialect, "preparer"):
+        if hasattr(dialect, "preparer") and dialect.preparer.__name__ != "MDBPreparer":
 
-            class Preparer(dialect.preparer):
+            class MDBPreparer(dialect.preparer):
                 def _requires_quotes(self, value: str) -> bool:
                     # check force-quote flag
                     if isinstance(value, AttributedStr):
@@ -116,7 +135,7 @@ class SqlalchemyRender:
                         # or (lc_value != value)
                     )
 
-            dialect.preparer = Preparer
+            dialect.preparer = MDBPreparer
 
         # remove double percent signs
         # https://docs.sqlalchemy.org/en/14/faq/sqlexpressions.html#why-are-percent-signs-being-doubled-up-when-stringifying-sql-statements
@@ -126,8 +145,8 @@ class SqlalchemyRender:
         self.selects_stack = []
 
         if dialect_name == "mssql":
-            # update version to MS_2008_VERSION for supports_multivalues_insert
-            self.dialect.server_version_info = (10,)
+            # update version to MS_2012_VERSION for supports_multivalues_insert and offset
+            self.dialect.server_version_info = (12,)
             self.dialect._setup_version_attributes()
         elif dialect_name == "mysql":
             # update version for support float cast
@@ -212,7 +231,12 @@ class SqlalchemyRender:
             if col is None:
                 col = self.to_column(t)
             if t.alias:
-                col = col.label(self.get_alias(t.alias))
+                alias_name = self.get_alias(t.alias)
+                # Skip self-referencing aliases (e.g., "column AS column")
+                if len(t.parts) == 1 and t.parts[0] == alias_name:
+                    pass  # Don't add alias if it matches the column name
+                else:
+                    col = col.label(alias_name)
         elif isinstance(t, ast.Select):
             sub_stmt = self.prepare_select(t)
             col = sub_stmt.scalar_subquery()
@@ -282,6 +306,12 @@ class SqlalchemyRender:
                 func = functions[t.op.lower()]
                 col = func(arg0, arg1)
             else:
+                # for unknown operators wrap arguments into parens
+                if isinstance(t.args[0], ast.BinaryOperation):
+                    arg0 = arg0.self_group()
+                if isinstance(t.args[1], ast.BinaryOperation):
+                    arg1 = arg1.self_group()
+
                 col = arg0.op(t.op)(arg1)
 
             if t.alias:
@@ -377,9 +407,9 @@ class SqlalchemyRender:
         elif isinstance(t, ast.Parameter):
             col = sa.column(t.value, is_literal=True)
             if t.alias:
-                raise RenderError()
+                raise RenderError("Parameter aliases are not supported in the renderer")
         elif isinstance(t, ast.Tuple):
-            col = [self.to_expression(i) for i in t.items]
+            col = sa.tuple_(*[self.to_expression(i) for i in t.items])
         elif isinstance(t, ast.Variable):
             col = sa.column(t.to_string(), is_literal=True)
         elif isinstance(t, ast.Latest):
@@ -416,7 +446,11 @@ class SqlalchemyRender:
         return col
 
     def to_function(self, t):
-        op = getattr(sa.func, t.op)
+        if t.namespace is not None:
+            op = getattr(sa.func, t.namespace)
+        else:
+            op = sa.func
+        op = getattr(op, t.op)
         if t.from_arg is not None:
             arg = t.args[0].to_string()
             from_arg = self.to_expression(t.from_arg)
@@ -568,17 +602,18 @@ class SqlalchemyRender:
                         else:
                             condition = self.to_expression(item["condition"])
 
-                        if "ASOF" in join_type:
+                        if "ASOF" in join_type or "RIGHT" in join_type:
                             raise NotImplementedError(f"Unsupported join type: {join_type}")
-                        method = "join"
+
                         is_full = False
-                        if join_type == "LEFT JOIN":
-                            method = "outerjoin"
+                        is_outer = False
+                        if join_type in ("LEFT JOIN", "LEFT OUTER JOIN"):
+                            is_outer = True
                         if join_type == "FULL JOIN":
                             is_full = True
 
                         # perform join
-                        query = getattr(query, method)(table, condition, full=is_full)
+                        query = query.join(table, condition, isouter=is_outer, full=is_full)
             elif isinstance(from_table, (ast.Union, ast.Intersect, ast.Except)):
                 alias = None
                 if from_table.alias:
@@ -608,7 +643,10 @@ class SqlalchemyRender:
 
         if node.group_by is not None:
             cols = [self.to_expression(i) for i in node.group_by]
-            query = query.group_by(*cols)
+            if getattr(node.group_by[-1], "with_rollup", False):
+                query = query.group_by(GroupByRollup(*cols))
+            else:
+                query = query.group_by(*cols)
 
         if node.having is not None:
             query = query.having(self.to_expression(node.having))
@@ -832,7 +870,7 @@ class SqlalchemyRender:
 
             return sql, params
 
-        except (SQLAlchemyError, NotImplementedError) as e:
+        except (SQLAlchemyError, NotImplementedError, AttributeError) as e:
             if not with_failback:
                 raise e
 

@@ -113,3 +113,18 @@ class WriterConfig(BaseLLMConfig):
     writer_api_key: Optional[str] = Field(default=None)
     writer_org_id: Optional[str] = Field(default=None)
     base_url: Optional[str] = Field(default=None)
+
+
+# https://api.python.langchain.com/en/latest/llms/langchain_aws.llms.bedrock.BedrockLLM.html#langchain_aws.llms.bedrock.BedrockLLM
+class BedrockConfig(BaseLLMConfig):
+    model_id: str
+    aws_access_key_id: Optional[str] = Field(default=None)
+    aws_secret_access_key: Optional[str] = Field(default=None)
+    aws_session_token: Optional[str] = Field(default=None)
+    region_name: Optional[str] = Field(default=None)
+    credentials_profile_name: Optional[str] = Field(default=None)
+    endpoint_url: Optional[str] = Field(default=None)
+    stop: Optional[List[str]] = Field(default=None)
+    temperature: Optional[float] = Field(default=0.7)
+    max_tokens: Optional[int] = Field(default=None)
+    model_kwargs: Optional[Dict[str, Any]] = Field(default=None)

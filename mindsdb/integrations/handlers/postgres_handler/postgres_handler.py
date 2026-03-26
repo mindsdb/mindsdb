@@ -1,5 +1,6 @@
 import time
 import json
+import logging
 from typing import Optional, Any
 
 import pandas as pd
@@ -146,7 +147,7 @@ class PostgresHandler(MetaDatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = False
+        self.cache_thread_safe = True
 
     def __del__(self):
         if self.is_connected:
@@ -175,9 +176,6 @@ class PostgresHandler(MetaDatabaseHandler):
         if self.connection_args.get("autocommit"):
             config["autocommit"] = self.connection_args.get("autocommit")
 
-        # If schema is not provided set public as default one
-        if self.connection_args.get("schema"):
-            config["options"] = f"-c search_path={self.connection_args.get('schema')},public"
         return config
 
     @profiler.profile()
@@ -198,6 +196,12 @@ class PostgresHandler(MetaDatabaseHandler):
         try:
             self.connection = psycopg.connect(**config)
             self.is_connected = True
+
+            schema = self.connection_args.get("schema")
+            if schema:
+                with self.connection.cursor() as cur:
+                    cur.execute(f'SET search_path TO "{schema}", public;')
+                self.connection.commit()
             return self.connection
         except psycopg.Error as e:
             logger.error(f"Error connecting to PostgreSQL {self.database}, {e}!")
@@ -279,7 +283,7 @@ class PostgresHandler(MetaDatabaseHandler):
         df.columns = columns
 
     @profiler.profile()
-    def native_query(self, query: str, params=None) -> Response:
+    def native_query(self, query: str, params=None, **kwargs) -> Response:
         """
         Executes a SQL query on the PostgreSQL database and returns the result.
 
@@ -304,8 +308,19 @@ class PostgresHandler(MetaDatabaseHandler):
                     result = cur.fetchall()
                     response = _make_table_response(result, cur)
                 connection.commit()
+            except (psycopg.ProgrammingError, psycopg.DataError) as e:
+                # These is 'expected' exceptions, they should not be treated as mindsdb's errors
+                # ProgrammingError: table not found or already exists, syntax error, etc
+                # DataError: division by zero, numeric value out of range, etc.
+                # https://www.psycopg.org/psycopg3/docs/api/errors.html
+                log_message = "Database query failed with error, likely due to invalid SQL query"
+                if logger.isEnabledFor(logging.DEBUG):
+                    log_message += f". Executed query:\n{query}"
+                logger.info(log_message)
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_expected_error=True)
+                connection.rollback()
             except Exception as e:
-                logger.error(f"Error running query: {query} on {self.database}, {e}!")
+                logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
                 response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                 connection.rollback()
 
@@ -466,7 +481,10 @@ class PostgresHandler(MetaDatabaseHandler):
             AND
                 table_schema = {schema_name}
         """
-        result = self.native_query(query)
+        # If it is used by pgvector handler - `native_query` method of pgvector handler will be used
+        #   in that case if shared pgvector db is used - `native_query` will be skipped (return  empty result)
+        #   `no_restrict` flag allows to execute native query, and it will call `native_query` of postgres handler
+        result = self.native_query(query, no_restrict=True)
         result.to_columns_table_response(map_type_fn=_map_type)
         return result
 
@@ -573,8 +591,11 @@ class PostgresHandler(MetaDatabaseHandler):
                 obj_description(pgc.oid, 'pg_class') AS table_description,
                 pgc.reltuples AS row_count
             FROM information_schema.tables t
-            JOIN pg_catalog.pg_class pgc ON pgc.relname = t.table_name
-            JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
+            JOIN pg_catalog.pg_namespace pgn
+            ON pgn.nspname = t.table_schema
+            JOIN pg_catalog.pg_class pgc
+            ON pgc.relname = t.table_name
+            AND pgc.relnamespace = pgn.oid
             WHERE t.table_schema = current_schema()
             AND t.table_type in ('BASE TABLE', 'VIEW')
             AND t.table_name NOT LIKE 'pg_%'
@@ -607,13 +628,14 @@ class PostgresHandler(MetaDatabaseHandler):
                 c.column_default,
                 (c.is_nullable = 'YES') AS is_nullable
             FROM information_schema.columns c
-            JOIN pg_catalog.pg_class pgc ON pgc.relname = c.table_name
-            JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
+            JOIN pg_namespace pgn ON pgn.nspname = c.table_schema
+            JOIN pg_class pgc
+            ON pgc.relname = c.table_name
+            AND pgc.relnamespace = pgn.oid
             WHERE c.table_schema = current_schema()
             AND pgc.relkind = 'r'  -- Only consider regular tables (avoids indexes, sequences, etc.)
             AND c.table_name NOT LIKE 'pg_%'
             AND c.table_name NOT LIKE 'sql_%'
-            AND pgn.nspname = c.table_schema
         """
 
         if table_names is not None and len(table_names) > 0:
@@ -683,7 +705,16 @@ class PostgresHandler(MetaDatabaseHandler):
             df["MINIMUM_VALUE"] = min_max_values.apply(lambda x: x[0])
             df["MAXIMUM_VALUE"] = min_max_values.apply(lambda x: x[1])
 
-        result.data_frame = df.drop(columns=["histogram_bounds"])
+            # Convert most_common_values and most_common_freqs to arrays.
+            df["MOST_COMMON_VALUES"] = df["most_common_values"].apply(
+                lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
+            )
+            df["MOST_COMMON_FREQUENCIES"] = df["most_common_frequencies"].apply(
+                lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
+            )
+
+        result.data_frame = df.drop(columns=["histogram_bounds", "most_common_values", "most_common_frequencies"])
+
         return result
 
     def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
@@ -704,10 +735,10 @@ class PostgresHandler(MetaDatabaseHandler):
                 tc.constraint_name
             FROM
                 information_schema.table_constraints AS tc
-            JOIN
-                information_schema.key_column_usage AS kcu
-            ON
-                tc.constraint_name = kcu.constraint_name
+            JOIN information_schema.key_column_usage AS kcu
+                ON tc.constraint_name = kcu.constraint_name
+                AND tc.constraint_schema = kcu.constraint_schema
+                AND tc.table_schema = kcu.table_schema
             WHERE
                 tc.constraint_type = 'PRIMARY KEY'
                 AND tc.table_schema = current_schema()
@@ -739,14 +770,13 @@ class PostgresHandler(MetaDatabaseHandler):
                 tc.constraint_name
             FROM
                 information_schema.table_constraints AS tc
-            JOIN
-                information_schema.key_column_usage AS kcu
-            ON
-                tc.constraint_name = kcu.constraint_name
-            JOIN
-                information_schema.constraint_column_usage AS ccu
-            ON
-                ccu.constraint_name = tc.constraint_name
+                JOIN information_schema.key_column_usage AS kcu
+                    ON tc.constraint_name   = kcu.constraint_name
+                    AND tc.constraint_schema = kcu.constraint_schema
+                    AND tc.table_schema      = kcu.table_schema
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name   = tc.constraint_name
+                    AND ccu.constraint_schema = tc.constraint_schema
             WHERE
                 tc.constraint_type = 'FOREIGN KEY'
                 AND tc.table_schema = current_schema()

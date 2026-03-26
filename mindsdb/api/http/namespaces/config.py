@@ -11,6 +11,7 @@ from flask import current_app as ca
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.utilities.api_status import get_api_status
 from mindsdb.utilities import log
 from mindsdb.utilities.functions import decrypt, encrypt
 from mindsdb.utilities.config import Config
@@ -32,8 +33,13 @@ class GetConfig(Resource):
             value = config.get(key)
             if value is not None:
                 resp[key] = value
-        if "a2a" in config["api"]:
-            resp["a2a"] = config["api"]["a2a"]
+
+        api_status = get_api_status()
+        api_configs = copy.deepcopy(config["api"])
+        for api_name, api_config in api_configs.items():
+            api_config["running"] = api_status.get(api_name, False)
+        resp["api"] = api_configs
+
         return resp
 
     @ns_conf.doc("put_config")
@@ -165,9 +171,7 @@ class Integration(Resource):
             )
 
         try:
-            engine = params["type"]
-            if engine is not None:
-                del params["type"]
+            engine = params.pop("type", None)
             params.pop("publish", False)
             storage = params.pop("storage", None)
             ca.integration_controller.add(name, engine, params)
@@ -180,10 +184,10 @@ class Integration(Resource):
                 handler.handler_storage.import_files(export)
 
         except Exception as e:
-            logger.error(str(e))
+            logger.exception("An error occurred during the creation of the integration:")
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
-            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during config update: {str(e)}")
+            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during config update: {e}")
 
         if temp_dir is not None:
             shutil.rmtree(temp_dir)
@@ -200,8 +204,8 @@ class Integration(Resource):
         try:
             ca.integration_controller.delete(name)
         except Exception as e:
-            logger.error(str(e))
-            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration delete: {str(e)}")
+            logger.exception("An error occurred while deleting the integration")
+            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration delete: {e}")
         return "", 200
 
     @ns_conf.doc("modify_integration")
@@ -225,8 +229,6 @@ class Integration(Resource):
             ca.integration_controller.modify(name, params)
 
         except Exception as e:
-            logger.error(str(e))
-            return http_error(
-                HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration modification: {str(e)}"
-            )
+            logger.exception("An error occurred while modifying the integration")
+            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration modification: {e}")
         return "", 200

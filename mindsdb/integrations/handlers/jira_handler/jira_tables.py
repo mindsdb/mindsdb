@@ -246,8 +246,7 @@ class JiraIssueFetcherMixin:
         """
         fields = issue.get("fields") or {}
         if field_key in fields:
-            if fields[field_key] is not None:
-                return fields[field_key]
+            return fields[field_key]
 
         issue_identifier = issue.get("id") or issue.get("key")
         if issue_identifier is None:
@@ -359,6 +358,88 @@ class JiraProjectsTable(JiraTableBase):
             "entityId",
             "uuid",
         ]
+
+    # META TABLES
+    @staticmethod
+    def meta_get_tables(table_name: str) -> Dict[str, str]:
+        if table_name == "projects":
+            return {
+                "table_name": "projects",
+                "table_schema": "jira",
+                "table_type": "BASE TABLE",
+                "table_description": "Jira projects available to the configured user.",
+            }
+        return {}
+
+    @staticmethod
+    def meta_get_columns(table_name: str) -> List[Dict]:
+        if table_name == "projects":
+            return [
+                {
+                    "table_name": "projects",
+                    "column_name": "id",
+                    "data_type": "TEXT",
+                    "description": "Project ID",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "projects",
+                    "column_name": "key",
+                    "data_type": "TEXT",
+                    "description": "Project key",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "projects",
+                    "column_name": "name",
+                    "data_type": "TEXT",
+                    "description": "Project name",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "projects",
+                    "column_name": "projectTypeKey",
+                    "data_type": "TEXT",
+                    "description": "Type of the project",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "projects",
+                    "column_name": "simplified",
+                    "data_type": "BOOLEAN",
+                    "description": "Whether the project is simplified",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "projects",
+                    "column_name": "style",
+                    "data_type": "TEXT",
+                    "description": "Style of the project",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "projects",
+                    "column_name": "isPrivate",
+                    "data_type": "BOOLEAN",
+                    "description": "Whether the project is private",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "projects",
+                    "column_name": "entityId",
+                    "data_type": "TEXT",
+                    "description": "Entity ID of the project",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "projects",
+                    "column_name": "uuid",
+                    "data_type": "TEXT",
+                    "description": "UUID of the project",
+                    "is_nullable": False,
+                },
+            ]
+        return []
 
 
 class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
@@ -489,6 +570,192 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
             return None
         return None
 
+    # META TABLES
+    @staticmethod
+    def meta_get_tables(table_name: str) -> Dict[str, str]:
+        if table_name == "issues":
+            return {
+                "table_name": "issues",
+                "table_schema": "jira",
+                "table_type": "BASE TABLE",
+                "table_description": "Jira issues across all projects accessible to the configured user.",
+            }
+        return {}
+
+    @staticmethod
+    def meta_get_columns(table_name: str) -> List[Dict]:
+        if table_name == "issues":
+            return [
+                {
+                    "table_name": "issues",
+                    "column_name": "id",
+                    "data_type": "TEXT",
+                    "description": "Issue ID",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "key",
+                    "data_type": "TEXT",
+                    "description": "Issue key",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "project_id",
+                    "data_type": "TEXT",
+                    "description": "ID of the project the issue belongs to",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "project_key",
+                    "data_type": "TEXT",
+                    "description": "Key of the project the issue belongs to",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "project_name",
+                    "data_type": "TEXT",
+                    "description": "Name of the project the issue belongs to",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "project",
+                    "data_type": "TEXT",
+                    "description": "Project information as a JSON string",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "issue_type",
+                    "data_type": "TEXT",
+                    "description": "Type of the issue",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "summary",
+                    "data_type": "TEXT",
+                    "description": "Summary of the issue",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "description",
+                    "data_type": "TEXT",
+                    "description": "Description of the issue",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "priority",
+                    "data_type": "TEXT",
+                    "description": "Priority of the issue",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "creator",
+                    "data_type": "TEXT",
+                    "description": "Display name of the issue creator",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "creator_account_id",
+                    "data_type": "TEXT",
+                    "description": "Account ID of the issue creator",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "reporter",
+                    "data_type": "TEXT",
+                    "description": "Display name of the issue reporter",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "reporter_account_id",
+                    "data_type": "TEXT",
+                    "description": "Account ID of the issue reporter",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "assignee",
+                    "data_type": "TEXT",
+                    "description": "Display name of the issue assignee",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "assignee_account_id",
+                    "data_type": "TEXT",
+                    "description": "Account ID of the issue assignee",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "status",
+                    "data_type": "TEXT",
+                    "description": "Current status of the issue",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "status_category",
+                    "data_type": "TEXT",
+                    "description": "Category of the current status",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "status_category_change_date",
+                    "data_type": "TIMESTAMP",
+                    "description": "Date when the status category last changed",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "labels",
+                    "data_type": "TEXT",
+                    "description": "Comma-separated labels associated with the issue",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "components",
+                    "data_type": "TEXT",
+                    "description": "Comma-separated component names associated with the issue",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "due_date",
+                    "data_type": "DATE",
+                    "description": "Due date of the issue",
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "created",
+                    "data_type": "TIMESTAMP",
+                    "description": "Creation date of the issue",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "issues",
+                    "column_name": "updated",
+                    "data_type": "TIMESTAMP",
+                    "description": "Last updated date of the issue",
+                    "is_nullable": False,
+                },
+            ]
+        return []
+
 
 class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
     """
@@ -565,6 +832,102 @@ class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
             "author_account_id",
         ]
 
+    # META TABLES
+    @staticmethod
+    def meta_get_tables(table_name: str) -> Dict[str, str]:
+        if table_name == "attachments":
+            return {
+                "table_name": "attachments",
+                "table_schema": "jira",
+                "table_type": "BASE TABLE",
+                "table_description": "Jira issue attachments across all projects accessible to the configured user.",
+            }
+        return {}
+
+    @staticmethod
+    def meta_get_columns(table_name: str) -> List[Dict]:
+        if table_name == "attachments":
+            return [
+                {
+                    "table_name": "attachments",
+                    "column_name": "issue_id",
+                    "data_type": "TEXT",
+                    "description": "ID of the issue the attachment belongs to",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "issue_key",
+                    "data_type": "TEXT",
+                    "description": "Key of the issue the attachment belongs to",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "attachment_id",
+                    "data_type": "TEXT",
+                    "description": "ID of the attachment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "filename",
+                    "data_type": "TEXT",
+                    "description": "Filename of the attachment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "mime_type",
+                    "data_type": "TEXT",
+                    "description": "MIME type of the attachment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "size",
+                    "data_type": "INTEGER",
+                    "description": "Size of the attachment in bytes",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "content_url",
+                    "data_type": "TEXT",
+                    "description": "URL to access the content of the attachment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "thumbnail_url",
+                    "data_type": "TEXT",
+                    "description": "URL to access the thumbnail of the attachment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "created",
+                    "data_type": "TIMESTAMP",
+                    "description": "Creation date of the attachment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "author",
+                    "data_type": "TEXT",
+                    "description": "Display name of the attachment author",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "attachments",
+                    "column_name": "author_account_id",
+                    "data_type": "TEXT",
+                    "description": "Account ID of the attachment author",
+                    "is_nullable": False,
+                },
+            ]
+        return []
+
 
 class JiraCommentsTable(JiraIssueFetcherMixin, JiraTableBase):
     """
@@ -639,6 +1002,95 @@ class JiraCommentsTable(JiraIssueFetcherMixin, JiraTableBase):
             "visibility_value",
         ]
 
+    # META TABLES
+    @staticmethod
+    def meta_get_tables(table_name: str) -> Dict[str, str]:
+        if table_name == "comments":
+            return {
+                "table_name": "comments",
+                "table_schema": "jira",
+                "table_type": "BASE TABLE",
+                "table_description": "Jira issue comments across all projects accessible to the configured user.",
+            }
+        return {}
+
+    @staticmethod
+    def meta_get_columns(table_name: str) -> List[Dict]:
+        if table_name == "comments":
+            return [
+                {
+                    "table_name": "comments",
+                    "column_name": "issue_id",
+                    "data_type": "TEXT",
+                    "description": "ID of the issue the comment belongs to",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "comments",
+                    "column_name": "issue_key",
+                    "data_type": "TEXT",
+                    "description": "Key of the issue the comment belongs to",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "comments",
+                    "column_name": "comment_id",
+                    "data_type": "TEXT",
+                    "description": "ID of the comment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "comments",
+                    "column_name": "body",
+                    "data_type": "TEXT",
+                    "description": "Body of the comment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "comments",
+                    "column_name": "created",
+                    "data_type": "TIMESTAMP",
+                    "description": "Creation date of the comment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "comments",
+                    "column_name": "updated",
+                    "data_type": "TIMESTAMP",
+                    "description": "Last updated date of the comment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "comments",
+                    "column_name": "author",
+                    "data_type": "TEXT",
+                    "description": "Display name of the comment author",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "comments",
+                    "column_name": "author_account_id",
+                    "data_type": "TEXT",
+                    "description": "Account ID of the comment author",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "comments",
+                    "column_name": "visibility_type",
+                    "data_type": "TEXT",
+                    "description": "Type of visibility for the comment",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "comments",
+                    "column_name": "visibility_value",
+                    "data_type": "TEXT",
+                    "description": "Value of visibility for the comment",
+                    "is_nullable": False,
+                },
+            ]
+        return []
+
 
 class JiraGroupsTable(JiraTableBase):
     """
@@ -670,6 +1122,46 @@ class JiraGroupsTable(JiraTableBase):
             "name",
             "html",
         ]
+
+    # META TABLES
+    @staticmethod
+    def meta_get_tables(table_name: str) -> Dict[str, str]:
+        if table_name == "groups":
+            return {
+                "table_name": "groups",
+                "table_schema": "jira",
+                "table_type": "BASE TABLE",
+                "table_description": "Jira user groups available to the configured user.",
+            }
+        return {}
+
+    @staticmethod
+    def meta_get_columns(table_name: str) -> List[Dict]:
+        if table_name == "groups":
+            return [
+                {
+                    "table_name": "groups",
+                    "column_name": "groupId",
+                    "data_type": "TEXT",
+                    "description": "Group ID",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "groups",
+                    "column_name": "name",
+                    "data_type": "TEXT",
+                    "description": "Group name",
+                    "is_nullable": False,
+                },
+                {
+                    "table_name": "groups",
+                    "column_name": "html",
+                    "data_type": "TEXT",
+                    "description": "HTML representation of the group",
+                    "is_nullable": False,
+                },
+            ]
+        return []
 
 
 class JiraUsersTable(JiraTableBase):

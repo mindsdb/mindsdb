@@ -74,25 +74,14 @@ def normalize_jira_connection_data(connection_data: Dict[str, Any]) -> Dict[str,
     if "jira_url" not in connection_data:
         raise ValueError("The 'jira_url' parameter is required in the connection data.")
 
-    cloud_flag = connection_data.get("cloud")
-    if cloud_flag is None and "is_cloud" in connection_data:
-        cloud_flag = connection_data["is_cloud"]
+    cloud = bool(connection_data.get("jira_cloud", False))
 
-    cloud = bool(cloud_flag) if cloud_flag is not None else True
-
-    if (
-        not cloud
-        and "jira_api_token" in connection_data
-        and "jira_password" not in connection_data
-        and "jira_personal_access_token" not in connection_data
-    ):
-        cloud = True
-
-    credentials = (
-        _normalize_cloud_credentials(connection_data)
-        if cloud
-        else _normalize_server_credentials(connection_data)
-    )
+    if cloud:
+        logger.debug("Normalizing connection data for Jira Cloud.")
+        credentials = _normalize_cloud_credentials(connection_data)
+    else:
+        logger.debug("Normalizing connection data for Jira Server.")
+        credentials = _normalize_server_credentials(connection_data)
 
     return {
         "url": connection_data["jira_url"],

@@ -299,7 +299,7 @@ class JiraIssueFetcherMixin:
         return issues
 
 
-class JiraProjectsTable(JiraTableBase):
+class JiraProjectsTable(JiraIssueFetcherMixin, JiraTableBase):
     """
     Projects table: provides project information for the Jira instance.
     """
@@ -331,7 +331,7 @@ class JiraProjectsTable(JiraTableBase):
                 condition.applied = True
 
         if not projects:
-            all_projects = client.get_all_projects()
+            all_projects = self._get_all_projects(client)
             if limit is not None:
                 projects = all_projects[:limit]
             else:

@@ -61,8 +61,8 @@ class LogTable(ABC):
         return BinaryOperation(
             op="=",
             args=(
-                Function(op="coalesce", args=(Identifier(f"{table_a}.company_id"), 0)),
-                Function(op="coalesce", args=(Identifier(f"{table_b}.company_id"), 0)),
+                Function(op="coalesce", args=(Identifier(f"{table_a}.company_id"), "0")),
+                Function(op="coalesce", args=(Identifier(f"{table_b}.company_id"), "0")),
             ),
         )
 

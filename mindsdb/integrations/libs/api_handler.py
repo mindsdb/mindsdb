@@ -2,13 +2,12 @@ from typing import Any, List, Optional
 import ast as py_ast
 
 import pandas as pd
-from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star
+from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star, BinaryOperation
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.utilities.sql_utils import (
     extract_comparison_conditions,
     filter_dataframe,
-    sort_dataframe,
     FilterCondition,
     FilterOperator,
     SortColumn,
@@ -168,7 +167,7 @@ class APIResource(APITable):
             pd.DataFrame
         """
 
-        conditions = self._extract_conditions(query.where)
+        api_conditions, raw_conditions = self._extract_conditions(query.where, strict=False)
 
         limit = None
         if query.limit:
@@ -178,33 +177,26 @@ class APIResource(APITable):
         if query.order_by and len(query.order_by) > 0:
             sort = []
             for an_order in query.order_by:
-                sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
+                if isinstance(an_order.field, Identifier):
+                    sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
 
         targets = []
         for col in query.targets:
             if isinstance(col, Identifier):
                 targets.append(col.parts[-1])
 
-        kwargs = {"conditions": conditions, "limit": limit, "sort": sort, "targets": targets}
+        kwargs = {"conditions": api_conditions, "limit": limit, "sort": sort, "targets": targets}
         if self.table_name is not None:
             kwargs["table_name"] = self.table_name
 
         result = self.list(**kwargs)
 
         filters = []
-        for cond in conditions:
+        for cond in api_conditions:
             if not cond.applied:
                 filters.append([cond.op.value, cond.column, cond.value])
 
-        result = filter_dataframe(result, filters)
-
-        if sort:
-            sort_columns = []
-            for idx, a_sort in enumerate(sort):
-                if not a_sort.applied:
-                    sort_columns.append(query.order_by[idx])
-
-            result = sort_dataframe(result, sort_columns)
+        result = filter_dataframe(result, filters, raw_conditions=raw_conditions)
 
         if limit is not None and len(result) > limit:
             result = result[: int(limit)]
@@ -274,7 +266,7 @@ class APIResource(APITable):
         Returns:
             None
         """
-        conditions = self._extract_conditions(query.where)
+        conditions, _ = self._extract_conditions(query.where)
 
         values = {key: val.value for key, val in query.update_columns.items()}
 
@@ -303,7 +295,7 @@ class APIResource(APITable):
         Returns:
             None
         """
-        conditions = self._extract_conditions(query.where)
+        conditions, _ = self._extract_conditions(query.where)
 
         self.remove(conditions)
 
@@ -320,8 +312,16 @@ class APIResource(APITable):
         """
         raise NotImplementedError()
 
-    def _extract_conditions(self, where: ASTNode) -> List[FilterCondition]:
-        return [FilterCondition(i[1], FilterOperator(i[0].upper()), i[2]) for i in extract_comparison_conditions(where)]
+    def _extract_conditions(self, where: ASTNode, strict=True):
+        api_conditions, raw_conditions = [], []
+        for item in extract_comparison_conditions(where, strict=strict):
+            if isinstance(item, BinaryOperation):
+                # is it a raw condition
+                raw_conditions.append(item)
+            else:
+                api_conditions.append(FilterCondition(item[1], FilterOperator(item[0].upper()), item[2]))
+
+        return api_conditions, raw_conditions
 
 
 class MetaAPIResource(APIResource):
@@ -553,6 +553,17 @@ class MetaAPIHandler(APIHandler):
                 except Exception:
                     logger.exception(f"Error retrieving metadata for table {table_name}:")
 
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "TABLE_TYPE",
+                    "TABLE_SCHEMA",
+                    "TABLE_DESCRIPTION",
+                    "ROW_COUNT",
+                ]
+            )
+
         return Response(RESPONSE_TYPE.TABLE, df)
 
     def meta_get_columns(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
@@ -574,6 +585,18 @@ class MetaAPIHandler(APIHandler):
                         df = pd.concat([df, pd.DataFrame(column_metadata)], ignore_index=True)
                 except Exception:
                     logger.exception(f"Error retrieving column metadata for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "COLUMN_NAME",
+                    "DATA_TYPE",
+                    "COLUMN_DESCRIPTION",
+                    "IS_NULLABLE",
+                    "COLUMN_DEFAULT",
+                ]
+            )
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -597,6 +620,20 @@ class MetaAPIHandler(APIHandler):
                 except Exception:
                     logger.exception(f"Error retrieving column statistics for table {table_name}:")
 
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "COLUMN_NAME",
+                    "MOST_COMMON_VALUES",
+                    "MOST_COMMON_FREQUENCIES",
+                    "NULL_PERCENTAGE",
+                    "MINIMUM_VALUE",
+                    "MAXIMUM_VALUE",
+                    "DISTINCT_VALUES_COUNT",
+                ]
+            )
+
         return Response(RESPONSE_TYPE.TABLE, df)
 
     def meta_get_primary_keys(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
@@ -618,6 +655,16 @@ class MetaAPIHandler(APIHandler):
                         df = pd.concat([df, pd.DataFrame(primary_key_metadata)], ignore_index=True)
                 except Exception:
                     logger.exception(f"Error retrieving primary keys for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "TABLE_NAME",
+                    "COLUMN_NAME",
+                    "ORDINAL_POSITION",
+                    "CONSTRAINT_NAME",
+                ]
+            )
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -643,6 +690,17 @@ class MetaAPIHandler(APIHandler):
                         df = pd.concat([df, pd.DataFrame(foreign_key_metadata)], ignore_index=True)
                 except Exception:
                     logger.exception(f"Error retrieving foreign keys for table {table_name}:")
+
+        if len(df.columns) == 0:
+            df = pd.DataFrame(
+                columns=[
+                    "PARENT_TABLE_NAME",
+                    "PARENT_COLUMN_NAME",
+                    "CHILD_TABLE_NAME",
+                    "CHILD_COLUMN_NAME",
+                    "CONSTRAINT_NAME",
+                ]
+            )
 
         return Response(RESPONSE_TYPE.TABLE, df)
 

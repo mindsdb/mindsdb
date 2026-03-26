@@ -1,4 +1,3 @@
-from typing import List
 import copy
 from dataclasses import dataclass, field
 
@@ -15,6 +14,7 @@ from mindsdb_sql_parser.ast import (
     Parameter,
     Function,
     Last,
+    Tuple,
 )
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -22,6 +22,7 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep,
+    FetchDataframeStepPartition,
     JoinStep,
     ApplyPredictorStep,
     SubSelectStep,
@@ -36,8 +37,8 @@ from mindsdb.api.executor.planner.plan_join_ts import PlanJoinTSPredictorQuery
 class TableInfo:
     integration: str
     table: Identifier
-    aliases: List[str] = field(default_factory=List)
-    conditions: List = None
+    aliases: list[tuple[str, ...]] = field(default_factory=list)
+    conditions: list = None
     sub_select: ast.ASTNode = None
     predictor_info: dict = None
     join_condition = None
@@ -59,9 +60,7 @@ class PlanJoin:
 
     def check_single_integration(self, query):
         query_info = self.planner.get_query_info(query)
-
         # can we send all query to integration?
-
         # one integration and not mindsdb objects in query
         if (
             len(query_info["mdb_entities"]) == 0
@@ -71,7 +70,8 @@ class PlanJoin:
         ):
             int_name = list(query_info["integrations"])[0]
             # if is sql database
-            if self.planner.integrations.get(int_name, {}).get("class_type") != "api":
+            class_type = self.planner.integrations.get(int_name, {}).get("class_type")
+            if class_type != "api":
                 # send to this integration
                 return int_name
         return None
@@ -154,8 +154,14 @@ class PlanJoinTablesQuery:
         # try to use default namespace
         integration = self.planner.default_namespace
         if len(table.parts) > 0:
-            if table.parts[0] in self.planner.databases:
-                integration = table.parts.pop(0)
+            # if not quoted  check in lower case
+            part = table.parts[0]
+            if part not in self.planner.databases and not table.is_quoted[0]:
+                part = part.lower()
+
+            if part in self.planner.databases:
+                integration = part
+                table.parts.pop(0)
                 table.is_quoted.pop(0)
             else:
                 integration = self.planner.default_namespace
@@ -252,10 +258,12 @@ class PlanJoinTablesQuery:
     def can_be_table_filter(self, node):
         """
         Check if node can be used as a filter.
-        It can contain only: Constant, Parameter, Function (with Last)
+        It can contain only: Constant, Parameter, Tuple (for IN clauses), Function (with Last)
         """
         if isinstance(node, (Constant, Parameter)):
             return True
+        if isinstance(node, Tuple):
+            return all(isinstance(item, Constant) for item in node.items)
         if isinstance(node, Function):
             # `Last` must be in args
             if not any(isinstance(arg, Last) for arg in node.args):
@@ -280,21 +288,32 @@ class PlanJoinTablesQuery:
         self.query_context["binary_ops"] = binary_ops
 
     def check_use_limit(self, query_in, join_sequence):
-        # use limit for first table?
-        # if only models
+        # if only models (predictors), not for regular table joins
         use_limit = False
-        if query_in.having is None or query_in.group_by is None and query_in.limit is not None:
-            join = None
+        optimize_inner_join = False
+        if query_in.having is None and query_in.group_by is None and query_in.limit is not None:
             use_limit = True
+
+            # Check what we're joining
+            has_predictor = False
+
             for item in join_sequence:
                 if isinstance(item, TableInfo):
-                    if item.predictor_info is None and item.sub_select is None:
-                        if join is not None:
-                            if join.join_type.upper() != "LEFT JOIN":
-                                use_limit = False
-                elif isinstance(item, Join):
-                    join = item
+                    if item.predictor_info is not None:
+                        has_predictor = True
+                elif isinstance(item, Join) and not has_predictor:
+                    # LEFT JOIN preserves left table row count - LIMIT pushdown is safe
+                    join_type = str(item.join_type).upper() if item.join_type else ""
+                    if join_type in ("LEFT JOIN", "LEFT OUTER JOIN"):
+                        continue
+
+                    if query_in.offset is None:
+                        optimize_inner_join = True
+                        continue
+                    use_limit = False
+
         self.query_context["use_limit"] = use_limit
+        self.query_context["optimize_inner_join"] = optimize_inner_join
 
     def plan_join_tables(self, query_in):
         # plan all nested selects in 'where'
@@ -321,6 +340,7 @@ class PlanJoinTablesQuery:
 
         # get all join tables, form join sequence
         join_sequence = self.get_join_sequence(query.from_table)
+        self.join_sequence = join_sequence
 
         # find tables for identifiers used in query
         def _check_identifiers(node, is_table, **kwargs):
@@ -352,7 +372,7 @@ class PlanJoinTablesQuery:
         for item in join_sequence:
             if isinstance(item, TableInfo):
                 if item.sub_select is not None:
-                    self.process_subselect(item)
+                    self.process_subselect(item, query_in)
                 elif item.predictor_info is not None:
                     self.process_predictor(item, query_in)
                 else:
@@ -376,10 +396,47 @@ class PlanJoinTablesQuery:
 
         query_in.where = query.where
 
-        self.close_partition()
-        return self.step_stack.pop()
+        if self.query_context["optimize_inner_join"]:
+            self.planner.plan.steps = self.optimize_inner_join(self.planner.plan.steps)
 
-    def process_subselect(self, item):
+        self.close_partition()
+        return self.planner.plan.steps[-1]
+
+    def optimize_inner_join(self, steps_in):
+        steps_out = []
+
+        partition_step = None
+        partition_used = False
+
+        for step in steps_in:
+            if partition_step is None:
+                if isinstance(step, FetchDataframeStep) and not partition_used and step.query.limit is not None:
+                    limit = step.query.limit.value
+                    step.query.limit = None
+                    partition_used = True
+
+                    partition_step = FetchDataframeStepPartition(
+                        step_num=step.step_num,
+                        integration=step.integration,
+                        query=step.query,
+                        raw_query=step.raw_query,
+                        params=step.params,
+                        condition={"limit": limit},
+                    )
+                    steps_out.append(partition_step)
+                    continue
+
+            elif isinstance(step, (JoinStep, FetchDataframeStep, SubSelectStep)):
+                partition_step.steps.append(step)
+                continue
+            else:
+                partition_step = None
+
+            steps_out.append(step)
+
+        return steps_out
+
+    def process_subselect(self, item, query_in):
         # is sub select
         item.sub_select.alias = None
         item.sub_select.parentheses = False
@@ -387,8 +444,17 @@ class PlanJoinTablesQuery:
 
         where = filters_to_bin_op(item.conditions)
 
+        # Column pruning for subselects:
+        # - If subselect has pure SELECT *, we can prune to only needed columns
+        # - If subselect has explicit columns (SELECT a, b, c), pass through all (don't prune)
+        # This preserves column aliases and prevents breaking explicit projections
+        targets = [Star()]
+        needed_columns = self.get_fetch_columns_for_table(item, query_in)
+        if needed_columns:
+            targets = needed_columns
+
         # apply table alias
-        query2 = Select(targets=[Star()], where=where)
+        query2 = Select(targets=targets, where=where)
         if item.table.alias is None:
             raise PlanningException(f"Subselect in join have to be aliased: {item.sub_select.to_string()}")
         table_name = item.table.alias.parts[-1]
@@ -401,24 +467,150 @@ class PlanJoinTablesQuery:
         step2 = self.add_plan_step(step2)
         self.step_stack.append(step2)
 
+    def _collect_from_order_by(self, query_in, alias_map, add_column_callback):
+        """Helper to collect columns from ORDER BY clause, resolving aliases and ordinals."""
+        for order_col in query_in.order_by:
+            field = order_col.field
+
+            # Handle ORDER BY ordinal (e.g., ORDER BY 1)
+            if isinstance(field, Constant) and isinstance(field.value, int):
+                ordinal = field.value
+                if 1 <= ordinal <= len(query_in.targets):
+                    target_expr = query_in.targets[ordinal - 1]
+                    query_traversal(target_expr, add_column_callback)
+                continue
+
+            # Handle ORDER BY alias (e.g., ORDER BY alias_name)
+            if isinstance(field, Identifier) and len(field.parts) == 1:
+                alias_name = field.parts[0].lower()
+                if alias_name in alias_map:
+                    query_traversal(alias_map[alias_name], add_column_callback)
+                    continue
+
+            # Regular column reference
+            query_traversal(field, add_column_callback)
+
+    def _join_has_predictor(self, join_sequence) -> bool:
+        """Check if the join sequence contains any predictor."""
+        for item in join_sequence:
+            if isinstance(item, TableInfo) and item.predictor_info is not None:
+                return True
+        return False
+
+    def _can_prune_columns(self, table_info) -> bool:
+        """
+        Determine if column pruning can be applied to this table.
+
+        Returns:
+            True if column pruning can be applied
+            False if we should skip pruning (use SELECT *)
+        """
+
+        # If this table is part of a join with a predictor: cannot prune
+        # Predictors may need all columns from joined tables as input features
+        if hasattr(self, "join_sequence") and self._join_has_predictor(self.join_sequence):
+            return False
+
+        # For subselects: can only prune if they have pure SELECT * (no other columns)
+        sub = table_info.sub_select
+        if sub is not None and isinstance(sub, Select):
+            targets = getattr(sub, "targets", None) or []
+            # Can prune only if subselect has PURE SELECT * (one target that is Star)
+            # Cannot prune if:
+            #   - Mixed: SELECT *, col1 (has Star but also other columns)
+            if len(targets) == 1 and isinstance(targets[0], Star):
+                return True  # Pure SELECT * - can prune
+            return False
+
+        # For project tables (KB tables, views, etc.): cannot prune
+        # Project tables need SELECT * for proper column mapping
+        if table_info.integration and table_info.integration in self.planner.projects:
+            return False
+
+        # Regular integration tables: can prune
+        return True
+
+    def get_fetch_columns_for_table(self, table_info, query_in):
+        """
+        Collect all columns needed from a specific table for column pruning optimization.
+
+        Note: Caller should check _can_prune_columns() before calling this method.
+
+        Returns a list of column Identifiers or None if we should fetch all columns.
+        """
+        if not self._can_prune_columns(table_info):
+            return None
+
+        columns = {}
+        has_qualified_star_for_table = False
+
+        alias_map = {}
+        if query_in.targets:
+            for target in query_in.targets:
+                if isinstance(target, Identifier) and target.alias:
+                    alias_map[target.alias.parts[-1].lower()] = target
+
+        def add_column(node, **kwargs):
+            if isinstance(node, Identifier):
+                col_table = self.get_table_for_column(node)
+                if not col_table or col_table.index != table_info.index:
+                    return
+
+                # Check for qualified star: t1.* or alias.*
+                col_name = node.parts[-1]
+                is_quoted = node.is_quoted[-1]
+
+                if isinstance(col_name, Star):
+                    nonlocal has_qualified_star_for_table
+                    has_qualified_star_for_table = True
+                    return
+
+                # Store - if already exists, keep it quoted if either reference was quoted
+                columns[col_name] = columns.get(col_name) or is_quoted
+
+        # Check for bare Star() in targets
+        if query_in.targets:
+            for target in query_in.targets:
+                if isinstance(target, Star):
+                    return None
+
+        query_traversal(query_in, add_column)
+
+        # If qualified star found for this table, fetch all columns
+        if has_qualified_star_for_table:
+            return None
+
+        # If we found no columns, fetch all
+        if not columns:
+            return None
+
+        # Convert column names to Identifier objects, we need to preserve quoting
+        result = []
+        for col, is_quoted in sorted(columns.items()):
+            result.append(Identifier(parts=[col], is_quoted=[is_quoted]))
+        return result
+
     def process_table(self, item, query_in):
         table = copy.deepcopy(item.table)
         table.parts.insert(0, item.integration)
         table.is_quoted.insert(0, False)
-        query2 = Select(from_table=table, targets=[Star()])
-        # parts = tuple(map(str.lower, table_name.parts))
+
+        needed_columns = self.get_fetch_columns_for_table(item, query_in)
+        targets = needed_columns if needed_columns else [Star()]
+
+        query2 = Select(from_table=table, targets=targets)
         conditions = item.conditions
         if "or" in self.query_context["binary_ops"]:
-            # not use conditions
             conditions = []
 
-        conditions += self.get_filters_from_join_conditions(item)
+        if self.query_context.get("had_limit"):
+            conditions += self.get_filters_from_join_conditions(item)
 
         if self.query_context["use_limit"]:
             order_by = None
             if query_in.order_by is not None:
                 order_by = []
-                # all order column be from this table
+                # all order column are from this table
                 for col in query_in.order_by:
                     table_info = self.get_table_for_column(col.field)
                     if table_info is None or table_info.table != item.table:
@@ -439,6 +631,7 @@ class PlanJoinTablesQuery:
                 query2.order_by = order_by
 
             self.query_context["use_limit"] = False
+            self.query_context["had_limit"] = True
         for cond in conditions:
             if query2.where is not None:
                 query2.where = BinaryOperation("and", args=[query2.where, cond])
@@ -482,6 +675,18 @@ class PlanJoinTablesQuery:
         return columns_map
 
     def get_filters_from_join_conditions(self, fetch_table):
+        """
+        Extract filters from join conditions for filter pushdown optimization.
+
+        Note: This function is currently disabled (not called) to avoid:
+        - Creating massive IN clauses that exceed database query size limits
+        - Making arbitrary assumptions about data distribution
+
+        For cross-database joins with large tables, users should:
+        - Add explicit WHERE clauses to filter data at the source
+        - Use indexed/partitioned tables in their databases
+        - Consider materializing intermediate results
+        """
         binary_ops = set()
         conditions = []
         data_conditions = []

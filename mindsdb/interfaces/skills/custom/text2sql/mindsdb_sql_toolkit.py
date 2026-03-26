@@ -177,28 +177,22 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
 
                 Query Types and Examples:
                 1. Basic semantic search:
-                   kb_query_tool("SELECT * FROM kb_name WHERE content = 'your search query';")
+                   kb_query_tool("SELECT * FROM kb_name WHERE chunk_content = 'your search query';")
 
                 2. Metadata filtering:
                    kb_query_tool("SELECT * FROM kb_name WHERE metadata_field = 'value';")
 
                 3. Combined search:
-                   kb_query_tool("SELECT * FROM kb_name WHERE content = 'query' AND metadata_field = 'value';")
+                   kb_query_tool("SELECT * FROM kb_name WHERE chunk_content = 'query' AND metadata_field = 'value';")
 
                 4. Setting relevance threshold:
-                   kb_query_tool("SELECT * FROM kb_name WHERE content = 'query' AND relevance_threshold = 0.7;")
+                   kb_query_tool("SELECT * FROM kb_name WHERE chunk_content = 'query' AND relevance_threshold = 0.7;")
 
                 5. Limiting results:
-                   kb_query_tool("SELECT * FROM kb_name WHERE content = 'query' LIMIT 5;")
+                   kb_query_tool("SELECT * FROM kb_name WHERE chunk_content = 'query' LIMIT 5;")
 
                 6. Getting sample data:
                    kb_query_tool("SELECT * FROM kb_name LIMIT 3;")
-
-                7. Don't use LIKE operator on content filter ie semantic search:
-                SELECT * FROM `test_kb` WHERE content LIKE '%population of New York%' $STOP$
-
-                Like is not supported, use the following instead:
-                SELECT * FROM `test_kb` WHERE content = 'population of New York'
 
                 Result Format:
                 - Results include: id, chunk_id, chunk_content, metadata, distance, and relevance columns

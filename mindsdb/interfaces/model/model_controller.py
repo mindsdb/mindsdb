@@ -246,8 +246,8 @@ class ModelController:
 
     def prepare_create_statement(self, statement, database_controller):
         # extract data from Create model or Retrain statement and prepare it for using in crate and retrain functions
-        project_name = statement.name.parts[0].lower()
-        model_name = statement.name.parts[1].lower()
+        project_name = statement.name.parts[0]
+        model_name = statement.name.parts[1]
 
         sql_task = None
         if statement.task is not None:
@@ -294,11 +294,11 @@ class ModelController:
     def create_model(self, statement, ml_handler):
         params = self.prepare_create_statement(statement, ml_handler.database_controller)
 
-        existing_projects_meta = ml_handler.database_controller.get_dict(filter_type="project")
+        existing_projects_meta = ml_handler.database_controller.get_dict(filter_type="project", lowercase=False)
         if params["project_name"] not in existing_projects_meta:
             raise EntityNotExistsError("Project does not exist", params["project_name"])
 
-        project = ml_handler.database_controller.get_project(name=params["project_name"])
+        project = ml_handler.database_controller.get_project(name=params["project_name"], strict_case=True)
         project_tables = project.get_tables()
         if params["model_name"] in project_tables:
             raise EntityExistsError("Model already exists", f"{params['project_name']}.{params['model_name']}")

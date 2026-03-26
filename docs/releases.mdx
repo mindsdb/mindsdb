@@ -1,0 +1,60 @@
+---
+title: MindsDB Releases
+sidebarTitle: Releases
+icon: "code-branch"
+---
+
+MindsDB releases new features, functionalitites, and fixes on regular cadence. This document outlines the release process, versioning, and naming conventions.
+
+## Release Types and Versioning
+
+MindsDB uses [semantic versioning](https://semver.org/) to name all releases. This format is applied consistently across our GitHub tags, Python packages, and Docker images.
+
+Each release name follows the structure:
+
+```
+v<MAJOR>.<MINOR>.<PATCH>(<TYPE><NUMBER>)
+```
+
+Where:
+
+* `MAJOR` indicates the major version, which introduces significant changes or backward-incompatible updates.
+* `MINOR` indicates the minor version, which introduces new features that remain backward-compatible.
+* `PATCH` indicates the patch version, which introduces small fixes or improvements.
+* `TYPE` is an optional component, which informs about the nature of the (pre-)release.
+* `NUMBER` is an optional component used when `TYPE` is provided that indicates the pre-release version.
+
+The following are the release types and their naming conventions.
+
+| **Release Type**              | **Sample Version** | **Description** |
+|-------------------------------|--------------------|-----------------|
+| **GA (General Availability)** | `v25.9.3`          | The stable public release. `25` is the major version, `9` is the minor version, and `3` is the patch number. |
+| **Pre-GA (Release Candidate)**| `v25.9.3rc1`       | A release candidate that is nearly ready for GA. `rc` stands for release candidate, and `1` indicates the version number of the pre-release. |
+| **Alpha**                     | `v25.9.3alpha1`    | An early testing version with limited features or stability. `alpha` denotes an initial stage for internal or early feedback. |
+| **Beta**                      | `v25.9.3beta1`     | A version close to final release. `beta` indicates a feature-complete build shared for broader testing and feedback. |
+
+## Release Process
+
+The `main` branch of the [MindsDB repository](https://github.com/mindsdb/mindsdb) contains the latest stable version of MindsDB and represents the GA (General Availability) release.
+
+MindsDB follows the [Gitflow branching model](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow) to manage development and releases as follows.
+
+<Steps>
+  <Step title="Development Phase">
+    All code changes are first committed to the `develop` branch.
+  </Step>
+  <Step title="Release Preparation">
+    When a release is approaching, a short-lived `release` branch is created from the `develop` branch.
+      * This branch is used for final testing and validation.
+      * Pre-GA artifacts are built at this stage, including both the Python package and the Docker image, and shared for broader testing and feedback.
+  </Step>
+  <Step title="Release Finalization">
+    After successful testing and validation:
+      * The `release` branch is merged into the `main` branch, making it an official GA release.
+      * The final GA versions of the Python package and Docker image are released, while the pre-GA version are removed.
+  </Step>
+</Steps>
+
+<Tip>
+If you are interested in contributing to MindsDB, follow [this link](/contribute/contribute).
+</Tip>

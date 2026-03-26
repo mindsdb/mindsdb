@@ -19,10 +19,13 @@ from mindsdb.api.a2a.common.types import (
     SendTaskStreamingRequest,
     SendTaskStreamingResponse,
     InvalidRequestError,
+    MessageStreamRequest,
+    SendStreamingMessageSuccessResponse,
 )
 from mindsdb.api.a2a.common.server.task_manager import InMemoryTaskManager
 from mindsdb.api.a2a.agent import MindsDBAgent
 from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 
 
 logger = logging.getLogger(__name__)
@@ -180,11 +183,10 @@ class AgentTaskManager(InMemoryTaskManager):
                 if isinstance(item, dict) and "artifact" in item and "parts" in item["artifact"]:
                     item["artifact"]["parts"] = [to_serializable(p) for p in item["artifact"]["parts"]]
                 yield to_serializable(item)
-        except Exception as e:
-            error_text = "An error occurred while streaming the response:"
-            logger.exception(error_text)
-            # Ensure all parts are plain dicts
-            parts = [{"type": "text", "text": f"{error_text} {e}"}]
+        except TimeoutError as e:
+            logger.error(f"Timeout error while streaming the response: {e}")
+            error_text = "The request timed out. The agent is taking longer than expected to respond. Please try again or increase the timeout."
+            parts = [{"type": "text", "text": error_text}]
             parts = [to_serializable(part) for part in parts]
             artifact = {
                 "parts": parts,
@@ -196,6 +198,59 @@ class AgentTaskManager(InMemoryTaskManager):
                 "error": {
                     "id": task_send_params.id,
                     "artifact": artifact,
+                    "error_type": "timeout",
+                },
+            }
+            yield error_result
+        except ConnectionError as e:
+            logger.error(f"Connection error while streaming the response: {e}")
+            error_text = "Failed to connect to the agent. Please check if the agent is running and accessible."
+            parts = [{"type": "text", "text": error_text}]
+            parts = [to_serializable(part) for part in parts]
+            artifact = {
+                "parts": parts,
+                "index": 0,
+                "append": False,
+            }
+            error_result = {
+                "id": request.id,
+                "error": {
+                    "id": task_send_params.id,
+                    "artifact": artifact,
+                    "error_type": "connection",
+                },
+            }
+            yield error_result
+        except Exception as e:
+            logger.exception("An error occurred while streaming the response:")
+            # Provide more specific error messages based on error type
+            if "API key" in str(e) or "authentication" in str(e).lower():
+                error_text = f"Authentication error: {str(e)}"
+                error_category = "authentication"
+            elif "404" in str(e) or "not found" in str(e).lower():
+                error_text = f"Resource not found: {str(e)}"
+                error_category = "not_found"
+            elif "rate limit" in str(e).lower() or "429" in str(e):
+                error_text = f"Rate limit exceeded: {str(e)}"
+                error_category = "rate_limit"
+            else:
+                error_text = f"An error occurred while streaming the response: {str(e)}"
+                error_category = "general"
+
+            # Ensure all parts are plain dicts
+            parts = [{"type": "text", "text": error_text}]
+            parts = [to_serializable(part) for part in parts]
+            artifact = {
+                "parts": parts,
+                "index": 0,
+                "append": False,
+            }
+            error_result = {
+                "id": request.id,
+                "error": {
+                    "id": task_send_params.id,
+                    "artifact": artifact,
+                    "error_type": error_category,
                 },
             }
             yield error_result
@@ -472,3 +527,50 @@ class AgentTaskManager(InMemoryTaskManager):
                 [Artifact(parts=parts)],
             )
             return to_serializable(SendTaskResponse(id=request.id, result=task))
+
+    async def on_message_stream(
+        self, request: MessageStreamRequest, user_info: Dict
+    ) -> Union[AsyncIterable[SendStreamingMessageSuccessResponse], JSONRPCResponse]:
+        """
+        Handle message streaming requests.
+        """
+        logger.info(f"Processing message stream request for session {request.params.sessionId}")
+
+        query = self._get_user_query(request.params)
+        params = self._get_task_params(request.params)
+
+        try:
+            task_id = f"msg_stream_{request.params.sessionId}_{request.id}"
+            context_id = f"ctx_{request.params.sessionId}"
+            message_id = f"msg_{request.id}"
+
+            agents_controller = AgentsController()
+            existing_agent = agents_controller.get_agent(params["agent_name"])
+            resp = agents_controller.get_completion(existing_agent, [{"question": query}])
+            response_message = resp["answer"][0]
+
+            response_message = Message(
+                role="agent", parts=[{"type": "text", "text": response_message}], metadata={}, messageId=message_id
+            )
+
+            task_status = TaskStatus(state=TaskState.COMPLETED, message=response_message)
+
+            task_status_update = TaskStatusUpdateEvent(
+                id=task_id,
+                status=task_status,
+                final=True,
+                metadata={"message_stream": True},
+                contextId=context_id,
+                taskId=task_id,
+            )
+
+            async def message_stream_generator():
+                yield to_serializable(SendStreamingMessageSuccessResponse(id=request.id, result=task_status_update))
+
+            return message_stream_generator()
+
+        except Exception as e:
+            logger.error(f"Error processing message stream: {e}")
+            return SendStreamingMessageSuccessResponse(
+                id=request.id, error=InternalError(message=f"Error processing message stream: {str(e)}")
+            )

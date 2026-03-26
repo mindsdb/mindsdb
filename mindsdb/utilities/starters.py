@@ -18,16 +18,6 @@ def start_mysql(*args, **kwargs):
     start(*args, **kwargs)
 
 
-def start_postgres(*args, **kwargs):
-    from mindsdb.utilities.log import initialize_logging
-
-    initialize_logging("postgres")
-
-    from mindsdb.api.postgres.start import start
-
-    start(*args, **kwargs)
-
-
 def start_tasks(*args, **kwargs):
     from mindsdb.utilities.log import initialize_logging
 

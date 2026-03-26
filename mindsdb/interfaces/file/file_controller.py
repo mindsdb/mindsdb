@@ -24,9 +24,19 @@ class FileController:
         self.fs_store = FsStore()
         self.dir = os.path.join(self.config.paths["content"], "file")
 
-    def get_files_names(self):
-        """return list of files names"""
-        return [x[0] for x in db.session.query(db.File.name).filter_by(company_id=ctx.company_id)]
+    def get_files_names(self, lower: bool = False):
+        """return list of files names
+
+        Args:
+            lower (bool): return names in lowercase if True
+
+        Returns:
+            list[str]: list of files names
+        """
+        names = [record[0] for record in db.session.query(db.File.name).filter_by(company_id=ctx.company_id)]
+        if lower:
+            names = [name.lower() for name in names]
+        return names
 
     def get_file_meta(self, name):
         file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()

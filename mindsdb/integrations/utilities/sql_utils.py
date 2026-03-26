@@ -97,7 +97,7 @@ def conditions_to_filter(binary_op: ASTNode):
     return filters
 
 
-def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False):
+def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False, strict=True):
     """Extracts all simple comparison conditions that must be true from an AST node.
     Does NOT support 'or' conditions.
     """
@@ -119,7 +119,11 @@ def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False):
 
             if not isinstance(arg1, ast.Identifier):
                 # Only support [identifier] =/</>/>=/<=/etc [constant] comparisons.
-                raise NotImplementedError(f"Not implemented arg1: {arg1}")
+                if strict:
+                    raise NotImplementedError(f"Not implemented arg1: {arg1}")
+                else:
+                    conditions.append(node)
+                    return
 
             if isinstance(arg2, ast.Constant):
                 value = arg2.value
@@ -190,7 +194,7 @@ def project_dataframe(df, targets, table_columns):
     return df
 
 
-def filter_dataframe(df: pd.DataFrame, conditions: list):
+def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, order_by=None):
     # convert list of conditions to ast.
     # assumes that list was got from extract_comparison_conditions
     where_query = None
@@ -209,7 +213,17 @@ def filter_dataframe(df: pd.DataFrame, conditions: list):
         else:
             where_query = ast.BinaryOperation(op="and", args=[where_query, item])
 
+    if raw_conditions:
+        for condition in raw_conditions:
+            if where_query is None:
+                where_query = condition
+            else:
+                where_query = ast.BinaryOperation(op="and", args=[where_query, condition])
+
     query = ast.Select(targets=[ast.Star()], from_table=ast.Identifier("df"), where=where_query)
+
+    if order_by:
+        query.order_by = order_by
 
     return query_df(df, query)
 

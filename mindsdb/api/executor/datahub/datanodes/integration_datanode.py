@@ -124,7 +124,7 @@ class IntegrationDataNode(DataNode):
         df.columns = [name.upper() for name in df.columns]
         if "FIELD" not in df.columns or "TYPE" not in df.columns:
             logger.warning(
-                f"Response from the handler's `get_columns` call does not contain required columns: f{df.columns}"
+                f"Response from the handler's `get_columns` call does not contain required columns: {list(df.columns)}"
             )
             return pd.DataFrame([], columns=astuple(INF_SCHEMA_COLUMNS_NAMES))
 
@@ -294,7 +294,7 @@ class IntegrationDataNode(DataNode):
                 db_type=self.integration_handler.__class__.name,
                 db_error_msg=result.error_message,
                 failed_query=query_str,
-                is_acceptable=result.is_acceptable_error,
+                is_expected=result.is_expected_error,
             )
 
             if result.exception is None:

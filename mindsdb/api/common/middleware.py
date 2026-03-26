@@ -75,7 +75,7 @@ class PATAuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# Used by mysql and postgres protocols
+# Used by mysql protocol
 def check_auth(username, password, scramble_func, salt, company_id, config):
     try:
         hardcoded_user = config["auth"].get("username")

@@ -22,7 +22,8 @@ def app():
         old_minds_db_con = os.environ["MINDSDB_DB_CON"]
 
     try:
-        with TemporaryDirectory(prefix="skills_test_") as temp_dir:
+        with TemporaryDirectory(prefix="test_tmp_") as temp_dir:
+            os.environ["MINDSDB_STORAGE_DIR"] = temp_dir
             db_path = "sqlite:///" + os.path.join(temp_dir, "mindsdb.sqlite3.db")
             # Need to change env variable for migrate module, since it calls db.init().
             os.environ["MINDSDB_DB_CON"] = db_path

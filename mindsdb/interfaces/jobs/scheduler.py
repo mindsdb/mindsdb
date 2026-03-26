@@ -128,7 +128,6 @@ class Scheduler:
 
 
 def start(verbose=False):
-    logger.info("Jobs API is starting..")
     scheduler = Scheduler()
 
     scheduler.start()

@@ -28,7 +28,6 @@ class TestEmailHandler:
         assert connection is self.email_handler.connection, "The connection must be the same as the one in the handler."
 
     def test_check_connection(self):
-
         response = self.email_handler.check_connection()
         assert response.success is True, "The response success must be True."
 
@@ -37,30 +36,38 @@ class TestEmailHandler:
         Test the select method of EmailsTable Class
         """
 
-        mock_df = pd.DataFrame({
-            'date': ["Wed, 02 Feb 2022 15:30:00 +0000",
-                     "Thu, 10 Mar 2022 10:45:15 +0530",
-                     "Fri, 16 Dec 2022 20:15:30 -0400"
-                     ],
-            'body_content_type': ['html', 'html', 'text'],
-            "body": ["<html><body><p>Hello, World!</p></body></html>", "<html><body><p>Hello, World!</p></body></html>", "Hello, World!"],
-            "from_field": ["", "", ""],
-            "id": ["", "", ""],
-            "to_field": ["", "", ""],
-            "subject": ["", "", ""],
-        })
+        mock_df = pd.DataFrame(
+            {
+                "date": [
+                    "Wed, 02 Feb 2022 15:30:00 +0000",
+                    "Thu, 10 Mar 2022 10:45:15 +0530",
+                    "Fri, 16 Dec 2022 20:15:30 -0400",
+                ],
+                "body_content_type": ["html", "html", "text"],
+                "body": [
+                    "<html><body><p>Hello, World!</p></body></html>",
+                    "<html><body><p>Hello, World!</p></body></html>",
+                    "Hello, World!",
+                ],
+                "from_field": ["", "", ""],
+                "id": ["", "", ""],
+                "to_field": ["", "", ""],
+                "subject": ["", "", ""],
+            }
+        )
 
         self.emails_table_instance.handler.connection.search_email = MagicMock(return_value=mock_df)
 
-        query = parse_sql('SELECT * FROM emails limit 1')
+        query = parse_sql("SELECT * FROM emails limit 1")
 
         self.emails_table_instance.select(query)
 
-        assert self.emails_table_instance.handler.connection.search_email.called, ("The search_email "
-                                                                                   "method must be called.")
+        assert self.emails_table_instance.handler.connection.search_email.called, (
+            "The search_email method must be called."
+        )
 
         # select using invalid column should raise Exception
-        query = parse_sql('SELECT invalid_column FROM emails limit 1')
+        query = parse_sql("SELECT invalid_column FROM emails limit 1")
 
         with pytest.raises(Exception):
             self.emails_table_instance.select(query)
@@ -73,16 +80,18 @@ class TestEmailHandler:
         self.emails_table_instance.handler.connection.send_email = MagicMock()
 
         query = parse_sql(
-            'INSERT INTO email_datasource.emails(to_field, subject, body) '
-            'VALUES ("toemail@email.com", "MindsDB", "Hello from MindsDB!")')
+            "INSERT INTO email_datasource.emails(to_field, subject, body) "
+            'VALUES ("toemail@email.com", "MindsDB", "Hello from MindsDB!")'
+        )
 
         self.emails_table_instance.insert(query)
         assert self.emails_table_instance.handler.connection.send_email.called, "The send_email method must be called."
 
         # insert using invalid column should raise Exception
         query = parse_sql(
-            'INSERT INTO email_datasource.emails(to_field, subject, body, invalid_column) '
-            'VALUES ("toemail@email.com", "MindsDB", "blaha" , "invalid")')
+            "INSERT INTO email_datasource.emails(to_field, subject, body, invalid_column) "
+            'VALUES ("toemail@email.com", "MindsDB", "blaha" , "invalid")'
+        )
 
         with pytest.raises(Exception):
             self.emails_table_instance.insert(query)
@@ -94,9 +103,36 @@ class TestEmailHandler:
 
         columns = self.emails_table_instance.get_columns()
         assert isinstance(columns, list), "The returned value must be a list."
-        assert 'id' in columns, "Column 'id' must be in the columns list."
-        assert 'body' in columns, "Column 'body' must be in the columns list."
-        assert 'subject' in columns, "Column 'subject' must be in the columns list."
-        assert 'to_field' in columns, "Column 'to_field' must be in the columns list."
-        assert 'from_field' in columns, "Column 'from_field' must be in the columns list."
-        assert 'datetime' in columns, "Column 'datetime' must be in the columns list."
+        assert "id" in columns, "Column 'id' must be in the columns list."
+        assert "body" in columns, "Column 'body' must be in the columns list."
+        assert "subject" in columns, "Column 'subject' must be in the columns list."
+        assert "to_field" in columns, "Column 'to_field' must be in the columns list."
+        assert "from_field" in columns, "Column 'from_field' must be in the columns list."
+        assert "datetime" in columns, "Column 'datetime' must be in the columns list."
+
+    def test_undetectable_encoding_handling(self):
+        """
+        Test that the email handler can process emails with undetectable encodings
+        without raising exceptions.
+        """
+
+        undetectable_content = b"\x80\x81\x82\x83\x84\x85\x86\x87"
+        mock_df = pd.DataFrame(
+            {
+                "date": ["Wed, 02 Feb 2022 15:30:00 +0000"],
+                "body_content_type": ["text"],
+                "body": [undetectable_content],
+                "from_field": ["test@example.com"],
+                "id": ["test1"],
+                "to_field": ["recipient@example.com"],
+                "subject": ["Test email with undetectable encoding"],
+            }
+        )
+
+        self.emails_table_instance.handler.connection.search_email = MagicMock(return_value=mock_df)
+        query = parse_sql("SELECT * FROM emails limit 1")
+        result = self.emails_table_instance.select(query)
+
+        assert result is not None, "The result must not be None."
+        assert "body" in result.columns, "The body should be in the result columns."
+        assert len(result) > 0, "The result should not be empty."

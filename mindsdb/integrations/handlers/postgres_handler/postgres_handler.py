@@ -147,7 +147,7 @@ class PostgresHandler(MetaDatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = False
+        self.thread_safe = True
 
     def __del__(self):
         if self.is_connected:
@@ -314,7 +314,7 @@ class PostgresHandler(MetaDatabaseHandler):
                 if logger.isEnabledFor(logging.DEBUG):
                     log_message += f". Executed query:\n{query}"
                 logger.info(log_message)
-                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_acceptable_error=True)
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_expected_error=True)
                 connection.rollback()
             except Exception as e:
                 logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
@@ -698,7 +698,16 @@ class PostgresHandler(MetaDatabaseHandler):
             df["MINIMUM_VALUE"] = min_max_values.apply(lambda x: x[0])
             df["MAXIMUM_VALUE"] = min_max_values.apply(lambda x: x[1])
 
-        result.data_frame = df.drop(columns=["histogram_bounds"])
+            # Convert most_common_values and most_common_freqs to arrays.
+            df["MOST_COMMON_VALUES"] = df["most_common_values"].apply(
+                lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
+            )
+            df["MOST_COMMON_FREQUENCIES"] = df["most_common_frequencies"].apply(
+                lambda x: x.strip("{}").split(",") if isinstance(x, str) else []
+            )
+
+        result.data_frame = df.drop(columns=["histogram_bounds", "most_common_values", "most_common_frequencies"])
+
         return result
 
     def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:

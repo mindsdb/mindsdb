@@ -94,17 +94,7 @@ class InformationSchemaDataNode(DataNode):
         self.integration_controller = session.integration_controller
         self.project_controller = ProjectController()
         self.database_controller = session.database_controller
-
-        self.persis_datanodes = {"log": self.database_controller.logs_db_controller}
-
-        databases = self.database_controller.get_dict()
-        if "files" in databases:
-            self.persis_datanodes["files"] = IntegrationDataNode(
-                "files",
-                ds_type="file",
-                integration_controller=self.session.integration_controller,
-            )
-
+        self.persist_datanodes_names = ("log", "files")
         self.tables = {t.name: t for t in self.tables_list}
 
     def __getitem__(self, key):
@@ -119,8 +109,12 @@ class InformationSchemaDataNode(DataNode):
         if name_lower == "log":
             return self.database_controller.get_system_db("log")
 
-        if name_lower in self.persis_datanodes:
-            return self.persis_datanodes[name_lower]
+        if name_lower == "files":
+            return IntegrationDataNode(
+                "files",
+                ds_type="file",
+                integration_controller=self.session.integration_controller,
+            )
 
         existing_databases_meta = self.database_controller.get_dict()  # filter_type='project'
         database_name = None

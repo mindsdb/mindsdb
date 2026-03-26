@@ -4,8 +4,7 @@ import hashlib
 import json
 import datetime
 import textwrap
-from functools import wraps
-from collections.abc import Callable
+from contextlib import ContextDecorator
 
 from cryptography.fernet import Fernet
 from mindsdb_sql_parser.ast import Identifier
@@ -53,23 +52,21 @@ def cast_row_types(row, field_types):
                 pass
 
 
-def mark_process(name: str, custom_mark: str = None) -> Callable:
-    def mark_process_wrapper(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if custom_mark is None:
-                mark = create_process_mark(name)
-            else:
-                mark = set_process_mark(name, custom_mark)
+class mark_process(ContextDecorator):
+    def __init__(self, name: str, custom_mark: str = None):
+        self.name = name
+        self.custom_mark = custom_mark
+        self.mark = None
 
-            try:
-                return func(*args, **kwargs)
-            finally:
-                delete_process_mark(name, mark)
+    def __enter__(self):
+        if self.custom_mark is None:
+            self.mark = create_process_mark(self.name)
+        else:
+            self.mark = set_process_mark(self.name, self.custom_mark)
 
-        return wrapper
-
-    return mark_process_wrapper
+    def __exit__(self, exc_type, exc, tb):
+        delete_process_mark(self.name, self.mark)
+        return False
 
 
 def init_lexer_parsers():

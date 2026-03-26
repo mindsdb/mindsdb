@@ -241,6 +241,26 @@ class KnowledgeBaseResource(Resource):
             if kb_data.get("query"):
                 table.insert_query_result(kb_data["query"], project_name)
 
+            # update KB
+            update_kb_data = {}
+            if "params" in kb_data:
+                allowed_keys = [
+                    "id_column",
+                    "metadata_columns",
+                    "content_columns",
+                    "preprocessing",
+                    "reranking_model",
+                    "embedding_model",
+                ]
+                update_kb_data = {k: v for k, v in kb_data["params"].items() if k in allowed_keys}
+            if update_kb_data or "preprocessing" in kb_data:
+                session.kb_controller.update(
+                    knowledge_base_name,
+                    project.name,
+                    params=update_kb_data,
+                    preprocessing_config=kb_data.get("preprocessing"),
+                )
+
         except ExecutorException as e:
             logger.exception("Error during preprocessing and insertion:")
             return http_error(

@@ -286,26 +286,8 @@ class PreparedStatementPlanner:
 
                 if step.result_data is not None:
                     # save results
-
-                    if len(step.result_data["tables"]) > 0:
-                        table_info = step.result_data["tables"][0]
-                        columns_info = step.result_data["columns"][table_info]
-
-                        table.columns = []
-                        table.ds = table_info[0]
-                        for col in columns_info:
-                            if isinstance(col, tuple):
-                                # is predictor
-                                col = dict(name=col[0], type="str")
-                            table.columns.append(
-                                Column(
-                                    name=col["name"],
-                                    type=col["type"],
-                                )
-                            )
-
-                    # map by names
-                    table.columns_map = {i.name.upper(): i for i in table.columns}
+                    table.columns = step.result_data.columns
+                    table.columns_map = {column.name.upper(): column for column in step.result_data.columns}
 
         # === create columns list ===
         columns_result = []

@@ -1,5 +1,6 @@
 import io
-import os.path
+import os
+import zipfile
 from http import HTTPStatus
 
 
@@ -226,3 +227,23 @@ def test_put_file_with_invalid_parameters_json(client):
     assert response.status_code == 400
     response_data = response.get_json()
     assert "Invalid request parameters" in response_data["title"]
+
+
+def test_zipfile_traversal(client):
+    """Test uploading a zip archive with path traversal filenames"""
+
+    # Create a zip file in memory with a symlink
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("../../../../etc/passwd", "malicious content")
+    zip_buffer.seek(0)
+    data = {"file": (zip_buffer, "archive.zip")}
+    response = client.put(
+        "/api/files/archive",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    data = response.get_json()
+    assert "Attempted Path Traversal in Zip File" in data["detail"]

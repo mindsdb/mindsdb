@@ -526,7 +526,7 @@ class FaissIVFIndex(FaissIndex):
             to_free_gb = round((index_size * (k - 1)) / 1024**3, 2)
             raise ValueError(f"Unable run indexing FAISS not enough disk space, get free at least : {to_free_gb} Gb")
 
-    def create_index(self, index_type, nlist=None, train_count=None):
+    def create_index(self, index_type=None, nlist=None, train_count=None):
         """
         Create or recreate IVF index
 
@@ -535,6 +535,18 @@ class FaissIVFIndex(FaissIndex):
         :param train_count: count of vectors to use for training.
 
         """
+
+        if index_type is None:
+            if os.name == "nt":
+                index_type = "ivf"
+            else:
+                index_type = "ivf_file"
+
+        elif index_type not in ("ivf", "ivf_file"):
+            raise NotImplementedError("Only ivf or ivf_file indexes are supported")
+
+        if index_type == "ivf_file" and os.name == "nt":
+            raise ValueError("IVF FILE index is not supported on Windows. Try to use ivf instead")
 
         # index might not fit into RAM, extract data to files
         base_path = Path(self.path).parent

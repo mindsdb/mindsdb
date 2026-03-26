@@ -80,9 +80,7 @@ class DuckDBFaissTable:
         if self.handler._use_handler_storage:
             self.handler.handler_storage.folder_sync(self.table_name)
 
-    def create_index(self, type: str = "ivf_file", nlist: int = None, train_count: int = None):
-        if type not in ("ivf", "ivf_file"):
-            raise NotImplementedError("Only ivf or ivf_file indexes are supported")
+    def create_index(self, type: str = None, nlist: int = None, train_count: int = None):
         self.faiss_index.create_index(type, nlist=nlist, train_count=train_count)
         # index was already saved. don't dump it twice
         self._sync(dump_faiss=False)

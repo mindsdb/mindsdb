@@ -1331,7 +1331,7 @@ class TestKBNOAutoBatch(BaseTestKB):
 
         self.run_sql("insert into kb_ral select * from files.ral")
 
-        # create index
+        # create index default index (ivf_file, for windows it is ivf)
         self.run_sql(
             """
             CREATE INDEX ON KNOWLEDGE_BASE kb_ral WITH (nlist=1)
@@ -1342,6 +1342,7 @@ class TestKBNOAutoBatch(BaseTestKB):
         ret = self.run_sql("select * from kb_ral where content='white'")
         assert "white" in ret["chunk_content"].iloc[0]
 
+        # specified index
         self.run_sql(
             """
             CREATE INDEX ON KNOWLEDGE_BASE kb_ral

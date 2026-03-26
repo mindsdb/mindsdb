@@ -1,7 +1,6 @@
 import pytest
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import MagicMock, patch
 import pandas as pd
-import imaplib
 import smtplib
 
 from mindsdb.integrations.handlers.email_handler.email_client import EmailClient

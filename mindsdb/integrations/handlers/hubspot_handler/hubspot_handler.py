@@ -13,9 +13,15 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     EmailsTable,
     MeetingsTable,
     NotesTable,
+    LeadsTable,
+    OwnersTable,
+    DealStagesTable,
     to_hubspot_property,
     to_internal_property,
     HUBSPOT_TABLE_COLUMN_DEFINITIONS,
+)
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_tables import (
+    ASSOCIATION_TABLE_CLASSES,
 )
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 
@@ -27,6 +33,9 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
+
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_oauth import HubSpotOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 logger = log.getLogger(__name__)
 
@@ -112,9 +121,12 @@ class HubspotHandler(MetaAPIHandler):
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
         self.kwargs = kwargs
+        self.handler_storage = kwargs.get("handler_storage")
 
         self.connection: Optional[HubSpot] = None
         self.is_connected: bool = False
+        self._association_tables = set(ASSOCIATION_TABLE_CLASSES.keys())
+        self._non_object_tables = {"owners", "deal_stages"}
 
         # Register core CRM tables
         self._register_table("companies", CompaniesTable(self))
@@ -128,6 +140,12 @@ class HubspotHandler(MetaAPIHandler):
         self._register_table("emails", EmailsTable(self))
         self._register_table("meetings", MeetingsTable(self))
         self._register_table("notes", NotesTable(self))
+        self._register_table("leads", LeadsTable(self))
+        self._register_table("owners", OwnersTable(self))
+        self._register_table("deal_stages", DealStagesTable(self))
+
+        for table_name, table_class in ASSOCIATION_TABLE_CLASSES.items():
+            self._register_table(table_name, table_class(self))
 
     def connect(self) -> HubSpot:
         """Creates a new Hubspot API client if needed."""
@@ -135,39 +153,53 @@ class HubspotHandler(MetaAPIHandler):
             return self.connection
 
         try:
-            if "access_token" in self.connection_data:
-                access_token = self.connection_data["access_token"]
-                if not access_token or not isinstance(access_token, str):
+            access_token = self.connection_data.get("access_token")
+            client_id = self.connection_data.get("client_id")
+            client_secret = self.connection_data.get("client_secret")
+
+            if access_token:
+                if not isinstance(access_token, str) or not access_token.strip():
                     raise ValueError("Invalid access_token provided")
 
                 logger.info("Connecting to HubSpot using access token")
                 self.connection = HubSpot(access_token=access_token)
 
-            elif "client_id" in self.connection_data and "client_secret" in self.connection_data:
-                client_id = self.connection_data["client_id"]
-                client_secret = self.connection_data["client_secret"]
-
-                if not client_id or not client_secret:
-                    raise ValueError("Invalid OAuth credentials provided")
-
+            elif client_id and client_secret:
                 logger.info("Connecting to HubSpot using OAuth credentials")
-                self.connection = HubSpot(client_id=client_id, client_secret=client_secret)
+                oauth_manager = HubSpotOAuth2Manager(
+                    handler_storage=self.handler_storage,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    scopes=self.connection_data.get("scope"),
+                    optional_scopes=self.connection_data.get("optional_scope"),
+                    redirect_uri=self.connection_data.get("redirect_uri"),
+                    code=self.connection_data.get("code"),
+                    datasource_name=self.name,
+                )
+                logger.info("Attempting to obtain access token via OAuth flow")
+                logger.debug(oauth_manager)
+                self.connection = HubSpot(access_token=oauth_manager.get_access_token())
+
             else:
                 raise ValueError(
                     "Authentication credentials missing. Provide either 'access_token' "
-                    "or both 'client_id' and 'client_secret' for OAuth authentication."
+                    "or OAuth credentials: 'client_id' and 'client_secret'."
                 )
 
             self.is_connected = True
             logger.info("Successfully connected to HubSpot API")
             return self.connection
 
-        except ValueError:
-            logger.error("Failed to connect to HubSpot API")
+        except AuthException:
+            self.connection = None
+            self.is_connected = False
+            logger.info("HubSpot OAuth authorization required")
             raise
         except Exception as e:
-            logger.error("Failed to connect to HubSpot API")
-            raise ValueError(f"Connection to HubSpot failed: {str(e)}")
+            self.connection = None
+            self.is_connected = False
+            logger.error("Failed to connect to HubSpot API: %s", e)
+            raise ValueError(f"Connection to HubSpot failed: {e}") from e
 
     def disconnect(self) -> None:
         """Close connection and cleanup resources."""
@@ -178,6 +210,19 @@ class HubspotHandler(MetaAPIHandler):
     def check_connection(self) -> StatusResponse:
         """Checks whether the API client is connected to Hubspot."""
         response = StatusResponse(False)
+
+        # Defer OAuth code-for-token exchange: CREATE DATABASE runs check_connection
+        # with ephemeral handler_storage, so tokens written here would be discarded;
+        # later requests then fail with BAD_AUTH_CODE. Exchange only when a request
+        if self.connection_data.get("code") and not self.is_connected:
+            from mindsdb.integrations.handlers.hubspot_handler.hubspot_oauth import _STORAGE_KEY
+
+            if not self.handler_storage.encrypted_json_get(_STORAGE_KEY):
+                logger.info(
+                    "Deferring HubSpot check_connection because OAuth code exchange must happen in a persistent context."
+                )
+                response.success = True
+                return response
 
         try:
             self.connect()
@@ -201,6 +246,10 @@ class HubspotHandler(MetaAPIHandler):
                         response.error_message = error_msg
                         response.success = False
 
+        except AuthException as error:
+            response.error_message = str(error)
+            response.redirect_url = error.auth_url
+            return response
         except Exception as e:
             error_msg = _extract_hubspot_error_message(e)
             logger.error(f"HubSpot connection check failed: {error_msg}")
@@ -228,10 +277,27 @@ class HubspotHandler(MetaAPIHandler):
             self.connect()
 
             tables_data = []
-            all_tables = ["companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"]
+            all_tables = list(self._tables.keys())
             for table_name in all_tables:
                 try:
-                    # Try to access each table with a minimal request
+                    if table_name in self._association_tables:
+                        table_info = {
+                            "TABLE_SCHEMA": "hubspot",
+                            "TABLE_NAME": table_name,
+                            "TABLE_TYPE": "BASE TABLE",
+                        }
+                        tables_data.append(table_info)
+                        continue
+                    if table_name in self._non_object_tables:
+                        self._tables[table_name].list(limit=1)
+                        table_info = {
+                            "TABLE_SCHEMA": "hubspot",
+                            "TABLE_NAME": table_name,
+                            "TABLE_TYPE": "BASE TABLE",
+                        }
+                        tables_data.append(table_info)
+                        continue
+
                     default_properties = self._tables[table_name].get_columns()
                     hubspot_properties = [
                         to_hubspot_property(col)
@@ -282,17 +348,7 @@ class HubspotHandler(MetaAPIHandler):
 
     def get_columns(self, table_name: str) -> Response:
         """Return column information for a specific table."""
-        valid_tables = [
-            "companies",
-            "contacts",
-            "deals",
-            "tickets",
-            "tasks",
-            "calls",
-            "emails",
-            "meetings",
-            "notes",
-        ]
+        valid_tables = list(self._tables.keys())
 
         if table_name not in valid_tables:
             return Response(
@@ -345,7 +401,11 @@ class HubspotHandler(MetaAPIHandler):
         try:
             self.connect()
 
-            all_tables = ["companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"]
+            all_tables = [
+                name
+                for name in self._tables.keys()
+                if name not in self._association_tables and name not in self._non_object_tables
+            ]
             if table_names:
                 tables_to_process = [t for t in table_names if t in all_tables]
             else:
@@ -460,6 +520,25 @@ class HubspotHandler(MetaAPIHandler):
 
     def _get_default_discovered_columns(self, table_name: str) -> List[Dict[str, Any]]:
         """Get default discovered columns when API data is unavailable."""
+        if (
+            table_name in self._association_tables or table_name in self._non_object_tables
+        ) and table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
+            base_columns = []
+            ordinal_position = 1
+            for col_name, data_type, description in HUBSPOT_TABLE_COLUMN_DEFINITIONS[table_name]:
+                base_columns.append(
+                    {
+                        "column_name": col_name,
+                        "data_type": data_type,
+                        "is_nullable": True,
+                        "ordinal_position": ordinal_position,
+                        "description": description,
+                        "original_name": col_name,
+                    }
+                )
+                ordinal_position += 1
+            return base_columns
+
         ordinal_position = 1
         base_columns = [
             {
@@ -491,6 +570,23 @@ class HubspotHandler(MetaAPIHandler):
 
     def _get_default_meta_columns(self, table_name: str) -> List[Dict[str, Any]]:
         """Get default column metadata for data catalog when data is unavailable."""
+        if (
+            table_name in self._association_tables or table_name in self._non_object_tables
+        ) and table_name in HUBSPOT_TABLE_COLUMN_DEFINITIONS:
+            base_columns = []
+            for col_name, data_type, description in HUBSPOT_TABLE_COLUMN_DEFINITIONS[table_name]:
+                base_columns.append(
+                    {
+                        "TABLE_NAME": table_name,
+                        "COLUMN_NAME": col_name,
+                        "DATA_TYPE": data_type,
+                        "COLUMN_DESCRIPTION": description,
+                        "IS_NULLABLE": True,
+                        "COLUMN_DEFAULT": None,
+                    }
+                )
+            return base_columns
+
         base_columns = [
             {
                 "TABLE_NAME": table_name,
@@ -529,13 +625,27 @@ class HubspotHandler(MetaAPIHandler):
             "emails": "HubSpot email logs including subject, direction, status and content",
             "meetings": "HubSpot meeting logs including title, location, outcome and timing",
             "notes": "HubSpot notes for timeline entries on records",
+            "company_contacts": "HubSpot company to contact associations",
+            "company_deals": "HubSpot company to deal associations",
+            "company_tickets": "HubSpot company to ticket associations",
+            "contact_companies": "HubSpot contact to company associations",
+            "contact_deals": "HubSpot contact to deal associations",
+            "contact_tickets": "HubSpot contact to ticket associations",
+            "deal_companies": "HubSpot deal to company associations",
+            "deal_contacts": "HubSpot deal to contact associations",
+            "ticket_companies": "HubSpot ticket to company associations",
+            "ticket_contacts": "HubSpot ticket to contact associations",
+            "ticket_deals": "HubSpot ticket to deal associations",
+            "owners": "HubSpot owners with names and emails",
+            "deal_stages": "HubSpot deal pipeline stages with labels",
+            "leads": "HubSpot leads data including lead status, source and other lead properties",
         }
         return descriptions.get(table_name, f"HubSpot {table_name} data")
 
     def _estimate_table_rows(self, table_name: str) -> Optional[int]:
         """Get actual count of rows in a table using HubSpot Search API."""
         try:
-            if table_name in ["companies", "contacts", "deals", "tickets"]:
+            if table_name in ["companies", "contacts", "deals", "tickets", "leads"]:
                 result = getattr(self.connection.crm, table_name).search_api.do_search(
                     public_object_search_request={"limit": 1}
                 )

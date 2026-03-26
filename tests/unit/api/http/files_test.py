@@ -69,6 +69,48 @@ def test_put_file_invalid_url(client):
     assert "Invalid URL" in data["title"]
 
 
+def test_put_file_url_with_file_param(client, monkeypatch):
+    """Test uploading from URL with "file" parameter, which forbidden if source_type!=file"""
+    monkeypatch.setattr(
+        "mindsdb.api.http.namespaces.file.config",
+        {"url_file_upload": {"enabled": True}},
+    )
+    data = {
+        "source_type": "url",
+        "source": "http://example.com/file.txt",
+        "file": "../path/test.txt",  # forbidden param if source_type!=file
+    }
+    response = client.put(
+        "/api/files/remote.txt",
+        json=data,
+        content_type="application/json",
+        follow_redirects=True,
+    )
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "Invalid request parameters" == data["title"]
+
+
+def test_put_file_no_source_type_with_file_param(client, monkeypatch):
+    """Test uploading from without source_type, but with "file" param"""
+    monkeypatch.setattr(
+        "mindsdb.api.http.namespaces.file.config",
+        {"url_file_upload": {"enabled": True}},
+    )
+    data = {
+        "file": "../path/test.txt"  # forbidden param if source_type!=file
+    }
+    response = client.put(
+        "/api/files/remote.txt",
+        json=data,
+        content_type="application/json",
+        follow_redirects=True,
+    )
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "Invalid request parameters" == data["title"]
+
+
 def test_put_file_url_upload_disabled(client, monkeypatch):
     """Test uploading from URL when URL upload is disabled"""
     # Patch config to disable URL upload
@@ -79,7 +121,6 @@ def test_put_file_url_upload_disabled(client, monkeypatch):
     data = {
         "source_type": "url",
         "source": "http://example.com/file.txt",
-        "file": "remote.txt",
     }
     response = client.put(
         "/api/files/remote.txt",
@@ -129,3 +170,59 @@ def test_archive_file_with_extension_upload(client):
     assert response.status_code == 400
     data = response.get_json()
     assert "File name cannot contain extension." in data["detail"]
+
+
+def test_put_file_with_path_in_filename_multipart(client):
+    """Test uploading a file with path traversal in the filename via multipart form data"""
+    file = io.BytesIO(b"Hello, World!")
+
+    data = {
+        "file": (file, "../test.txt"),
+        "source_type": "file",
+    }
+    response = client.put(
+        "/api/files/testfile",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    # Should fail due to path validation (ValueError is raised)
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+def test_put_file_with_invalid_parameters_multipart(client):
+    """Test uploading a file with invalid/unexpected parameters via multipart form data"""
+    file = io.BytesIO(b"Hello, World!")
+
+    data = {
+        "file": (file, "test.txt"),
+        "source_type": "file",
+        "unexpected_param": "unexpected_value",  # Invalid parameter
+    }
+    response = client.put(
+        "/api/files/testfile",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "Invalid request parameters" in data["title"]
+
+
+def test_put_file_with_invalid_parameters_json(client):
+    """Test uploading a file with invalid/unexpected parameters via JSON"""
+    data = {
+        "source_type": "url",
+        "source": "http://example.com/file.txt",
+        "invalid_field": "some_value",  # Invalid parameter
+    }
+    response = client.put(
+        "/api/files/testfile",
+        json=data,
+        content_type="application/json",
+        follow_redirects=True,
+    )
+    assert response.status_code == 400
+    response_data = response.get_json()
+    assert "Invalid request parameters" in response_data["title"]

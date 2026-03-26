@@ -15,6 +15,7 @@ from mindsdb.interfaces.storage.db import Predictor
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
 from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.utilities.config import config
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -72,11 +73,14 @@ class ModelsList(Resource):
         except PredictorRecordNotFound:
             pass
 
-        ml_integration = "lightwood"
+        ml_integration = config["default_ml_engine"]
         if create_statement.using is not None:
             # Convert using to lowercase
             create_statement.using = {k.lower(): v for k, v in create_statement.using.items()}
             ml_integration = create_statement.using.pop("engine", ml_integration)
+
+        if ml_integration is None:
+            return http_error(HTTPStatus.NOT_FOUND, "ML handler not found", "Default ML handler is not specified")
 
         try:
             ml_handler = session.integration_controller.get_ml_handler(ml_integration)

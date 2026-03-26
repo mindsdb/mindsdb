@@ -8,11 +8,12 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 
 class TestSchema(BaseExecutorDummyML):
     def test_show(self):
-        for item in ("chatbots", "knowledge_bases", "agents", "skills", "jobs"):
+        for item in ("chatbots", "knowledge_bases", "agents", "jobs"):
             self.run_sql(f"show {item}")
 
     @pytest.mark.slow
-    def test_schema(self):
+    @patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+    def test_schema(self, check_agent):
         # --- create objects + describe ---
         # todo: create knowledge base (requires chromadb)
 
@@ -91,15 +92,15 @@ class TestSchema(BaseExecutorDummyML):
         # agent
         self.run_sql("""
               CREATE AGENT agent1
-              USING model = 'pred1'
+              USING model = {'model_name': "pred1", "provider": "openai"}
         """)
         self.run_sql("""
               CREATE AGENT proj2.agent2
-              USING model = 'pred2' -- it looks up in agent's project
+              USING model =  {'model_name': "pred2", "provider": "openai"} -- it looks up in agent's project
         """)
 
         df = self.run_sql("describe agent agent1")
-        assert df.NAME[0] == "agent1" and df.MODEL_NAME[0] == "pred1"
+        assert df.NAME[0] == "agent1" and "pred1" in df.MODEL[0]
 
         # chatbot
         self.run_sql("""
@@ -115,21 +116,6 @@ class TestSchema(BaseExecutorDummyML):
 
         df = self.run_sql("describe chatbot chatbot1")
         assert df.NAME[0] == "chatbot1" and df.DATABASE[0] == "dummy_data"
-
-        # skill
-        self.run_sql("""
-         CREATE SKILL skill1
-            USING type = 'text_to_sql',
-                database = 'dummy_data', tables = ['table1'];
-        """)
-        self.run_sql("""
-         CREATE SKILL proj2.skill2
-            USING type = 'text_to_sql',
-                database = 'dummy_data', tables = ['table1'];
-        """)
-
-        df = self.run_sql("describe skill skill1")
-        assert df.NAME[0] == "skill1" and df.TYPE[0] == "text_to_sql"
 
         # --- SHOW ---
 
@@ -168,7 +154,6 @@ class TestSchema(BaseExecutorDummyML):
         _test_proj_obj("triggers", "trigger")
         _test_proj_obj("chatbots", "chatbot")
         _test_proj_obj("agents", "agent")
-        _test_proj_obj("skills", "skill")
 
         # model
         df = self.run_sql("show models")
@@ -234,7 +219,6 @@ class TestSchema(BaseExecutorDummyML):
         _test_proj_obj("TRIGGERS", "trigger")
         _test_proj_obj("CHATBOTS", "chatbot")
         _test_proj_obj("AGENTS", "agent")
-        _test_proj_obj("SKILLS", "skill")
 
         # models
         df = self.run_sql("select * from information_schema.MODELS")

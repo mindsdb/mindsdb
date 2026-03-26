@@ -83,12 +83,12 @@ class EmailClient:
             self.smtp_server.login(self.email, self.password)
             self.smtp_server.send_message(msg)
             logger.info(f"Email sent to {to_addr} with subject: {subject}")
-        except smtplib.SMTPException as e:
-            logger.error(f"Failed to send email to {to_addr}: {str(e)}")
-            raise ValueError(f"Failed to send email to {to_addr}: {str(e)}") from e
         except smtplib.SMTPAuthenticationError as e:
             logger.error(f"SMTP authentication failed: {str(e)}")
             raise ValueError("SMTP authentication failed. Please check your credentials")
+        except smtplib.SMTPException as e:
+            logger.error(f"Failed to send email to {to_addr}: {str(e)}")
+            raise ValueError(f"Failed to send email to {to_addr}: {str(e)}") from e
         except Exception as e:
             logger.error(f"An unexpected error occurred while sending email to {to_addr}: {str(e)}")
             raise ValueError(f"An unexpected error occurred while sending email to {to_addr}: {str(e)}") from e

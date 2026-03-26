@@ -241,8 +241,7 @@ class JiraIssueFetcherMixin:
         """
         fields = issue.get("fields") or {}
         if field_key in fields:
-            if fields[field_key] is not None:
-                return fields[field_key]
+            return fields[field_key]
 
         issue_identifier = issue.get("id") or issue.get("key")
         if issue_identifier is None:
@@ -359,7 +358,7 @@ class JiraProjectsTable(JiraTableBase):
         if table_name == "projects":
             return {
                 "table_name": "projects",
-                "table_schma": "jira",
+                "table_schema": "jira",
                 "table_type": "BASE TABLE",
                 "table_description": "Jira projects available to the configured user.",
             }
@@ -584,7 +583,7 @@ class JiraIssuesTable(JiraIssueFetcherMixin, JiraTableBase):
         if table_name == "issues":
             return {
                 "table_name": "issues",
-                "table_schma": "jira",
+                "table_schema": "jira",
                 "table_type": "BASE TABLE",
                 "table_description": "Jira issues across all projects accessible to the configured user.",
             }
@@ -844,7 +843,7 @@ class JiraAttachmentsTable(JiraIssueFetcherMixin, JiraTableBase):
         if table_name == "attachments":
             return {
                 "table_name": "attachments",
-                "table_schma": "jira",
+                "table_schema": "jira",
                 "table_type": "BASE TABLE",
                 "table_description": "Jira issue attachments across all projects accessible to the configured user.",
             }
@@ -1014,7 +1013,7 @@ class JiraCommentsTable(JiraIssueFetcherMixin, JiraTableBase):
         if table_name == "comments":
             return {
                 "table_name": "comments",
-                "table_schma": "jira",
+                "table_schema": "jira",
                 "table_type": "BASE TABLE",
                 "table_description": "Jira issue comments across all projects accessible to the configured user.",
             }
@@ -1135,7 +1134,7 @@ class JiraGroupsTable(JiraTableBase):
         if table_name == "groups":
             return {
                 "table_name": "groups",
-                "table_schma": "jira",
+                "table_schema": "jira",
                 "table_type": "BASE TABLE",
                 "table_description": "Jira user groups available to the configured user.",
             }

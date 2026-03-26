@@ -5,6 +5,7 @@ import pymssql
 from pymssql import OperationalError
 import pandas as pd
 from pandas.api import types as pd_types
+from sqlalchemy.exc import SQLAlchemyError
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -13,7 +14,7 @@ from mindsdb_sql_parser.ast import Identifier
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log
-from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender, RenderError
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -78,15 +79,11 @@ def _make_table_response(
     if not result:
         data_frame = pd.DataFrame(columns=columns)
     elif use_odbc:
-        # For pyodbc with large datasets, convert Row objects efficiently
-        # Using iterator with pd.DataFrame avoids intermediate list creation
-        try:
-            data_frame = pd.DataFrame(result, columns=columns)
-        except (ValueError, TypeError):
-            # Fallback: convert Row objects to tuples
-            data_frame = pd.DataFrame.from_records((tuple(row) for row in result), columns=columns)
+        # from_records() understands tuple-like records (including pyodbc.Row)
+        data_frame = pd.DataFrame.from_records(result, columns=columns)
     else:
-        data_frame = pd.DataFrame(result, columns=columns)
+        # pymssql with as_dict=True returns list of dicts
+        data_frame = pd.DataFrame(result)
 
     for column in description:
         column_name = column[0]
@@ -304,7 +301,13 @@ class SqlServerHandler(MetaDatabaseHandler):
 
         if not self.is_connected:
             return
-        self.connection.close()
+        if self.connection is not None:
+            try:
+                self.connection.close()
+            except Exception:
+                logger.exception("Failed to close connection:")
+                pass
+        self.connection = None
         self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
@@ -324,7 +327,7 @@ class SqlServerHandler(MetaDatabaseHandler):
                 # Execute a simple query to test the connection
                 cur.execute("select 1;")
             response.success = True
-        except OperationalError as e:
+        except Exception as e:
             logger.error(f"Error connecting to Microsoft SQL Server {self.database}, {e}!")
             response.error_message = str(e)
 
@@ -417,10 +420,20 @@ class SqlServerHandler(MetaDatabaseHandler):
         # Add schema prefix to table identifiers if schema is configured
         if self.schema:
             query_traversal(query, self._add_schema_to_tables)
+        query_str, render_error = None, None
+        try:
+            query_str = self.renderer.get_string(query, with_failback=False)
+        except (SQLAlchemyError, NotImplementedError, RenderError) as e:
+            render_error = str(e)
 
-        query_str = self.renderer.get_string(query, with_failback=True)
+        if query_str is None:
+            query_str = self.renderer.get_string(query, with_failback=True)
+
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str)
+        resp = self.native_query(query_str)
+        if resp.resp_type == RESPONSE_TYPE.ERROR and render_error:
+            resp.error_message += f"\nThe problem with render: {render_error}"
+        return resp
 
     def get_tables(self) -> Response:
         """

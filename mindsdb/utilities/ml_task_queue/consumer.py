@@ -171,9 +171,7 @@ class MLTaskConsumer(BaseRedisQueue):
             payload = from_bytes(message_content[b"payload"])
             task_type = ML_TASK_TYPE(message_content[b"task_type"])
             model_id = int(message_content[b"model_id"])
-            company_id = message_content[b"company_id"]
-            if len(company_id) == 0:
-                company_id = None
+
             redis_key = RedisKey(message_content.get(b"redis_key"))
 
             # region read dataframe

@@ -102,8 +102,9 @@ def query_traversal(node, callback, is_table=False, is_target=False, parent_quer
             if node_out is not None:
                 node.condition = node_out
 
-    elif isinstance(node, (ast.Function, ast.BinaryOperation, ast.UnaryOperation, ast.BetweenOperation,
-                           ast.Exists, ast.NotExists)):
+    elif isinstance(
+        node, (ast.Function, ast.BinaryOperation, ast.UnaryOperation, ast.BetweenOperation, ast.Exists, ast.NotExists)
+    ):
         array = []
         for arg in node.args:
             node_out = query_traversal(arg, callback, parent_query=parent_query, stack=stack2) or arg
@@ -232,6 +233,9 @@ def query_traversal(node, callback, is_table=False, is_target=False, parent_quer
         default = query_traversal(node.default, callback, parent_query=parent_query, stack=stack2)
         if default is not None:
             node.default = default
+        arg = query_traversal(node.arg, callback, parent_query=parent_query, stack=stack2)
+        if arg is not None:
+            node.arg = arg
 
     elif isinstance(node, list):
         array = []

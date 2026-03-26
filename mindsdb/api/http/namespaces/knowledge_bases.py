@@ -2,7 +2,6 @@ from http import HTTPStatus
 
 from flask import request
 from flask_restx import Resource
-from langchain_text_splitters import MarkdownHeaderTextSplitter
 from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
@@ -17,7 +16,6 @@ from mindsdb.interfaces.knowledge_base.preprocessing.constants import (
     DEFAULT_CONTEXT_DOCUMENT_LIMIT,
     DEFAULT_CRAWL_DEPTH,
     DEFAULT_WEB_FILTERS,
-    DEFAULT_MARKDOWN_HEADERS,
     DEFAULT_WEB_CRAWL_LIMIT,
 )
 from mindsdb.interfaces.knowledge_base.preprocessing.document_loader import DocumentLoader
@@ -202,14 +200,12 @@ class KnowledgeBaseResource(Resource):
             file_controller = FileController()
             file_splitter_config = FileSplitterConfig()
             file_splitter = FileSplitter(file_splitter_config)
-            markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=DEFAULT_MARKDOWN_HEADERS)
             mysql_proxy = FakeMysqlProxy()
 
             # Initialize DocumentLoader with required components
             document_loader = DocumentLoader(
                 file_controller=file_controller,
                 file_splitter=file_splitter,
-                markdown_splitter=markdown_splitter,
                 mysql_proxy=mysql_proxy,
             )
 

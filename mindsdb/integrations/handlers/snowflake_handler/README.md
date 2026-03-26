@@ -87,6 +87,21 @@ WITH
     };
 ```
 
+If the private key cannot be accesed from disk (for example when running MindsDB on Cloud), provide the PEM content directly:
+
+```sql
+CREATE DATABASE snowflake_datasource
+WITH
+    ENGINE = 'snowflake',
+    PARAMETERS = {
+        "account": "tvuibdy-vm85921",
+        "user": "your_username",
+        "private_key": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----",
+        "database": "test_db",
+        "auth_type": "key_pair"
+    };
+```
+
 With encrypted private key (passphrase protected):
 
 ```sql
@@ -111,11 +126,13 @@ Required parameters:
 * `user`: The username for the Snowflake account.
 * `database`: The name of the Snowflake database to connect to.
 * `auth_type`: The authentication type to use. Options: `"password"` or `"key_pair"`.
+* `schema`: The database schema to use within the Snowflake database.
 
 Authentication parameters (one method required):
 
 * `password`: The password for the Snowflake account (password authentication).
 * `private_key_path`: Path to the private key file for key pair authentication.
+* `private_key`: PEM-formatted private key content for key pair authentication. Use when the key cannot be stored on disk.
 * `private_key_passphrase`: Optional passphrase for encrypted private key (key pair authentication).
 
 Optional parameters:

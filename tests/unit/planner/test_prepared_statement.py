@@ -31,6 +31,8 @@ class FakeExecutor:
             return [{"id": 1, "name": "asdf"}, {"id": 2, "name": "jkl;"}]
         if isinstance(step, steps.GetTableColumns):
             if step.table in (
+                "table1",
+                "table2",
                 "tab",
                 "tab1",
                 "tab2",

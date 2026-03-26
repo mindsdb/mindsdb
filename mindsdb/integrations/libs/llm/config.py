@@ -37,20 +37,6 @@ class AnthropicConfig(BaseLLMConfig):
     anthropic_api_url: Optional[str]
 
 
-# See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.anyscale.ChatAnyscale.html
-# This config does not have to be exclusively used with Langchain.
-class AnyscaleConfig(BaseLLMConfig):
-    model_name: str
-    temperature: Optional[float]
-    max_retries: Optional[int]
-    max_tokens: Optional[int]
-    anyscale_api_base: Optional[str]
-    # Inferred from ANYSCALE_API_KEY if not provided.
-    anyscale_api_key: Optional[str]
-    anyscale_proxy: Optional[str]
-    request_timeout: Optional[float]
-
-
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.litellm.ChatLiteLLM.html
 # This config does not have to be exclusively used with Langchain.
 class LiteLLMConfig(BaseLLMConfig):
@@ -127,3 +113,18 @@ class WriterConfig(BaseLLMConfig):
     writer_api_key: Optional[str] = Field(default=None)
     writer_org_id: Optional[str] = Field(default=None)
     base_url: Optional[str] = Field(default=None)
+
+
+# https://api.python.langchain.com/en/latest/llms/langchain_aws.llms.bedrock.BedrockLLM.html#langchain_aws.llms.bedrock.BedrockLLM
+class BedrockConfig(BaseLLMConfig):
+    model_id: str
+    aws_access_key_id: Optional[str] = Field(default=None)
+    aws_secret_access_key: Optional[str] = Field(default=None)
+    aws_session_token: Optional[str] = Field(default=None)
+    region_name: Optional[str] = Field(default=None)
+    credentials_profile_name: Optional[str] = Field(default=None)
+    endpoint_url: Optional[str] = Field(default=None)
+    stop: Optional[List[str]] = Field(default=None)
+    temperature: Optional[float] = Field(default=0.7)
+    max_tokens: Optional[int] = Field(default=None)
+    model_kwargs: Optional[Dict[str, Any]] = Field(default=None)

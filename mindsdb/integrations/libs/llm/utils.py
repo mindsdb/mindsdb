@@ -1,14 +1,14 @@
-from typing import Optional, Dict, List, Tuple
+import re
 import json
 import itertools
-import re
+from enum import Enum
+from typing import Optional, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
 
 from mindsdb.integrations.libs.llm.config import (
     AnthropicConfig,
-    AnyscaleConfig,
     BaseLLMConfig,
     GoogleConfig,
     LiteLLMConfig,
@@ -17,9 +17,26 @@ from mindsdb.integrations.libs.llm.config import (
     NvidiaNIMConfig,
     MindsdbConfig,
     WriterConfig,
+    BedrockConfig,
 )
 from mindsdb.utilities.config import config
-from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter
+
+
+class Language(Enum):
+    PYTHON = "python"
+    JAVASCRIPT = "javascript"
+    TYPESCRIPT = "typescript"
+    JAVA = "java"
+    CPP = "cpp"
+    C = "c"
+    GO = "go"
+    RUST = "rust"
+    RUBY = "ruby"
+    PHP = "php"
+    SWIFT = "swift"
+    KOTLIN = "kotlin"
+    SCALA = "scala"
 
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
@@ -29,9 +46,6 @@ DEFAULT_OPENAI_MAX_TOKENS = 8096
 DEFAULT_OPENAI_MAX_RETRIES = 3
 
 DEFAULT_ANTHROPIC_MODEL = "claude-3-haiku-20240307"
-
-DEFAULT_ANYSCALE_MODEL = "meta-llama/Llama-2-7b-chat-hf"
-DEFAULT_ANYSCALE_BASE_URL = "https://api.endpoints.anyscale.com/v1"
 
 DEFAULT_GOOGLE_MODEL = "gemini-2.5-pro-preview-03-25"
 
@@ -135,17 +149,6 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
             anthropic_api_key=args["api_keys"].get("anthropic", None),
             anthropic_api_url=args.get("base_url", None),
         )
-    if provider == "anyscale":
-        return AnyscaleConfig(
-            model_name=args.get("model_name", DEFAULT_ANYSCALE_MODEL),
-            temperature=temperature,
-            max_retries=args.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
-            max_tokens=args.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
-            anyscale_api_base=args.get("base_url", DEFAULT_ANYSCALE_BASE_URL),
-            anyscale_api_key=args["api_keys"].get("anyscale", None),
-            anyscale_proxy=args.get("proxy", None),
-            request_timeout=args.get("request_timeout", None),
-        )
     if provider == "litellm":
         model_kwargs = {
             "api_key": args["api_keys"].get("litellm", None),
@@ -237,6 +240,20 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
             writer_org_id=args.get("writer_org_id", None),
             base_url=args.get("base_url", None),
         )
+    if provider == "bedrock":
+        return BedrockConfig(
+            model_id=args.get("model_name"),
+            temperature=temperature,
+            max_tokens=args.get("max_tokens", None),
+            stop=args.get("stop", None),
+            base_url=args.get("endpoint_url", None),
+            aws_access_key_id=args.get("aws_access_key_id", None),
+            aws_secret_access_key=args.get("aws_secret_access_key", None),
+            aws_session_token=args.get("aws_session_token", None),
+            region_name=args.get("aws_region_name", None),
+            credentials_profile_name=args.get("credentials_profile_name", None),
+            model_kwargs=args.get("model_kwargs", None),
+        )
 
     raise ValueError(f"Provider {provider} is not supported.")
 
@@ -304,10 +321,10 @@ def ft_jsonl_validation(
                     assistant_key=assistant_key,
                 )
             except Exception as e:
-                raise Exception(f"{prefix}{e}")
+                raise Exception(f"{prefix}{e}") from e
 
     except Exception as e:
-        raise Exception(f"Fine-tuning data format is not valid. Got {e}")
+        raise Exception(f"Fine-tuning data format is not valid. Got {e}") from e
 
 
 def ft_chat_format_validation(
@@ -525,8 +542,10 @@ def ft_code_formatter(
         raise Exception(f"Invalid format. Please choose one of {supported_formats}")
 
     # split code into chunks
+    # Get language enum value (handle both string and enum)
+    lang_enum = getattr(Language, language.upper(), language)
     code_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=getattr(Language, language.upper()),
+        language=lang_enum,
         chunk_size=3 * chunk_size,  # each triplet element has `chunk_size`
         chunk_overlap=chunk_overlap,  # some overlap here is fine
     )
@@ -535,7 +554,7 @@ def ft_code_formatter(
 
     # split each chunk into a triplet, with no overlap
     triplet_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=getattr(Language, language.upper()),
+        language=lang_enum,
         chunk_size=chunk_size,
         chunk_overlap=0,  # no overlap admitted, otherwise context may leak into answer
     )

@@ -2,15 +2,25 @@ from collections import defaultdict
 
 import pandas as pd
 
-from mindsdb_sql_parser.ast import Identifier, Select, Star, Constant, Parameter, Function, Variable, BinaryOperation
+from mindsdb_sql_parser.ast import (
+    Identifier,
+    Select,
+    Star,
+    Constant,
+    Function,
+    Variable,
+    BinaryOperation,
+)
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import SubSelectStep, QueryStep
-from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
+from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.utilities.types.column import Column
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.executor.exceptions import KeyColumnDoesNotExist
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.integrations.utilities.sql_utils import has_aggregate_function
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 from .base import BaseStepCall
@@ -52,15 +62,30 @@ class SubSelectStepCall(BaseStepCall):
 
         # inject previous step values
         if isinstance(query, Select):
-
-            def inject_values(node, **kwargs):
-                if isinstance(node, Parameter) and isinstance(node.value, Result):
-                    prev_result = self.steps_data[node.value.step_num]
-                    return Constant(prev_result.get_column_values(col_idx=0)[0])
-
-            query_traversal(query, inject_values)
+            fill_params = get_fill_param_fnc(self.steps_data)
+            query_traversal(query, fill_params)
 
         df = result.to_df()
+
+        if step.skip_for_aggregation:
+            # Check if query has aggregations and result is already aggregated (single row)
+            # If so, and the query is just selecting the aggregated columns, skip query_df
+            # to avoid re-aggregating already aggregated data
+            # TODO remove `len(df) == 1` condition
+            if isinstance(query, Select) and len(df) == 1:
+                has_aggregation = has_aggregate_function(query.targets)
+                if (
+                    has_aggregation
+                    and query.where is None
+                    and query.group_by is None
+                    and query.order_by is None
+                    and query.limit is None
+                ):
+                    # Query is just aggregations with no WHERE, GROUP BY, ORDER BY, or LIMIT
+                    # The result is already aggregated, so just return it as-is
+                    database = result.columns[0].database if result.columns else None
+                    return ResultSet.from_df(df, database, table_name)
+
         res = query_df(df, query, session=self.session)
 
         # get database from first column
@@ -159,6 +184,8 @@ class QueryStepCall(BaseStepCall):
                         "version for the right syntax to use near '$$' at line 1"
                     )
 
+                key, column_quoted = (), False
+
                 match node.parts, node.is_quoted:
                     case [column_name], [column_quoted]:
                         if column_name in aliases:
@@ -184,7 +211,7 @@ class QueryStepCall(BaseStepCall):
                     raise KeyColumnDoesNotExist(f"Table not found for column: {key}")
 
                 new_name = search_idx[key]
-                return Identifier(parts=[new_name], alias=node.alias)
+                return Identifier(parts=[new_name], alias=node.alias, with_rollup=node.with_rollup)
 
         # fill params
         fill_params = get_fill_param_fnc(self.steps_data)
@@ -196,7 +223,6 @@ class QueryStepCall(BaseStepCall):
             #   but can be absent in their output
 
             def remove_not_used_conditions(node, **kwargs):
-                # find last in where
                 if isinstance(node, BinaryOperation):
                     for arg in node.args:
                         if isinstance(arg, Identifier) and len(arg.parts) > 1:

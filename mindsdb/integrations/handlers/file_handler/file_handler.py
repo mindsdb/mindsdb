@@ -7,11 +7,15 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import CreateTable, DropTables, Insert, Select, Identifier
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+from mindsdb.api.executor.utilities.sql import query_dfs
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.response import RESPONSE_TYPE
-from mindsdb.integrations.libs.response import HandlerResponse as Response
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.response import (
+    RESPONSE_TYPE,
+    HandlerResponse as Response,
+    HandlerStatusResponse as StatusResponse,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
+)
 from mindsdb.utilities import log
 
 
@@ -50,6 +54,7 @@ class FileHandler(DatabaseHandler):
         self.chunk_size = connection_data.get("chunk_size", DEFAULT_CHUNK_SIZE)
         self.chunk_overlap = connection_data.get("chunk_overlap", DEFAULT_CHUNK_OVERLAP)
         self.file_controller = file_controller
+        self.cache_thread_safe = True
 
     def connect(self, **kwargs):
         return
@@ -83,6 +88,12 @@ class FileHandler(DatabaseHandler):
                 table_name = table_identifier.parts[-1]
                 try:
                     self.file_controller.delete_file(table_name)
+                except FileNotFoundError as e:
+                    if not query.if_exists:
+                        return Response(
+                            RESPONSE_TYPE.ERROR,
+                            error_message=f"Can't delete table '{table_name}': {e}",
+                        )
                 except Exception as e:
                     return Response(
                         RESPONSE_TYPE.ERROR,
@@ -133,23 +144,33 @@ class FileHandler(DatabaseHandler):
             return Response(RESPONSE_TYPE.OK)
 
         elif isinstance(query, Select):
-            if isinstance(query.from_table, Select):
-                # partitioning mode
-                sub_result = self.query(query.from_table)
-                if sub_result.error_message is not None:
-                    raise RuntimeError(sub_result.error_message)
+            from mindsdb.integrations.utilities.query_traversal import query_traversal
 
-                df = sub_result.data_frame
-                query.from_table = Identifier("t")
-            elif isinstance(query.from_table, Identifier):
-                table_name, page_name = self._get_table_page_names(query.from_table)
+            tables = {}
 
-                df = self.file_controller.get_file_data(table_name, page_name)
-            else:
-                raise RuntimeError(f"Not supported query target: {query}")
+            not_found = []
+
+            def find_tables(node, is_table, **args):
+                if is_table and isinstance(node, Identifier):
+                    table_name, page_name = self._get_table_page_names(node)
+                    try:
+                        df = self.file_controller.get_file_data(table_name, page_name)
+                    except FileNotFoundError:
+                        not_found.append(table_name)
+                        return
+
+                    if page_name is not None:
+                        table_name = f"{page_name}_{table_name}"
+                        node.parts = [table_name]
+                    tables[table_name] = df
+
+            query_traversal(query, find_tables)
+
+            if len(tables) == 0:
+                raise RuntimeError(f"Files not found: {', '.join(not_found)}")
 
             # Process the SELECT query
-            result_df = query_df(df, query)
+            result_df = query_dfs(tables, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
 
         elif isinstance(query, Insert):
@@ -194,16 +215,23 @@ class FileHandler(DatabaseHandler):
 
     def get_columns(self, table_name) -> Response:
         file_meta = self.file_controller.get_file_meta(table_name)
+        if file_meta is None:
+            result = Response(
+                RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
+            )
+            result.to_columns_table_response(map_type_fn=lambda _: MYSQL_DATA_TYPE.TEXT)
+            return result
         result = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 [
                     {
-                        "Field": x["name"].strip() if isinstance(x, dict) else x.strip(),
-                        "Type": "str",
+                        "COLUMN_NAME": x["name"].strip() if isinstance(x, dict) else x.strip(),
+                        "DATA_TYPE": "str",
                     }
                     for x in file_meta["columns"]
                 ]
             ),
         )
+        result.to_columns_table_response(map_type_fn=lambda _: MYSQL_DATA_TYPE.TEXT)
         return result

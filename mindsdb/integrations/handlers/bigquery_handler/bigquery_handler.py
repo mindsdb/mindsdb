@@ -10,7 +10,9 @@ from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleServiceAccountOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import (
+    GoogleServiceAccountOAuth2Manager,
+)
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -137,7 +139,8 @@ class BigQueryHandler(MetaDatabaseHandler):
             )
             query = connection.query(query, job_config=job_config)
             result = query.to_dataframe()
-            if not result.empty:
+            has_table_result = isinstance(result, pd.DataFrame) and (not result.empty or len(result.columns) > 0)
+            if has_table_result:
                 response = Response(RESPONSE_TYPE.TABLE, result)
             else:
                 response = Response(RESPONSE_TYPE.OK)
@@ -270,14 +273,48 @@ class BigQueryHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the column statistics.
         """
+        # Check column data types
+        column_types_query = f"""
+            SELECT column_name, data_type
+            FROM `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.COLUMNS`
+            WHERE table_name = '{table_name}'
+        """
+        column_types_result = self.native_query(column_types_query)
+
+        if column_types_result.resp_type != RESPONSE_TYPE.TABLE:
+            logger.error(f"Error retrieving column types for table {table_name}")
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Could not retrieve column types for table {table_name}",
+            )
+
+        column_type_map = dict(
+            zip(
+                column_types_result.data_frame["column_name"],
+                column_types_result.data_frame["data_type"],
+            )
+        )
+
+        # Types that don't support MIN/MAX aggregations
+        UNSUPPORTED_MINMAX_PREFIXES = ("ARRAY", "STRUCT", "RECORD")
+        UNSUPPORTED_MINMAX_TYPES = ("GEOGRAPHY", "JSON", "BYTES")
+
+        def supports_minmax(data_type: str) -> bool:
+            """Check if a BigQuery data type supports MIN/MAX operations."""
+            if data_type is None:
+                return False
+            data_type_upper = data_type.upper()
+            if any(data_type_upper.startswith(prefix) for prefix in UNSUPPORTED_MINMAX_PREFIXES):
+                return False
+            if data_type_upper in UNSUPPORTED_MINMAX_TYPES:
+                return False
+            return True
+
         # To avoid hitting BigQuery's query size limits, we will chunk the columns into batches.
-        # This is because the queries are combined using UNION ALL, which can lead to very large queries if there are many columns.
         BATCH_SIZE = 20
 
         def chunked(lst, n):
-            """
-            Yields successive n-sized chunks from lst.
-            """
+            """Yields successive n-sized chunks from lst."""
             for i in range(0, len(lst), n):
                 yield lst[i : i + n]
 
@@ -285,22 +322,43 @@ class BigQueryHandler(MetaDatabaseHandler):
         for column_batch in chunked(columns, BATCH_SIZE):
             batch_queries = []
             for column in column_batch:
-                batch_queries.append(
-                    f"""
-                    SELECT
-                        '{table_name}' AS table_name,
-                        '{column}' AS column_name,
-                        SAFE_DIVIDE(COUNTIF({column} IS NULL), COUNT(*)) * 100 AS null_percentage,
-                        CAST(MIN(`{column}`) AS STRING) AS minimum_value,
-                        CAST(MAX(`{column}`) AS STRING) AS maximum_value,
-                        COUNT(DISTINCT {column}) AS distinct_values_count
-                    FROM
-                        `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.{table_name}`
-                    """
-                )
+                data_type = column_type_map.get(column)
 
-            query = " UNION ALL ".join(batch_queries)
-            queries.append(query)
+                if supports_minmax(data_type):
+                    # Full statistics for supported types
+                    batch_queries.append(
+                        f"""
+                        SELECT
+                            '{table_name}' AS table_name,
+                            '{column}' AS column_name,
+                            SAFE_DIVIDE(COUNTIF(`{column}` IS NULL), COUNT(*)) * 100 AS null_percentage,
+                            CAST(MIN(`{column}`) AS STRING) AS minimum_value,
+                            CAST(MAX(`{column}`) AS STRING) AS maximum_value,
+                            COUNT(DISTINCT `{column}`) AS distinct_values_count
+                        FROM
+                            `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.{table_name}`
+                        """
+                    )
+                else:
+                    # Limited statistics for complex types (no MIN/MAX/COUNT DISTINCT)
+                    logger.info(f"Skipping MIN/MAX for column {column} with unsupported type: {data_type}")
+                    batch_queries.append(
+                        f"""
+                        SELECT
+                            '{table_name}' AS table_name,
+                            '{column}' AS column_name,
+                            SAFE_DIVIDE(COUNTIF(`{column}` IS NULL), COUNT(*)) * 100 AS null_percentage,
+                            CAST(NULL AS STRING) AS minimum_value,
+                            CAST(NULL AS STRING) AS maximum_value,
+                            CAST(NULL AS INT64) AS distinct_values_count
+                        FROM
+                            `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.{table_name}`
+                        """
+                    )
+
+            if batch_queries:
+                query = " UNION ALL ".join(batch_queries)
+                queries.append(query)
 
         results = []
         for query in queries:
@@ -316,9 +374,13 @@ class BigQueryHandler(MetaDatabaseHandler):
         if not results:
             logger.warning(f"No column statistics could be retrieved for table {table_name}.")
             return Response(
-                RESPONSE_TYPE.ERROR, error_message=f"No column statistics could be retrieved for table {table_name}."
+                RESPONSE_TYPE.ERROR,
+                error_message=f"No column statistics could be retrieved for table {table_name}.",
             )
-        return Response(RESPONSE_TYPE.TABLE, pd.concat(results, ignore_index=True) if results else pd.DataFrame())
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            pd.concat(results, ignore_index=True) if results else pd.DataFrame(),
+        )
 
     def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
         """
@@ -335,7 +397,7 @@ class BigQueryHandler(MetaDatabaseHandler):
                 tc.table_name,
                 kcu.column_name,
                 kcu.ordinal_position,
-                tc.constraint_name,
+                tc.constraint_name
             FROM
                 `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
             JOIN

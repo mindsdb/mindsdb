@@ -4,8 +4,7 @@ import hashlib
 import json
 import datetime
 import textwrap
-from functools import wraps
-from collections.abc import Callable
+from contextlib import ContextDecorator
 
 from cryptography.fernet import Fernet
 from mindsdb_sql_parser.ast import Identifier
@@ -35,45 +34,45 @@ def get_handler_install_message(handler_name):
 
 
 def cast_row_types(row, field_types):
-    '''
-    '''
+    """ """
     keys = [x for x in row.keys() if x in field_types]
     for key in keys:
         t = field_types[key]
-        if t == 'Timestamp' and isinstance(row[key], (int, float)):
-            timestamp = datetime.datetime.utcfromtimestamp(row[key])
-            row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-        elif t == 'Date' and isinstance(row[key], (int, float)):
-            timestamp = datetime.datetime.utcfromtimestamp(row[key])
-            row[key] = timestamp.strftime('%Y-%m-%d')
-        elif t == 'Int' and isinstance(row[key], (int, float, str)):
+        if t == "Timestamp" and isinstance(row[key], (int, float)):
+            timestamp = datetime.datetime.fromtimestamp(row[key], datetime.timezone.utc)
+            row[key] = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        elif t == "Date" and isinstance(row[key], (int, float)):
+            timestamp = datetime.datetime.fromtimestamp(row[key], datetime.timezone.utc)
+            row[key] = timestamp.strftime("%Y-%m-%d")
+        elif t == "Int" and isinstance(row[key], (int, float, str)):
             try:
-                logger.debug(f'cast {row[key]} to {int(row[key])}')
+                logger.debug(f"cast {row[key]} to {int(row[key])}")
                 row[key] = int(row[key])
             except Exception:
                 pass
 
 
-def mark_process(name: str, custom_mark: str = None) -> Callable:
-    def mark_process_wrapper(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if custom_mark is None:
-                mark = create_process_mark(name)
-            else:
-                mark = set_process_mark(name, custom_mark)
+class mark_process(ContextDecorator):
+    def __init__(self, name: str, custom_mark: str = None):
+        self.name = name
+        self.custom_mark = custom_mark
+        self.mark = None
 
-            try:
-                return func(*args, **kwargs)
-            finally:
-                delete_process_mark(name, mark)
-        return wrapper
-    return mark_process_wrapper
+    def __enter__(self):
+        if self.custom_mark is None:
+            self.mark = create_process_mark(self.name)
+        else:
+            self.mark = set_process_mark(self.name, self.custom_mark)
+
+    def __exit__(self, exc_type, exc, tb):
+        delete_process_mark(self.name, self.mark)
+        return False
 
 
 def init_lexer_parsers():
     from mindsdb_sql_parser.lexer import MindsDBLexer
     from mindsdb_sql_parser.parser import MindsDBParser
+
     return MindsDBLexer(), MindsDBParser()
 
 
@@ -86,62 +85,72 @@ def resolve_table_identifier(identifier: Identifier, default_database: str = Non
     elif parts_count == 2:
         return (parts[0], parts[1])
     else:
-        raise Exception(f'Table identifier must contain max 2 parts: {parts}')
+        raise Exception(f"Table identifier must contain max 2 parts: {parts}")
 
 
 def resolve_model_identifier(identifier: Identifier) -> tuple:
-    """ split model name to parts
-
-        Identifier may be:
-
-        Examples:
-            >>> resolve_model_identifier(['a', 'b'])
-            ('a', 'b', None)
-
-            >>> resolve_model_identifier(['a', '1'])
-            (None, 'a', 1)
-
-            >>> resolve_model_identifier(['a'])
-            (None, 'a', None)
-
-            >>> resolve_model_identifier(['a', 'b', 'c'])
-            (None, None, None)  # not found
-
-        Args:
-            name (Identifier): Identifier parts
-
-        Returns:
-            tuple: (database_name, model_name, model_version)
     """
-    parts = identifier.parts
-    database_name = None
+    Splits a model identifier into its database, model name, and version components.
+
+    The identifier may contain one, two, or three parts.
+    The function supports both quoted and unquoted identifiers, and normalizes names to lowercase if unquoted.
+
+    Examples:
+        >>> resolve_model_identifier(Identifier(parts=['a', 'b']))
+        ('a', 'b', None)
+        >>> resolve_model_identifier(Identifier(parts=['a', '1']))
+        (None, 'a', 1)
+        >>> resolve_model_identifier(Identifier(parts=['a']))
+        (None, 'a', None)
+        >>> resolve_model_identifier(Identifier(parts=['a', 'b', 'c']))
+        (None, None, None)  # not found
+
+    Args:
+        identifier (Identifier): The identifier object containing parts and is_quoted attributes.
+
+    Returns:
+        tuple: (database_name, model_name, model_version)
+            - database_name (str or None): The name of the database/project, or None if not specified.
+            - model_name (str or None): The name of the model, or None if not found.
+            - model_version (int or None): The model version as an integer, or None if not specified.
+    """
     model_name = None
-    model_version = None
+    db_name = None
+    version = None
+    model_name_quoted = None
+    db_name_quoted = None
 
-    parts_count = len(parts)
-    if parts_count == 1:
-        database_name = None
-        model_name = parts[0]
-        model_version = None
-    elif parts_count == 2:
-        if parts[-1].isdigit():
-            database_name = None
-            model_name = parts[0]
-            model_version = int(parts[-1])
-        else:
-            database_name = parts[0]
-            model_name = parts[1]
-            model_version = None
-    elif parts_count == 3:
-        database_name = parts[0]
-        model_name = parts[1]
-        if parts[2].isdigit():
-            model_version = int(parts[2])
-        else:
-            # not found
-            return None, None, None
+    match identifier.parts, identifier.is_quoted:
+        case [model_name], [model_name_quoted]:
+            ...
+        case [model_name, str(version)], [model_name_quoted, _] if version.isdigit():
+            ...
+        case [model_name, int(version)], [model_name_quoted, _]:
+            ...
+        case [db_name, model_name], [db_name_quoted, model_name_quoted]:
+            ...
+        case [db_name, model_name, str(version)], [db_name_quoted, model_name_quoted, _] if version.isdigit():
+            ...
+        case [db_name, model_name, int(version)], [db_name_quoted, model_name_quoted, _]:
+            ...
+        case [db_name, model_name, str(version)], [db_name_quoted, model_name_quoted, _]:
+            # for back compatibility. May be delete?
+            return (None, None, None)
+        case _:
+            ...  # may be raise ValueError?
 
-    return database_name, model_name, model_version
+    if model_name_quoted is False:
+        model_name = model_name.lower()
+
+    if db_name_quoted is False:
+        db_name = db_name.lower()
+
+    if isinstance(version, int) or isinstance(version, str) and version.isdigit():
+        version = int(version)
+    else:
+        version = None
+
+    return db_name, model_name, version
 
 
 def encrypt(string: bytes, key: str) -> bytes:

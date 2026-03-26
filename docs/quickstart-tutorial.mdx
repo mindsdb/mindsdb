@@ -9,26 +9,24 @@ Before we start, install MindsDB locally via [Docker](/setup/self-hosted/docker)
 Get started with MindsDB in a few simple steps:
 
 <Steps>
-  <Step title="Connect a data source">
-    Explore all available [data sources here](/integrations/data-overview).
+  <Step title="Connect">
+    Connect one or more data sources. Explore all available [data sources here](/integrations/data-overview).
   </Step>
-  <Step title="Configure an AI engine">
-    Explore all available [AI engines here](/integrations/ai-overview).
+  <Step title="Unify">
+    Unify your data with [knowledge bases](/mindsdb_sql/knowledge_bases/overview).
   </Step>
-  <Step title="Create and deploy an AI model">
-    MindsDB abstracts AI Models as [AI Tables](/generative-ai-tables). This step uses the configured AI engine.
-  </Step>
-  <Step title="Query for predictions">
-    Join the data table with the AI table to get predictions.
-  </Step>
-  <Step title="Automate customized workflows">
-    Use [Jobs](/mindsdb_sql/sql/create/jobs) or [Triggers](/mindsdb_sql/sql/create/trigger) to automate workflows.
+  <Step title="Respond">
+    Respond to questions over your data with [AI agents](/mindsdb_sql/agents/agent).
   </Step>
 </Steps>
 
-### Step 1. Connect a data source
+## Step 1. Connect
 
-Use the [`CREATE DATABASE`]() statement to connect a data source to MindsDB.
+MindsDB enables connecting data from various data sources and operating on data without moving it from its source. Learn more [here](/mindsdb-connect).
+
+* **Connecting Structured Data**
+
+Use the [`CREATE DATABASE`](/mindsdb_sql/sql/create/database) statement to connect a data source to MindsDB.
 
 ```sql
 CREATE DATABASE mysql_demo_db
@@ -46,115 +44,145 @@ This is the input data used in the following steps:
 
 ```sql
 SELECT *
-FROM mysql_demo_db.questions
+FROM mysql_demo_db.home_rentals
 LIMIT 3;
 ```
 
-Here is the output:
+The sample contains contains information about properties for rent.
 
-```
-+------------------+--------------------------------------------------------+-------------+
-| article_title    | question                                               | true_answer |
-+------------------+--------------------------------------------------------+-------------+
-| Alessandro_Volta | Was Volta an Italian physicist?                        | yes         |
-| Alessandro_Volta | Is Volta buried in the city of Pittsburgh?             | no          |
-| Alessandro_Volta | Did Volta have a passion for the study of electricity? | yes         |
-+------------------+--------------------------------------------------------+-------------+
-```
+* **Connecting Unstructured Data**
 
-### Step 2. Configure an AI engine
+Extract data from webpages using the [web crawler](/integrations/app-integrations/web-crawler) or [upload files](/integrations/files/csv-xlsx-xls) to MindsDB.
 
-Use the [`CREATE ML_ENGINE`]() command to configure an AI engine. Here we use the OpenAI engine.
+In this example, we fetch data from MindsDB Documentation webpage using the web crawler.
 
 ```sql
-CREATE ML_ENGINE openai_engine
-FROM openai
+CREATE DATABASE my_web 
+WITH ENGINE = 'web';
+
+SELECT url, text_content
+FROM my_web.crawler
+WHERE url = 'https://docs.mindsdb.com/'
+```
+
+Now we save this data into a view which is saved in the default `mindsdb` project.
+
+```sql
+CREATE VIEW mindsdb_docs (
+    SELECT url, text_content
+    FROM my_web.crawler
+    WHERE url = 'https://docs.mindsdb.com/'
+);
+
+SELECT *
+FROM mindsdb.mindsdb_docs;
+```
+
+## Step 2. Unify
+
+MindsDB enables unifying data from structured and unstructured data sources into a single, queryable interface. This unified view allows seamless querying and model-building across all data without consolidation into one system. Learn more [here](/mindsdb-unify).
+
+Create a knowledge base to store all your data in a single location. Learn more about [knowledge bases here](/mindsdb_sql/knowledge_bases/overview).
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
 USING
-	openai_api_key = 'your-openai-api-key';
+    embedding_model = {
+        "provider": "openai",
+        "model_name" : "text-embedding-3-large",
+        "api_key": "your-openai-api-key"
+    },
+    reranking_model = {
+        "provider": "openai",
+        "model_name": "gpt-4o",
+        "api_key": "your-openai-api-key"
+    },
+    content_columns = ['content'];
 ```
 
-### Step 3. Create and deploy an AI model
-
-Use the [`CREATE MODEL`]() statement to create, train, and deploy an AI model based on the AI engine created in step 2.
+[Insert data](/mindsdb_sql/knowledge_bases/insert_data) from Step 1 into the knowledge base.
 
 ```sql
-CREATE MODEL question_answering_model
-PREDICT answer
-USING
-    engine = 'openai_engine',
-    prompt_template = 'answer the question of text:{{question}} about text:{{article_title}}';
+INSERT INTO my_kb
+    SELECT
+            'number_of_rooms: ' || number_of_rooms || ', ' ||
+            'number_of_bathrooms' || number_of_bathrooms || ', ' ||
+            'sqft' || sqft || ', ' ||
+            'location' || location || ', ' ||
+            'days_on_market' || days_on_market || ', ' ||
+            'neighborhood' || neighborhood || ', ' ||
+            'rental_price' || rental_price
+                AS content
+    FROM mysql_demo_db.home_rentals;
+
+INSERT INTO my_kb
+    SELECT text_content AS content
+    FROM mindsdb.mindsdb_docs;
 ```
 
-This model expects `{{question}}` and `{{article_title}}` as input, and generates `answer` as output.
-
-### Step 4. Query for predictions
-
-Query for predictions by joining the AI Table (from step 3) with the data table (from step 1).
+[Query the knowledge base](/mindsdb_sql/knowledge_bases/query) to search your data.
 
 ```sql
-SELECT input.article_title, input.question, output.answer
-FROM mysql_demo_db.questions AS input
-JOIN question_answering_model AS output
-LIMIT 3;
+SELECT *
+FROM my_kb
+WHERE content = 'what is MindsDB';
+
+SELECT *
+FROM my_kb
+WHERE content = 'rental price lower than 2000';
 ```
 
-Here is the output data:
-
-```
-+------------------+--------------------------------------------------------+--------------------------------------------------------+
-| article_title    | question                                               | answer                                                 |
-+------------------+--------------------------------------------------------+--------------------------------------------------------+
-| Alessandro_Volta | Was Volta an Italian physicist?                        | Yes, Volta was an Italian physicist.                   |
-| Alessandro_Volta | Is Volta buried in the city of Pittsburgh?             | No, Volta is not buried in the city of Pittsburgh.     |
-| Alessandro_Volta | Did Volta have a passion for the study of electricity? | Yes, Volta had a passion for the study of electricity. |
-+------------------+--------------------------------------------------------+--------------------------------------------------------+
-```
-
-### Step 5. Automate customized workflows
-
-With MindsDB, you can create custom automation workflows. Let's set up a workflow that uses [Jobs](/mindsdb_sql/sql/create/jobs) and (re)creates a table with predicted answers to all questions.
+<Tip>
+In order to keep the knowledge base up-to-date with your data, use [jobs](/mindsdb_sql/sql/create/jobs) to automate data inserts every time your data is modified.
 
 ```sql
-CREATE JOB answer_questions (
+CREATE JOB update_kb (
 
-    CREATE OR REPLACE TABLE data_source.questions_answers (
-        SELECT input.article_title, input.question, output.answer
-        FROM mysql_demo_db.questions AS input
-        JOIN question_answering_model AS output
-    )
+  INSERT INTO my_kb
+      SELECT
+              'number_of_rooms: ' || number_of_rooms || ', ' ||
+              'number_of_bathrooms' || number_of_bathrooms || ', ' ||
+              'sqft' || sqft || ', ' ||
+              'location' || location || ', ' ||
+              'days_on_market' || days_on_market || ', ' ||
+              'neighborhood' || neighborhood || ', ' ||
+              'rental_price' || rental_price
+                  AS content
+      FROM mysql_demo_db.home_rentals
+      WHERE created_at > LATEST
 )
 EVERY 1 day;
 ```
-
-The `data_source` connection should be made using the `CREATE DATABASE` statement to a data source with a user that has the write access.
-
-This job creates the `questions_answers` table inside the connected data source. This table is filled with questions from the input data table and answers generated by the AI table. Considering that new questions are added daily to the input data table, this job executes once a day.
-
-Alternatively, you could use the `LAST` keyword to fetch only the newly added questions to the input data table. That would enable you to insert new question-answer pairs into the `questions_answers` table instead of recreating it. But to do that, the input data table must provide either a date/time or integer/float column that would be used in the condition like `datetime > LAST`. Learn more about the [`LAST` keyword here](/mindsdb_sql/sql/create/jobs#last).
-
-<Tip>
-**Next Steps**
-
-Follow the links below to explore MindsDB.
-
-<CardGroup cols={3}>
-  <Card title="Connect data sources" icon="square-1" href="/mindsdb_sql/sql/create/database">
-  </Card>
-  <Card title="Configure AI engines" icon="square-2" href="/mindsdb_sql/sql/create/ml-engine">
-  </Card>
-  <Card title="Deploy models" icon="square-3" href="/mindsdb_sql/sql/create/model">
-  </Card>
-  <Card title="Get predictions" icon="square-4" href="/mindsdb_sql/sql/get-batch-predictions">
-  </Card>
-  <Card title="Finetune models" icon="square-5" href="/mindsdb_sql/api/finetune">
-  </Card>
-  <Card title="Automate with jobs" icon="square-6" href="/mindsdb_sql/sql/create/jobs">
-  </Card>
-  <Card title="Automate with triggers" icon="square-7" href="/mindsdb_sql/sql/create/trigger">
-  </Card>
-  <Card title="Create knowledge bases" icon="square-8" href="/mindsdb_sql/agents/knowledge-bases">
-  </Card>
-  <Card title="Create chatbots" icon="square-9" href="/mindsdb_sql/agents/chatbot">
-  </Card>
-</CardGroup>
 </Tip>
+
+## Step 3. Respond
+
+MindsDB enables generating insightful and accurate responses from unified data using natural language. Learn more [here](/mindsdb-respond).
+
+Create an [agent](https://docs.mindsdb.com/mindsdb_sql/agents/agent) that can answer questions over your unified data from Step 2.
+
+```sql
+CREATE AGENT my_agent
+USING
+    model = {
+        "provider": "openai",
+        "model_name" : "gpt-4o",
+        "api_key": "your-openai-api-key"
+    },
+    data = {
+         "knowledge_bases": ["mindsdb.my_kb"],
+         "tables": ["mysql_demo_db.home_rentals"]
+    },
+    prompt_template = 'mindsdb.my_kb stores data about mindsdb and home rentals,
+                      mysql_demo_db.home_rentals stores data about home rentals';
+```
+
+Now you can ask questions over your data.
+
+```sql
+SELECT *
+FROM my_agent
+WHERE question = 'what is MindsDB?';
+```
+
+Visit the [Respond tab in the MindsDB Editor](/mindsdb_sql/agents/agent_gui) to chat with an agent.

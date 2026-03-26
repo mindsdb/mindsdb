@@ -1,0 +1,47 @@
+---
+title: Delete Agent
+sidebarTitle: Delete Agent
+---
+
+**DELETE `/api/projects/{project_name}/agents/{agent_name}`**
+
+This API endpoint deletes an agent using the `DELETE` method.
+
+<Tip>
+Learn more about agents and the available parameters following [this doc page](/mindsdb_sql/agents/agent).
+</Tip>
+
+### Path Parameters
+
+<ParamField body='project_name' type='string' required>
+Defines the project where the agent are located. Note that the default project name is `mindsdb`.
+</ParamField>
+
+<ParamField body='agent_name' type='string' required>
+Defines the agent name.
+</ParamField>
+
+### Body
+
+None.
+
+### Response
+
+None.
+
+<RequestExample>
+
+```shell Shell
+curl --request DELETE \
+  --url http://127.0.0.1:47334/api/projects/mindsdb/agents/my_agent
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+200 OK
+```
+
+</ResponseExample>

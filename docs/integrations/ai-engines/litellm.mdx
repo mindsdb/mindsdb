@@ -41,6 +41,10 @@ The parameters include:
 
 * `model` is the one of the models supported by LiteLLM. See the [complete list of the supported providers and models here](https://docs.litellm.ai/docs/providers).
 
+    <Note>
+    Note that you may need to provide the model name following this format: `provider/model_name`. For example, `ollama/llama2` or `openai/gpt-4o`.
+    </Note>
+
 * `base_url` is an optional parameter that stores the base URL for accessing models.
 
 * `api_key` stores the API key of the provider whose model is used.
@@ -56,11 +60,11 @@ CREATE ML_ENGINE litellm
 FROM litellm;
 
 CREATE MODEL chat_model
-PREDICT result
+PREDICT answer
 USING
     engine = "litellm",
-    model = "gpt-4o",
-    api_key = "sk-xxx";
+    model = "ollama/llama2:latest",
+    base_url = "http://localhost:11434";
 
 SELECT *
 FROM chat_model

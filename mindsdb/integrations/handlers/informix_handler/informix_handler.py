@@ -21,7 +21,6 @@ logger = log.getLogger(__name__)
 
 
 class InformixHandler(DatabaseHandler):
-
     name = "informix"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
@@ -35,11 +34,7 @@ class InformixHandler(DatabaseHandler):
 
         self.kwargs = kwargs
         self.parser = parse_sql
-        self.loging_enabled = (
-            connection_data["loging_enabled"]
-            if "loging_enabled" in connection_data
-            else True
-        )
+        self.loging_enabled = connection_data["loging_enabled"] if "loging_enabled" in connection_data else True
         self.server = connection_data["server"]
         self.database = connection_data["database"]
         self.user = connection_data["user"]
@@ -47,9 +42,7 @@ class InformixHandler(DatabaseHandler):
         self.schemaName = connection_data["schema_name"]
         self.host = connection_data["host"]
         self.port = connection_data["port"]
-        self.connString = (
-            "SERVER={0};" "DATABASE={1};" "HOST={2};" "PORT={3};" "UID={4};" "PWD={5};"
-        ).format(
+        self.connString = ("SERVER={0};DATABASE={1};HOST={2};PORT={3};UID={4};PWD={5};").format(
             self.server, self.database, self.host, self.port, self.user, self.password
         )
 
@@ -115,7 +108,7 @@ class InformixHandler(DatabaseHandler):
         """Receive raw query and act upon it somehow.
         Args:
             query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+                etc)
         Returns:
             HandlerResponse
         """
@@ -129,9 +122,7 @@ class InformixHandler(DatabaseHandler):
                 result = cur.fetchall()
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result, columns=[x[0] for x in cur.description]
-                    ),
+                    data_frame=pd.DataFrame(result, columns=[x[0] for x in cur.description]),
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
@@ -179,11 +170,7 @@ class InformixHandler(DatabaseHandler):
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
-                        [
-                            x["TABLE_NAME"]
-                            for x in result
-                            if x["TABLE_SCHEM"] == self.schemaName
-                        ],
+                        [x["TABLE_NAME"] for x in result if x["TABLE_SCHEM"] == self.schemaName],
                         columns=["TABLE_NAME"],
                     ),
                 )

@@ -12,7 +12,6 @@ logger = log.getLogger(__name__)
 
 
 class TaskThread(threading.Thread):
-
     def __init__(self, task_id):
         threading.Thread.__init__(self)
         self.task_id = task_id
@@ -27,6 +26,7 @@ class TaskThread(threading.Thread):
 
         ctx.set_default()
         ctx.company_id = task_record.company_id
+        ctx.user_id = task_record.user_id
         if task_record.user_class is not None:
             ctx.user_class = task_record.user_class
         ctx.task_id = task_record.id
@@ -34,28 +34,27 @@ class TaskThread(threading.Thread):
         self.object_type = task_record.object_type
         self.object_id = task_record.object_id
 
-        logger.info(f'Task starting: {self.object_type}.{self.object_id}')
+        logger.info(f"Task starting: {self.object_type}.{self.object_id}")
         try:
-            if self.object_type == 'trigger':
-
+            if self.object_type == "trigger":
                 trigger = TriggerTask(self.task_id, self.object_id)
                 trigger.run(self._stop_event)
 
-            elif self.object_type == 'chatbot':
+            elif self.object_type == "chatbot":
                 bot = ChatBotTask(self.task_id, self.object_id)
                 bot.run(self._stop_event)
 
-            elif self.object_type == 'query':
+            elif self.object_type == "query":
                 query = QueryTask(self.task_id, self.object_id)
                 query.run(self._stop_event)
 
         except Exception:
-            logger.error(traceback.format_exc())
-            task_record.last_error = str(traceback.format_exc())
+            logger.exception("Error during task processing:")
+            task_record.last_error = traceback.format_exc()
 
         db.session.commit()
 
     def stop(self):
-        logger.info(f'Task stopping: {self.object_type}.{self.object_id}')
+        logger.info(f"Task stopping: {self.object_type}.{self.object_id}")
 
         self._stop_event.set()

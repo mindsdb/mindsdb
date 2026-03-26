@@ -3,6 +3,15 @@ title: Remove a Table
 sidebarTitle: Remove a Table
 ---
 
-<Info>
-This feature is in progress.
-</Info>
+## Description
+
+The `runQuery()` function executes a query given as its argument directly in MindsDB.
+
+## Syntax
+
+Here is the syntax:
+
+```
+const query = `DROP TABLE integration_name.table_name;`;
+const queryResult = await MindsDB.SQL.runQuery(query);
+```

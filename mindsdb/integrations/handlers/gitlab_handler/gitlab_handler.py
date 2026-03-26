@@ -16,7 +16,7 @@ class GitlabHandler(APIHandler):
     """The GitLab handler implementation"""
 
     def __init__(self, name: str, **kwargs):
-        """ constructor
+        """constructor
         Args:
             name (str): the handler name
         """
@@ -36,15 +36,21 @@ class GitlabHandler(APIHandler):
         self._register_table("merge_requests", gitlab_merge_requests_data)
 
     def connect(self) -> StatusResponse:
-        """ Set up the connections required by the handler
+        """Set up the connections required by the handler
         Returns:
             HandlerStatusResponse
         """
 
         connection_kwargs = {}
 
-        if self.connection_data.get("api_key", None):
-            connection_kwargs["private_token"] = self.connection_data["api_key"]
+        connection_params = ["url", "api_key", "http_username", "http_password"]
+
+        for connection_param in connection_params:
+            if connection_param in self.connection_data.keys():
+                if connection_param == "api_key":
+                    connection_kwargs["private_token"] = self.connection_data["api_key"]
+                else:
+                    connection_kwargs[connection_param] = self.connection_data.get(connection_param, None)
 
         self.connection = gitlab.Gitlab(**connection_kwargs)
         self.is_connected = True

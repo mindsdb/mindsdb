@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from unittest.mock import MagicMock, Mock
 
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
+    DataHandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
 )
 
@@ -12,10 +12,11 @@ class MockCursorContextManager(Mock):
     A mock class that simulates a cursor context manager for database clients.
     This class is used in the `BaseDatabaseHandlerTest` class to simulate the cursor object returned by the database client.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.description = kwargs.get('description', [['a']])
-        self.data = kwargs.get('data', [[1]])
+        self.description = kwargs.get("description", [["a"]])
+        self.data = kwargs.get("data", [[1]])
 
     def __enter__(self):
         return self
@@ -146,7 +147,7 @@ class BaseDatabaseHandlerTest(BaseHandlerTest):
         A string containing the name of a mock table. This attribute should be used as the table name when constructing SQL queries.
         It should be used in the `get_columns_query` attribute.
         """
-        return 'mock_table'
+        return "mock_table"
 
     @property
     @abstractmethod
@@ -166,22 +167,6 @@ class BaseDatabaseHandlerTest(BaseHandlerTest):
         """
         pass
 
-    def test_native_query(self):
-        """
-        Tests the `native_query` method to ensure it executes a SQL query using a mock cursor and returns a Response object.
-        """
-        mock_conn = MagicMock()
-        mock_cursor = MockCursorContextManager()
-
-        self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor = MagicMock(return_value=mock_cursor)
-
-        query_str = f"SELECT * FROM {self.mock_table}"
-        data = self.handler.native_query(query_str)
-
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
-
     def test_get_columns(self):
         """
         Tests if the `get_tables` method calls `native_query` with the correct SQL query.
@@ -189,7 +174,8 @@ class BaseDatabaseHandlerTest(BaseHandlerTest):
         self.handler.native_query = MagicMock()
         self.handler.get_columns(self.mock_table)
 
-        self.handler.native_query.assert_called_once_with(self.get_columns_query)
+        self.handler.native_query.assert_called_once()
+        assert self.handler.native_query.call_args_list[0][0][0] == self.get_columns_query
 
     def test_get_tables(self):
         """
@@ -223,7 +209,7 @@ class BaseAPIHandlerTest(BaseHandlerTest):
         response = self.handler.get_columns(self.registered_tables[0])
 
         assert isinstance(response, Response)
-        assert response.data_frame.columns.tolist() == ['Field', 'Type']
+        assert response.data_frame.columns.tolist() == ["Field", "Type"]
 
     def test_get_tables(self):
         """
@@ -232,9 +218,9 @@ class BaseAPIHandlerTest(BaseHandlerTest):
         response = self.handler.get_tables()
 
         assert isinstance(response, Response)
-        assert all(col in response.data_frame.columns.tolist() for col in ['table_name', 'table_type'])
-        assert response.data_frame['table_type'].unique().tolist() == ['BASE TABLE']
-        assert response.data_frame['table_name'].tolist() == self.registered_tables
+        assert all(col in response.data_frame.columns.tolist() for col in ["table_name", "table_type"])
+        assert response.data_frame["table_type"].unique().tolist() == ["BASE TABLE"]
+        assert response.data_frame["table_name"].tolist() == self.registered_tables
 
 
 class BaseAPIChatHandlerTest(BaseAPIHandlerTest):
@@ -252,17 +238,24 @@ class BaseAPIChatHandlerTest(BaseAPIHandlerTest):
         response = self.handler.get_chat_config()
 
         assert isinstance(response, dict)
-        assert 'polling' in response and isinstance(response['polling'], dict) and 'type' in response['polling'] and response['polling']['type'] in ['realtime', 'message_count', 'webhook']
+        assert (
+            "polling" in response
+            and isinstance(response["polling"], dict)
+            and "type" in response["polling"]
+            and response["polling"]["type"] in ["realtime", "message_count", "webhook"]
+        )
 
-        required_keys = ['name', 'chat_id_col', 'username_col', 'text_col', 'time_col']
-        if 'chat_table' in response:
-            assert isinstance(response['chat_table'], dict)
-            assert all(key in list(response['chat_table'].keys()) for key in required_keys)
+        required_keys = ["name", "chat_id_col", "username_col", "text_col", "time_col"]
+        if "chat_table" in response:
+            assert isinstance(response["chat_table"], dict)
+            assert all(key in list(response["chat_table"].keys()) for key in required_keys)
 
-        if 'tables' in response:
-            assert isinstance(response['tables'], list)
-            assert all(isinstance(table, dict) for table in response['tables'])
-            assert all(all(key in list(table['chat_table'].keys()) for key in required_keys) for table in response['tables'])
+        if "tables" in response:
+            assert isinstance(response["tables"], list)
+            assert all(isinstance(table, dict) for table in response["tables"])
+            assert all(
+                all(key in list(table["chat_table"].keys()) for key in required_keys) for table in response["tables"]
+            )
 
     @abstractmethod
     def test_get_my_user_name(self):

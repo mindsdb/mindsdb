@@ -119,6 +119,30 @@ The following parameters are available to use when creating an OpenAI model:
   </Accordion>
 </AccordionGroup>
 
+## Usage with OpenAI-Compatible APIs
+
+The OpenAI handler can be used with any OpenAI-compatible APIs by providing the `api_base` parameter that stores the base URL of the OpenAI-compatible APIs.
+
+Here is an example of how to use the OpenAI handler with OpenRouter, the OpenAI-compatible interface for accessing LLMs.
+
+```sql
+CREATE MODEL openrouter_model
+PREDICT answer
+USING
+  engine = 'openai_engine',
+  api_base = 'https://openrouter.ai/api/v1',
+  openai_api_key = 'openrouter-api-key',
+  model_name = 'mistralai/devstral-small-2505',
+  prompt_template = 'answer a question: {{question}}';
+
+DESCRIBE openrouter_model;
+
+SELECT * FROM openrouter_model
+WHERE question = 'how many planets are in the solar system?';
+```
+
+When using OpenAI-compatible APIs, it is required to provide the base URL in the `api_base` parameter and the API key in the `openai_api_key` parameter.
+
 ## Usage
 
 Here are the combination of parameters for creating a model:

@@ -13,6 +13,9 @@ The GitLab handler is initialized with the following parameters:
 
 - `repository`: a required name of a GitLab repository to connect to
 - `api_key`: an optional GitLab API key to use for authentication
+- `url`: an optional GitLab server URL (defaults to https://gitlab.com)
+- `http_username`: an optional username for HTTP authentication
+- `http_password`: an optional password for HTTP authentication
 
 ## Implemented Features
 
@@ -39,6 +42,7 @@ WITH ENGINE = 'gitlab',
 PARAMETERS = {
   "repository": "gitlab-org/gitlab",
   "api_key": "api_key",    -- optional GitLab API key
+  "url": "https://gitlab.com"  -- optional GitLab server URL (defaults to https://gitlab.com)
 };
 ~~~~
 

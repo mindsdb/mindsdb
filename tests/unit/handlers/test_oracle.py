@@ -9,15 +9,23 @@ from unittest.mock import patch, MagicMock
 try:
     import oracledb
     from oracledb import DatabaseError
-    from mindsdb.integrations.handlers.oracle_handler.oracle_handler import OracleHandler
+    from mindsdb.integrations.handlers.oracle_handler.oracle_handler import (
+        OracleHandler,
+    )
 except ImportError:
     pytestmark = pytest.mark.skip("Oracle handler not installed")
 
 import pandas as pd
 from pandas import DataFrame
 
-from base_handler_test import BaseDatabaseHandlerTest
-from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
+from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
+from mindsdb.integrations.libs.response import (
+    TableResponse,
+    OkResponse,
+    ErrorResponse,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
+    RESPONSE_TYPE,
+)
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
@@ -91,6 +99,13 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         with self.assertRaises(ValueError):
             handler.connect()
 
+        # Test missing 'oracle_client_lib_dir' when thick_mode is enabled
+        invalid_connection_args = self.dummy_connection_data.copy()
+        invalid_connection_args["thick_mode"] = True
+        handler = OracleHandler("oracle", connection_data=invalid_connection_args)
+        with self.assertRaises(ValueError):
+            handler.connect()
+
     def test_disconnect(self):
         """
         Tests the disconnect method to ensure it correctly closes connections
@@ -137,9 +152,57 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(response.error_message, str(ping_error))
         mock_conn.ping.assert_called_once()
 
-    def test_native_query_with_results(self):
+    def test_thick_mode_connection(self):
         """
-        Tests the `native_query` method for a SELECT statement returning results.
+        Tests that thick mode connection initializes Oracle client with the provided library directory
+        """
+        connection_args = self.dummy_connection_data.copy()
+        connection_args["thick_mode"] = True
+        connection_args["oracle_client_lib_dir"] = "/path/to/oracle/client/lib"
+
+        with patch(
+            "mindsdb.integrations.handlers.oracle_handler.oracle_handler.oracledb.init_oracle_client"
+        ) as mock_init:
+            handler = OracleHandler("oracle", connection_data=connection_args)
+            handler.connect()
+            mock_init.assert_called_once_with(lib_dir="/path/to/oracle/client/lib")
+
+    def test_native_query_with_results_streaming(self):
+        """
+        Tests the `native_query` method for a SELECT statement returning results at server side execution.
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        # Server-side execution uses fetchmany, not fetchall
+        mock_cursor.fetchmany = MagicMock(side_effect=[[(1, "test1"), (2, "test2")], []])
+        mock_cursor.description = [
+            ("ID", None, None, None, None, None, None),
+            ("NAME", None, None, None, None, None, None),
+        ]
+
+        query_str = "SELECT ID, NAME FROM test_table"
+        data = self.handler.native_query(query_str, stream=True)
+
+        mock_conn.cursor.assert_called_once()
+        mock_cursor.execute.assert_called_once_with(query_str)
+
+        # Verify the response
+        self.assertIsInstance(data, TableResponse)
+        self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
+        self.assertIsNone(data._data)
+        data.fetchall()
+        self.assertIsInstance(data._data, DataFrame)
+        expected_columns = ["ID", "NAME"]
+        self.assertListEqual(list(data.data_frame.columns), expected_columns)
+        self.assertEqual(len(data.data_frame), 2)
+
+    def test_native_query_with_no_streaming(self):
+        """
+        Tests the `native_query` method for a SELECT statement returning results at client side execution.
         """
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -149,22 +212,21 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.fetchall.return_value = [(1, "test1"), (2, "test2")]
+        mock_cursor.fetchall = MagicMock(return_value=[(1, "test1"), (2, "test2")])
         mock_cursor.description = [
             ("ID", None, None, None, None, None, None),
             ("NAME", None, None, None, None, None, None),
         ]
 
         query_str = "SELECT ID, NAME FROM test_table"
-        data = self.handler.native_query(query_str)
+        data = self.handler.native_query(query_str, stream=False)
 
         mock_conn.cursor.assert_called_once()
         mock_cursor.execute.assert_called_once_with(query_str)
         mock_cursor.fetchall.assert_called_once()
         mock_conn.commit.assert_called_once()
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, TableResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
         expected_columns = ["ID", "NAME"]
@@ -194,8 +256,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.fetchall.assert_not_called()
         mock_conn.commit.assert_called_once()
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, OkResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.OK)
         self.assertEqual(data.affected_rows, 1)
 
@@ -224,7 +285,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.rollback.assert_called_once()
         mock_conn.commit.assert_not_called()
 
-        self.assertIsInstance(data, Response)
+        self.assertIsInstance(data, ErrorResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.ERROR)
         self.assertEqual(data.error_message, error_msg)
 
@@ -237,7 +298,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             orig_renderer = self.handler.renderer
 
         self.handler.native_query = MagicMock()
-        expected_response = Response(RESPONSE_TYPE.TABLE)
+        expected_response = TableResponse()
         self.handler.native_query.return_value = expected_response
         mock_ast = MagicMock()
 
@@ -263,22 +324,108 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         Tests that get_tables calls native_query with the correct SQL for Oracle
         and returns the expected DataFrame structure.
         """
-        expected_df = DataFrame([("TABLE1",), ("TABLE2",)], columns=["TABLE_NAME"])
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        expected_df = DataFrame(
+            [
+                ("SAMPLEUSER", "CUSTOMERS", "BASE TABLE"),
+                ("SAMPLEUSER", "PRODUCTS", "BASE TABLE"),
+                ("SAMPLEUSER", "ORDERS_VIEW", "VIEW"),
+            ],
+            columns=["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
+        )
+        expected_response = TableResponse(data=expected_df)
 
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         response = self.handler.get_tables()
 
         self.handler.native_query.assert_called_once()
-        call_args = self.handler.native_query.call_args[0][0]
 
-        self.assertIn("FROM user_tables", call_args)
-        self.assertIn("SELECT table_name", call_args)
+        expected_query = """
+            SELECT
+                owner AS table_schema,
+                table_name AS table_name,
+                'BASE TABLE' AS table_type
+            FROM all_tables t
+            JOIN all_users u ON t.owner = u.username
+            WHERE t.tablespace_name = 'USERS'
+
+            UNION ALL
+
+            SELECT
+                v.owner AS table_schema,
+                v.view_name AS table_name,
+                'VIEW' AS table_type
+            FROM all_views v
+            JOIN all_users u ON v.owner = u.username
+            WHERE v.owner IN (
+                SELECT DISTINCT owner
+                FROM all_tables
+                WHERE tablespace_name = 'USERS'
+            )
+            """
+        self.handler.native_query.assert_called_once_with(expected_query)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, DataFrame)
-        self.assertListEqual(list(response.data_frame.columns), ["TABLE_NAME"])
-        self.assertEqual(len(response.data_frame), 2)
+        self.assertEqual(len(response.data_frame), 3)
+        self.assertListEqual(
+            list(response.data_frame.columns),
+            ["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
+        )
+        self.assertEqual(response.data_frame.iloc[0]["TABLE_SCHEMA"], "SAMPLEUSER")
+        self.assertEqual(response.data_frame.iloc[0]["TABLE_NAME"], "CUSTOMERS")
+        self.assertEqual(response.data_frame.iloc[0]["TABLE_TYPE"], "BASE TABLE")
+
+        view_rows = response.data_frame[response.data_frame["TABLE_TYPE"] == "VIEW"]
+        self.assertEqual(len(view_rows), 1)
+
+        del self.handler.native_query
+
+    def test_get_tables_multiple_schemas(self):
+        """
+        Tests that get_tables calls native_query with the correct SQL for Oracle
+        and returns the expected DataFrame structure when multiple schemas are present.
+        """
+        expected_df = DataFrame(
+            [
+                ("SAMPLEUSER1", "EMPLOYEES", "BASE TABLE"),
+                ("SAMPLEUSER1", "DEPARTMENTS", "BASE TABLE"),
+                ("SAMPLEUSER1", "EMP_VIEW", "VIEW"),
+                ("SAMPLEUSER2", "CUSTOMERS", "BASE TABLE"),
+                ("SAMPLEUSER2", "ORDERS", "BASE TABLE"),
+                ("SAMPLEUSER2", "CUST_VIEW", "VIEW"),
+                ("SAMPLEUSER3", "PRODUCTS", "BASE TABLE"),
+            ],
+            columns=["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
+        )
+        expected_response = TableResponse(data=expected_df)
+
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = self.handler.get_tables()
+
+        self.handler.native_query.assert_called_once()
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertIsInstance(response.data_frame, DataFrame)
+        self.assertEqual(len(response.data_frame), 7)
+        self.assertListEqual(
+            list(response.data_frame.columns),
+            ["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
+        )
+        schemas = response.data_frame["TABLE_SCHEMA"].unique()
+        self.assertEqual(len(schemas), 3)
+        self.assertIn("SAMPLEUSER1", schemas)
+        self.assertIn("SAMPLEUSER2", schemas)
+        self.assertIn("SAMPLEUSER3", schemas)
+
+        table_types = response.data_frame["TABLE_TYPE"].unique()
+        self.assertIn("BASE TABLE", table_types)
+        self.assertIn("VIEW", table_types)
+
+        tables = response.data_frame[response.data_frame["TABLE_TYPE"] == "BASE TABLE"]
+        views = response.data_frame[response.data_frame["TABLE_TYPE"] == "VIEW"]
+        self.assertEqual(len(tables), 5)
+        self.assertEqual(len(views), 2)
 
         del self.handler.native_query
 
@@ -334,7 +481,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         expected_df = DataFrame(expected_df_data, columns=query_columns)
 
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        expected_response = TableResponse(data=expected_df)
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"
@@ -459,7 +606,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("N_BINARY_DOUBLE", oracledb.DB_TYPE_NUMBER, 127, None, None, None, True),
         ]
 
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.DECIMAL,
@@ -476,7 +623,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.FLOAT,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -498,9 +645,9 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
             ("T_BOOL", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOLEAN, MYSQL_DATA_TYPE.BOOLEAN]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -542,7 +689,17 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             HEXTORAW('54657374')      -- t_blob
         );
         """
-        input_row = ("Test      ", "Unicode   ", "Test", "Unicode", "Test", "Test", "Test", b"Test", b"Test")
+        input_row = (
+            "Test      ",
+            "Unicode   ",
+            "Test",
+            "Unicode",
+            "Test",
+            "Test",
+            "Test",
+            b"Test",
+            b"Test",
+        )
         mock_cursor.fetchall.return_value = [input_row]
 
         mock_cursor.description = [
@@ -556,7 +713,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("T_RAW", oracledb.DB_TYPE_RAW, 100, 100, None, None, True),
             ("T_BLOB", oracledb.DB_TYPE_LONG_RAW, None, None, None, None, True),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.TEXT,
             MYSQL_DATA_TYPE.TEXT,
@@ -568,7 +725,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.BINARY,
             MYSQL_DATA_TYPE.BINARY,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -615,9 +772,13 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("D_TIMESTAMP", oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 6, True),
             ("D_TIMESTAMP_P", oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 9, True),
         ]
-        response: Response = self.handler.native_query(query_str)
-        excepted_mysql_types = [MYSQL_DATA_TYPE.DATE, MYSQL_DATA_TYPE.TIMESTAMP, MYSQL_DATA_TYPE.TIMESTAMP]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.DATE,
+            MYSQL_DATA_TYPE.TIMESTAMP,
+            MYSQL_DATA_TYPE.TIMESTAMP,
+        ]
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -628,14 +789,22 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         input_rows = [(bigint_val, True), (None, None)]
         mock_cursor.fetchall.return_value = input_rows
         mock_cursor.description = [
-            ("N_BIGINT", oracledb.DB_TYPE_NUMBER, 39, None, 17, 0, True),  # set 17 jsut to force cast to Int64
+            (
+                "N_BIGINT",
+                oracledb.DB_TYPE_NUMBER,
+                39,
+                None,
+                17,
+                0,
+                True,
+            ),  # set 17 just to force cast to Int64
             ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
-        response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.data_frame.dtypes[0], "Int64")
-        self.assertEquals(response.data_frame.dtypes[1], "boolean")
-        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
-        self.assertEquals(response.data_frame.iloc[0, 1], True)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
+        self.assertEqual(response.data_frame.dtypes[0], "Int64")
+        self.assertEqual(response.data_frame.dtypes[1], "boolean")
+        self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEqual(response.data_frame.iloc[0, 1], True)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion
@@ -655,18 +824,256 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 )
             );
         """
-        input_row = (array("f", [1.1, 2.2, 3.3]), {"category": "electronics", "price": Decimal("299.99")})
+        input_row = (
+            array("f", [1.1, 2.2, 3.3]),
+            {"category": "electronics", "price": Decimal("299.99")},
+        )
         mock_cursor.fetchall.return_value = [input_row]
         mock_cursor.description = [
             ("T_EMBEDDING", oracledb.DB_TYPE_VECTOR, None, None, None, None, True),
             ("T_JSON", oracledb.DB_TYPE_JSON, None, None, None, None, True),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: TableResponse = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.VECTOR, MYSQL_DATA_TYPE.JSON]
+        self.assertEqual([col.type for col in response.columns], excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
-        # endreion
+        # endregion
+
+    def test_insert(self):
+        """
+        Tests the insert method to ensure it correctly constructs and executes an INSERT statement
+        using insertmany for batch inserts.
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+        mock_cursor.rowcount = 3
+
+        df = pd.DataFrame({"id": [1, 2, 3], "name": ["a", "b", "c"]})
+
+        response = self.handler.insert("test_table", df)
+        expected_sql = "INSERT INTO test_table (id, name) VALUES (:1, :2)"
+        expected_values = df.values.tolist()
+        mock_cursor.executemany.assert_called_once_with(expected_sql, expected_values)
+        mock_conn.commit.assert_called_once()
+
+        self.assertEqual(response.affected_rows, 3)
+        self.assertEqual(response.type, RESPONSE_TYPE.OK)
+
+    def test_insert_error(self):
+        """
+        Tests the insert method to ensure it correctly handles errors
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        error_msg = "ORA-00942: table or view does not exist"
+        mock_cursor.executemany.side_effect = DatabaseError(error_msg)
+
+        df = pd.DataFrame({"id": [1, 2, 3], "name": ["a", "b", "c"]})
+
+        with self.assertRaises(DatabaseError):
+            self.handler.insert("nonexistent_table", df)
+
+        mock_conn.rollback.assert_called_once()
+
+    # Metadata Handler Tests
+    def test_meta_get_tables(self, table_names=None):
+        expected_df = DataFrame(
+            [
+                ("TABLE1", "SAMPLEUSER", "TABLE", "desc1", 5),
+                ("TABLE2", "SAMPLEUSER", "VIEW", "desc2", 0),
+            ],
+            columns=[
+                "table_name",
+                "table_schema",
+                "table_type",
+                "table_description",
+                "row_count",
+            ],
+        )
+        mock_response = TableResponse(data=expected_df)
+        self.handler.native_query = MagicMock(return_value=mock_response)
+
+        response = self.handler.meta_get_tables(table_names=table_names)
+        self.handler.native_query.assert_called_once()
+
+        assert response is mock_response
+        df = response.data_frame
+        assert list(df["table_name"]) == ["TABLE1", "TABLE2"]
+
+        del self.handler.native_query
+
+    def test_meta_get_columns(self, table_names=None):
+        """
+        Test the retrieval of column metadata.
+        """
+        expected_df = DataFrame(
+            [
+                ("TABLE1", "COL1", "VARCHAR2", "desc1", None, 1),
+                ("TABLE1", "COL2", "NUMBER", "desc2", "0", 0),
+            ],
+            columns=[
+                "table_name",
+                "column_name",
+                "data_type",
+                "column_description",
+                "column_default",
+                "is_nullable",
+            ],
+        )
+
+        mock_response = TableResponse(data=expected_df)
+        self.handler.native_query = MagicMock(return_value=mock_response)
+
+        table_name = "TABLE1"
+        response = self.handler.meta_get_columns(table_name)
+        self.handler.native_query.assert_called_once()
+
+        assert response is mock_response
+        df = response.data_frame
+        assert list(df["column_name"]) == ["COL1", "COL2"]
+        assert list(df["is_nullable"]) == [1, 0]
+
+        del self.handler.native_query
+
+    def test_meta_get_column_statistics(self, table_names=None):
+        """
+        Test the retrieval of column statistics.
+        """
+        expected_df = DataFrame(
+            [
+                ("STATS_TABLE", "ID", 0.0, 1500, None, None, "1,1500"),
+                ("STATS_TABLE", "CATEGORY", 5.5, 12, None, None, "A,Z"),
+            ],
+            columns=[
+                "TABLE_NAME",
+                "COLUMN_NAME",
+                "NULL_PERCENTAGE",
+                "DISTINCT_VALUES_COUNT",
+                "MOST_COMMON_VALUES",
+                "MOST_COMMON_FREQUENCIES",
+                "HISTOGRAM_BOUNDS",
+            ],
+        )
+
+        mock_response = TableResponse(data=expected_df)
+        self.handler.native_query = MagicMock(return_value=mock_response)
+        table_names = ["STATS_TABLE"]
+        response = self.handler.meta_get_column_statistics(table_names=table_names)
+        self.handler.native_query.assert_called_once()
+        final_df = response.data_frame
+
+        assert list(final_df.columns) == [
+            "TABLE_NAME",
+            "COLUMN_NAME",
+            "NULL_PERCENTAGE",
+            "DISTINCT_VALUES_COUNT",
+            "MOST_COMMON_VALUES",
+            "MOST_COMMON_FREQUENCIES",
+            "MINIMUM_VALUE",
+            "MAXIMUM_VALUE",
+        ]
+
+        assert list(final_df["COLUMN_NAME"]) == ["ID", "CATEGORY"]
+        assert list(final_df["MINIMUM_VALUE"]) == ["1", "A"]
+        assert list(final_df["MAXIMUM_VALUE"]) == ["1500", "Z"]
+
+        del self.handler.native_query
+
+    def test_meta_get_primary_keys(self):
+        """
+        Test the retrieval of primary key metadata.
+        """
+        expected_df = DataFrame(
+            [
+                ("USERS", "USER_ID", 1, "PK_USERS"),
+                ("ORDERS", "ORDER_ID", 3, "PK_ORDERS"),
+            ],
+            columns=[
+                "table_name",
+                "column_name",
+                "ordinal_position",
+                "constraint_name",
+            ],
+        )
+
+        mock_response = TableResponse(data=expected_df)
+        self.handler.native_query = MagicMock(return_value=mock_response)
+
+        table_names = ["USERS", "ORDERS"]
+        response = self.handler.meta_get_primary_keys(table_names=table_names)
+        self.handler.native_query.assert_called_once()
+
+        assert response is mock_response
+        df = response.data_frame
+        assert list(df["table_name"]) == ["USERS", "ORDERS"]
+        assert list(df["column_name"]) == ["USER_ID", "ORDER_ID"]
+        assert list(df["ordinal_position"]) == [1, 3]
+        assert list(df["constraint_name"]) == ["PK_USERS", "PK_ORDERS"]
+
+        del self.handler.native_query
+
+    def test_meta_get_foreign_keys(self, table_names=None):
+        """
+        Test the retrieval of foreign key metadata.
+        """
+        expected_df = DataFrame(
+            [
+                (
+                    "ORDERS",
+                    "USER_ID",
+                    "USERS",
+                    "USER_ID",
+                    1,
+                    "FK_ORDERS_USERS",
+                ),
+                (
+                    "ORDER_ITEMS",
+                    "ORDER_ID",
+                    "ORDERS",
+                    "ORDER_ID",
+                    1,
+                    "FK_ORDERITEMS_ORDERS",
+                ),
+            ],
+            columns=[
+                "table_name",
+                "column_name",
+                "referenced_table_name",
+                "referenced_column_name",
+                "ordinal_position",
+                "constraint_name",
+            ],
+        )
+
+        mock_response = TableResponse(data=expected_df)
+        self.handler.native_query = MagicMock(return_value=mock_response)
+
+        table_names = ["ORDERS", "ORDER_ITEMS"]
+        response = self.handler.meta_get_foreign_keys(table_names=table_names)
+        self.handler.native_query.assert_called_once()
+
+        assert response is mock_response
+        df = response.data_frame
+        assert list(df["table_name"]) == ["ORDERS", "ORDER_ITEMS"]
+        assert list(df["column_name"]) == ["USER_ID", "ORDER_ID"]
+        assert list(df["referenced_table_name"]) == ["USERS", "ORDERS"]
+        assert list(df["referenced_column_name"]) == ["USER_ID", "ORDER_ID"]
+        assert list(df["ordinal_position"]) == [1, 1]
+        assert list(df["constraint_name"]) == [
+            "FK_ORDERS_USERS",
+            "FK_ORDERITEMS_ORDERS",
+        ]
+
+        del self.handler.native_query
 
 
 if __name__ == "__main__":

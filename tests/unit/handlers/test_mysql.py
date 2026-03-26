@@ -12,7 +12,13 @@ from pandas.api import types as pd_types
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    OkResponse,
+    TableResponse,
+    DataHandlerResponse as Response,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
+    RESPONSE_TYPE,
+)
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
@@ -67,7 +73,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             from
                 information_schema.columns
             where
-                table_name = '{self.mock_table}';
+                table_name = '{self.mock_table}'
+                and table_schema = DATABASE();
         """
 
     def create_handler(self):
@@ -89,13 +96,12 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = f"SELECT * FROM {self.mock_table}"
         data = self.handler.native_query(query_str)
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, TableResponse)
 
     def test_native_query_with_results(self):
         """
         Tests the `native_query` method to ensure it executes a SQL query and handles the case
-        where the query returns a result set
+        where the query returns a result set, streaming data via fetchmany
         """
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -106,7 +112,11 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
         mock_conn.is_connected = MagicMock(return_value=True)
 
-        mock_cursor.fetchall.return_value = [{"id": 1, "name": "test1"}, {"id": 2, "name": "test2"}]
+        # fetchmany returns tuples (non-dictionary cursor), then empty list to signal end
+        mock_cursor.fetchmany.side_effect = [
+            [(1, "test1"), (2, "test2")],
+            [],
+        ]
 
         # MySQL cursor provides column info via description attribute
         mock_cursor.description = [
@@ -119,12 +129,10 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = "SELECT * FROM test_table"
         data = self.handler.native_query(query_str)
 
-        mock_conn.cursor.assert_called_once_with(dictionary=True, buffered=True)
+        mock_conn.cursor.assert_called_once_with(buffered=False)
         mock_cursor.execute.assert_called_once_with(query_str)
 
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
-        self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
+        assert isinstance(data, TableResponse)
         self.assertIsInstance(data.data_frame, DataFrame)
 
         expected_columns = ["id", "name"]
@@ -150,12 +158,10 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = "INSERT INTO test_table VALUES (1, 'test')"
         data = self.handler.native_query(query_str)
 
-        mock_conn.cursor.assert_called_once_with(dictionary=True, buffered=True)
+        mock_conn.cursor.assert_called_once_with(buffered=False)
         mock_cursor.execute.assert_called_once_with(query_str)
 
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
-        self.assertEqual(data.type, RESPONSE_TYPE.OK)
+        assert isinstance(data, OkResponse)
         self.assertEqual(data.affected_rows, 1)
 
     def test_native_query_error(self):
@@ -178,7 +184,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = "INVALID SQL"
         data = self.handler.native_query(query_str)
 
-        mock_conn.cursor.assert_called_once_with(dictionary=True, buffered=True)
+        mock_conn.cursor.assert_called_once_with(buffered=False)
         mock_cursor.execute.assert_called_once_with(query_str)
 
         assert isinstance(data, Response)
@@ -219,6 +225,80 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.is_connected = MagicMock(return_value=False)
         self.handler.disconnect()
         mock_conn.close.assert_not_called()
+
+    def test_check_connection_success(self):
+        """
+        Tests that check_connection returns success status when connection is valid
+        """
+        self.handler.connection_data = self.dummy_connection_data.copy()
+
+        mock_conn = MagicMock()
+        mock_conn.is_connected = MagicMock(return_value=True)
+        self.mock_connect.return_value = mock_conn
+
+        response = self.handler.check_connection()
+
+        self.assertTrue(response.success)
+        self.assertIsNone(response.error_message)
+        self.mock_connect.assert_called_once()
+
+    def test_check_connection_failure(self):
+        """
+        Tests that check_connection returns failure status and error message when connection fails
+        """
+        self.handler.connection_data = self.dummy_connection_data.copy()
+
+        error_message = "Connection failed: Unknown MySQL server host 'invalid-host'"
+        self.mock_connect.side_effect = mysql.connector.Error(error_message)
+
+        response = self.handler.check_connection()
+
+        self.assertFalse(response.success)
+        self.assertIsNotNone(response.error_message)
+        self.assertIn("Connection failed", response.error_message)
+
+    def test_check_connection_closes_on_success(self):
+        """
+        Tests that check_connection closes the connection after successful check if it wasn't already connected
+        """
+        self.handler.connection_data = self.dummy_connection_data.copy()
+        self.handler.connection = None  # Not connected initially
+
+        mock_conn = MagicMock()
+        mock_conn.is_connected = MagicMock(return_value=True)
+        self.mock_connect.return_value = mock_conn
+
+        response = self.handler.check_connection()
+
+        self.assertTrue(response.success)
+        mock_conn.close.assert_called_once()
+
+    def test_connection_with_url(self):
+        """
+        Tests connecting with a URL connection string instead of individual parameters
+        """
+        url_connection_data = {"url": "mysql://root:password@127.0.0.1:3306/test_db"}
+        self.handler.connection_data = url_connection_data
+
+        # Mock ConnectionConfig to process the URL
+        with patch("mindsdb.integrations.handlers.mysql_handler.mysql_handler.ConnectionConfig") as mock_config_class:
+            mock_model = MagicMock()
+            mock_model.model_dump.return_value = {
+                "host": "127.0.0.1",
+                "port": 3306,
+                "user": "root",
+                "password": "password",
+                "database": "test_db",
+                "connection_timeout": 10,
+                "collation": "utf8mb4_general_ci",
+                "use_pure": True,
+            }
+            mock_config_class.return_value = mock_model
+
+            self.handler.connect()
+
+            mock_config_class.assert_called_once_with(**url_connection_data)
+            self.mock_connect.assert_called_once()
 
     def test_unpack_config(self):
         """
@@ -303,7 +383,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             mock_renderer_class.return_value = mock_renderer
 
             self.handler.native_query = MagicMock()
-            self.handler.native_query.return_value = Response(RESPONSE_TYPE.OK)
+            self.handler.native_query.return_value = OkResponse()
 
             mock_ast = MagicMock()
 
@@ -332,7 +412,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_tables calls native_query with the correct SQL
         """
-        expected_response = Response(RESPONSE_TYPE.OK)
+        expected_response = OkResponse()
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         response = self.handler.get_tables()
@@ -351,9 +431,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_columns calls native_query with the correct SQL
         """
-        expected_response = Response(
-            RESPONSE_TYPE.TABLE, data_frame=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
-        )
+        expected_response = TableResponse(data=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET)))
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"
@@ -380,7 +458,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             from
                 information_schema.columns
             where
-                table_name = '{table_name}';
+                table_name = '{table_name}'
+                and table_schema = DATABASE();
         """
         self.assertEqual(call_args, expected_sql)
         self.assertEqual(response, expected_response)
@@ -399,19 +478,19 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.is_connected = MagicMock(return_value=True)
 
         # region test TEXT/BLOB types and sub-types
-        input_row = {
-            "t_varchar": "v_varchar",
-            "t_tinytext": "v_tinytext",
-            "t_text": "v_text",
-            "t_mediumtext": "v_mediumtext",
-            "t_longtext": "v_longtext",
-            "t_tinyblon": "v_tinyblon",
-            "t_blob": "v_blob",
-            "t_mediumblob": "v_mediumblob",
-            "t_longblob": "v_longblob",
-            "t_json": '{"key": "value"}',
-        }
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(
+            t_varchar="v_varchar",
+            t_tinytext="v_tinytext",
+            t_text="v_text",
+            t_mediumtext="v_mediumtext",
+            t_longtext="v_longtext",
+            t_tinyblon="v_tinyblon",
+            t_blob="v_blob",
+            t_mediumblob="v_mediumblob",
+            t_longblob="v_longblob",
+            t_json='{"key": "value"}',
+        )
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
 
         mock_cursor.description = [
             ("t_varchar", 253, None, None, None, None, 1, 0, 45),
@@ -426,7 +505,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("t_json", 245, None, None, None, None, 1, 144, 63),
         ]
 
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.VARBINARY,
             MYSQL_DATA_TYPE.TEXT,
@@ -439,7 +518,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.BLOB,
             MYSQL_DATA_TYPE.JSON,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(type(result_value), type(input_value))
@@ -447,17 +527,18 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # endregion
 
         # region test TINYINT/BOOL/BOOLEAN types
-        input_row = {"t_tinyint": 1, "t_bool": 1, "t_boolean": 1}
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(t_tinyint=1, t_bool=1, t_boolean=1)
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
 
         mock_cursor.description = [
             ("t_tinyint", 1, None, None, None, None, 1, 0, 63),
             ("t_bool", 1, None, None, None, None, 1, 0, 63),
             ("t_boolean", 1, None, None, None, None, 1, 0, 63),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             # without None values in result columns types will be one of pandas types
@@ -466,19 +547,19 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # endregion
 
         # region test numeric types
-        input_row = {
-            "t_tinyint": 1,
-            "t_bool": 0,
-            "t_smallint": 2,
-            "t_year": 2025,
-            "t_mediumint": 3,
-            "t_int": 4,
-            "t_bigint": 5,
-            "t_float": 1.1,
-            "t_double": 2.2,
-            "t_decimal": Decimal("3.3"),
-        }
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(
+            t_tinyint=1,
+            t_bool=0,
+            t_smallint=2,
+            t_year=2025,
+            t_mediumint=3,
+            t_int=4,
+            t_bigint=5,
+            t_float=1.1,
+            t_double=2.2,
+            t_decimal=Decimal("3.3"),
+        )
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
         mock_cursor.description = [
             ("t_tinyint", 1, None, None, None, None, 1, 0, 63),
             ("t_bool", 1, None, None, None, None, 1, 0, 63),
@@ -491,7 +572,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("t_double", 5, None, None, None, None, 1, 0, 63),
             ("t_decimal", 246, None, None, None, None, 1, 0, 63),
         ]
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.TINYINT,
             MYSQL_DATA_TYPE.TINYINT,
@@ -505,21 +586,22 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DECIMAL,
         ]
 
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(result_value, input_value)
         # endregion
 
         # test date/time types
-        input_row = {
-            "t_date": datetime.date(2025, 4, 16),
-            "t_time": datetime.timedelta(seconds=45600),
-            "t_year": 2025,
-            "t_datetime": datetime.datetime(2025, 4, 16, 12, 30, 15),
-            "t_timestamp": datetime.datetime(2025, 4, 16, 12, 30, 15),
-        }
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(
+            t_date=datetime.date(2025, 4, 16),
+            t_time=datetime.timedelta(seconds=45600),
+            t_year=2025,
+            t_datetime=datetime.datetime(2025, 4, 16, 12, 30, 15),
+            t_timestamp=datetime.datetime(2025, 4, 16, 12, 30, 15),
+        )
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
 
         mock_cursor.description = [
             ("t_date", 10, None, None, None, None, 1, 128, 63),
@@ -529,7 +611,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("t_timestamp", 7, None, None, None, None, 1, 128, 63),
         ]
 
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.DATE,
             MYSQL_DATA_TYPE.TIME,
@@ -537,7 +619,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DATETIME,
             MYSQL_DATA_TYPE.TIMESTAMP,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(result_value, input_value)
@@ -545,35 +628,199 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         # region test casting of nullable types
         bigint_val = 9223372036854775807
-        input_rows = [{"t_bigint": bigint_val, "t_boolean": 1}, {"t_bigint": None, "t_boolean": None}]
-        mock_cursor.fetchall.return_value = input_rows
+        input_rows = [OrderedDict(t_bigint=bigint_val, t_boolean=1), OrderedDict(t_bigint=None, t_boolean=None)]
+        mock_cursor.fetchall.return_value = [list(row.values()) for row in input_rows]
         description = [
             ("t_bigint", 8, None, None, None, None, 1, 0, 63),
             ("t_boolean", 1, None, None, None, None, 1, 0, 63),
         ]
         mock_cursor.description = description
-        response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.data_frame.dtypes[0], "Int64")
-        self.assertEquals(response.data_frame.dtypes[1], "Int64")
-        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
-        self.assertEquals(response.data_frame.iloc[0, 1], 1)
+        response: Response = self.handler.native_query(query_str, stream=False)
+        self.assertEqual(response.data_frame.dtypes.iloc[0], "Int64")
+        self.assertEqual(response.data_frame.dtypes.iloc[1], "Int64")
+        self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEqual(response.data_frame.iloc[0, 1], 1)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion
 
         # region test vector type
-        input_row = {
-            "t_vector": array("f", [1.1, 2.2, 3.3]),
-        }
-        mock_cursor.fetchall.return_value = [input_row]
+        input_row = OrderedDict(
+            t_vector=array("f", [1.1, 2.2, 3.3]),
+        )
+        mock_cursor.fetchall.return_value = [list(input_row.values())]
 
         mock_cursor.description = [("t_vector", 242, None, None, None, None, 1, 144, 63)]
 
-        response: Response = self.handler.native_query(query_str)
+        response: Response = self.handler.native_query(query_str, stream=False)
         excepted_mysql_types = [MYSQL_DATA_TYPE.VECTOR]
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        for column, mysql_type in zip(response.columns, excepted_mysql_types):
+            self.assertEqual(column.type, mysql_type)
         self.assertEqual(input_row["t_vector"], response.data_frame["t_vector"][0])
         # endregion
+
+    def _test_meta_method_with_filter(self, method, sample_data, filter_column, filter_values):
+        """
+        Helper method to test meta catalog methods with and without filtering.
+
+        Args:
+            method: The method to test (e.g., self.handler.meta_get_tables)
+            sample_data: List of dicts containing sample data
+            filter_column: Column name to filter on
+            filter_values: List of values to filter by
+        """
+        # Test without filter
+        df = DataFrame(sample_data)
+        expected_response = TableResponse(data=df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = method()
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, expected_response)
+
+        # Test with filter
+        self.handler.native_query.reset_mock()
+        filtered_df = df[df[filter_column].isin(filter_values)].reset_index(drop=True)
+        filtered_response = TableResponse(data=filtered_df)
+        self.handler.native_query = MagicMock(return_value=filtered_response)
+
+        response = method(table_names=filter_values)
+        self.handler.native_query.assert_called_once()
+        self.assertIs(response, filtered_response)
+
+        # Verify filtered data
+        if filter_column in response.data_frame.columns:
+            self.assertTrue(response.data_frame[filter_column].isin(filter_values).all())
+
+        return response
+
+    def test_meta_get_tables_returns_response(self):
+        """Test that meta_get_tables returns correct response with and without filtering"""
+        sample_data = [
+            {
+                "table_name": "customers",
+                "table_schema": "test_db",
+                "table_type": "BASE TABLE",
+                "table_description": "Customer information",
+                "row_count": 100,
+            },
+            {
+                "table_name": "orders",
+                "table_schema": "test_db",
+                "table_type": "BASE TABLE",
+                "table_description": None,
+                "row_count": 500,
+            },
+            {
+                "table_name": "products",
+                "table_schema": "test_db",
+                "table_type": "BASE TABLE",
+                "table_description": None,
+                "row_count": 42,
+            },
+        ]
+        self._test_meta_method_with_filter(
+            self.handler.meta_get_tables, sample_data, "table_name", ["customers", "orders"]
+        )
+
+    def test_meta_get_columns_returns_response(self):
+        """Test that meta_get_columns returns correct response with and without filtering"""
+        sample_data = [
+            {
+                "table_name": "customers",
+                "column_name": "id",
+                "data_type": "int",
+                "column_description": None,
+                "column_default": None,
+                "is_nullable": 0,
+            },
+            {
+                "table_name": "customers",
+                "column_name": "name",
+                "data_type": "varchar",
+                "column_description": None,
+                "column_default": None,
+                "is_nullable": 1,
+            },
+            {
+                "table_name": "products",
+                "column_name": "sku",
+                "data_type": "varchar",
+                "column_description": "Product SKU",
+                "column_default": None,
+                "is_nullable": 0,
+            },
+        ]
+        self._test_meta_method_with_filter(self.handler.meta_get_columns, sample_data, "table_name", ["customers"])
+
+    def test_meta_get_column_statistics_returns_response(self):
+        """Test that meta_get_column_statistics returns correct response with and without filtering"""
+        sample_data = [
+            {
+                "TABLE_NAME": "customers",
+                "COLUMN_NAME": "id",
+                "MOST_COMMON_VALUES": None,
+                "MOST_COMMON_FREQUENCIES": None,
+                "NULL_PERCENTAGE": 0.0,
+                "MINIMUM_VALUE": "1",
+                "MAXIMUM_VALUE": "100",
+                "DISTINCT_VALUES_COUNT": 100,
+            },
+            {
+                "TABLE_NAME": "customers",
+                "COLUMN_NAME": "name",
+                "MOST_COMMON_VALUES": None,
+                "MOST_COMMON_FREQUENCIES": None,
+                "NULL_PERCENTAGE": 5.0,
+                "MINIMUM_VALUE": "Alice",
+                "MAXIMUM_VALUE": "Zoe",
+                "DISTINCT_VALUES_COUNT": 95,
+            },
+            {
+                "TABLE_NAME": "products",
+                "COLUMN_NAME": "sku",
+                "MOST_COMMON_VALUES": None,
+                "MOST_COMMON_FREQUENCIES": None,
+                "NULL_PERCENTAGE": 0.0,
+                "MINIMUM_VALUE": None,
+                "MAXIMUM_VALUE": None,
+                "DISTINCT_VALUES_COUNT": 42,
+            },
+        ]
+        self._test_meta_method_with_filter(
+            self.handler.meta_get_column_statistics, sample_data, "TABLE_NAME", ["customers"]
+        )
+
+    def test_meta_get_primary_keys_returns_response(self):
+        """Test that meta_get_primary_keys returns correct response with and without filtering"""
+        sample_data = [
+            {"table_name": "customers", "column_name": "id", "ordinal_position": 1, "constraint_name": "PRIMARY"},
+            {"table_name": "orders", "column_name": "id", "ordinal_position": 1, "constraint_name": "PRIMARY"},
+            {"table_name": "products", "column_name": "id", "ordinal_position": 1, "constraint_name": "PRIMARY"},
+        ]
+        self._test_meta_method_with_filter(self.handler.meta_get_primary_keys, sample_data, "table_name", ["customers"])
+
+    def test_meta_get_foreign_keys_returns_response(self):
+        """Test that meta_get_foreign_keys returns correct response with and without filtering"""
+        sample_data = [
+            {
+                "parent_table_name": "customers",
+                "parent_column_name": "id",
+                "child_table_name": "orders",
+                "child_column_name": "customer_id",
+                "constraint_name": "orders_ibfk_1",
+            },
+            {
+                "parent_table_name": "products",
+                "parent_column_name": "id",
+                "child_table_name": "orders",
+                "child_column_name": "product_id",
+                "constraint_name": "orders_ibfk_2",
+            },
+        ]
+        self._test_meta_method_with_filter(
+            self.handler.meta_get_foreign_keys, sample_data, "child_table_name", ["orders"]
+        )
 
 
 if __name__ == "__main__":

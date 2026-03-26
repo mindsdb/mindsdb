@@ -1,4 +1,0 @@
-lightwood>=25.5.2.2
-lightwood[extra]>=25.5.2.2
-lightwood[xai]>=25.5.2.2
-type_infer==0.0.22

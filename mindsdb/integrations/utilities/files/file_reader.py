@@ -1,16 +1,16 @@
-from dataclasses import dataclass, astuple
-import traceback
-import json
 import csv
-from io import BytesIO, StringIO, IOBase
-from pathlib import Path
+import json
 import codecs
+from io import BytesIO, StringIO, IOBase
 from typing import List, Generator
+from pathlib import Path
+from dataclasses import dataclass, astuple
 
 import filetype
 import pandas as pd
 from charset_normalizer import from_bytes
 
+from mindsdb.interfaces.knowledge_base.preprocessing.text_splitter import TextSplitter
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -37,6 +37,7 @@ SINGLE_PAGE_FORMAT = _SINGLE_PAGE_FORMAT()
 @dataclass(frozen=True, slots=True)
 class _MULTI_PAGE_FORMAT:
     XLSX: str = "xlsx"
+    XLS: str = "xls"
 
 
 MULTI_PAGE_FORMAT = _MULTI_PAGE_FORMAT()
@@ -75,7 +76,7 @@ def decode(file_obj: IOBase) -> StringIO:
 
                 data_str = StringIO(byte_str.decode(encoding, errors))
     except Exception as e:
-        logger.error(traceback.format_exc())
+        logger.exception("Error during file decode:")
         raise FileProcessingError("Could not load into string") from e
 
     return data_str
@@ -120,6 +121,10 @@ class FormatDetector:
 
         self.parameters = {}
 
+    def close(self):
+        if self.file_obj is not None:
+            self.file_obj.close()
+
     def get_format(self) -> str:
         if self.format is not None:
             return self.format
@@ -155,9 +160,10 @@ class FormatDetector:
         if file_type is not None:
             if file_type.mime in {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "application/vnd.ms-excel",
             }:
                 return MULTI_PAGE_FORMAT.XLSX
+            if file_type.mime == "application/vnd.ms-excel":
+                return MULTI_PAGE_FORMAT.XLS
 
             if file_type.mime == "application/pdf":
                 return SINGLE_PAGE_FORMAT.PDF
@@ -322,40 +328,25 @@ class FileReader(FormatDetector):
     @staticmethod
     def read_txt(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
         # the lib is heavy, so import it only when needed
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
 
         file_obj = decode(file_obj)
 
-        try:
-            from langchain_core.documents import Document
-        except ImportError:
-            raise FileProcessingError(
-                "To import TXT document please install 'langchain-community':\n    pip install langchain-community"
-            )
         text = file_obj.read()
 
-        metadata = {"source_file": name, "file_format": "txt"}
-        documents = [Document(page_content=text, metadata=metadata)]
+        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP
-        )
-
-        docs = text_splitter.split_documents(documents)
-        return pd.DataFrame([{"content": doc.page_content, "metadata": doc.metadata} for doc in docs])
+        docs = text_splitter.split_text(text)
+        return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "txt"}} for doc in docs])
 
     @staticmethod
     def read_pdf(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
         # the libs are heavy, so import it only when needed
         import fitz  # pymupdf
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
 
         with fitz.open(stream=file_obj.read()) as pdf:  # open pdf
             text = chr(12).join([page.get_text() for page in pdf])
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP
-        )
+        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
 
         split_text = text_splitter.split_text(text)
 
@@ -396,3 +387,12 @@ class FileReader(FormatDetector):
                 else:
                     df = pd.read_excel(xls, sheet_name=page_name)
                 yield page_name, df
+
+    @staticmethod
+    def read_xls(
+        file_obj: BytesIO,
+        page_name: str | None = None,
+        only_names: bool = False,
+        **kwargs,
+    ):
+        return FileReader.read_xlsx(file_obj, page_name=page_name, only_names=only_names, **kwargs)

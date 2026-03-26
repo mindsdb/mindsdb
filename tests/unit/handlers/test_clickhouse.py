@@ -4,8 +4,10 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from sqlalchemy.exc import SQLAlchemyError
+from mindsdb_sql_parser import parse_sql
 
-from base_handler_test import BaseDatabaseHandlerTest
+from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
+from mindsdb.integrations.libs.response import TableResponse
 
 try:
     from mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler import ClickHouseHandler
@@ -54,12 +56,32 @@ class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertFalse(self.handler.is_connected)
         self.assertEqual(self.handler.protocol, "native")
 
+    def test_renderer(self):
+        sql = "SELECT * FROM ch.table WHERE created_at = (now() - INTERVAL '5' MINUTE);"
+        rendered_sql = self.handler.renderer.get_string(parse_sql(sql), with_failback=True)
+        assert rendered_sql == "SELECT * \nFROM ch.\"table\" \nWHERE created_at = now() - INTERVAL '5' MINUTE"
+
     def test_connect_success(self):
         self.mock_connect.return_value = MagicMock()
         self.handler.connect()
         self.mock_connect.assert_called_once_with(
             f"clickhouse+{self.dummy_connection_data['protocol']}://{self.dummy_connection_data['user']}:{self.dummy_connection_data['password']}@{self.dummy_connection_data['host']}:{self.dummy_connection_data['port']}/{self.dummy_connection_data['database']}"
         )
+
+    def test_native_query(self):
+        """
+        Tests the `native_query` method to ensure it executes a SQL query using a mock cursor and returns a Response object.
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        query_str = f"SELECT * FROM {self.mock_table}"
+        data = self.handler.native_query(query_str)
+
+        assert isinstance(data, TableResponse)
 
 
 if __name__ == "__main__":

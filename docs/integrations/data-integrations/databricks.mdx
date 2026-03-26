@@ -51,7 +51,7 @@ Refer the instructions given https://docs.databricks.com/en/integrations/compute
 Optional connection parameters include the following:
 
 * `session_configuration`: Additional (key, value) pairs to set as Spark session configuration parameters. This should be provided as a JSON string.
-* `http_headers`: Additional (key, value) pairs to set in HTTP headers on every RPC request the client makes. This should be provided as a JSON string.
+* `http_headers`: Additional (key, value) pairs to set in HTTP headers on every RPC request the client makes. This should be provided as `"http_headers": [['Header-1', 'value1'],  ['Header-2', 'value2']]`.
 * `catalog`: The catalog to use for the connection. Default is `hive_metastore`.
 * `schema`: The schema (database) to use for the connection. Default is `default`.
 

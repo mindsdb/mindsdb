@@ -60,6 +60,12 @@ class GetLeaf(Resource):
                 }
                 for key, val in tables.items()
             ]
+
+            jobs = ca.jobs_controller.get_list(db_name)
+            tables = tables + [
+                {"name": job["name"], "schema": None, "class": "job", "type": "job", "engine": "job", "deletable": True}
+                for job in jobs
+            ]
         elif db["type"] == "data":
             handler = ca.integration_controller.get_data_handler(db_name)
             if "all" in inspect.signature(handler.get_tables).parameters:

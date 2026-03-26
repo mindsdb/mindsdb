@@ -6,12 +6,13 @@ from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.datanodes.integration_datanode import IntegrationDataNode
 from mindsdb.api.executor.datahub.datanodes.project_datanode import ProjectDataNode
-from mindsdb.api.executor import exceptions as exc
+from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.executor.utilities.sql import get_query_tables
+from mindsdb.api.executor import exceptions as exc
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.api.executor.datahub.classes.response import DataHubResponse
-from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.integrations.libs.response import TableResponse, INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.utilities.types.column import Column
 from mindsdb.utilities import log
 
 from .system_tables import (
@@ -42,13 +43,10 @@ from .mindsdb_tables import (
     QueriesTable,
     ChatbotsTable,
     KBTable,
-    SkillsTable,
     AgentsTable,
     ViewsTable,
     TriggersTable,
 )
-
-from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 
 
 logger = log.getLogger(__name__)
@@ -81,7 +79,6 @@ class InformationSchemaDataNode(DataNode):
         JobsTable,
         ChatbotsTable,
         KBTable,
-        SkillsTable,
         AgentsTable,
         ViewsTable,
         TriggersTable,
@@ -94,17 +91,7 @@ class InformationSchemaDataNode(DataNode):
         self.integration_controller = session.integration_controller
         self.project_controller = ProjectController()
         self.database_controller = session.database_controller
-
-        self.persis_datanodes = {"log": self.database_controller.logs_db_controller}
-
-        databases = self.database_controller.get_dict()
-        if "files" in databases:
-            self.persis_datanodes["files"] = IntegrationDataNode(
-                "files",
-                ds_type="file",
-                integration_controller=self.session.integration_controller,
-            )
-
+        self.persist_datanodes_names = ("log", "files")
         self.tables = {t.name: t for t in self.tables_list}
 
     def __getitem__(self, key):
@@ -119,8 +106,12 @@ class InformationSchemaDataNode(DataNode):
         if name_lower == "log":
             return self.database_controller.get_system_db("log")
 
-        if name_lower in self.persis_datanodes:
-            return self.persis_datanodes[name_lower]
+        if name_lower == "files":
+            return IntegrationDataNode(
+                "files",
+                ds_type="file",
+                integration_controller=self.session.integration_controller,
+            )
 
         existing_databases_meta = self.database_controller.get_dict()  # filter_type='project'
         database_name = None
@@ -214,7 +205,7 @@ class InformationSchemaDataNode(DataNode):
     def get_tree_tables(self):
         return {name: table for name, table in self.tables.items() if table.visible}
 
-    def query(self, query: ASTNode, session=None) -> DataHubResponse:
+    def query(self, query: ASTNode, session=None) -> TableResponse:
         query_tables = [x[1] for x in get_query_tables(query)]
 
         if len(query_tables) != 1:
@@ -233,9 +224,8 @@ class InformationSchemaDataNode(DataNode):
             dataframe = self._get_empty_table(tbl)
         data = query_df(dataframe, query, session=self.session)
 
-        columns_info = [{"name": k, "type": v} for k, v in data.dtypes.items()]
-
-        return DataHubResponse(data_frame=data, columns=columns_info, affected_rows=0)
+        columns = [Column(name=k, dtype=v) for k, v in data.dtypes.items()]
+        return TableResponse(data=data, columns=columns, affected_rows=0)
 
     def _get_empty_table(self, table):
         columns = table.columns

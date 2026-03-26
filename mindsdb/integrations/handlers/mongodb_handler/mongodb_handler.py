@@ -10,13 +10,13 @@ from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError, OperationFailure, ConfigurationError, InvalidURI
 from typing import Text, List, Dict, Any, Union
 
-from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
-from mindsdb.api.mongo.utilities.mongodb_parser import MongodbParser
+from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_query import MongoQuery
+from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_parser import MongodbParser
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
 from .utils.mongodb_render import MongodbRender
@@ -31,7 +31,7 @@ class MongoDBHandler(DatabaseHandler):
     """
 
     _SUBSCRIBE_SLEEP_INTERVAL = 0.5
-    name = 'mongodb'
+    name = "mongodb"
 
     def __init__(self, name: Text, **kwargs: Any) -> None:
         """
@@ -42,13 +42,13 @@ class MongoDBHandler(DatabaseHandler):
             kwargs: Arbitrary keyword arguments including the connection data.
         """
         super().__init__(name)
-        connection_data = kwargs['connection_data']
+        connection_data = kwargs["connection_data"]
         self.host = connection_data.get("host")
         self.port = int(connection_data.get("port") or 27017)
         self.user = connection_data.get("username")
         self.password = connection_data.get("password")
-        self.database = connection_data.get('database')
-        self.flatten_level = connection_data.get('flatten_level', 0)
+        self.database = connection_data.get("database")
+        self.flatten_level = connection_data.get("flatten_level", 0)
 
         self.connection = None
         self.is_connected = False
@@ -72,31 +72,27 @@ class MongoDBHandler(DatabaseHandler):
         """
         kwargs = {}
         if isinstance(self.user, str) and len(self.user) > 0:
-            kwargs['username'] = self.user
+            kwargs["username"] = self.user
 
         if isinstance(self.password, str) and len(self.password) > 0:
-            kwargs['password'] = self.password
+            kwargs["password"] = self.password
 
-        if re.match(r'/?.*tls=true', self.host.lower()):
-            kwargs['tls'] = True
+        if re.match(r"/?.*tls=true", self.host.lower()):
+            kwargs["tls"] = True
 
-        if re.match(r'/?.*tls=false', self.host.lower()):
-            kwargs['tls'] = False
+        if re.match(r"/?.*tls=false", self.host.lower()):
+            kwargs["tls"] = False
 
         try:
-            connection = MongoClient(
-                self.host,
-                port=self.port,
-                **kwargs
-            )
+            connection = MongoClient(self.host, port=self.port, **kwargs)
         except InvalidURI as invalid_uri_error:
-            logger.error(f'Invalid URI provided for MongoDB connection: {invalid_uri_error}!')
+            logger.error(f"Invalid URI provided for MongoDB connection: {invalid_uri_error}!")
             raise
         except ConfigurationError as config_error:
-            logger.error(f'Configuration error connecting to MongoDB: {config_error}!')
+            logger.error(f"Configuration error connecting to MongoDB: {config_error}!")
             raise
         except Exception as unknown_error:
-            logger.error(f'Unknown error connecting to MongoDB: {unknown_error}!')
+            logger.error(f"Unknown error connecting to MongoDB: {unknown_error}!")
             raise
 
         # Get the database name from the connection if it's not provided.
@@ -107,7 +103,9 @@ class MongoDBHandler(DatabaseHandler):
         self.connection = connection
         return self.connection
 
-    def subscribe(self, stop_event: threading.Event, callback: callable, table_name: Text, columns: List = None, **kwargs: Any) -> None:
+    def subscribe(
+        self, stop_event: threading.Event, callback: callable, table_name: Text, columns: List = None, **kwargs: Any
+    ) -> None:
         """
         Subscribes to changes in a MongoDB collection and calls the provided callback function when changes occur.
 
@@ -131,26 +129,26 @@ class MongoDBHandler(DatabaseHandler):
                 time.sleep(self._SUBSCRIBE_SLEEP_INTERVAL)
                 continue
 
-            _id = res['documentKey']['_id']
-            if res['operationType'] == 'insert':
+            _id = res["documentKey"]["_id"]
+            if res["operationType"] == "insert":
                 if columns is not None:
-                    updated_columns = set(res['fullDocument'].keys())
+                    updated_columns = set(res["fullDocument"].keys())
                     if not set(columns) & set(updated_columns):
                         # Do nothing.
                         continue
 
-                callback(row=res['fullDocument'], key={'_id': _id})
+                callback(row=res["fullDocument"], key={"_id": _id})
 
-            if res['operationType'] == 'update':
+            if res["operationType"] == "update":
                 if columns is not None:
-                    updated_columns = set(res['updateDescription']['updatedFields'].keys())
+                    updated_columns = set(res["updateDescription"]["updatedFields"].keys())
                     if not set(columns) & set(updated_columns):
                         # Do nothing.
                         continue
 
                 # Get the full document.
-                full_doc = con[self.database][table_name].find_one(res['documentKey'])
-                callback(row=full_doc, key={'_id': _id})
+                full_doc = con[self.database][table_name].find_one(res["documentKey"])
+                callback(row=full_doc, key={"_id": _id})
 
     def disconnect(self) -> None:
         """
@@ -178,14 +176,20 @@ class MongoDBHandler(DatabaseHandler):
 
             # Check if the database exists.
             if self.database not in con.list_database_names():
-                raise ValueError(f'Database {self.database} not found!')
+                raise ValueError(f"Database {self.database} not found!")
 
             response.success = True
-        except (InvalidURI, ServerSelectionTimeoutError, OperationFailure, ConfigurationError, ValueError) as known_error:
-            logger.error(f'Error connecting to MongoDB {self.database}, {known_error}!')
+        except (
+            InvalidURI,
+            ServerSelectionTimeoutError,
+            OperationFailure,
+            ConfigurationError,
+            ValueError,
+        ) as known_error:
+            logger.error(f"Error connecting to MongoDB {self.database}, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Unknown error connecting to MongoDB {self.database}, {unknown_error}!')
+            logger.error(f"Unknown error connecting to MongoDB {self.database}, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
@@ -211,13 +215,10 @@ class MongoDBHandler(DatabaseHandler):
 
         if isinstance(query, dict):
             # Fallback for the previous API.
-            mquery = MongoQuery(query['collection'])
+            mquery = MongoQuery(query["collection"])
 
-            for c in query['call']:
-                mquery.add_step({
-                    'method': c['method'],
-                    'args': c['args']
-                })
+            for c in query["call"]:
+                mquery.add_step({"method": c["method"], "args": c["args"]})
 
             query = mquery
 
@@ -229,16 +230,15 @@ class MongoDBHandler(DatabaseHandler):
         # Check if the collection exists.
         if collection not in con[database].list_collection_names():
             return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f'Collection {collection} not found in database {database}!'
+                RESPONSE_TYPE.ERROR, error_message=f"Collection {collection} not found in database {database}!"
             )
 
         try:
             cursor = con[database][collection]
 
             for step in query.pipeline:
-                fnc = getattr(cursor, step['method'])
-                cursor = fnc(*step['args'])
+                fnc = getattr(cursor, step["method"])
+                cursor = fnc(*step["args"])
 
             result = []
             if not isinstance(cursor, pymongo.results.UpdateResult):
@@ -254,16 +254,10 @@ class MongoDBHandler(DatabaseHandler):
                 columns = list(self.get_columns(collection).data_frame.Field)
                 df = pd.DataFrame([], columns=columns)
 
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                df
-            )
+            response = Response(RESPONSE_TYPE.TABLE, df)
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.database}.{collection}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.database}.{collection}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         return response
 
@@ -289,7 +283,7 @@ class MongoDBHandler(DatabaseHandler):
             if level > 0:
                 if isinstance(v, dict):
                     for k2, v2 in self.flatten(v, level=level - 1).items():
-                        add[f'{k}.{k2}'] = v2
+                        add[f"{k}.{k2}"] = v2
                     del_keys.append(k)
 
         if add:
@@ -324,15 +318,10 @@ class MongoDBHandler(DatabaseHandler):
         """
         con = self.connect()
         collections = con[self.database].list_collection_names()
-        collections_ar = [
-            [i] for i in collections
-        ]
-        df = pd.DataFrame(collections_ar, columns=['table_name'])
+        collections_ar = [[i] for i in collections]
+        df = pd.DataFrame(collections_ar, columns=["table_name"])
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response
 
@@ -363,10 +352,7 @@ class MongoDBHandler(DatabaseHandler):
             for k, v in record.items():
                 data.append([k, type(v).__name__])
 
-        df = pd.DataFrame(data, columns=['Field', 'Type'])
+        df = pd.DataFrame(data, columns=["Field", "Type"])
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        response = Response(RESPONSE_TYPE.TABLE, df)
         return response

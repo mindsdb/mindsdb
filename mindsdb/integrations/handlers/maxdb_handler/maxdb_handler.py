@@ -9,7 +9,8 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE, HandlerResponse
+    RESPONSE_TYPE,
+    HandlerResponse,
 )
 import pandas as pd
 import jaydebeapi as jd
@@ -19,13 +20,13 @@ logger = log.getLogger(__name__)
 
 class MaxDBHandler(DatabaseHandler):
     """
-       This handler handles connection and execution of the SAP MaxDB  statements.
-       """
+    This handler handles connection and execution of the SAP MaxDB  statements.
+    """
 
-    name = 'maxdb'
+    name = "maxdb"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
-        """ Initialize the handler
+        """Initialize the handler
         Args:
             name (str): name of particular handler instance
             connection_data (dict): parameters for connecting to the database
@@ -35,12 +36,12 @@ class MaxDBHandler(DatabaseHandler):
         self.kwargs = kwargs
         self.parser = parse_sql
         self.connection_config = connection_data
-        self.database = connection_data['database']
-        self.host = connection_data['host']
-        self.port = connection_data['port']
-        self.user = connection_data['user']
-        self.password = connection_data['password']
-        self.jdbc_location = connection_data['jdbc_location']
+        self.database = connection_data["database"]
+        self.host = connection_data["host"]
+        self.port = connection_data["port"]
+        self.user = connection_data["user"]
+        self.password = connection_data["password"]
+        self.jdbc_location = connection_data["jdbc_location"]
         self.connection = None
         self.is_connected = False
 
@@ -61,14 +62,14 @@ class MaxDBHandler(DatabaseHandler):
             return self.connection
 
         jdbc_url = f"jdbc:sapdb://{self.host}:{self.port}/{self.database}"
-        jdbc_class = 'com.sap.dbtech.jdbc.DriverSapDB'
+        jdbc_class = "com.sap.dbtech.jdbc.DriverSapDB"
 
         self.connection = jd.connect(jdbc_class, jdbc_url, [self.user, self.password], self.jdbc_location)
         self.is_connected = True
         return self.connection
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
         Should switch self.is_connected.
         """
         if self.is_connected is False:
@@ -82,7 +83,7 @@ class MaxDBHandler(DatabaseHandler):
         return
 
     def check_connection(self) -> StatusResponse:
-        """ Check connection to the handler
+        """Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
@@ -93,7 +94,7 @@ class MaxDBHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to database {self.database}, {e}!')
+            logger.error(f"Error connecting to database {self.database}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -107,7 +108,7 @@ class MaxDBHandler(DatabaseHandler):
         """Receive raw query and act upon it somehow.
         Args:
             query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+                etc)
         Returns:
             HandlerResponse
         """
@@ -119,21 +120,14 @@ class MaxDBHandler(DatabaseHandler):
                 if cur.description:
                     result = cur.fetchall()
                     response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
+                        RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cur.description])
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 self.connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.database}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.database}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
                 self.connection.rollback()
 
         if need_to_close is True:
@@ -165,7 +159,7 @@ class MaxDBHandler(DatabaseHandler):
         query = f"SELECT TABLENAME FROM DOMAIN.TABLES WHERE TYPE = 'TABLE' AND SCHEMANAME = '{self.user}'"
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name: str) -> Response:
@@ -182,5 +176,5 @@ class MaxDBHandler(DatabaseHandler):
         query = f"SELECT COLUMNNAME,DATATYPE FROM DOMAIN.COLUMNS WHERE TABLENAME ='{table_name}'"
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={'name': 'column_name', 'type': 'data_type'})
+        result.data_frame = df.rename(columns={"name": "column_name", "type": "data_type"})
         return self.native_query(query)

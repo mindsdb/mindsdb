@@ -1,1 +1,1 @@
-hubspot-api-client
+hubspot-api-client==12.0.0

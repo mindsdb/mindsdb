@@ -1,7 +1,7 @@
 import ast
 from typing import Dict, Optional, List
 
-
+import litellm
 from litellm import completion, batch_completion, embedding, acompletion, supports_response_schema
 
 import pandas as pd
@@ -13,6 +13,8 @@ from mindsdb.integrations.handlers.litellm_handler.settings import CompletionPar
 
 
 logger = log.getLogger(__name__)
+
+litellm.drop_params = True
 
 
 class LiteLLMHandler(BaseMLEngine):
@@ -33,10 +35,6 @@ class LiteLLMHandler(BaseMLEngine):
 
     @classmethod
     def prepare_arguments(cls, provider, model_name, args):
-        if provider == "snowflake" and "snowflake_account_id" in args:
-            args["api_base"] = (
-                f"https://{args['snowflake_account_id']}.snowflakecomputing.com/api/v2/cortex/inference:complete"
-            )
         if provider == "google":
             provider = "gemini"
         if "base_url" in args:
@@ -87,6 +85,7 @@ class LiteLLMHandler(BaseMLEngine):
 
         # check engine_storage for api_key
         input_args.update({k: v for k, v in ml_engine_args.items()})
+        input_args["target"] = target
 
         # validate args
         export_args = CompletionParameters(**input_args).model_dump()
@@ -104,6 +103,8 @@ class LiteLLMHandler(BaseMLEngine):
         # validate args
         args = CompletionParameters(**input_args).model_dump()
 
+        target = args.pop("target")
+
         # build messages
         self._build_messages(args, df)
 
@@ -113,12 +114,12 @@ class LiteLLMHandler(BaseMLEngine):
         if len(args["messages"]) > 1:
             # if more than one message, use batch completion
             responses = batch_completion(**args)
-            return pd.DataFrame({"result": [response.choices[0].message.content for response in responses]})
+            return pd.DataFrame({target: [response.choices[0].message.content for response in responses]})
 
         # run completion
         response = completion(**args)
 
-        return pd.DataFrame({"result": [response.choices[0].message.content]})
+        return pd.DataFrame({target: [response.choices[0].message.content]})
 
     @staticmethod
     def _prompt_to_messages(prompt: str, **kwargs) -> List[Dict]:

@@ -15,8 +15,8 @@ logger = log.getLogger(__name__)
 class Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._temp_dir = tempfile.TemporaryDirectory(prefix="lightwood_handler_test_")
-        os.environ["MINDSDB_STORAGE_DIR"] = os.environ.get("MINDSDB_STORAGE_DIR", cls._temp_dir.name)
+        cls._temp_dir = tempfile.TemporaryDirectory(prefix="test_tmp_")
+        os.environ["MINDSDB_STORAGE_DIR"] = cls._temp_dir.name
         os.environ["MINDSDB_DB_CON"] = (
             "sqlite:///"
             + os.path.join(os.environ["MINDSDB_STORAGE_DIR"], "mindsdb.sqlite3.db")

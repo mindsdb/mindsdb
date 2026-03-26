@@ -8,7 +8,7 @@ DataStax, Inc. is a real-time data company based in Santa Clara, California.[3] 
 
 ## Implementation
 
-Datastax Astra DB is API-compatible with Apache Cassandra and Scylla DB so this handler just extends the ScyllaHandler and is using the python `scylla-driver` library.
+Datastax Astra DB is API-compatible with Apache Cassandra so this handler just extends the CassandraHandler and is using the python `cassandra-driver` library.
 
 The required arguments to establish a connection are:
 

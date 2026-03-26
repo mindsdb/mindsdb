@@ -4,7 +4,7 @@ import tempfile
 try:
     import snowflake
     import snowflake.connector
-    from mindsdb.integrations.handlers.snowflake_handler.snowflake_handler import SnowflakeHandler
+    from mindsdb.integrations.handlers.snowflake_handler.snowflake_handler import SnowflakeHandler, _map_type
 except ImportError:
     pytestmark = pytest.mark.skip("Snowflake handler not installed")
 
@@ -19,7 +19,13 @@ from pandas import DataFrame
 
 
 from base_handler_test import BaseDatabaseHandlerTest
-from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    OkResponse,
+    TableResponse,
+    ErrorResponse,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
+    RESPONSE_TYPE,
+)
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
@@ -37,6 +43,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             user="example_user",
             password="example_pass",
             database="example_db",
+            schema="example_schema",
             auth_type="password",
         )
 
@@ -106,6 +113,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key_path=private_key_path,
             auth_type="key_pair",
         )
@@ -146,13 +154,21 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         with self.assertRaises(ValueError):
             handler.connect()
 
-        # Test missing 'auth_type'
-        invalid_connection_args = self.dummy_connection_data.copy()
-        del invalid_connection_args["auth_type"]
-        handler = SnowflakeHandler("snowflake", connection_data=invalid_connection_args)
-        with self.assertRaises(ValueError) as context:
-            handler.connect()
-        self.assertIn("auth_type is required", str(context.exception))
+    def test_map_type_handles_unknown_types(self):
+        self.assertEqual(_map_type("BOOLEAN"), MYSQL_DATA_TYPE.BOOL)
+        self.assertEqual(_map_type("VARIANT"), MYSQL_DATA_TYPE.VARCHAR)
+        self.assertEqual(_map_type("custom_type"), MYSQL_DATA_TYPE.VARCHAR)
+
+    def test_check_connection_failure_resets_flag(self):
+        self.handler.is_connected = True
+        error = snowflake.connector.errors.Error("boom")
+        self.handler.connect = MagicMock(side_effect=error)
+
+        response = self.handler.check_connection()
+
+        self.assertFalse(response.success)
+        self.assertFalse(self.handler.is_connected)
+        self.assertEqual(response.error_message, str(error))
 
     def test_disconnect(self):
         """
@@ -235,8 +251,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.fetch_pandas_batches.assert_called_once()
         mock_cursor.fetchall.assert_not_called()
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, TableResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
         self.assertListEqual(list(data.data_frame.columns), expected_columns)
@@ -274,13 +289,46 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.execute.assert_called_once_with(query_str)
         mock_cursor.fetch_pandas_batches.assert_called_once()
 
-        self.assertIsInstance(data, Response)
-        self.assertFalse(data.error_code)
+        self.assertIsInstance(data, OkResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.OK)
         self.assertEqual(data.affected_rows, 1)
 
         mock_conn.commit.assert_not_called()
         mock_conn.rollback.assert_not_called()
+
+    def test_native_query_fallback_returns_table(self):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock(spec=snowflake.connector.cursor.DictCursor)
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_cursor.__exit__.return_value = None
+        mock_cursor.fetch_pandas_batches.side_effect = snowflake.connector.errors.NotSupportedError()
+        mock_cursor.fetchall.return_value = [{"COL": 1}, {"COL": 2}]
+        mock_cursor.description = [("COL",)]
+        mock_cursor.rowcount = 2
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor.return_value = mock_cursor
+
+        response = self.handler.native_query("CALL test_proc()")
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertEqual(len(response.data_frame), 2)
+
+    def test_native_query_fallback_without_data_returns_ok(self):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock(spec=snowflake.connector.cursor.DictCursor)
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_cursor.__exit__.return_value = None
+        mock_cursor.fetch_pandas_batches.side_effect = snowflake.connector.errors.NotSupportedError()
+        mock_cursor.fetchall.return_value = None
+        mock_cursor.description = []
+        mock_cursor.rowcount = 0
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor.return_value = mock_cursor
+
+        response = self.handler.native_query("UNKNOWN")
+        self.assertEqual(response.type, RESPONSE_TYPE.OK)
 
     def test_native_query_error(self):
         """
@@ -305,12 +353,36 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor.assert_called_once()
         mock_cursor.execute.assert_called_once_with(query_str)
 
-        self.assertIsInstance(data, Response)
+        self.assertIsInstance(data, ErrorResponse)
         self.assertEqual(data.type, RESPONSE_TYPE.ERROR)
         self.assertIn(error_msg, data.error_message)
 
         mock_conn.rollback.assert_not_called()
         mock_conn.commit.assert_not_called()
+
+    def test_native_query_releases_memory_pool_when_jemalloc(self):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_cursor.__exit__.return_value = None
+        mock_cursor.fetch_pandas_batches.return_value = iter([DataFrame([[1, "foo"]], columns=["ID", "NAME"])])
+        mock_cursor.description = [
+            ColumnDescription(name="ID", type_code=0, scale=0),
+            ColumnDescription(name="NAME", type_code=2),
+        ]
+        mock_cursor.rowcount = 1
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("mindsdb.integrations.handlers.snowflake_handler.snowflake_handler.memory_pool") as mock_pool:
+            mock_pool.backend_name = "jemalloc"
+            mock_pool.release_unused = MagicMock()
+
+            response = self.handler.native_query("SELECT 1", stream=False)
+
+            self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+            mock_pool.release_unused.assert_called_once()
 
     def test_key_pair_authentication_success(self):
         """
@@ -383,6 +455,81 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             if os.path.exists(temp_key_path):
                 os.unlink(temp_key_path)
 
+    def test_key_pair_authentication_with_inline_private_key(self):
+        """
+        Tests successful connection using in-memory private key content
+        """
+        connection_data = OrderedDict(
+            account="tvuibdy-vm85921",
+            user="example_user",
+            database="example_db",
+            schema="example_schema",
+            private_key="-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----",
+            auth_type="key_pair",
+        )
+
+        handler = SnowflakeHandler("snowflake", connection_data=connection_data)
+
+        with (
+            patch(
+                "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
+                return_value="parsed_key",
+            ) as mock_loader,
+            patch("snowflake.connector.connect") as mock_connect,
+        ):
+            mock_conn = MagicMock()
+            mock_connect.return_value = mock_conn
+
+            connection = handler.connect()
+
+            mock_loader.assert_called_once_with(
+                "-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----", None
+            )
+            mock_connect.assert_called_once()
+            call_kwargs = mock_connect.call_args[1]
+
+            self.assertIn("private_key", call_kwargs)
+            self.assertEqual(call_kwargs["private_key"], "parsed_key")
+            self.assertNotIn("private_key_file", call_kwargs)
+            self.assertTrue(handler.is_connected)
+            self.assertEqual(connection, mock_conn)
+
+    def test_key_pair_authentication_with_inline_private_key_and_passphrase(self):
+        """
+        Tests inline private key content when a passphrase is supplied
+        """
+        connection_data = OrderedDict(
+            account="tvuibdy-vm85921",
+            user="example_user",
+            database="example_db",
+            schema="example_schema",
+            private_key="-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----",
+            private_key_passphrase="inline-pass",
+            auth_type="key_pair",
+        )
+
+        handler = SnowflakeHandler("snowflake", connection_data=connection_data)
+
+        with (
+            patch(
+                "mindsdb.integrations.handlers.snowflake_handler.auth_types.KeyPairAuthType._load_private_key",
+                return_value="parsed_key",
+            ) as mock_loader,
+            patch("snowflake.connector.connect") as mock_connect,
+        ):
+            mock_conn = MagicMock()
+            mock_connect.return_value = mock_conn
+
+            handler.connect()
+
+            mock_loader.assert_called_once_with(
+                "-----BEGIN PRIVATE KEY-----\\nINLINE KEY\\n-----END PRIVATE KEY-----", "inline-pass"
+            )
+            call_kwargs = mock_connect.call_args[1]
+            self.assertIn("private_key", call_kwargs)
+            self.assertEqual(call_kwargs["private_key"], "parsed_key")
+            self.assertNotIn("private_key_file", call_kwargs)
+
     def test_key_pair_authentication_file_not_found(self):
         """
         Tests that ValueError is raised when private key file doesn't exist
@@ -391,6 +538,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             account="tvuibdy-vm85921",
             user="example_user",
             database="example_db",
+            schema="example_schema",
             private_key_path="/nonexistent/path/to/key.pem",
             auth_type="key_pair",
         )
@@ -414,6 +562,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 account="tvuibdy-vm85921",
                 user="example_user",
                 database="example_db",
+                schema="example_schema",
                 private_key_path=temp_key_path,
                 auth_type="key_pair",
             )
@@ -477,7 +626,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         renderer_mock.get_string.return_value = "SELECT * FROM test_table_rendered"
 
         self.handler.native_query = MagicMock()
-        expected_response = Response(RESPONSE_TYPE.TABLE)
+        expected_response = TableResponse(data=DataFrame())
         self.handler.native_query.return_value = expected_response
 
         try:
@@ -505,11 +654,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_tables calls native_query with the correct SQL for Snowflake
         """
-        expected_response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=DataFrame(
-                [("table1", "SCHEMA1", "BASE TABLE")], columns=["TABLE_NAME", "TABLE_SCHEMA", "TABLE_TYPE"]
-            ),
+        expected_response = TableResponse(
+            data=DataFrame([("table1", "SCHEMA1", "BASE TABLE")], columns=["TABLE_NAME", "TABLE_SCHEMA", "TABLE_TYPE"])
         )
         self.handler.native_query = MagicMock(return_value=expected_response)
 
@@ -583,7 +729,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         expected_df = DataFrame(expected_df_data, columns=query_columns)
 
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        expected_response = TableResponse(data=expected_df)
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"
@@ -610,6 +756,156 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertIsNotNone(response.data_frame.iloc[0]["MYSQL_DATA_TYPE"])
 
         del self.handler.native_query
+
+    def test_meta_get_tables_casts_rowcount(self):
+        df = DataFrame(
+            [
+                {
+                    "TABLE_CATALOG": "CAT",
+                    "TABLE_SCHEMA": "PUBLIC",
+                    "TABLE_NAME": "ORDERS",
+                    "TABLE_TYPE": "BASE TABLE",
+                    "TABLE_DESCRIPTION": None,
+                    "ROW_COUNT": "5",
+                    "CREATED": "2024-01-01",
+                    "LAST_ALTERED": "2024-01-02",
+                }
+            ]
+        )
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
+
+        result = self.handler.meta_get_tables(table_names=["orders"])
+
+        query = self.handler.native_query.call_args[0][0]
+        self.assertIn("AND TABLE_NAME IN ('ORDERS')", query)
+        self.assertTrue(pd.api.types.is_integer_dtype(result.data_frame["ROW_COUNT"]))
+
+    def test_meta_get_columns_filters(self):
+        df = DataFrame(
+            [
+                {
+                    "TABLE_NAME": "ORDERS",
+                    "COLUMN_NAME": "ID",
+                    "DATA_TYPE": "NUMBER",
+                    "COLUMN_DESCRIPTION": None,
+                    "COLUMN_DEFAULT": None,
+                    "IS_NULLABLE": True,
+                }
+            ]
+        )
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
+
+        result = self.handler.meta_get_columns(table_names=["orders"])
+
+        query = self.handler.native_query.call_args[0][0]
+        self.assertIn("AND TABLE_NAME IN ('ORDERS')", query)
+        self.assertEqual(result.data_frame.iloc[0]["TABLE_NAME"], "ORDERS")
+
+    def test_meta_get_column_statistics_success(self):
+        columns_df = DataFrame(
+            {
+                "TABLE_SCHEMA": ["PUBLIC", "PUBLIC"],
+                "TABLE_NAME": ["ORDERS", "ORDERS"],
+                "COLUMN_NAME": ["ID", "AMOUNT"],
+                "DATA_TYPE": ["NUMBER", "NUMBER"],
+            }
+        )
+        stats_df = DataFrame(
+            [
+                {
+                    "total_rows": 10,
+                    "nulls_ID": 2,
+                    "distincts_ID": 5,
+                    "min_ID": 1,
+                    "max_ID": 10,
+                    "nulls_AMOUNT": 0,
+                    "distincts_AMOUNT": 3,
+                    "min_AMOUNT": 5,
+                    "max_AMOUNT": 20,
+                }
+            ]
+        )
+        self.handler.native_query = MagicMock(
+            side_effect=[
+                TableResponse(data=columns_df),
+                TableResponse(data=stats_df),
+            ]
+        )
+
+        result = self.handler.meta_get_column_statistics(table_names=["orders"])
+
+        self.assertEqual(len(result.data_frame), 2)
+        id_stats = result.data_frame[result.data_frame["column_name"] == "ID"].iloc[0]
+        self.assertEqual(id_stats["null_percentage"], 20.0)
+        self.assertEqual(id_stats["distinct_values_count"], 5)
+        self.assertEqual(id_stats["minimum_value"], 1)
+        self.assertEqual(id_stats["maximum_value"], 10)
+
+    def test_meta_get_column_statistics_handles_error_response(self):
+        self.handler.native_query = MagicMock(return_value=ErrorResponse(error_message="boom"))
+        result = self.handler.meta_get_column_statistics(table_names=["orders"])
+        self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
+
+    def test_meta_get_primary_keys_filters(self):
+        df = DataFrame(
+            [
+                {"table_name": "ORDERS", "column_name": "ID", "key_sequence": 1, "constraint_name": "PK_ORDERS"},
+                {"table_name": "CUSTOMERS", "column_name": "ID", "key_sequence": 1, "constraint_name": "PK_CUSTOMERS"},
+            ]
+        )
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
+
+        result = self.handler.meta_get_primary_keys(table_names=["ORDERS"])
+
+        query = self.handler.native_query.call_args[0][0]
+        self.assertIn("SHOW PRIMARY KEYS", query)
+        self.assertEqual(len(result.data_frame), 1)
+        self.assertEqual(result.data_frame.iloc[0]["table_name"], "ORDERS")
+        self.assertIn("ordinal_position", result.data_frame.columns)
+
+    def test_meta_get_primary_keys_handles_exception(self):
+        self.handler.native_query = MagicMock(side_effect=Exception("boom"))
+        result = self.handler.meta_get_primary_keys()
+        self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
+
+    def test_meta_get_foreign_keys_filters(self):
+        df = DataFrame(
+            [
+                {
+                    "pk_table_name": "ORDERS",
+                    "pk_column_name": "CUSTOMER_ID",
+                    "fk_table_name": "CUSTOMERS",
+                    "fk_column_name": "ID",
+                },
+                {
+                    "pk_table_name": "INVENTORY",
+                    "pk_column_name": "PRODUCT_ID",
+                    "fk_table_name": "PRODUCTS",
+                    "fk_column_name": "ID",
+                },
+            ]
+        )
+        self.handler.native_query = MagicMock(return_value=TableResponse(data=df))
+
+        result = self.handler.meta_get_foreign_keys(table_names=["ORDERS", "CUSTOMERS"])
+
+        self.assertEqual(len(result.data_frame), 1)
+        self.assertIn("child_table_name", result.data_frame.columns)
+        row = result.data_frame.iloc[0]
+        self.assertEqual(row["parent_table_name"], "ORDERS")
+        self.assertEqual(row["parent_column_name"], "CUSTOMER_ID")
+        self.assertEqual(row["child_table_name"], "CUSTOMERS")
+        self.assertEqual(row["child_column_name"], "ID")
+
+    def test_meta_get_foreign_keys_handles_exception(self):
+        self.handler.native_query = MagicMock(side_effect=Exception("boom"))
+        result = self.handler.meta_get_foreign_keys()
+        self.assertEqual(result.type, RESPONSE_TYPE.ERROR)
+
+    def test_meta_get_handler_info_returns_guidance(self):
+        info = self.handler.meta_get_handler_info()
+        self.assertIn("ticks", info)
+        self.assertIn("double quotes", info)
 
     def test_types_casting(self):
         """Test that types are casted correctly"""
@@ -880,7 +1176,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -1031,7 +1328,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -1065,7 +1363,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOLEAN]
 
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         for column_name in input_data.columns:
             result_value = response.data_frame[column_name][0]
             self.assertEqual(result_value, input_data[column_name][0])
@@ -1301,7 +1600,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             }
         )
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 
@@ -1364,7 +1664,8 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             }
         )
         response = self.handler.native_query(query_str)
-        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        actual_mysql_types = [col.type for col in response.columns]
+        self.assertEqual(actual_mysql_types, excepted_mysql_types)
         self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 

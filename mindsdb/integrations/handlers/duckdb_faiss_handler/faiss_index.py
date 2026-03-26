@@ -503,11 +503,11 @@ class FaissIVFIndex(FaissIndex):
             return self.index.ntotal
 
     def check_required_disk_space(self, index_type):
-        available = psutil.disk_usage(self.path).free
+        base_path = Path(self.path).parent
+        available = psutil.disk_usage(str(base_path)).free
 
         # current size of index
         index_size = 0
-        base_path = Path(self.path).parent
         for item in base_path.iterdir():
             if item.is_dir() or not item.name.startswith("faiss_index"):
                 continue

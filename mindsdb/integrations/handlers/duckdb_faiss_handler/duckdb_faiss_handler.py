@@ -246,7 +246,7 @@ class DuckDBFaissHandler(VectorStoreHandler, KeywordSearchBase):
 
     # -- table methods --
 
-    def create_index(self, table_name: str, type: str = "ivf_file", nlist: int = None, train_count: int = None):
+    def create_index(self, table_name: str, type: str = None, nlist: int = None, train_count: int = None):
         with self.open_table(table_name) as table:
             table.create_index(type=type, nlist=nlist, train_count=train_count)
 

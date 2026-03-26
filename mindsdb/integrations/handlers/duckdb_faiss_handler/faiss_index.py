@@ -546,7 +546,7 @@ class FaissIVFIndex(FaissIndex):
             raise NotImplementedError("Only ivf or ivf_file indexes are supported")
 
         if index_type == "ivf_file" and os.name == "nt":
-            raise ValueError("IVF FILE index is not supported on Windows. Try to use ivf instead")
+            raise ValueError("'ivf_file' index is not supported on Windows. Try to use 'ivf' instead")
 
         # index might not fit into RAM, extract data to files
         base_path = Path(self.path).parent

@@ -1,7 +1,7 @@
 import ast
 from typing import Dict, Optional, List
 
-
+import litellm
 from litellm import completion, batch_completion, embedding, acompletion, supports_response_schema
 
 import pandas as pd
@@ -13,6 +13,8 @@ from mindsdb.integrations.handlers.litellm_handler.settings import CompletionPar
 
 
 logger = log.getLogger(__name__)
+
+litellm.drop_params = True
 
 
 class LiteLLMHandler(BaseMLEngine):
@@ -33,10 +35,6 @@ class LiteLLMHandler(BaseMLEngine):
 
     @classmethod
     def prepare_arguments(cls, provider, model_name, args):
-        if provider == "snowflake" and "snowflake_account_id" in args:
-            args["api_base"] = (
-                f"https://{args['snowflake_account_id']}.snowflakecomputing.com/api/v2/cortex/inference:complete"
-            )
         if provider == "google":
             provider = "gemini"
         if "base_url" in args:

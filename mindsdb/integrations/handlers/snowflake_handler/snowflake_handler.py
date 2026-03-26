@@ -596,7 +596,9 @@ class SnowflakeHandler(MetaDatabaseHandler):
                 for _, row in group.iterrows():
                     col = row["COLUMN_NAME"]
                     # Keys for stats_data should match the aliases in stats_query (e.g., "nulls_COLNAME")
-                    nulls = stats_data.get(f"nulls_{col}", 0)
+                    nulls = (
+                        float(stats_data.get(f"nulls_{col}", 0)) if stats_data.get(f"nulls_{col}") is not None else 0
+                    )
                     distincts = stats_data.get(f"distincts_{col}", None)
                     min_val = stats_data.get(f"min_{col}", None)
                     max_val = stats_data.get(f"max_{col}", None)
@@ -647,7 +649,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         """
         try:
             query = """
-                SHOW PRIMARY KEYS IN TABLE;
+                SHOW PRIMARY KEYS IN SCHEMA;
             """
 
             response = self.native_query(query)
@@ -682,7 +684,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
         """
         try:
             query = """
-                SHOW IMPORTED KEYS IN TABLE;
+                SHOW IMPORTED KEYS IN SCHEMA;
             """
 
             response = self.native_query(query)

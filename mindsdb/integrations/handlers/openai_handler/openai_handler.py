@@ -277,7 +277,7 @@ class OpenAIHandler(BaseMLEngine):
                 raise Exception(f"Invalid model name. Please use one of {available_models}")
                 
         except Exception as e:
-            raise
+            raise e
         finally:
             self.model_storage.json_set("args", args)
 

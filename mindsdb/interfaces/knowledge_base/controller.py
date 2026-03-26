@@ -1,4 +1,3 @@
-import os
 import copy
 from typing import Dict, List, Optional, Any, Text, Tuple, Union
 import json
@@ -32,6 +31,7 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import Preprocessing
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.knowledge_base.executor import KnowledgeBaseQueryExecutor
+from mindsdb.interfaces.knowledge_base.default_storage_resolver import resolve_default_storage_engines
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
@@ -1236,34 +1236,12 @@ class KnowledgeBaseController:
 
         # search for the vector database table
         if storage is None:
-            cloud_pg_vector = os.environ.get("KB_PGVECTOR_URL")
-            if cloud_pg_vector:
-                vector_table_name = name
-                # Add sparse vector support for pgvector
-                vector_db_params = {}
-                # Check both explicit parameter and model configuration
-                if is_sparse:
-                    vector_db_params["is_sparse"] = True
-                    if vector_size is not None:
-                        vector_db_params["vector_size"] = vector_size
-                vector_db_name = self._create_persistent_pgvector(vector_db_params)
-                params["default_vector_storage"] = vector_db_name
-            else:
-                # try faiss
-                module = self.session.integration_controller.get_handler_module("duckdb_faiss")
-                if module is None or module.Handler is None:
-                    raise ValueError(
-                        "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
-                        "One of the options is to use pgvector: "
-                        "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
-                    )
-
-                # create faiss db with same name
-                vector_table_name = "data"
-                vector_db_name = self._create_persistent_faiss(name)
-                # memorize to remove it later
-                params["default_vector_storage"] = vector_db_name
-
+            vector_db_name, vector_table_name = self._resolve_default_vector_storage(
+                kb_name=name,
+                is_sparse=is_sparse,
+                vector_size=vector_size,
+            )
+            params["default_vector_storage"] = vector_db_name
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:
@@ -1465,6 +1443,34 @@ class KnowledgeBaseController:
 
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
+
+    def _resolve_default_vector_storage(self, kb_name: str, is_sparse: bool = False, vector_size: int = None):
+        resolved_storage = resolve_default_storage_engines(config)
+        default_engine = resolved_storage["default_storage"]
+
+        if default_engine is None:
+            raise ValueError(
+                "Vector table is not defined. Set it by `storage=vector_db.vector_table` or configure "
+                "`knowledge_bases.storage` as one of: pgvector, faiss."
+            )
+
+        if default_engine == "pgvector":
+            vector_db_params = {}
+            if is_sparse:
+                vector_db_params["is_sparse"] = True
+                if vector_size is not None:
+                    vector_db_params["vector_size"] = vector_size
+            vector_db_name = self._create_persistent_pgvector(vector_db_params)
+            return vector_db_name, kb_name
+
+        if default_engine in ("duckdb_faiss", "faiss"):
+            vector_db_name = self._create_persistent_faiss(kb_name)
+            return vector_db_name, kb_name
+
+        raise ValueError(
+            f"Automatic default storage creation is not supported for engine '{default_engine}'. "
+            "Set `storage=vector_db.vector_table` explicitly."
+        )
 
     def _check_embedding_model(self, project_name, params: dict = None, kb_name="") -> dict:
         """check embedding model for knowledge base, return embedding model info"""

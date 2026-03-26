@@ -290,6 +290,7 @@ class Config:
             "knowledge_bases": {
                 "disable_autobatch": False,
                 "disable_pgvector_autobatch": True,
+                "storage": None,
             },
         }
         # endregion
@@ -323,6 +324,7 @@ class Config:
             "ml_task_queue": {},
             "gui": {},
             "byom": {},
+            "knowledge_bases": {},
         }
 
         # region storage root path
@@ -536,6 +538,8 @@ class Config:
         if mindsdb_mcp_dns_rebinding_protection is not None:
             self._env_config["api"]["mcp"]["dns_rebinding_protection"] = mindsdb_mcp_dns_rebinding_protection
         # endregion
+
+        # Keep env-based KB defaults out of config.auto.json overrides.
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.

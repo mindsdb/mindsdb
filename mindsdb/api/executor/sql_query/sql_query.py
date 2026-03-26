@@ -20,6 +20,8 @@ from mindsdb.api.executor.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     ApplyPredictorStep,
+    InsertToTable,
+    FetchDataframeStepPartition,
 )
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
@@ -27,21 +29,21 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.api.executor.planner import query_planner
 
 from mindsdb.api.executor.utilities.sql import get_query_models
-from mindsdb.interfaces.model.functions import get_model_record
+from mindsdb.interfaces.model.functions import get_model_record, get_project_record
 from mindsdb.api.executor.exceptions import (
     BadTableError,
     UnknownError,
     LogicError,
 )
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 from mindsdb.utilities.exception import EntityNotExistsError
-from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities.context import context as ctx
-
+from mindsdb.utilities.types.column import Column
 
 from . import steps
-from .result_set import ResultSet, Column
+from .result_set import ResultSet
 from .steps.base import BaseStepCall
 
 
@@ -71,7 +73,12 @@ class SQLQuery:
         else:
             self.database = session.database
 
-        self.context = {"database": None if self.database == "" else self.database.lower(), "row_id": 0}
+        # Handle None or empty database - convert to None for context
+        if self.database is None or self.database == "":
+            db_context = None
+        else:
+            db_context = self.database.lower()
+        self.context = {"database": db_context, "row_id": 0}
 
         self.columns_list = None
         self.steps_data: Dict[int, ResultSet] = {}
@@ -114,10 +121,23 @@ class SQLQuery:
         databases = self.session.database_controller.get_list()
 
         predictor_metadata = []
+        kb_metadata = {}
 
         query_tables = get_query_models(self.query, default_database=self.database)
 
         for project_name, table_name, table_version in query_tables:
+            project = get_project_record(project_name)
+            if project is None:
+                continue
+
+            # check if KB
+            kb = self.session.kb_controller.get(table_name, project.id)
+            if kb is not None:
+                params = kb.params.copy()
+                vector_db = self.session.integration_controller.get_by_id(kb.vector_database_id)
+                params["vector_db_engine"] = vector_db.get("engine") if vector_db is not None else None
+                kb_metadata[(project_name, table_name)] = params
+
             args = {"name": table_name, "project_name": project_name}
             if table_version is not None:
                 args["active"] = None
@@ -184,7 +204,7 @@ class SQLQuery:
                     }
                 )
 
-            predictor["model_types"] = model_record.data.get("dtypes", {})
+            predictor["model_types"] = model_record.dtype_dict or {}
 
             predictor_metadata.append(predictor)
 
@@ -196,6 +216,7 @@ class SQLQuery:
             integrations=databases,
             predictor_metadata=predictor_metadata,
             default_namespace=database,
+            kb_metadata=kb_metadata,
         )
 
     def prepare_query(self):
@@ -237,6 +258,16 @@ class SQLQuery:
         except PlanningException as e:
             raise LogicError(e) from e
 
+        # -- a plan with failback --
+        if self.planner.plan.probe_query is not None:
+            try:
+                probe_query = self.planner.plan.probe_query
+                SQLQuery(probe_query["query"], session=self.session, database=probe_query["database"])
+            except Exception:
+                # switch to failback plan
+                self.planner.plan = self.planner.plan.failback_plan
+                steps = self.planner.plan.steps
+
         if self.planner.plan.is_resumable:
             # create query
             if self.query_id is not None:
@@ -247,6 +278,16 @@ class SQLQuery:
                 )
 
             if self.planner.plan.is_async and ctx.task_id is None:
+                # release KB locks before inserting in background
+                db_released, partition_params = self.release_kb_lock(steps)
+                if db_released:
+                    # faiss db is used as a table to insert
+                    if partition_params.get("threads", 1) > 1:
+                        raise ValueError(
+                            "It is not possible to use threads for FAISS knowledge base, "
+                            f"please remove `threads={partition_params['threads']}` parameter"
+                        )
+
                 # add to task
                 self.run_query.add_to_task()
                 # return query info
@@ -259,7 +300,7 @@ class SQLQuery:
 
             ctx.run_query_id = self.run_query.record.id
 
-        step_result = None
+        step_result: list[ResultSet] = None
         process_mark = None
         try:
             steps_classes = (x.__class__ for x in steps)
@@ -273,7 +314,7 @@ class SQLQuery:
         except Exception as e:
             if self.run_query is not None:
                 # set error and place where it stopped
-                self.run_query.on_error(e, step.step_num, self.steps_data)
+                self.run_query.on_error(e, step.step_num if 'step' in locals() else -1, self.steps_data)
             raise e
         else:
             # mark running query as completed
@@ -294,10 +335,6 @@ class SQLQuery:
         self.fetched_data = step_result
 
         try:
-            if hasattr(self, "columns_list") is False:
-                # how it becomes False?
-                self.columns_list = self.fetched_data.columns
-
             if self.columns_list is None:
                 self.columns_list = self.fetched_data.columns
 
@@ -314,6 +351,22 @@ class SQLQuery:
             raise UnknownError(f"Unknown step: {cls_name}")
 
         return handler(self, steps_data=steps_data).call(step)
+
+    def release_kb_lock(self, steps):
+        # find knowledge bases that are used as tables to insert.
+        #  then release locks of vector for these knowledge bases
+        #  return partition step params and databases names that were unlocked
+        db_released, partition_params = [], {}
+        for step in steps:
+            if isinstance(step, InsertToTable):
+                db_name = self.session.kb_controller.release_lock(step.table, project_name=self.database)
+                if db_name:
+                    db_released.append(db_name)
+            if isinstance(step, FetchDataframeStepPartition):
+                dbs, _ = self.release_kb_lock(step.steps)
+                db_released.extend(dbs)
+                partition_params.update(step.params)
+        return db_released, partition_params
 
 
 SQLQuery.register_steps()

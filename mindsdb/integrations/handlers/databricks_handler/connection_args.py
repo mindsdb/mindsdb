@@ -21,7 +21,7 @@ connection_args = OrderedDict(
         "description": "A Databricks personal access token to authenticate the connection.",
         "required": True,
         "label": "Access Token",
-        'secret': True
+        "secret": True,
     },
     session_configuration={
         "type": ARG_TYPE.STR,

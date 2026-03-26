@@ -3,11 +3,21 @@ from http import HTTPStatus
 from unittest.mock import patch
 
 
-@patch("mindsdb.integrations.handlers.chromadb_handler.chromadb_handler.ChromaDBHandler")
-@patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-def test_update_kb_embeddings(mock_embedding, chroma, client):
+@patch("mindsdb.integrations.handlers.duckdb_faiss_handler.duckdb_faiss_handler.DuckDBFaissHandler")
+@patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+def test_update_kb_embeddings(mock_embedding, handler, client):
     # for test of embeddings
-    mock_embedding().data = [{"embedding": [0.1, 0.2]}]
+    mock_embedding().embeddings.return_value = [{"embedding": [0.1, 0.2]}]
+
+    integration_data = {
+        "database": {
+            "name": "kb_vector_db",
+            "engine": "duckdb_faiss",
+            "parameters": {},
+        }
+    }
+    response = client.post("/api/databases", json=integration_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.CREATED
 
     create_response = client.post(
         "/api/projects/mindsdb/knowledge_bases",
@@ -15,6 +25,7 @@ def test_update_kb_embeddings(mock_embedding, chroma, client):
         json={
             "knowledge_base": {
                 "name": "test_kb",
+                "storage": {"database": "kb_vector_db", "table": "default_collection"},
                 "params": {
                     "embedding_model": {
                         "provider": "gemini",
@@ -43,5 +54,5 @@ def test_update_kb_embeddings(mock_embedding, chroma, client):
     )
 
     assert update_response.status_code == HTTPStatus.OK
-    kwargs = mock_embedding.call_args_list[0][1]
+    kwargs = mock_embedding.call_args_list[0][0][0]
     assert kwargs["api_key"] == "embed-key-2"

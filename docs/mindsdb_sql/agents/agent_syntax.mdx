@@ -24,7 +24,8 @@ USING
          "tables": ["datasource_conn_name.table_name", ...]
     },
     prompt_template='describe data',
-    timeout=10;
+    timeout=10,
+    mode='text';
 ```
 
 It creates an agent that uses the defined model and has access to the connected data.
@@ -315,12 +316,24 @@ This parameter defines the time the agent can take to come back with an answer.
 
 For example, when the `timeout` parameter is set to 10, the agent has 10 seconds to return an answer. If the agent takes longer than 10 seconds, it aborts the process and comes back with an answer indicating its failure to return an answer within the defined time interval.
 
+### `mode`
+
+This parameter defines the agent's response style, allowing users to partially control the output format. Supported values include `text` and `sql`.
+
+When set, the agent will tailor its responses to match the specified format. Note that the agent may still adapt its output when necessary to ensure clarity or correctness.
+
 ## `SELECT FROM AGENT` Syntax
 
 Query an agent to generate responses to questions.
 
 ```sql
 SELECT answer
+FROM my_agent 
+WHERE question = 'What is the average number of orders per customers?';
+
+-- or
+
+SELECT customer_name, avg_number_of_orders
 FROM my_agent 
 WHERE question = 'What is the average number of orders per customers?';
 ```

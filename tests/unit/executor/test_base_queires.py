@@ -4,7 +4,31 @@ import pytest
 
 import pandas as pd
 
-from tests.unit.executor_test_base import BaseExecutorDummyML
+from tests.unit.executor_test_base import BaseExecutorDummyML, BaseExecutorTest
+
+
+def get_stores_df():
+    return pd.DataFrame(
+        columns=["id", "region_id", "format"],
+        data=[
+            [1, 1, "c"],
+            [2, 2, "a"],
+            [3, 2, "a"],
+            [4, 2, "b"],
+            [5, 1, "b"],
+            [6, 2, "b"],
+        ],
+    )
+
+
+def get_regions_df():
+    return pd.DataFrame(
+        columns=["id", "name"],
+        data=[
+            [1, "asia"],
+            [2, "europe"],
+        ],
+    )
 
 
 class TestSelect(BaseExecutorDummyML):
@@ -335,29 +359,88 @@ class TestSelect(BaseExecutorDummyML):
         # must be 2 rows
         assert len(ret) == 2
 
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_federated_query(self, data_handler):
+        statuses = pd.DataFrame(
+            [
+                [1, "new"],
+                [2, "progress"],
+                [3, "done"],
+                [4, "cancel"],
+                [5, "duplicate"],
+                [6, "docs"],
+                [7, "backlog"],
+            ],
+            columns=["id", "name"],
+        )
+
+        tasks = pd.DataFrame(
+            [
+                [1, 1, "new1"],
+                [2, 7, "backlog2"],
+                [3, 7, "backlog3"],
+                [4, 7, "backlog4"],
+                [5, 7, "backlog5"],
+                [6, 7, "backlog6"],
+            ],
+            columns=["id", "status", "name"],
+        )
+
+        self.set_handler(data_handler, name="db", tables={"statuses": statuses})
+        self.save_file("tasks", tasks)
+
+        # test inner join
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          JOIN files.tasks as t2 on t1.id=t2.status
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        assert len(tries) == 2
+        query1 = tries[0][0][0]
+        # not all record were fetched in first query
+        assert query1.limit.value < 6
+
+        # test with order by 2nd table
+        data_handler.reset_mock()
+
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          JOIN files.tasks as t2 on t1.id=t2.status
+          order by t2.id
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        # the first table was used once without the limit
+        assert len(tries) == 1
+        query1 = tries[0][0][0]
+        assert query1.limit is None
+
+        # test left join
+        data_handler.reset_mock()
+
+        ret = self.run_sql("""
+          SELECT * FROM db.statuses as t1
+          left join files.tasks as t2 on t1.id=t2.status
+          limit 2
+        """)
+
+        assert len(ret) == 2
+        tries = data_handler().query.call_args_list
+        # the first table was used once with the limit
+        assert len(tries) == 1
+        query1 = tries[0][0][0]
+        assert query1.limit.value == 2
+
     def test_complex_queries(self):
         # -- set up data --
 
-        stores = pd.DataFrame(
-            columns=["id", "region_id", "format"],
-            data=[
-                [1, 1, "c"],
-                [2, 2, "a"],
-                [3, 2, "a"],
-                [4, 2, "b"],
-                [5, 1, "b"],
-                [6, 2, "b"],
-            ],
-        )
-        regions = pd.DataFrame(
-            columns=["id", "name"],
-            data=[
-                [1, "asia"],
-                [2, "europe"],
-            ],
-        )
-        self.save_file("stores", stores)
-        self.save_file("regions", regions)
+        self.save_file("stores", get_stores_df())
+        self.save_file("regions", get_regions_df())
 
         # -- create view --
         self.run_sql("""
@@ -482,6 +565,21 @@ class TestSelect(BaseExecutorDummyML):
         # -- unions functions --
 
         # TODO Correlated subqueries (not implemented)
+
+    def test_pruning_ambiguous_columns(self):
+        self.save_file("stores", get_stores_df())
+        self.save_file("regions", get_regions_df())
+
+        ret = self.run_sql(
+            """
+             select format
+             from files.stores s
+             join files.regions r on r.id = s.region_id
+             where s.id = 3
+            """
+        )
+        assert len(ret) == 1
+        assert ret["format"][0] == "a"
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_replace_suqueries(self, data_handler):
@@ -769,7 +867,7 @@ class TestSelect(BaseExecutorDummyML):
 
         # is not possible to update name of database
         with pytest.raises(Exception):
-            res = self.run_sql("""
+            self.run_sql("""
                 alter database test_db name=db_test;
             """)
 
@@ -778,6 +876,74 @@ class TestSelect(BaseExecutorDummyML):
         """)
         assert res["NAME"][0] == "test_db"
         assert res["CONNECTION_DATA"][0] == '{"key": 2}'
+
+    def test_unknown_duckdb_function(self):
+        with pytest.raises(Exception) as exc_info:
+            self.run_sql("""
+                select unknown_function_asdf(1)
+            """)
+
+        assert "Unknown function" in str(exc_info.value)
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_subselect_1row_aggregate(self, data_handler):
+        self.set_handler(data_handler, name="pg", tables={})
+
+        ret = self.run_sql("""
+            select count (*) result from (
+                SELECT * FROM pg (
+                    select 'content'
+                )
+            ) 
+        """)
+        assert len(ret) == 1
+        assert ret["result"][0] == 1
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_cte_join(self, data_handler):
+        self.set_handler(data_handler, name="pg", tables={"stores": get_stores_df()})
+        self.save_file("regions", get_regions_df())
+
+        ret = self.run_sql("""
+            WITH regions AS (
+                SELECT DISTINCT id, name FROM files.regions
+            ),
+            stores AS (
+                SELECT * FROM pg.stores 
+                LIMIT 10 
+            )
+            SELECT format, region_id FROM pg.stores s 
+            JOIN regions r on r.id = s.region_id
+            WHERE s.format IN (SELECT format FROM stores WHERE format='a')
+            LIMIT 100;
+        """)
+        assert len(ret) > 1
+        assert ret["format"][0] == "a"
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_view_duplicated_cols(self, data_handler):
+        self.set_handler(data_handler, name="pg", tables={"stores": get_stores_df(), "regions": get_regions_df()})
+
+        with pytest.raises(Exception):
+            # `id` exists in both tables, should raise an exception
+            self.run_sql("""
+                create view v1 (
+                   select * from pg.stores s
+                   join pg.regions r on r.id = s.region_id
+                )
+            """)
+
+
+class TestSet(BaseExecutorTest):
+    @pytest.mark.parametrize("var", ["var", "@@var", "@@session.var", "session var"])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "on", "off"])
+    def test_set(self, var, value):
+        query = f"set {var} = {value}"
+        self.run_sql(query)
+
+    def test_multy_set(self):
+        query = "set @@var = ON, session var = 0"
+        self.run_sql(query)
 
 
 class TestDML(BaseExecutorDummyML):

@@ -13,6 +13,7 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     EmailsTable,
     MeetingsTable,
     NotesTable,
+    LeadsTable,
     OwnersTable,
     DealStagesTable,
     to_hubspot_property,
@@ -32,6 +33,9 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
+
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_oauth import HubSpotOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 logger = log.getLogger(__name__)
 
@@ -117,6 +121,7 @@ class HubspotHandler(MetaAPIHandler):
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
         self.kwargs = kwargs
+        self.handler_storage = kwargs.get("handler_storage")
 
         self.connection: Optional[HubSpot] = None
         self.is_connected: bool = False
@@ -135,6 +140,7 @@ class HubspotHandler(MetaAPIHandler):
         self._register_table("emails", EmailsTable(self))
         self._register_table("meetings", MeetingsTable(self))
         self._register_table("notes", NotesTable(self))
+        self._register_table("leads", LeadsTable(self))
         self._register_table("owners", OwnersTable(self))
         self._register_table("deal_stages", DealStagesTable(self))
 
@@ -147,39 +153,53 @@ class HubspotHandler(MetaAPIHandler):
             return self.connection
 
         try:
-            if "access_token" in self.connection_data:
-                access_token = self.connection_data["access_token"]
-                if not access_token or not isinstance(access_token, str):
+            access_token = self.connection_data.get("access_token")
+            client_id = self.connection_data.get("client_id")
+            client_secret = self.connection_data.get("client_secret")
+
+            if access_token:
+                if not isinstance(access_token, str) or not access_token.strip():
                     raise ValueError("Invalid access_token provided")
 
                 logger.info("Connecting to HubSpot using access token")
                 self.connection = HubSpot(access_token=access_token)
 
-            elif "client_id" in self.connection_data and "client_secret" in self.connection_data:
-                client_id = self.connection_data["client_id"]
-                client_secret = self.connection_data["client_secret"]
-
-                if not client_id or not client_secret:
-                    raise ValueError("Invalid OAuth credentials provided")
-
+            elif client_id and client_secret:
                 logger.info("Connecting to HubSpot using OAuth credentials")
-                self.connection = HubSpot(client_id=client_id, client_secret=client_secret)
+                oauth_manager = HubSpotOAuth2Manager(
+                    handler_storage=self.handler_storage,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    scopes=self.connection_data.get("scope"),
+                    optional_scopes=self.connection_data.get("optional_scope"),
+                    redirect_uri=self.connection_data.get("redirect_uri"),
+                    code=self.connection_data.get("code"),
+                    datasource_name=self.name,
+                )
+                logger.info("Attempting to obtain access token via OAuth flow")
+                logger.debug(oauth_manager)
+                self.connection = HubSpot(access_token=oauth_manager.get_access_token())
+
             else:
                 raise ValueError(
                     "Authentication credentials missing. Provide either 'access_token' "
-                    "or both 'client_id' and 'client_secret' for OAuth authentication."
+                    "or OAuth credentials: 'client_id' and 'client_secret'."
                 )
 
             self.is_connected = True
             logger.info("Successfully connected to HubSpot API")
             return self.connection
 
-        except ValueError:
-            logger.error("Failed to connect to HubSpot API")
+        except AuthException:
+            self.connection = None
+            self.is_connected = False
+            logger.info("HubSpot OAuth authorization required")
             raise
         except Exception as e:
-            logger.error("Failed to connect to HubSpot API")
-            raise ValueError(f"Connection to HubSpot failed: {str(e)}")
+            self.connection = None
+            self.is_connected = False
+            logger.error("Failed to connect to HubSpot API: %s", e)
+            raise ValueError(f"Connection to HubSpot failed: {e}") from e
 
     def disconnect(self) -> None:
         """Close connection and cleanup resources."""
@@ -190,6 +210,19 @@ class HubspotHandler(MetaAPIHandler):
     def check_connection(self) -> StatusResponse:
         """Checks whether the API client is connected to Hubspot."""
         response = StatusResponse(False)
+
+        # Defer OAuth code-for-token exchange: CREATE DATABASE runs check_connection
+        # with ephemeral handler_storage, so tokens written here would be discarded;
+        # later requests then fail with BAD_AUTH_CODE. Exchange only when a request
+        if self.connection_data.get("code") and not self.is_connected:
+            from mindsdb.integrations.handlers.hubspot_handler.hubspot_oauth import _STORAGE_KEY
+
+            if not self.handler_storage.encrypted_json_get(_STORAGE_KEY):
+                logger.info(
+                    "Deferring HubSpot check_connection because OAuth code exchange must happen in a persistent context."
+                )
+                response.success = True
+                return response
 
         try:
             self.connect()
@@ -213,6 +246,10 @@ class HubspotHandler(MetaAPIHandler):
                         response.error_message = error_msg
                         response.success = False
 
+        except AuthException as error:
+            response.error_message = str(error)
+            response.redirect_url = error.auth_url
+            return response
         except Exception as e:
             error_msg = _extract_hubspot_error_message(e)
             logger.error(f"HubSpot connection check failed: {error_msg}")
@@ -601,13 +638,14 @@ class HubspotHandler(MetaAPIHandler):
             "ticket_deals": "HubSpot ticket to deal associations",
             "owners": "HubSpot owners with names and emails",
             "deal_stages": "HubSpot deal pipeline stages with labels",
+            "leads": "HubSpot leads data including lead status, source and other lead properties",
         }
         return descriptions.get(table_name, f"HubSpot {table_name} data")
 
     def _estimate_table_rows(self, table_name: str) -> Optional[int]:
         """Get actual count of rows in a table using HubSpot Search API."""
         try:
-            if table_name in ["companies", "contacts", "deals", "tickets"]:
+            if table_name in ["companies", "contacts", "deals", "tickets", "leads"]:
                 result = getattr(self.connection.crm, table_name).search_api.do_search(
                     public_object_search_request={"limit": 1}
                 )

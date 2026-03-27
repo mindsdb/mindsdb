@@ -14,7 +14,7 @@ except Exception as e:
 title = "BigCommerce"
 name = "bigcommerce"
 type = HANDLER_TYPE.DATA
-icon_path = "bigcommerce-black.svg"
+icon_path = "icon.svg"
 support_level = HANDLER_SUPPORT_LEVEL.COMMUNITY
 
 __all__ = [

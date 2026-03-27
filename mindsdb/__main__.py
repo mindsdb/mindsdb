@@ -360,6 +360,15 @@ if __name__ == "__main__":
 
         sys.exit(0)
 
+    if config.cmd_args.mcp_stdio:
+        # StreamHandler writes to stderr by default, which MCP treats as notification messages.
+        # Raise the log level to ERROR to suppress notification spam, and explicitly set the
+        # stream to stderr in case the user has overridden it in their config.
+        os.environ["MINDSDB_CONSOLE_LOG_LEVEL"] = "ERROR"
+        config["logging"]["handlers"]["console"]["level"] = "ERROR"
+        config["logging"]["handlers"]["console"]["stream"] = "ext://sys.stderr"
+        log.configure_logging()
+
     config.raise_warnings(logger=logger)
     os.environ["MINDSDB_RUNTIME"] = "1"
 
@@ -429,6 +438,12 @@ if __name__ == "__main__":
         create_permanent_integrations()
 
     clean_process_marks()
+
+    if config.cmd_args.mcp_stdio:
+        from mindsdb.api.mcp.mcp_instance import mcp
+
+        mcp.run()
+        sys.exit(0)
 
     # Get config values for APIs
     http_api_config = config.get("api", {}).get("http", {})

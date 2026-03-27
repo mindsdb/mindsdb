@@ -12,7 +12,8 @@ class TestSchema(BaseExecutorDummyML):
             self.run_sql(f"show {item}")
 
     @pytest.mark.slow
-    def test_schema(self):
+    @patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+    def test_schema(self, check_agent):
         # --- create objects + describe ---
         # todo: create knowledge base (requires chromadb)
 
@@ -91,15 +92,15 @@ class TestSchema(BaseExecutorDummyML):
         # agent
         self.run_sql("""
               CREATE AGENT agent1
-              USING model = 'pred1'
+              USING model = {'model_name': "pred1", "provider": "openai"}
         """)
         self.run_sql("""
               CREATE AGENT proj2.agent2
-              USING model = 'pred2' -- it looks up in agent's project
+              USING model =  {'model_name': "pred2", "provider": "openai"} -- it looks up in agent's project
         """)
 
         df = self.run_sql("describe agent agent1")
-        assert df.NAME[0] == "agent1" and df.MODEL_NAME[0] == "pred1"
+        assert df.NAME[0] == "agent1" and "pred1" in df.MODEL[0]
 
         # chatbot
         self.run_sql("""

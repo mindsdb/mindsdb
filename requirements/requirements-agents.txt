@@ -10,4 +10,5 @@ mcp~=1.26.0 # Required for MCP server
 # A2A requirements
 httpx==0.28.1
 jwcrypto==1.5.6
-typing-extensions==4.14.1
+# fastmcp (via pydantic-ai) requires typing-extensions>=4.15.0 (py-key-value-aio chain)
+typing-extensions>=4.15.0,<5

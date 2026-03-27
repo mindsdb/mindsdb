@@ -314,7 +314,7 @@ class SQLQuery:
         except Exception as e:
             if self.run_query is not None:
                 # set error and place where it stopped
-                self.run_query.on_error(e, step.step_num, self.steps_data)
+                self.run_query.on_error(e, step.step_num if "step" in locals() else -1, self.steps_data)
             raise e
         else:
             # mark running query as completed

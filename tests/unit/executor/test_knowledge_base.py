@@ -1,6 +1,7 @@
 import time
 import json
 import tempfile
+import datetime as dt
 
 from unittest.mock import patch, MagicMock
 import threading
@@ -31,12 +32,13 @@ def task_monitor():
     worker.join()
 
 
-def dummy_embeddings(string, dimension=None):
+def dummy_embeddings(string, dimension=None, base=None):
     # Imitates embedding generation: create vectors which are similar for similar words in inputs
     if dimension is None:
         dimension = 25**2
     embeds = [0] * dimension
-    base = 25
+    if base is None:
+        base = 25
 
     string = string.lower().replace(",", " ").replace(".", " ")
     for word in string.split():
@@ -59,9 +61,9 @@ def dummy_embeddings(string, dimension=None):
     return embeds
 
 
-def set_embedding(mock_embedding, dimension=None):
+def set_embedding(mock_embedding, dimension=None, base=None):
     def resp_f(input, *args, **kwargs):
-        return [dummy_embeddings(s, dimension) for s in input]
+        return [dummy_embeddings(s, dimension, base) for s in input]
 
     mock_embedding().embeddings.side_effect = resp_f
 
@@ -165,7 +167,7 @@ class BaseTestKB(BaseExecutorDummyML):
         return pd.DataFrame(data, columns=["ral", "english", "italian"])
 
 
-class TestKB(BaseTestKB):
+class TestKBNOAutoBatch(BaseTestKB):
     def setup_method(self):
         super().setup_method()
         from mindsdb.utilities.config import config
@@ -479,7 +481,6 @@ class TestKB(BaseTestKB):
         set_embedding(mock_embedding)
 
         df = self._get_ral_table()
-        self.save_file("ral", df)
 
         df = pd.concat([df] * 30)
         # unique ids
@@ -626,8 +627,8 @@ class TestKB(BaseTestKB):
             for size in ("big", "middle", "small"):
                 for shape in ("square", "triangle", "circle"):
                     i += 1
-                    lines.append([i, i, f"{color} {size} {shape}", color, size, shape])
-        df = pd.DataFrame(lines, columns=["id", "num", "content", "color", "size", "shape"])
+                    lines.append([i, i, f"{color} {size} {shape}", color, size, shape, dt.date(2000, 1, i)])
+        df = pd.DataFrame(lines, columns=["id", "num", "content", "color", "size", "shape", "valid_date"])
 
         self.save_file("items", df)
 
@@ -735,6 +736,43 @@ class TestKB(BaseTestKB):
                 assert "big" in content
             else:
                 assert "small" in content
+
+        # -- metadata: like, not like
+        for query in ("trian%", "%riangl%", "%angle"):
+            ret = self.run_sql(f"select * from kb_alg where shape like '{query}'")
+
+            # only triangle
+            assert set(ret["shape"]) == {"triangle"}
+
+        # -- metadata: '>=', '>', '<=', '<'
+
+        ret = self.run_sql("select * from kb_alg where color > 'red'")
+        # only white
+        assert set(ret["color"]) == {"white"}
+
+        ret = self.run_sql("select * from kb_alg where color < 'red'")
+        # only green
+        assert set(ret["color"]) == {"green"}
+
+        ret = self.run_sql("select * from kb_alg where color <= 'red' and color > 'green'")
+        # only red
+        assert set(ret["color"]) == {"red"}
+
+        # filter by int
+        ret = self.run_sql("select * from kb_alg where num >= 10")
+        assert ret["num"].min() == 10
+
+        # filter by date
+        ret = self.run_sql("select * from kb_alg where valid_date >= '2000-01-15'")
+        assert ret["valid_date"].min() > "2000-01-14" and ret["valid_date"].min() < "2000-01-16"
+
+        ret = self.run_sql("select * from kb_alg where valid_date < '2000-01-15'")
+        assert ret["valid_date"].max() > "2000-01-13" and ret["valid_date"].min() < "2000-01-15"
+
+        # -- filter by id and content
+        ret = self.run_sql("select * from kb_alg where content = 'green' and id < 22")
+        assert ret["color"][0] == "green"
+        assert ret["id"].max() < 22
 
     @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
     def test_select_allowed_columns(self, mock_embedding):
@@ -1031,6 +1069,11 @@ class TestKB(BaseTestKB):
         assert kb.params["reranking_model"]["provider"] == "ollama"
         assert "api_key" not in kb.params["reranking_model"]
 
+        # disable reranking model and ensure config is cleared
+        self.run_sql("ALTER KNOWLEDGE BASE kb1 USING reranking_model = false")
+        kb = self.db.KnowledgeBase.query.filter_by(name="kb1").first()
+        assert kb.params["reranking_model"] == {}
+
     @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
     @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
     def test_ollama(self, mock_openai, mock_get_scores):
@@ -1203,6 +1246,111 @@ class TestKB(BaseTestKB):
         ret = self.run_sql("select * from kb1 where id = 1")
         assert len(ret) == 1
         assert ret["chunk_content"][0] == "dog"
+
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_reranking(self, mock_embedding, mock_get_scores):
+        set_embedding(mock_embedding)
+
+        self._create_kb(
+            "kb_ral",
+            content_columns=["english"],
+            reranking_model={
+                "provider": "openai",
+                "model_name": "gpt-3",
+                "api_key": "embed-key-1",
+            },
+        )
+
+        df = self._get_ral_table()
+        self.save_file("ral", df)
+
+        self.run_sql(
+            """
+                insert into kb_ral
+                select * from files.ral
+            """
+        )
+
+        # rank from greater to lower
+        mock_get_scores.side_effect = lambda query, docs: [1 - i / 4 for i in range(len(docs))]
+        ret = self.run_sql("select * from kb_ral where content='white'")
+        assert "white" in ret["chunk_content"].iloc[0]
+
+        # reverse rank: from lower to greater. the most semantic result have to be moved back
+        mock_get_scores.side_effect = lambda query, docs: [i / 4 for i in range(len(docs))]
+        ret = self.run_sql("select * from kb_ral where content='white'")
+        assert "white" not in ret["chunk_content"].iloc[0]
+
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_hybrid_search(self, mock_embedding):
+        df = self._get_ral_table()
+        self.save_file("ral", df)
+
+        set_embedding(mock_embedding)
+
+        self._create_kb("kb_hybrid", content_columns=["english"])
+
+        self.run_sql("insert into kb_hybrid  select * from files.ral")
+
+        # changing embedding config, making semantic search irrelevant
+        set_embedding(mock_embedding, base=20)
+
+        # white is not at the top
+        ret = self.run_sql("select * from kb_hybrid where content='white'")
+        assert "white" not in ret["chunk_content"].iloc[0]
+
+        # but it is when hybrid search is used
+        ret = self.run_sql("""
+            select * from kb_hybrid where content='white'
+            and hybrid_search_alpha = 0
+        """)
+        assert "white" in ret["chunk_content"].iloc[0]
+
+        # checking alpha=0.5
+        ret = self.run_sql("""
+            select * from kb_hybrid where content='white'
+            and hybrid_search = true
+        """)
+        assert "white" in ret["chunk_content"].iloc[0]
+
+    # @pytest.mark.slow
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
+    def test_create_index(self, mock_embedding):
+        set_embedding(mock_embedding)
+
+        df = self._get_ral_table()
+
+        df = pd.concat([df] * 30)
+        # unique ids
+        df["id"] = list(map(str, range(len(df))))
+        self.save_file("ral", df)
+
+        # create kb, fill it
+        self._create_kb("kb_ral", content_columns=["english"])
+
+        self.run_sql("insert into kb_ral select * from files.ral")
+
+        # create index default index (ivf_file, for windows it is ivf)
+        self.run_sql(
+            """
+            CREATE INDEX ON KNOWLEDGE_BASE kb_ral WITH (nlist=1)
+            """
+        )
+
+        # check kb works after index was created
+        ret = self.run_sql("select * from kb_ral where content='white'")
+        assert "white" in ret["chunk_content"].iloc[0]
+
+        # specified index
+        self.run_sql(
+            """
+            CREATE INDEX ON KNOWLEDGE_BASE kb_ral
+            WITH (nlist=1, type='ivf', train_count=50)
+            """
+        )
+        ret = self.run_sql("select * from kb_ral where content='white'")
+        assert "white" in ret["chunk_content"].iloc[0]
 
 
 class TestKBAutoBatch(BaseTestKB):

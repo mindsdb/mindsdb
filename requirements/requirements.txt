@@ -10,7 +10,7 @@ psutil~=7.0
 sqlalchemy >= 2.0.0, < 3.0.0
 psycopg2-binary  # This is required for using sqlalchemy with postgres
 alembic >= 1.3.3
-redis >=5.0.0, < 6.0.0
+redis==6.4.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0

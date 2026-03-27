@@ -245,25 +245,29 @@ def query_dfs(dataframes, query_ast, session=None):
     else:
         user_functions = None
 
-    # region collect schemas. This need to cut only tables/schemas names from identifiers, and keep aliases.
+    # region collect table aliases. Strip schema/db prefix from column identifiers, but keep table aliases.
     # Examples:
-    #   table.col = 1            ->  col = 1                  (schema prefix stripped)
-    #   table.alias.col = 1      ->  alias.col = 1            (schema prefix stripped, alias kept)
-    #   alias1.col = alias2.col  ->  alias1.col = alias2.col  (aliases untouched, no schema prefix)
-    known_schemas = set()
+    #   files.col = 1            ->  col = 1                  (schema prefix stripped)
+    #   files.a1.col = 1         ->  a1.col = 1               (schema prefix stripped, alias kept)
+    #   a1.col = a2.col          ->  a1.col = a2.col          (aliases untouched, no schema prefix)
+    #   "Custom SQL Query".col   ->  col                      (replaced subquery alias stripped)
+    known_aliases = set()
 
-    def collect_schemas(node, is_table, **kwargs):
-        if is_table and isinstance(node, Identifier) and len(node.parts) >= 2:
-            known_schemas.add(node.parts[0].lower())
+    def collect_aliases(node, is_table, **kwargs):
+        if not is_table or not isinstance(node, Identifier):
+            return
+        known_aliases.add(node.parts[-1].lower())
+        if node.alias is not None:
+            known_aliases.add(node.alias.parts[-1].lower())
 
-    query_traversal(query_ast, collect_schemas)
+    query_traversal(query_ast, collect_aliases)
     # endregion
 
     def adapt_query(node, is_table, **kwargs):
         if is_table:
             return
         if isinstance(node, Identifier):
-            if len(node.parts) > 1 and node.parts[0].lower() in known_schemas:
+            if len(node.parts) > 1 and node.parts[0].lower() not in known_aliases:
                 node.parts = node.parts[1:]
                 return node
         if isinstance(node, Function):

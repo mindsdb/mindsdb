@@ -37,6 +37,7 @@ SINGLE_PAGE_FORMAT = _SINGLE_PAGE_FORMAT()
 @dataclass(frozen=True, slots=True)
 class _MULTI_PAGE_FORMAT:
     XLSX: str = "xlsx"
+    XLS: str = "xls"
 
 
 MULTI_PAGE_FORMAT = _MULTI_PAGE_FORMAT()
@@ -120,6 +121,10 @@ class FormatDetector:
 
         self.parameters = {}
 
+    def close(self):
+        if self.file_obj is not None:
+            self.file_obj.close()
+
     def get_format(self) -> str:
         if self.format is not None:
             return self.format
@@ -155,9 +160,10 @@ class FormatDetector:
         if file_type is not None:
             if file_type.mime in {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "application/vnd.ms-excel",
             }:
                 return MULTI_PAGE_FORMAT.XLSX
+            if file_type.mime == "application/vnd.ms-excel":
+                return MULTI_PAGE_FORMAT.XLS
 
             if file_type.mime == "application/pdf":
                 return SINGLE_PAGE_FORMAT.PDF
@@ -381,3 +387,12 @@ class FileReader(FormatDetector):
                 else:
                     df = pd.read_excel(xls, sheet_name=page_name)
                 yield page_name, df
+
+    @staticmethod
+    def read_xls(
+        file_obj: BytesIO,
+        page_name: str | None = None,
+        only_names: bool = False,
+        **kwargs,
+    ):
+        return FileReader.read_xlsx(file_obj, page_name=page_name, only_names=only_names, **kwargs)

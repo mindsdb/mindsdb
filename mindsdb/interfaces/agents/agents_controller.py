@@ -1,7 +1,9 @@
 import datetime
-from typing import Dict, Iterator, List, Union, Tuple, Optional, Any
+from typing import Dict, Iterator, List, Union, Tuple, Optional, Any, Text
 import copy
 
+from enum import Enum
+from pydantic import BaseModel
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
 import pandas as pd
@@ -13,17 +15,56 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.utilities.config import config
+from mindsdb.utilities.utils import validate_pydantic_params
 from mindsdb.utilities import log
+from mindsdb.interfaces.agents.utils.sql_toolkit import MindsDBQuery
 
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from .utils.constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .utils.pydantic_ai_model_factory import get_llm_provider
-
+from .pydantic_ai_agent import check_agent_llm
 
 logger = log.getLogger(__name__)
 
 default_project = config.get("default_project")
+
+
+def check_agent_data(data):
+    tables = data.get("tables", [])
+    knowledge_bases = data.get("knowledge_bases", [])
+    if tables or knowledge_bases:
+        sql_toolkit = MindsDBQuery(tables=tables, knowledge_bases=knowledge_bases)
+
+        if tables and len(sql_toolkit.get_usable_table_names(lazy=False)) == 0:
+            raise ValueError(f"No tables found: {tables}")
+
+        if knowledge_bases and len(sql_toolkit.get_usable_knowledge_base_names(lazy=False)) == 0:
+            raise ValueError(f"No knowledge bases found: {knowledge_bases}")
+
+
+class AgentParamsData(BaseModel):
+    knowledge_bases: List[str] | None = None
+    tables: List[str] | None = None
+
+    class Config:
+        extra = "forbid"
+
+
+class AgentMode(Enum):
+    TEXT = "text"
+    SQL = "sql"
+
+
+class AgentParams(BaseModel):
+    prompt_template: str | None = None
+    model: Dict[Text, Any] | None = None
+    data: AgentParamsData | None = None
+    timeout: int | None = None
+    mode: AgentMode = AgentMode.TEXT
+
+    class Config:
+        extra = "forbid"
 
 
 class AgentsController:
@@ -149,8 +190,7 @@ class AgentsController:
         self,
         name: str,
         project_name: str = None,
-        model_name: Union[str, dict] = None,
-        provider: str = None,
+        model: dict = None,
         params: Dict[str, Any] = None,
     ) -> db.Agents:
         """
@@ -159,24 +199,15 @@ class AgentsController:
         Parameters:
             name (str): The name of the new agent
             project_name (str): The containing project
-            model_name (str | dict): The name of the existing ML model the agent will use
-            provider (str): The provider of the model
+            model: Dict, parameters for the model to use
+                - provider: The provider of the model (e.g., 'openai', 'google')
+                - Other model-specific parameters like 'api_key', 'model_name', etc.
+
             params (Dict[str, str]): Parameters to use when running the agent
                 data: Dict, data sources for an agent, keys:
                   - knowledge_bases: List of KBs to use
                   - tables: list of tables to use
-                model: Dict, parameters for the model to use
-                  - provider: The provider of the model (e.g., 'openai', 'google')
-                  - Other model-specific parameters like 'api_key', 'model_name', etc.
                 <provider>_api_key: API key for the provider (e.g., openai_api_key)
-
-                # Deprecated parameters:
-                database: The database to use (default is 'mindsdb')
-                knowledge_base_database: The database to use for knowledge base queries (default is 'mindsdb')
-                include_tables: List of tables to include
-                ignore_tables: List of tables to ignore
-                include_knowledge_bases: List of knowledge bases to include
-                ignore_knowledge_bases: List of knowledge bases to ignore
 
         Returns:
             agent (db.Agents): The created agent
@@ -195,61 +226,19 @@ class AgentsController:
 
         # No need to copy params since we're not preserving the original reference
         params = params or {}
+        params["model"] = model
 
-        if isinstance(model_name, dict):
-            # move into params
-            params["model"] = model_name
-            model_name = None
+        # check agent params
+        validate_pydantic_params(params, AgentParams, "agent")
 
-        if model_name is not None:
-            _, provider = self.check_model_provider(model_name, provider)
+        # check llm works
+        llm_params = self.get_agent_llm_params(model)
+        check_agent_llm(llm_params)
 
-        if model_name is None:
-            logger.warning("'model_name' param is not provided. Using default global llm model at runtime.")
-
-        # If model_name is not provided, we use default global llm model at runtime
-        # Default parameters will be applied at runtime via get_agent_llm_params
-        # This allows global default updates to apply to all agents immediately
-
-        # Extract API key if provided in the format <provider>_api_key
-        if provider is not None:
-            provider_api_key_param = f"{provider.lower()}_api_key"
-            if provider_api_key_param in params:
-                # Keep the API key in params for the agent to use
-                # It will be picked up by get_api_key() in handler_utils.py
-                pass
-
-        # Handle generic api_key parameter if provided
-        if "api_key" in params:
-            # Keep the generic API key in params for the agent to use
-            # It will be picked up by get_api_key() in handler_utils.py
-            pass
-
-        depreciated_params = [
-            "database",
-            "knowledge_base_database",
-            "include_tables",
-            "ignore_tables",
-            "include_knowledge_bases",
-            "ignore_knowledge_bases",
-        ]
-        if any(param in params for param in depreciated_params):
-            raise ValueError(
-                f"Parameters {', '.join(depreciated_params)} are deprecated. "
-                "Use 'data' parameter with 'tables' and 'knowledge_bases' keys instead."
-            )
-
-        include_tables = None
-        include_knowledge_bases = None
-        if "data" in params:
-            include_knowledge_bases = params["data"].get("knowledge_bases")
-            include_tables = params["data"].get("tables")
-
-        # Convert string parameters to lists if needed
-        if isinstance(include_tables, str):
-            include_tables = [t.strip() for t in include_tables.split(",")]
-        if isinstance(include_knowledge_bases, str):
-            include_knowledge_bases = [kb.strip() for kb in include_knowledge_bases.split(",")]
+        # check data
+        data = params.get("data", {})
+        if data:
+            check_agent_data(data)
 
         agent = db.Agents(
             name=name,
@@ -257,8 +246,6 @@ class AgentsController:
             company_id=ctx.company_id,
             user_id=ctx.user_id,
             user_class=ctx.user_class,
-            model_name=model_name,
-            provider=provider,
             params=params,
         )
 
@@ -272,9 +259,8 @@ class AgentsController:
         agent_name: str,
         project_name: str = default_project,
         name: str = None,
-        model_name: Union[str, dict] = None,
-        provider: str = None,
-        params: Dict[str, str] = None,
+        model: dict = None,
+        params: Dict[str, Any] = None,
     ):
         """
         Updates an agent in the database.
@@ -283,8 +269,7 @@ class AgentsController:
             agent_name (str): The name of the new agent, or existing agent to update
             project_name (str): The containing project
             name (str): The updated name of the agent
-            model_name (str | dict): The name of the existing ML model the agent will use
-            provider (str): The provider of the model
+            model dict: model parameters
             params: (Dict[str, str]): Parameters to use when running the agent
 
         Returns:
@@ -301,12 +286,7 @@ class AgentsController:
         existing_params = existing_agent.params or {}
 
         is_demo = (existing_agent.params or {}).get("is_demo", False)
-        if is_demo and (
-            (name is not None and name != agent_name)
-            or (model_name is not None and existing_agent.model_name != model_name)
-            or (provider is not None and existing_agent.provider != provider)
-            or (isinstance(params, dict) and len(params) > 0 and "prompt_template" not in params)
-        ):
+        if is_demo:
             raise ValueError("It is forbidden to change properties of the demo object")
 
         if name is not None and name != agent_name:
@@ -316,27 +296,34 @@ class AgentsController:
                 raise EntityExistsError(f"Agent with updated name already exists: {name}")
             existing_agent.name = name
 
-        if model_name or provider:
-            if isinstance(model_name, dict):
-                # move into params
-                existing_params["model"] = model_name
-                model_name = None
+        params = params or {}
 
-            # check model and provider
-            _, provider = self.check_model_provider(model_name, provider)
-            # Update model and provider
-            existing_agent.model_name = model_name
-            existing_agent.provider = provider
+        if model:
+            params["model"] = model
 
-        if params is not None:
-            # Merge params on update
-            existing_params.update(params)
-            # Remove None values entirely.
-            params = {k: v for k, v in existing_params.items() if v is not None}
-            existing_agent.params = params
-            # Some versions of SQL Alchemy won't handle JSON updates correctly without this.
-            # See: https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.attributes.flag_modified
-            flag_modified(existing_agent, "params")
+        if params:
+            validate_pydantic_params(params, AgentParams, "agent")
+        else:
+            # do nothing
+            return existing_agent
+
+        if model:
+            # check llm works
+            llm_params = self.get_agent_llm_params(model)
+            check_agent_llm(llm_params)
+
+        data = params.get("data", {})
+        if data:
+            check_agent_data(data)
+
+        # Merge params on update
+        existing_params.update(params)
+        # Remove None values entirely.
+        params = {k: v for k, v in existing_params.items() if v is not None}
+        existing_agent.params = params
+        # Some versions of SQL Alchemy won't handle JSON updates correctly without this.
+        # See: https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.attributes.flag_modified
+        flag_modified(existing_agent, "params")
         db.session.commit()
 
         return existing_agent
@@ -362,31 +349,11 @@ class AgentsController:
         agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
-    def get_agent_llm_params(self, agent):
+    def get_agent_llm_params(self, model_params):
         """
         Get agent LLM parameters by combining default config with user provided parameters.
         Uses the same pattern as knowledge bases get_model_params function.
         """
-
-        agent_params = agent.params
-
-        # Get model params from agent params (same structure as knowledge bases)
-        if "model" in agent_params:
-            model_params = agent_params.get("model", {})
-            if not isinstance(model_params, dict):
-                raise ValueError("Model parameters must be passed as a JSON object")
-        else:
-            # params for LLM can be arbitrary (backward compatibility)
-            model_params = copy.deepcopy(agent_params)
-            model_params.pop("mode", None)
-            model_params.pop("prompt_template", None)
-
-            _, provider = self.check_model_provider(agent.model_name, agent.provider)
-
-            if agent.model_name is not None:
-                model_params["model_name"] = agent.model_name
-            if provider is not None:
-                model_params["provider"] = provider
 
         combined_model_params = copy.deepcopy(config.get("default_llm", {}))
 
@@ -433,7 +400,7 @@ class AgentsController:
         from .pydantic_ai_agent import PydanticAIAgent
 
         # Get agent parameters and combine with default LLM parameters at runtime
-        llm_params = self.get_agent_llm_params(agent)
+        llm_params = self.get_agent_llm_params(agent.params.get("model"))
 
         pydantic_agent = PydanticAIAgent(agent, llm_params=llm_params)
 

@@ -13,6 +13,10 @@ on:
       deploy-env:
         required: true
         type: string
+      runs-on:
+        required: false
+        type: string
+        default: "mdb-dev"
     secrets:
       OPENAI_API_KEY:
         required: true
@@ -25,6 +29,10 @@ on:
       deploy-env:
         required: true
         type: string
+      runs-on:
+        required: false
+        type: string
+        default: "mdb-dev"
     secrets:
       OPENAI_API_KEY:
         required: true
@@ -43,7 +51,7 @@ jobs:
       name: ${{ inputs.deploy-env }}
       url: ${{ vars.MDB_ENV_URL }}
     name: Run integration tests on deploy
-    runs-on: mdb-dev
+    runs-on: ${{ inputs.runs-on }}
     steps:
     - uses: actions/checkout@v4
       with:

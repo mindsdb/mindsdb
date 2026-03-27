@@ -11,6 +11,7 @@ from mindsdb_sql_parser.ast import (
     Star,
     BinaryOperation,
     Function,
+    Parameter,
 )
 from mindsdb_sql_parser.utils import JoinType
 
@@ -319,43 +320,71 @@ class TestPlanJoinTables:
 
     def test_join_tables_plan_order_by(self):
         query = parse_sql("""
+            WITH tab2 AS (
+                SELECT * FROM int2.tab2 limit 100
+            ),            
+            categories as (
+                SELECT * FROM int3.cats
+            )        
             SELECT 
               tab1.column1, tab2.column1, tab2.column2 
-            FROM int.tab1 INNER 
-             JOIN int2.tab2 ON tab1.column1 > tab2.column1 
+            FROM  int.tab1 tab1
+            INNER JOIN tab2 ON tab1.column1 > tab2.column1 
+             WHERE tab2.category_id = (SELECT id FROM categories WHERE name='book')
             ORDER BY tab1.column1 
             LIMIT 10 
         """)
 
         subquery = copy.deepcopy(query)
+        subquery.cte = None
         subquery.from_table = None
         subquery.offset = None
+        subquery.where.args[1] = Parameter(Result(2))
 
-        plan = plan_query(query, integrations=["int", "int2"])
+        plan = plan_query(query, integrations=["int", "int2", "int3"], default_namespace="mindsdb")
         expected_plan = QueryPlan(
             integrations=["int"],
             steps=[
-                FetchDataframeStepPartition(
+                FetchDataframeStep(
                     step_num=0,
+                    integration="int2",
+                    query=parse_sql("select * from tab2 limit 100"),
+                ),
+                FetchDataframeStep(
+                    step_num=1,
+                    integration="int3",
+                    query=parse_sql("select * from cats"),
+                ),
+                SubSelectStep(
+                    step_num=2,
+                    query=Select(
+                        targets=[Identifier("id")],
+                        where=BinaryOperation(op="=", args=[Identifier("name"), Constant("book")]),
+                    ),
+                    dataframe=Result(1),
+                    table_name="categories",
+                ),
+                FetchDataframeStepPartition(
+                    step_num=3,
                     integration="int",
-                    query=parse_sql("select column1 AS column1 from tab1 order by column1"),
+                    query=parse_sql("select column1 AS column1 from tab1 AS tab1 order by column1"),
                     condition={"limit": 10},
                     steps=[
-                        FetchDataframeStep(
-                            step_num=1,
-                            integration="int2",
+                        SubSelectStep(
+                            step_num=4,
+                            dataframe=Result(0),
                             query=Select(
                                 targets=[
-                                    Identifier("column1", alias=Identifier("column1")),
-                                    Identifier("column2", alias=Identifier("column2")),
+                                    Star(),
                                 ],  # Column pruning
-                                from_table=Identifier("tab2"),
+                                where=BinaryOperation(op="=", args=[Identifier("category_id"), Parameter(Result(2))]),
                             ),
+                            table_name="tab2",
                         ),
                         JoinStep(
-                            step_num=2,
-                            left=Result(0),
-                            right=Result(1),
+                            step_num=5,
+                            left=Result(3),
+                            right=Result(4),
                             query=Join(
                                 left=Identifier("tab1"),
                                 right=Identifier("tab2"),
@@ -367,7 +396,7 @@ class TestPlanJoinTables:
                         ),
                     ],
                 ),
-                QueryStep(subquery, from_table=Result(0), strict_where=False),
+                QueryStep(subquery, from_table=Result(3), strict_where=False),
             ],
         )
 
@@ -784,7 +813,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.JOIN,
                     ),
                 ),
-                QueryStep(parse_sql("SELECT t1.`id`, t2.*"), from_table=Result(3), strict_where=False),
+                QueryStep(parse_sql("SELECT t1.id, t2.*"), from_table=Result(3), strict_where=False),
             ]
         )
 

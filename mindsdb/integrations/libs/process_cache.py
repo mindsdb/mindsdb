@@ -214,10 +214,6 @@ class ProcessCache:
 
         if config["ml_task_queue"]["type"] != "redis":
             if is_cloud:
-                lightwood_handler = integration_controller.get_handler_module("lightwood")
-                if lightwood_handler is not None and lightwood_handler.Handler is not None:
-                    preload_handlers[lightwood_handler.Handler] = 4 if is_cloud else 1
-
                 huggingface_handler = integration_controller.get_handler_module("huggingface")
                 if huggingface_handler is not None and huggingface_handler.Handler is not None:
                     preload_handlers[huggingface_handler.Handler] = 1
@@ -330,7 +326,7 @@ class ProcessCache:
             raise Exception(f"Unknown ML task type: {task_type}")
 
         ml_engine_name = payload["handler_meta"]["engine"]
-        model_marker = (model_id, payload["context"]["company_id"])
+        model_marker = (model_id, payload["context"]["company_id"], payload["context"]["user_id"])
         with self._lock:
             if ml_engine_name not in self.cache:
                 warm_process = WarmProcess(init_ml_handler, (handler_module_path,))

@@ -23,7 +23,7 @@ import pandas as pd
 from pandas.api import types as pd_types
 
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.fs import safe_extract
 from mindsdb.interfaces.storage import db
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -55,11 +55,8 @@ class BYOMHandler(BaseMLEngine):
 
     def __init__(self, model_storage, engine_storage, **kwargs) -> None:
         # region check availability
-        is_cloud = Config().get("cloud", False)
-        if is_cloud is True:
-            byom_enabled = os.environ.get("MINDSDB_BYOM_ENABLED", "false").lower()
-            if byom_enabled not in ("true", "1"):
-                raise RuntimeError("BYOM is disabled on cloud")
+        if config["byom"]["enabled"] is not True:
+            raise RuntimeError("BYOM is disabled")
         # endregion
 
         self.model_wrapper = None
@@ -80,7 +77,7 @@ class BYOMHandler(BaseMLEngine):
         # region check if 'inhouse' BYOM is enabled
         env_var = os.environ.get("MINDSDB_BYOM_INHOUSE_ENABLED")
         if env_var is None:
-            self._inhouse_enabled = False if is_cloud else True
+            self._inhouse_enabled = False if config.is_cloud else True
         else:
             self._inhouse_enabled = env_var.lower() in ("true", "1")
         # endregion
@@ -331,7 +328,6 @@ class BYOMHandler(BaseMLEngine):
         engine_version = using_args.get("engine_version")
 
         model_storage = self.model_storage
-        # TODO: should probably refactor at some point, as a bit of the logic is shared with lightwood's finetune logic
         try:
             base_predictor_id = args["base_model_id"]
             base_predictor_record = db.Predictor.query.get(base_predictor_id)
@@ -441,8 +437,8 @@ class ModelWrapperSafe:
         self.code = code
         modules = self.parse_requirements(modules_str)
 
-        self.config = Config()
-        self.is_cloud = Config().get("cloud", False)
+        self.config = config
+        self.is_cloud = config.is_cloud
 
         self.env_path = None
         self.env_storage_path = None

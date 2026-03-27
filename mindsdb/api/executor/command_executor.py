@@ -75,7 +75,8 @@ from mindsdb_sql_parser.ast.mindsdb import (
 
 import mindsdb.utilities.profiler as profiler
 
-from mindsdb.api.executor.sql_query.result_set import Column, ResultSet
+from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.utilities.types.column import Column
 from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
@@ -1483,13 +1484,11 @@ class ExecuteCommands:
     def answer_create_agent(self, statement, database_name):
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        provider = statement.params.pop("provider", None)
         try:
             _ = self.session.agents_controller.add_agent(
                 name=name,
                 project_name=project_name,
-                model_name=statement.model,
-                provider=provider,
+                model=statement.model,
                 params=variables_controller.fill_parameters(statement.params),
             )
         except EntityExistsError as e:
@@ -1520,7 +1519,7 @@ class ExecuteCommands:
             _ = self.session.agents_controller.update_agent(
                 name,
                 project_name=project_name,
-                model_name=model,
+                model=model,
                 params=variables_controller.fill_parameters(statement.params),
             )
         except (EntityExistsError, EntityNotExistsError, ValueError) as e:

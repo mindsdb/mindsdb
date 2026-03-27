@@ -9,13 +9,14 @@ from mindsdb_sql_parser.ast import Select, Identifier, Star, BinaryOperation, Co
 from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.functions import resolve_table_identifier
-from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.utilities.exception import EntityNotExistsError
-import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
-from mindsdb.api.executor.datahub.classes.response import DataHubResponse
+from mindsdb.utilities.types.column import Column
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.integrations.libs.response import TableResponse
+import mindsdb.interfaces.storage.db as db
+from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.api.executor.datahub.classes.tables_row import (
     TABLES_ROW_TYPE,
     TablesRow,
@@ -228,7 +229,7 @@ class LogDBController:
             for table_name in self._tables.keys()
         ]
 
-    def query(self, query: Select = None, native_query: str = None, session=None) -> DataHubResponse:
+    def query(self, query: Select = None, native_query: str = None, session=None) -> TableResponse:
         if native_query is not None:
             if query is not None:
                 raise Exception("'query' and 'native_query' arguments can not be used together")
@@ -290,6 +291,5 @@ class LogDBController:
                     df[df_column_name] = df[df_column_name].astype(column_type)
         # endregion
 
-        columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
-
-        return DataHubResponse(data_frame=df, columns=columns_info)
+        columns = [Column(name=k, dtype=v) for k, v in df.dtypes.items()]
+        return TableResponse(data=df, columns=columns, affected_rows=0)

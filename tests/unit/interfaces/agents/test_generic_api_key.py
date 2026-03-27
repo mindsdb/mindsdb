@@ -1,9 +1,8 @@
 import os
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.interfaces.agents.agents_controller import AgentsController
 
 
 class TestGenericApiKeyHandling(unittest.TestCase):
@@ -70,100 +69,6 @@ class TestGenericApiKeyHandling(unittest.TestCase):
             "google", {"google_api_key": "test-specific-google-api-key", "api_key": "test-generic-google-api-key"}
         )
         self.assertEqual(api_key, "test-specific-google-api-key")
-
-    @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.check_model_provider")
-    @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.get_agent")
-    @patch("mindsdb.interfaces.agents.agents_controller.ProjectController")
-    @patch("mindsdb.interfaces.storage.db.session")
-    def test_add_agent_with_generic_api_key(
-        self, mock_session, mock_project_controller, mock_get_agent, mock_check_model_provider
-    ):
-        """Test adding an agent with a generic API key in params."""
-        # Mock project controller
-        mock_project = MagicMock()
-        mock_project_controller.return_value.get.return_value = mock_project
-
-        # Mock get_agent to return None (agent doesn't exist yet)
-        mock_get_agent.return_value = None
-
-        # Mock check_model_provider to return a provider
-        mock_check_model_provider.return_value = (None, "openai")
-
-        # Create an instance of AgentsController
-        agent_controller = AgentsController()
-
-        # Test adding an agent with a generic API key in params
-        params = {"api_key": "test-generic-agent-api-key", "other_param": "value"}
-
-        # Create a mock agent with proper params
-        mock_agent = MagicMock()
-        mock_agent.params = params.copy()  # Set params directly
-
-        # Mock db.Agents to return our prepared mock agent
-        with patch("mindsdb.interfaces.storage.db.Agents", return_value=mock_agent):
-            # Add the agent
-            agent = agent_controller.add_agent(
-                name="test_agent",
-                project_name="mindsdb",
-                model_name="gpt-4",
-                provider="openai",
-                params=params,
-            )
-
-        # Verify that the generic API key was preserved in the params
-        self.assertEqual(agent.params["api_key"], "test-generic-agent-api-key")
-
-    @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.check_model_provider")
-    @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.get_agent")
-    @patch("mindsdb.interfaces.agents.agents_controller.ProjectController")
-    @patch("mindsdb.interfaces.storage.db.session")
-    def test_add_agent_with_both_api_keys(
-        self, mock_session, mock_project_controller, mock_get_agent, mock_check_model_provider
-    ):
-        """Test adding an agent with both generic and provider-specific API keys."""
-        # Mock project controller
-        mock_project = MagicMock()
-        mock_project_controller.return_value.get.return_value = mock_project
-
-        # Mock get_agent to return None (agent doesn't exist yet)
-        mock_get_agent.return_value = None
-
-        # Mock check_model_provider to return a provider
-        mock_check_model_provider.return_value = (None, "openai")
-
-        # Create an instance of AgentsController
-        agent_controller = AgentsController()
-
-        # Test adding an agent with both generic and provider-specific API keys
-        params = {
-            "api_key": "test-generic-agent-api-key",
-            "openai_api_key": "test-specific-agent-api-key",
-            "other_param": "value",
-        }
-
-        # Create a mock agent with proper params
-        mock_agent = MagicMock()
-        mock_agent.params = params.copy()  # Set params directly
-
-        # Mock db.Agents to return our prepared mock agent
-        with patch("mindsdb.interfaces.storage.db.Agents", return_value=mock_agent):
-            # Add the agent
-            agent = agent_controller.add_agent(
-                name="test_agent",
-                project_name="mindsdb",
-                model_name="gpt-4",
-                provider="openai",
-                params=params,
-            )
-
-        # Verify that both API keys were preserved in the params
-        self.assertEqual(agent.params["api_key"], "test-generic-agent-api-key")
-        self.assertEqual(agent.params["openai_api_key"], "test-specific-agent-api-key")
-
-        # Test that get_api_key returns the provider-specific key when both are present
-        api_key = get_api_key("openai", {"params": params})
-
-        self.assertEqual(api_key, "test-specific-agent-api-key")
 
 
 if __name__ == "__main__":

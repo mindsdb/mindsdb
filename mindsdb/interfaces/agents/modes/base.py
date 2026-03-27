@@ -8,6 +8,10 @@ class PlanResponse(BaseModel):
     estimated_steps: int = Field(..., description="Estimated number of steps needed to solve the question")
 
 
+class TestResponse(BaseModel):
+    text: str = Field(..., description="Text response to the user")
+
+
 class ResponseType:
     FINAL_QUERY = "final_query"  # this is the final query
     EXPLORATORY = "exploratory_query"  # this is a query to explore and collect info to solve the challenge (e.g., distinct values of a categorical column, schema inference, etc.)

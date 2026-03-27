@@ -210,6 +210,7 @@ def get_handlers_config(process_name: str) -> dict:
             "class": "mindsdb.utilities.log.StreamSanitizingHandler",
             "formatter": console_handler_config.get("formatter", "default"),
             "level": console_handler_config_level,
+            "stream": console_handler_config.get("stream", "ext://sys.stderr"),
         }
 
     file_handler_config = app_config["logging"]["handlers"]["file"]

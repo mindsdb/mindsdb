@@ -245,12 +245,26 @@ def query_dfs(dataframes, query_ast, session=None):
     else:
         user_functions = None
 
+    # region collect schemas. This need to cut only tables/schemas names from identifiers, and keep aliases.
+    # Examples:
+    #   table.col = 1            ->  col = 1                  (schema prefix stripped)
+    #   table.alias.col = 1      ->  alias.col = 1            (schema prefix stripped, alias kept)
+    #   alias1.col = alias2.col  ->  alias1.col = alias2.col  (aliases untouched, no schema prefix)
+    known_schemas = set()
+
+    def collect_schemas(node, is_table, **kwargs):
+        if is_table and isinstance(node, Identifier) and len(node.parts) >= 2:
+            known_schemas.add(node.parts[0].lower())
+
+    query_traversal(query_ast, collect_schemas)
+    # endregion
+
     def adapt_query(node, is_table, **kwargs):
         if is_table:
             return
         if isinstance(node, Identifier):
-            if len(node.parts) > 1:
-                node.parts = [node.parts[-1]]
+            if len(node.parts) > 1 and node.parts[0].lower() in known_schemas:
+                node.parts = node.parts[1:]
                 return node
         if isinstance(node, Function):
             fnc = mysql_to_duckdb_fnc(node)

@@ -1,4 +1,4 @@
-openai<3.0.0,>=2.9.0
+openai<3.0.0,>=2.11.0
 
 # When using agents, some LLMs may require the 'transformers' library (like Ollama):
 transformers >= 4.42.4

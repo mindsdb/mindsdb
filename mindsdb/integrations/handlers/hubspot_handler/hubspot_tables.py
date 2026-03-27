@@ -1,11 +1,15 @@
 from typing import List, Dict, Any, Optional, Tuple, Set, Iterable
 import calendar
-import inspect
 import re
 from datetime import date, datetime, time, timedelta
 
 import pandas as pd
 from hubspot import HubSpot
+from hubspot.crm.associations.models import BatchInputPublicObjectId, PublicObjectId
+from hubspot.crm.contacts.models import (
+    BatchReadInputSimplePublicObjectId,
+    SimplePublicObjectId as ContactObjectId,
+)
 from hubspot.crm.objects import (
     SimplePublicObjectId as HubSpotObjectId,
     SimplePublicObjectBatchInput as HubSpotObjectBatchInput,
@@ -899,8 +903,11 @@ def _build_hubspot_search_filters(
 
         if hubspot_operator in {"IN", "NOT_IN"}:
             values = _extract_in_values(value)
+            values = [v for v in values if v is not None]
             if not values:
-                logger.warning(f"Empty IN clause values for column '{column}'")
+                logger.debug(
+                    f"No valid (non-None) values in IN clause for column '{column}', falling back to post-filter"
+                )
                 return None
 
             logger.debug(f"Building IN filter for {column}: {values}")
@@ -973,6 +980,9 @@ def _prepare_association_request(object_type: str, columns: List[str]) -> Tuple[
     return association_targets, hubspot_columns
 
 
+HUBSPOT_IN_MAX = 100
+
+
 def _execute_hubspot_search(
     search_api,
     filters: List[Dict],
@@ -984,17 +994,56 @@ def _execute_hubspot_search(
 ) -> List[Dict[str, Any]]:
     """
     Execute paginated HubSpot search with filters.
+    Automatically chunks oversized IN filters (HubSpot max: 100 values).
     """
+    logger.debug(f"[_execute_hubspot_search] called — object_type={object_type}, limit={limit}, filters={filters}")
+    for i, f in enumerate(filters or []):
+        if f.get("operator") in {"IN", "NOT_IN"} and len(f.get("values", [])) > HUBSPOT_IN_MAX:
+            values = f["values"]
+            chunks = [values[j : j + HUBSPOT_IN_MAX] for j in range(0, len(values), HUBSPOT_IN_MAX)]
+            # When no explicit limit is provided, cap the number of chunks we process.
+            # Without this cap, a caller that passes id IN [10000 ids] with limit=None
+            # would fire 100+ sequential HubSpot API calls and run indefinitely.
+            MAX_CHUNKS_WITHOUT_LIMIT = 10
+            effective_limit = limit
+            if limit is None and len(chunks) > MAX_CHUNKS_WITHOUT_LIMIT:
+                effective_limit = MAX_CHUNKS_WITHOUT_LIMIT * HUBSPOT_IN_MAX
+            collected: List[Dict[str, Any]] = []
+            for chunk in chunks:
+                if effective_limit is not None and len(collected) >= effective_limit:
+                    break
+                chunk_limit = effective_limit - len(collected) if effective_limit is not None else None
+                chunked_filters = filters[:i] + [{**f, "values": chunk}] + filters[i + 1 :]
+                collected.extend(
+                    _execute_hubspot_search(
+                        search_api,
+                        chunked_filters,
+                        properties,
+                        chunk_limit,
+                        to_dict_fn,
+                        sorts,
+                        object_type,
+                    )
+                )
+            return collected
+
     collected: List[Dict[str, Any]] = []
     remaining = limit if limit is not None else float("inf")
     after = None
+    page_num = 0
 
     while remaining > 0:
+        page_num += 1
         page_limit = min(int(remaining) if remaining != float("inf") else 200, 200)
+        logger.debug(
+            f"[_execute_hubspot_search] page {page_num} — fetching up to {page_limit} results (after={after}, collected={len(collected)})"
+        )
         search_request = {
-            "properties": properties,
             "limit": page_limit,
         }
+
+        if properties:
+            search_request["properties"] = properties
 
         if filters:
             search_request["filterGroups"] = [{"filters": filters}]
@@ -1019,12 +1068,14 @@ def _execute_hubspot_search(
         next_page = getattr(paging, "next", None) if paging else None
         after = getattr(next_page, "after", None) if next_page else None
 
+        logger.debug(f"[_execute_hubspot_search] page {page_num} — got {len(results)} results, after={after}")
         if after is None:
             break
 
         if remaining != float("inf"):
             remaining = limit - len(collected)
 
+    logger.debug(f"[_execute_hubspot_search] done — total collected={len(collected)}")
     return collected
 
 
@@ -1039,15 +1090,34 @@ class HubSpotAPIResource(APIResource):
     # Reference: https://developers.hubspot.com/docs/api-reference/search/guide
     SEARCHABLE_COLUMNS: Set[str] = set()
 
+    # Aggregate function names → pandas equivalents
+    _AGG_FUNC_MAP: Dict[str, str] = {
+        "sum": "sum",
+        "count": "count",
+        "avg": "mean",
+        "mean": "mean",
+        "max": "max",
+        "min": "min",
+    }
+
     def select(self, query: ASTNode) -> pd.DataFrame:
-        """
-        Override select to handle server-side filtering properly.
-        """
+        """Select data, applying WHERE, GROUP BY, ORDER BY, LIMIT and function evaluation."""
+        table_name = self.__class__.__name__
+
         conditions, order_by, result_limit = self._extract_query_params(query)
+        group_by_cols = self._get_group_by_columns(query)
+        # Targets include columns referenced inside functions and GROUP BY
         targets = self._get_targets(query)
-        original_targets = list(targets)
+        fetch_targets = list(dict.fromkeys(targets + group_by_cols))
         normalized_conditions = _normalize_filter_conditions(conditions)
-        self._validate_query_columns(targets, normalized_conditions, order_by)
+
+        self._validate_query_columns(fetch_targets, normalized_conditions, order_by)
+
+        for condition in normalized_conditions:
+            if len(condition) >= 3 and condition[0] == "in":
+                in_vals = condition[2] if isinstance(condition[2], list) else [condition[2]]
+                if not in_vals or all(v is None for v in in_vals):
+                    return pd.DataFrame(columns=fetch_targets or self.get_columns())
 
         if self.SEARCHABLE_COLUMNS:
             filters = (
@@ -1055,7 +1125,12 @@ class HubSpotAPIResource(APIResource):
                 if normalized_conditions
                 else None
             )
-            sorts = _build_hubspot_search_sorts(order_by, self.SEARCHABLE_COLUMNS) if order_by else None
+            # Don't push ORDER BY to search when GROUP BY is present (need raw rows)
+            sorts = (
+                _build_hubspot_search_sorts(order_by, self.SEARCHABLE_COLUMNS)
+                if order_by and not group_by_cols
+                else None
+            )
             use_search = filters is not None or sorts is not None
         else:
             filters = None
@@ -1063,33 +1138,39 @@ class HubSpotAPIResource(APIResource):
             use_search = False
 
         fetch_columns = self._get_fetch_columns(
-            targets=targets,
+            targets=fetch_targets,
             normalized_conditions=normalized_conditions,
-            order_by=order_by,
+            order_by=order_by if not group_by_cols else [],
             use_search=use_search,
         )
 
         result = self.list(
             conditions=conditions if not use_search else None,
-            limit=result_limit,
-            sort=order_by if not use_search else None,
+            limit=result_limit if not group_by_cols else None,
+            sort=order_by if not use_search and not group_by_cols else None,
             targets=fetch_columns,
             search_filters=filters,
             search_sorts=sorts,
             allow_search=use_search,
         )
 
-        if use_search:
-            logger.debug("Filters/sorts pushed to HubSpot API, skipping post-filter/sort")
-            return self._apply_column_selection(result, original_targets)
-
-        if normalized_conditions and not result.empty:
+        # Post-filter for non-search queries
+        if not use_search and normalized_conditions and not result.empty:
             result = self._apply_post_filter(result, normalized_conditions)
 
+        # GROUP BY + aggregation
+        if group_by_cols and not result.empty:
+            result = self._apply_aggregation(result, query, group_by_cols)
+
+        # ORDER BY (after aggregation so we can sort on aggregate columns)
         if order_by and not result.empty:
             result = self._apply_post_sort(result, order_by)
 
-        return self._apply_column_selection(result, original_targets)
+        # LIMIT (applied after aggregation/sort)
+        if result_limit is not None and not result.empty:
+            result = result.head(result_limit)
+
+        return self._apply_column_selection(result, query.targets or [])
 
     def _extract_query_params(self, query: ASTNode) -> Tuple[List, List, Optional[int]]:
         """Extract conditions, order_by, and limit from query AST."""
@@ -1174,7 +1255,6 @@ class HubSpotAPIResource(APIResource):
             op_key = canonical_op(op)
 
             if column not in df.columns:
-                logger.warning(f"Column '{column}' not found in DataFrame for post-filtering")
                 continue
 
             try:
@@ -1197,7 +1277,6 @@ class HubSpotAPIResource(APIResource):
                     values = value if isinstance(value, (list, tuple, set)) else [value]
                     mask &= ~df[column].isin(values)
             except Exception as e:
-                logger.warning(f"Error applying post-filter for {column}: {e}")
                 continue
 
         return df[mask].reset_index(drop=True)
@@ -1208,7 +1287,6 @@ class HubSpotAPIResource(APIResource):
         for sort_item in sort:
             column = to_internal_property(sort_item.column)
             if column not in df.columns:
-                logger.warning(f"Column '{column}' not found in DataFrame for post-sorting")
                 continue
             sort_columns.append(column)
             sort_ascending.append(sort_item.ascending)
@@ -1219,17 +1297,55 @@ class HubSpotAPIResource(APIResource):
         try:
             return df.sort_values(by=sort_columns, ascending=sort_ascending).reset_index(drop=True)
         except Exception as e:
-            logger.warning(f"Error applying post-sort: {e}")
             return df
 
-    def _apply_column_selection(self, df: pd.DataFrame, targets: List[str]) -> pd.DataFrame:
-        """Apply column selection if specific columns requested."""
+    def _apply_column_selection(self, df: pd.DataFrame, targets) -> pd.DataFrame:
+        """Apply column selection, resolving AST target nodes and aliases."""
         if not targets or df.empty:
             return df
 
-        existing_targets = [t for t in targets if t in df.columns]
-        if existing_targets:
-            return df[existing_targets]
+        def _alias_str(alias) -> Optional[str]:
+            """Convert an alias (str or Identifier) to a plain string."""
+            if alias is None:
+                return None
+            if isinstance(alias, str):
+                return alias
+            if isinstance(alias, sql_ast.Identifier):
+                return alias.parts[-1]
+            return str(alias)
+
+        selected: List[str] = []
+        for target in targets:
+            if isinstance(target, sql_ast.Star):
+                return df
+            # AST node with an alias — the alias becomes the output column name
+            alias = _alias_str(getattr(target, "alias", None))
+            if alias and alias in df.columns:
+                selected.append(alias)
+                continue
+            # Plain identifier
+            if isinstance(target, sql_ast.Identifier):
+                col = to_internal_property(target.parts[-1])
+                if col in df.columns:
+                    selected.append(col)
+                continue
+            # Function without alias — resolved agg column
+            if isinstance(target, sql_ast.Function):
+                func_name = (getattr(target, "op", None) or getattr(target, "name", "")).lower()
+                inner_cols = self._extract_target_columns(target)
+                candidate = f"{func_name}({inner_cols[0]})" if inner_cols else func_name
+                if candidate in df.columns:
+                    selected.append(candidate)
+                elif inner_cols and inner_cols[0] in df.columns:
+                    selected.append(inner_cols[0])
+                continue
+            # Plain string
+            if isinstance(target, str) and target in df.columns:
+                selected.append(target)
+
+        selected = list(dict.fromkeys(selected))
+        if selected:
+            return df[selected]
         return df
 
     def _validate_query_columns(
@@ -1238,15 +1354,24 @@ class HubSpotAPIResource(APIResource):
         normalized_conditions: List[List[Any]],
         order_by: List[SortColumn],
     ) -> None:
+        # Names that are SQL aggregate/scalar functions — skip validation
+        _FUNC_NAMES = {"sum", "count", "avg", "mean", "max", "min", "date_trunc", "lower", "upper", "coalesce"}
+
         requested = set()
-        requested.update(targets or [])
+        for col in targets or []:
+            if col.lower() not in _FUNC_NAMES:
+                requested.add(col)
 
         for condition in normalized_conditions:
             if len(condition) >= 2:
-                requested.add(condition[1])
+                col = condition[1]
+                if col.lower() not in _FUNC_NAMES:
+                    requested.add(col)
 
         for sort_item in order_by or []:
-            requested.add(to_internal_property(sort_item.column))
+            col = to_internal_property(sort_item.column)
+            if col.lower() not in _FUNC_NAMES:
+                requested.add(col)
 
         if not requested:
             return
@@ -1261,6 +1386,88 @@ class HubSpotAPIResource(APIResource):
         raise ValueError(
             f"Column(s) {missing_cols} do not exist for this HubSpot table. Available columns: {available_cols}."
         )
+
+    def _get_group_by_columns(self, query: ASTNode) -> List[str]:
+        """Extract GROUP BY column names from query AST."""
+        if not query.group_by:
+            return []
+        cols = []
+        for item in query.group_by:
+            if isinstance(item, sql_ast.Identifier):
+                cols.append(to_internal_property(item.parts[-1]))
+            elif isinstance(item, sql_ast.Function):
+                # e.g. DATE_TRUNC('month', closedate) — include the inner column
+                inner_cols = self._extract_target_columns(item)
+                cols.extend(inner_cols)
+        return list(dict.fromkeys(cols))
+
+    def _apply_aggregation(self, df: pd.DataFrame, query: ASTNode, group_by_cols: List[str]) -> pd.DataFrame:
+        """Apply GROUP BY + aggregation to a DataFrame based on query targets."""
+        if not group_by_cols:
+            return df
+
+        # Collect (input_col, agg_func, output_alias) triples from SELECT targets
+        agg_specs: List[Tuple[str, str, str]] = []
+        for target in query.targets or []:
+            if not isinstance(target, sql_ast.Function):
+                continue
+            func_name = (getattr(target, "op", None) or getattr(target, "name", "")).lower()
+            pandas_agg = self._AGG_FUNC_MAP.get(func_name)
+            if pandas_agg is None:
+                continue
+            inner_cols = self._extract_target_columns(target)
+            raw_alias = getattr(target, "alias", None)
+            alias = (
+                raw_alias.parts[-1]
+                if isinstance(raw_alias, sql_ast.Identifier)
+                else str(raw_alias)
+                if raw_alias is not None and not isinstance(raw_alias, str)
+                else raw_alias
+            )
+            if inner_cols:
+                col = inner_cols[0]
+                out_name = alias or f"{func_name}({col})"
+                agg_specs.append((col, pandas_agg, out_name))
+            elif func_name == "count":
+                # COUNT(*) — use first group_by col as proxy
+                out_name = alias or "count"
+                agg_specs.append((group_by_cols[0], "count", out_name))
+
+        if not agg_specs:
+            # No aggregate functions — just deduplicate by group keys
+            return df[group_by_cols].drop_duplicates().reset_index(drop=True)
+
+        # Validate group-by columns exist
+        valid_group_cols = [c for c in group_by_cols if c in df.columns]
+        if not valid_group_cols:
+            return df
+
+        agg_dict: Dict[str, List[str]] = {}
+        for col, pandas_agg, _ in agg_specs:
+            if col in df.columns:
+                agg_dict.setdefault(col, []).append(pandas_agg)
+
+        if not agg_dict:
+            return df[valid_group_cols].drop_duplicates().reset_index(drop=True)
+
+        grouped = df.groupby(valid_group_cols, as_index=False).agg(agg_dict)
+        # Flatten multi-level columns from groupby + agg
+        if isinstance(grouped.columns, pd.MultiIndex):
+            grouped.columns = ["_".join(filter(None, c)) for c in grouped.columns]
+
+        # Rename output columns to requested aliases
+        rename_map: Dict[str, str] = {}
+        for col, pandas_agg, out_name in agg_specs:
+            # pandas names the result column as col_agg in multi-level flattened case
+            candidate = f"{col}_{pandas_agg}"
+            if candidate in grouped.columns and candidate != out_name:
+                rename_map[candidate] = out_name
+            elif col in grouped.columns and col != out_name:
+                rename_map[col] = out_name
+        if rename_map:
+            grouped = grouped.rename(columns=rename_map)
+
+        return grouped.reset_index(drop=True)
 
     def _get_fetch_columns(
         self,
@@ -1468,7 +1675,7 @@ class CompaniesTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("companies")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot companies row count: {e}")
+            pass
 
         return {
             "TABLE_NAME": "companies",
@@ -1620,11 +1827,14 @@ class CompaniesTable(HubSpotAPIResource):
 
         companies = hubspot.crm.companies.get_all(**api_kwargs)
         companies_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for company in companies:
             try:
                 companies_dict.append(self._company_to_dict(company, columns))
+                if len(companies_dict) >= effective_limit:
+                    break
             except Exception as e:
-                logger.warning(f"Error processing company {getattr(company, 'id', 'unknown')}: {str(e)}")
                 continue
 
         logger.info(f"Retrieved {len(companies_dict)} companies from HubSpot")
@@ -1694,6 +1904,24 @@ class CompaniesTable(HubSpotAPIResource):
             raise Exception(f"Companies deletion failed {e}")
 
 
+def _extract_association_condition(conditions: List[List[Any]], column: str) -> Optional[List[str]]:
+    """
+    Return a list of non-None string values if conditions contain an
+    eq/in filter on *column*, otherwise return None.
+    """
+    for condition in conditions:
+        if len(condition) >= 3 and condition[1] == column:
+            op, val = condition[0], condition[2]
+            if op == "eq" and val is not None:
+                return [str(val)]
+            if op == "in":
+                vals = val if isinstance(val, list) else [val]
+                valid = [str(v) for v in vals if v is not None]
+                if valid:
+                    return valid
+    return None
+
+
 class ContactsTable(HubSpotAPIResource):
     """Hubspot Contacts table."""
 
@@ -1733,7 +1961,7 @@ class ContactsTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("contacts")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot contacts row count: {e}")
+            pass
 
         return {
             "TABLE_NAME": "contacts",
@@ -1858,6 +2086,9 @@ class ContactsTable(HubSpotAPIResource):
         allow_search: bool = True,
         **kwargs,
     ) -> List[Dict]:
+        logger.debug(
+            f"[ContactsTable] get_contacts() called — limit={limit}, conditions={where_conditions}, properties={properties}"
+        )
         normalized_conditions = _normalize_filter_conditions(where_conditions)
         hubspot = self.handler.connect()
         requested_properties = properties or []
@@ -1865,13 +2096,58 @@ class ContactsTable(HubSpotAPIResource):
         columns = requested_properties or default_properties
         association_targets, hubspot_columns = _prepare_association_request("contacts", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
+        logger.debug(
+            f"[ContactsTable] get_contacts() — association_targets={association_targets}, hubspot_columns={hubspot_columns}"
+        )
 
+        # Optimization: if filtering by primary_company_id, bypass full contact
+        # scan and use the associations API to fetch only the relevant contacts.
+        company_ids = _extract_association_condition(normalized_conditions, "primary_company_id")
+        if company_ids:
+            logger.debug(
+                f"[ContactsTable] get_contacts() — company_ids filter detected ({len(company_ids)} ids), using associations API"
+            )
+            return self._get_contacts_by_company_ids(
+                hubspot, company_ids, hubspot_columns, hubspot_properties, columns, limit
+            )
+
+        # Guard: fetching association columns (primary_company_id) without any
+        # WHERE filter means MindsDB's join executor is doing a full table scan
+        # to resolve a direct FK join — e.g.:
+        #   FROM contacts c JOIN companies co ON c.primary_company_id = co.id
+        # MindsDB injects a large LIMIT (e.g. 20010) for its in-memory join
+        # buffer, so we also block large-limit scans, not just limit=None.
+        # Small explicit limits (≤ MAX_ASSOCIATION_SCAN) are allowed so that
+        # a user can still browse a few contacts with their association columns.
+        # Return empty immediately. Users should rewrite the query using the
+        # appropriate association table, e.g.:
+        #   FROM companies co
+        #   JOIN company_contacts cc ON cc.company_id = co.id
+        #   JOIN contacts c ON c.id = cc.contact_id
+        MAX_ASSOCIATION_SCAN = 500
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
+            msg = (
+                "Direct FK joins between HubSpot objects using foreign key columns "
+                "(e.g. primary_company_id) are not supported. The HubSpot API represents "
+                "relationships through association tables.\n\n"
+                "Please rewrite your query using the association table, e.g.:\n"
+                "SELECT c.firstname, c.lastname, c.email\n"
+                "FROM companies co\n"
+                "JOIN company_contacts cc ON cc.company_id = co.id\n"
+                "JOIN contacts c ON c.id = cc.contact_id\n"
+                "WHERE co.name = 'HubSpot'"
+            )
+            raise ValueError(msg)
+
+        logger.debug(
+            f"[ContactsTable] get_contacts() — proceeding with scan/search. allow_search={allow_search}, search_filters={search_filters}, normalized_conditions={normalized_conditions}"
+        )
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
-        if association_targets and "associations" in inspect.signature(hubspot.crm.contacts.get_all).parameters:
+        if association_targets:
             api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
@@ -1881,6 +2157,9 @@ class ContactsTable(HubSpotAPIResource):
             if filters is not None or search_sorts is not None:
                 if association_targets:
                     logger.debug("HubSpot search API does not include associations for contacts.")
+                logger.debug(
+                    f"[ContactsTable] get_contacts() — calling _search_contacts_by_conditions with filters={filters}, limit={limit}"
+                )
                 search_results = self._search_contacts_by_conditions(
                     hubspot,
                     filters,
@@ -1893,19 +2172,112 @@ class ContactsTable(HubSpotAPIResource):
                 logger.info(f"Retrieved {len(search_results)} contacts from HubSpot via search API")
                 return search_results
 
+        logger.debug(
+            f"[ContactsTable] get_contacts() — falling back to full scan (get_all), effective_limit={limit if limit is not None else 10_000}"
+        )
         contacts = hubspot.crm.contacts.get_all(**api_kwargs)
         contacts_dict = []
+        # Without an explicit LIMIT MindsDB's join executor does not propagate the
+        # outer LIMIT to sub-table queries, leading to unbounded full-table scans.
+        # Cap the scan so that JOIN queries don't run indefinitely.  Queries that
+        # genuinely need more than MAX_SCAN_ROWS rows should supply an explicit LIMIT.
+        # Cap full scans at MAX_SCAN_ROWS regardless of whether limit was explicit.
+        # MindsDB's in-memory join executor injects large limits (e.g. 20010, 20000)
+        # for its join buffer, causing multi-minute full table scans.  Applying min()
+        # ensures those injected limits are treated the same as limit=None.
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
+        logger.debug(f"[ContactsTable] get_contacts() — full scan capped at {effective_limit}")
         try:
             for contact in contacts:
                 row = self._contact_to_dict(contact, hubspot_columns, association_targets)
                 contacts_dict.append(row)
-                if limit is not None and len(contacts_dict) >= limit:
+                if effective_limit is not None and len(contacts_dict) >= effective_limit:
+                    logger.debug(
+                        f"[ContactsTable] get_contacts() — reached effective_limit={effective_limit}, stopping scan"
+                    )
                     break
         except Exception as e:
             logger.error(f"Failed to iterate HubSpot contacts: {str(e)}")
             raise
 
         logger.info(f"Retrieved {len(contacts_dict)} contacts from HubSpot")
+        return contacts_dict
+
+    def _get_contacts_by_company_ids(
+        self,
+        hubspot: HubSpot,
+        company_ids: List[str],
+        hubspot_columns: List[str],
+        hubspot_properties: List[str],
+        columns: List[str],
+        limit: Optional[int],
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch contacts that are associated with the given company IDs using
+        HubSpot's batch associations API + batch read, instead of scanning
+        all contacts (~100x faster for large accounts).
+        """
+        logger.debug(
+            f"[ContactsTable] _get_contacts_by_company_ids() called — company_ids={company_ids}, limit={limit}"
+        )
+        BATCH = 100
+        # contact_id -> company_id (first company that referenced this contact)
+        contact_company_map: Dict[str, str] = {}
+
+        for i in range(0, len(company_ids), BATCH):
+            chunk = company_ids[i : i + BATCH]
+            try:
+                resp = hubspot.crm.associations.batch_api.read(
+                    "companies",
+                    "contacts",
+                    BatchInputPublicObjectId(inputs=[PublicObjectId(id=cid) for cid in chunk]),
+                )
+                for multi in resp.results or []:
+                    from_id = str(
+                        (multi._from or {}).get("id", "")
+                        if isinstance(multi._from, dict)
+                        else getattr(multi._from, "id", "")
+                    )
+                    for assoc in multi.to or []:
+                        cid = str(assoc.id)
+                        if cid not in contact_company_map:
+                            contact_company_map[cid] = from_id
+            except Exception as e:
+                pass
+
+        if not contact_company_map:
+            logger.debug(
+                "[ContactsTable] _get_contacts_by_company_ids() — no contacts found for given company_ids, returning []"
+            )
+            return []
+
+        logger.debug(
+            f"[ContactsTable] _get_contacts_by_company_ids() — found {len(contact_company_map)} contact ids from associations API"
+        )
+        all_contact_ids = list(contact_company_map.keys())
+        if limit is not None:
+            all_contact_ids = all_contact_ids[:limit]
+
+        contacts_dict = []
+        for i in range(0, len(all_contact_ids), BATCH):
+            batch_ids = all_contact_ids[i : i + BATCH]
+            try:
+                resp = hubspot.crm.contacts.batch_api.read(
+                    batch_read_input_simple_public_object_id=BatchReadInputSimplePublicObjectId(
+                        properties=hubspot_properties,
+                        inputs=[ContactObjectId(id=cid) for cid in batch_ids],
+                    )
+                )
+                for contact in resp.results or []:
+                    row = self._contact_to_dict(contact, hubspot_columns, None)
+                    row["primary_company_id"] = contact_company_map.get(str(contact.id))
+                    contacts_dict.append(row)
+            except Exception as e:
+                logger.error(f"Failed to batch read contacts: {e}")
+                raise
+
+        logger.info(f"Retrieved {len(contacts_dict)} contacts via company associations API")
         return contacts_dict
 
     def _search_contacts_by_conditions(
@@ -1918,6 +2290,9 @@ class ContactsTable(HubSpotAPIResource):
         columns: List[str],
         association_targets: List[str],
     ) -> List[Dict[str, Any]]:
+        logger.debug(
+            f"[ContactsTable] _search_contacts_by_conditions() called — filters={filters}, limit={limit}, sorts={sorts}"
+        )
         return _execute_hubspot_search(
             hubspot.crm.contacts.search_api,
             filters or [],
@@ -1940,7 +2315,6 @@ class ContactsTable(HubSpotAPIResource):
                 row = enrich_object_with_associations(contact, "contacts", row)
             return row
         except Exception as e:
-            logger.warning(f"Error processing contact {getattr(contact, 'id', 'unknown')}: {str(e)}")
             assoc_columns = get_primary_association_columns("contacts") if association_targets else []
             return {
                 "id": getattr(contact, "id", None),
@@ -2025,7 +2399,7 @@ class DealsTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("deals")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot deals row count: {e}")
+            pass
 
         return {
             "TABLE_NAME": "deals",
@@ -2259,12 +2633,25 @@ class DealsTable(HubSpotAPIResource):
         hubspot_columns = self._strip_virtual_columns(hubspot_columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
+            msg = (
+                "Direct FK joins on HubSpot deals using foreign key columns "
+                "(e.g. primary_company_id, primary_contact_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table, e.g.:\n"
+                "FROM companies co\n"
+                "JOIN company_deals cd ON cd.company_id = co.id\n"
+                "JOIN deals d ON d.id = cd.deal_id"
+            )
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
-        if association_targets and "associations" in inspect.signature(hubspot.crm.deals.get_all).parameters:
+        if association_targets:
             api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
@@ -2290,10 +2677,16 @@ class DealsTable(HubSpotAPIResource):
 
         deals = hubspot.crm.deals.get_all(**api_kwargs)
         deals_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
+        logger.debug(f"[DealsTable] get_deals() — full scan capped at {effective_limit}")
         for deal in deals:
             try:
                 row = self._deal_to_dict(deal, hubspot_columns, association_targets)
                 deals_dict.append(row)
+                if len(deals_dict) >= effective_limit:
+                    logger.debug(f"[DealsTable] get_deals() — reached effective_limit={effective_limit}, stopping scan")
+                    break
             except Exception as e:
                 logger.error(f"Error processing deal {getattr(deal, 'id', 'unknown')}: {str(e)}")
                 raise ValueError(f"Failed to process deal {getattr(deal, 'id', 'unknown')}.") from e
@@ -2388,7 +2781,7 @@ class TicketsTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("tickets")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot tickets row count: {e}")
+            pass
 
         return {
             "TABLE_NAME": "tickets",
@@ -2503,12 +2896,25 @@ class TicketsTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("tickets", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
+            msg = (
+                "Direct FK joins on HubSpot tickets using foreign key columns "
+                "(e.g. primary_company_id, primary_contact_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table, e.g.:\n"
+                "FROM companies co\n"
+                "JOIN company_tickets ct ON ct.company_id = co.id\n"
+                "JOIN tickets t ON t.id = ct.ticket_id"
+            )
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
         else:
             api_kwargs.pop("limit", None)
-        if association_targets and "associations" in inspect.signature(hubspot.crm.tickets.get_all).parameters:
+        if association_targets:
             api_kwargs["associations"] = association_targets
 
         if allow_search and (search_filters or search_sorts or normalized_conditions):
@@ -2532,12 +2938,15 @@ class TicketsTable(HubSpotAPIResource):
 
         tickets = hubspot.crm.tickets.get_all(**api_kwargs)
         tickets_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for ticket in tickets:
             try:
                 row = self._ticket_to_dict(ticket, hubspot_columns, association_targets)
                 tickets_dict.append(row)
+                if len(tickets_dict) >= effective_limit:
+                    break
             except Exception as e:
-                logger.warning(f"Error processing ticket {getattr(ticket, 'id', 'unknown')}: {str(e)}")
                 continue
 
         logger.info(f"Retrieved {len(tickets_dict)} tickets from HubSpot")
@@ -2628,7 +3037,7 @@ class TasksTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("tasks")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot tasks row count: {e}")
+            pass
 
         return {
             "TABLE_NAME": "tasks",
@@ -2743,6 +3152,16 @@ class TasksTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("tasks", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
+            msg = (
+                "Direct FK joins on HubSpot tasks using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -2773,12 +3192,15 @@ class TasksTable(HubSpotAPIResource):
 
         tasks = self.handler._get_objects_all("tasks", **api_kwargs)
         tasks_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for task in tasks:
             try:
                 row = self._task_to_dict(task, hubspot_columns, association_targets)
                 tasks_dict.append(row)
+                if len(tasks_dict) >= effective_limit:
+                    break
             except Exception as e:
-                logger.warning(f"Error processing task {getattr(task, 'id', 'unknown')}: {str(e)}")
                 continue
 
         logger.info(f"Retrieved {len(tasks_dict)} tasks from HubSpot")
@@ -2872,7 +3294,7 @@ class CallsTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("calls")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot calls row count: {e}")
+            pass
 
         return {
             "TABLE_NAME": "calls",
@@ -2988,6 +3410,16 @@ class CallsTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("calls", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
+            msg = (
+                "Direct FK joins on HubSpot calls using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -3017,12 +3449,15 @@ class CallsTable(HubSpotAPIResource):
 
         calls = self.handler._get_objects_all("calls", **api_kwargs)
         calls_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for call in calls:
             try:
                 row = self._call_to_dict(call, hubspot_columns, association_targets)
                 calls_dict.append(row)
+                if len(calls_dict) >= effective_limit:
+                    break
             except Exception as e:
-                logger.warning(f"Error processing call {getattr(call, 'id', 'unknown')}: {str(e)}")
                 continue
 
         logger.info(f"Retrieved {len(calls_dict)} calls from HubSpot")
@@ -3116,7 +3551,7 @@ class EmailsTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("emails")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot emails row count: {e}")
+            pass
 
         return {
             "TABLE_NAME": "emails",
@@ -3232,6 +3667,16 @@ class EmailsTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("emails", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
+            msg = (
+                "Direct FK joins on HubSpot emails using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -3261,12 +3706,15 @@ class EmailsTable(HubSpotAPIResource):
 
         emails = self.handler._get_objects_all("emails", **api_kwargs)
         emails_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for email in emails:
             try:
                 row = self._email_to_dict(email, hubspot_columns, association_targets)
                 emails_dict.append(row)
+                if len(emails_dict) >= effective_limit:
+                    break
             except Exception as e:
-                logger.warning(f"Error processing email {getattr(email, 'id', 'unknown')}: {str(e)}")
                 continue
 
         logger.info(f"Retrieved {len(emails_dict)} emails from HubSpot")
@@ -3360,7 +3808,7 @@ class MeetingsTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("meetings")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot meetings row count: {e}")
+            pass
 
         return {
             "TABLE_NAME": "meetings",
@@ -3476,6 +3924,16 @@ class MeetingsTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("meetings", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
+            msg = (
+                "Direct FK joins on HubSpot meetings using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -3505,12 +3963,15 @@ class MeetingsTable(HubSpotAPIResource):
 
         meetings = self.handler._get_objects_all("meetings", **api_kwargs)
         meetings_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for meeting in meetings:
             try:
                 row = self._meeting_to_dict(meeting, hubspot_columns, association_targets)
                 meetings_dict.append(row)
+                if len(meetings_dict) >= effective_limit:
+                    break
             except Exception as e:
-                logger.warning(f"Error processing meeting {getattr(meeting, 'id', 'unknown')}: {str(e)}")
                 continue
 
         logger.info(f"Retrieved {len(meetings_dict)} meetings from HubSpot")
@@ -3604,7 +4065,7 @@ class NotesTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("notes")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot notes row count: {e}")
+            pass
 
         return {
             "TABLE_NAME": "notes",
@@ -3715,6 +4176,16 @@ class NotesTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("notes", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
+            msg = (
+                "Direct FK joins on HubSpot notes using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id, primary_deal_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -3744,12 +4215,15 @@ class NotesTable(HubSpotAPIResource):
 
         notes = self.handler._get_objects_all("notes", **api_kwargs)
         notes_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for note in notes:
             try:
                 row = self._note_to_dict(note, hubspot_columns, association_targets)
                 notes_dict.append(row)
+                if len(notes_dict) >= effective_limit:
+                    break
             except Exception as e:
-                logger.warning(f"Error processing note {getattr(note, 'id', 'unknown')}: {str(e)}")
                 continue
 
         logger.info(f"Retrieved {len(notes_dict)} notes from HubSpot")
@@ -3844,7 +4318,7 @@ class LeadsTable(HubSpotAPIResource):
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("leads")
         except Exception as e:
-            logger.warning(f"Could not estimate HubSpot leads row count: {e}")
+            pass
         return {
             "TABLE_NAME": "leads",
             "TABLE_TYPE": "BASE TABLE",
@@ -3955,6 +4429,16 @@ class LeadsTable(HubSpotAPIResource):
         association_targets, hubspot_columns = _prepare_association_request("leads", columns)
         hubspot_properties = _build_hubspot_properties(hubspot_columns)
 
+        MAX_ASSOCIATION_SCAN = 500
+        if not normalized_conditions and limit is not None and limit > MAX_ASSOCIATION_SCAN:
+            msg = (
+                "Direct FK joins on HubSpot leads using foreign key columns "
+                "(e.g. primary_contact_id, primary_company_id) are not supported. "
+                "The HubSpot API represents relationships through association tables.\n\n"
+                "Please rewrite your query using the appropriate association table."
+            )
+            raise ValueError(msg)
+
         api_kwargs = {**kwargs, "properties": hubspot_properties}
         if limit is not None:
             api_kwargs["limit"] = limit
@@ -3984,12 +4468,15 @@ class LeadsTable(HubSpotAPIResource):
 
         leads = self.handler._get_objects_all("leads", **api_kwargs)
         leads_dict = []
+        MAX_SCAN_ROWS = 10_000
+        effective_limit = min(limit, MAX_SCAN_ROWS) if limit is not None else MAX_SCAN_ROWS
         for lead in leads:
             try:
                 row = self._lead_to_dict(lead, hubspot_columns, association_targets)
                 leads_dict.append(row)
+                if len(leads_dict) >= effective_limit:
+                    break
             except Exception as e:
-                logger.warning(f"Error processing lead {getattr(lead, 'id', 'unknown')}: {str(e)}")
                 continue
 
         logger.info(f"Retrieved {len(leads_dict)} leads from HubSpot")

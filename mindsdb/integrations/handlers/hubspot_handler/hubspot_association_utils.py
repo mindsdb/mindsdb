@@ -49,7 +49,9 @@ PRIMARY_ASSOCIATIONS_CONFIG = {
 }
 
 
-def extract_primary_association(obj: Any, to_object_type: str) -> Optional[str]:
+def extract_primary_association(
+    obj: Any, to_object_type: str
+) -> Optional[str]:
     associations = getattr(obj, "associations", None)
     if not associations:
         return None
@@ -58,8 +60,10 @@ def extract_primary_association(obj: Any, to_object_type: str) -> Optional[str]:
         to_objects = associations.get(to_object_type, {})
         if isinstance(to_objects, dict):
             results = to_objects.get("results", [])
+        elif isinstance(to_objects, list):
+            results = to_objects
         else:
-            results = to_objects if isinstance(to_objects, list) else []
+            results = getattr(to_objects, "results", []) or []
     else:
         to_objects = getattr(associations, to_object_type, None)
         if to_objects is None:
@@ -90,7 +94,9 @@ def get_primary_association_columns(object_type: str) -> List[str]:
     return [col_name for _, col_name in config]
 
 
-def enrich_object_with_associations(obj: Any, object_type: str, row: Dict[str, Any]) -> Dict[str, Any]:
+def enrich_object_with_associations(
+    obj: Any, object_type: str, row: Dict[str, Any]
+) -> Dict[str, Any]:
     config = PRIMARY_ASSOCIATIONS_CONFIG.get(object_type, [])
     for target_type, column_name in config:
         row[column_name] = extract_primary_association(obj, target_type)

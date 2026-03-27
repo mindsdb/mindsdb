@@ -25,6 +25,7 @@ google_calendar
 google_fit
 hackernews
 hubspot
+linkedin_ads
 intercom
 jira
 ms_one_drive

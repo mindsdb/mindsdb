@@ -180,6 +180,7 @@ HANDLER_RULE_IGNORES = {
         "IfxPyDbi",
         "ingres_sa_dialect",
         "pyodbc",
+        "freshdesk",
     ],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": DEP003_IGNORE_HANDLER_DEPS,
 }

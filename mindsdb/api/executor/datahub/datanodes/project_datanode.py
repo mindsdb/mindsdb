@@ -174,7 +174,7 @@ class ProjectDataNode(DataNode):
             raise NotImplementedError(f"Query not supported {query}")
 
     def create_table(
-        self, table_name: Identifier, result_set=None, is_replace=False, params=None, **kwargs
+        self, table_name: Identifier, result_set=None, is_replace=False, params=None, is_create=None, **kwargs
     ) -> DataHubResponse:
         # is_create - create table
         # is_replace - drop table if exists
@@ -183,6 +183,9 @@ class ProjectDataNode(DataNode):
         from mindsdb.api.executor.controllers.session_controller import SessionController
 
         session = SessionController()
+
+        if is_create:
+            raise NotImplementedError(f"Can't create table {table_name}")
 
         table_name = table_name.parts[-1]
         kb_table = session.kb_controller.get_table(table_name, self.project.id)
@@ -194,4 +197,5 @@ class ProjectDataNode(DataNode):
             df = result_set.to_df()
             kb_table.insert(df, params=params)
             return DataHubResponse()
-        raise NotImplementedError(f"Can't create table {table_name}")
+
+        raise ValueError(f"Table or Knowledge Base '{table_name}' doesn't exist")

@@ -112,7 +112,7 @@ class HandlerResponse:
                 INF_SCHEMA_COLUMNS_NAMES.COLLATION_NAME: "string",
             }
         )
-        self.data_frame.replace([numpy.NaN, pandas.NA], None, inplace=True)
+        self.data_frame.replace([numpy.nan, pandas.NA], None, inplace=True)
 
         self.resp_type = RESPONSE_TYPE.COLUMNS_TABLE
 

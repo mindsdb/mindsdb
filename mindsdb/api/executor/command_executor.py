@@ -38,6 +38,8 @@ from mindsdb_sql_parser.ast import (
     Variable,
     Intersect,
     Except,
+    Parameter,
+    NullConstant,
 )
 
 # typed models
@@ -52,7 +54,6 @@ from mindsdb_sql_parser.ast.mindsdb import (
     AlterKnowledgeBase,
     CreateMLEngine,
     CreatePredictor,
-    CreateSkill,
     CreateTrigger,
     CreateView,
     CreateKnowledgeBaseIndex,
@@ -64,14 +65,12 @@ from mindsdb_sql_parser.ast.mindsdb import (
     DropKnowledgeBase,
     DropMLEngine,
     DropPredictor,
-    DropSkill,
     DropTrigger,
     Evaluate,
     FinetunePredictor,
     RetrainPredictor,
     UpdateAgent,
     UpdateChatBot,
-    UpdateSkill,
 )
 
 import mindsdb.utilities.profiler as profiler
@@ -98,6 +97,7 @@ from mindsdb.integrations.libs.const import (
     HANDLER_CONNECTION_ARG_TYPE,
     PREDICTOR_STATUS,
 )
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.database.projects import ProjectController
@@ -215,6 +215,20 @@ def match_two_part_name(
     return db_name, name
 
 
+def apply_parameters(statement, params):
+    def fill_parameters(node, **kwargs):
+        if isinstance(node, Parameter):
+            if node.value in params:
+                value = params[node.value]
+                if value is None:
+                    return NullConstant()
+                if isinstance(value, list):
+                    return Tuple([Constant(i) for i in value])
+                return Constant(value)
+
+    query_traversal(statement, fill_parameters)
+
+
 class ExecuteCommands:
     def __init__(self, session, context=None):
         if context is None:
@@ -233,6 +247,9 @@ class ExecuteCommands:
 
         if database_name is None:
             database_name = self.session.database
+
+        if ctx.params:
+            apply_parameters(statement, ctx.params)
 
         statement_type = type(statement)
         if statement_type is CreateDatabase:
@@ -662,12 +679,6 @@ class ExecuteCommands:
             return self.answer_alter_kb(statement, database_name)
         elif statement_type is DropKnowledgeBase:
             return self.answer_drop_kb(statement, database_name)
-        elif statement_type is CreateSkill:
-            return self.answer_create_skill(statement, database_name)
-        elif statement_type is DropSkill:
-            return self.answer_drop_skill(statement, database_name)
-        elif statement_type is UpdateSkill:
-            return self.answer_update_skill(statement, database_name)
         elif statement_type is CreateAgent:
             return self.answer_create_agent(statement, database_name)
         elif statement_type is DropAgent:
@@ -786,7 +797,7 @@ class ExecuteCommands:
             agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
         )
         return ExecuteAnswer()
 
@@ -817,7 +828,7 @@ class ExecuteCommands:
             agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
         )
         if updated_chatbot is None:
             raise ExecutorException(f"Chatbot with name {name} not found")
@@ -833,7 +844,10 @@ class ExecuteCommands:
 
     def answer_evaluate_metric(self, statement, database_name):
         # heavy import, so we do it here on-demand
-        from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+        try:
+            from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+        except ImportError:
+            logger.error("mindsdb-evaluator is not installed. Please install it with `pip install mindsdb-evaluator]`.")
 
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
@@ -952,7 +966,9 @@ class ExecuteCommands:
 
     def answer_create_kb_index(self, statement, database_name):
         project_name, table_name = match_two_part_name(statement.name, default_db_name=database_name)
-        self.session.kb_controller.create_index(table_name=table_name, project_name=project_name)
+        self.session.kb_controller.create_index(
+            table_name=table_name, project_name=project_name, params=statement.params
+        )
         return ExecuteAnswer()
 
     def answer_evaluate_kb(self, statement: EvaluateKnowledgeBase, database_name):
@@ -999,6 +1015,10 @@ class ExecuteCommands:
         if ctx.company_id is None:
             # bypass for tests
             return
+        if ctx.user_id is None:
+            # bypass for tests
+            return
+
         is_cloud = self.session.config.get("cloud", False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
@@ -1179,7 +1199,7 @@ class ExecuteCommands:
 
         params_out = {}
         if params:
-            for key, value in params.items():
+            for key, value in variables_controller.fill_parameters(params).items():
                 # convert ast types to string
                 if isinstance(value, (Constant, Identifier)):
                     value = value.to_string()
@@ -1249,7 +1269,7 @@ class ExecuteCommands:
 
         engine = (statement.engine or "mindsdb").lower()
 
-        connection_args = statement.parameters
+        connection_args = variables_controller.fill_parameters(statement.parameters)
 
         try:
             if engine == "mindsdb":
@@ -1428,7 +1448,7 @@ class ExecuteCommands:
             project_name=project_name,
             # embedding_model=statement.model,
             storage=statement.storage,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
             if_not_exists=statement.if_not_exists,
         )
 
@@ -1443,7 +1463,7 @@ class ExecuteCommands:
         self.session.kb_controller.update(
             name=kb_name,
             project_name=project_name,
-            params=statement.params,
+            params=variables_controller.fill_parameters(statement.params),
         )
 
         return ExecuteAnswer()
@@ -1460,55 +1480,17 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_create_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        try:
-            _ = self.session.skills_controller.add_skill(name, project_name, statement.type, statement.params)
-        except ValueError as e:
-            # Project does not exist or skill already exists.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
-    def answer_drop_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        try:
-            self.session.skills_controller.delete_skill(name, project_name, strict_case=True)
-        except ValueError as e:
-            # Project does not exist or skill does not exist.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
-    def answer_update_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
-
-        type = statement.params.pop("type", None)
-        try:
-            _ = self.session.skills_controller.update_skill(
-                name, project_name=project_name, type=type, params=statement.params
-            )
-        except ValueError as e:
-            # Project does not exist or skill does not exist.
-            raise ExecutorException(str(e))
-
-        return ExecuteAnswer()
-
     def answer_create_agent(self, statement, database_name):
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        skills = statement.params.pop("skills", [])
         provider = statement.params.pop("provider", None)
         try:
             _ = self.session.agents_controller.add_agent(
                 name=name,
                 project_name=project_name,
                 model_name=statement.model,
-                skills=skills,
                 provider=provider,
-                params=statement.params,
+                params=variables_controller.fill_parameters(statement.params),
             )
         except EntityExistsError as e:
             if statement.if_not_exists is not True:
@@ -1534,16 +1516,12 @@ class ExecuteCommands:
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         model = statement.params.pop("model", None)
-        skills_to_add = statement.params.pop("skills_to_add", [])
-        skills_to_remove = statement.params.pop("skills_to_remove", [])
         try:
             _ = self.session.agents_controller.update_agent(
                 name,
                 project_name=project_name,
                 model_name=model,
-                skills_to_add=skills_to_add,
-                skills_to_remove=skills_to_remove,
-                params=statement.params,
+                params=variables_controller.fill_parameters(statement.params),
             )
         except (EntityExistsError, EntityNotExistsError, ValueError) as e:
             # Project does not exist or agent does not exist.
@@ -1558,12 +1536,15 @@ class ExecuteCommands:
         statement.name.parts = [integration_name, model_name]
         statement.name.is_quoted = [False, False]
 
-        ml_integration_name = "lightwood"  # default
+        ml_integration_name = self.session.config["default_ml_engine"]
         if statement.using is not None:
             # repack using with lower names
             statement.using = {k.lower(): v for k, v in statement.using.items()}
 
             ml_integration_name = statement.using.pop("engine", ml_integration_name)
+
+        if ml_integration_name is None:
+            raise ValueError("ML engine must be specified when creating a model")
 
         if statement.query_str is not None and statement.integration_name is None:
             # set to current project

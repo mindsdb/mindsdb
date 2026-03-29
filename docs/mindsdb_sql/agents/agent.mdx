@@ -1,7 +1,128 @@
 ---
-title: How Agents Work
+title: MindsDB Agents
 sidebarTitle: Overview
 ---
+
+**MindsDB Agents** are part of the open-source MindsDB product and enable users to ask natural language questions over connected data sources. They provide intelligent querying capabilities across databases and knowledge bases directly within MindsDB.
+
+For organizations with advanced requirements, **Minds** is the enterprise counterpart to MindsDB Agents. Minds extends the same core concept with enhanced capabilities, scalability, context management, and production-grade features.
+
+## How MindsDB Agents Work
+
+MindsDB Agents are built on the Pydantic framework and follow a structured workflow to interpret and answer user questions over the connected data.
+
+<AccordionGroup>
+
+<Accordion title="Step 1. Input Processing">
+When a query is received, the agent:
+* Builds a real-time data catalog generated dynamically and based on a sample of 5 rows from each connected data object
+* Extracts prompts and user messages
+* Prepares structured input for reasoning
+This lightweight catalog enables the agent to understand available schemas and data types.
+</Accordion>
+
+<Accordion title="Step 2. Planning">
+Using the processed input, the agent:
+* Determines which connected data sources are relevant
+* Plans query execution steps
+* Prepares SQL queries as needed
+This stage ensures that the agent selects appropriate tables and avoids unnecessary exploration.
+</Accordion>
+
+<Accordion title="Step 3. Exploration Loop">
+The agent enters an iterative execution cycle:
+* Executes queries against connected tables or knowledge bases
+* Collects and evaluates results
+* Adjusts queries if needed
+This loop continues until sufficient relevant data is collected, up to a maximum of 20 queries.
+</Accordion>
+
+<Accordion title="Step 4. Error Handling & Learning">
+If execution errors occur:
+* Errors are analyzed
+* The agent attempts corrective adjustments
+* Up to three accumulated errors are retained for context
+This iterative correction improves answer accuracy within session constraints.
+</Accordion>
+
+<Accordion title="Step 5. Output Synthesis">
+Finally, the agent:
+* Aggregates collected data
+* Synthesizes a natural language or structured response
+* Returns the answer based on the query format
+</Accordion>
+
+</AccordionGroup>
+
+## Recommended Usage
+
+To ensure optimal performance and accuracy, follow these guidelines.
+
+1. **Data Preparation**
+
+    High-quality input significantly improves agent performance.
+
+    Clean your data:
+
+    * Remove irrelevant columns
+    * Filter unnecessary rows
+    * Normalize inconsistent formats
+
+    Create views to simplify the agent's reasoning:
+
+    * Filtered views: Keep only relevant tables, columns, and rows
+    * Aggregated views: Provide summary tables for frequent analytical queries
+    * Joined views: Combine tables that are commonly queried together
+
+    Well-designed views reduce cognitive load on the agent.
+
+2. **Agent Data Setup**
+
+    To maintain performance:
+
+    * Limit connected objects (tables + knowledge bases) to 10 or fewer
+    * Ensure objects are relevant to the use case
+    * Provide descriptive context in the prompt
+
+    Example of helpful context:
+
+    * Describe data stored in connected tables or knowledge bases
+    * Clarify relationships between available data objects
+    * Specify expected output format
+
+    The clearer the setup, the more accurate the agent's reasoning.
+
+3. **Querying an Agent**
+
+    Agent outputs are non-deterministic, due to the nature of large language models. However, MindsDB provides mechanisms for limited output control.
+
+    To receive a natural language answer:
+
+    ```sql
+    SELECT answer 
+    FROM agent_name 
+    WHERE question = "What is the capital of France?";
+    ```
+
+    This ensures the agent returns a human-readable response contained in the `answer` column.
+
+    To enforce a specific output structure:
+
+    ```sql
+    SELECT product_name, monthly_sales_count
+    FROM agent_name
+    WHERE question = "How many sales were there per product last month?";
+    ```
+
+    The agent will format its response to match the defined columns.
+
+    This enables:
+
+    * Programmatic consumption
+    * Dashboard integration
+    * Downstream automation workflows
+
+## Usage Example
 
 Agents enable conversation with data, including structured and unstructured data connected to MindsDB.
 
@@ -35,8 +156,47 @@ Query an agent and ask question over the connected data.
 SELECT answer
 FROM my_agent 
 WHERE question = 'What is the average number of orders per customers?';
+
+-- or
+
+SELECT customer_name, avg_number_of_orders
+FROM my_agent 
+WHERE question = 'What is the average number of orders per customers?';
 ```
 
 <Tip>
 Follow [this doc page to learn more about the usage of agents](/mindsdb_sql/agents/agent_syntax).
 </Tip>
+
+## MindsDB Agents vs Minds: Feature Comparison
+
+Both MindsDB Agents (open-source) and Minds (enterprise) are designed to answer questions over data connected to MindsDB.
+
+The key difference lies in scope, scale, and advanced functionality:
+
+| Feature            | MindsDB Agents (Open-Source)                              | Minds (Enterprise)                                  |
+|--------------------|-----------------------------------------------------------|-----------------------------------------------------|
+| Data catalog       | Built dynamically from sample data (5 rows per object)    | Full data catalog with complete metadata            |
+| Context window     | Limited                                                   | Extended                                            |
+| Error memory       | Up to 3 accumulated errors                                | Extended memory and learning                        |
+| Message history    | Cleared with thread reset                                 | Persistent across threads                           |
+| Production controls| Basic                                                     | Advanced governance and controls                    |
+| Scalability        | Recommended ≤10 connected objects                         | Designed for complex, large-scale environments      |
+
+MindsDB Agents enable querying over connected data sources that is good for:
+
+* Prototyping
+* Small-to-medium complexity use cases
+* Controlled data environments
+
+As complexity grows, Minds offers a seamless enterprise-grade upgrade path with expanded capabilities, memory, and performance.
+
+Consider upgrading to Minds if:
+
+* You require full data catalog visibility
+* You need persistent conversation memory
+* You are connecting many tables or knowledge bases
+* Your workflows involve complex multi-step reasoning
+* You require production-level governance and control
+
+Minds extends the same fundamental concept as MindsDB Agents, but is designed for enterprise-scale intelligence workflows.

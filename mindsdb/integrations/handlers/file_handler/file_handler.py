@@ -50,7 +50,7 @@ class FileHandler(DatabaseHandler):
         self.chunk_size = connection_data.get("chunk_size", DEFAULT_CHUNK_SIZE)
         self.chunk_overlap = connection_data.get("chunk_overlap", DEFAULT_CHUNK_OVERLAP)
         self.file_controller = file_controller
-        self.thread_safe = True
+        self.cache_thread_safe = True
 
     def connect(self, **kwargs):
         return
@@ -144,12 +144,15 @@ class FileHandler(DatabaseHandler):
 
             tables = {}
 
+            not_found = []
+
             def find_tables(node, is_table, **args):
                 if is_table and isinstance(node, Identifier):
                     table_name, page_name = self._get_table_page_names(node)
                     try:
                         df = self.file_controller.get_file_data(table_name, page_name)
                     except FileNotFoundError:
+                        not_found.append(table_name)
                         return
 
                     if page_name is not None:
@@ -160,7 +163,7 @@ class FileHandler(DatabaseHandler):
             query_traversal(query, find_tables)
 
             if len(tables) == 0:
-                raise RuntimeError(f"No tables in query: {query}")
+                raise RuntimeError(f"Files not found: {', '.join(not_found)}")
 
             # Process the SELECT query
             result_df = query_dfs(tables, query)

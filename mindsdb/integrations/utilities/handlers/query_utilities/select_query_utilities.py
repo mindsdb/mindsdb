@@ -21,6 +21,7 @@ class SELECTQueryParser(BaseQueryParser):
     columns : List[Text]
         List of columns in the table.
     """
+
     def __init__(self, query: ast.Select, table: Text, columns: List[Text]):
         super().__init__(query)
         self.table = table
@@ -48,6 +49,8 @@ class SELECTQueryParser(BaseQueryParser):
                 break
             elif isinstance(target, ast.Identifier):
                 selected_columns.append(target.parts[-1])
+            elif isinstance(target, ast.Function):
+                selected_columns += [arg.parts[-1] for arg in target.args if isinstance(arg, ast.Identifier)]
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
 
@@ -91,7 +94,15 @@ class SELECTQueryExecutor(BaseQueryExecutor):
     result_limit : int
         Number of results to return.
     """
-    def __init__(self, df: pd.DataFrame, selected_columns: List[Text], where_conditions: List[List[Text]], order_by_conditions: List, result_limit: int = None):
+
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        selected_columns: List[Text],
+        where_conditions: List[List[Text]],
+        order_by_conditions: List,
+        result_limit: int = None,
+    ):
         super().__init__(df, where_conditions)
         self.selected_columns = selected_columns
         self.order_by_conditions = order_by_conditions

@@ -36,7 +36,8 @@
                   "pages": [
                     "setup/custom-config",
                     "setup/environment-vars",
-                    "setup/mindsdb-apis"
+                    "setup/mindsdb-apis",
+                    "setup/system-defaults"
                   ]
                 },
                 {
@@ -81,12 +82,14 @@
                       "integrations/app-integrations/google-analytics",
                       "integrations/app-integrations/gong",
                       "integrations/app-integrations/hackernews",
+                      "integrations/app-integrations/hubspot",
                       "integrations/app-integrations/instatus",
                       "integrations/app-integrations/intercom",
                       "integrations/app-integrations/jira",
                       "integrations/app-integrations/mediawiki",
                       "integrations/app-integrations/microsoft-onedrive",
                       "integrations/app-integrations/microsoft-teams",
+                      "integrations/app-integrations/netsuite",
                       "integrations/app-integrations/newsapi",
                       "integrations/app-integrations/paypal",
                       "integrations/app-integrations/plaid",
@@ -424,8 +427,8 @@
                       "group": "Connect",
                       "icon": "link",
                       "pages": [
-                        "rest/usage",
                         "rest/authentication",
+                        "rest/usage",
                         {
                           "group": "Data Sources",
                           "pages": [
@@ -1075,10 +1078,6 @@
     {
       "source": "/custom-model/mlflow",
       "destination": "/integrations/ai-engines/mlflow"
-    },
-    {
-      "source": "/ml-engines/automl/lightwood",
-      "destination": "/integrations/ai-engines/lightwood"
     },
     {
       "source": "/nixtla/statsforecast",

@@ -80,6 +80,10 @@ MindsDB follows a simple workflow: **Connect → Unify → Respond**. At the cen
   </tr>
 </table>
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/mindsdb-mindsdb).
+
 ## Setup
 
 Users can install MindsDB via <a href="https://docs.mindsdb.com/setup/self-hosted/docker?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docker</a>, <a href="https://docs.mindsdb.com/setup/self-hosted/docker-desktop?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docker Extension</a>, or <a href="https://docs.mindsdb.com/contribute/install?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">PyPI</a>.

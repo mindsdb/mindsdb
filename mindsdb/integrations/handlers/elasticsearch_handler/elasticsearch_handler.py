@@ -7,7 +7,6 @@ from elasticsearch.exceptions import (
     TransportError,
     RequestError,
 )
-from es.elastic.sqlalchemy import ESDialect
 from pandas import DataFrame
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
@@ -70,12 +69,8 @@ class ElasticsearchHandler(DatabaseHandler):
         config = {}
 
         # Mandatory connection parameters.
-        if ("hosts" not in self.connection_data) and (
-            "cloud_id" not in self.connection_data
-        ):
-            raise ValueError(
-                "Either the hosts or cloud_id parameter should be provided!"
-            )
+        if ("hosts" not in self.connection_data) and ("cloud_id" not in self.connection_data):
+            raise ValueError("Either the hosts or cloud_id parameter should be provided!")
 
         # Optional/Additional connection parameters.
         optional_parameters = ["hosts", "cloud_id", "api_key"]
@@ -88,12 +83,10 @@ class ElasticsearchHandler(DatabaseHandler):
 
         # Ensure that if either user or password is provided, both are provided.
         if ("user" in self.connection_data) != ("password" in self.connection_data):
-            raise ValueError(
-                "Both user and password should be provided if one of them is provided!"
-            )
+            raise ValueError("Both user and password should be provided if one of them is provided!")
 
         if "user" in self.connection_data:
-            config["http_auth"] = (
+            config["basic_auth"] = (
                 self.connection_data["user"],
                 self.connection_data["password"],
             )
@@ -105,19 +98,13 @@ class ElasticsearchHandler(DatabaseHandler):
             self.is_connected = True
             return self.connection
         except ConnectionError as conn_error:
-            logger.error(
-                f"Connection error when connecting to Elasticsearch: {conn_error}"
-            )
+            logger.error(f"Connection error when connecting to Elasticsearch: {conn_error}")
             raise
         except AuthenticationException as auth_error:
-            logger.error(
-                f"Authentication error when connecting to Elasticsearch: {auth_error}"
-            )
+            logger.error(f"Authentication error when connecting to Elasticsearch: {auth_error}")
             raise
         except Exception as unknown_error:
-            logger.error(
-                f"Unknown error when connecting to Elasticsearch: {unknown_error}"
-            )
+            logger.error(f"Unknown error when connecting to Elasticsearch: {unknown_error}")
             raise
 
     def disconnect(self) -> None:
@@ -181,9 +168,7 @@ class ElasticsearchHandler(DatabaseHandler):
             while new_records:
                 try:
                     if response["cursor"]:
-                        response = connection.sql.query(
-                            body={"query": query, "cursor": response["cursor"]}
-                        )
+                        response = connection.sql.query(body={"query": query, "cursor": response["cursor"]})
 
                         new_records = response["rows"]
                         records = records + new_records
@@ -201,16 +186,10 @@ class ElasticsearchHandler(DatabaseHandler):
             )
 
         except (TransportError, RequestError) as transport_or_request_error:
-            logger.error(
-                f"Error running query: {query} on Elasticsearch, {transport_or_request_error}!"
-            )
-            response = Response(
-                RESPONSE_TYPE.ERROR, error_message=str(transport_or_request_error)
-            )
+            logger.error(f"Error running query: {query} on Elasticsearch, {transport_or_request_error}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(transport_or_request_error))
         except Exception as unknown_error:
-            logger.error(
-                f"Unknown error running query: {query} on Elasticsearch, {unknown_error}!"
-            )
+            logger.error(f"Unknown error running query: {query} on Elasticsearch, {unknown_error}!")
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(unknown_error))
 
         if need_to_close is True:
@@ -229,7 +208,8 @@ class ElasticsearchHandler(DatabaseHandler):
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
         # TODO: Add support for other query types.
-        renderer = SqlalchemyRender(ESDialect)
+        # Use postgresql dialect for SQL rendering - Elasticsearch SQL is ANSI-compatible
+        renderer = SqlalchemyRender("postgresql")
         query_str = renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
         return self.native_query(query_str)
@@ -252,9 +232,7 @@ class ElasticsearchHandler(DatabaseHandler):
         df = df[~df["name"].str.startswith(".")]
 
         df = df.drop(["catalog", "kind"], axis=1)
-        result.data_frame = df.rename(
-            columns={"name": "table_name", "type": "table_type"}
-        )
+        result.data_frame = df.rename(columns={"name": "table_name", "type": "table_type"})
 
         return result
 
@@ -281,8 +259,6 @@ class ElasticsearchHandler(DatabaseHandler):
 
         df = result.data_frame
         df = df.drop("mapping", axis=1)
-        result.data_frame = df.rename(
-            columns={"column": "column_name", "type": "data_type"}
-        )
+        result.data_frame = df.rename(columns={"column": "column_name", "type": "data_type"})
 
         return result

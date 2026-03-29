@@ -92,8 +92,35 @@ class LLMClient:
             self.client = OpenAI(**kwargs)
         elif self.provider == "ollama":
             kwargs = params.copy()
-            kwargs.pop("model_name")
+            # After get_llm_config/model_dump the model key may arrive as 'model' (OllamaConfig
+            # field name) instead of 'model_name' (the key used elsewhere in LLMClient).
+            # Normalise to 'model_name' so completion()/embeddings() can reference it uniformly.
+            model = kwargs.pop("model_name", None) or kwargs.pop("model", None)
+            if model is not None:
+                self.params["model_name"] = model
+            kwargs.pop("model", None)  # remove any residual 'model' key
             kwargs.pop("provider", None)
+            # Strip keys that OllamaConfig carries but that the OpenAI-compatible client
+            # constructor does not accept.
+            _ollama_only_keys = (
+                "temperature",
+                "top_p",
+                "top_k",
+                "timeout",
+                "format",
+                "headers",
+                "num_predict",
+                "num_ctx",
+                "num_gpu",
+                "repeat_penalty",
+                "stop",
+                "template",
+                "api_keys",
+            )
+            for key in _ollama_only_keys:
+                kwargs.pop(key, None)
+            # Ollama does not require a real API key; supply a placeholder so the
+            # OpenAI client does not raise an AuthenticationError on construction.
             if kwargs.get("api_key") is None:
                 kwargs["api_key"] = "n/a"
             self.client = OpenAI(**kwargs)

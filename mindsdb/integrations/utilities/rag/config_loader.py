@@ -8,7 +8,6 @@ from mindsdb.integrations.utilities.rag.settings import (
     MultiVectorRetrieverMode,
     SearchType,
     SearchKwargs,
-    SummarizationConfig,
     VectorStoreConfig,
     RerankerConfig,
     RAGPipelineModel,
@@ -60,10 +59,7 @@ def load_rag_config(
     if "search_kwargs" in rag_params and isinstance(rag_params["search_kwargs"], dict):
         rag_params["search_kwargs"] = SearchKwargs(**rag_params["search_kwargs"])
 
-    # Handle summarization config if present
-    summarization_config = rag_params.get("summarization_config")
-    if summarization_config is not None and isinstance(summarization_config, dict):
-        rag_params["summarization_config"] = SummarizationConfig(**summarization_config)
+    # Summarization config removed - no longer supported
 
     # Handle vector store config
     if "vector_store_config" in rag_params:

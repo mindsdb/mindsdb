@@ -1,7 +1,6 @@
 from typing import Optional, Dict
 
 import pandas as pd
-import openai
 from llama_index.llms.openai import OpenAI
 from llama_index.core import Document
 from llama_index.readers.web import SimpleWebPageReader
@@ -35,10 +34,10 @@ class LlamaIndexHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        if 'using' not in args:
+        if "using" not in args:
             raise MissingConnectionParams("LlamaIndex engine requires USING clause!")
         else:
-            args = args['using']
+            args = args["using"]
             LlamaIndexModel(**args)
 
     def create(
@@ -55,22 +54,20 @@ class LlamaIndexHandler(BaseMLEngine):
 
         if args_reader == "DFReader":
             dstrs = df.apply(
-                lambda x: ", ".join(
-                    [f"{col}: {str(entry)}" for col, entry in zip(df.columns, x)]
-                ),
+                lambda x: ", ".join([f"{col}: {str(entry)}" for col, entry in zip(df.columns, x)]),
                 axis=1,
             )
             reader = list(map(lambda x: Document(text=x), dstrs.tolist()))
         elif args_reader == "SimpleWebPageReader":
             url = args["using"]["source_url_link"]
-            allowed_urls = self.config.get('web_crawling_allowed_sites', [])
+            allowed_urls = self.config.get("web_crawling_allowed_sites", [])
             if allowed_urls and not validate_urls(url, allowed_urls):
-                raise ValueError(f"The provided URL is not allowed for web crawling. Please use any of {', '.join(allowed_urls)}.")
+                raise ValueError(
+                    f"The provided URL is not allowed for web crawling. Please use any of {', '.join(allowed_urls)}."
+                )
             reader = SimpleWebPageReader(html_to_text=True).load_data([url])
         else:
-            raise Exception(
-                f"Invalid operation mode. Please use one of {self.supported_reader}."
-            )
+            raise Exception(f"Invalid operation mode. Please use one of {self.supported_reader}.")
         self.model_storage.json_set("args", args)
         index = self._setup_index(reader)
         path = self.model_storage.folder_get("context")
@@ -86,9 +83,7 @@ class LlamaIndexHandler(BaseMLEngine):
 
         self.model_storage.json_set("args", args_cur)
 
-    def predict(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> pd.DataFrame:
+    def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         pred_args = args["predict_params"] if args else {}
 
         args = self.model_storage.json_get("args")
@@ -129,9 +124,7 @@ class LlamaIndexHandler(BaseMLEngine):
         else:
             input_column = args["using"].get("input_column", None)
 
-            prompt_template = args["using"].get(
-                "prompt_template", args.get("prompt_template", None)
-            )
+            prompt_template = args["using"].get("prompt_template", args.get("prompt_template", None))
             if prompt_template is not None:
                 self.create_validation(args=args)
                 engine_kwargs["text_qa_template"] = PromptTemplate(prompt_template)
@@ -142,9 +135,7 @@ class LlamaIndexHandler(BaseMLEngine):
                 )  # noqa
 
             if input_column not in df.columns:
-                raise Exception(
-                    f'Column "{input_column}" not found in input data! Please try again.'
-                )
+                raise Exception(f'Column "{input_column}" not found in input data! Please try again.')
 
             questions = df[input_column]
 
@@ -152,28 +143,22 @@ class LlamaIndexHandler(BaseMLEngine):
         storage_context = StorageContext.from_defaults(persist_dir=index_path)
         self._get_service_context()
 
-        index = load_index_from_storage(
-            storage_context
-        )
+        index = load_index_from_storage(storage_context)
         query_engine = index.as_query_engine(**engine_kwargs)
 
         results = []
 
         for question in questions:
-            query_results = query_engine.query(
-                question
-            )  # TODO: provide extra_info in explain_target col
+            query_results = query_engine.query(question)  # TODO: provide extra_info in explain_target col
             results.append(query_results.response)
 
-        result_df = pd.DataFrame(
-            {"question": questions, args["target"]: results}
-        )  # result_df['answer'].tolist()
+        result_df = pd.DataFrame({"question": questions, args["target"]: results})  # result_df['answer'].tolist()
         return result_df
 
     def _get_service_context(self) -> None:
         args = self.model_storage.json_get("args")
         engine_storage = self.engine_storage
-        openai_api_key = get_api_key('openai', args["using"], engine_storage, strict=True)
+        openai_api_key = get_api_key("openai", args["using"], engine_storage, strict=True)
         llm_kwargs = {"api_key": openai_api_key}
 
         if "temperature" in args["using"]:
@@ -184,9 +169,8 @@ class LlamaIndexHandler(BaseMLEngine):
             llm_kwargs["max_tokens"] = args["using"]["max_tokens"]
         # only way this works is by sending the key through openai
 
-        openai.api_key = openai_api_key
         if Settings.llm is None:
-            llm = OpenAI()
+            llm = OpenAI(api_key=openai_api_key)
             Settings.llm = llm
         if Settings.embed_model is None:
             embed_model = OpenAIEmbedding()
@@ -195,7 +179,5 @@ class LlamaIndexHandler(BaseMLEngine):
 
     def _setup_index(self, documents):
         self._get_service_context()
-        index = VectorStoreIndex.from_documents(
-            documents
-        )
+        index = VectorStoreIndex.from_documents(documents)
         return index

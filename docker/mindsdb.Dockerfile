@@ -91,8 +91,7 @@ ENV PATH=/venv/bin:$PATH
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 
-HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=60s \
-  CMD-SHELL curl -f "http://localhost:47334/api/status" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=60s CMD curl -f "http://localhost:47334/api/status" || exit 1
 
 # Pre-load tokenizer from Huggingface, and UI
 # This causing issues during docker build in CI/CD, need to fix it

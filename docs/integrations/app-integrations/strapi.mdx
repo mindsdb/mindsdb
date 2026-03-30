@@ -14,7 +14,7 @@ To use the Strapi Handler, initialize it with the following parameters:
 - `host`: Strapi server host.
 - `port`: Strapi server port (typically 1337).
 - `api_token`: Strapi server API token for authentication.
-- `plural_api_ids`: List of plural API IDs for the collections.
+- `endpoints`: List of collection endpoints.
 
 To get started, create a Strapi engine database with the following SQL command:
 
@@ -25,7 +25,7 @@ PARAMETERS = {
   "host" : "<strapi-host>", --- Host (can be an IP address or URL).
   "port" : "<strapi-port>",  --- Common port is 1337.
   "api_token": "<your-strapi-api-token>", --- API token of the Strapi server.
-  "plural_api_ids" : ["<plural-api-id>"] --- Plural API IDs of the collections.
+  "endpoints" : ["<collection-endpoint>"] --- Collection endpoints.
 };
 ```
 
@@ -43,7 +43,7 @@ Filter data based on specific criteria:
 ```sql
 SELECT *
 FROM myshop.<collection-name>
-WHERE id = <id-value>
+WHERE documentId = '<documentId-value>';
 ```
 
 Insert new data into a collection:
@@ -64,7 +64,7 @@ Modify existing data in a collection:
 ```sql
 UPDATE myshop.<collection-name>
 SET <field-name-1> = <value-1>, <field-name-2> = <value-2>, ...
-WHERE id = <id-value>;
+WHERE documentId = '<documentId-value>';
 ```
 
 <Tip>

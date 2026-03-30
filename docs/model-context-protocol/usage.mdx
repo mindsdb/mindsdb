@@ -29,37 +29,67 @@ Follow the steps below to use MindsDB as an MCP server.
     ```
     </Accordion>
 
-3. Start MindsDB MCP server, either with or without authentication.
+3. Start MindsDB MCP server.
 
-    * Start MindsDB MCP server without authentication to connect it to [Cursor](/mcp/cursor_usage).
-
-        ```bash
-        docker run --name mindsdb_container -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
-        ```
-
-    * Start MindsDB MCP server with authentication to connect it to [OpenAI](/mcp/openai) or [Anthropic](/mcp/anthropic).
+    * **Without authentication** (suitable for local tools):
 
         ```bash
-        docker run --name mindsdb_container -p 47334:47334 -p 47335:47335 -e MINDSDB_USERNAME=admin -e MINDSDB_PASSWORD=password123 mindsdb/mindsdb
+        docker run --name mindsdb_container -p 47334:47334 mindsdb/mindsdb
         ```
 
-        Then get an auth token from MindsDB:
+    * **With PAT authentication** (suitable for remote):
+
+        ```bash
+        docker run --name mindsdb_container -p 47334:47334 -e MINDSDB_USERNAME=admin -e MINDSDB_PASSWORD=password123 mindsdb/mindsdb
+        ```
+
+        Get a Bearer token:
         ```bash
         curl -X POST -d '{"username":"admin","password":"password123"}' -H "Content-Type: application/json" http://localhost:47334/api/login
         ```
-        This will return a token that you can use in your MCP client.
+        Use this token as `Authorization: Bearer <token>` in your MCP client.
+
+    * **With OAuth 2.0** (for enterprise deployments): configure `MINDSDB_MCP_OAUTH_ENABLED=true` along with `MINDSDB_MCP_OAUTH_ISSUER_URL`, `MINDSDB_MCP_OAUTH_CLIENT_ID`, and `MINDSDB_MCP_OAUTH_CLIENT_SECRET`.
 
 4. To confirm the MindsDB MCP server is running use `http://127.0.0.1:47334/mcp/status`. A successful response means your MCP environment is ready.
 
 
-## MCP Tools
+## MCP Capabilities
 
-MindsDB MCP API exposes a set of tools that enable users to interact with their data and extract valuable insights.
+### Tools
 
-**1. List Databases**
+**`query`** — Executes SQL queries against MindsDB using MySQL syntax.
 
-The `list_databases` tool lists all data sources connected to MindsDB.
+Parameters:
+- `query` (required): SQL query string
+- `context` (optional): Dict with default database, e.g. `{"db": "my_postgres"}`
 
-**2. Query**
+Returns one of:
+- `{"type": "table", "column_names": [...], "data": [...]}` — for SELECT results
+- `{"type": "ok", "affected_rows": N}` — for INSERT/UPDATE/DELETE
+- `{"type": "error", "error_code": N, "error_message": "..."}` — on failure
 
-The `query` tool executes queries on the federated data to extract data relevant to answering a given question.
+### Resources
+
+MCP resources expose schema information for discovery:
+
+| Resource URI | Description |
+|---|---|
+| `schema://databases` | Lists all connected data sources |
+| `schema://databases/{db}/tables` | Lists tables in a database |
+| `schema://databases/{db}/tables/{table}/columns` | Lists columns with types |
+| `schema://knowledge_bases` | Lists knowledge bases |
+
+### Prompts
+
+**`sample_table`** — Generates instructions to fetch 5 sample rows and describe a table's structure.
+
+## Transport Modes
+
+- **HTTP (SSE)**: `http://127.0.0.1:47334/mcp/sse`
+- **HTTP (Streamable)**: `http://127.0.0.1:47334/mcp/streamable`
+- **Stdio**: run with `--mcp-stdio` flag for local stdio-based transport
+
+## Configuration
+
+CORS, rate limiting, DNS rebinding protection, and OAuth settings for the MCP server are configured via the `api.mcp` section of `config.json` or the corresponding environment variables. See [Extend the Default MindsDB Configuration](/setup/custom-config#mcp-api) for the full parameter reference.

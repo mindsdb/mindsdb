@@ -22,7 +22,7 @@ You can create your own duckdb_faiss database manually as well:
 
 ```sql
 CREATE DATABASE mindsdb_faiss
-WITH ENGINE = 'duckdb_faiss';
+WITH ENGINE = 'duckdb_faiss',
 PARAMETERS = {
     "persist_directory": "/data/faiss_db_location",
     "metric": "ip",
@@ -61,15 +61,15 @@ VALUES (1, 'duck', 2), (2, 'cat', 4);
 **Vector similarity search**
 ```sql
 SELECT * FROM kb_animals
-WHERE content = 'cat' and distance < 0.5
+WHERE content = 'cat' AND distance < 0.5;
 ```
 
 **Mixed search**
 ```sql
 SELECT * FROM kb_animals
-WHERE content = 'cat' AND legs = 4  
+WHERE content = 'cat' AND legs = 4;
 ```
-Supported `LIKE`, `NOT LIKE`, `>`, `>=`, `<`, `<=` filters for metadata columns
+Supported `LIKE`, `NOT LIKE`, `>`, `>=`, `<`, `<=` filters for metadata columns.
 
 
 **Hybrid search**
@@ -87,7 +87,7 @@ Can be used with bool `hybrid_search` or float `hybrid_search_alpha` parameters
 When a new duckdb_faiss is created, it starts from using [flat FAISS index](https://faiss.ai/cpp_api/struct/structfaiss_1_1IndexFlat.html). It works by scanning all index file to get similar vectors. Also a flat index is located in RAM, and its size is restricted by available memory. 
 To speed up vector search you can convert to other type of indexes. Available options:
 - ivf - [Inverted File](https://faiss.ai/cpp_api/struct/structfaiss_1_1IndexIVF.html). It is also located in memory, but faster than FLAT
-- ivf_file, the same as ivf, but located on disk and don't require to be loaded into RAM. This type of indexes isn't supported on windows
+- ivf_file, the same as ivf, but located on disk and doesn't require being loaded into RAM. This type of index isn't supported on Windows.
 
 Important: It is not possible to create an index for an empty FAISS knowledge base because both types of indexes require data in the knowledge base before creating it. The loaded data is used to train the index. The size of the training data and the number of clusters can affect index quality.
 
@@ -127,22 +127,22 @@ The other files in folders in faiss table:
 
 Because IVF and FLAT indexes are loaded in RAM and the disk copy is used only to store changes in the index (insert/delete records), small indexes are unloaded from RAM after each request and loaded again before the next request.
 
-When the index becomes large the read time increases, so the index is cached in RAM and locked to prevent using it in different processes or threads. If mindsdb is used from different threads or processes, an `index file locked` exception might appear. The lock is releases when handler cache is cleared (default timeout is 1 min)
+When the index becomes large the read time increases, so the index is cached in RAM and locked to prevent using it in different processes or threads. If mindsdb is used from different threads or processes, an `index file locked` exception might appear. The lock is released when the handler cache is cleared (default timeout is 1 min).
 
-Because insert from select into knowledge base is performed in background - the background process can't use faiss index if is locked by a gui. The implemented workaround is:
+Because insert-from-select into the knowledge base is performed in the background, the background process can't use the FAISS index if it is locked by a GUI. The implemented workaround is:
 - before the query is sent into background
-  - search all locks for vector bases of KBs in query and unload faiss database from cache
+  - search all locks for vector bases of KBs in the query and unload the FAISS database from cache
 - after executing query in background
-  - do the same (unload faiss database from cache)
+  - do the same (unload the FAISS database from cache)
 
-Also locks prevent to insert into knowledge base in threads. This query won't work:
+Locks also prevent inserting into the knowledge base using threads. This query won't work:
 ```sql
 INSERT INTO my_kb SELECT * FROM db1.table1
 USING threads=10
 ```
 
 
-Important: faiss index isn't locked on windows, faiss library can write locked file there
+Important: The FAISS index isn't locked on Windows; the FAISS library can write to a locked file there.
 
 ### Checking resources
 
@@ -166,6 +166,3 @@ For queries that mix vectors and rich metadata:
 - The handler estimates metadata selectivity (`COUNT(*) WHERE <filters>`) to choose the best execution plan.
 - **Vector-first strategy** fetches an expanding set of candidates from FAISS until enough records satisfy the metadata filters.
 - **Metadata-first strategy** constrains candidate IDs via DuckDB before scoring them in FAISS batches (`META_BATCH = 10,000`).
-
-
-

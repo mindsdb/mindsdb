@@ -266,7 +266,7 @@ class FaissIndex:
         self,
         query: Iterable[float],
         limit: int = 10,
-        allowed_ids: Optional[Iterable[float]] = None,
+        allowed_ids: Optional[Iterable[int]] = None,
     ):
         if self.index is None:
             return [], []
@@ -278,7 +278,11 @@ class FaissIndex:
 
         params = None
         if allowed_ids is not None:
-            ids_selector = faiss.IDSelectorArray(allowed_ids)
+            allowed_ids_array = np.asarray(list(allowed_ids), dtype=np.int64)
+            ids_selector = faiss.IDSelectorArray(
+                len(allowed_ids_array),
+                faiss.swig_ptr(allowed_ids_array),
+            )
             params = faiss.IVFSearchParameters(sel=ids_selector)
 
         ds, ids = self.index.search(queries, limit, params=params)

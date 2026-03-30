@@ -72,7 +72,8 @@ class DuckDBFaissTable:
         self.faiss_index.close()
         self.connection.close()
 
-    def _empty_result(self) -> pd.DataFrame:
+    @staticmethod
+    def _empty_result() -> pd.DataFrame:
         return pd.DataFrame([], columns=["id", "content", "metadata", "distance"])
 
     def _create_kw_index(self):
@@ -174,7 +175,8 @@ class DuckDBFaissTable:
         selectivity = matched_count / total
 
         # compare forecast count of affected records for vector and metadata search and choose what will take less
-        if selectivity * total > limit / selectivity:
+        # do search even if selectivity is 0 because it might be approximate value in the future
+        if selectivity > 0 and selectivity * total > limit / selectivity:
             df = self.vector_first_search(vector_filter, meta_filters, limit, selectivity)
         else:
             df = self.metadata_first_search(vector_filter, meta_filters, limit)
@@ -281,12 +283,14 @@ class DuckDBFaissTable:
         for start in range(0, len(faiss_ids), self.META_BATCH_SIZE):
             batch_ids = faiss_ids[start : start + self.META_BATCH_SIZE]
 
-            distances, faiss_ids = self.faiss_index.search(embedding, limit, allowed_ids=batch_ids)
-            results.extend(zip(distances, faiss_ids))
+            distances, faiss_ids_found = self.faiss_index.search(embedding, limit, allowed_ids=batch_ids)
+            results.extend(zip(distances, faiss_ids_found))
 
         results.sort(key=lambda x: x[0])
 
         results = results[:limit]
+        if len(results) == 0:
+            raise RuntimeError("Something went wrong, faiss database didn't return results")
         distances, faiss_ids = zip(*results)
 
         meta_df = self._select_from_metadata(faiss_ids=faiss_ids, meta_filters=meta_filters)
@@ -417,7 +421,7 @@ class DuckDBFaissTable:
                     if len(df) > 0:
                         dfs.append(df)
                 if len(dfs) == 0:
-                    return self._empty_result()
+                    return pd.DataFrame([], columns=["faiss_id", "id", "content", "metadata"])
                 return pd.concat(dfs)
 
             if where_clause is None:

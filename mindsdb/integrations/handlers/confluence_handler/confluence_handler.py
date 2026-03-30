@@ -95,7 +95,7 @@ class ConfluenceHandler(APIHandler):
 
         self.is_connected = True
         return self.connection
-        
+
     def check_connection(self) -> StatusResponse:
         """
         Checks the status of the connection to the Confluence API.

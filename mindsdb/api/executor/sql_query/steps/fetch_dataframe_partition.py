@@ -1,3 +1,4 @@
+import time
 import copy
 import pandas as pd
 from typing import List
@@ -90,10 +91,14 @@ class FetchDataframePartitionCall(BaseStepCall):
                 use_threads = False
 
         on_error = step.params.get("error", "raise")
-        if use_threads:
-            return self.fetch_threads(run_query, query, thread_count=thread_count, on_error=on_error)
-        else:
-            return self.fetch_iterate(run_query, query, on_error=on_error)
+        try:
+            if use_threads:
+                return self.fetch_threads(run_query, query, thread_count=thread_count, on_error=on_error)
+            else:
+                return self.fetch_iterate(run_query, query, on_error=on_error)
+        finally:
+            # release KB locks after inserting in background
+            self.sql_query.release_kb_lock(self.substeps)
 
     def repeat_till_reach_limit(self, step, limit):
         first_table_limit = limit * 2
@@ -105,6 +110,7 @@ class FetchDataframePartitionCall(BaseStepCall):
         query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
 
         try_num = 1
+        started_at = time.time()
         while True:
             self.substeps = copy.deepcopy(step.steps)
             query2 = copy.deepcopy(query)
@@ -126,7 +132,8 @@ class FetchDataframePartitionCall(BaseStepCall):
                 result = result[:limit]
                 break
 
-            if try_num > 3:
+            # break if process is too long or to many tries
+            if try_num > 3 or time.time() - started_at > 5:
                 # the last try without the limit
                 first_table_limit = None
                 continue

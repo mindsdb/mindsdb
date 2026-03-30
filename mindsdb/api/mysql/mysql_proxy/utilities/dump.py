@@ -9,8 +9,8 @@ from numpy import dtype as np_dtype
 import pandas as pd
 from pandas.api import types as pd_types
 
-from mindsdb.api.executor.sql_query.result_set import ResultSet, get_mysql_data_type_from_series, Column
-from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype as lightwood_dtype
+from mindsdb.api.executor.sql_query.result_set import ResultSet, get_mysql_data_type_from_series
+from mindsdb.utilities.types.column import Column
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     MYSQL_DATA_TYPE,
     DATA_C_TYPE_MAP,
@@ -38,21 +38,12 @@ def column_to_mysql_column_dict(column: Column, database_name: str | None = None
     Returns:
         dict[str, str | int]: Dictionary with mysql column properties.
     """
-    # region infer type. Should not happen, but what if it is dtype of lightwood type?
+    # region infer type. Should not happen, but what if it is dtype?
     if isinstance(column.type, str):
         try:
-            column.type = MYSQL_DATA_TYPE(column.type)
+            column.type = MYSQL_DATA_TYPE(column.type.upper())
         except ValueError:
-            if column.type == lightwood_dtype.date:
-                column.type = MYSQL_DATA_TYPE.DATE
-            elif column.type == lightwood_dtype.datetime:
-                column.type = MYSQL_DATA_TYPE.DATETIME
-            elif column.type == lightwood_dtype.float:
-                column.type = MYSQL_DATA_TYPE.FLOAT
-            elif column.type == lightwood_dtype.integer:
-                column.type = MYSQL_DATA_TYPE.INT
-            else:
-                column.type = MYSQL_DATA_TYPE.TEXT
+            pass
     elif isinstance(column.type, np_dtype):
         if pd_types.is_integer_dtype(column.type):
             column.type = MYSQL_DATA_TYPE.INT
@@ -392,7 +383,7 @@ def dump_result_set_to_mysql(
 
         # inplace modification of dt types raise SettingWithCopyWarning, so do regular replace
         # we may split this operation for dt and other types for optimisation
-        df[i] = series.replace([np.NaN, pd.NA, pd.NaT], None)
+        df[i] = series.replace([np.nan, pd.NA, pd.NaT], None)
 
     columns_dicts = [column_to_mysql_column_dict(column) for column in result_set.columns]
 

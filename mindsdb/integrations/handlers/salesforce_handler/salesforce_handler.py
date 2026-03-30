@@ -40,7 +40,7 @@ class SalesforceHandler(MetaAPIHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.cache_thread_safe = True
         self.resource_names = []
 
     def connect(self) -> salesforce_api.client.Client:

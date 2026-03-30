@@ -1,6 +1,7 @@
 import time
 import tempfile
 import os
+from datetime import date, timedelta
 
 import pandas as pd
 from mindsdb_sql_parser import ast
@@ -294,11 +295,10 @@ def _extract_date_range(where):
                 end_date = val
             else:
                 other_conditions.append(cond)
-    if not start_date or not end_date:
-        raise ValueError(
-            "Report tables require start_date and end_date in WHERE clause. "
-            "Example: WHERE start_date = '2026-03-01' AND end_date = '2026-03-25'"
-        )
+    if not end_date:
+        end_date = date.today().strftime('%Y-%m-%d')
+    if not start_date:
+        start_date = (date.today() - timedelta(days=30)).strftime('%Y-%m-%d')
     return start_date, end_date, other_conditions
 
 
@@ -413,6 +413,7 @@ class CampaignPerformanceTable(APITable):
         report_time.CustomDateRangeStart = _make_report_date(service, start_date)
         report_time.CustomDateRangeEnd = _make_report_date(service, end_date)
         report_time.PredefinedTime = None
+        report_time.ReportTimeZone = 'GreenwichMeanTimeDublinEdinburghLisbonLondon'
         report_request.Time = report_time
 
         # Columns to request
@@ -423,8 +424,7 @@ class CampaignPerformanceTable(APITable):
 
         # Scope — account level, optionally filtered to specific campaign
         scope = service.factory.create('AccountThroughCampaignReportScope')
-        scope.AccountIds = service.factory.create('ns3:ArrayOflong')
-        scope.AccountIds.long.append(int(self.handler.account_id))
+        scope.AccountIds = {'long': [int(self.handler.account_id)]}
         scope.Campaigns = None
 
         # Optional campaign_id filter
@@ -492,6 +492,7 @@ class SearchTermsTable(APITable):
         report_time.CustomDateRangeStart = _make_report_date(service, start_date)
         report_time.CustomDateRangeEnd = _make_report_date(service, end_date)
         report_time.PredefinedTime = None
+        report_time.ReportTimeZone = 'GreenwichMeanTimeDublinEdinburghLisbonLondon'
         report_request.Time = report_time
 
         # Columns to request
@@ -502,8 +503,7 @@ class SearchTermsTable(APITable):
 
         # Scope
         scope = service.factory.create('AccountThroughAdGroupReportScope')
-        scope.AccountIds = service.factory.create('ns3:ArrayOflong')
-        scope.AccountIds.long.append(int(self.handler.account_id))
+        scope.AccountIds = {'long': [int(self.handler.account_id)]}
         scope.Campaigns = None
         scope.AdGroups = None
 

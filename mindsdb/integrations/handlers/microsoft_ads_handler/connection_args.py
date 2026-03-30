@@ -42,6 +42,18 @@ connection_args = OrderedDict(
         'required': True,
         'secret': True,
     },
+    redirect_uri={
+        'type': ARG_TYPE.STR,
+        'description': 'OAuth redirect URI registered in Azure AD / Google Cloud Console (must match the one used during authorization)',
+        'label': 'Redirect URI',
+        'required': True,
+    },
+    auth_type={
+        'type': ARG_TYPE.STR,
+        'description': 'Authentication provider: "microsoft" (default) or "google" (for Microsoft Ads accounts signed in via Google)',
+        'label': 'Auth Type',
+        'required': False,
+    },
     environment={
         'type': ARG_TYPE.STR,
         'description': 'API environment: "production" (default) or "sandbox"',

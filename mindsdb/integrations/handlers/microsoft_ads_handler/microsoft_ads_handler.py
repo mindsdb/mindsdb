@@ -38,11 +38,14 @@ class MicrosoftAdsHandler(APIHandler):
         self.customer_id = self.connection_args['customer_id']
         self.client_id = self.connection_args['client_id']
         self.client_secret = self.connection_args['client_secret']
+        self.redirect_uri = self.connection_args['redirect_uri']
         self.refresh_token = self.connection_args['refresh_token']
         self.environment = self.connection_args.get('environment', 'production')
+        self.auth_type = self.connection_args.get('auth_type', 'microsoft')
 
         self.authorization_data = None
         self.campaign_service = None
+        self.customer_service = None
         self.reporting_service = None
         self.is_connected = False
 
@@ -68,26 +71,78 @@ class MicrosoftAdsHandler(APIHandler):
         return self.refresh_token
 
     def _build_authorization_data(self):
-        """Refresh OAuth tokens and build AuthorizationData for the bingads SDK."""
-        from bingads import AuthorizationData, OAuthDesktopMobileAuthCodeGrant
+        """Refresh OAuth tokens and build AuthorizationData for the bingads SDK.
 
-        authentication = OAuthDesktopMobileAuthCodeGrant(
-            client_id=self.client_id,
-            client_secret=self.client_secret,
-            env=self.environment,
-        )
+        Supports two auth flows:
+        - 'microsoft': Azure AD OAuth — token endpoint is login.microsoftonline.com
+        - 'google': Google OAuth (Microsoft Ads accounts signed in via Google) —
+          token endpoint is oauth2.googleapis.com; Google does not always return a
+          new refresh token on refresh, so the original is kept when absent.
+        """
+        import requests as http_requests
+        from bingads import AuthorizationData, OAuthTokens
+        from bingads import GoogleOAuthWebAuthCodeGrant, OAuthWebAuthCodeGrant
 
-        refresh_token = self._get_refresh_token()
-        authentication.request_oauth_tokens_by_refresh_token(refresh_token)
+        if self.auth_type == 'google':
+            token_url = 'https://oauth2.googleapis.com/token'
+            post_data = {
+                'client_id': self.client_id,
+                'client_secret': self.client_secret,
+                'grant_type': 'refresh_token',
+                'refresh_token': self._get_refresh_token(),
+            }
+        else:
+            token_url = (
+                'https://login.windows-ppe.net/consumers/oauth2/v2.0/token'
+                if self.environment == 'sandbox'
+                else 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+            )
+            post_data = {
+                'client_id': self.client_id,
+                'client_secret': self.client_secret,
+                'grant_type': 'refresh_token',
+                'refresh_token': self._get_refresh_token(),
+                'redirect_uri': self.redirect_uri,
+                'scope': 'https://ads.microsoft.com/msads.manage offline_access',
+            }
 
-        # Persist the new refresh token for future use
-        if self.handler_storage:
+        resp = http_requests.post(token_url, data=post_data)
+        if not resp.ok:
+            err = resp.json()
+            raise Exception(
+                f"error_code: {err.get('error')}, "
+                f"error_description: {err.get('error_description')}"
+            )
+        token_data = resp.json()
+        # Google does not always issue a new refresh token — keep the original when absent
+        new_refresh_token = token_data.get('refresh_token') or self._get_refresh_token()
+
+        if self.handler_storage and token_data.get('refresh_token'):
             try:
                 self.handler_storage.encrypted_json_set('microsoft_ads_tokens', {
-                    'refresh_token': authentication.oauth_tokens.refresh_token,
+                    'refresh_token': new_refresh_token,
                 })
             except Exception as e:
                 logger.warning(f"Failed to persist refresh token: {e}")
+
+        if self.auth_type == 'google':
+            authentication = GoogleOAuthWebAuthCodeGrant(
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                redirect_url=self.redirect_uri,
+            )
+        else:
+            authentication = OAuthWebAuthCodeGrant(
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                redirection_uri=self.redirect_uri,
+                env=self.environment,
+            )
+        authentication._oauth_tokens = OAuthTokens(
+            access_token=token_data['access_token'],
+            access_token_expires_in_seconds=int(token_data['expires_in']),
+            refresh_token=new_refresh_token,
+        )
 
         authorization_data = AuthorizationData(
             account_id=self.account_id,
@@ -113,6 +168,13 @@ class MicrosoftAdsHandler(APIHandler):
             environment=self.environment,
         )
 
+        self.customer_service = ServiceClient(
+            service='CustomerManagementService',
+            version=13,
+            authorization_data=self.authorization_data,
+            environment=self.environment,
+        )
+
         self.reporting_service = ServiceClient(
             service='ReportingService',
             version=13,
@@ -128,7 +190,7 @@ class MicrosoftAdsHandler(APIHandler):
         response = StatusResponse(False)
         try:
             self.connect()
-            self.campaign_service.GetUser(UserId=None)
+            self.customer_service.GetUser(UserId=None)
             response.success = True
         except Exception as e:
             response.error_message = f'Error connecting to Microsoft Advertising: {e}'

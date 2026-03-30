@@ -117,17 +117,38 @@ When a duckdb_faiss table is created, the handler creates a folder for it. It co
 - faiss_index - faiss index file
 Folder name - is a table name
 
+The other files in folders in faiss table:
+- duckdb.db* - all files related to duckdb (duckdb.db.wal)
+- faiss_index* - all files related faiss index (partitions, merged index for ivf_file)  
+- dump/ - temporal folder for extracted vectors
+- recover/ - temporal folder for index backup
+
 ### Locks and concurrency
 
 Because IVF and FLAT indexes are loaded in RAM and the disk copy is used only to store changes in the index (insert/delete records), small indexes are unloaded from RAM after each request and loaded again before the next request.
 
-When the index becomes large the read time increases, so the index is cached in RAM and locked to prevent using it in different processes or threads. If mindsdb is used from different threads or processes, an `index file locked` exception might appear.
+When the index becomes large the read time increases, so the index is cached in RAM and locked to prevent using it in different processes or threads. If mindsdb is used from different threads or processes, an `index file locked` exception might appear. The lock is releases when handler cache is cleared (default timeout is 1 min)
 
+Because insert from select into knowledge base is performed in background - the background process can't use faiss index if is locked by a gui. The implemented workaround is:
+- before the query is sent into background
+  - search all locks for vector bases of KBs in query and unload faiss database from cache
+- after executing query in background
+  - do the same (unload faiss database from cache)
+
+Also locks prevent to insert into knowledge base in threads. This query won't work:
+```sql
+INSERT INTO my_kb SELECT * FROM db1.table1
+USING threads=10
+```
+
+
+Important: faiss index isn't locked on windows, faiss library can write locked file there
 
 ### Checking resources
 
 **RAM**
 For indexes located in RAM, when data is inserted into the FAISS index it forecasts the required memory and does not allow the insert if it exceeds available memory.
+This check is run after every 10k records inserted.
 
 **disk**
 When an index is created, it requires two to three times more disk space (depending on the index type). The free disk space is also checked before starting to create the index.
@@ -136,8 +157,11 @@ What occupies disk:
 - fetched vectors from old index
 - a new index
 
+### Keyword search
 
-### Mixed Search Optimizations
+
+
+### Mixed search optimizations
 For queries that mix vectors and rich metadata:
 - The handler estimates metadata selectivity (`COUNT(*) WHERE <filters>`) to choose the best execution plan.
 - **Vector-first strategy** fetches an expanding set of candidates from FAISS until enough records satisfy the metadata filters.

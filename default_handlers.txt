@@ -28,6 +28,7 @@ hubspot
 linkedin_ads
 intercom
 jira
+microsoft_ads
 ms_one_drive
 ms_teams
 mssql

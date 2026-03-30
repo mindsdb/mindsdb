@@ -5,6 +5,10 @@ sidebarTitle: AI Agents
 
 Agents enable conversation with data, including structured and unstructured data connected to MindsDB.
 
+<Tip>
+Learn more about [MindsDB Agents here](/mindsdb_sql/agents/agent).
+</Tip>
+
 ## Create Agents
 
 Here is the syntax for creating an agent:
@@ -302,6 +306,12 @@ It is recommended to provide data description of the data sources listed in the 
 This parameter defines the time the agent can take to come back with an answer.
 
 For example, when the `timeout` parameter is set to 10, the agent has 10 seconds to return an answer. If the agent takes longer than 10 seconds, it aborts the process and comes back with an answer indicating its failure to return an answer within the defined time interval.
+
+### `mode`
+
+This parameter defines the agent's response style, allowing users to partially control the output format. Supported values include `text` and `sql`.
+
+When set, the agent will tailor its responses to match the specified format. Note that the agent may still adapt its output when necessary to ensure clarity or correctness.
 
 ## Get Agents
 

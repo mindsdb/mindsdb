@@ -101,11 +101,15 @@ class DatabaseController:
 
     def get_integration(self, integration_id):
         # get integration by id
-
-        # TODO get directly from db?
-        for rec in self.get_list():
-            if rec["id"] == integration_id and rec["type"] == "data":
-                return {"name": rec["name"], "type": rec["type"], "engine": rec["engine"], "id": rec["id"]}
+        integration = self.integration_controller.get_by_id(integration_id)
+        if integration and integration.get("type", "data") == "data":
+            return {
+                "name": integration["name"],
+                "type": integration["type"],
+                "engine": integration["engine"],
+                "id": integration["id"],
+            }
+        return None
 
     def exists(self, db_name: str) -> bool:
         return db_name.lower() in self.get_dict()
@@ -133,7 +137,7 @@ class DatabaseController:
         else:
             raise Exception(f"Database '{name}' does not exists")
 
-    def update(self, name: str, data: dict, strict_case: bool = False):
+    def update(self, name: str, data: dict, strict_case: bool = False, check_connection: bool = False) -> None:
         """
         Updates the database with the given name using the provided data.
 
@@ -141,6 +145,7 @@ class DatabaseController:
             name (str): The name of the database to update.
             data (dict): The data to update the database with.
             strict_case (bool): if True, then name is case-sesitive
+            check_connection (bool): if True, check the connection before applying the update
 
         Raises:
             EntityNotExistsError: If the database does not exist.
@@ -165,7 +170,12 @@ class DatabaseController:
             # Only the parameters (connection data) of the integration can be updated.
             if {"parameters"} != set(data):
                 raise ValueError("Only the 'parameters' field can be updated for integrations.")
-            self.integration_controller.modify(name, data["parameters"])
+
+            try:
+                self.integration_controller.modify(name, data["parameters"], check_connection=check_connection)
+            except Exception as e:
+                raise Exception(f"Failed to update database: {str(e)}")
+
             return
 
         else:

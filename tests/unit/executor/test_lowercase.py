@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
-from tests.unit.executor.test_agent import set_litellm_embedding
+from tests.unit.executor.test_agent import set_embedding
 
 
 class TestLowercase(BaseExecutorDummyML):
@@ -166,29 +166,16 @@ class TestLowercase(BaseExecutorDummyML):
                 self.run_sql(f"DROP MODEL `{another_name}`")
             self.run_sql(f"DROP MODEL {another_name}")
 
-    def test_agent_name_lowercase(self):
+    @patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+    def test_agent_name_lowercase(self, check_agent_llm):
         agent_params = """
-                model='gpt-3.5-turbo',
-                provider='openai',
+                model={
+                    "model_name": "gpt-3.5-turbo",
+                    "provider": "openai"
+                },
                 prompt_template='Answer the user input in a helpful way using tools',
-                max_iterations=5,
-                mode='retrieval'
+                mode='text'
         """
-
-        skill_params = """
-                type = 'retrieval',
-                source = 'kb_review',
-                description = 'user reviews'
-        """
-
-        # mixed case: skill
-        self.run_sql(f"create skill `MySkillMixed` using {skill_params}")
-
-        res = self.run_sql("select * from information_schema.skills where name = 'MySkillMixed'")
-        assert len(res) == 1
-
-        with pytest.raises(Exception):
-            self.run_sql("drop skill MySkillMixed")
 
         # mixed case: agent
         self.run_sql(f"create agent `MyAGENT` using {agent_params}")
@@ -200,51 +187,42 @@ class TestLowercase(BaseExecutorDummyML):
             self.run_sql("drop agent MyAGENT")
         self.run_sql("drop agent `MyAGENT`")
 
-        for agent_name, skill_name in [("myagent", "myskill"), ("MyAgent", "Myskill"), ("MYAGENT", "MYSKILL")]:
-            another_skill_name = "mySKILL"
+        for agent_name in "myagent", "MyAgent", "MYAGENT":
             another_agent_name = "myAGENT"
 
-            # user mixed-case skill
             self.run_sql(f"""
-                create agent {agent_name} using {agent_params},
-                skills=['MySkillMixed']
+                create agent {agent_name} using {agent_params}
             """)
 
-            self.run_sql(f"create skill {skill_name} using {skill_params}")
             # switch to lowercase
             self.run_sql(f"""
-                update agent {agent_name} set {agent_params},
-                skills=['{skill_name.lower()}']
+                update agent {agent_name} set {agent_params}
             """)
 
             ret = self.run_sql(f"select * from information_schema.agents where name = '{agent_name.lower()}'")
-            assert len(ret) == 1
-
-            ret = self.run_sql(f"select * from information_schema.skills where name = '{skill_name.lower()}'")
             assert len(ret) == 1
 
             with pytest.raises(Exception):
                 self.run_sql(f"drop agent `{another_agent_name}`")
             self.run_sql(f"drop agent {another_agent_name}")
 
-            with pytest.raises(Exception):
-                self.run_sql(f"drop skill `{another_skill_name}`")
-            self.run_sql(f"drop skill {another_skill_name}")
-
-        # clear mixed case skill
-        self.run_sql("drop skill `MySkillMixed`")
-
-    @patch("litellm.embedding")
+    @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")
     @patch("openai.OpenAI")
-    def test_knowledgebase_name_lowercase(self, mock_openai, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding)
+    def test_knowledgebase_name_lowercase(self, mock_openai, mock_embedding):
+        set_embedding(mock_embedding)
+
+        self.run_sql("""
+          create database my_kb_storage 
+           with  engine='duckdb_faiss'
+        """)
 
         kb_params = """
             using embedding_model = {
                 "provider": "bedrock",
                 "model_name": "dummy_model",
-                "api_key": "dummy_key"
-            }
+                "api_key": "dummy_key"                
+            },
+            storage = my_kb_storage.default_collection
         """
 
         # mixed case
@@ -271,6 +249,10 @@ class TestLowercase(BaseExecutorDummyML):
                 self.run_sql(f"DROP KNOWLEDGE BASE `{another_kb_name}`")
             self.run_sql(f"DROP KNOWLEDGE BASE {another_kb_name}")
 
+        self.run_sql("drop table my_kb_storage.default_collection")
+
+        self.run_sql("drop database my_kb_storage")
+
     def test_job_name_lowercase(self):
         # mixed case
         self.run_sql("CREATE JOB `MyJOB` (select 1)")
@@ -294,7 +276,8 @@ class TestLowercase(BaseExecutorDummyML):
 
             self.run_sql(f"DROP JOB {another_name}")
 
-    def test_chatbot_lowercase(self):
+    @patch("mindsdb.interfaces.agents.agents_controller.check_agent_llm")
+    def test_chatbot_lowercase(self, check_agent_llm):
         self.run_sql("create agent my_agent using model={'provider': 'openai', 'model_name': 'gpt-3.5'}")
 
         self.run_sql("create database my_db using engine='dummy_data'")

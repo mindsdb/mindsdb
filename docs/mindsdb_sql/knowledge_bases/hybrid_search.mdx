@@ -21,14 +21,15 @@ Hybrid search can be enabled at the time of querying the knowledge base by speci
 SELECT * from my_kb
 WHERE
 	content = ”ACME-213”
-AND hybrid_search_alpha = 0.8 -- optional, this is 0.5 by default
-AND hybrid_search = true;
+AND hybrid_search_alpha = 0.8;
 ```
 
-The `hybrid_search` parameter enables hybrid search functionality. While the `hybrid_search_alpha` parameter allows you to control the balance between semantic and keyword relevance, with values varying between 0 (more importance on keyword relevance) and 1 (more importance on semantic relevance) and the default value of 0.5.
+The `hybrid_search_alpha` parameter enables hybrid search functionality and allows you to control the balance between semantic and keyword relevance, with values varying between 0 (more importance on keyword relevance) and 1 (more importance on semantic relevance) and the default value of 0.5.
+
+Alternatively, you can use the `hybrid_search` parameter and set it to `true` in order to enable hybrid search with default `hybrid_search_alpha = 0.5`.
 
 <Note>
-Note that hybrid search works only on knowledge bases that use PGVector as a [storage](/mindsdb_sql/knowledge_bases/create#storage).
+Note that hybrid search works only on knowledge bases that use PGVector as a [storage](/mindsdb_sql/knowledge_bases/create#storage). Ensure to [install the PGVector handler to connect it to MindsDB](/integrations/vector-db-integrations/pgvector#usage).
 </Note>
 
 Knowledge bases provide optional [reranking features](/mindsdb_sql/knowledge_bases/create#reranking-model) that users can decide to use in specific use cases. When the reranker is available, it is used to rerank results from both the full-text index search and the embedding-based semantic search. It estimates the relevance of each document and orders them from most to least relevant.
@@ -99,7 +100,7 @@ Below is a breakdown of how hybrid search works under the hood:
         SELECT * from my_kb
         WHERE
             content = ”ACME-213”
-            AND hybrid_search = true;
+            AND hybrid_search = true; -- here, hybrid_search_alpha = 0.5
         ```
 
         In this query, the hybrid search uses the reranking features enabled with the knowledge base.
@@ -112,7 +113,6 @@ Below is a breakdown of how hybrid search works under the hood:
         SELECT * from my_kb
         WHERE
             content = ”ACME-213”
-            AND hybrid_search = true;
             AND hybrid_search_alpha = 0.4
             AND reranking = false;
         ```

@@ -1,4 +1,3 @@
-import time
 import shutil
 import tempfile
 from http import HTTPStatus
@@ -70,7 +69,7 @@ class DatabasesResource(Resource):
                 status = HandlerStatusResponse(success=False, error_message=str(import_error))
 
             if status.success is not True:
-                if hasattr(status, "redirect_url") and isinstance(status, str):
+                if hasattr(status, "redirect_url") and isinstance(status.redirect_url, str):
                     return {
                         "status": "redirect_required",
                         "redirect_url": status.redirect_url,
@@ -137,7 +136,7 @@ class DatabasesStatusResource(Resource):
                 shutil.rmtree(temp_dir)
 
         if not status.success:
-            if hasattr(status, "redirect_url") and isinstance(status, str):
+            if hasattr(status, "redirect_url") and isinstance(status.redirect_url, str):
                 return {
                     "status": "redirect_required",
                     "redirect_url": status.redirect_url,
@@ -208,27 +207,20 @@ class DatabaseResource(Resource):
                     'Missing "engine" field for new database. '
                     "If you want to create a project instead, use the POST /api/projects endpoint.",
                 )
-            new_integration_id = session.integration_controller.add(database_name, database["engine"], parameters)
+            try:
+                new_integration_id = session.integration_controller.add(
+                    database_name, database["engine"], parameters, check_connection=check_connection
+                )
+            except Exception as e:
+                return http_error(HTTPStatus.BAD_REQUEST, "Connection error", str(e) or "Connection error")
             new_integration = session.database_controller.get_integration(new_integration_id)
             return new_integration, HTTPStatus.CREATED
 
-        if check_connection:
-            existing_integration = session.integration_controller.get(database_name)
-            temp_name = f"{database_name}_{time.time()}".replace(".", "")
-            try:
-                handler = session.integration_controller.create_tmp_handler(
-                    temp_name, existing_integration["engine"], parameters
-                )
-                status = handler.check_connection()
-            except ImportError as import_error:
-                status = HandlerStatusResponse(success=False, error_message=str(import_error))
+        try:
+            session.integration_controller.modify(database_name, parameters, check_connection=check_connection)
+        except Exception as e:
+            return http_error(HTTPStatus.BAD_REQUEST, "Connection error", str(e) or "Connection error")
 
-            if status.success is not True:
-                return http_error(
-                    HTTPStatus.BAD_REQUEST, "Connection error", status.error_message or "Connection error"
-                )
-
-        session.integration_controller.modify(database_name, parameters)
         return session.integration_controller.get(database_name)
 
     @ns_conf.doc("delete_database")

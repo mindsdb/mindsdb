@@ -6,6 +6,7 @@ from mindsdb_sql_parser import Function, Constant, Variable
 from mindsdb.utilities import log
 from mindsdb.interfaces.storage.fs import RESOURCE_GROUP
 from mindsdb.interfaces.storage.json import get_json_storage
+from mindsdb.utilities.context import context as ctx
 
 
 logger = log.getLogger(__name__)
@@ -25,7 +26,7 @@ class VariablesController:
             self._data = self._storage.get(self._store_key)
             if self._data is None:
                 self._data = {}
-        return self._data
+        return {**self._data, **ctx.params}
 
     def get_value(self, name: str):
         data = self._get_data()

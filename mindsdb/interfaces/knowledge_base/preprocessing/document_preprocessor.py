@@ -10,7 +10,7 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
     FileSplitterConfig,
 )
-from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     PreprocessingConfig,
     ProcessedChunk,

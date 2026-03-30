@@ -4,7 +4,6 @@ import copy
 from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
 
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
-from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.utilities.config import config
 
 
@@ -139,6 +138,7 @@ class FunctionController(BYOMFunctionsController):
 
         try:
             from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
+
             llm = LLMClient(chat_model_params, session=self.session)
         except Exception as e:
             raise RuntimeError(f"Unable to use LLM function, check ENV variables: {e}") from e

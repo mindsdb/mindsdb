@@ -93,7 +93,7 @@ ENV PATH=/venv/bin:$PATH
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 
-HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=60s CMD curl -f "http://localhost:47334/api/status" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=60s CMD curl -fsS "http://localhost:47334/api/status"
 
 # Pre-load tokenizer from Huggingface, and UI
 RUN python -m mindsdb --config=/root/mindsdb_config.json --load-tokenizer --update-gui

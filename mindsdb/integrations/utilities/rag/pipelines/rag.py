@@ -322,7 +322,6 @@ class LangChainRAGPipeline:
             reranker_config=config.reranker_config,
             reranker=config.reranker,
             vector_store_config=config.vector_store_config,
-            summarization_config=config.summarization_config,
         )
 
     @classmethod
@@ -336,7 +335,6 @@ class LangChainRAGPipeline:
             reranker_config=config.reranker_config,
             reranker=config.reranker,
             vector_store_config=config.vector_store_config,
-            summarization_config=config.summarization_config,
         )
 
     @classmethod
@@ -400,5 +398,4 @@ class LangChainRAGPipeline:
             reranker_config=config.reranker_config,
             reranker=config.reranker,
             vector_store_config=config.vector_store_config,
-            summarization_config=config.summarization_config,
         )

@@ -1,9 +1,8 @@
-import pandas as pd
 from typing import Any
+
 from mindsdb.integrations.utilities.rag.storage.in_memory_byte_store import InMemoryByteStore
 from mindsdb.integrations.utilities.rag.pipelines.rag import LangChainRAGPipeline
 from mindsdb.integrations.utilities.rag.settings import RetrieverType, RAGPipelineModel
-from mindsdb.integrations.utilities.rag.utils import documents_to_df
 from mindsdb.integrations.utilities.rag.retrievers.multi_hop_retriever import MultiHopRetriever
 from mindsdb.integrations.utilities.rag.splitters.custom_splitters import RecursiveCharacterTextSplitter
 from mindsdb.utilities.log import getLogger
@@ -51,12 +50,6 @@ def _create_pipeline_from_multi_hop_retriever(config: RAGPipelineModel) -> LangC
         reranker_config=config.reranker_config,
         reranker=config.reranker,
         vector_store_config=config.vector_store_config,
-    )
-
-
-def _process_documents_to_df(config: RAGPipelineModel) -> pd.DataFrame:
-    return documents_to_df(
-        config.content_column_name, config.documents, embedding_model=config.embedding_model, with_embeddings=True
     )
 
 

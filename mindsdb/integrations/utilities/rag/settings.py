@@ -44,26 +44,6 @@ Question: {question}
 Context: {context}
 Answer:"""
 
-DEFAULT_QA_GENERATION_PROMPT_TEMPLATE = """You are an assistant for
-generating sample questions and answers from the given document and metadata. Given
-a document and its metadata as context, generate a question and answer from that document and its metadata.
-
-The document will be a string. The metadata will be a JSON string. You need
-to parse the JSON to understand it.
-
-Generate a question that requires BOTH the document and metadata to answer, if possible.
-Otherwise, generate a question that requires ONLY the document to answer.
-
-Return a JSON dictionary with the question and answer like this:
-{{ "question": <the full generated question>, "answer": <the full generated answer> }}
-
-Make sure the JSON string is valid before returning it. You must return the question and answer
-in the specified JSON format no matter what.
-
-Document: {document}
-Metadata: {metadata}
-Answer:"""
-
 DEFAULT_MAP_PROMPT_TEMPLATE = """The following is a set of documents
 {docs}
 Based on this list of docs, please summarize based on the user input.
@@ -661,25 +641,6 @@ class SQLRetrieverConfig(BaseModel):
     )
 
 
-class SummarizationConfig(BaseModel):
-    llm_config: LLMConfig = Field(
-        default_factory=LLMConfig,
-        description="LLM configuration to use for summarization",
-    )
-    map_prompt_template: str = Field(
-        default=DEFAULT_MAP_PROMPT_TEMPLATE,
-        description="Prompt for an LLM to summarize a single document",
-    )
-    reduce_prompt_template: str = Field(
-        default=DEFAULT_REDUCE_PROMPT_TEMPLATE,
-        description="Prompt for an LLM to summarize a set of summaries of documents into one",
-    )
-    max_summarization_tokens: int = Field(
-        default=DEFAULT_MAX_SUMMARIZATION_TOKENS,
-        description="Max number of tokens for summarized documents",
-    )
-
-
 class RerankerMode(str, Enum):
     POINTWISE = "pointwise"
     LISTWISE = "listwise"
@@ -761,10 +722,6 @@ class RAGPipelineModel(BaseModel):
     search_kwargs: SearchKwargs = Field(
         default_factory=SearchKwargs,
         description="Search configuration for the retriever",
-    )
-    summarization_config: Optional[SummarizationConfig] = Field(
-        default=None,
-        description="Configuration for summarizing retrieved documents as context",
     )
     # SQL retriever specific.
     sql_retriever_config: Optional[SQLRetrieverConfig] = Field(

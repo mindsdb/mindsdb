@@ -1,24 +1,6 @@
 from typing import List, Any
 
 import pandas as pd
-from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
-
-
-def df_to_documents(df: pd.DataFrame, content_column_name: str) -> List[SimpleDocument]:
-    """
-    Given a dataframe, convert it to a list of documents.
-
-    :param df: pd.DataFrame
-    :param content_column_name: str
-
-    :return: List[SimpleDocument]
-    """
-    documents = []
-    for _, row in df.iterrows():
-        metadata = row.to_dict()
-        page_content = metadata.pop(content_column_name)
-        documents.append(SimpleDocument(page_content=page_content, metadata=metadata))
-    return documents
 
 
 def documents_to_df(

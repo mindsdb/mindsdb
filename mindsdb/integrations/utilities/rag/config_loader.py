@@ -59,8 +59,6 @@ def load_rag_config(
     if "search_kwargs" in rag_params and isinstance(rag_params["search_kwargs"], dict):
         rag_params["search_kwargs"] = SearchKwargs(**rag_params["search_kwargs"])
 
-    # Summarization config removed - no longer supported
-
     # Handle vector store config
     if "vector_store_config" in rag_params:
         if isinstance(rag_params["vector_store_config"], dict):

@@ -7,16 +7,18 @@ This handler combines DuckDB for metadata storage and SQL filtering with Faiss f
 
 ### 1. Create a FAISS Database and Knowledge Base
 
-`duckdb_faiss` handler is installed by default with mindsdb.
-If no shared pgvector defined (by using KB_PGVECTOR_URL env variable), duckdb_faiss database will be created by default with knowledbe base if `storage` parameter is not specified
+`duckdb_faiss` handler is installed by default with mindsdb. When the `storage` parameter is not specified it creates default vector storage. It can be:
+- pgvector (if the KB_PGVECTOR_URL env variable is defined)
+- otherwise, a duckdb_faiss database will be created by default 
 
+Create knowledge base with default vector db:
 ```
 CREATE KNOWLEDGE BASE kb_animals
 USING 
   embedding_model = {"provider": "openai", "model_name": "text-embedding-3-small"};
 ```
 
-You can create own duckdb_faiss manually as well:
+You can create your own duckdb_faiss database manually as well:
 
 ```sql
 CREATE DATABASE mindsdb_faiss
@@ -39,11 +41,11 @@ USING
 ```
 
 Parameters for duckdb_faiss database:
-- `persist_directory`: Optional custom storage path. If not set - a handler storage will be used
-- `metric`: Distance metric - possible values: cosine/ip/l1/l2. Default is "cosine"
-- `use_gpu`: Enable GPU acceleration (default: False)
-- `nlist`: IVF parameter for clustering. Used as default value in create IVF index. Default is 1024
-- `nprobe`: controls the number of clusters to search during a query. Default is 1
+- `persist_directory`: Optional, custom storage path. If not set - a handler storage will be used
+- `metric`: Optional, distance metric - possible values: cosine/ip/l1/l2. Default is "cosine"
+- `use_gpu`: Optional, enable GPU acceleration (default: False)
+- `nlist`: Optional, IVF parameter for clustering. Used as default value in create IVF index. Default is 1024
+- `nprobe`: Optional, controls the number of clusters to search during a query. Default is 1
 
 
 ### 2. Insert data
@@ -87,15 +89,15 @@ To speed up vector search you can convert to other type of indexes. Available op
 - ivf - [Inverted File](https://faiss.ai/cpp_api/struct/structfaiss_1_1IndexIVF.html). It is also located in memory, but faster than FLAT
 - ivf_file, the same as ivf, but located on disk and don't require to be loaded into RAM. This type of indexes isn't supported on windows
 
-Important: t is not possible to create an index for empty FAISS knowledge base because both type of indexes require to having data in knowledge base before creating it. The loaded data is used to train index. The size of the train data and also count of clusters can affect on index quality.
+Important: It is not possible to create an index for an empty FAISS knowledge base because both types of indexes require data in the knowledge base before creating it. The loaded data is used to train the index. The size of the training data and the number of clusters can affect index quality.
 
 Query:
 ```sql
 CREATE INDEX ON KNOWLEDGE_BASE kb_animals
 WITH (
-  type='ivf_file' 
-  nlist = 100,    
-  train_count = 10000 
+  type = 'ivf_file',
+  nlist = 100,
+  train_count = 10000
 );
 ```
 
@@ -110,26 +112,25 @@ Parameters:
 
 ### How it works
 
-When duckdb_faiss table is crated the handler creates folder for it. It contains files:
+When a duckdb_faiss table is created, the handler creates a folder for it. It contains:
 - duckdb.db - a duckdb database to store metadata for knowledge base
 - faiss_index - faiss index file
 Folder name - is a table name
 
 ### Locks and concurrency
 
-Because ivf and flat indexes are loaded in RAM and disk copy is used only to store changes in index (insert / delete records)
-For small indexes: index is unloaded from RAM after request and loaded again before next request
+Because IVF and FLAT indexes are loaded in RAM and the disk copy is used only to store changes in the index (insert/delete records), small indexes are unloaded from RAM after each request and loaded again before the next request.
 
-When index became big read time increases: the index is cached in RAM and locked to prevent using it in different process / thread. If mindsdb is used from different threads processes - a `index file locked` exception might appear
+When the index becomes large the read time increases, so the index is cached in RAM and locked to prevent using it in different processes or threads. If mindsdb is used from different threads or processes, an `index file locked` exception might appear.
 
 
 ### Checking resources
 
 **RAM**
-For indexes located in RAM, when data is inserted in faiss index - it forecast required memory and don't allow to insert if it exceeds available memory
+For indexes located in RAM, when data is inserted into the FAISS index it forecasts the required memory and does not allow the insert if it exceeds available memory.
 
 **disk**
-When index is created, it requires to get 2 or 3 more times disk space (depending on index type). The free disk space is also checked before staring to crate index
+When an index is created, it requires two to three times more disk space (depending on the index type). The free disk space is also checked before starting to create the index.
 What occupies disk:
 - an old faiss_index file (its backup)
 - fetched vectors from old index
@@ -141,7 +142,6 @@ For queries that mix vectors and rich metadata:
 - The handler estimates metadata selectivity (`COUNT(*) WHERE <filters>`) to choose the best execution plan.
 - **Vector-first strategy** fetches an expanding set of candidates from FAISS until enough records satisfy the metadata filters.
 - **Metadata-first strategy** constrains candidate IDs via DuckDB before scoring them in FAISS batches (`META_BATCH = 10,000`).
-
 
 
 

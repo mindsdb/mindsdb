@@ -27,6 +27,7 @@ hackernews
 hubspot
 intercom
 jira
+microsoft_ads
 ms_one_drive
 ms_teams
 mssql

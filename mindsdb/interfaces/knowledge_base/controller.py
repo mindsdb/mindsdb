@@ -180,7 +180,7 @@ def rotate_provider_api_key(params):
     :param params: input params, can be modified by this function
     :return: a new api key if it is refreshed
     """
-    provider = params.get("provider").lower()
+    provider = params.get("provider", "").lower()
 
     if provider == "snowflake":
         if "snowflake_account_id" in params:
@@ -1209,6 +1209,9 @@ class KnowledgeBaseController:
             raise EntityExistsError("Knowledge base already exists", name)
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
+        if not bool(embedding_params):
+            raise ValueError("No embedding model parameters provided")
+
         params["embedding_model"] = embedding_params
         rotate_provider_api_key(embedding_params)
 

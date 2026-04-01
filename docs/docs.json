@@ -1080,10 +1080,6 @@
       "destination": "/integrations/ai-engines/mlflow"
     },
     {
-      "source": "/nixtla/statsforecast",
-      "destination": "/integrations/ai-engines/statsforecast"
-    },
-    {
       "source": "/connect/mindsdb_editor",
       "destination": "/mindsdb_sql/connect/mindsdb_editor"
     },

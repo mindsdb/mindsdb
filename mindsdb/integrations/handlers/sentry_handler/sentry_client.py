@@ -15,6 +15,21 @@ DEFAULT_ISSUES_LIMIT = 100
 MAX_ISSUES_LIMIT = 1000
 
 
+class SentryRequestError(RuntimeError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        operation: str,
+        status_code: int | None = None,
+        response_text: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.operation = operation
+        self.status_code = status_code
+        self.response_text = response_text
+
+
 class SentryClient:
     def __init__(
         self,
@@ -88,6 +103,16 @@ class SentryClient:
         self.list_issues(project_id=project.get("id"), query="", limit=1)
         return project
 
+    def request_json(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        operation: str,
+    ) -> tuple[Any, requests.Response]:
+        return self._request(method, path, params=params, operation=operation)
+
     def _paginate(
         self,
         path: str,
@@ -141,25 +166,47 @@ class SentryClient:
                 response = self.session.request(method, url, params=params, timeout=self.timeout)
             except requests.Timeout as exc:
                 if attempt >= self.max_retries:
-                    raise RuntimeError(f"Sentry {operation} request timed out") from exc
+                    raise SentryRequestError(
+                        f"Sentry {operation} request timed out",
+                        operation=operation,
+                    ) from exc
                 self._sleep(2**attempt)
                 continue
             except requests.RequestException as exc:
-                raise RuntimeError(f"Sentry {operation} request failed: {exc}") from exc
+                raise SentryRequestError(
+                    f"Sentry {operation} request failed: {exc}",
+                    operation=operation,
+                ) from exc
 
             if response.status_code in RETRYABLE_STATUS_CODES and attempt < self.max_retries:
                 self._sleep(2**attempt)
                 continue
 
             if response.status_code >= 400:
-                raise RuntimeError(f"Sentry {operation} request failed with status {response.status_code}")
+                details = response.text.strip() if getattr(response, "text", None) else None
+                message = f"Sentry {operation} request failed with status {response.status_code}"
+                if details:
+                    message = f"{message}: {details[:500]}"
+                raise SentryRequestError(
+                    message,
+                    operation=operation,
+                    status_code=response.status_code,
+                    response_text=details,
+                )
 
             try:
                 return response.json(), response
             except ValueError as exc:
-                raise RuntimeError(f"Sentry {operation} request returned malformed JSON") from exc
+                raise SentryRequestError(
+                    f"Sentry {operation} request returned malformed JSON",
+                    operation=operation,
+                    status_code=response.status_code,
+                ) from exc
 
-        raise RuntimeError(f"Sentry {operation} request failed after retries")
+        raise SentryRequestError(
+            f"Sentry {operation} request failed after retries",
+            operation=operation,
+        )
 
     def _apply_environment_query(self, query: str) -> str:
         environment_fragment = f"environment:{self._quote_query_value(self.environment)}"

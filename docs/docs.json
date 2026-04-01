@@ -1372,10 +1372,6 @@
       "destination": "/use-cases/predictive_analytics/house-sales-forecasting"
     },
     {
-      "source": "/sql/tutorials/expenditures-statsforecast",
-      "destination": "/use-cases/predictive_analytics/expenditures-statsforecast"
-    },
-    {
       "source": "/sql/tutorials/eeg-forecasting",
       "destination": "/use-cases/predictive_analytics/eeg-forecasting"
     },

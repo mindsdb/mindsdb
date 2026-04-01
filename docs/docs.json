@@ -1084,10 +1084,6 @@
       "destination": "/integrations/ai-engines/statsforecast"
     },
     {
-      "source": "/nixtla/house-sales-statsforecast",
-      "destination": "/sql/tutorials/house-sales-statsforecast"
-    },
-    {
       "source": "/connect/mindsdb_editor",
       "destination": "/mindsdb_sql/connect/mindsdb_editor"
     },

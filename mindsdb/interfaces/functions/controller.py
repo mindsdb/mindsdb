@@ -139,6 +139,7 @@ class FunctionController(BYOMFunctionsController):
         try:
             from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
+            chat_model_params.pop("api_keys", None)
             llm = LLMClient(chat_model_params, session=self.session)
         except Exception as e:
             raise RuntimeError(f"Unable to use LLM function, check ENV variables: {e}") from e

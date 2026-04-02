@@ -134,7 +134,6 @@ class LLMClient:
         Call LLM completion and get response
         """
         params = self.params
-        params["json_output"] = json_output
         if self.engine == "openai":
             response = self.client.chat.completions.create(
                 model=params["model_name"],
@@ -143,6 +142,7 @@ class LLMClient:
             return [item.message.content for item in response.choices]
         else:
             kwargs = params.copy()
+            params["json_output"] = json_output
             model = kwargs.pop("model_name")
             kwargs.pop("provider", None)
             response = self.client.completion(self.provider, model=model, messages=messages, args=kwargs)

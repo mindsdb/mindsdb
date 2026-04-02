@@ -1472,6 +1472,10 @@
     {
       "source": "/use-cases/overview",
       "destination": "/homepage"
+    },
+    {
+      "source": "/",
+      "destination": "/homepage"
     }
   ]
 }

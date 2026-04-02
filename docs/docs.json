@@ -11,13 +11,13 @@
   "navigation": {
       "tabs": [
         {
-          "tab": "Home",
-          "hidden": true,
-          "pages": ["homepage"]
-        },
-        {
           "tab": "Documentation",
           "groups": [
+          {
+           "group": "Home",
+           "hidden": true,
+           "pages": ["homepage"]
+          },
             {
               "group": "Get Started",
               "pages": [

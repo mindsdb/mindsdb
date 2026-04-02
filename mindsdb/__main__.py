@@ -51,6 +51,8 @@ except RuntimeError:
     logger.info("Torch multiprocessing context already set, ignoring...")
 
 gc.enable()
+from dotenv import load_dotenv
+load_dotenv() 
 
 _stop_event = threading.Event()
 

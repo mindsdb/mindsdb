@@ -342,6 +342,11 @@ class Config:
 
         if os.environ.get("MINDSDB_DEFAULT_LLM_API_KEY", "") != "":
             self._env_config["default_llm"] = {"api_key": os.environ["MINDSDB_DEFAULT_LLM_API_KEY"]}
+        # Allow setting default LLM model name via environment variable
+        if os.environ.get("MINDSDB_DEFAULT_LLM_MODEL", "") != "":
+            if "default_llm" not in self._env_config:
+                self._env_config["default_llm"] = {}
+            self._env_config["default_llm"]["model_name"] = os.environ["MINDSDB_DEFAULT_LLM_MODEL"]
         if os.environ.get("MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY", "") != "":
             self._env_config["default_embedding_model"] = {
                 "api_key": os.environ["MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY"]

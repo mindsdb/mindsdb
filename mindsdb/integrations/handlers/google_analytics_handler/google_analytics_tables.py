@@ -41,7 +41,7 @@ class ConversionEventsTable(APITable):
         # Get the conversion events from the Google Analytics Admin API.
         conversion_events = pd.DataFrame(columns=self.get_columns())
         result = self.get_conversion_events(params=params)
-        conversion_events_data = self.extract_conversion_events_data(result.conversion_events)
+        conversion_events_data = self.extract_conversion_events_data(result)
         events = self.concat_dataframes(conversion_events, conversion_events_data)
 
         selected_columns = []
@@ -168,16 +168,19 @@ class ConversionEventsTable(APITable):
         service = self.handler.connect()
         page_token = None
         url = self.handler.get_api_url('properties')
+        all_results = []
 
         while True:
-            request = ListConversionEventsRequest(parent=url,
-                                                  page_token=page_token, **params)
+            request = ListConversionEventsRequest(
+                parent=url, page_token=page_token, **params
+            )
             result = service.list_conversion_events(request)
-
+            all_results.extend(result.conversion_events)
             page_token = result.next_page_token
             if not page_token:
                 break
-        return result
+
+        return all_results
 
     def create_conversion_event(self, params: dict = None):
         """

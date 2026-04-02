@@ -12,6 +12,7 @@ import os
 
 from google.analytics.admin_v1beta import AnalyticsAdminServiceClient
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials as OAuth2Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
 
@@ -67,6 +68,32 @@ class GoogleAnalyticsHandler(APIHandler):
             raise Exception('Connection args have to content ether credentials_file or credentials_json')
 
     def create_connection(self):
+        if 'access_token' in self.connection_args:
+            token = self.connection_args.get('access_token')
+            if not token or not isinstance(token, str):
+                raise Exception("access_token must be a non-empty string")
+
+            creds = OAuth2Credentials(token, scopes=self.scopes)
+            refresh_token = self.connection_args.get('refresh_token')
+            client_id = self.connection_args.get('client_id')
+            client_secret = self.connection_args.get('client_secret')
+            token_uri = self.connection_args.get('token_uri')
+            if refresh_token or client_id or client_secret or token_uri:
+                creds = OAuth2Credentials(
+                    token,
+                    refresh_token=refresh_token,
+                    token_uri=token_uri or "https://oauth2.googleapis.com/token",
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    scopes=self.scopes,
+                )
+
+            if not creds or not creds.valid:
+                if creds and creds.expired and getattr(creds, 'refresh_token', None):
+                    creds.refresh(Request())
+
+            return AnalyticsAdminServiceClient(credentials=creds)
+
         info = self._get_creds_json()
         creds = service_account.Credentials.from_service_account_info(info=info, scopes=self.scopes)
 
@@ -111,9 +138,10 @@ class GoogleAnalyticsHandler(APIHandler):
 
             if result is not None:
                 response.success = True
-        except HttpError as error:
+        except Exception as error:
             response.error_message = f'Error connecting to Google Analytics api: {error}.'
             log.logger.error(response.error_message)
+            self.is_connected = False
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

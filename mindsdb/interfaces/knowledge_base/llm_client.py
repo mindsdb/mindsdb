@@ -103,6 +103,8 @@ class LLMClient:
                 kwargs["api_key"] = "n/a"
             self.client = OpenAI(**kwargs)
         elif self.provider == "bedrock":
+            if 'aws_region' in self.params:
+                self.params['region_name'] = self.params.pop('aws_region')
             self.client = BedrockClient(**self.params)
         elif self.provider == "gemini":
             self.client = GeminiClient(**self.params)

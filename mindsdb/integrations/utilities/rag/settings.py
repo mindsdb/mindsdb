@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, ConfigDict
 DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_CHUNK_OVERLAP = 200
 DEFAULT_LLM_MODEL = "gpt-4o"
+DEFAULT_LLM_ENDPOINT = "https://api.openai.com/v1"
 DEFAULT_LLM_MODEL_PROVIDER = "openai"
 DEFAULT_RERANKING_MODEL = "gpt-4o"
 DEFAULT_RERANKER_N = 1

@@ -210,7 +210,7 @@ class BaseLLMReranker(BaseModel, ABC):
             temperature=self.temperature,
             n=1,
             logprobs=True,
-            max_tokens=1,
+            max_completion_tokens=1,
         )
 
         # Extract response and logprobs
@@ -356,7 +356,7 @@ class BaseLLMReranker(BaseModel, ABC):
             n=self.n,
             logprobs=self.logprobs,
             top_logprobs=self.top_logprobs,
-            max_tokens=self.max_tokens,
+            max_completion_tokens=self.max_tokens,
         )
 
         # Extract response and logprobs

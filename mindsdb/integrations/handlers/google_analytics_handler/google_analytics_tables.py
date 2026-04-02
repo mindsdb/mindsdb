@@ -33,10 +33,10 @@ class ConversionEventsTable(APITable):
 
         # Get the order by from the query.
         if query.order_by is not None:
-            raise NotImplementedError
+            pass
 
         if query.limit is not None:
-            raise NotImplementedError
+            pass
 
         # Get the conversion events from the Google Analytics Admin API.
         conversion_events = pd.DataFrame(columns=self.get_columns())

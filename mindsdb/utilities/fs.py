@@ -174,11 +174,10 @@ def delete_pid_file():
     pid_file.unlink()
 
 
-def __is_within_directory(directory, target):
-    abs_directory = os.path.abspath(directory)
-    abs_target = os.path.abspath(target)
-    prefix = os.path.commonprefix([abs_directory, abs_target])
-    return prefix == abs_directory
+def _is_within_directory(directory, target):
+    abs_directory = os.path.realpath(directory)
+    abs_target = os.path.realpath(target)
+    return abs_target.startswith(abs_directory + os.sep) or abs_target == abs_directory
 
 
 def safe_extract(tarfile, path=".", members=None, *, numeric_owner=False):
@@ -190,6 +189,6 @@ def safe_extract(tarfile, path=".", members=None, *, numeric_owner=False):
     # for py < 3.12
     for member in tarfile.getmembers():
         member_path = os.path.join(path, member.name)
-        if not __is_within_directory(path, member_path):
-            raise Exception("Attempted Path Traversal in Tar File")
+        if not _is_within_directory(path, member_path):
+            raise Exception(f"Path traversal attempt: {member.name}")
     tarfile.extractall(path, members=members, numeric_owner=numeric_owner)

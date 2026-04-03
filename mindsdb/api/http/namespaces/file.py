@@ -73,6 +73,8 @@ class File(Resource):
             file_name = file.file_name.decode()
             data["file"] = file_name
             if Path(file_name).name != file_name:
+                if file_object is not None and not file_object.closed:
+                    file_object.close()
                 raise ValueError(f"Wrong file name: {file_name}")
             file_object = file.file_object
 
@@ -100,6 +102,9 @@ class File(Resource):
             parser.finalize()
             parser.close()
 
+            if Path(data["file"]).name != data["file"]:
+                raise ValueError(f"Wrong file name: {data['file']}")
+
             if file_object is not None:
                 if not file_object.closed:
                     try:
@@ -107,10 +112,27 @@ class File(Resource):
                     except (AttributeError, ValueError, OSError):
                         logger.debug("Failed to flush file_object before closing.", exc_info=True)
                     file_object.close()
-                Path(file_object.name).rename(Path(file_object.name).parent / data["file"])
+                Path(file_object.name).rename(Path(file_object.name).parent / Path(data["file"]).name)
                 file_object = None
+            allowed_keys = {"source_type", "file", "original_file_name"}
         else:
             data = request.json
+            allowed_keys = {"source_type", "source", "original_file_name"}
+
+        if isinstance(data, dict) is False:
+            return http_error(
+                400,
+                "Invalid request parameters",
+                "Unexpected parameters in request",
+            )
+
+        if len(set(data.keys()) - allowed_keys) > 0:
+            unexpected_keys = set(data.keys()) - allowed_keys
+            return http_error(
+                400,
+                "Invalid request parameters",
+                f"Unexpected parameters in request: {', '.join(unexpected_keys)}. Allowed parameters: {', '.join(sorted(allowed_keys))}",
+            )
 
         existing_file_names = ca.file_controller.get_files_names(lower=True)
         if mindsdb_file_name.lower() in existing_file_names:
@@ -214,21 +236,25 @@ class File(Resource):
         file_path = os.path.join(temp_dir_path, data["file"])
         lp = file_path.lower()
         if lp.endswith((".zip", ".tar.gz")):
-            if lp.endswith(".zip"):
-                with zipfile.ZipFile(file_path) as f:
-                    f.extractall(temp_dir_path)
-            elif lp.endswith(".tar.gz"):
-                with tarfile.open(file_path) as f:
-                    safe_extract(f, temp_dir_path)
+            try:
+                if lp.endswith(".zip"):
+                    with zipfile.ZipFile(file_path) as f:
+                        safe_extract(f, temp_dir_path)
+                elif lp.endswith(".tar.gz"):
+                    with tarfile.open(file_path) as f:
+                        safe_extract(f, temp_dir_path)
+            except Exception as e:
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
+                return http_error(500, "Error", str(e))
             os.remove(file_path)
             files = os.listdir(temp_dir_path)
             if len(files) != 1:
-                os.rmdir(temp_dir_path)
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
                 return http_error(400, "Wrong content.", "Archive must contain only one data file.")
             file_path = os.path.join(temp_dir_path, files[0])
             mindsdb_file_name = files[0]
             if not os.path.isfile(file_path):
-                os.rmdir(temp_dir_path)
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
                 return http_error(400, "Wrong content.", "Archive must contain data file in root.")
 
         try:

@@ -24,38 +24,35 @@ class MultiplePredictorRecordsFound(Exception):
 @profiler.profile()
 def get_integration_record(name: str) -> db.Integration:
     company_id = ctx.company_id
-    if company_id is None:
-        company_id = null()
-
-    record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
+    query = db.session.query(db.Integration).filter_by(company_id=company_id, name=name)
+    if ctx.enforce_user_id:
+        query = query.filter(db.Integration.user_id == ctx.user_id)
+    record = query.first()
     return record
 
 
 @profiler.profile()
 def get_project_record(name: str) -> db.Project:
-    company_id = ctx.company_id if ctx.company_id is not None else "0"
+    company_id = ctx.company_id
+    filters = [
+        (func.lower(db.Project.name) == name),
+        (db.Project.company_id == company_id),
+        (db.Project.deleted_at == null()),
+    ]
+    if ctx.enforce_user_id:
+        filters.append(db.Project.user_id == ctx.user_id)
 
-    project_record = (
-        db.session.query(db.Project)
-        .filter(
-            (func.lower(db.Project.name) == name)
-            & (db.Project.company_id == company_id)
-            & (db.Project.deleted_at == null())
-        )
-        .first()
-    )
+    project_record = db.session.query(db.Project).filter(*filters).first()
     return project_record
 
 
 @profiler.profile()
 def get_project_records() -> List[db.Project]:
-    company_id = ctx.company_id if ctx.company_id is not None else "0"
-
-    return (
-        db.session.query(db.Project)
-        .filter((db.Project.company_id == company_id) & (db.Project.deleted_at == null()))
-        .all()
-    )
+    company_id = ctx.company_id
+    filters = [(db.Project.company_id == company_id), (db.Project.deleted_at == null())]
+    if ctx.enforce_user_id:
+        filters.append(db.Project.user_id == ctx.user_id)
+    return db.session.query(db.Project).filter(*filters).all()
 
 
 @profiler.profile()
@@ -80,8 +77,8 @@ def get_model_records(
     **kwargs,
 ):
     kwargs["company_id"] = ctx.company_id
-    if kwargs["company_id"] is None:
-        kwargs["company_id"] = null()
+    if ctx.enforce_user_id:
+        kwargs["user_id"] = ctx.user_id
 
     if deleted_at is not None:
         kwargs["deleted_at"] = deleted_at
@@ -118,8 +115,8 @@ def get_model_record(
     **kwargs,
 ):
     kwargs["company_id"] = ctx.company_id
-    if kwargs["company_id"] is None:
-        kwargs["company_id"] = null()
+    if ctx.enforce_user_id:
+        kwargs["user_id"] = ctx.user_id
 
     kwargs["deleted_at"] = deleted_at
     if active is not None:

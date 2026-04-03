@@ -191,6 +191,38 @@ Connection parameters for the MySQL API include:
 
 </Accordion>
 
+<Accordion title="MCP API">
+
+The `mcp` section configures the [MCP server](/model-context-protocol/usage).
+
+```json
+"api": {
+    "mcp": {
+        "cors": {
+            "enabled": true,
+            "allow_origins": [],
+            "allow_origin_regex": "https?://(localhost|127\\.0\\.0\\.1)(:\\d+)?",
+            "allow_headers": ["*"]
+        },
+        "rate_limit": {
+            "enabled": false,
+            "requests_per_minute": 60
+        },
+        "dns_rebinding_protection": false
+    }
+}
+```
+
+* `cors.enabled`: Enables CORS headers on MCP endpoints. Can also be set via `MINDSDB_MCP_CORS_ENABLED`.
+* `cors.allow_origins`: List of allowed origins. Can also be set via `MINDSDB_MCP_ALLOW_ORIGINS` (comma-separated).
+* `cors.allow_origin_regex`: Regex pattern for allowed origins. Can also be set via `MINDSDB_MCP_ALLOW_ORIGIN_REGEXP`.
+* `cors.allow_headers`: List of allowed request headers. Can also be set via `MINDSDB_MCP_ALLOW_HEADERS` (comma-separated).
+* `rate_limit.enabled`: Enables per-IP rate limiting. Can also be set via `MINDSDB_MCP_RATE_LIMIT_ENABLED`.
+* `rate_limit.requests_per_minute`: Maximum number of requests per minute per IP. Can also be set via `MINDSDB_MCP_RATE_LIMIT_RPM`.
+* `dns_rebinding_protection`: When `true`, the MCP transport validates the `Host` header against a list of known-safe hosts to prevent DNS rebinding attacks. Disabled by default (`false`). Enable it when running MindsDB locally and you want to restrict MCP access to `localhost` only. Can also be set via `MINDSDB_MCP_DNS_REBINDING_PROTECTION`.
+
+</Accordion>
+
 </AccordionGroup>
 
 #### `cache`
@@ -202,7 +234,7 @@ Connection parameters for the MySQL API include:
     },
 ```
 
-The `cache` parameter controls how MindsDB stores the results of recent predictions to avoid recalculating them if the same query is run again. Note that recent predictions are cached for ML models, like Lightwood, but not in the case of large language models (LLMs), like OpenAI.
+The `cache` parameter controls how MindsDB stores the results of recent predictions to avoid recalculating them if the same query is run again. Note that recent predictions are cached for ML models, but not in the case of large language models (LLMs), like OpenAI.
 
 The `type` parameter specifies the type of caching mechanism to use for storing prediction results.
 

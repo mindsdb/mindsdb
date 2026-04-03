@@ -29,4 +29,3 @@ ignore = [
 "mindsdb/__main__.py" = ["E402"]
 "mindsdb/api/http/start.py" = ["E402"]
 "mindsdb/api/mysql/mysql_proxy/libs/constants/mysql.py" = ["E241"]
-"mindsdb/integrations/handlers/lightwood_handler/tests/test_lightwood_handler.py" = ["E402"]

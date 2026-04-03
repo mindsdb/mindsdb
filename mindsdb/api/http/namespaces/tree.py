@@ -39,7 +39,8 @@ class GetLeaf(Resource):
         if isinstance(with_schemas, str):
             with_schemas = with_schemas.lower() in ("1", "true")
         else:
-            with_schemas = False
+            # Show all schemas by default for better UX
+            with_schemas = True
         db_name = db_name.lower()
         databases = ca.database_controller.get_dict()
         if db_name not in databases:

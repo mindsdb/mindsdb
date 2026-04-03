@@ -1102,7 +1102,7 @@ class HubSpotAPIResource(APIResource):
 
     def select(self, query: ASTNode) -> pd.DataFrame:
         """Select data, applying WHERE, GROUP BY, ORDER BY, LIMIT and function evaluation."""
-        
+
         conditions, order_by, result_limit = self._extract_query_params(query)
         group_by_cols = self._get_group_by_columns(query)
         # Targets include columns referenced inside functions and GROUP BY

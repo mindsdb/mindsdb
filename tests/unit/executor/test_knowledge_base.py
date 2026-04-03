@@ -325,13 +325,8 @@ class TestKBNOAutoBatch(BaseTestKB):
             def __init__(self, content):
                 self.message = _Msg(content)
 
-        class _Resp:
-            def __init__(self, content):
-                self.choices = [_Choice(content)]
-
         async def _fake_call_llm(messages):
-            content = '{"ranking": [{"doc_index": 2, "score": 0.9}, {"doc_index": 1, "score": 0.6}, {"doc_index": 3, "score": 0.1}]}'
-            return _Resp(content)
+            return '{"ranking": [{"doc_index": 2, "score": 0.9}, {"doc_index": 1, "score": 0.6}, {"doc_index": 3, "score": 0.1}]}'
 
         # Bind the async method to this reranker instance
         reranker._call_llm = _fake_call_llm  # type: ignore
@@ -356,16 +351,11 @@ class TestKBNOAutoBatch(BaseTestKB):
             def __init__(self, content):
                 self.message = _Msg(content)
 
-        class _Resp:
-            def __init__(self, content):
-                self.choices = [_Choice(content)]
-
         async def _fake_call_llm(messages):
             # Returns code-fenced JSON, includes only two entries, one without score
-            content = """```json
+            return """```json
             {"ranking": [1, {"doc_index": 3, "score": 0.8}]}
             ```"""
-            return _Resp(content)
 
         reranker._call_llm = _fake_call_llm  # type: ignore
 
@@ -389,14 +379,9 @@ class TestKBNOAutoBatch(BaseTestKB):
             def __init__(self, content):
                 self.message = _Msg(content)
 
-        class _Resp:
-            def __init__(self, content):
-                self.choices = [_Choice(content)]
-
         async def _fake_call_llm(messages):
             # Invalid JSON forces fallback
-            content = "not-json"
-            return _Resp(content)
+            return "not-json"
 
         reranker._call_llm = _fake_call_llm  # type: ignore
 

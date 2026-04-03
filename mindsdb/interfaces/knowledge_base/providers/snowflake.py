@@ -1,11 +1,11 @@
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 import requests
 import httpx
 
 
-def _raise_for_status(response):
-    # show response text in error
+def _raise_for_status(response: Union[requests.Response, httpx.Response]) -> None:
+    """Raise an informative HTTPError when Snowflake responds with an error."""
     if 400 <= response.status_code < 600:
         if hasattr(response, "reason"):
             reason = response.reason
@@ -17,7 +17,9 @@ def _raise_for_status(response):
 
 
 class SnowflakeClient:
-    def __init__(self, account_id: str = None, api_key: str = None):
+    """Wrapper over Snowflake Cortex REST endpoints."""
+
+    def __init__(self, account_id: Optional[str] = None, api_key: Optional[str] = None):
         if account_id is None:
             raise ValueError("account_id must be provided")
         if api_key is None:
@@ -31,10 +33,10 @@ class SnowflakeClient:
             self.api_key = self.api_key[4:]
             self.auth_type = "PROGRAMMATIC_ACCESS_TOKEN"
 
-    def _get_base_url(self):
+    def _get_base_url(self) -> str:
         return f"https://{self.account_id}.snowflakecomputing.com/api/v2"
 
-    def _get_headers(self):
+    def _get_headers(self) -> Dict[str, str]:
         return {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -42,7 +44,8 @@ class SnowflakeClient:
             "X-Snowflake-Authorization-Token-Type": self.auth_type,
         }
 
-    def embeddings(self, model_name: str, messages: List[str]):
+    def embeddings(self, model_name: str, messages: List[str]) -> List[List[float]]:
+        """Request embedding vectors for the provided `messages`."""
         url = f"{self._get_base_url()}/cortex/inference:embed"
 
         payload = {"text": messages, "model": model_name}
@@ -62,7 +65,8 @@ class SnowflakeClient:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-    ):
+    ) -> str:
+        """Generate a chat completion with the Cortex complete endpoint."""
         url = f"{self._get_base_url()}/cortex/inference:complete"
 
         payload = {
@@ -90,7 +94,8 @@ class SnowflakeClient:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-    ):
+    ) -> str:
+        """Async variant of `completion` using httpx."""
         url = f"{self._get_base_url()}/cortex/inference:complete"
 
         payload = {

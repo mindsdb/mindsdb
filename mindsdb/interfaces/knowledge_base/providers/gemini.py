@@ -1,7 +1,9 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 
 class GeminiClient:
+    """Wrapper around google-genai SDK"""
+
     def __init__(self, api_key: str):
         try:
             from google import genai
@@ -12,12 +14,14 @@ class GeminiClient:
         self.client = genai.Client(api_key=api_key)
         self.types = types
 
-    def embeddings(self, model_name: str, messages: List[str]):
+    def embeddings(self, model_name: str, messages: List[str]) -> List[List[float]]:
+        """Generate embedding vectors for each text in `messages`."""
         result = self.client.models.embed_content(model=model_name, contents=messages)
 
         return [item.values for item in result.embeddings]
 
-    def _prepare_messages(self, messages):
+    def _prepare_messages(self, messages: List[dict]) -> List[Any]:
+        """Convert chat messages into google-genai content payloads."""
         contents = []
         for message in messages:
             role = message["role"]
@@ -35,7 +39,8 @@ class GeminiClient:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-    ):
+    ) -> str:
+        """Produce a chat response"""
         config = {}
         if temperature:
             config["temperature"] = temperature
@@ -57,7 +62,8 @@ class GeminiClient:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-    ):
+    ) -> str:
+        """Async variant of `completion` using the SDK aio client."""
         config = {}
         if temperature:
             config["temperature"] = temperature

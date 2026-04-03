@@ -1,8 +1,9 @@
 import json
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
-def prepare_conversation(messages):
+def prepare_conversation(messages: List[dict]) -> List[dict]:
+    """Convert chat messages to Bedrock `converse` message payload format."""
     conversation = []
     for message in messages:
         content = message["content"]
@@ -25,6 +26,8 @@ def prepare_conversation(messages):
 
 
 class AsyncBedrockClient:
+    """Async Bedrock runtime client wrapper"""
+
     def __init__(
         self,
         aws_access_key_id: Optional[str] = None,
@@ -54,16 +57,16 @@ class AsyncBedrockClient:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-    ):
-        inferenceConfig = {}
+    ) -> str:
+        """Generate a chat completion asynchronously via Bedrock."""
+        inference_config = {}
         if temperature:
-            inferenceConfig["temperature"] = temperature
+            inference_config["temperature"] = temperature
         if max_tokens:
-            inferenceConfig["max_tokens"] = max_tokens
+            inference_config["max_tokens"] = max_tokens
         if top_p:
-            inferenceConfig["top_p"] = top_p
+            inference_config["top_p"] = top_p
 
-        # convert messages
         conversation = prepare_conversation(messages)
 
         async with self.session.client(
@@ -73,12 +76,16 @@ class AsyncBedrockClient:
             aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         ) as client:
-            response = await client.converse(modelId=model_name, messages=conversation, inferenceConfig=inferenceConfig)
+            response = await client.converse(
+                modelId=model_name, messages=conversation, inferenceConfig=inference_config
+            )
 
         return response["output"]["message"]["content"][0]["text"]
 
 
 class BedrockClient:
+    """Synchronous Bedrock runtime client wrapper"""
+
     def __init__(
         self,
         aws_access_key_id: Optional[str] = None,
@@ -99,7 +106,8 @@ class BedrockClient:
             region_name=region_name,
         )
 
-    def embeddings(self, model_name: str, messages: List[str]):
+    def embeddings(self, model_name: str, messages: List[str]) -> List[List[float]]:
+        """Request embedding vectors for each text in `messages`."""
         embeddings = []
         for message in messages:
             native_request = {"inputText": message}
@@ -120,18 +128,18 @@ class BedrockClient:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-    ):
-        inferenceConfig = {}
+    ) -> str:
+        """Generate a chat completion synchronously via Bedrock."""
+        inference_config: Dict[str, float | int] = {}
         if temperature:
-            inferenceConfig["temperature"] = temperature
+            inference_config["temperature"] = temperature
         if max_tokens:
-            inferenceConfig["max_tokens"] = max_tokens
+            inference_config["max_tokens"] = max_tokens
         if top_p:
-            inferenceConfig["top_p"] = top_p
+            inference_config["top_p"] = top_p
 
-        # convert messages
         conversation = prepare_conversation(messages)
 
-        response = self.client.converse(modelId=model_name, messages=conversation, inferenceConfig=inferenceConfig)
+        response = self.client.converse(modelId=model_name, messages=conversation, inferenceConfig=inference_config)
 
         return response["output"]["message"]["content"][0]["text"]

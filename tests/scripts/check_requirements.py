@@ -110,8 +110,6 @@ MAIN_RULE_IGNORES = {
         "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
         "urllib3",  # pinned by Snyk to avoid a vulnerability
         "faiss-cpu",
-        "types-aioboto3",  # aioboto3 is imported
-        "google-genai",  # google.genai is imported
     ],
 }
 
@@ -203,6 +201,7 @@ PACKAGE_NAME_MAP = {
     "google-analytics-admin": ["google"],
     "google-auth": ["google"],
     "google-cloud-storage": ["google"],
+    "google-genai": ["google"],
     "google-auth-oauthlib": ["google_auth_oauthlib"],
     "google-api-python-client": ["googleapiclient"],
     "ibm-cos-sdk": ["ibm_boto3", "ibm_botocore"],
@@ -260,6 +259,7 @@ PACKAGE_NAME_MAP = {
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
     "sklearn": ["scikit-learn"],
+    "types-aioboto3": ["aioboto3"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

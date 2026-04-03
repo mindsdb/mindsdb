@@ -11,7 +11,7 @@ on:
       - closed
     branches:
       - 'develop'
-      - 'release/*'
+      - 'releases/*'
 
 concurrency:
   group: ${{ github.workflow_ref }}

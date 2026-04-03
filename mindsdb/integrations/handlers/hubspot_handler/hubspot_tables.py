@@ -1,4 +1,4 @@
-from typing import List, Dict, Text, Any, Optional
+from typing import List, Dict, Text, Any, Optional, Tuple
 
 import pandas as pd
 from hubspot import HubSpot
@@ -10,110 +10,102 @@ from hubspot.crm.objects import (
     BatchInputSimplePublicObjectBatchInput,
     BatchInputSimplePublicObjectId,
 )
-from mindsdb_sql_parser import ast
-
-from mindsdb.integrations.utilities.handlers.query_utilities import (
-    INSERTQueryParser,
-    SELECTQueryParser,
-    UPDATEQueryParser,
-    DELETEQueryParser,
-    SELECTQueryExecutor,
-    UPDATEQueryExecutor,
-    DELETEQueryExecutor,
-)
-
-from mindsdb.integrations.libs.api_handler import APITable
+from mindsdb.integrations.utilities.handlers.query_utilities import UPDATEQueryExecutor, DELETEQueryExecutor
+from mindsdb.integrations.libs.api_handler import APIResource
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+HUBSPOT_TABLE_COLUMN_DEFINITIONS: Dict[str, List[Tuple[str, str, str]]] = {
+    "companies": [
+        ("name", "VARCHAR", "Company name"),
+        ("domain", "VARCHAR", "Company domain"),
+        ("industry", "VARCHAR", "Industry"),
+        ("city", "VARCHAR", "City"),
+        ("state", "VARCHAR", "State"),
+        ("phone", "VARCHAR", "Phone number"),
+        ("createdate", "TIMESTAMP", "Creation date"),
+        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+    ],
+    "contacts": [
+        ("email", "VARCHAR", "Email address"),
+        ("firstname", "VARCHAR", "First name"),
+        ("lastname", "VARCHAR", "Last name"),
+        ("phone", "VARCHAR", "Phone number"),
+        ("company", "VARCHAR", "Associated company"),
+        ("website", "VARCHAR", "Website URL"),
+        ("createdate", "TIMESTAMP", "Creation date"),
+        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+    ],
+    "deals": [
+        ("dealname", "VARCHAR", "Deal name"),
+        ("amount", "DECIMAL", "Deal amount"),
+        ("dealstage", "VARCHAR", "Deal stage"),
+        ("pipeline", "VARCHAR", "Sales pipeline"),
+        ("closedate", "DATE", "Expected close date"),
+        ("hubspot_owner_id", "VARCHAR", "Owner ID"),
+        ("createdate", "TIMESTAMP", "Creation date"),
+        ("lastmodifieddate", "TIMESTAMP", "Last modification date"),
+    ],
+}
 
-class CompaniesTable(APITable):
+
+def _normalize_filter_conditions(conditions: Optional[List[FilterCondition]]) -> List[List[Any]]:
+    """
+    Convert FilterCondition instances into the condition format expected by query executors.
+    """
+    normalized: List[List[Any]] = []
+    if not conditions:
+        return normalized
+
+    for condition in conditions:
+        if isinstance(condition, FilterCondition):
+            normalized.append([condition.op.value, condition.column, condition.value])
+        elif isinstance(condition, (list, tuple)) and len(condition) >= 3:
+            normalized.append([condition[0], condition[1], condition[2]])
+    return normalized
+
+
+class CompaniesTable(APIResource):
     """Hubspot Companies table."""
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-        Pulls Hubspot Companies data
+    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+        """Return static metadata for the companies table."""
+        row_count = None
+        try:
+            self.handler.connect()
+            row_count = self.handler._estimate_table_rows("companies")
+        except Exception as e:
+            logger.warning(f"Could not estimate HubSpot companies row count: {e}")
 
-        Parameters
-        ----------
-        query : ast.Select
-            Given SQL SELECT query
+        return {
+            "TABLE_NAME": "companies",
+            "TABLE_TYPE": "BASE TABLE",
+            "TABLE_DESCRIPTION": self.handler._get_table_description("companies"),
+            "ROW_COUNT": row_count,
+        }
 
-        Returns
-        -------
-        pd.DataFrame
-            Hubspot Companies matching the query
+    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        """Return default column metadata for companies."""
+        return self.handler._get_default_meta_columns("companies")
 
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-
-        """
-
-        select_statement_parser = SELECTQueryParser(query, "companies", self.get_columns())
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        companies_df = pd.json_normalize(self.get_companies(limit=result_limit))
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
+        companies_df = pd.json_normalize(self.get_companies(limit=limit))
         if companies_df.empty:
             companies_df = pd.DataFrame(columns=self._get_default_company_columns())
-
-        select_statement_executor = SELECTQueryExecutor(
-            companies_df, selected_columns, where_conditions, order_by_conditions
-        )
-        companies_df = select_statement_executor.execute_query()
-
         return companies_df
 
-    def insert(self, query: ast.Insert) -> None:
-        """
-        Inserts data into HubSpot "POST /crm/v3/objects/companies/batch/create" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Insert
-           Given SQL INSERT query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        insert_statement_parser = INSERTQueryParser(
-            query,
-            supported_columns=["name", "city", "phone", "state", "domain", "industry"],
-            mandatory_columns=["name"],
-            all_mandatory=False,
-        )
-        company_data = insert_statement_parser.parse_query()
+    def add(self, company_data: List[dict]):
         self.create_companies(company_data)
 
-    def update(self, query: ast.Update) -> None:
-        """
-        Updates data from HubSpot "PATCH /crm/v3/objects/companies/batch/update" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Update
-           Given SQL UPDATE query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        update_statement_parser = UPDATEQueryParser(query)
-        values_to_update, where_conditions = update_statement_parser.parse_query()
-
+    def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
         companies_df = pd.json_normalize(self.get_companies(limit=1000))
 
         if companies_df.empty:
@@ -121,39 +113,20 @@ class CompaniesTable(APITable):
                 "No companies retrieved from HubSpot to evaluate update conditions. Verify your connection and permissions."
             )
 
-        update_query_executor = UPDATEQueryExecutor(companies_df, where_conditions)
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        update_query_executor = UPDATEQueryExecutor(companies_df, normalized_conditions)
         filtered_df = update_query_executor.execute_query()
 
         if filtered_df.empty:
             raise ValueError(
-                f"No companies found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+                f"No companies found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
             )
 
         company_ids = filtered_df["id"].astype(str).tolist()
         logger.info(f"Updating {len(company_ids)} compan(ies) matching WHERE conditions")
-        self.update_companies(company_ids, values_to_update)
+        self.update_companies(company_ids, values)
 
-    def delete(self, query: ast.Delete) -> None:
-        """
-        Deletes data from HubSpot "DELETE /crm/v3/objects/companies/batch/archive" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Delete
-           Given SQL DELETE query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        delete_statement_parser = DELETEQueryParser(query)
-        where_conditions = delete_statement_parser.parse_query()
-
+    def remove(self, conditions: List[FilterCondition]) -> None:
         companies_df = pd.json_normalize(self.get_companies(limit=1000))
 
         if companies_df.empty:
@@ -161,12 +134,13 @@ class CompaniesTable(APITable):
                 "No companies retrieved from HubSpot to evaluate delete conditions. Verify your connection and permissions."
             )
 
-        delete_query_executor = DELETEQueryExecutor(companies_df, where_conditions)
+        normalized_conditions = _normalize_filter_conditions(conditions)
+        delete_query_executor = DELETEQueryExecutor(companies_df, normalized_conditions)
         filtered_df = delete_query_executor.execute_query()
 
         if filtered_df.empty:
             raise ValueError(
-                f"No companies found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+                f"No companies found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
             )
 
         company_ids = filtered_df["id"].astype(str).tolist()
@@ -287,92 +261,49 @@ class CompaniesTable(APITable):
             raise Exception(f"Companies deletion failed {e}")
 
 
-class ContactsTable(APITable):
+class ContactsTable(APIResource):
     """Hubspot Contacts table."""
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-        Pulls Hubspot Contacts data
+    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+        row_count = None
+        try:
+            self.handler.connect()
+            row_count = self.handler._estimate_table_rows("contacts")
+        except Exception as e:
+            logger.warning(f"Could not estimate HubSpot contacts row count: {e}")
 
-        Parameters
-        ----------
-        query : ast.Select
-            Given SQL SELECT query
+        return {
+            "TABLE_NAME": "contacts",
+            "TABLE_TYPE": "BASE TABLE",
+            "TABLE_DESCRIPTION": self.handler._get_table_description("contacts"),
+            "ROW_COUNT": row_count,
+        }
 
-        Returns
-        -------
-        pd.DataFrame
-            Hubspot Contacts matching the query
+    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        return self.handler._get_default_meta_columns("contacts")
 
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-
-        """
-
-        select_statement_parser = SELECTQueryParser(query, "contacts", self.get_columns())
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        contacts_df = pd.json_normalize(self.get_contacts(limit=result_limit, where_conditions=where_conditions))
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
+        requested_properties = targets or []
+        contacts_df = pd.json_normalize(
+            self.get_contacts(limit=limit, where_conditions=conditions, properties=requested_properties)
+        )
         if contacts_df.empty:
             contacts_df = pd.DataFrame(columns=self._get_default_contact_columns())
-
-        select_statement_executor = SELECTQueryExecutor(
-            contacts_df, selected_columns, where_conditions, order_by_conditions
-        )
-        contacts_df = select_statement_executor.execute_query()
-
+        else:
+            contacts_df["id"] = pd.to_numeric(contacts_df["id"], errors="coerce")
         return contacts_df
 
-    def insert(self, query: ast.Insert) -> None:
-        """
-        Inserts data into HubSpot "POST /crm/v3/objects/contacts/batch/create" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Insert
-           Given SQL INSERT query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        insert_statement_parser = INSERTQueryParser(
-            query,
-            supported_columns=["email", "firstname", "lastname", "phone", "company", "website"],
-            mandatory_columns=["email"],
-            all_mandatory=False,
-        )
-        contact_data = insert_statement_parser.parse_query()
+    def add(self, contact_data: List[dict]):
         self.create_contacts(contact_data)
 
-    def update(self, query: ast.Update) -> None:
-        """
-        Updates data from HubSpot "PATCH /crm/v3/objects/contacts/batch/update" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Update
-           Given SQL UPDATE query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        update_statement_parser = UPDATEQueryParser(query)
-        values_to_update, where_conditions = update_statement_parser.parse_query()
-
+    def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
+        where_conditions = _normalize_filter_conditions(conditions)
         contacts_df = pd.json_normalize(self.get_contacts(limit=1000, where_conditions=where_conditions))
 
         if contacts_df.empty:
@@ -385,34 +316,15 @@ class ContactsTable(APITable):
 
         if filtered_df.empty:
             raise ValueError(
-                f"No contacts found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+                f"No contacts found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
             )
 
         contact_ids = filtered_df["id"].astype(str).tolist()
         logger.info(f"Updating {len(contact_ids)} contact(s) matching WHERE conditions")
-        self.update_contacts(contact_ids, values_to_update)
+        self.update_contacts(contact_ids, values)
 
-    def delete(self, query: ast.Delete) -> None:
-        """
-        Deletes data from HubSpot "DELETE /crm/v3/objects/contacts/batch/archive" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Delete
-           Given SQL DELETE query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        delete_statement_parser = DELETEQueryParser(query)
-        where_conditions = delete_statement_parser.parse_query()
-
+    def remove(self, conditions: List[FilterCondition]) -> None:
+        where_conditions = _normalize_filter_conditions(conditions)
         contacts_df = pd.json_normalize(self.get_contacts(limit=1000, where_conditions=where_conditions))
 
         if contacts_df.empty:
@@ -425,7 +337,7 @@ class ContactsTable(APITable):
 
         if filtered_df.empty:
             raise ValueError(
-                f"No contacts found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+                f"No contacts found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
             )
 
         contact_ids = filtered_df["id"].astype(str).tolist()
@@ -455,6 +367,7 @@ class ContactsTable(APITable):
         where_conditions: Optional[List] = None,
         **kwargs,
     ) -> List[Dict]:
+        normalized_conditions = _normalize_filter_conditions(where_conditions)
         hubspot = self.handler.connect()
         requested_properties = kwargs.get("properties", [])
         default_properties = [
@@ -477,8 +390,8 @@ class ContactsTable(APITable):
             api_kwargs.pop("limit", None)
 
         # Try using HubSpot search API if we have simple equality filters
-        if where_conditions:
-            search_results = self._search_contacts_by_conditions(hubspot, where_conditions, properties, limit)
+        if normalized_conditions:
+            search_results = self._search_contacts_by_conditions(hubspot, normalized_conditions, properties, limit)
             if search_results is not None:
                 logger.info(f"Retrieved {len(search_results)} contacts from HubSpot via search API")
                 return search_results
@@ -642,92 +555,46 @@ class ContactsTable(APITable):
             raise Exception(f"Contacts deletion failed {e}")
 
 
-class DealsTable(APITable):
+class DealsTable(APIResource):
     """Hubspot Deals table."""
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-        Pulls Hubspot Deals data
+    def meta_get_tables(self, table_name: str) -> Dict[str, Any]:
+        row_count = None
+        try:
+            self.handler.connect()
+            row_count = self.handler._estimate_table_rows("deals")
+        except Exception as e:
+            logger.warning(f"Could not estimate HubSpot deals row count: {e}")
 
-        Parameters
-        ----------
-        query : ast.Select
-            Given SQL SELECT query
+        return {
+            "TABLE_NAME": "deals",
+            "TABLE_TYPE": "BASE TABLE",
+            "TABLE_DESCRIPTION": self.handler._get_table_description("deals"),
+            "ROW_COUNT": row_count,
+        }
 
-        Returns
-        -------
-        pd.DataFrame
-            Hubspot Deals matching the query
+    def meta_get_columns(self, table_name: str) -> List[Dict[str, Any]]:
+        return self.handler._get_default_meta_columns("deals")
 
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-
-        """
-
-        select_statement_parser = SELECTQueryParser(query, "deals", self.get_columns())
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        deals_df = pd.json_normalize(self.get_deals(limit=result_limit))
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+    ) -> pd.DataFrame:
+        deals_df = pd.json_normalize(self.get_deals(limit=limit))
         if deals_df.empty:
             deals_df = pd.DataFrame(columns=self._get_default_deal_columns())
-
-        select_statement_executor = SELECTQueryExecutor(
-            deals_df, selected_columns, where_conditions, order_by_conditions
-        )
-        deals_df = select_statement_executor.execute_query()
-
+        else:
+            deals_df = self._cast_deal_columns(deals_df)
         return deals_df
 
-    def insert(self, query: ast.Insert) -> None:
-        """
-        Inserts data into HubSpot "POST /crm/v3/objects/deals/batch/create" API endpoint.
+    def add(self, deal_data: List[dict]):
+        self.create_deals(deal_data)
 
-        Parameters
-        ----------
-        query : ast.Insert
-           Given SQL INSERT query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        insert_statement_parser = INSERTQueryParser(
-            query,
-            supported_columns=["amount", "dealname", "pipeline", "closedate", "dealstage", "hubspot_owner_id"],
-            mandatory_columns=["dealname"],
-            all_mandatory=False,
-        )
-        deals_data = insert_statement_parser.parse_query()
-        self.create_deals(deals_data)
-
-    def update(self, query: ast.Update) -> None:
-        """
-        Updates data from HubSpot "PATCH /crm/v3/objects/deals/batch/update" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Update
-           Given SQL UPDATE query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        update_statement_parser = UPDATEQueryParser(query)
-        values_to_update, where_conditions = update_statement_parser.parse_query()
-
+    def modify(self, conditions: List[FilterCondition], values: Dict) -> None:
+        where_conditions = _normalize_filter_conditions(conditions)
         deals_df = pd.json_normalize(self.get_deals(limit=1000))
 
         if deals_df.empty:
@@ -740,34 +607,15 @@ class DealsTable(APITable):
 
         if filtered_df.empty:
             raise ValueError(
-                f"No deals found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+                f"No deals found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
             )
 
         deal_ids = filtered_df["id"].astype(str).tolist()
         logger.info(f"Updating {len(deal_ids)} deal(s) matching WHERE conditions")
-        self.update_deals(deal_ids, values_to_update)
+        self.update_deals(deal_ids, values)
 
-    def delete(self, query: ast.Delete) -> None:
-        """
-        Deletes data from HubSpot "DELETE /crm/v3/objects/deals/batch/archive" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Delete
-           Given SQL DELETE query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        delete_statement_parser = DELETEQueryParser(query)
-        where_conditions = delete_statement_parser.parse_query()
-
+    def remove(self, conditions: List[FilterCondition]) -> None:
+        where_conditions = _normalize_filter_conditions(conditions)
         deals_df = pd.json_normalize(self.get_deals(limit=1000))
 
         if deals_df.empty:
@@ -780,7 +628,7 @@ class DealsTable(APITable):
 
         if filtered_df.empty:
             raise ValueError(
-                f"No deals found matching WHERE conditions: {where_conditions}. Please verify the conditions are correct."
+                f"No deals found matching WHERE conditions: {conditions}. Please verify the conditions are correct."
             )
 
         deal_ids = filtered_df["id"].astype(str).tolist()
@@ -803,6 +651,21 @@ class DealsTable(APITable):
             "createdate",
             "hs_lastmodifieddate",
         ]
+
+    @staticmethod
+    def _cast_deal_columns(deals_df: pd.DataFrame) -> pd.DataFrame:
+        numeric_columns = ["amount"]
+        datetime_columns = ["closedate", "createdate", "hs_lastmodifieddate"]
+
+        for column in numeric_columns:
+            if column in deals_df.columns:
+                deals_df[column] = pd.to_numeric(deals_df[column], errors="coerce")
+
+        for column in datetime_columns:
+            if column in deals_df.columns:
+                deals_df[column] = pd.to_datetime(deals_df[column], errors="coerce")
+
+        return deals_df
 
     def get_deals(self, **kwargs) -> List[Dict]:
         hubspot = self.handler.connect()

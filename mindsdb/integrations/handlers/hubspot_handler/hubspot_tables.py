@@ -1102,8 +1102,7 @@ class HubSpotAPIResource(APIResource):
 
     def select(self, query: ASTNode) -> pd.DataFrame:
         """Select data, applying WHERE, GROUP BY, ORDER BY, LIMIT and function evaluation."""
-        table_name = self.__class__.__name__
-
+        
         conditions, order_by, result_limit = self._extract_query_params(query)
         group_by_cols = self._get_group_by_columns(query)
         # Targets include columns referenced inside functions and GROUP BY
@@ -1276,7 +1275,7 @@ class HubSpotAPIResource(APIResource):
                 elif op_key == "not_in":
                     values = value if isinstance(value, (list, tuple, set)) else [value]
                     mask &= ~df[column].isin(values)
-            except Exception as e:
+            except Exception:
                 continue
 
         return df[mask].reset_index(drop=True)
@@ -1296,7 +1295,7 @@ class HubSpotAPIResource(APIResource):
 
         try:
             return df.sort_values(by=sort_columns, ascending=sort_ascending).reset_index(drop=True)
-        except Exception as e:
+        except Exception:
             return df
 
     def _apply_column_selection(self, df: pd.DataFrame, targets) -> pd.DataFrame:
@@ -1674,7 +1673,7 @@ class CompaniesTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("companies")
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -1834,7 +1833,7 @@ class CompaniesTable(HubSpotAPIResource):
                 companies_dict.append(self._company_to_dict(company, columns))
                 if len(companies_dict) >= effective_limit:
                     break
-            except Exception as e:
+            except Exception:
                 continue
 
         logger.info(f"Retrieved {len(companies_dict)} companies from HubSpot")
@@ -1960,7 +1959,7 @@ class ContactsTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("contacts")
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -2243,7 +2242,7 @@ class ContactsTable(HubSpotAPIResource):
                         cid = str(assoc.id)
                         if cid not in contact_company_map:
                             contact_company_map[cid] = from_id
-            except Exception as e:
+            except Exception:
                 pass
 
         if not contact_company_map:
@@ -2314,7 +2313,7 @@ class ContactsTable(HubSpotAPIResource):
             if association_targets:
                 row = enrich_object_with_associations(contact, "contacts", row)
             return row
-        except Exception as e:
+        except Exception:
             assoc_columns = get_primary_association_columns("contacts") if association_targets else []
             return {
                 "id": getattr(contact, "id", None),
@@ -2398,7 +2397,7 @@ class DealsTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("deals")
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -2780,7 +2779,7 @@ class TicketsTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("tickets")
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -2946,7 +2945,7 @@ class TicketsTable(HubSpotAPIResource):
                 tickets_dict.append(row)
                 if len(tickets_dict) >= effective_limit:
                     break
-            except Exception as e:
+            except Exception:
                 continue
 
         logger.info(f"Retrieved {len(tickets_dict)} tickets from HubSpot")
@@ -3036,7 +3035,7 @@ class TasksTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("tasks")
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -3200,7 +3199,7 @@ class TasksTable(HubSpotAPIResource):
                 tasks_dict.append(row)
                 if len(tasks_dict) >= effective_limit:
                     break
-            except Exception as e:
+            except Exception:
                 continue
 
         logger.info(f"Retrieved {len(tasks_dict)} tasks from HubSpot")
@@ -3293,7 +3292,7 @@ class CallsTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("calls")
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -3457,7 +3456,7 @@ class CallsTable(HubSpotAPIResource):
                 calls_dict.append(row)
                 if len(calls_dict) >= effective_limit:
                     break
-            except Exception as e:
+            except Exception:
                 continue
 
         logger.info(f"Retrieved {len(calls_dict)} calls from HubSpot")
@@ -3550,7 +3549,7 @@ class EmailsTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("emails")
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -3714,7 +3713,7 @@ class EmailsTable(HubSpotAPIResource):
                 emails_dict.append(row)
                 if len(emails_dict) >= effective_limit:
                     break
-            except Exception as e:
+            except Exception:
                 continue
 
         logger.info(f"Retrieved {len(emails_dict)} emails from HubSpot")
@@ -3807,7 +3806,7 @@ class MeetingsTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("meetings")
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -3971,7 +3970,7 @@ class MeetingsTable(HubSpotAPIResource):
                 meetings_dict.append(row)
                 if len(meetings_dict) >= effective_limit:
                     break
-            except Exception as e:
+            except Exception:
                 continue
 
         logger.info(f"Retrieved {len(meetings_dict)} meetings from HubSpot")
@@ -4064,7 +4063,7 @@ class NotesTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("notes")
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -4223,7 +4222,7 @@ class NotesTable(HubSpotAPIResource):
                 notes_dict.append(row)
                 if len(notes_dict) >= effective_limit:
                     break
-            except Exception as e:
+            except Exception:
                 continue
 
         logger.info(f"Retrieved {len(notes_dict)} notes from HubSpot")
@@ -4317,7 +4316,7 @@ class LeadsTable(HubSpotAPIResource):
         try:
             self.handler.connect()
             row_count = self.handler._estimate_table_rows("leads")
-        except Exception as e:
+        except Exception:
             pass
         return {
             "TABLE_NAME": "leads",
@@ -4476,7 +4475,7 @@ class LeadsTable(HubSpotAPIResource):
                 leads_dict.append(row)
                 if len(leads_dict) >= effective_limit:
                     break
-            except Exception as e:
+            except Exception:
                 continue
 
         logger.info(f"Retrieved {len(leads_dict)} leads from HubSpot")

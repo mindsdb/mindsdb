@@ -201,6 +201,7 @@ PACKAGE_NAME_MAP = {
     "google-analytics-admin": ["google"],
     "google-auth": ["google"],
     "google-cloud-storage": ["google"],
+    "google-genai": ["google"],
     "google-auth-oauthlib": ["google_auth_oauthlib"],
     "google-api-python-client": ["googleapiclient"],
     "ibm-cos-sdk": ["ibm_boto3", "ibm_botocore"],
@@ -258,6 +259,7 @@ PACKAGE_NAME_MAP = {
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
     "sklearn": ["scikit-learn"],
+    "types-aioboto3": ["aioboto3"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

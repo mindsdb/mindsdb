@@ -7,6 +7,10 @@ from openai import OpenAI, AzureOpenAI
 
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 
+from mindsdb.interfaces.knowledge_base.providers.bedrock import BedrockClient
+from mindsdb.interfaces.knowledge_base.providers.gemini import GeminiClient
+from mindsdb.interfaces.knowledge_base.providers.snowflake import SnowflakeClient
+
 
 def retry_with_exponential_backoff(func):
     def decorator(*args, **kwargs):
@@ -60,21 +64,22 @@ def run_in_batches(batch_size):
 class LLMClient:
     """
     Class for accession to LLM.
-    It chooses openai client or litellm handler depending on the config
+    It chooses openai provider client depending on the config
     """
 
     def __init__(self, params: dict = None, session=None):
         self._session = session
-        self.params = params
+        self.params = params.copy()
 
-        self.provider = params.get("provider", "openai")
+        self.provider = self.params.pop("provider", "openai")
+        self.model_name = self.params.pop("model_name")
+        if self.provider == "google":
+            self.provider = "gemini"
 
         if "api_key" not in params:
             api_key = get_api_key(self.provider, params, strict=False)
             if api_key is not None:
                 params["api_key"] = api_key
-
-        self.engine = "openai"
 
         if self.provider == "azure_openai":
             azure_api_key = params.get("api_key") or os.getenv("AZURE_OPENAI_API_KEY")
@@ -97,56 +102,43 @@ class LLMClient:
             if kwargs.get("api_key") is None:
                 kwargs["api_key"] = "n/a"
             self.client = OpenAI(**kwargs)
+        elif self.provider == "bedrock":
+            if "aws_region" in self.params:
+                self.params["aws_region_name"] = self.params.pop("aws_region")
+            self.client = BedrockClient(**self.params)
+        elif self.provider == "gemini":
+            self.client = GeminiClient(**self.params)
+        elif self.provider == "snowflake":
+            self.client = SnowflakeClient(**self.params)
         else:
-            # try to use litellm
-            if self._session is None:
-                from mindsdb.api.executor.controllers.session_controller import SessionController
-
-                self._session = SessionController()
-            module = self._session.integration_controller.get_handler_module("litellm")
-
-            if module is None or module.Handler is None:
-                raise ValueError(f'Unable to use "{self.provider}" provider. Litellm handler is not installed')
-
-            self.client = module.Handler
-            self.engine = "litellm"
+            raise NotImplementedError(f'Provider "{self.provider}" is not supported')
 
     @run_in_batches(1000)
     @retry_with_exponential_backoff
     def embeddings(self, messages: List[str]):
-        params = self.params
-        if self.engine == "openai":
+        if self.provider in ("openai", "azure_openai"):
             response = self.client.embeddings.create(
-                model=params["model_name"],
+                model=self.model_name,
                 input=messages,
             )
             return [item.embedding for item in response.data]
         else:
-            kwargs = params.copy()
-            model = kwargs.pop("model_name")
-            kwargs.pop("provider", None)
-
-            return self.client.embeddings(self.provider, model=model, messages=messages, args=kwargs)
+            return self.client.embeddings(self.model_name, messages)
 
     @run_in_batches(100)
     def completion(self, messages: List[dict], json_output: bool = False) -> List[str]:
         """
         Call LLM completion and get response
         """
-        params = self.params
-        params["json_output"] = json_output
-        if self.engine == "openai":
+
+        if self.provider in ("openai", "azure_openai"):
             response = self.client.chat.completions.create(
-                model=params["model_name"],
+                model=self.model_name,
                 messages=messages,
             )
             return [item.message.content for item in response.choices]
         else:
-            kwargs = params.copy()
-            model = kwargs.pop("model_name")
-            kwargs.pop("provider", None)
-            response = self.client.completion(self.provider, model=model, messages=messages, args=kwargs)
-            return [item.message.content for item in response.choices]
+            return self.client.completion(self.model_name, messages)
 
     async def abatch(self, messages_list: List[List[dict]], json_output: bool = False) -> List[List[str]]:
         """

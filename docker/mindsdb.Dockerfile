@@ -93,6 +93,8 @@ ENV PATH=/venv/bin:$PATH
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 
+HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=60s CMD curl -fsS "http://localhost:47334/api/status"
+
 # Pre-load web GUI
 RUN python -m mindsdb --config=/root/mindsdb_config.json --update-gui
 

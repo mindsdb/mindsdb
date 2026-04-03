@@ -20,6 +20,8 @@ from mindsdb.api.executor.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     ApplyPredictorStep,
+    InsertToTable,
+    FetchDataframeStepPartition,
 )
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
@@ -276,6 +278,16 @@ class SQLQuery:
                 )
 
             if self.planner.plan.is_async and ctx.task_id is None:
+                # release KB locks before inserting in background
+                db_released, partition_params = self.release_kb_lock(steps)
+                if db_released:
+                    # faiss db is used as a table to insert
+                    if partition_params.get("threads", 1) > 1:
+                        raise ValueError(
+                            "It is not possible to use threads for FAISS knowledge base, "
+                            f"please remove `threads={partition_params['threads']}` parameter"
+                        )
+
                 # add to task
                 self.run_query.add_to_task()
                 # return query info
@@ -302,7 +314,7 @@ class SQLQuery:
         except Exception as e:
             if self.run_query is not None:
                 # set error and place where it stopped
-                self.run_query.on_error(e, step.step_num, self.steps_data)
+                self.run_query.on_error(e, step.step_num if "step" in locals() else -1, self.steps_data)
             raise e
         else:
             # mark running query as completed
@@ -339,6 +351,22 @@ class SQLQuery:
             raise UnknownError(f"Unknown step: {cls_name}")
 
         return handler(self, steps_data=steps_data).call(step)
+
+    def release_kb_lock(self, steps):
+        # find knowledge bases that are used as tables to insert.
+        #  then release locks of vector for these knowledge bases
+        #  return partition step params and databases names that were unlocked
+        db_released, partition_params = [], {}
+        for step in steps:
+            if isinstance(step, InsertToTable):
+                db_name = self.session.kb_controller.release_lock(step.table, project_name=self.database)
+                if db_name:
+                    db_released.append(db_name)
+            if isinstance(step, FetchDataframeStepPartition):
+                dbs, _ = self.release_kb_lock(step.steps)
+                db_released.extend(dbs)
+                partition_params.update(step.params)
+        return db_released, partition_params
 
 
 SQLQuery.register_steps()

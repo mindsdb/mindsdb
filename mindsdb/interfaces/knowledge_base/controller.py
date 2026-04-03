@@ -1,4 +1,3 @@
-import os
 import copy
 from typing import Dict, List, Optional, Any, Text, Tuple, Union
 import json
@@ -6,7 +5,7 @@ import decimal
 
 import pandas as pd
 import numpy as np
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
@@ -32,11 +31,13 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import Preprocessing
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.knowledge_base.executor import KnowledgeBaseQueryExecutor
+from mindsdb.interfaces.knowledge_base.default_storage_resolver import resolve_default_storage_engines
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.utils import validate_pydantic_params
 from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
 from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
 
@@ -1023,21 +1024,6 @@ class KnowledgeBaseTable:
         res = self._df_to_embeddings(df)
         return res[TableField.EMBEDDINGS.value][0]
 
-    @staticmethod
-    def call_litellm_embedding(session, model_params, messages):
-        args = copy.deepcopy(model_params)
-
-        if "model_name" not in args:
-            raise ValueError("'model_name' must be provided for embedding model")
-
-        llm_model = args.pop("model_name")
-        engine = args.pop("provider")
-
-        module = session.integration_controller.get_handler_module("litellm")
-        if module is None or module.Handler is None:
-            raise ValueError(f'Unable to use "{engine}" provider. Litellm handler is not installed')
-        return module.Handler.embeddings(engine, llm_model, messages, args)
-
     def build_rag_pipeline(self, retrieval_config: dict):
         """
         Builds a RAG pipeline with returned sources
@@ -1179,26 +1165,6 @@ class KnowledgeBaseController:
     def __init__(self, session) -> None:
         self.session = session
 
-    def _check_kb_input_params(self, params):
-        # check names and types KB params
-        try:
-            KnowledgeBaseInputParams.model_validate(params)
-        except ValidationError as e:
-            problems = []
-            for error in e.errors():
-                parameter = ".".join([str(i) for i in error["loc"]])
-                param_type = error["type"]
-                if param_type == "extra_forbidden":
-                    msg = f"Parameter '{parameter}' is not allowed"
-                else:
-                    msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
-                problems.append(msg)
-
-            msg = "\n".join(problems)
-            if len(problems) > 1:
-                msg = "\n" + msg
-            raise ValueError(f"Problem with knowledge base parameters: {msg}") from e
-
     def add(
         self,
         name: str,
@@ -1223,7 +1189,7 @@ class KnowledgeBaseController:
             params = params or {}
             params["preprocessing"] = preprocessing_config
 
-        self._check_kb_input_params(params)
+        validate_pydantic_params(params, KnowledgeBaseInputParams, "knowledge base")
 
         # Check if vector_size is provided when using sparse vectors
         is_sparse = params.get("is_sparse")
@@ -1270,24 +1236,12 @@ class KnowledgeBaseController:
 
         # search for the vector database table
         if storage is None:
-            cloud_pg_vector = os.environ.get("KB_PGVECTOR_URL")
-            if cloud_pg_vector:
-                vector_table_name = name
-                # Add sparse vector support for pgvector
-                vector_db_params = {}
-                # Check both explicit parameter and model configuration
-                if is_sparse:
-                    vector_db_params["is_sparse"] = True
-                    if vector_size is not None:
-                        vector_db_params["vector_size"] = vector_size
-                vector_db_name = self._create_persistent_pgvector(vector_db_params)
-                params["default_vector_storage"] = vector_db_name
-            else:
-                raise ValueError(
-                    "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
-                    "One of the options is to use pgvector: "
-                    "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
-                )
+            vector_db_name, vector_table_name = self._resolve_default_vector_storage(
+                kb_name=name,
+                is_sparse=is_sparse,
+                vector_size=vector_size,
+            )
+            params["default_vector_storage"] = vector_db_name
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:
@@ -1376,7 +1330,7 @@ class KnowledgeBaseController:
             params = params or {}
             params["preprocessing"] = preprocessing_config
 
-        self._check_kb_input_params(params)
+        validate_pydantic_params(params, KnowledgeBaseInputParams, "knowledge base")
 
         # get project id
         project = self.session.database_controller.get_project(project_name)
@@ -1465,6 +1419,16 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, "pgvector", params or {})
         return vector_store_name
 
+    def _create_persistent_faiss(self, kb_name: str):
+        vector_store_name = f"store_{kb_name}"
+
+        # check if exists
+        if self.session.integration_controller.get(vector_store_name):
+            return vector_store_name
+
+        self.session.integration_controller.add(vector_store_name, "duckdb_faiss", {})
+        return vector_store_name
+
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):
         """Create default vector database for knowledge base, if not specified"""
 
@@ -1479,6 +1443,34 @@ class KnowledgeBaseController:
 
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
+
+    def _resolve_default_vector_storage(self, kb_name: str, is_sparse: bool = False, vector_size: int = None):
+        resolved_storage = resolve_default_storage_engines(config)
+        default_engine = resolved_storage["default_storage"]
+
+        if default_engine is None:
+            raise ValueError(
+                "Vector table is not defined. Set it by `storage=vector_db.vector_table` or configure "
+                "`knowledge_bases.storage` as one of: pgvector, faiss."
+            )
+
+        if default_engine == "pgvector":
+            vector_db_params = {}
+            if is_sparse:
+                vector_db_params["is_sparse"] = True
+                if vector_size is not None:
+                    vector_db_params["vector_size"] = vector_size
+            vector_db_name = self._create_persistent_pgvector(vector_db_params)
+            return vector_db_name, kb_name
+
+        if default_engine in ("duckdb_faiss", "faiss"):
+            vector_db_name = self._create_persistent_faiss(kb_name)
+            return vector_db_name, kb_name
+
+        raise ValueError(
+            f"Automatic default storage creation is not supported for engine '{default_engine}'. "
+            "Set `storage=vector_db.vector_table` explicitly."
+        )
 
     def _check_embedding_model(self, project_name, params: dict = None, kb_name="") -> dict:
         """check embedding model for knowledge base, return embedding model info"""
@@ -1510,7 +1502,7 @@ class KnowledgeBaseController:
         except Exception as e:
             raise RuntimeError(f"Problem with embedding model config: {e}") from e
 
-    def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
+    def delete(self, name: str, project_name: str, if_exists: bool = False) -> None:
         """
         Delete a knowledge base from the database
         """
@@ -1629,3 +1621,26 @@ class KnowledgeBaseController:
         scores = EvaluateBase.run(self.session, kb_table, params)
 
         return scores
+
+    def release_lock(self, knowledge_base: Identifier, project_name):
+        # works only for FAISS dbs.
+        # if FAISS vector db is used in KB: remove this db from handlers cache.
+        #   it will clear internal cache of tables in faiss handler and release locks for faiss files
+        #   return unloaded database name
+
+        if len(knowledge_base.parts) > 1:
+            project_name, kb_name = knowledge_base.parts[-2:]
+        else:
+            kb_name = knowledge_base.parts[-1]
+
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb = self.get(kb_name, project_id)
+        if kb is None or kb.vector_database_id is None:
+            return
+        database = db.Integration.query.get(kb.vector_database_id)
+        if database is None:
+            return
+
+        if database.engine == "duckdb_faiss":
+            self.session.integration_controller.handlers_cache.delete(database.name)
+            return database.name

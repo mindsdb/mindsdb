@@ -11,7 +11,9 @@ import numpy as np
 
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
-from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb_sql_parser import parse_sql
+
+from mindsdb.api.executor.utilities.sql import query_df, query_dfs
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_executor.py
@@ -1617,6 +1619,75 @@ class TestExecutionTools:
         query = "select CURTIME() as result from df"
         result = query_df(df, query)["result"][0]
         assert isinstance(result, dt.time)
+
+    def test_not_exists_correlated_subquery(self):
+        a = pd.DataFrame(
+            [
+                {"tab_num": 1, "shop": 1},
+                {"tab_num": 1, "shop": 2},
+                {"tab_num": 1, "shop": 3},
+                {"tab_num": 2, "shop": 1},
+                {"tab_num": 2, "shop": 2},
+                {"tab_num": 3, "shop": 1},
+            ]
+        )
+        b = pd.DataFrame([{"shop": 1}, {"shop": 2}, {"shop": 3}])
+
+        result = query_dfs(
+            {"A": a, "B": b},
+            parse_sql(
+                """
+                SELECT DISTINCT a1.tab_num
+                FROM A a1
+                WHERE NOT EXISTS (
+                    SELECT * FROM B b
+                    WHERE NOT EXISTS (
+                        SELECT * FROM A a2
+                        WHERE a2.tab_num = a1.tab_num AND a2.shop = b.shop
+                    )
+                )
+                """,
+                dialect="mindsdb",
+            ),
+        )
+
+        # Only tab_num=1 covers all shops {1, 2, 3}
+        assert list(result["tab_num"]) == [1]
+
+    def test_exists_correlated_subquery(self):
+        # EXISTS version: find tab_num values missing at least one shop.
+        # tab_num=2 misses shop=3, tab_num=3 misses shops 2 and 3.
+        a = pd.DataFrame(
+            [
+                {"tab_num": 1, "shop": 1},
+                {"tab_num": 1, "shop": 2},
+                {"tab_num": 1, "shop": 3},
+                {"tab_num": 2, "shop": 1},
+                {"tab_num": 2, "shop": 2},
+                {"tab_num": 3, "shop": 1},
+            ]
+        )
+        b = pd.DataFrame([{"shop": 1}, {"shop": 2}, {"shop": 3}])
+
+        result = query_dfs(
+            {"A": a, "B": b},
+            parse_sql(
+                """
+                SELECT DISTINCT a1.tab_num
+                FROM A a1
+                WHERE EXISTS (
+                    SELECT * FROM B b
+                    WHERE NOT EXISTS (
+                        SELECT * FROM A a2
+                        WHERE a2.tab_num = a1.tab_num AND a2.shop = b.shop
+                    )
+                )
+                """,
+                dialect="mindsdb",
+            ),
+        )
+
+        assert sorted(result["tab_num"].tolist()) == [2, 3]
 
 
 class TestIfExistsIfNotExists(BaseExecutorMockPredictor):

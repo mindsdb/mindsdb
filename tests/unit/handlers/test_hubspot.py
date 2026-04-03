@@ -565,8 +565,12 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         mock_hubspot_client = MagicMock()
         mock_access_token = "oauth_access_token_123"
 
-        with patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpot") as mock_hubspot, \
-             patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpotOAuth2Manager") as mock_oauth_manager_cls:
+        with (
+            patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpot") as mock_hubspot,
+            patch(
+                "mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpotOAuth2Manager"
+            ) as mock_oauth_manager_cls,
+        ):
             mock_hubspot.return_value = mock_hubspot_client
             mock_oauth_manager_cls.return_value.get_access_token.return_value = mock_access_token
 
@@ -1131,10 +1135,10 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         contact_df = pd.DataFrame({"id": ["42"], "firstname": ["Alice"]})
 
         orientations = [
-            ("c.id = cc.company_id", "cc.contact_id = ct.id"),   # A
-            ("cc.company_id = c.id", "cc.contact_id = ct.id"),   # B
-            ("c.id = cc.company_id", "ct.id = cc.contact_id"),   # C
-            ("cc.company_id = c.id", "ct.id = cc.contact_id"),   # D
+            ("c.id = cc.company_id", "cc.contact_id = ct.id"),  # A
+            ("cc.company_id = c.id", "cc.contact_id = ct.id"),  # B
+            ("c.id = cc.company_id", "ct.id = cc.contact_id"),  # C
+            ("cc.company_id = c.id", "ct.id = cc.contact_id"),  # D
         ]
 
         handler: HubspotHandler = self.create_handler()
@@ -1164,7 +1168,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
                     response.type,
                     RESPONSE_TYPE.TABLE,
                     msg=f"orientation ({left_on!r}, {right_on!r}) returned ERROR: "
-                        f"{getattr(response, 'error_message', '')}",
+                    f"{getattr(response, 'error_message', '')}",
                 )
                 self.assertFalse(response.data_frame.empty)
 
@@ -1176,7 +1180,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
                     "company_id",
                     assoc_filter_cols,
                     msg=f"assoc.list not filtered on company_id for orientation "
-                        f"({left_on!r}, {right_on!r}); got {assoc_filter_cols}",
+                    f"({left_on!r}, {right_on!r}); got {assoc_filter_cols}",
                 )
 
     def test_multijoin_query_handling(self):

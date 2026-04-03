@@ -30,7 +30,6 @@ except ImportError:
 
 
 class TestJiraHandler(BaseHandlerTestSetup, unittest.TestCase):
-
     @property
     def dummy_connection_data(self):
         return {
@@ -133,11 +132,7 @@ class TestJiraHandler(BaseHandlerTestSetup, unittest.TestCase):
         mock_client.get_all_projects.return_value = [{"id": "100"}]
         mock_client.get_all_project_issues.return_value = [issue_without_attachments]
         mock_client.get_issue.return_value = {
-            "fields": {
-                "attachment": [
-                    {"id": "att-1", "filename": "log.txt", "size": 10, "mimeType": "text/plain"}
-                ]
-            }
+            "fields": {"attachment": [{"id": "att-1", "filename": "log.txt", "size": 10, "mimeType": "text/plain"}]}
         }
 
         attachments_table = JiraAttachmentsTable(self.handler)

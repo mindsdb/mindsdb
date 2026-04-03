@@ -9,14 +9,14 @@ HANDLER_TYPE = HANDLER_TYPE()
 
 class HANDLER_CONNECTION_ARG_TYPE:
     __slots__ = ()
-    STR = 'str'
-    INT = 'int'
-    BOOL = 'bool'
-    URL = 'url'
-    PATH = 'path'
-    DICT = 'dict'
-    PWD = 'pwd'
-    LIST = 'list'
+    STR = "str"
+    INT = "int"
+    BOOL = "bool"
+    URL = "url"
+    PATH = "path"
+    DICT = "dict"
+    PWD = "pwd"
+    LIST = "list"
 
 
 HANDLER_CONNECTION_ARG_TYPE = HANDLER_CONNECTION_ARG_TYPE()

@@ -180,7 +180,10 @@ def rotate_provider_api_key(params):
     :param params: input params, can be modified by this function
     :return: a new api key if it is refreshed
     """
-    provider = params.get("provider").lower()
+    provider = params.get("provider")
+    if isinstance(provider, str) is False:
+        raise ValueError("The 'provider' parameter is required.")
+    provider = provider.lower()
 
     if provider == "snowflake":
         if "snowflake_account_id" in params:
@@ -1186,7 +1189,6 @@ class KnowledgeBaseController:
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
-            params = params or {}
             params["preprocessing"] = preprocessing_config
 
         validate_pydantic_params(params, KnowledgeBaseInputParams, "knowledge base")

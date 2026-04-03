@@ -1,10 +1,13 @@
-import ast
-import sys
 import os
-from typing import Dict, List, Optional, Union
+import ast
+import shutil
 import hashlib
+from typing import Dict, List, Optional, Union
+import threading
 
 import pandas as pd
+import chromadb
+from chromadb.api.shared_system_client import SharedSystemClient
 
 from mindsdb.integrations.handlers.chromadb_handler.settings import ChromaHandlerConfig
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -20,31 +23,6 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
-
-
-def get_chromadb():
-    """
-    Import and return the chromadb module, using pysqlite3 if available.
-    this is a hack to make chromadb work with pysqlite3 instead of sqlite3 for cloud usage
-    see https://docs.trychroma.com/troubleshooting#sqlite
-    """
-
-    # if we are using python 3.10 or above, we don't need pysqlite
-    if sys.hexversion < 0x30A0000:
-        try:
-            __import__("pysqlite3")
-            sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-        except ImportError:
-            logger.warn(
-                "Python version < 3.10 and pysqlite3 is not installed. ChromaDB may not work without solving one of these: https://docs.trychroma.com/troubleshooting#sqlite"
-            )  # noqa: E501
-
-    try:
-        import chromadb
-
-        return chromadb
-    except ImportError:
-        raise ImportError("Failed to import chromadb.")
 
 
 class ChromaDBHandler(VectorStoreHandler):
@@ -97,10 +75,9 @@ class ChromaDBHandler(VectorStoreHandler):
         if client_config is None:
             raise Exception("Client config is not set!")
 
-        chromadb = get_chromadb()
-
         # decide the client type to be used, either persistent or httpclient
         if client_config["persist_directory"] is not None:
+            SharedSystemClient.clear_system_cache()
             return chromadb.PersistentClient(path=client_config["persist_directory"])
         else:
             return chromadb.HttpClient(
@@ -231,23 +208,29 @@ class ChromaDBHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> pd.DataFrame:
+        self.disconnect()
         self.connect()
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
 
         include = ["metadatas", "documents", "embeddings"]
 
-        # check if embedding vector filter is present
-        vector_filter = (
-            []
-            if conditions is None
-            else [condition for condition in conditions if condition.column == TableField.EMBEDDINGS.value]
-        )
+        # Identify Search Intent
+        vector_filter = None
+        content_filter = None
 
-        if len(vector_filter) > 0:
-            vector_filter = vector_filter[0]
-        else:
-            vector_filter = None
+        if conditions is not None:
+            # Embeddings
+            v_filters = [c for c in conditions if c.column == TableField.EMBEDDINGS.value]
+            if v_filters:
+                vector_filter = v_filters[0]
+
+            # Semantic Search
+            c_filters = [c for c in conditions if c.column == TableField.CONTENT.value]
+            if c_filters:
+                content_filter = c_filters[0]
+
+        # ID Filtering
         ids_include = []
         ids_exclude = []
 
@@ -264,13 +247,25 @@ class ChromaDBHandler(VectorStoreHandler):
                 elif condition.op == FilterOperator.NOT_IN:
                     ids_exclude.extend(condition.value)
 
-        if vector_filter is not None:
-            # similarity search
+        # Trigger search if Vector OR Content is present
+        if vector_filter is not None or content_filter is not None:
+            # Similarity search
             query_payload = {
                 "where": filters,
-                "query_embeddings": vector_filter.value if vector_filter is not None else None,
                 "include": include + ["distances"],
             }
+
+            # Handle Vector Search
+            if vector_filter:
+                query_payload["query_embeddings"] = vector_filter.value
+
+            # Handle Text Search
+            if content_filter:
+                val = content_filter.value
+                if isinstance(val, list):
+                    query_payload["query_texts"] = val
+                else:
+                    query_payload["query_texts"] = [val]
 
             if limit is not None:
                 if len(ids_include) == 0 and len(ids_exclude) == 0:
@@ -287,7 +282,7 @@ class ChromaDBHandler(VectorStoreHandler):
             embeddings = result["embeddings"][0]
 
         else:
-            # general get query
+            # general get query (Exact Match)
             result = collection.get(
                 ids=ids_include or None,
                 where=filters,
@@ -301,7 +296,6 @@ class ChromaDBHandler(VectorStoreHandler):
             embeddings = result["embeddings"]
             distances = None
 
-        # project based on columns
         payload = {
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
@@ -312,7 +306,7 @@ class ChromaDBHandler(VectorStoreHandler):
         if columns is not None:
             payload = {column: payload[column] for column in columns if column != TableField.DISTANCE.value}
 
-        # always include distance
+        # Include distance
         distance_filter = None
         distance_col = TableField.DISTANCE.value
         if distances is not None:
@@ -421,24 +415,22 @@ class ChromaDBHandler(VectorStoreHandler):
         # Extract data from DataFrame
         data_dict = df.to_dict(orient="list")
 
-        try:
-            collection.upsert(
-                ids=data_dict[TableField.ID.value],
-                documents=data_dict[TableField.CONTENT.value],
-                embeddings=data_dict.get(TableField.EMBEDDINGS.value, None),
-                metadatas=data_dict.get(TableField.METADATA.value, None),
-            )
-            self._sync()
-        except Exception as e:
-            logger.error(f"Error during upsert operation: {str(e)}")
-            raise Exception(f"Failed to insert/update data: {str(e)}")
-        return Response(RESPONSE_TYPE.OK, affected_rows=len(df))
+        if not hasattr(self._client, "_insert_lock"):
+            self._client._insert_lock = threading.Lock()
 
-    def upsert(self, table_name: str, data: pd.DataFrame):
-        """
-        Alias for insert since insert handles upsert functionality
-        """
-        return self.insert(table_name, data)
+        with self._client._insert_lock:
+            try:
+                collection.upsert(
+                    ids=data_dict[TableField.ID.value],
+                    documents=data_dict[TableField.CONTENT.value],
+                    embeddings=data_dict.get(TableField.EMBEDDINGS.value, None),
+                    metadatas=data_dict.get(TableField.METADATA.value, None),
+                )
+                self._sync()
+            except Exception as e:
+                logger.error(f"Error during upsert operation: {str(e)}")
+                raise Exception(f"Failed to insert/update data: {str(e)}")
+            return Response(RESPONSE_TYPE.OK, affected_rows=len(df))
 
     def update(
         self,
@@ -470,12 +462,20 @@ class ChromaDBHandler(VectorStoreHandler):
         self.connect()
         filters = self._translate_metadata_condition(conditions)
         # get id filters
-        id_filters = [condition.value for condition in conditions if condition.column == TableField.ID.value] or None
+        id_filters = []
+        for condition in conditions:
+            if condition.column != TableField.ID.value:
+                continue
+            value = condition.value
+            if isinstance(value, list):
+                id_filters.extend(value)
+            else:
+                id_filters.append(value)
 
-        if filters is None and id_filters is None:
+        if filters is None and len(id_filters) == 0:
             raise Exception("Delete query must have at least one condition!")
         collection = self._client.get_collection(table_name)
-        collection.delete(ids=id_filters, where=filters)
+        collection.delete(ids=id_filters or None, where=filters)
         self._sync()
 
     def create_table(self, table_name: str, if_not_exists=True):
@@ -494,6 +494,17 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         self.connect()
         try:
+            # NOTE: there is a bug in chromadb v0.6.3 - it delete only segments that loaded in memory,
+            # so we delete them manually
+            if self._client_config.get("persist_directory") is not None:
+                collection = self._client.get_collection(table_name)
+                segments = self._client._server._sysdb.get_segments(collection.id)
+                for segment in segments:
+                    self._client._server._sysdb.delete_segment(collection=collection.id, id=segment["id"])
+                    shutil.rmtree(
+                        os.path.join(self._client_config["persist_directory"], str(segment["id"])), ignore_errors=True
+                    )
+
             self._client.delete_collection(table_name)
             self._sync()
         except ValueError:

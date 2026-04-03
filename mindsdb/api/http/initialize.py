@@ -1,4 +1,5 @@
 import os
+import secrets
 import mimetypes
 import threading
 import webbrowser
@@ -24,13 +25,12 @@ from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
 from mindsdb.api.http.namespaces.jobs import ns_conf as jobs_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
-from mindsdb.api.http.namespaces.default import ns_conf as default_ns
+from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_session_auth
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.knowledge_bases import ns_conf as knowledge_bases_ns
 from mindsdb.api.http.namespaces.models import ns_conf as models_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
-from mindsdb.api.http.namespaces.skills import ns_conf as skills_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
@@ -44,13 +44,14 @@ from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.storage import db
 from mindsdb.metrics.server import init_metrics
 from mindsdb.utilities import log
-from mindsdb.utilities.config import config
+from mindsdb.utilities.config import config, HTTP_AUTH_TYPE
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.json_encoder import ORJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
 from mindsdb.api.common.middleware import verify_pat
+from mindsdb.utilities.constants import DEFAULT_COMPANY_ID, DEFAULT_USER_ID
 
 logger = log.getLogger(__name__)
 
@@ -276,7 +277,6 @@ def initialize_app(is_restart: bool = False):
         views_ns,
         models_ns,
         chatbots_ns,
-        skills_ns,
         agents_ns,
         jobs_ns,
         knowledge_bases_ns,
@@ -324,10 +324,19 @@ def initialize_app(is_restart: bool = False):
             bearer = h.split(" ", 1)[1].strip() or None
 
         # region routes where auth is required
+        http_auth_type = config["auth"]["http_auth_type"]
         if (
             config["auth"]["http_auth_enabled"] is True
             and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
-            and verify_pat(bearer) is False
+            and (
+                (http_auth_type == HTTP_AUTH_TYPE.SESSION and check_session_auth() is False)
+                or (http_auth_type == HTTP_AUTH_TYPE.TOKEN and verify_pat(bearer) is False)
+                or (
+                    http_auth_type == HTTP_AUTH_TYPE.SESSION_OR_TOKEN
+                    and check_session_auth() is False
+                    and verify_pat(bearer) is False
+                )
+            )
         ):
             logger.debug(f"Auth failed for path {request.path}")
             return http_error(
@@ -338,17 +347,9 @@ def initialize_app(is_restart: bool = False):
         # endregion
 
         company_id = request.headers.get("company-id")
+        user_id = request.headers.get("user-id")
         user_class = request.headers.get("user-class")
-
-        try:
-            email_confirmed = int(request.headers.get("email-confirmed", 1))
-        except Exception:
-            email_confirmed = 1
-
-        try:
-            user_id = int(request.headers.get("user-id", 0))
-        except Exception:
-            user_id = 0
+        enforce_user_id = request.headers.get("enforce-user-id")
 
         if user_class is not None:
             try:
@@ -359,10 +360,11 @@ def initialize_app(is_restart: bool = False):
         else:
             user_class = 0
 
-        ctx.user_id = user_id
-        ctx.company_id = company_id
+        ctx.company_id = company_id if company_id is not None else DEFAULT_COMPANY_ID
+        ctx.user_id = user_id if user_id is not None else DEFAULT_USER_ID
         ctx.user_class = user_class
-        ctx.email_confirmed = email_confirmed
+        if enforce_user_id is not None:
+            ctx.enforce_user_id = enforce_user_id.lower() not in ("false", "0", "no", "")
 
     logger.debug("Done initializing app.")
     return app
@@ -392,13 +394,26 @@ def initialize_flask():
     app.config["SWAGGER_HOST"] = "http://localhost:8000/mindsdb"
     app.json = ORJSONProvider(app)
 
-    authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}}
+    http_auth_type = config["auth"]["http_auth_type"]
+    authorizations = {}
+    security = []
+
+    if http_auth_type in (HTTP_AUTH_TYPE.SESSION, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
+        app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
+        app.config["SESSION_COOKIE_NAME"] = "session"
+        app.config["PERMANENT_SESSION_LIFETIME"] = config["auth"]["http_permanent_session_lifetime"]
+        authorizations["session"] = {"type": "apiKey", "in": "cookie", "name": "session"}
+        security.append(["session"])
+
+    if http_auth_type in (HTTP_AUTH_TYPE.TOKEN, HTTP_AUTH_TYPE.SESSION_OR_TOKEN):
+        authorizations["bearer"] = {"type": "apiKey", "in": "header", "name": "Authorization"}
+        security.append(["bearer"])
 
     logger.debug("Creating swagger API..")
     api = Swagger_Api(
         app,
         authorizations=authorizations,
-        security=["apikey"],
+        security=security,
         url_prefix=":8000",
         prefix="/api",
         doc="/doc/",

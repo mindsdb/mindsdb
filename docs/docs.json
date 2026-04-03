@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "willow",
+  "theme": "almond",
   "name": "MindsDB",
   "colors": {
     "primary": "#3f8394",
@@ -13,6 +13,11 @@
         {
           "tab": "Documentation",
           "groups": [
+          {
+           "group": "Home",
+           "hidden": true,
+           "pages": ["homepage"]
+          },
             {
               "group": "Get Started",
               "pages": [
@@ -36,7 +41,8 @@
                   "pages": [
                     "setup/custom-config",
                     "setup/environment-vars",
-                    "setup/mindsdb-apis"
+                    "setup/mindsdb-apis",
+                    "setup/system-defaults"
                   ]
                 },
                 {
@@ -81,12 +87,14 @@
                       "integrations/app-integrations/google-analytics",
                       "integrations/app-integrations/gong",
                       "integrations/app-integrations/hackernews",
+                      "integrations/app-integrations/hubspot",
                       "integrations/app-integrations/instatus",
                       "integrations/app-integrations/intercom",
                       "integrations/app-integrations/jira",
                       "integrations/app-integrations/mediawiki",
                       "integrations/app-integrations/microsoft-onedrive",
                       "integrations/app-integrations/microsoft-teams",
+                      "integrations/app-integrations/netsuite",
                       "integrations/app-integrations/newsapi",
                       "integrations/app-integrations/paypal",
                       "integrations/app-integrations/plaid",
@@ -265,6 +273,7 @@
                     "pages": [
                       "mindsdb_sql/knowledge_bases/overview",
                       "mindsdb_sql/knowledge_bases/create",
+                      "mindsdb_sql/knowledge_bases/alter",
                       "mindsdb_sql/knowledge_bases/insert_data",
                       "mindsdb_sql/knowledge_bases/query",
                       "mindsdb_sql/knowledge_bases/hybrid_search",
@@ -423,8 +432,8 @@
                       "group": "Connect",
                       "icon": "link",
                       "pages": [
-                        "rest/usage",
                         "rest/authentication",
+                        "rest/usage",
                         {
                           "group": "Data Sources",
                           "pages": [
@@ -452,6 +461,7 @@
                           "group": "Knowledge Bases",
                           "pages": [
                             "rest/knowledge_bases/create",
+                            "rest/knowledge_bases/alter",
                             "rest/knowledge_bases/insert",
                             "rest/knowledge_bases/query",
                             "rest/knowledge_bases/list",
@@ -721,7 +731,8 @@
   },
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "dark": "/logo/dark.svg",
+    "href": "/homepage"
   },
   "api": {
     "mdx": {
@@ -1073,10 +1084,6 @@
     {
       "source": "/custom-model/mlflow",
       "destination": "/integrations/ai-engines/mlflow"
-    },
-    {
-      "source": "/ml-engines/automl/lightwood",
-      "destination": "/integrations/ai-engines/lightwood"
     },
     {
       "source": "/nixtla/statsforecast",
@@ -1461,6 +1468,14 @@
     {
       "source": "/mcp/cursor_usage",
       "destination": "/model-context-protocol/cursor_usage"
+    },
+    {
+      "source": "/use-cases/overview",
+      "destination": "/homepage"
+    },
+    {
+      "source": "/",
+      "destination": "/homepage"
     }
   ]
 }

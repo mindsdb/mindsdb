@@ -3,7 +3,15 @@ import copy
 import pytest
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Star, BinaryOperation, OrderBy, Function
+from mindsdb_sql_parser.ast import (
+    Identifier,
+    Select,
+    Join,
+    Constant,
+    Star,
+    BinaryOperation,
+    Function,
+)
 from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
@@ -12,6 +20,7 @@ from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep,
+    FetchDataframeStepPartition,
     ProjectStep,
     JoinStep,
     ApplyPredictorStep,
@@ -37,11 +46,20 @@ class TestPlanJoinTables:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(
+                        targets=[Identifier("column1", alias=Identifier("column1"))],  # Column pruning
+                        from_table=Identifier("tab1"),
+                    ),
                 ),
                 FetchDataframeStep(
                     integration="int2",
-                    query=Select(targets=[Star()], from_table=Identifier("tab2")),
+                    query=Select(
+                        targets=[
+                            Identifier("column1", alias=Identifier("column1")),
+                            Identifier("column2", alias=Identifier("column2")),
+                        ],  # Column pruning
+                        from_table=Identifier("tab2"),
+                    ),
                 ),
                 JoinStep(
                     left=Result(0),
@@ -66,6 +84,75 @@ class TestPlanJoinTables:
         assert plan.steps == expected_plan.steps
 
     def test_join_tables_where_plan(self):
+        # `WHERE column1 = 1` without table, therefore should be processed in mindsdb
+        query = parse_sql("""
+            SELECT * FROM int1.table1 ta LEFT JOIN int2.table2 tb ON ta.id = tb.id
+            WHERE column1 = 1
+        """)
+        plan = plan_query(query, integrations=["int1", "int2"])
+        subquery = copy.deepcopy(query)
+        subquery.from_table = None
+        expected_plan = QueryPlan(
+            steps=[
+                FetchDataframeStep(
+                    integration="int1",
+                    query=parse_sql("SELECT * FROM table1 AS ta"),
+                ),
+                FetchDataframeStep(
+                    integration="int2",
+                    query=parse_sql("SELECT * FROM table2 AS tb"),
+                ),
+                JoinStep(
+                    left=Result(0),
+                    right=Result(1),
+                    query=Join(
+                        left=Identifier("tab1"),
+                        right=Identifier("tab2"),
+                        condition=BinaryOperation(op="=", args=[Identifier("ta.id"), Identifier("tb.id")]),
+                        join_type=JoinType.LEFT_JOIN,
+                    ),
+                ),
+                QueryStep(subquery, from_table=Result(2), strict_where=False),
+            ]
+        )
+        assert plan.steps == expected_plan.steps
+
+        # `WHERE ta.column1 = 1` is with table, therefore should be processed in the integration
+        query = parse_sql("""
+            SELECT * FROM int1.table1 ta LEFT JOIN int2.table2 tb ON ta.id = tb.id
+            WHERE ta.column1 = 1
+        """)
+        plan = plan_query(query, integrations=["int1", "int2"])
+        subquery = copy.deepcopy(query)
+        subquery.from_table = None
+        expected_plan.steps[0].query = parse_sql("SELECT * FROM table1 AS ta WHERE column1 = 1")
+        expected_plan.steps[3].query = subquery
+        assert plan.steps == expected_plan.steps
+
+        # WHERE with IN (constants)
+        query = parse_sql("""
+            SELECT * FROM int1.table1 ta LEFT JOIN int2.table2 tb ON ta.id = tb.id
+            WHERE ta.column1 in (1,2,3)
+        """)
+        plan = plan_query(query, integrations=["int1", "int2"])
+        subquery = copy.deepcopy(query)
+        subquery.from_table = None
+        expected_plan.steps[0].query = parse_sql("SELECT * FROM table1 AS ta WHERE column1 in (1,2,3)")
+        expected_plan.steps[3].query = subquery
+        assert plan.steps == expected_plan.steps
+
+        # WHERE with IN (columns) - should be processed in mindsdb
+        query = parse_sql("""
+            SELECT * FROM int1.table1 ta LEFT JOIN int2.table2 tb ON ta.id = tb.id
+            WHERE ta.column1 in (column2, column3)
+        """)
+        plan = plan_query(query, integrations=["int1", "int2"])
+        subquery = copy.deepcopy(query)
+        subquery.from_table = None
+        expected_plan.steps[0].query = parse_sql("SELECT * FROM table1 AS ta")
+        expected_plan.steps[3].query = subquery
+        assert plan.steps == expected_plan.steps
+
         query = parse_sql(
             """
               SELECT tab1.column1, tab2.column1, tab2.column2
@@ -85,8 +172,16 @@ class TestPlanJoinTables:
         expected_plan = QueryPlan(
             integrations=["int"],
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("SELECT * FROM tab1 WHERE (column1 = 1)")),
-                FetchDataframeStep(integration="int2", query=parse_sql("SELECT * FROM tab2 WHERE (column1 = 0)")),
+                FetchDataframeStep(
+                    integration="int",
+                    query=parse_sql("SELECT column1 AS column1, column3 AS column3 FROM tab1 WHERE (column1 = 1)"),
+                ),
+                FetchDataframeStep(
+                    integration="int2",
+                    query=parse_sql(
+                        "SELECT column1 AS column1, column2 AS column2, column3 AS column3 FROM tab2 WHERE (column1 = 0)"
+                    ),
+                ),
                 JoinStep(
                     left=Result(0),
                     right=Result(1),
@@ -132,11 +227,20 @@ class TestPlanJoinTables:
             steps=[
                 FetchDataframeStep(
                     integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    query=Select(
+                        targets=[Identifier("column1", alias=Identifier("column1"))],  # Column pruning
+                        from_table=Identifier("tab1"),
+                    ),
                 ),
                 FetchDataframeStep(
                     integration="int2",
-                    query=Select(targets=[Star()], from_table=Identifier("tab2")),
+                    query=Select(
+                        targets=[
+                            Identifier("column1", alias=Identifier("column1")),
+                            Identifier("column2", alias=Identifier("column2")),
+                        ],  # Column pruning
+                        from_table=Identifier("tab2"),
+                    ),
                 ),
                 JoinStep(
                     left=Result(0),
@@ -162,7 +266,7 @@ class TestPlanJoinTables:
                 left=Identifier("int.tab1"),
                 right=Identifier("int2.tab2"),
                 condition=BinaryOperation(op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]),
-                join_type=JoinType.INNER_JOIN,
+                join_type=JoinType.LEFT_JOIN,
             ),
             limit=Constant(10),
             offset=Constant(15),
@@ -170,6 +274,7 @@ class TestPlanJoinTables:
 
         subquery = copy.deepcopy(query)
         subquery.from_table = None
+        subquery.offset = None
 
         plan = plan_query(query, integrations=["int", "int2"])
         expected_plan = QueryPlan(
@@ -178,14 +283,21 @@ class TestPlanJoinTables:
                 FetchDataframeStep(
                     integration="int",
                     query=Select(
-                        targets=[Star()],
+                        targets=[Identifier("column1", alias=Identifier("column1"))],  # Column pruning
                         from_table=Identifier("tab1"),
-                        # LIMIT should NOT be pushed down to individual table fetches in joins
+                        limit=Constant(10),
+                        offset=Constant(15),
                     ),
                 ),
                 FetchDataframeStep(
                     integration="int2",
-                    query=Select(targets=[Star()], from_table=Identifier("tab2")),
+                    query=Select(
+                        targets=[
+                            Identifier("column1", alias=Identifier("column1")),
+                            Identifier("column2", alias=Identifier("column2")),
+                        ],  # Column pruning
+                        from_table=Identifier("tab2"),
+                    ),
                 ),
                 JoinStep(
                     left=Result(0),
@@ -196,10 +308,9 @@ class TestPlanJoinTables:
                         condition=BinaryOperation(
                             op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]
                         ),
-                        join_type=JoinType.INNER_JOIN,
+                        join_type=JoinType.LEFT_JOIN,
                     ),
                 ),
-                # LIMIT and OFFSET applied after join
                 QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
@@ -207,18 +318,72 @@ class TestPlanJoinTables:
         assert plan.steps == expected_plan.steps
 
     def test_join_tables_plan_order_by(self):
-        query = Select(
-            targets=[Identifier("tab1.column1"), Identifier("tab2.column1"), Identifier("tab2.column2")],
-            from_table=Join(
-                left=Identifier("int.tab1"),
-                right=Identifier("int2.tab2"),
-                condition=BinaryOperation(op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]),
-                join_type=JoinType.INNER_JOIN,
-            ),
-            limit=Constant(10),
-            offset=Constant(15),
-            order_by=[OrderBy(field=Identifier("tab1.column1"))],
+        query = parse_sql("""
+            SELECT 
+              tab1.column1, tab2.column1, tab2.column2 
+            FROM int.tab1 INNER 
+             JOIN int2.tab2 ON tab1.column1 > tab2.column1 
+            ORDER BY tab1.column1 
+            LIMIT 10 
+        """)
+
+        subquery = copy.deepcopy(query)
+        subquery.from_table = None
+        subquery.offset = None
+
+        plan = plan_query(query, integrations=["int", "int2"])
+        expected_plan = QueryPlan(
+            integrations=["int"],
+            steps=[
+                FetchDataframeStepPartition(
+                    step_num=0,
+                    integration="int",
+                    query=parse_sql("select column1 AS column1 from tab1 order by column1"),
+                    condition={"limit": 10},
+                    steps=[
+                        FetchDataframeStep(
+                            step_num=1,
+                            integration="int2",
+                            query=Select(
+                                targets=[
+                                    Identifier("column1", alias=Identifier("column1")),
+                                    Identifier("column2", alias=Identifier("column2")),
+                                ],  # Column pruning
+                                from_table=Identifier("tab2"),
+                            ),
+                        ),
+                        JoinStep(
+                            step_num=2,
+                            left=Result(0),
+                            right=Result(1),
+                            query=Join(
+                                left=Identifier("tab1"),
+                                right=Identifier("tab2"),
+                                condition=BinaryOperation(
+                                    op=">", args=[Identifier("tab1.column1"), Identifier("tab2.column1")]
+                                ),
+                                join_type=JoinType.INNER_JOIN,
+                            ),
+                        ),
+                    ],
+                ),
+                QueryStep(subquery, from_table=Result(0), strict_where=False),
+            ],
         )
+
+        assert plan.steps == expected_plan.steps
+
+    def test_join_tables_plan_order_by_offset(self):
+        # no optimisation with offset
+        query = parse_sql("""
+            SELECT 
+              tab1.column1, tab2.column1, tab2.column2 
+            FROM int.tab1 INNER 
+             JOIN int2.tab2 ON tab1.column1 > tab2.column1 
+            ORDER BY tab1.column1 
+            LIMIT 10 
+            OFFSET 15
+        """)
 
         subquery = copy.deepcopy(query)
         subquery.from_table = None
@@ -227,17 +392,16 @@ class TestPlanJoinTables:
         expected_plan = QueryPlan(
             integrations=["int"],
             steps=[
-                FetchDataframeStep(
-                    integration="int",
-                    query=Select(
-                        targets=[Star()],
-                        from_table=Identifier("tab1"),
-                        # ORDER BY and LIMIT should NOT be pushed down to individual table fetches in joins
-                    ),
-                ),
+                FetchDataframeStep(integration="int", query=parse_sql("select column1 AS column1 from tab1")),
                 FetchDataframeStep(
                     integration="int2",
-                    query=Select(targets=[Star()], from_table=Identifier("tab2")),
+                    query=Select(
+                        targets=[
+                            Identifier("column1", alias=Identifier("column1")),
+                            Identifier("column2", alias=Identifier("column2")),
+                        ],  # Column pruning
+                        from_table=Identifier("tab2"),
+                    ),
                 ),
                 JoinStep(
                     left=Result(0),
@@ -251,7 +415,6 @@ class TestPlanJoinTables:
                         join_type=JoinType.INNER_JOIN,
                     ),
                 ),
-                # ORDER BY, LIMIT and OFFSET applied after join
                 QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
@@ -607,7 +770,9 @@ class TestPlanJoinTables:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(integration="int1", query=parse_sql("select * from tbl1")),
-                SubSelectStep(dataframe=Result(0), query=Select(targets=[Star()]), table_name="t1"),
+                SubSelectStep(
+                    dataframe=Result(0), query=parse_sql("SELECT *"), table_name="t1"
+                ),  # TODO: CTE column pruning optimization
                 FetchDataframeStep(integration="int2", query=parse_sql("select * from tbl2 as t2")),
                 JoinStep(
                     left=Result(1),

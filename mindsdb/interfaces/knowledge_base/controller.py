@@ -1,6 +1,6 @@
 import os
 import copy
-from typing import Dict, List, Optional, Any, Text
+from typing import Dict, List, Optional, Any, Text, Tuple, Union
 import json
 import decimal
 
@@ -24,6 +24,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get_validated_jwt
 
+from mindsdb.integrations.utilities.rag.settings import RerankerMode
+
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
@@ -41,7 +43,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
+from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker, ListwiseLLMReranker
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
@@ -56,7 +58,7 @@ class KnowledgeBaseInputParams(BaseModel):
     embedding_model: Dict[Text, Any] | None = None
     is_sparse: bool = False
     vector_size: int | None = None
-    reranking_model: Dict[Text, Any] | None = None
+    reranking_model: Union[Dict[Text, Any], bool] | None = None
     preprocessing: Dict[Text, Any] | None = None
 
     class Config:
@@ -114,17 +116,34 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     """
     Create reranking model from parameters.
     """
-    params_copy = copy.deepcopy(reranking_model_params)
-    provider = params_copy.get("provider", "openai").lower()
+    from mindsdb.integrations.utilities.rag.settings import RerankerConfig
 
+    # Work on a copy; do not mutate caller's dict
+    params_copy = copy.deepcopy(reranking_model_params)
+
+    # Handle API key if not provided
+    provider = params_copy.get("provider", "openai").lower()
     if "api_key" not in params_copy:
         params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
 
-    if "model_name" not in params_copy:
-        raise ValueError("'model_name' must be provided for reranking model")
-    params_copy["model"] = params_copy.pop("model_name")
+    # Handle model_name -> model alias for backward compatibility
+    if "model_name" in params_copy and "model" not in params_copy:
+        params_copy["model"] = params_copy.pop("model_name")
 
-    return BaseLLMReranker(**params_copy)
+    # Validate core fields (e.g. mode) via Pydantic
+    try:
+        cfg = RerankerConfig(**params_copy)
+    except ValueError as e:
+        raise ValueError(f"Invalid reranker configuration: {str(e)}")
+
+    # Merge validated fields back, preserving any extra user fields
+    validated = cfg.model_dump()
+    reranker_params = {**params_copy, **validated}
+
+    # Choose reranker class based on validated mode
+    if cfg.mode == RerankerMode.LISTWISE:
+        return ListwiseLLMReranker(**reranker_params)
+    return BaseLLMReranker(**reranker_params)
 
 
 def safe_pandas_is_datetime(value: str) -> bool:
@@ -567,8 +586,6 @@ class KnowledgeBaseTable:
         """Process and insert raw data rows"""
         if not rows:
             return
-        if len(rows) > MAX_INSERT_BATCH_SIZE:
-            raise ValueError("Input data is too large, please load data in batches")
 
         df = pd.DataFrame(rows)
 
@@ -681,6 +698,9 @@ class KnowledgeBaseTable:
         if df.empty:
             return
 
+        if len(df) > MAX_INSERT_BATCH_SIZE:
+            raise ValueError("Input data is too large, please load data in batches")
+
         try:
             run_query_id = ctx.run_query_id
             # Link current KB to running query (where KB is used to insert data)
@@ -692,8 +712,8 @@ class KnowledgeBaseTable:
             ...
 
         # First adapt column names to identify content and metadata columns
-        adapted_df = self._adapt_column_names(df)
-        content_columns = self._kb.params.get("content_columns", [TableField.CONTENT.value])
+        adapted_df, normalized_columns = self._adapt_column_names(df)
+        content_columns = normalized_columns["content_columns"]
 
         # Convert DataFrame rows to documents, creating separate documents for each content column
         raw_documents = []
@@ -769,7 +789,7 @@ class KnowledgeBaseTable:
         else:
             db_handler.do_upsert(self._kb.vector_database_table, df)
 
-    def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _adapt_column_names(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, List[str]]]:
         """
         Convert input columns for vector db input
         - id, content and metadata
@@ -878,7 +898,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Output DataFrame columns: {df_out.columns}")
         logger.debug(f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}")
 
-        return df_out
+        return df_out, {"content_columns": content_columns, "metadata_columns": metadata_columns}
 
     def _replace_query_content(self, node, **kwargs):
         if isinstance(node, BinaryOperation):
@@ -1194,8 +1214,9 @@ class KnowledgeBaseController:
 
         if isinstance(reranking_model_params, bool) and not reranking_model_params:
             params["reranking_model"] = {}
+        else:
+            reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
 
-        reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
         params["reranking_model"] = reranking_model_params
         if reranking_model_params:
             # Get reranking model from params.

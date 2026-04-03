@@ -85,6 +85,73 @@ Optional connection parameters include the following:
 
 * `port`: The port number for connecting to the Microsoft SQL Server. Default is 1433.
 * `server`: The server name to connect to. Typically only used with named instances or Azure SQL Database.
+* `schema`: The schema in which objects are searched first. If specified, all table references without an explicit schema will be automatically qualified with this schema.
+
+### ODBC Connection
+
+The handler also supports ODBC connections via `pyodbc` for advanced scenarios like Windows Authentication or specific driver requirements.
+
+
+#### Setup
+
+1. Install: `pip install mindsdb[mssql-odbc]`
+2. Install system ODBC driver (see Installation section above)
+
+Basic ODBC Connection:
+
+```sql
+CREATE DATABASE mssql_odbc_datasource 
+WITH ENGINE = 'mssql', 
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 1433,
+    "user": "sa",
+    "password": "password",
+    "database": "master",
+    "driver": "ODBC Driver 18 for SQL Server"  -- Specifying driver enables ODBC
+};
+```
+ODBC-specific Parameters:
+
+* `driver`: The ODBC driver name (e.g., "ODBC Driver 18 for SQL Server"). When specified, enables ODBC mode.
+* `use_odbc`: Set to `true` to explicitly use ODBC. Optional if `driver` is specified.
+* `encrypt`: Connection encryption: `"yes"` or `"no"`. Driver 18 defaults to `"yes"`.
+* `trust_server_certificate`: Whether to trust self-signed certificates: `"yes"` or `"no"`.
+* `connection_string_args`: Additional connection string arguments.
+
+#### Example: Azure SQL Database with Encryption:
+
+```sql
+CREATE DATABASE azure_sql_datasource 
+WITH ENGINE = 'mssql', 
+PARAMETERS = {
+    "host": "myserver.database.windows.net",
+    "port": 1433,
+    "user": "adminuser",
+    "password": "SecurePass123!",
+    "database": "mydb",
+    "driver": "ODBC Driver 18 for SQL Server",
+    "encrypt": "yes",
+    "trust_server_certificate": "no"
+};
+```
+
+#### Example: Local Development (Self-Signed Certificate):
+
+```sql
+CREATE DATABASE local_mssql 
+WITH ENGINE = 'mssql', 
+PARAMETERS = {
+    "host": "localhost",
+    "port": 1433,
+    "user": "sa",
+    "password": "YourStrong@Passw0rd",
+    "database": "testdb",
+    "driver": "ODBC Driver 18 for SQL Server",
+    "encrypt": "yes",
+    "trust_server_certificate": "yes"  -- Allow self-signed certs
+};
+```
 
 ### ODBC Connection
 

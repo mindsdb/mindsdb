@@ -690,11 +690,30 @@ class SummarizationConfig(BaseModel):
     )
 
 
+class RerankerMode(str, Enum):
+    POINTWISE = "pointwise"
+    LISTWISE = "listwise"
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            value = value.lower()
+            for member in cls:
+                if member.value == value:
+                    return member
+        return None
+
+
 class RerankerConfig(BaseModel):
     model: str = DEFAULT_RERANKING_MODEL
     base_url: str = DEFAULT_LLM_ENDPOINT
     filtering_threshold: float = 0.5
     num_docs_to_keep: Optional[int] = None
+    mode: RerankerMode = Field(
+        default=RerankerMode.POINTWISE,
+        description="Reranking mode to use. 'pointwise' for individual scoring, '"
+        "listwise' for joint scoring of all documents.",
+    )
     max_concurrent_requests: int = 20
     max_retries: int = 3
     retry_delay: float = 1.0

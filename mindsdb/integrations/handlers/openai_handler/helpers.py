@@ -78,9 +78,13 @@ def retry_with_exponential_backoff(
                     return func(*args, **kwargs)
 
                 except status_errors as e:
-                    raise Exception(
-                        f"Error status {e.status_code} raised by OpenAI API: {e.body.get('message', 'Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.')}"  # noqa
-                    )  # noqa
+                    error_message = e.body
+                    if isinstance(error_message, dict):
+                        error_message = error_message.get(
+                            "message",
+                            "Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.",
+                        )
+                    raise Exception(f"Error status {e.status_code} raised by OpenAI API: {error_message}")
 
                 except wait_errors:
                     num_retries += 1
@@ -176,6 +180,9 @@ def count_tokens(messages: List[Dict], encoder: tiktoken.core.Encoding, model_na
 def get_available_models(client) -> List[Text]:
     """
     Returns a list of available openai models for the given API key.
+    NOTE: writer's 'get models list' response differs from openai's
+    https://dev.writer.com/api-reference/completion-api/list-models
+    https://platform.openai.com/docs/api-reference/models/list
 
     Args:
         client: openai sdk client
@@ -184,5 +191,8 @@ def get_available_models(client) -> List[Text]:
         List[Text]: List of available models
     """
     res = client.models.list()
+
+    if str(client.base_url.netloc).lower() == "api.writer.com":
+        return [models["id"] for models in res.models]
 
     return [models.id for models in res.data]

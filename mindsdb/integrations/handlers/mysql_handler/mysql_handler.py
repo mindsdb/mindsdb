@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 import pandas as pd
 import mysql.connector
@@ -37,7 +37,7 @@ def _map_type(mysql_type_text: str) -> MYSQL_DATA_TYPE:
         return MYSQL_DATA_TYPE.TEXT
 
 
-def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQLCursor) -> Response:
+def _make_table_response(result: List[Dict[str, Any]], cursor: mysql.connector.cursor.MySQLCursor) -> Response:
     """Build response from result and cursor.
 
     Args:
@@ -113,20 +113,20 @@ class MySQLHandler(MetaDatabaseHandler):
 
     name = "mysql"
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name: str, **kwargs: Any) -> None:
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = "mysql"
         self.connection_data = kwargs.get("connection_data", {})
         self.database = self.connection_data.get("database")
 
-        self.connection = None
+        self.connection: Optional[mysql.connector.MySQLConnection] = None
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self.is_connected:
             self.disconnect()
 
-    def _unpack_config(self):
+    def _unpack_config(self) -> Dict[str, Any]:
         """
         Unpacks the config from the connection_data by validation all parameters.
 
@@ -140,7 +140,7 @@ class MySQLHandler(MetaDatabaseHandler):
             raise ValueError(str(e))
 
     @property
-    def is_connected(self):
+    def is_connected(self) -> bool:
         """
         Checks if the handler is connected to the MySQL database.
 
@@ -150,10 +150,10 @@ class MySQLHandler(MetaDatabaseHandler):
         return self.connection is not None and self.connection.is_connected()
 
     @is_connected.setter
-    def is_connected(self, value):
+    def is_connected(self, value: bool) -> None:
         pass
 
-    def connect(self):
+    def connect(self) -> mysql.connector.MySQLConnection:
         """
         Establishes a connection to a MySQL database.
 
@@ -197,7 +197,7 @@ class MySQLHandler(MetaDatabaseHandler):
             logger.error(f"Error connecting to MySQL {self.database}, {e}!")
             raise
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """
         Closes the connection to the MySQL database if it's currently open.
         """
@@ -221,7 +221,7 @@ class MySQLHandler(MetaDatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except mysql.connector.Error as e:
-            logger.error(f"Error connecting to MySQL {self.connection_data['database']}, {e}!")
+            logger.error(f"Error connecting to MySQL {self.connection_data.get('database', 'unknown')}! Error: {e}")
             result.error_message = str(e)
 
         if result.success and need_to_close:
@@ -251,8 +251,10 @@ class MySQLHandler(MetaDatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
         except mysql.connector.Error as e:
-            logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            logger.error(
+                f"Error running query: {query} on {self.connection_data.get('database', 'unknown')}! Error: {e}"
+            )
+            response = Response(RESPONSE_TYPE.ERROR, error_code=e.errno or 1, error_message=str(e))
             if connection is not None and connection.is_connected():
                 connection.rollback()
 
@@ -289,7 +291,7 @@ class MySQLHandler(MetaDatabaseHandler):
         result = self.native_query(sql)
         return result
 
-    def get_columns(self, table_name) -> Response:
+    def get_columns(self, table_name: str) -> Response:
         """
         Show details about the table
         """
@@ -316,7 +318,7 @@ class MySQLHandler(MetaDatabaseHandler):
         result.to_columns_table_response(map_type_fn=_map_type)
         return result
 
-    def meta_get_tables(self, table_names: Optional[list[str]] = None) -> Response:
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """
         Retrieves metadata information about the tables in the MySQL database
         to be stored in the data catalog.
@@ -348,7 +350,7 @@ class MySQLHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_columns(self, table_names: Optional[list[str]] = None) -> Response:
+    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
         """
         Retrieves column metadata for the specified tables (or all tables if no list is provided).
 
@@ -379,7 +381,7 @@ class MySQLHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_column_statistics(self, table_names: Optional[list[str]] = None) -> Response:
+    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
         """
         Retrieves column statistics for the specified tables (or all tables if no list is provided).
         Uses MySQL 8.0+ metadata sources (INFORMATION_SCHEMA.COLUMN_STATISTICS and INFORMATION_SCHEMA.STATISTICS) not requiring table scans.
@@ -482,7 +484,7 @@ class MySQLHandler(MetaDatabaseHandler):
         """
         return self.native_query(query)
 
-    def meta_get_primary_keys(self, table_names: Optional[list[str]] = None) -> Response:
+    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
         """
         Retrieves primary key information for the specified tables (or all tables if no list is provided).
 
@@ -516,7 +518,7 @@ class MySQLHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_foreign_keys(self, table_names: Optional[list[str]] = None) -> Response:
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
         """
         Retrieves foreign key information for the specified tables (or all tables if no list is provided).
 

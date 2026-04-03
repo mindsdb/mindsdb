@@ -8,8 +8,10 @@ from pandas.api import types as pd_types
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
@@ -76,15 +78,11 @@ def _make_table_response(
     if not result:
         data_frame = pd.DataFrame(columns=columns)
     elif use_odbc:
-        # For pyodbc with large datasets, convert Row objects efficiently
-        # Using iterator with pd.DataFrame avoids intermediate list creation
-        try:
-            data_frame = pd.DataFrame(result, columns=columns)
-        except (ValueError, TypeError):
-            # Fallback: convert Row objects to tuples
-            data_frame = pd.DataFrame.from_records((tuple(row) for row in result), columns=columns)
+        # from_records() understands tuple-like records (including pyodbc.Row)
+        data_frame = pd.DataFrame.from_records(result, columns=columns)
     else:
-        data_frame = pd.DataFrame(result, columns=columns)
+        # pymssql with as_dict=True returns list of dicts
+        data_frame = pd.DataFrame(result)
 
     for column in description:
         column_name = column[0]
@@ -169,6 +167,7 @@ class SqlServerHandler(MetaDatabaseHandler):
         self.connection_args = kwargs.get("connection_data")
         self.dialect = "mssql"
         self.database = self.connection_args.get("database")
+        self.schema = self.connection_args.get("schema")
         self.renderer = SqlalchemyRender("mssql")
 
         # Determine if ODBC should be used
@@ -244,7 +243,7 @@ class SqlServerHandler(MetaDatabaseHandler):
         if not all(key in self.connection_args for key in ["host", "user", "password", "database"]):
             raise ValueError("Required parameters (host, user, password, database) must be provided.")
 
-        driver = self.connection_args.get("driver", "ODBC Driver 17 for SQL Server")
+        driver = self.connection_args.get("driver", "ODBC Driver 18 for SQL Server")
         host = self.connection_args.get("host")
         port = self.connection_args.get("port", 1433)
         database = self.connection_args.get("database")
@@ -381,6 +380,26 @@ class SqlServerHandler(MetaDatabaseHandler):
 
         return response
 
+    def _add_schema_to_tables(self, node, is_table=False, **kwargs):
+        """
+        Callback for query_traversal that adds schema prefix to table identifiers.
+
+        Args:
+            node: The AST node being visited
+            is_table: True if this node represents a table reference
+            **kwargs: Other arguments from query_traversal (parent_query, callstack, etc.)
+
+        Returns:
+            None to keep traversing, or a replacement node
+        Note: This is mostly a workaround for Minds but it should still work for FQE
+        """
+        if is_table and isinstance(node, Identifier):
+            # Only add schema if the identifier doesn't already have one (single part)
+            if len(node.parts) == 1:
+                node.parts.insert(0, self.schema)
+                node.is_quoted.insert(0, False)
+        return None
+
     def query(self, query: ASTNode) -> Response:
         """
         Executes a SQL query represented by an ASTNode and retrieves the data.
@@ -391,6 +410,9 @@ class SqlServerHandler(MetaDatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
+        # Add schema prefix to table identifiers if schema is configured
+        if self.schema:
+            query_traversal(query, self._add_schema_to_tables)
 
         query_str = self.renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
@@ -410,8 +432,11 @@ class SqlServerHandler(MetaDatabaseHandler):
                 table_name,
                 table_type
             FROM {self.database}.INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW');
+            WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW')
         """
+        if self.schema:
+            query += f" AND table_schema = '{self.schema}'"
+
         return self.native_query(query)
 
     def get_columns(self, table_name) -> Response:
@@ -446,6 +471,10 @@ class SqlServerHandler(MetaDatabaseHandler):
             WHERE
                 table_name = '{table_name}'
         """
+
+        if self.schema:
+            query += f" AND table_schema = '{self.schema}'"
+
         result = self.native_query(query)
         result.to_columns_table_response(map_type_fn=_map_type)
         return result
@@ -483,8 +512,12 @@ class SqlServerHandler(MetaDatabaseHandler):
                 AND p.index_id IN (0, 1)
             WHERE t.TABLE_TYPE IN ('BASE TABLE', 'VIEW')
                 AND t.TABLE_SCHEMA NOT IN ('sys', 'INFORMATION_SCHEMA')
-            GROUP BY t.TABLE_NAME, t.TABLE_SCHEMA, t.TABLE_TYPE, ep.value
         """
+
+        if self.schema:
+            query += f" AND t.TABLE_SCHEMA = '{self.schema}'"
+
+        query += " GROUP BY t.TABLE_NAME, t.TABLE_SCHEMA, t.TABLE_TYPE, ep.value"
 
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]
@@ -525,6 +558,9 @@ class SqlServerHandler(MetaDatabaseHandler):
             WHERE c.TABLE_SCHEMA NOT IN ('sys', 'INFORMATION_SCHEMA')
         """
 
+        if self.schema:
+            query += f" AND c.TABLE_SCHEMA = '{self.schema}'"
+
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]
             query += f" AND c.TABLE_NAME IN ({','.join(quoted_names)})"
@@ -552,6 +588,10 @@ class SqlServerHandler(MetaDatabaseHandler):
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]
             table_filter = f" AND t.name IN ({','.join(quoted_names)})"
+
+        schema_filter = ""
+        if self.schema:
+            schema_filter = f" AND s.name = '{self.schema}'"
 
         # Using OUTER APPLY to handle table-valued functions properly
         # This is equivalent to PostgreSQL's pg_stats view approach
@@ -589,6 +629,7 @@ class SqlServerHandler(MetaDatabaseHandler):
                 WHERE st.object_id IS NOT NULL
             ) h
             WHERE s.name NOT IN ('sys', 'INFORMATION_SCHEMA')
+            {schema_filter}
             {table_filter}
             ORDER BY t.name, c.name
         """
@@ -619,6 +660,9 @@ class SqlServerHandler(MetaDatabaseHandler):
                 AND tc.TABLE_NAME = kcu.TABLE_NAME
             WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
         """
+
+        if self.schema:
+            query += f" AND tc.TABLE_SCHEMA = '{self.schema}'"
 
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]
@@ -655,6 +699,9 @@ class SqlServerHandler(MetaDatabaseHandler):
                 ON t.schema_id = s.schema_id
             WHERE s.name NOT IN ('sys', 'INFORMATION_SCHEMA')
         """
+
+        if self.schema:
+            query += f" AND s.name = '{self.schema}'"
 
         if table_names is not None and len(table_names) > 0:
             quoted_names = [f"'{t}'" for t in table_names]

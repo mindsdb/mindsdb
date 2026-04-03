@@ -14,7 +14,7 @@ class ChromaHandlerConfig(BaseModel):
     host: str = None
     port: str = None
     password: str = None
-    distance: str = 'cosine'
+    distance: str = "cosine"
 
     class Config:
         extra = "forbid"
@@ -27,13 +27,9 @@ class ChromaHandlerConfig(BaseModel):
         expected_params = cls.model_fields.keys()
         for key in values.keys():
             if key not in expected_params:
-                close_matches = difflib.get_close_matches(
-                    key, expected_params, cutoff=0.4
-                )
+                close_matches = difflib.get_close_matches(key, expected_params, cutoff=0.4)
                 if close_matches:
-                    raise ValueError(
-                        f"Unexpected parameter '{key}'. Did you mean '{close_matches[0]}'?"
-                    )
+                    raise ValueError(f"Unexpected parameter '{key}'. Did you mean '{close_matches[0]}'?")
                 else:
                     raise ValueError(f"Unexpected parameter '{key}'.")
         return values
@@ -56,8 +52,7 @@ class ChromaHandlerConfig(BaseModel):
 
         if persist_directory and (host or port):
             raise ValueError(
-                f"For {vector_store} handler - if persistence_folder is provided, "
-                f"host, port should not be provided."
+                f"For {vector_store} handler - if persistence_folder is provided, host, port should not be provided."
             )
 
         return values

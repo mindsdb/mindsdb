@@ -245,12 +245,30 @@ def query_dfs(dataframes, query_ast, session=None):
     else:
         user_functions = None
 
+    # region collect table aliases. Strip schema/db prefix from column identifiers, but keep table aliases.
+    # Examples:
+    #   files.col = 1            ->  col = 1                  (schema prefix stripped)
+    #   files.a1.col = 1         ->  a1.col = 1               (schema prefix stripped, alias kept)
+    #   a1.col = a2.col          ->  a1.col = a2.col          (aliases untouched, no schema prefix)
+    #   "Custom SQL Query".col   ->  col                      (replaced subquery alias stripped)
+    known_aliases = set()
+
+    def collect_aliases(node, is_table, **kwargs):
+        if not is_table or not isinstance(node, Identifier):
+            return
+        known_aliases.add(node.parts[-1].lower())
+        if node.alias is not None:
+            known_aliases.add(node.alias.parts[-1].lower())
+
+    query_traversal(query_ast, collect_aliases)
+    # endregion
+
     def adapt_query(node, is_table, **kwargs):
         if is_table:
             return
         if isinstance(node, Identifier):
-            if len(node.parts) > 1:
-                node.parts = [node.parts[-1]]
+            if len(node.parts) > 1 and node.parts[0].lower() not in known_aliases:
+                node.parts = node.parts[1:]
                 return node
         if isinstance(node, Function):
             fnc = mysql_to_duckdb_fnc(node)

@@ -181,14 +181,16 @@ class HubspotHandler(MetaAPIHandler):
             client_id = self.connection_data.get("client_id")
             client_secret = self.connection_data.get("client_secret")
 
-            if access_token:
+            if access_token is not None:
                 if not isinstance(access_token, str) or not access_token.strip():
                     raise ValueError("Invalid access_token provided")
 
                 logger.info("Connecting to HubSpot using access token")
                 self.connection = HubSpot(access_token=access_token)
 
-            elif client_id and client_secret:
+            elif client_id is not None or client_secret is not None:
+                if not client_id or not client_secret or not str(client_id).strip() or not str(client_secret).strip():
+                    raise ValueError("Invalid OAuth credentials provided")
                 logger.info("Connecting to HubSpot using OAuth credentials")
                 oauth_manager = HubSpotOAuth2Manager(
                     handler_storage=self.handler_storage,

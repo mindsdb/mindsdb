@@ -28,8 +28,8 @@ except ImportError:
 from base_handler_test import BaseHandlerTestSetup
 
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
+    DataHandlerResponse,
     RESPONSE_TYPE,
 )
 
@@ -158,7 +158,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         query = "SELECT * FROM companies LIMIT 1"
         response = self.handler.native_query(query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, DataHandlerResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsNotNone(response.data_frame)
 
@@ -186,7 +186,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.get_columns("companies")
 
-        assert isinstance(response, Response)
+        assert isinstance(response, DataHandlerResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.COLUMNS_TABLE)
 
         df = response.data_frame
@@ -234,7 +234,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.get_columns("contacts")
 
-        assert isinstance(response, Response)
+        assert isinstance(response, DataHandlerResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.COLUMNS_TABLE)
 
         df = response.data_frame
@@ -281,7 +281,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         response = self.handler.get_columns("deals")
 
-        assert isinstance(response, Response)
+        assert isinstance(response, DataHandlerResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.COLUMNS_TABLE)
 
         df = response.data_frame
@@ -321,7 +321,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         """Test get_columns method with invalid table name."""
         response = self.handler.get_columns("nonexistent_table")
 
-        assert isinstance(response, Response)
+        assert isinstance(response, DataHandlerResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
         self.assertIsNotNone(response.error_message)
 
@@ -337,7 +337,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         insert_query = "INSERT INTO companies (name, city) VALUES ('New Company', 'Boston')"
         response = self.handler.native_query(insert_query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, DataHandlerResponse)
 
         self.assertNotEqual(response.type, RESPONSE_TYPE.ERROR)
 
@@ -369,7 +369,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         update_query = "UPDATE companies SET city='Boston' WHERE name='Test Company'"
         response = self.handler.native_query(update_query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, DataHandlerResponse)
         self.assertNotEqual(response.type, RESPONSE_TYPE.ERROR)
 
     def test_native_query_with_delete(self):
@@ -397,7 +397,7 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         delete_query = "DELETE FROM companies WHERE name='Test Company'"
         response = self.handler.native_query(delete_query)
 
-        assert isinstance(response, Response)
+        assert isinstance(response, DataHandlerResponse)
         self.assertNotEqual(response.type, RESPONSE_TYPE.ERROR)
 
     def test_handler_name(self):
@@ -563,15 +563,18 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         handler = HubspotHandler("hubspot", connection_data=oauth_data)
 
         mock_hubspot_client = MagicMock()
+        mock_access_token = "oauth_access_token_123"
 
-        with patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpot") as mock_hubspot:
+        with patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpot") as mock_hubspot, \
+             patch("mindsdb.integrations.handlers.hubspot_handler.hubspot_handler.HubSpotOAuth2Manager") as mock_oauth_manager_cls:
             mock_hubspot.return_value = mock_hubspot_client
+            mock_oauth_manager_cls.return_value.get_access_token.return_value = mock_access_token
 
             connection = handler.connect()
 
             self.assertIsNotNone(connection)
             self.assertTrue(handler.is_connected)
-            mock_hubspot.assert_called_with(client_id="test_client_id", client_secret="test_client_secret")
+            mock_hubspot.assert_called_with(access_token=mock_access_token)
 
     def test_comprehensive_error_handling(self):
         """Test comprehensive error handling in various scenarios."""

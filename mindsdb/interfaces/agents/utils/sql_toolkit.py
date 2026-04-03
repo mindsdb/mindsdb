@@ -340,8 +340,8 @@ class MindsDBQuery:
         try:
             # Query to get all knowledge bases
             ast_query = Select(
-                targets=[Identifier('PROJECT'), Identifier('NAME')],
-                from_table=Identifier(parts=["information_schema", "knowledge_bases"])
+                targets=[Identifier("PROJECT"), Identifier("NAME")],
+                from_table=Identifier(parts=["information_schema", "knowledge_bases"]),
             )
             result = self.command_executor.execute_command(ast_query)
 

@@ -1352,6 +1352,47 @@ class TestKBNOAutoBatch(BaseTestKB):
         ret = self.run_sql("select * from kb_ral where content='white'")
         assert "white" in ret["chunk_content"].iloc[0]
 
+    def test_providers(self):
+        with patch("mindsdb.interfaces.knowledge_base.llm_client.BedrockClient.embeddings") as embed:
+            with patch(
+                "mindsdb.integrations.utilities.rag.rerankers.base_reranker.AsyncBedrockClient.acompletion"
+            ) as rerank:
+                embed.return_value = [[1, 1, 1]]
+                rerank.return_value = "100"
+                self._create_kb(
+                    "kb_test",
+                    embedding_model={
+                        "provider": "bedrock",
+                        "model_name": "amazon.titan",
+                        "aws_access_key_id": "-",
+                        "aws_region_name": "us-east-2",
+                        "aws_secret_access_key": "-",
+                    },
+                    reranking_model={
+                        "provider": "bedrock",
+                        "model_name": "llama3",
+                        "aws_access_key_id": "-",
+                        "aws_region_name": "us-east-2",
+                        "aws_secret_access_key": "-",
+                    },
+                )
+                assert embed.call_args_list[0][0][0] == "amazon.titan"
+                assert rerank.call_args_list[0][1]["model_name"] == "llama3"
+
+        with patch("mindsdb.interfaces.knowledge_base.llm_client.SnowflakeClient.embeddings") as embed:
+            embed.return_value = [[1, 1, 1]]
+            self._create_kb(
+                "kb_test",
+                embedding_model={"provider": "snowflake", "model_name": "arctic", "account_id": "ABC", "api_key": "-"},
+            )
+            assert embed.call_args_list[0][0][0] == "arctic"
+        with patch("mindsdb.interfaces.knowledge_base.llm_client.GeminiClient.embeddings") as embed:
+            embed.return_value = [[1, 1, 1]]
+            self._create_kb(
+                "kb_test", embedding_model={"provider": "gemini", "model_name": "gemini-embedding", "api_key": "-"}
+            )
+            assert embed.call_args_list[0][0][0] == "gemini-embedding"
+
 
 class TestKBAutoBatch(BaseTestKB):
     @patch("mindsdb.interfaces.knowledge_base.controller.LLMClient")

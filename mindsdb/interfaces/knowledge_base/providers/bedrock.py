@@ -32,7 +32,7 @@ class AsyncBedrockClient:
         self,
         aws_access_key_id: Optional[str] = None,
         aws_secret_access_key: Optional[str] = None,
-        region_name: Optional[str] = None,
+        aws_region_name: Optional[str] = None,
         aws_session_token: Optional[str] = None,
     ):
         try:
@@ -45,7 +45,7 @@ class AsyncBedrockClient:
         self.aws_access_key_id = aws_access_key_id
         self.aws_secret_access_key = aws_secret_access_key
         self.aws_session_token = aws_session_token
-        self.region_name = region_name
+        self.region_name = aws_region_name
 
         self.session = aioboto3.Session()
         self._client = None
@@ -90,7 +90,7 @@ class BedrockClient:
         self,
         aws_access_key_id: Optional[str] = None,
         aws_secret_access_key: Optional[str] = None,
-        region_name: Optional[str] = None,
+        aws_region_name: Optional[str] = None,
         aws_session_token: Optional[str] = None,
     ):
         try:
@@ -103,7 +103,7 @@ class BedrockClient:
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             aws_session_token=aws_session_token,
-            region_name=region_name,
+            region_name=aws_region_name,
         )
 
     def embeddings(self, model_name: str, messages: List[str]) -> List[List[float]]:

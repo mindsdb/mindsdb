@@ -2,6 +2,7 @@ from collections import OrderedDict
 import pytest
 import unittest
 from unittest.mock import patch, MagicMock
+import pandas as pd
 
 try:
     from hubspot.crm.objects import SimplePublicObject
@@ -1115,6 +1116,65 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(search_request["sorts"][0]["propertyName"], "closedate")
         self.assertEqual(search_request["sorts"][0]["direction"], "DESCENDING")
         self.assertEqual(search_request["properties"], ["dealname"])
+
+    def test_three_table_join_on_clause_orientations(self):
+        """
+        Verify CORE JOIN ASSOC JOIN CORE resolves left_assoc_col / right_assoc_col
+        correctly regardless of which side of the ON each table appears on.
+        """
+
+        company_df = pd.DataFrame({"id": ["1"], "name": ["Acme"]})
+        assoc_df = pd.DataFrame({"company_id": ["1"], "contact_id": ["42"]})
+        contact_df = pd.DataFrame({"id": ["42"], "firstname": ["Alice"]})
+
+        orientations = [
+            ("c.id = cc.company_id", "cc.contact_id = ct.id"),   # A
+            ("cc.company_id = c.id", "cc.contact_id = ct.id"),   # B
+            ("c.id = cc.company_id", "ct.id = cc.contact_id"),   # C
+            ("cc.company_id = c.id", "ct.id = cc.contact_id"),   # D
+        ]
+
+        handler: HubspotHandler = self.create_handler()
+
+        for left_on, right_on in orientations:
+            with self.subTest(left_on=left_on, right_on=right_on):
+                companies_mock = MagicMock()
+                companies_mock.select.return_value = company_df.copy()
+                assoc_mock = MagicMock()
+                assoc_mock.list.return_value = assoc_df.copy()
+                contacts_mock = MagicMock()
+                contacts_mock.list.return_value = contact_df.copy()
+
+                handler._tables["companies"] = companies_mock
+                handler._tables["company_contacts"] = assoc_mock
+                handler._tables["contacts"] = contacts_mock
+
+                query = f"""
+                SELECT *
+                FROM companies c
+                JOIN company_contacts cc ON {left_on}
+                JOIN contacts ct ON {right_on}
+                """
+                response = handler.native_query(query)
+
+                self.assertEqual(
+                    response.type,
+                    RESPONSE_TYPE.TABLE,
+                    msg=f"orientation ({left_on!r}, {right_on!r}) returned ERROR: "
+                        f"{getattr(response, 'error_message', '')}",
+                )
+                self.assertFalse(response.data_frame.empty)
+
+                # The assoc table must be queried by company_id (left_assoc_col), not
+                # by some other column — this is the column the bug inverted.
+                assoc_conditions = assoc_mock.list.call_args.kwargs.get("conditions", [])
+                assoc_filter_cols = [fc.column for fc in assoc_conditions]
+                self.assertIn(
+                    "company_id",
+                    assoc_filter_cols,
+                    msg=f"assoc.list not filtered on company_id for orientation "
+                        f"({left_on!r}, {right_on!r}); got {assoc_filter_cols}",
+                )
 
     def test_multijoin_query_handling(self):
         """Test that multijoin queries return appropriate error since not supported."""

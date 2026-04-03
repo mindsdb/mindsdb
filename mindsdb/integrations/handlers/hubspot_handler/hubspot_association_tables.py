@@ -720,15 +720,15 @@ class DealCompaniesTable(HubSpotAssociationTable):
     def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
         return [
             {
-                "TABLE_NAME": "deal_contacts",
+                "TABLE_NAME": "deal_companies",
                 "COLUMN_NAME": "deal_id",
                 "REFERENCED_TABLE_NAME": "deals",
                 "REFERENCED_COLUMN_NAME": "id",
             },
             {
-                "TABLE_NAME": "deal_contacts",
-                "COLUMN_NAME": "contact_id",
-                "REFERENCED_TABLE_NAME": "contacts",
+                "TABLE_NAME": "deal_companies",
+                "COLUMN_NAME": "company_id",
+                "REFERENCED_TABLE_NAME": "companies",
                 "REFERENCED_COLUMN_NAME": "id",
             },
         ]

@@ -1042,11 +1042,15 @@ class HubspotHandler(MetaAPIHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message="Unsupported JOIN condition — expected simple equality.")
 
         lop_left_alias, lop_left_col, _, lop_right_col = left_on_parsed
-        left_assoc_col = lop_right_col if lop_left_alias == assoc_alias else lop_left_col
+        # left association column is the one that references the core table 
+        left_assoc_col = lop_left_col if lop_left_alias == assoc_alias else lop_right_col
+        # left id column is the one that references the left core table
         left_id_col = lop_left_col if lop_left_alias == left_alias else lop_right_col
 
         rop_left_alias, rop_left_col, _, rop_right_col = right_on_parsed
+        # right association column is the one that references the core table
         right_assoc_col = rop_left_col if rop_left_alias == assoc_alias else rop_right_col
+        # right id column is the one that references the right core table
         right_id_col = rop_right_col if rop_left_alias == assoc_alias else rop_left_col
 
         if left_table not in self._tables or assoc_table not in self._tables or right_table not in self._tables:

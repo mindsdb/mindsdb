@@ -383,10 +383,22 @@ class PostgresHandler(MetaDatabaseHandler):
         columns = [f'"{c}"' for c in columns]
         rowcount = None
 
+        def _normalize_value(v):
+            """Convert pandas NA/NaN/NaT to None for proper SQL NULL handling."""
+            if v is None:
+                return None
+            try:
+                if pd.isna(v) is True:
+                    return None
+            except (ValueError, TypeError):
+                pass
+            return v
+
         with connection.cursor() as cur:
             try:
-                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
-                    df.to_csv(copy, index=False, header=False)
+                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN') as copy:
+                    for _, row in df.iterrows():
+                        copy.write_row([_normalize_value(v) for v in row])
 
                 connection.commit()
             except Exception as e:

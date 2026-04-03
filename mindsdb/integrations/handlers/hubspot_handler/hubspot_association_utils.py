@@ -58,8 +58,10 @@ def extract_primary_association(obj: Any, to_object_type: str) -> Optional[str]:
         to_objects = associations.get(to_object_type, {})
         if isinstance(to_objects, dict):
             results = to_objects.get("results", [])
+        elif isinstance(to_objects, list):
+            results = to_objects
         else:
-            results = to_objects if isinstance(to_objects, list) else []
+            results = getattr(to_objects, "results", []) or []
     else:
         to_objects = getattr(associations, to_object_type, None)
         if to_objects is None:

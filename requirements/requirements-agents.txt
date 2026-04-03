@@ -10,7 +10,7 @@ transformers >= 4.42.4
 
 # Required for KB
 mindsdb-evaluator == 0.0.21
-litellm==1.63.14
+litellm==1.83.0
 mcp~=1.10.1 # Required for MCP server
 
 # A2A requirements

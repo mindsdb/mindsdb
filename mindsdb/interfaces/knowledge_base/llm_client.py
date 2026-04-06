@@ -64,7 +64,7 @@ def run_in_batches(batch_size):
 class LLMClient:
     """
     Class for accession to LLM.
-    It chooses openai provider client depending on the config
+    It chooses provider client depending on the config
     """
 
     def __init__(self, params: dict = None, session=None):

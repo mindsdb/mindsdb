@@ -1,0 +1,3 @@
+google-ads>=24.0.0
+google-auth
+-r mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt

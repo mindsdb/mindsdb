@@ -260,6 +260,7 @@ PACKAGE_NAME_MAP = {
     "pyjwt": ["jwt"],
     "sklearn": ["scikit-learn"],
     "types-aioboto3": ["aioboto3"],
+    "ag2": ["autogen"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

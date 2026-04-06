@@ -36,8 +36,8 @@ class AsyncBedrockClient:
         aws_session_token: Optional[str] = None,
     ):
         try:
-            import aioboto3  # type: ignore
-        except ImportError as exc:  # pragma: no cover - environment specific
+            import aioboto3
+        except ImportError as exc:
             raise ImportError(
                 "aioboto3 is required for the Bedrock reranker client. Install it with `pip install aioboto3`."
             ) from exc
@@ -94,8 +94,8 @@ class BedrockClient:
         aws_session_token: Optional[str] = None,
     ):
         try:
-            import boto3  # type: ignore
-        except ImportError as exc:  # pragma: no cover - environment specific
+            import boto3
+        except ImportError as exc:
             raise ImportError("boto3 is required for the Bedrock client. Install it with `pip install boto3`.") from exc
 
         self.client = boto3.client(

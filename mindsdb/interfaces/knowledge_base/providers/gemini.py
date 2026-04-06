@@ -8,7 +8,7 @@ class GeminiClient:
         try:
             from google import genai
             from google.genai import types
-        except ImportError as exc:  # pragma: no cover - environment specific
+        except ImportError as exc:
             raise ImportError("google.genai is required. Install it with `pip install google-genai`.") from exc
 
         self.client = genai.Client(api_key=api_key)

@@ -121,7 +121,7 @@ _CAMPAIGNS_FILTER_MAP = {
 
 CAMPAIGNS_COLUMNS = [
     'id', 'name', 'status', 'advertising_channel_type', 'bidding_strategy_type',
-    'budget_amount_micros', 'budget_name', 'start_date', 'end_date', 'serving_status',
+    'budget_amount_micros', 'budget_name', 'serving_status',
 ]
 
 _CAMPAIGNS_GAQL = """
@@ -133,8 +133,6 @@ _CAMPAIGNS_GAQL = """
         campaign.bidding_strategy_type,
         campaign_budget.amount_micros,
         campaign_budget.name,
-        campaign.start_date,
-        campaign.end_date,
         campaign.serving_status
     FROM campaign
 """
@@ -172,8 +170,6 @@ class CampaignsTable(APITable):
                 'bidding_strategy_type': _enum_name(c.bidding_strategy_type),
                 'budget_amount_micros': b.amount_micros if b else None,
                 'budget_name': b.name if b else None,
-                'start_date': c.start_date or None,
-                'end_date': c.end_date or None,
                 'serving_status': _enum_name(c.serving_status),
             })
 
@@ -446,9 +442,8 @@ class CampaignPerformanceTable(APITable):
         start_date, end_date, other_conditions = _extract_date_range(query.where)
 
         if not start_date or not end_date:
-            raise ValueError(
-                "campaign_performance requires WHERE start_date = '...' AND end_date = '...'"
-            )
+            end_date = end_date or date.today().isoformat()
+            start_date = start_date or (date.today() - timedelta(days=30)).isoformat()
 
         push_filters = _build_simple_filters(other_conditions, _PERF_FILTER_MAP)
 
@@ -531,9 +526,8 @@ class SearchTermsTable(APITable):
         start_date, end_date, other_conditions = _extract_date_range(query.where)
 
         if not start_date or not end_date:
-            raise ValueError(
-                "search_terms requires WHERE start_date = '...' AND end_date = '...'"
-            )
+            end_date = end_date or date.today().isoformat()
+            start_date = start_date or (date.today() - timedelta(days=30)).isoformat()
 
         push_filters = _build_simple_filters(other_conditions, _SEARCH_TERMS_FILTER_MAP)
 

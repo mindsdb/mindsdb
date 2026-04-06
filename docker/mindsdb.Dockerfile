@@ -18,8 +18,6 @@ COPY mindsdb/__about__.py mindsdb/
 # Which will mean the next stage can be cached, even if the cache for the above stage was invalidated.
 
 
-
-
 # Use the stage from above to install our deps with as much caching as possible
 FROM python:3.10 AS build
 WORKDIR /mindsdb
@@ -92,6 +90,8 @@ ENV PATH=/venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=60s CMD curl -fsS "http://localhost:47334/api/status"
 
 # Pre-load web GUI
 RUN python -m mindsdb --config=/root/mindsdb_config.json --update-gui

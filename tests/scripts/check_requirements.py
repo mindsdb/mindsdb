@@ -145,6 +145,8 @@ OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
 
+FRESHDESK_EP002_IGNORE_HANDLER_DEPS = ["python-freshdesk"]
+
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
 SNOWFLAKE_DEP003_IGNORE_HANDLER_DEPS = ["pyarrow"]
@@ -160,6 +162,7 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + SOLR_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
+        + FRESHDESK_EP002_IGNORE_HANDLER_DEPS
     )
 )
 
@@ -177,6 +180,7 @@ HANDLER_RULE_IGNORES = {
         "IfxPyDbi",
         "ingres_sa_dialect",
         "pyodbc",
+        "freshdesk",
     ],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": DEP003_IGNORE_HANDLER_DEPS,
 }
@@ -254,6 +258,7 @@ PACKAGE_NAME_MAP = {
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
     "sklearn": ["scikit-learn"],
+    "ag2": ["autogen"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

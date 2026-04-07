@@ -42,7 +42,7 @@ filetype
 charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
 xlrd>=2.0.1 # used by pandas to read legacy .xls files
-aipdf==0.0.7.0
+aipdf==0.0.7.1
 pyarrow<=19.0.0 # used by pandas to read feather files in Files handler
 orjson==3.11.6
 

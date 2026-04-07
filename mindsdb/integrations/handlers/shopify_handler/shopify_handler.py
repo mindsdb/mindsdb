@@ -25,6 +25,14 @@ from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     BlogsTable,
     ArticlesTable,
     ShopTable,
+    AnalyticsTable,
+    AbandonedCheckoutsTable,
+    DeliveryProfilesTable,
+    CarrierServicesTable,
+    MarketsTable,
+    CompaniesTable,
+    CompanyLocationsTable,
+    CompanyContactsTable,
 )
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
@@ -102,6 +110,16 @@ class ShopifyHandler(MetaAPIHandler):
         self._register_table("blogs", BlogsTable(self))
         self._register_table("articles", ArticlesTable(self))
         self._register_table("shop", ShopTable(self))
+        # New read scope tables
+        self._register_table("analytics", AnalyticsTable(self))
+        self._register_table("abandoned_checkouts", AbandonedCheckoutsTable(self))
+        self._register_table("delivery_profiles", DeliveryProfilesTable(self))
+        self._register_table("carrier_services", CarrierServicesTable(self))
+        self._register_table("markets", MarketsTable(self))
+        # B2B tables (Shopify Plus only — read_companies scope)
+        self._register_table("companies", CompaniesTable(self))
+        self._register_table("company_locations", CompanyLocationsTable(self))
+        self._register_table("company_contacts", CompanyContactsTable(self))
 
     def connect(self):
         """

@@ -29,6 +29,14 @@ from .models.pages import Pages, columns as pages_columns
 from .models.blogs import Blogs, columns as blogs_columns
 from .models.articles import Articles, columns as articles_columns
 from .models.shop import columns as shop_columns
+from .models.analytics import columns as analytics_columns
+from .models.abandoned_checkouts import AbandonedCheckouts, columns as abandoned_checkouts_columns
+from .models.delivery_profiles import DeliveryProfiles, columns as delivery_profiles_columns
+from .models.carrier_services import CarrierServices, columns as carrier_services_columns
+from .models.markets import Markets, columns as markets_columns
+from .models.companies import Companies, columns as companies_columns
+from .models.company_locations import CompanyLocations, columns as company_locations_columns
+from .models.company_contacts import columns as company_contacts_columns
 
 logger = log.getLogger(__name__)
 
@@ -1554,3 +1562,530 @@ class ShopTable(ShopifyMetaAPIResource):
 
     def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
         return []
+
+
+class AnalyticsTable(ShopifyMetaAPIResource):
+    """The Shopify Analytics Table — ShopifyQL passthrough.
+    Usage: SELECT * FROM shopify.analytics WHERE query = 'FROM sales SHOW total_sales SINCE -30d'
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/shopifyqlquery
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "analytics"
+        self.model = None
+        self.model_name = "analytics"
+        self.columns = analytics_columns
+
+        self.sort_map = {}
+        self.conditions_op_map = {}
+        super().__init__(*args, **kwargs)
+
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        shopify_ql = None
+        for cond in conditions or []:
+            if cond.column.lower() == "query" and cond.op == FilterOperator.EQUAL:
+                shopify_ql = cond.value
+                cond.applied = True
+
+        if not shopify_ql:
+            raise ValueError(
+                "The analytics table requires a WHERE clause: WHERE query = '<ShopifyQL string>'. "
+                "Example: WHERE query = 'FROM sales SHOW total_sales SINCE -30d'"
+            )
+
+        escaped = shopify_ql.replace('"', '\\"')
+        gql = f"""{{
+            shopifyqlQuery(query: "{escaped}") {{
+                tableData {{
+                    columns {{ name dataType displayName }}
+                    rows
+                }}
+                parseErrors {{ code message range {{ start {{ line character }} end {{ line character }} }} }}
+            }}
+        }}"""
+
+        result = self.query_graphql(gql)
+        data = result.get("data", {}).get("shopifyqlQuery", {})
+
+        parse_errors = data.get("parseErrors") or []
+        if parse_errors:
+            messages = "; ".join(e.get("message", "unknown error") for e in parse_errors)
+            raise ValueError(f"ShopifyQL parse error: {messages}")
+
+        table_data = data.get("tableData") or {}
+        col_meta = table_data.get("columns") or []
+        col_names = [c["name"] for c in col_meta]
+        rows = [dict(zip(col_names, row)) for row in (table_data.get("rows") or [])]
+
+        if not rows:
+            return pd.DataFrame(columns=col_names or [c["COLUMN_NAME"] for c in self.columns])
+
+        df = pd.DataFrame(rows, columns=col_names)
+        if targets:
+            available = [c for c in targets if c in df.columns]
+            if available:
+                df = df[available]
+        return df
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "ShopifyQL analytics query engine. Use WHERE query = '<ShopifyQL>' to run analytics queries with dynamic columns.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return []
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class AbandonedCheckoutsTable(ShopifyMetaAPIResource):
+    """The Shopify AbandonedCheckouts Table implementation.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/abandonedcheckouts
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "abandoned_checkouts"
+        self.model = AbandonedCheckouts
+        self.model_name = "abandonedCheckouts"
+        self.columns = abandoned_checkouts_columns
+
+        sort_map = {
+            AbandonedCheckouts.id: "ID",
+            AbandonedCheckouts.createdAt: "CREATED_AT",
+            AbandonedCheckouts.updatedAt: "UPDATED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("email", FilterOperator.EQUAL): "email:",
+            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
+            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
+            ("createdat", FilterOperator.EQUAL): "created_at:",
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of abandoned checkouts (carts started but not completed).",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "customerId",
+                "CHILD_TABLE_NAME": "customers",
+                "CHILD_COLUMN_NAME": "id",
+            }
+        ]
+
+
+class DeliveryProfilesTable(ShopifyMetaAPIResource):
+    """The Shopify DeliveryProfiles Table implementation.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/deliveryprofiles
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "delivery_profiles"
+        self.model = DeliveryProfiles
+        self.model_name = "deliveryProfiles"
+        self.columns = delivery_profiles_columns
+
+        self.sort_map = {}
+        self.conditions_op_map = {}
+        super().__init__(*args, **kwargs)
+
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        # merchantOwnedOnly is a direct boolean arg, not a query: string filter
+        merchant_owned_only = None
+        for cond in conditions or []:
+            if cond.column.lower() == "merchantownedonly" and cond.op == FilterOperator.EQUAL:
+                merchant_owned_only = bool(cond.value)
+                cond.applied = True
+
+        col_names = (
+            "activeMethodDefinitionsCount default id name "
+            "productVariantsCount sellingPlanGroupsCount zoneCountryCount"
+        )
+
+        rows = []
+        cursor = None
+        has_next = True
+        fetched = 0
+        page_size = MAX_PAGE_LIMIT if limit is None else min(limit, MAX_PAGE_LIMIT)
+
+        while has_next:
+            remaining = None if limit is None else limit - fetched
+            if remaining is not None and remaining <= 0:
+                break
+            current_limit = page_size if remaining is None else min(page_size, remaining)
+
+            args_list = [f"first: {current_limit}"]
+            if cursor:
+                args_list.append(f'after: "{cursor}"')
+            if merchant_owned_only is not None:
+                args_list.append(f"merchantOwnedOnly: {'true' if merchant_owned_only else 'false'}")
+            args_str = ", ".join(args_list)
+
+            gql = f"{{ deliveryProfiles({args_str}) {{ nodes {{ {col_names} }} {PAGE_INFO} }} }}"
+            result = self.query_graphql(gql)
+            data = result.get("data", {}).get("deliveryProfiles", {})
+            nodes = data.get("nodes") or []
+            page_info = data.get("pageInfo") or {}
+            has_next = page_info.get("hasNextPage", False)
+            cursor = page_info.get("endCursor")
+            rows.extend(nodes)
+            fetched += len(nodes)
+            if limit is not None and fetched >= limit:
+                break
+
+        if not rows:
+            return pd.DataFrame(columns=[c["COLUMN_NAME"] for c in self.columns])
+
+        df = pd.DataFrame(rows)
+        if targets:
+            available = [c for c in targets if c in df.columns]
+            if available:
+                df = df[available]
+        return df
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "Shipping delivery profiles that define rates and zones for shipping methods.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class CarrierServicesTable(ShopifyMetaAPIResource):
+    """The Shopify CarrierServices Table implementation.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/carrierservices
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "carrier_services"
+        self.model = CarrierServices
+        self.model_name = "carrierServices"
+        self.columns = carrier_services_columns
+
+        self.sort_map = {
+            CarrierServices.id.name.lower(): "ID",
+        }
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("active", FilterOperator.EQUAL): "active:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of carrier service integrations for custom shipping rates.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class MarketsTable(ShopifyMetaAPIResource):
+    """The Shopify Markets Table implementation.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/markets
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "markets"
+        self.model = Markets
+        self.model_name = "markets"
+        self.columns = markets_columns
+
+        sort_map = {
+            Markets.id: "ID",
+            Markets.name: "NAME",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("name", FilterOperator.EQUAL): "name:",
+            ("name", FilterOperator.LIKE): "name:",
+            ("enabled", FilterOperator.EQUAL): "status:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of markets defining geographic regions with their own pricing and language settings.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class CompaniesTable(ShopifyMetaAPIResource):
+    """The Shopify Companies Table implementation (B2B, Shopify Plus only).
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/companies
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "companies"
+        self.model = Companies
+        self.model_name = "companies"
+        self.columns = companies_columns
+
+        sort_map = {
+            Companies.id: "ID",
+            Companies.name: "NAME",
+            Companies.createdAt: "CREATED_AT",
+            Companies.updatedAt: "UPDATED_AT",
+            Companies.totalSpent: "TOTAL_SPENT",
+            Companies.ordersCount: "ORDERS_COUNT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("name", FilterOperator.EQUAL): "name:",
+            ("name", FilterOperator.LIKE): "name:",
+            ("externalid", FilterOperator.EQUAL): "external_id:",
+            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
+            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
+            ("createdat", FilterOperator.EQUAL): "created_at:",
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of B2B company accounts (Shopify Plus only). Requires read_companies scope.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class CompanyLocationsTable(ShopifyMetaAPIResource):
+    """The Shopify CompanyLocations Table implementation (B2B, Shopify Plus only).
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/companylocations
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "company_locations"
+        self.model = CompanyLocations
+        self.model_name = "companyLocations"
+        self.columns = company_locations_columns
+
+        sort_map = {
+            CompanyLocations.id: "ID",
+            CompanyLocations.name: "NAME",
+            CompanyLocations.createdAt: "CREATED_AT",
+            CompanyLocations.updatedAt: "UPDATED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("name", FilterOperator.EQUAL): "name:",
+            ("name", FilterOperator.LIKE): "name:",
+            ("externalid", FilterOperator.EQUAL): "external_id:",
+            ("companyid", FilterOperator.EQUAL): "company_id:",
+            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
+            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
+            ("createdat", FilterOperator.EQUAL): "created_at:",
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of B2B company locations with billing/shipping addresses (Shopify Plus only).",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "companyId",
+                "CHILD_TABLE_NAME": "companies",
+                "CHILD_COLUMN_NAME": "id",
+            }
+        ]
+
+
+class CompanyContactsTable(ShopifyMetaAPIResource):
+    """The Shopify CompanyContacts Table.
+    Contacts have no root-level query; they are nested under company.contacts.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/CompanyContact
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "company_contacts"
+        self.model = None
+        self.model_name = "company_contacts"
+        self.columns = company_contacts_columns
+
+        self.sort_map = {}
+        self.conditions_op_map = {
+            ("companyid", FilterOperator.EQUAL): "company_id_eq",
+        }
+        super().__init__(*args, **kwargs)
+
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        company_query = None
+        for cond in conditions or []:
+            if cond.column.lower() == "companyid" and cond.op == FilterOperator.EQUAL:
+                company_query = f"id:{cond.value}"
+                cond.applied = True
+
+        contacts_gql = (
+            "id title locale isMainContact createdAt updatedAt "
+            "customer { id email firstName lastName }"
+        )
+        companies_gql = f"id contacts(first: 50) {{ nodes {{ {contacts_gql} }} }}"
+
+        data = query_graphql_nodes(
+            "companies",
+            Companies,
+            companies_gql,
+            query=company_query,
+            limit=None,
+        )
+
+        rows = []
+        for company in data:
+            company_id = company.get("id")
+            contacts_nodes = (company.get("contacts") or {}).get("nodes") or []
+            for contact in contacts_nodes:
+                customer = contact.get("customer") or {}
+                flat = {
+                    "id": contact.get("id"),
+                    "companyId": company_id,
+                    "customerId": customer.get("id"),
+                    "customerEmail": customer.get("email"),
+                    "customerFirstName": customer.get("firstName"),
+                    "customerLastName": customer.get("lastName"),
+                    "isMainContact": contact.get("isMainContact"),
+                    "locale": contact.get("locale"),
+                    "title": contact.get("title"),
+                    "createdAt": contact.get("createdAt"),
+                    "updatedAt": contact.get("updatedAt"),
+                }
+                rows.append(flat)
+
+        if limit:
+            rows = rows[:limit]
+
+        if not rows:
+            return pd.DataFrame(columns=[c["COLUMN_NAME"] for c in self.columns])
+
+        df = pd.DataFrame(rows)
+        if targets:
+            available = [c for c in targets if c in df.columns]
+            if available:
+                df = df[available]
+        return df
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of B2B company contacts nested under companies (Shopify Plus only).",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "companyId",
+                "CHILD_TABLE_NAME": "companies",
+                "CHILD_COLUMN_NAME": "id",
+            },
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "customerId",
+                "CHILD_TABLE_NAME": "customers",
+                "CHILD_COLUMN_NAME": "id",
+            },
+        ]

@@ -1,7 +1,7 @@
 openai<3.0.0,>=2.11.0
 
 # When using agents, some LLMs may require the 'transformers' library (like Ollama):
-transformers >= 4.42.4
+transformers==5.5.0
 
 # Required for KB
 mindsdb-evaluator == 0.0.21

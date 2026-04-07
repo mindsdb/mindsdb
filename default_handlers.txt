@@ -18,6 +18,7 @@ github
 gitlab
 gmail
 tripadvisor
+google_ads
 google_analytics
 google_search
 google_books

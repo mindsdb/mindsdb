@@ -37,7 +37,7 @@ sse-starlette==2.3.3
 pydantic_core>=2.33.2
 pyjwt==2.12.0
 # files reading
-pymupdf==1.27.1
+pymupdf==1.27.2.2
 filetype
 charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files

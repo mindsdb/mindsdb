@@ -1,3 +1,2 @@
 snowflake-connector-python[pandas]==3.15.0
 snowflake-sqlalchemy==1.7.0
-pyopenssl>=26.0.0

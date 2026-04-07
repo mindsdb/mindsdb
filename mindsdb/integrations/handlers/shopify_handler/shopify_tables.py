@@ -8,7 +8,7 @@ from mindsdb.integrations.libs.api_handler import MetaAPIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 from mindsdb.utilities import log
 
-from .utils import query_graphql_nodes, get_graphql_columns, _format_error
+from .utils import query_graphql_nodes, get_graphql_columns, _format_error, ShopifyQuery, MAX_PAGE_LIMIT, PAGE_INFO
 from .models.products import Products, columns as products_columns
 from .models.product_variants import ProductVariants, columns as product_variants_columns
 from .models.customers import Customers, columns as customers_columns
@@ -17,6 +17,18 @@ from .models.marketing_events import MarketingEvents, columns as marketing_event
 from .models.inventory_items import InventoryItems, columns as inventory_items_columns
 from .models.staff_members import StaffMembers, columns as staff_members_columns
 from .models.gift_cards import GiftCards, columns as gift_cards_columns
+from .models.collections import Collections, columns as collections_columns
+from .models.fulfillment_orders import FulfillmentOrders, columns as fulfillment_orders_columns
+from .models.locations import Locations, columns as locations_columns
+from .models.draft_orders import DraftOrders, columns as draft_orders_columns
+from .models.inventory_levels import InventoryLevels, INVENTORY_QUANTITY_NAMES, columns as inventory_levels_columns
+from .models.transactions import columns as transactions_columns
+from .models.refunds import columns as refunds_columns
+from .models.discount_codes import DiscountCodes, columns as discount_codes_columns
+from .models.pages import Pages, columns as pages_columns
+from .models.blogs import Blogs, columns as blogs_columns
+from .models.articles import Articles, columns as articles_columns
+from .models.shop import columns as shop_columns
 
 logger = log.getLogger(__name__)
 
@@ -753,3 +765,792 @@ class GiftCardsTable(ShopifyMetaAPIResource):
                 "CHILD_COLUMN_NAME": "id",
             },
         ]
+
+
+class CollectionsTable(ShopifyMetaAPIResource):
+    """The Shopify Collections Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/collections
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "collections"
+        self.model = Collections
+        self.model_name = "collections"
+        self.columns = collections_columns
+
+        sort_map = {
+            Collections.id: "ID",
+            Collections.title: "TITLE",
+            Collections.updatedAt: "UPDATED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("title", FilterOperator.EQUAL): "title:",
+            ("handle", FilterOperator.EQUAL): "handle:",
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        response = self.query_graphql("""{
+            collectionsCount(limit:null) {
+                count
+        } }""")
+        row_count = response["data"]["collectionsCount"]["count"]
+
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of collections (product groupings) in the store.",
+            "row_count": row_count,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class FulfillmentOrdersTable(ShopifyMetaAPIResource):
+    """The Shopify FulfillmentOrders Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/fulfillmentorders
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "fulfillment_orders"
+        self.model = FulfillmentOrders
+        self.model_name = "fulfillmentOrders"
+        self.columns = fulfillment_orders_columns
+
+        self.sort_map = {
+            FulfillmentOrders.id.name.lower(): "ID",
+        }
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("status", FilterOperator.EQUAL): "status:",
+            ("orderid", FilterOperator.EQUAL): "order_id:",
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of fulfillment orders, representing where and how an order's items will be fulfilled.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "orderId",
+                "CHILD_TABLE_NAME": "orders",
+                "CHILD_COLUMN_NAME": "id",
+            }
+        ]
+
+
+class LocationsTable(ShopifyMetaAPIResource):
+    """The Shopify Locations Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/locations
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "locations"
+        self.model = Locations
+        self.model_name = "locations"
+        self.columns = locations_columns
+
+        sort_map = {
+            Locations.id: "ID",
+            Locations.name: "NAME",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("name", FilterOperator.EQUAL): "name:",
+            ("name", FilterOperator.LIKE): "name:",
+            ("isactive", FilterOperator.EQUAL): "active:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of store locations (warehouses and retail stores).",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class DraftOrdersTable(ShopifyMetaAPIResource):
+    """The Shopify DraftOrders Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/draftorders
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "draft_orders"
+        self.model = DraftOrders
+        self.model_name = "draftOrders"
+        self.columns = draft_orders_columns
+
+        sort_map = {
+            DraftOrders.createdAt: "CREATED_AT",
+            DraftOrders.id: "ID",
+            DraftOrders.status: "STATUS",
+            DraftOrders.updatedAt: "UPDATED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("id", FilterOperator.GREATER_THAN): "id:>",
+            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
+            ("id", FilterOperator.LESS_THAN): "id:<",
+            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
+            ("status", FilterOperator.EQUAL): "status:",
+            ("email", FilterOperator.EQUAL): "email:",
+            ("customerid", FilterOperator.EQUAL): "customer_id:",
+            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
+            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
+            ("createdat", FilterOperator.EQUAL): "created_at:",
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        response = self.query_graphql("""{
+            draftOrdersCount(limit:null) {
+                count
+        } }""")
+        row_count = response["data"]["draftOrdersCount"]["count"]
+
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of draft orders (incomplete orders and wholesale quotes).",
+            "row_count": row_count,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "customerId",
+                "CHILD_TABLE_NAME": "customers",
+                "CHILD_COLUMN_NAME": "id",
+            }
+        ]
+
+
+class InventoryLevelsTable(ShopifyMetaAPIResource):
+    """The Shopify InventoryLevels Table implementation.
+    Inventory levels represent stock quantities per item per location.
+    Uses a custom list() because the quantities field requires a `names` argument.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/inventorylevels
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "inventory_levels"
+        self.model = InventoryLevels
+        self.model_name = "inventoryLevels"
+        self.columns = inventory_levels_columns
+
+        self.sort_map = {}
+
+        self.conditions_op_map = {
+            ("inventoryitemid", FilterOperator.EQUAL): "inventory_item_id:",
+            ("locationid", FilterOperator.EQUAL): "location_id:",
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        query_conditions = self._get_query_conditions(conditions)
+
+        qty_names = ", ".join(f'"{n}"' for n in INVENTORY_QUANTITY_NAMES)
+        columns_gql = (
+            "id "
+            "item { id sku legacyResourceId } "
+            "location { id name } "
+            "canDeactivate "
+            "createdAt "
+            "updatedAt "
+            f"quantities(names: [{qty_names}]) {{ name quantity }}"
+        )
+
+        data = query_graphql_nodes(
+            "inventoryLevels",
+            InventoryLevels,
+            columns_gql,
+            query=query_conditions,
+            limit=limit,
+        )
+
+        rows = []
+        for row in data:
+            flat = {
+                "id": row.get("id"),
+                "inventoryItemId": (row.get("item") or {}).get("id"),
+                "sku": (row.get("item") or {}).get("sku"),
+                "locationId": (row.get("location") or {}).get("id"),
+                "locationName": (row.get("location") or {}).get("name"),
+                "canDeactivate": row.get("canDeactivate"),
+                "createdAt": row.get("createdAt"),
+                "updatedAt": row.get("updatedAt"),
+            }
+            for qty in row.get("quantities") or []:
+                flat[qty["name"]] = qty["quantity"]
+            rows.append(flat)
+
+        if not rows:
+            return pd.DataFrame(columns=[c["COLUMN_NAME"] for c in self.columns])
+
+        df = pd.DataFrame(rows)
+        if targets:
+            available = [c for c in targets if c in df.columns]
+            if available:
+                df = df[available]
+        return df
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "Inventory quantities per item per location.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "inventoryItemId",
+                "CHILD_TABLE_NAME": "inventory_items",
+                "CHILD_COLUMN_NAME": "id",
+            },
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "locationId",
+                "CHILD_TABLE_NAME": "locations",
+                "CHILD_COLUMN_NAME": "id",
+            },
+        ]
+
+
+class TransactionsTable(ShopifyMetaAPIResource):
+    """The Shopify Transactions Table.
+    Transactions are fetched by querying orders with their nested transactions.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/OrderTransaction
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "transactions"
+        self.model = None
+        self.model_name = "transactions"
+        self.columns = transactions_columns
+
+        self.sort_map = {}
+        self.conditions_op_map = {
+            ("orderid", FilterOperator.EQUAL): "order_id_eq",
+        }
+        super().__init__(*args, **kwargs)
+
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        # Extract order_id filter if provided (used to scope the query)
+        order_id_filter = None
+        order_query = None
+        for cond in conditions or []:
+            if cond.column.lower() == "orderid" and cond.op == FilterOperator.EQUAL:
+                order_id_filter = cond.value
+                order_query = f"id:{order_id_filter}"
+                cond.applied = True
+
+        transactions_gql = (
+            "id kind status "
+            "amountSet { shopMoney { amount currencyCode } } "
+            "createdAt processedAt gateway authorization formattedGateway test errorCode"
+        )
+        orders_columns_gql = f"id transactions {{ {transactions_gql} }}"
+
+        data = query_graphql_nodes(
+            "orders",
+            Orders,
+            orders_columns_gql,
+            query=order_query,
+            limit=None,
+        )
+
+        rows = []
+        for order in data:
+            order_id = order.get("id")
+            for txn in order.get("transactions") or []:
+                flat = {
+                    "id": txn.get("id"),
+                    "orderId": order_id,
+                    "kind": txn.get("kind"),
+                    "status": txn.get("status"),
+                    "amount": ((txn.get("amountSet") or {}).get("shopMoney") or {}).get("amount"),
+                    "currencyCode": ((txn.get("amountSet") or {}).get("shopMoney") or {}).get("currencyCode"),
+                    "gateway": txn.get("gateway"),
+                    "authorization": txn.get("authorization"),
+                    "errorCode": txn.get("errorCode"),
+                    "formattedGateway": txn.get("formattedGateway"),
+                    "test": txn.get("test"),
+                    "processedAt": txn.get("processedAt"),
+                    "createdAt": txn.get("createdAt"),
+                }
+                rows.append(flat)
+
+        if limit:
+            rows = rows[:limit]
+
+        if not rows:
+            return pd.DataFrame(columns=[c["COLUMN_NAME"] for c in self.columns])
+
+        df = pd.DataFrame(rows)
+        if targets:
+            available = [c for c in targets if c in df.columns]
+            if available:
+                df = df[available]
+        return df
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "Order payment transactions (sales, refunds, captures, voids).",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "orderId",
+                "CHILD_TABLE_NAME": "orders",
+                "CHILD_COLUMN_NAME": "id",
+            }
+        ]
+
+
+class RefundsTable(ShopifyMetaAPIResource):
+    """The Shopify Refunds Table.
+    Refunds are fetched by querying orders with their nested refunds.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/Refund
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "refunds"
+        self.model = None
+        self.model_name = "refunds"
+        self.columns = refunds_columns
+
+        self.sort_map = {}
+        self.conditions_op_map = {
+            ("orderid", FilterOperator.EQUAL): "order_id_eq",
+        }
+        super().__init__(*args, **kwargs)
+
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        order_query = None
+        for cond in conditions or []:
+            if cond.column.lower() == "orderid" and cond.op == FilterOperator.EQUAL:
+                order_query = f"id:{cond.value}"
+                cond.applied = True
+
+        refunds_gql = (
+            "id note createdAt updatedAt "
+            "totalRefundedSet { shopMoney { amount currencyCode } } "
+            "refundLineItems(first: 50) { nodes { "
+            "  quantity "
+            "  priceSet { shopMoney { amount currencyCode } } "
+            "  lineItem { id title } "
+            "} }"
+        )
+        orders_columns_gql = f"id refunds {{ {refunds_gql} }}"
+
+        data = query_graphql_nodes(
+            "orders",
+            Orders,
+            orders_columns_gql,
+            query=order_query,
+            limit=None,
+        )
+
+        rows = []
+        for order in data:
+            order_id = order.get("id")
+            for refund in order.get("refunds") or []:
+                shop_money = ((refund.get("totalRefundedSet") or {}).get("shopMoney") or {})
+                flat = {
+                    "id": refund.get("id"),
+                    "orderId": order_id,
+                    "note": refund.get("note"),
+                    "createdAt": refund.get("createdAt"),
+                    "updatedAt": refund.get("updatedAt"),
+                    "totalRefundedAmount": shop_money.get("amount"),
+                    "totalRefundedCurrencyCode": shop_money.get("currencyCode"),
+                    "refundLineItems": (refund.get("refundLineItems") or {}).get("nodes"),
+                }
+                rows.append(flat)
+
+        if limit:
+            rows = rows[:limit]
+
+        if not rows:
+            return pd.DataFrame(columns=[c["COLUMN_NAME"] for c in self.columns])
+
+        df = pd.DataFrame(rows)
+        if targets:
+            available = [c for c in targets if c in df.columns]
+            if available:
+                df = df[available]
+        return df
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "Order refunds with line items and amounts.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "orderId",
+                "CHILD_TABLE_NAME": "orders",
+                "CHILD_COLUMN_NAME": "id",
+            }
+        ]
+
+
+class DiscountCodesTable(ShopifyMetaAPIResource):
+    """The Shopify DiscountCodes Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/discountcodes
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "discount_codes"
+        self.model = DiscountCodes
+        self.model_name = "discountCodes"
+        self.columns = discount_codes_columns
+
+        sort_map = {
+            DiscountCodes.id: "ID",
+            DiscountCodes.code: "CODE",
+            DiscountCodes.createdAt: "CREATED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("code", FilterOperator.EQUAL): "code:",
+            ("code", FilterOperator.LIKE): "code:",
+            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
+            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
+            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
+            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
+            ("createdat", FilterOperator.EQUAL): "created_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of discount codes (promo codes) that customers can apply at checkout.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class PagesTable(ShopifyMetaAPIResource):
+    """The Shopify Pages Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/pages
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "pages"
+        self.model = Pages
+        self.model_name = "pages"
+        self.columns = pages_columns
+
+        sort_map = {
+            Pages.id: "ID",
+            Pages.title: "TITLE",
+            Pages.createdAt: "CREATED_AT",
+            Pages.publishedAt: "PUBLISHED_AT",
+            Pages.updatedAt: "UPDATED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("title", FilterOperator.EQUAL): "title:",
+            ("title", FilterOperator.LIKE): "title:",
+            ("handle", FilterOperator.EQUAL): "handle:",
+            ("ispublished", FilterOperator.EQUAL): "published_status:",
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of online store pages.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class BlogsTable(ShopifyMetaAPIResource):
+    """The Shopify Blogs Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/blogs
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "blogs"
+        self.model = Blogs
+        self.model_name = "blogs"
+        self.columns = blogs_columns
+
+        sort_map = {
+            Blogs.id: "ID",
+            Blogs.title: "TITLE",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("title", FilterOperator.EQUAL): "title:",
+            ("title", FilterOperator.LIKE): "title:",
+            ("handle", FilterOperator.EQUAL): "handle:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of store blogs.",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []
+
+
+class ArticlesTable(ShopifyMetaAPIResource):
+    """The Shopify Articles Table implementation
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/articles
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "articles"
+        self.model = Articles
+        self.model_name = "articles"
+        self.columns = articles_columns
+
+        sort_map = {
+            Articles.id: "ID",
+            Articles.title: "TITLE",
+            Articles.createdAt: "CREATED_AT",
+            Articles.publishedAt: "PUBLISHED_AT",
+            Articles.updatedAt: "UPDATED_AT",
+        }
+        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
+
+        self.conditions_op_map = {
+            ("id", FilterOperator.EQUAL): "id:",
+            ("title", FilterOperator.EQUAL): "title:",
+            ("title", FilterOperator.LIKE): "title:",
+            ("handle", FilterOperator.EQUAL): "handle:",
+            ("blogid", FilterOperator.EQUAL): "blog_id:",
+            ("ispublished", FilterOperator.EQUAL): "published_status:",
+            ("updatedat", FilterOperator.GREATER_THAN): "updated_at:>",
+            ("updatedat", FilterOperator.GREATER_THAN_OR_EQUAL): "updated_at:>=",
+            ("updatedat", FilterOperator.LESS_THAN): "updated_at:<",
+            ("updatedat", FilterOperator.LESS_THAN_OR_EQUAL): "updated_at:<=",
+            ("updatedat", FilterOperator.EQUAL): "updated_at:",
+        }
+        super().__init__(*args, **kwargs)
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "List of blog articles (posts).",
+            "row_count": None,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return [
+            {
+                "PARENT_TABLE_NAME": table_name,
+                "PARENT_COLUMN_NAME": "blogId",
+                "CHILD_TABLE_NAME": "blogs",
+                "CHILD_COLUMN_NAME": "id",
+            }
+        ]
+
+
+class ShopTable(ShopifyMetaAPIResource):
+    """The Shopify Shop Table — a singleton resource with store configuration.
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/Shop
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.name = "shop"
+        self.model = None
+        self.model_name = "shop"
+        self.columns = shop_columns
+
+        self.sort_map = {}
+        self.conditions_op_map = {}
+        super().__init__(*args, **kwargs)
+
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        result = self.query_graphql("""{
+            shop {
+                id name email contactEmail myshopifyDomain
+                primaryDomain { host url }
+                plan { displayName partnerDevelopment shopifyPlus }
+                currencyCode
+                currencyFormats { moneyFormat moneyWithCurrencyFormat }
+                timezoneAbbreviation timezoneOffset ianaTimezone
+                description url createdAt updatedAt
+            }
+        }""")
+
+        shop = result.get("data", {}).get("shop", {})
+        if not shop:
+            return pd.DataFrame(columns=[c["COLUMN_NAME"] for c in self.columns])
+
+        row = {
+            "id": shop.get("id"),
+            "name": shop.get("name"),
+            "email": shop.get("email"),
+            "contactEmail": shop.get("contactEmail"),
+            "myshopifyDomain": shop.get("myshopifyDomain"),
+            "primaryDomain": shop.get("primaryDomain"),
+            "plan": shop.get("plan"),
+            "currencyCode": shop.get("currencyCode"),
+            "currencyFormats": shop.get("currencyFormats"),
+            "timezoneAbbreviation": shop.get("timezoneAbbreviation"),
+            "timezoneOffset": shop.get("timezoneOffset"),
+            "ianaTimezone": shop.get("ianaTimezone"),
+            "description": shop.get("description"),
+            "url": shop.get("url"),
+            "createdAt": shop.get("createdAt"),
+            "updatedAt": shop.get("updatedAt"),
+        }
+
+        df = pd.DataFrame([row])
+        if targets:
+            available = [c for c in targets if c in df.columns]
+            if available:
+                df = df[available]
+        return df
+
+    def meta_get_tables(self, *args, **kwargs) -> dict:
+        return {
+            "table_name": self.name,
+            "table_type": "BASE TABLE",
+            "table_description": "Store configuration and plan information (single row).",
+            "row_count": 1,
+        }
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        return [{"table_name": table_name, "column_name": "id"}]
+
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
+        return []

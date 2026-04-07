@@ -13,6 +13,18 @@ from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     InventoryItemsTable,
     StaffMembersTable,
     GiftCardsTable,
+    CollectionsTable,
+    FulfillmentOrdersTable,
+    LocationsTable,
+    DraftOrdersTable,
+    InventoryLevelsTable,
+    TransactionsTable,
+    RefundsTable,
+    DiscountCodesTable,
+    PagesTable,
+    BlogsTable,
+    ArticlesTable,
+    ShopTable,
 )
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
@@ -27,8 +39,6 @@ from mindsdb.integrations.libs.api_handler_exceptions import (
     ConnectionFailed,
     MissingConnectionParams,
 )
-
-from .connection_args import connection_args
 
 logger = log.getLogger(__name__)
 
@@ -54,15 +64,18 @@ class ShopifyHandler(MetaAPIHandler):
 
         connection_data = kwargs.get("connection_data", {})
 
-        required_args = [arg_name for arg_name, arg_meta in connection_args.items() if arg_meta.get("required") is True]
-        missed_args = set(required_args) - set(connection_data)
-        if missed_args:
-            raise MissingConnectionParams(
-                f"Required parameters are not found in the connection data: {', '.join(list(missed_args))}"
-            )
+        if not connection_data.get("shop_url"):
+            raise MissingConnectionParams("Required parameter 'shop_url' is missing.")
 
         self.connection_data = connection_data
         self.kwargs = kwargs
+
+        has_token = bool(connection_data.get("access_token"))
+        has_oauth = bool(connection_data.get("client_id") and connection_data.get("client_secret"))
+        if not has_token and not has_oauth:
+            raise MissingConnectionParams(
+                "Shopify connection requires either 'access_token' or both 'client_id' and 'client_secret'."
+            )
 
         self.connection = None
         self.is_connected = False
@@ -75,6 +88,20 @@ class ShopifyHandler(MetaAPIHandler):
         self._register_table("inventory_items", InventoryItemsTable(self))
         self._register_table("staff_members", StaffMembersTable(self))
         self._register_table("gift_cards", GiftCardsTable(self))
+        # Tier 1 new tables
+        self._register_table("collections", CollectionsTable(self))
+        self._register_table("fulfillment_orders", FulfillmentOrdersTable(self))
+        self._register_table("locations", LocationsTable(self))
+        self._register_table("draft_orders", DraftOrdersTable(self))
+        self._register_table("inventory_levels", InventoryLevelsTable(self))
+        self._register_table("transactions", TransactionsTable(self))
+        self._register_table("refunds", RefundsTable(self))
+        # Tier 2 new tables
+        self._register_table("discount_codes", DiscountCodesTable(self))
+        self._register_table("pages", PagesTable(self))
+        self._register_table("blogs", BlogsTable(self))
+        self._register_table("articles", ArticlesTable(self))
+        self._register_table("shop", ShopTable(self))
 
     def connect(self):
         """
@@ -88,20 +115,23 @@ class ShopifyHandler(MetaAPIHandler):
             return self.connection
 
         shop_url = self.connection_data["shop_url"]
-        client_id = self.connection_data["client_id"]
-        client_secret = self.connection_data["client_secret"]
+        access_token = self.connection_data.get("access_token")
 
-        response = requests.post(
-            f"https://{shop_url}/admin/oauth/access_token",
-            data={"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret},
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=10,
-        )
-        response.raise_for_status()
-        result = response.json()
-        access_token = result.get("access_token")
         if not access_token:
-            raise ConnectionFailed("Unable to get an access token")
+            client_id = self.connection_data["client_id"]
+            client_secret = self.connection_data["client_secret"]
+
+            response = requests.post(
+                f"https://{shop_url}/admin/oauth/access_token",
+                data={"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            result = response.json()
+            access_token = result.get("access_token")
+            if not access_token:
+                raise ConnectionFailed("Unable to get an access token from Shopify OAuth endpoint")
 
         api_session = shopify.Session(shop_url, "2025-10", access_token)
 

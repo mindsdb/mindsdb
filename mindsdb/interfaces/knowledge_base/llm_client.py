@@ -138,7 +138,7 @@ class LLMClient:
             )
             return [item.message.content for item in response.choices]
         else:
-            return self.client.completion(self.model_name, messages)
+            return [self.client.completion(self.model_name, messages)]
 
     async def abatch(self, messages_list: List[List[dict]], json_output: bool = False) -> List[List[str]]:
         """

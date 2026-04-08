@@ -11,7 +11,7 @@ from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever, Ru
 from mindsdb.interfaces.knowledge_base.preprocessing.document_types import SimpleDocument
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.integrations.libs.response import HandlerResponse
+from mindsdb.integrations.libs.response import ErrorResponse, DataHandlerResponse
 from mindsdb.integrations.libs.vectordatabase_handler import (
     DistanceFunction,
     VectorStoreHandler,
@@ -746,7 +746,7 @@ Query: {{query}}"""
 
     def _generate_metadata_filters(
         self, query: str, ranked_database_schema
-    ) -> Union[List[AblativeMetadataFilter], HandlerResponse]:
+    ) -> Union[List[AblativeMetadataFilter], DataHandlerResponse]:
         """Generate metadata filters using LLM"""
 
         metadata_filter_list = []
@@ -813,7 +813,7 @@ Query: {{query}}"""
                                     f"LLM failed to generate structured metadata filters: {e}",
                                     exc_info=logger.isEnabledFor(logging.DEBUG),
                                 )
-                                return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
+                                return ErrorResponse(error_message=str(e))
                         else:
                             metadata_filter = AblativeMetadataFilter(
                                 attribute=column_schema.column,
@@ -832,7 +832,7 @@ Query: {{query}}"""
         ranked_database_schema: DatabaseSchema,
         metadata_filters: List[AblativeMetadataFilter],
         embeddings_str: str,
-    ) -> HandlerResponse:
+    ) -> DataHandlerResponse:
         try:
             checked_sql_query = self._prepare_pgvector_query(ranked_database_schema, metadata_filters)
             checked_sql_query_with_embeddings = checked_sql_query.format(embeddings=embeddings_str)
@@ -842,7 +842,7 @@ Query: {{query}}"""
                 f"Failed to prepare and execute SQL query from structured metadata: {e}",
                 exc_info=logger.isEnabledFor(logging.DEBUG),
             )
-            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
+            return ErrorResponse(error_message=str(e))
 
     def _get_relevant_documents(self, query: str, *, run_manager: Optional[Any] = None) -> List[Any]:
         # Rewrite query to be suitable for retrieval.

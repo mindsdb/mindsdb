@@ -381,7 +381,7 @@ class KBTable(MdbTable):
 
 class AgentsTable(MdbTable):
     name = "AGENTS"
-    columns = ["NAME", "PROJECT", "MODEL_NAME", "PARAMS"]
+    columns = ["NAME", "PROJECT", "MODEL", "PARAMS"]
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
@@ -394,15 +394,18 @@ class AgentsTable(MdbTable):
         project_names = {i.id: i.name for i in project_controller.get_list()}
 
         # NAME, PROJECT, MODEL, PARAMS (skills removed)
-        data = [
-            (
-                a.name,
-                project_names[a.project_id],
-                a.model_name,
-                to_json(a.params),
+        data = []
+        for a in all_agents:
+            params = a.params or {}
+            model = params.pop("model", {})
+            data.append(
+                [
+                    a.name,
+                    project_names[a.project_id],
+                    to_json(model),
+                    to_json(params),
+                ]
             )
-            for a in all_agents
-        ]
         return pd.DataFrame(data, columns=cls.columns)
 
 

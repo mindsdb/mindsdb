@@ -109,6 +109,8 @@ MAIN_RULE_IGNORES = {
         "litellm",
         "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
         "urllib3",  # pinned by Snyk to avoid a vulnerability
+        "faiss-cpu",
+        "pyopenssl",
     ],
 }
 
@@ -136,13 +138,15 @@ LINDORM_DEP002_IGNORE_HANDLER_DEPS = ["protobuf"]
 
 HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS = ["torch"]
 
-RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers", "faiss-cpu"]
+RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers"]
 
 SOLR_DEP002_IGNORE_HANDLER_DEPS = ["sqlalchemy-solr"]
 
 OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
+
+FRESHDESK_EP002_IGNORE_HANDLER_DEPS = ["python-freshdesk"]
 
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
@@ -159,6 +163,7 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + SOLR_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
+        + FRESHDESK_EP002_IGNORE_HANDLER_DEPS
     )
 )
 
@@ -176,6 +181,7 @@ HANDLER_RULE_IGNORES = {
         "IfxPyDbi",
         "ingres_sa_dialect",
         "pyodbc",
+        "freshdesk",
     ],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": DEP003_IGNORE_HANDLER_DEPS,
 }
@@ -253,6 +259,7 @@ PACKAGE_NAME_MAP = {
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
     "sklearn": ["scikit-learn"],
+    "ag2": ["autogen"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

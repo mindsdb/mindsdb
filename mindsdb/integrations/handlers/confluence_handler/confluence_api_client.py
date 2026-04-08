@@ -1,16 +1,34 @@
-from typing import List
+from typing import List, Optional
 
 import requests
 
 
 class ConfluenceAPIClient:
-    def __init__(self, url: str, username: str, password: str):
+    def __init__(
+        self,
+        url: str,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        token: Optional[str] = None,
+        auth_method: Optional[str] = None,
+    ):
         self.url = url
         self.username = username
         self.password = password
+        self.token = token
+        self.auth_method = auth_method
         self.session = requests.Session()
-        self.session.auth = (self.username, self.password)
         self.session.headers.update({"Accept": "application/json"})
+
+        use_bearer = (auth_method == "bearer") or bool(token)
+        if use_bearer:
+            if not token:
+                raise ValueError("Token must be provided for bearer authentication.")
+            self.session.headers.update({"Authorization": f"Bearer {token}"})
+        else:
+            if not username or not password:
+                raise ValueError("Username and password must be provided for basic authentication.")
+            self.session.auth = (username, password)
 
     def get_spaces(
         self,

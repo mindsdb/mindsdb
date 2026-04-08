@@ -79,6 +79,7 @@ dependencies = [
     "pyaml ~= 23.12",
     "html2text>=2025.4.15",
     "xlrd>=2.0.2",
+    "pydantic-ai >= 1.66.0, < 2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -100,7 +101,7 @@ agents = [
     # A2A requirements
     "httpx ~= 0.28",
     "jwcrypto ~= 1.5",
-    "pydantic-ai >= 1.66.0, < 2.0.0",
+   
 ]
 
 #  Knowledge Base

@@ -23,7 +23,7 @@ with open("README.md", "r", encoding="utf8") as fh:
 def filter_requirements(lines: list) -> list:
     """
     Filter out comments, empty lines, and editable installs from requirement lines.
-    We are have generated reqquirements files with transitive dependencies.
+    We are have generated requirements files with transitive dependencies.
     """
     result = []
     for line in lines:

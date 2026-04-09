@@ -15,7 +15,7 @@ from .models.customers import Customers, columns as customers_columns
 from .models.orders import Orders, columns as orders_columns
 from .models.marketing_events import MarketingEvents, columns as marketing_events_columns
 from .models.inventory_items import InventoryItems, columns as inventory_items_columns
-from .models.staff_members import StaffMembers, columns as staff_members_columns
+
 from .models.gift_cards import GiftCards, columns as gift_cards_columns
 from .models.collections import Collections, columns as collections_columns
 from .models.fulfillment_orders import FulfillmentOrders, columns as fulfillment_orders_columns
@@ -633,66 +633,6 @@ class InventoryItemsTable(ShopifyMetaAPIResource):
     def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
         return []
 
-
-class StaffMembersTable(ShopifyMetaAPIResource):
-    """The Shopify StaffMembers table implementation
-    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/staffmembers
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.name = "staff_members"
-        self.model = StaffMembers
-        self.model_name = "staffMembers"
-        self.columns = staff_members_columns
-
-        sort_map = {
-            StaffMembers.id: "ID",
-            StaffMembers.email: "EMAIL",
-            StaffMembers.firstName: "FIRST_NAME",
-            StaffMembers.lastName: "LAST_NAME",
-        }
-        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
-
-        self.conditions_op_map = {
-            ("accounttype", FilterOperator.EQUAL): "account_type:",
-            ("email", FilterOperator.EQUAL): "email:",
-            ("firstname", FilterOperator.EQUAL): "first_name:",
-            ("firstname", FilterOperator.LIKE): "first_name:",
-            ("lastname", FilterOperator.EQUAL): "last_name:",
-            ("lastname", FilterOperator.LIKE): "last_name:",
-            ("id", FilterOperator.GREATER_THAN): "id:>",
-            ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
-            ("id", FilterOperator.LESS_THAN): "id:<",
-            ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
-            ("id", FilterOperator.EQUAL): "id:",
-        }
-        super().__init__(*args, **kwargs)
-
-    def meta_get_tables(self, *args, **kwargs) -> dict:
-        data = query_graphql_nodes(
-            self.model_name,
-            self.model,
-            "id",
-        )
-        row_count = len(data)
-
-        return {
-            "table_name": self.name,
-            "table_type": "BASE TABLE",
-            "table_description": "The shop staff members.",
-            "row_count": row_count,
-        }
-
-    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
-        return [
-            {
-                "table_name": table_name,
-                "column_name": "id",
-            }
-        ]
-
-    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
-        return []
 
 
 class GiftCardsTable(ShopifyMetaAPIResource):

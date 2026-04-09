@@ -11,7 +11,7 @@ from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     OrdersTable,
     MarketingEventsTable,
     InventoryItemsTable,
-    StaffMembersTable,
+
     GiftCardsTable,
     CollectionsTable,
     FulfillmentOrdersTable,
@@ -99,7 +99,7 @@ class ShopifyHandler(MetaAPIHandler):
         self._register_table("product_variants", ProductVariantsTable(self))
         self._register_table("marketing_events", MarketingEventsTable(self))
         self._register_table("inventory_items", InventoryItemsTable(self))
-        self._register_table("staff_members", StaffMembersTable(self))
+
         self._register_table("gift_cards", GiftCardsTable(self))
         # Tier 1 new tables
         self._register_table("collections", CollectionsTable(self))

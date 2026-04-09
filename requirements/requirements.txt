@@ -53,6 +53,5 @@ bs4 # for rag HTMLDocumentLoader
 urllib3>=2.6.3 # not directly required, pinned by Snyk to avoid a vulnerability
 
 # kb providers
-aioboto3==15.5.0
-types-aioboto3[bedrock-runtime]
+aiobotocore==3.4.0
 google-genai==1.70.0

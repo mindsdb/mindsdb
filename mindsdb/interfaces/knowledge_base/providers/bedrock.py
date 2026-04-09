@@ -36,10 +36,10 @@ class AsyncBedrockClient:
         aws_session_token: Optional[str] = None,
     ):
         try:
-            import aioboto3
+            from aiobotocore.session import get_session
         except ImportError as exc:
             raise ImportError(
-                "aioboto3 is required for the Bedrock reranker client. Install it with `pip install aioboto3`."
+                "aiobotocore is required for the Bedrock reranker client. Install it with `pip install aiobotocore`."
             ) from exc
 
         self.aws_access_key_id = aws_access_key_id
@@ -47,8 +47,7 @@ class AsyncBedrockClient:
         self.aws_session_token = aws_session_token
         self.region_name = aws_region_name
 
-        self.session = aioboto3.Session()
-        self._client = None
+        self._session = get_session()
 
     async def acompletion(
         self,
@@ -60,22 +59,25 @@ class AsyncBedrockClient:
     ) -> str:
         """Generate a chat completion asynchronously via Bedrock."""
         inference_config = {}
-        if temperature:
+        if temperature is not None:
             inference_config["temperature"] = temperature
-        if max_tokens:
+        if max_tokens is not None:
             inference_config["max_tokens"] = max_tokens
-        if top_p:
+        if top_p is not None:
             inference_config["top_p"] = top_p
 
         conversation = prepare_conversation(messages)
 
-        async with self.session.client(
-            "bedrock-runtime",
-            aws_access_key_id=self.aws_access_key_id,
-            aws_secret_access_key=self.aws_secret_access_key,
-            aws_session_token=self.aws_session_token,
-            region_name=self.region_name,
-        ) as client:
+        # Create client with credentials
+        client_kwargs = {
+            "service_name": "bedrock-runtime",
+            "region_name": self.region_name,
+            "aws_access_key_id": self.aws_access_key_id,
+            "aws_secret_access_key": self.aws_secret_access_key,
+            "aws_session_token": self.aws_session_token,
+        }
+
+        async with self._session.create_client(**client_kwargs) as client:
             response = await client.converse(
                 modelId=model_name, messages=conversation, inferenceConfig=inference_config
             )
@@ -131,11 +133,11 @@ class BedrockClient:
     ) -> str:
         """Generate a chat completion synchronously via Bedrock."""
         inference_config: Dict[str, float | int] = {}
-        if temperature:
+        if temperature is not None:
             inference_config["temperature"] = temperature
-        if max_tokens:
+        if max_tokens is not None:
             inference_config["max_tokens"] = max_tokens
-        if top_p:
+        if top_p is not None:
             inference_config["top_p"] = top_p
 
         conversation = prepare_conversation(messages)

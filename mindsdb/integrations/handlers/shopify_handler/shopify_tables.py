@@ -965,39 +965,54 @@ class InventoryLevelsTable(ShopifyMetaAPIResource):
         query_conditions = self._get_query_conditions(conditions)
 
         qty_names = ", ".join(f'"{n}"' for n in INVENTORY_QUANTITY_NAMES)
-        columns_gql = (
+
+        # inventoryLevels root query was removed in API 2025-10.
+        # Query via inventoryItems → inventoryLevels connection instead.
+        inv_level_fields = (
             "id "
-            "item { id sku legacyResourceId } "
-            "location { id name } "
+            "location { id } "
             "canDeactivate "
             "createdAt "
             "updatedAt "
             f"quantities(names: [{qty_names}]) {{ name quantity }}"
         )
+        item_columns_gql = (
+            f"id sku legacyResourceId "
+            f"inventoryLevels(first: {MAX_PAGE_LIMIT}) {{ "
+            f"  nodes {{ {inv_level_fields} }} "
+            f"  {PAGE_INFO} "
+            f"}}"
+        )
 
         data = query_graphql_nodes(
-            "inventoryLevels",
+            "inventoryItems",
             InventoryLevels,
-            columns_gql,
+            item_columns_gql,
             query=query_conditions,
-            limit=limit,
+            limit=None,
         )
 
         rows = []
-        for row in data:
-            flat = {
-                "id": row.get("id"),
-                "inventoryItemId": (row.get("item") or {}).get("id"),
-                "sku": (row.get("item") or {}).get("sku"),
-                "locationId": (row.get("location") or {}).get("id"),
-                "locationName": (row.get("location") or {}).get("name"),
-                "canDeactivate": row.get("canDeactivate"),
-                "createdAt": row.get("createdAt"),
-                "updatedAt": row.get("updatedAt"),
-            }
-            for qty in row.get("quantities") or []:
-                flat[qty["name"]] = qty["quantity"]
-            rows.append(flat)
+        for item in data:
+            item_id = item.get("id")
+            item_sku = item.get("sku")
+            for level in (item.get("inventoryLevels") or {}).get("nodes") or []:
+                flat = {
+                    "id": level.get("id"),
+                    "inventoryItemId": item_id,
+                    "sku": item_sku,
+                    "locationId": (level.get("location") or {}).get("id"),
+                    "locationName": (level.get("location") or {}).get("name"),
+                    "canDeactivate": level.get("canDeactivate"),
+                    "createdAt": level.get("createdAt"),
+                    "updatedAt": level.get("updatedAt"),
+                }
+                for qty in level.get("quantities") or []:
+                    flat[qty["name"]] = qty["quantity"]
+                rows.append(flat)
+
+        if limit:
+            rows = rows[:limit]
 
         if not rows:
             return pd.DataFrame(columns=[c["COLUMN_NAME"] for c in self.columns])
@@ -1071,7 +1086,7 @@ class TransactionsTable(ShopifyMetaAPIResource):
         transactions_gql = (
             "id kind status "
             "amountSet { shopMoney { amount currencyCode } } "
-            "createdAt processedAt gateway authorization formattedGateway test errorCode"
+            "createdAt processedAt gateway formattedGateway test errorCode"
         )
         orders_columns_gql = f"id transactions {{ {transactions_gql} }}"
 
@@ -1095,7 +1110,6 @@ class TransactionsTable(ShopifyMetaAPIResource):
                     "amount": ((txn.get("amountSet") or {}).get("shopMoney") or {}).get("amount"),
                     "currencyCode": ((txn.get("amountSet") or {}).get("shopMoney") or {}).get("currencyCode"),
                     "gateway": txn.get("gateway"),
-                    "authorization": txn.get("authorization"),
                     "errorCode": txn.get("errorCode"),
                     "formattedGateway": txn.get("formattedGateway"),
                     "test": txn.get("test"),
@@ -1239,33 +1253,87 @@ class RefundsTable(ShopifyMetaAPIResource):
 
 
 class DiscountCodesTable(ShopifyMetaAPIResource):
-    """The Shopify DiscountCodes Table implementation
-    Reference: https://shopify.dev/docs/api/admin-graphql/latest/queries/discountcodes
+    """The Shopify DiscountCodes Table implementation.
+    discountCodes root query was removed in API 2025-10.
+    Queries via codeDiscountNodes → codes connection instead.
     """
 
     def __init__(self, *args, **kwargs):
         self.name = "discount_codes"
         self.model = DiscountCodes
-        self.model_name = "discountCodes"
+        self.model_name = "codeDiscountNodes"
         self.columns = discount_codes_columns
 
-        sort_map = {
-            DiscountCodes.id: "ID",
-            DiscountCodes.code: "CODE",
-            DiscountCodes.createdAt: "CREATED_AT",
-        }
-        self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
-
-        self.conditions_op_map = {
-            ("code", FilterOperator.EQUAL): "code:",
-            ("code", FilterOperator.LIKE): "code:",
-            ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
-            ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
-            ("createdat", FilterOperator.LESS_THAN): "created_at:<",
-            ("createdat", FilterOperator.LESS_THAN_OR_EQUAL): "created_at:<=",
-            ("createdat", FilterOperator.EQUAL): "created_at:",
-        }
+        self.sort_map = {}
+        self.conditions_op_map = {}
         super().__init__(*args, **kwargs)
+
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        code_fields = "id code asyncUsageCount"
+        discount_fields = (
+            f"id "
+            f"codeDiscount {{ "
+            f"  ... on DiscountCodeBasic {{ codes(first: {MAX_PAGE_LIMIT}) {{ nodes {{ {code_fields} }} {PAGE_INFO} }} }} "
+            f"  ... on DiscountCodeBxgy {{ codes(first: {MAX_PAGE_LIMIT}) {{ nodes {{ {code_fields} }} {PAGE_INFO} }} }} "
+            f"  ... on DiscountCodeFreeShipping {{ codes(first: {MAX_PAGE_LIMIT}) {{ nodes {{ {code_fields} }} {PAGE_INFO} }} }} "
+            f"}}"
+        )
+
+        rows = []
+        cursor = None
+        has_next = True
+        fetched = 0
+        page_size = MAX_PAGE_LIMIT if limit is None else min(limit, MAX_PAGE_LIMIT)
+
+        while has_next:
+            remaining = None if limit is None else limit - fetched
+            if remaining is not None and remaining <= 0:
+                break
+            current_limit = page_size if remaining is None else min(page_size, remaining)
+
+            args_list = [f"first: {current_limit}"]
+            if cursor:
+                args_list.append(f'after: "{cursor}"')
+            args_str = ", ".join(args_list)
+
+            gql = f"{{ codeDiscountNodes({args_str}) {{ nodes {{ {discount_fields} }} {PAGE_INFO} }} }}"
+            result = self.query_graphql(gql)
+            data = result.get("data", {}).get("codeDiscountNodes", {})
+            nodes = data.get("nodes") or []
+            page_info = data.get("pageInfo") or {}
+            has_next = page_info.get("hasNextPage", False)
+            cursor = page_info.get("endCursor")
+
+            for node in nodes:
+                discount_id = node.get("id")
+                code_discount = node.get("codeDiscount") or {}
+                codes_data = code_discount.get("codes") or {}
+                for code_node in codes_data.get("nodes") or []:
+                    rows.append({
+                        "id": code_node.get("id"),
+                        "code": code_node.get("code"),
+                        "asyncUsageCount": code_node.get("asyncUsageCount"),
+                        "discountId": discount_id,
+                    })
+            fetched += len(nodes)
+            if limit is not None and len(rows) >= limit:
+                break
+
+        if limit:
+            rows = rows[:limit]
+
+        if not rows:
+            return pd.DataFrame(columns=[c["COLUMN_NAME"] for c in self.columns])
+
+        df = pd.DataFrame(rows)
+        if targets:
+            available = [c for c in targets if c in df.columns]
+            if available:
+                df = df[available]
+        return df
 
     def meta_get_tables(self, *args, **kwargs) -> dict:
         return {
@@ -1297,7 +1365,6 @@ class PagesTable(ShopifyMetaAPIResource):
             Pages.id: "ID",
             Pages.title: "TITLE",
             Pages.createdAt: "CREATED_AT",
-            Pages.publishedAt: "PUBLISHED_AT",
             Pages.updatedAt: "UPDATED_AT",
         }
         self.sort_map = {key.name.lower(): value for key, value in sort_map.items()}
@@ -1540,7 +1607,7 @@ class AnalyticsTable(ShopifyMetaAPIResource):
                     columns {{ name dataType displayName }}
                     rows
                 }}
-                parseErrors {{ code message range {{ start {{ line character }} end {{ line character }} }} }}
+                parseErrors
             }}
         }}"""
 
@@ -1549,13 +1616,19 @@ class AnalyticsTable(ShopifyMetaAPIResource):
 
         parse_errors = data.get("parseErrors") or []
         if parse_errors:
-            messages = "; ".join(e.get("message", "unknown error") for e in parse_errors)
+            messages = "; ".join(str(e) for e in parse_errors)
             raise ValueError(f"ShopifyQL parse error: {messages}")
 
         table_data = data.get("tableData") or {}
         col_meta = table_data.get("columns") or []
         col_names = [c["name"] for c in col_meta]
-        rows = [dict(zip(col_names, row)) for row in (table_data.get("rows") or [])]
+        raw_rows = table_data.get("rows") or []
+
+        # Shopify returns rows as dicts (keyed by column name) or as arrays.
+        if raw_rows and isinstance(raw_rows[0], dict):
+            rows = raw_rows
+        else:
+            rows = [dict(zip(col_names, row)) for row in raw_rows]
 
         if not rows:
             return pd.DataFrame(columns=col_names or [c["COLUMN_NAME"] for c in self.columns])
@@ -1606,7 +1679,6 @@ class AbandonedCheckoutsTable(ShopifyMetaAPIResource):
             ("id", FilterOperator.GREATER_THAN_OR_EQUAL): "id:>=",
             ("id", FilterOperator.LESS_THAN): "id:<",
             ("id", FilterOperator.LESS_THAN_OR_EQUAL): "id:<=",
-            ("email", FilterOperator.EQUAL): "email:",
             ("createdat", FilterOperator.GREATER_THAN): "created_at:>",
             ("createdat", FilterOperator.GREATER_THAN_OR_EQUAL): "created_at:>=",
             ("createdat", FilterOperator.LESS_THAN): "created_at:<",
@@ -1670,7 +1742,7 @@ class DeliveryProfilesTable(ShopifyMetaAPIResource):
 
         col_names = (
             "activeMethodDefinitionsCount default id name "
-            "productVariantsCount sellingPlanGroupsCount zoneCountryCount"
+            "productVariantsCount { count precision } zoneCountryCount"
         )
 
         rows = []

@@ -11,6 +11,15 @@ class AliasesEnum(Enum):
         return ((name, field.value) for name, field in cls.__members__.items())
 
 
+class Attribute(AliasesEnum):
+    """A class to represent a Shopify GraphQL attribute (key-value pair).
+    Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/Attribute
+    """
+
+    key = "key"
+    value = "value"
+
+
 class Count(AliasesEnum):
     """A class to represent a Shopify GraphQL count.
     Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/Count

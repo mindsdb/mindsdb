@@ -23,7 +23,6 @@ class Locations(AliasesEnum):
     Require `read_inventory` permission.
     """
 
-    activationDate = "activationDate"
     address = LocationAddress
     addressVerified = "addressVerified"
     deactivatedAt = "deactivatedAt"
@@ -37,13 +36,6 @@ class Locations(AliasesEnum):
 
 
 columns = [
-    {
-        "TABLE_NAME": "locations",
-        "COLUMN_NAME": "activationDate",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The date and time the location was activated.",
-        "IS_NULLABLE": True,
-    },
     {
         "TABLE_NAME": "locations",
         "COLUMN_NAME": "address",

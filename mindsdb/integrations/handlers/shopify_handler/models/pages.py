@@ -1,4 +1,4 @@
-from .common import AliasesEnum, SEO
+from .common import AliasesEnum
 
 
 class Pages(AliasesEnum):
@@ -7,30 +7,19 @@ class Pages(AliasesEnum):
     Require `read_content` permission.
     """
 
-    author = "author"
     body = "body"
     bodySummary = "bodySummary"
     createdAt = "createdAt"
     handle = "handle"
     id = "id"
     isPublished = "isPublished"
-    onlineStorePreviewUrl = "onlineStorePreviewUrl"
-    onlineStoreUrl = "onlineStoreUrl"
     publishedAt = "publishedAt"
-    seo = SEO
     templateSuffix = "templateSuffix"
     title = "title"
     updatedAt = "updatedAt"
 
 
 columns = [
-    {
-        "TABLE_NAME": "pages",
-        "COLUMN_NAME": "author",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The author of the page.",
-        "IS_NULLABLE": True,
-    },
     {
         "TABLE_NAME": "pages",
         "COLUMN_NAME": "body",
@@ -75,31 +64,10 @@ columns = [
     },
     {
         "TABLE_NAME": "pages",
-        "COLUMN_NAME": "onlineStorePreviewUrl",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The URL used for viewing the page on the shop's Online Store.",
-        "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "pages",
-        "COLUMN_NAME": "onlineStoreUrl",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The public URL for the page on the shop's Online Store. Returns null if unpublished.",
-        "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "pages",
         "COLUMN_NAME": "publishedAt",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The date and time when the page was published.",
         "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "pages",
-        "COLUMN_NAME": "seo",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The SEO title and description for the page.",
-        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "pages",

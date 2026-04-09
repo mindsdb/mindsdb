@@ -8,12 +8,9 @@ class Blogs(AliasesEnum):
     """
 
     articlesCount = Count
-    commentingEnabled = "commentingEnabled"
     createdAt = "createdAt"
     handle = "handle"
     id = "id"
-    onlineStorePreviewUrl = "onlineStorePreviewUrl"
-    onlineStoreUrl = "onlineStoreUrl"
     templateSuffix = "templateSuffix"
     title = "title"
     updatedAt = "updatedAt"
@@ -25,13 +22,6 @@ columns = [
         "COLUMN_NAME": "articlesCount",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The number of articles in the blog.",
-        "IS_NULLABLE": False,
-    },
-    {
-        "TABLE_NAME": "blogs",
-        "COLUMN_NAME": "commentingEnabled",
-        "DATA_TYPE": "BOOLEAN",
-        "COLUMN_DESCRIPTION": "Whether comments are enabled for the blog.",
         "IS_NULLABLE": False,
     },
     {
@@ -54,20 +44,6 @@ columns = [
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "A globally-unique ID.",
         "IS_NULLABLE": False,
-    },
-    {
-        "TABLE_NAME": "blogs",
-        "COLUMN_NAME": "onlineStorePreviewUrl",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The URL used for previewing the blog on the shop's Online Store.",
-        "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "blogs",
-        "COLUMN_NAME": "onlineStoreUrl",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The public URL for the blog on the shop's Online Store.",
-        "IS_NULLABLE": True,
     },
     {
         "TABLE_NAME": "blogs",

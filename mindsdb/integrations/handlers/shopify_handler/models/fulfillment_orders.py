@@ -2,6 +2,8 @@ from .common import AliasesEnum
 from .utils import Extract
 
 
+
+
 class FulfillmentOrderAssignedLocation(AliasesEnum):
     """A class to represent the assigned location of a fulfillment order.
     Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/FulfillmentOrderAssignedLocation
@@ -24,9 +26,7 @@ class FulfillmentOrders(AliasesEnum):
     """
 
     assignedLocation = FulfillmentOrderAssignedLocation
-    assignedLocationId = Extract("assignedLocation", "locationId")
     createdAt = "createdAt"
-    displayStatus = "displayStatus"
     id = "id"
     orderId = Extract("order", "id")
     requestStatus = "requestStatus"
@@ -44,23 +44,9 @@ columns = [
     },
     {
         "TABLE_NAME": "fulfillment_orders",
-        "COLUMN_NAME": "assignedLocationId",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The ID of the assigned location.",
-        "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "fulfillment_orders",
         "COLUMN_NAME": "createdAt",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The date and time when the fulfillment order was created.",
-        "IS_NULLABLE": False,
-    },
-    {
-        "TABLE_NAME": "fulfillment_orders",
-        "COLUMN_NAME": "displayStatus",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The display status of the fulfillment order.",
         "IS_NULLABLE": False,
     },
     {

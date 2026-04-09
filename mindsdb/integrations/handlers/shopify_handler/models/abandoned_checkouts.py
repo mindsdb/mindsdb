@@ -1,4 +1,4 @@
-from .common import AliasesEnum, MailingAddress, MoneyV2
+from .common import AliasesEnum, MailingAddress
 from .utils import Extract, Nodes
 
 
@@ -21,11 +21,9 @@ class AbandonedCheckouts(AliasesEnum):
     completedAt = "completedAt"
     createdAt = "createdAt"
     customerId = Extract("customer", "id")
-    email = "email"
     id = "id"
     lineItems = Nodes(AbandonedCheckoutLineItem)
     shippingAddress = MailingAddress
-    totalPriceV2 = MoneyV2
     updatedAt = "updatedAt"
 
 
@@ -60,13 +58,6 @@ columns = [
     },
     {
         "TABLE_NAME": "abandoned_checkouts",
-        "COLUMN_NAME": "email",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The email address of the customer.",
-        "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "abandoned_checkouts",
         "COLUMN_NAME": "id",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "A globally-unique ID.",
@@ -84,13 +75,6 @@ columns = [
         "COLUMN_NAME": "shippingAddress",
         "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The shipping address of the checkout.",
-        "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "abandoned_checkouts",
-        "COLUMN_NAME": "totalPriceV2",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The total price of the checkout (amount and currencyCode).",
         "IS_NULLABLE": True,
     },
     {

@@ -53,13 +53,6 @@ columns = [
     },
     {
         "TABLE_NAME": "transactions",
-        "COLUMN_NAME": "authorization",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The authorization code from the payment gateway.",
-        "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "transactions",
         "COLUMN_NAME": "errorCode",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The error code from the gateway (if any).",

@@ -1,4 +1,4 @@
-from .common import AliasesEnum, MoneyV2
+from .common import AliasesEnum, Count, MoneyV2
 
 
 class Companies(AliasesEnum):
@@ -7,14 +7,14 @@ class Companies(AliasesEnum):
     Require `read_companies` permission (Shopify Plus only).
     """
 
-    contactsCount = "contactsCount"
+    contactsCount = Count
     createdAt = "createdAt"
     externalId = "externalId"
     id = "id"
-    locationsCount = "locationsCount"
+    locationsCount = Count
     name = "name"
     note = "note"
-    ordersCount = "ordersCount"
+    ordersCount = Count
     totalSpent = MoneyV2
     updatedAt = "updatedAt"
 
@@ -23,7 +23,7 @@ columns = [
     {
         "TABLE_NAME": "companies",
         "COLUMN_NAME": "contactsCount",
-        "DATA_TYPE": "INT",
+        "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The number of contacts for the company.",
         "IS_NULLABLE": False,
     },
@@ -51,7 +51,7 @@ columns = [
     {
         "TABLE_NAME": "companies",
         "COLUMN_NAME": "locationsCount",
-        "DATA_TYPE": "INT",
+        "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The number of locations for the company.",
         "IS_NULLABLE": False,
     },
@@ -72,7 +72,7 @@ columns = [
     {
         "TABLE_NAME": "companies",
         "COLUMN_NAME": "ordersCount",
-        "DATA_TYPE": "INT",
+        "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The number of orders placed for this company across all its locations.",
         "IS_NULLABLE": False,
     },

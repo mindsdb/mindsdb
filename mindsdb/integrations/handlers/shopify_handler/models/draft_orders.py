@@ -18,7 +18,6 @@ class DraftOrders(AliasesEnum):
     invoiceUrl = "invoiceUrl"
     legacyResourceId = "legacyResourceId"
     name = "name"
-    note = "note"
     phone = "phone"
     poNumber = "poNumber"
     ready = "ready"
@@ -101,13 +100,6 @@ columns = [
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The identifier for the draft order, which is unique to a store.",
         "IS_NULLABLE": False,
-    },
-    {
-        "TABLE_NAME": "draft_orders",
-        "COLUMN_NAME": "note",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The text of an optional note that a shop owner can attach to the draft order.",
-        "IS_NULLABLE": True,
     },
     {
         "TABLE_NAME": "draft_orders",

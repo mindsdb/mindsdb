@@ -1,4 +1,4 @@
-from .common import AliasesEnum, Count, MailingAddress, OrderCancellation, MoneyBag
+from .common import AliasesEnum, Attribute, Count, MailingAddress, OrderCancellation, MoneyBag
 from .utils import Extract, DeepExtract
 
 
@@ -116,7 +116,7 @@ class Orders(AliasesEnum):
     currentTotalTaxSet_shopMoney_amount = DeepExtract(["currentTotalTaxSet", "shopMoney", "amount"], "DECIMAL")
     currentTotalTaxSet_shopMoney_currencyCode = DeepExtract(["currentTotalTaxSet", "shopMoney", "currencyCode"], "TEXT")
     currentTotalWeight = "currentTotalWeight"
-    customAttributes = "customAttributes"
+    customAttributes = Attribute
     # customer = "customer"
     customerId = Extract("customer", "id")  # custom
     customerAcceptsMarketing = "customerAcceptsMarketing"

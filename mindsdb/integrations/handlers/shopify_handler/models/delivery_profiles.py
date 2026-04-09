@@ -1,4 +1,4 @@
-from .common import AliasesEnum
+from .common import AliasesEnum, Count
 
 
 class DeliveryProfiles(AliasesEnum):
@@ -11,8 +11,7 @@ class DeliveryProfiles(AliasesEnum):
     default = "default"
     id = "id"
     name = "name"
-    productVariantsCount = "productVariantsCount"
-    sellingPlanGroupsCount = "sellingPlanGroupsCount"
+    productVariantsCount = Count
     zoneCountryCount = "zoneCountryCount"
 
 
@@ -48,15 +47,8 @@ columns = [
     {
         "TABLE_NAME": "delivery_profiles",
         "COLUMN_NAME": "productVariantsCount",
-        "DATA_TYPE": "INT",
+        "DATA_TYPE": "JSON",
         "COLUMN_DESCRIPTION": "The number of product variants for the delivery profile.",
-        "IS_NULLABLE": False,
-    },
-    {
-        "TABLE_NAME": "delivery_profiles",
-        "COLUMN_NAME": "sellingPlanGroupsCount",
-        "DATA_TYPE": "INT",
-        "COLUMN_DESCRIPTION": "The number of selling plan groups associated with the delivery profile.",
         "IS_NULLABLE": False,
     },
     {

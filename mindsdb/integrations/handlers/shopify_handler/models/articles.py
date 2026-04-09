@@ -1,4 +1,4 @@
-from .common import AliasesEnum, SEO
+from .common import AliasesEnum
 from .utils import Extract
 
 
@@ -7,10 +7,6 @@ class ArticleAuthor(AliasesEnum):
     Reference: https://shopify.dev/docs/api/admin-graphql/latest/objects/ArticleAuthor
     """
 
-    bio = "bio"
-    email = "email"
-    firstName = "firstName"
-    lastName = "lastName"
     name = "name"
 
 
@@ -24,15 +20,11 @@ class Articles(AliasesEnum):
     blogId = Extract("blog", "id")
     blogTitle = Extract("blog", "title")
     body = "body"
-    bodySummary = "bodySummary"
     createdAt = "createdAt"
     handle = "handle"
     id = "id"
     isPublished = "isPublished"
-    onlineStorePreviewUrl = "onlineStorePreviewUrl"
-    onlineStoreUrl = "onlineStoreUrl"
     publishedAt = "publishedAt"
-    seo = SEO
     tags = "tags"
     templateSuffix = "templateSuffix"
     title = "title"
@@ -70,13 +62,6 @@ columns = [
     },
     {
         "TABLE_NAME": "articles",
-        "COLUMN_NAME": "bodySummary",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "A summary of the article body content, stripped of HTML tags.",
-        "IS_NULLABLE": False,
-    },
-    {
-        "TABLE_NAME": "articles",
         "COLUMN_NAME": "createdAt",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The date and time when the article was created.",
@@ -105,31 +90,10 @@ columns = [
     },
     {
         "TABLE_NAME": "articles",
-        "COLUMN_NAME": "onlineStorePreviewUrl",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The URL used for previewing the article on the shop's Online Store.",
-        "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "articles",
-        "COLUMN_NAME": "onlineStoreUrl",
-        "DATA_TYPE": "TEXT",
-        "COLUMN_DESCRIPTION": "The public URL for the article on the shop's Online Store.",
-        "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "articles",
         "COLUMN_NAME": "publishedAt",
         "DATA_TYPE": "TEXT",
         "COLUMN_DESCRIPTION": "The date and time when the article was published.",
         "IS_NULLABLE": True,
-    },
-    {
-        "TABLE_NAME": "articles",
-        "COLUMN_NAME": "seo",
-        "DATA_TYPE": "JSON",
-        "COLUMN_DESCRIPTION": "The SEO title and description for the article.",
-        "IS_NULLABLE": False,
     },
     {
         "TABLE_NAME": "articles",

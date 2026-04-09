@@ -301,7 +301,7 @@ def run_deptry_with_requirements(reqs, rule_ignores, path, extra_args=""):
     deptry_path = os.path.join(os.path.dirname(sys.executable), "deptry")
     try:
         result = subprocess.run(
-            f'{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb '
+            f"{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb "
             f'--requirements-files "{reqs}" '
             f'--per-rule-ignores "{rule_ignores}" '
             f'--package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" '
@@ -336,7 +336,7 @@ def run_deptry_with_pyproject(rule_ignores, path, extra_args=""):
     deptry_path = os.path.join(os.path.dirname(sys.executable), "deptry")
     try:
         result = subprocess.run(
-            f'{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb '
+            f"{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb "
             f'--per-rule-ignores "{rule_ignores}" '
             f'--package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" '
             f"{extra_args} {path}",

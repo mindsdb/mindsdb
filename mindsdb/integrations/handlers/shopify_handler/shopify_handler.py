@@ -79,10 +79,15 @@ class ShopifyHandler(MetaAPIHandler):
         self.kwargs = kwargs
 
         has_token = bool(connection_data.get("access_token"))
+        has_refresh = bool(
+            connection_data.get("refresh_token")
+            and connection_data.get("client_id")
+            and connection_data.get("client_secret")
+        )
         has_oauth = bool(connection_data.get("client_id") and connection_data.get("client_secret"))
-        if not has_token and not has_oauth:
+        if not has_token and not has_refresh and not has_oauth:
             raise MissingConnectionParams(
-                "Shopify connection requires either 'access_token' or both 'client_id' and 'client_secret'."
+                "Shopify connection requires 'access_token', or 'refresh_token'+'client_id'+'client_secret'."
             )
 
         self.connection = None
@@ -121,6 +126,32 @@ class ShopifyHandler(MetaAPIHandler):
         self._register_table("company_locations", CompanyLocationsTable(self))
         self._register_table("company_contacts", CompanyContactsTable(self))
 
+    def _do_refresh_token(self) -> str:
+        """Exchange a refresh token for a new access token (Shopify token rotation)."""
+        shop_url = self.connection_data["shop_url"]
+        response = requests.post(
+            f"https://{shop_url}/admin/oauth/access_token",
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": self.connection_data["refresh_token"],
+                "client_id": self.connection_data["client_id"],
+                "client_secret": self.connection_data["client_secret"],
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        token_data = response.json()
+        new_access_token = token_data.get("access_token")
+        if not new_access_token:
+            raise ConnectionFailed("Token rotation did not return an access_token")
+        # Rotate refresh token if Shopify issued a new one
+        new_refresh_token = token_data.get("refresh_token")
+        if new_refresh_token:
+            self.connection_data["refresh_token"] = new_refresh_token
+        self.connection_data["access_token"] = new_access_token
+        return new_access_token
+
     def connect(self):
         """
         Set up the connection required by the handler.
@@ -135,7 +166,22 @@ class ShopifyHandler(MetaAPIHandler):
         shop_url = self.connection_data["shop_url"]
         access_token = self.connection_data.get("access_token")
 
+        # If refresh credentials are present, check expiry and rotate if needed
+        if self.connection_data.get("refresh_token") and self.connection_data.get("client_id"):
+            from datetime import datetime, timezone, timedelta
+            expires_at_str = self.connection_data.get("expires_at")
+            needs_refresh = not access_token
+            if not needs_refresh and expires_at_str:
+                try:
+                    expires_at = datetime.fromisoformat(expires_at_str)
+                    needs_refresh = expires_at < datetime.now(timezone.utc) + timedelta(minutes=5)
+                except (ValueError, TypeError):
+                    pass
+            if needs_refresh:
+                access_token = self._do_refresh_token()
+
         if not access_token:
+            # existing client_credentials fallback (legacy path)
             client_id = self.connection_data["client_id"]
             client_secret = self.connection_data["client_secret"]
 

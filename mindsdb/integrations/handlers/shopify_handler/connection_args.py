@@ -30,6 +30,19 @@ connection_args = OrderedDict(
         "label": "Client secret",
         "secret": True,
     },
+    refresh_token={
+        "type": ARG_TYPE.PWD,
+        "description": "Offline refresh token from Shopify OAuth. Used with client_id and client_secret to rotate expiring access tokens.",
+        "required": False,
+        "label": "Refresh token",
+        "secret": True,
+    },
+    expires_at={
+        "type": ARG_TYPE.STR,
+        "description": "ISO 8601 timestamp of when the current access token expires (e.g. 2026-04-09T12:00:00+00:00).",
+        "required": False,
+        "label": "Token expiry",
+    },
 )
 
 connection_args_example = OrderedDict(

@@ -1,4 +1,4 @@
-from .common import AliasesEnum, Count, MailingAddress, OrderCancellation, MoneyBag
+from .common import AliasesEnum, Attribute, Count, MailingAddress, OrderCancellation, MoneyBag
 from .utils import Extract, DeepExtract
 
 
@@ -12,7 +12,7 @@ class Orders(AliasesEnum):
     # agreements = "agreements"
     # alerts = "alerts"
     # app = "app"
-    # billingAddress = "billingAddress"
+    billingAddress = MailingAddress
     billingAddressMatchesShippingAddress = "billingAddressMatchesShippingAddress"
     cancellation = OrderCancellation
     cancelledAt = "cancelledAt"
@@ -116,7 +116,7 @@ class Orders(AliasesEnum):
     currentTotalTaxSet_shopMoney_amount = DeepExtract(["currentTotalTaxSet", "shopMoney", "amount"], "DECIMAL")
     currentTotalTaxSet_shopMoney_currencyCode = DeepExtract(["currentTotalTaxSet", "shopMoney", "currencyCode"], "TEXT")
     currentTotalWeight = "currentTotalWeight"
-    # customAttributes = "customAttributes"
+    customAttributes = Attribute
     # customer = "customer"
     customerId = Extract("customer", "id")  # custom
     customerAcceptsMarketing = "customerAcceptsMarketing"
@@ -126,8 +126,8 @@ class Orders(AliasesEnum):
     discountCode = "discountCode"
     discountCodes = "discountCodes"
     # displayAddress = "displayAddress"
-    # displayFinancialStatus = "displayFinancialStatus"
-    # displayFulfillmentStatus = "displayFulfillmentStatus"
+    displayFinancialStatus = "displayFinancialStatus"
+    displayFulfillmentStatus = "displayFulfillmentStatus"
     # disputes = "disputes"
     dutiesIncluded = "dutiesIncluded"
     edited = "edited"
@@ -390,6 +390,13 @@ columns = [
     # },
     {
         "TABLE_NAME": "orders",
+        "COLUMN_NAME": "billingAddress",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "The billing address provided by the customer.",
+        "IS_NULLABLE": True,
+    },
+    {
+        "TABLE_NAME": "orders",
         "COLUMN_NAME": "billingAddressMatchesShippingAddress",
         "DATA_TYPE": "BOOLEAN",
         "COLUMN_DESCRIPTION": "Whether the billing address matches the shipping address. Returns true if both addresses are the same, and false if they're different or if an address is missing.",
@@ -626,6 +633,27 @@ columns = [
     #     "COLUMN_DESCRIPTION": "A list of discounts that are applied to the order, excluding order edits and refunds. Includes discount codes, automatic discounts, and other promotions that reduce the order total.",
     #     "IS_NULLABLE": False
     # },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "customAttributes",
+        "DATA_TYPE": "JSON",
+        "COLUMN_DESCRIPTION": "Custom information added to the order by customers. Shown in the order details page in the Shopify admin. Each entry is a key-value pair.",
+        "IS_NULLABLE": False,
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "displayFinancialStatus",
+        "DATA_TYPE": "TEXT",
+        "COLUMN_DESCRIPTION": "The financial status of the order that can be shown to the merchant. This field doesn't capture all the details of an order's financial state and should only be used for display summary purposes.",
+        "IS_NULLABLE": True,
+    },
+    {
+        "TABLE_NAME": "orders",
+        "COLUMN_NAME": "displayFulfillmentStatus",
+        "DATA_TYPE": "TEXT",
+        "COLUMN_DESCRIPTION": "The fulfillment status for the order that can be shown to the merchant. This field does not capture all the details of an order's fulfillment state. It should only be used for display summary purposes.",
+        "IS_NULLABLE": False,
+    },
     {
         "TABLE_NAME": "orders",
         "COLUMN_NAME": "discountCode",

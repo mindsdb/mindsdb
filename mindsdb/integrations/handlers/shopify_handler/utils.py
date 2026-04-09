@@ -1,5 +1,6 @@
 import json
 import inspect
+import time
 from enum import Enum
 from dataclasses import dataclass
 
@@ -14,6 +15,8 @@ logger = log.getLogger(__name__)
 
 MAX_PAGE_LIMIT = 250
 PAGE_INFO = "pageInfo { hasNextPage endCursor }"
+_MAX_RETRIES = 5
+_BASE_RETRY_DELAY = 2.0
 
 
 def _format_error(errors_list: list[dict]) -> str:
@@ -117,13 +120,42 @@ class ShopifyQuery:
         return f"{{ {self.operation_name} ({', '.join(items)}) {{ nodes {{ {self.columns} }} {PAGE_INFO} }} }}"
 
     def execute(self) -> list[dict]:
-        """Execute the query.
+        """Execute the query with automatic retry on GraphQL rate limit throttling.
 
         Returns:
             list[dict]: The result of the query.
         """
-        result = shopify.GraphQL().execute(self.to_string())
-        return json.loads(result)
+        retry_delay = _BASE_RETRY_DELAY
+        for attempt in range(_MAX_RETRIES):
+            result = json.loads(shopify.GraphQL().execute(self.to_string()))
+            errors = result.get("errors")
+            if not errors:
+                return result
+            throttled = any(
+                e.get("extensions", {}).get("code") == "THROTTLED"
+                for e in errors
+            )
+            if not throttled:
+                return result
+            # Use Shopify's restore rate to calculate a smarter wait when available
+            throttle_status = (
+                result.get("extensions", {})
+                .get("cost", {})
+                .get("throttleStatus", {})
+            )
+            restore_rate = throttle_status.get("restoreRate")
+            requested_cost = result.get("extensions", {}).get("cost", {}).get("requestedQueryCost", 0)
+            if restore_rate and restore_rate > 0 and requested_cost:
+                wait = max(requested_cost / restore_rate, retry_delay)
+            else:
+                wait = retry_delay
+            logger.warning(
+                f"Shopify GraphQL throttled (attempt {attempt + 1}/{_MAX_RETRIES}). "
+                f"Retrying in {wait:.1f}s..."
+            )
+            time.sleep(wait)
+            retry_delay = min(retry_delay * 2, 30)
+        return result
 
 
 def query_graphql_nodes(

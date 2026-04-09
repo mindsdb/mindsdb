@@ -11,8 +11,28 @@ from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
     OrdersTable,
     MarketingEventsTable,
     InventoryItemsTable,
-    StaffMembersTable,
+
     GiftCardsTable,
+    CollectionsTable,
+    FulfillmentOrdersTable,
+    LocationsTable,
+    DraftOrdersTable,
+    InventoryLevelsTable,
+    TransactionsTable,
+    RefundsTable,
+    DiscountCodesTable,
+    PagesTable,
+    BlogsTable,
+    ArticlesTable,
+    ShopTable,
+    AnalyticsTable,
+    AbandonedCheckoutsTable,
+    DeliveryProfilesTable,
+    CarrierServicesTable,
+    MarketsTable,
+    CompaniesTable,
+    CompanyLocationsTable,
+    CompanyContactsTable,
 )
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
@@ -27,8 +47,6 @@ from mindsdb.integrations.libs.api_handler_exceptions import (
     ConnectionFailed,
     MissingConnectionParams,
 )
-
-from .connection_args import connection_args
 
 logger = log.getLogger(__name__)
 
@@ -54,15 +72,24 @@ class ShopifyHandler(MetaAPIHandler):
 
         connection_data = kwargs.get("connection_data", {})
 
-        required_args = [arg_name for arg_name, arg_meta in connection_args.items() if arg_meta.get("required") is True]
-        missed_args = set(required_args) - set(connection_data)
-        if missed_args:
-            raise MissingConnectionParams(
-                f"Required parameters are not found in the connection data: {', '.join(list(missed_args))}"
-            )
+        if not connection_data.get("shop_url"):
+            raise MissingConnectionParams("Required parameter 'shop_url' is missing.")
 
         self.connection_data = connection_data
+        self.handler_storage = kwargs.get("handler_storage")
         self.kwargs = kwargs
+
+        has_token = bool(connection_data.get("access_token"))
+        has_refresh = bool(
+            connection_data.get("refresh_token")
+            and connection_data.get("client_id")
+            and connection_data.get("client_secret")
+        )
+        has_oauth = bool(connection_data.get("client_id") and connection_data.get("client_secret"))
+        if not has_token and not has_refresh and not has_oauth:
+            raise MissingConnectionParams(
+                "Shopify connection requires 'access_token', or 'refresh_token'+'client_id'+'client_secret'."
+            )
 
         self.connection = None
         self.is_connected = False
@@ -73,8 +100,91 @@ class ShopifyHandler(MetaAPIHandler):
         self._register_table("product_variants", ProductVariantsTable(self))
         self._register_table("marketing_events", MarketingEventsTable(self))
         self._register_table("inventory_items", InventoryItemsTable(self))
-        self._register_table("staff_members", StaffMembersTable(self))
+
         self._register_table("gift_cards", GiftCardsTable(self))
+        # Tier 1 new tables
+        self._register_table("collections", CollectionsTable(self))
+        self._register_table("fulfillment_orders", FulfillmentOrdersTable(self))
+        self._register_table("locations", LocationsTable(self))
+        self._register_table("draft_orders", DraftOrdersTable(self))
+        self._register_table("inventory_levels", InventoryLevelsTable(self))
+        self._register_table("transactions", TransactionsTable(self))
+        self._register_table("refunds", RefundsTable(self))
+        # Tier 2 new tables
+        self._register_table("discount_codes", DiscountCodesTable(self))
+        self._register_table("pages", PagesTable(self))
+        self._register_table("blogs", BlogsTable(self))
+        self._register_table("articles", ArticlesTable(self))
+        self._register_table("shop", ShopTable(self))
+        # New read scope tables
+        self._register_table("analytics", AnalyticsTable(self))
+        self._register_table("abandoned_checkouts", AbandonedCheckoutsTable(self))
+        self._register_table("delivery_profiles", DeliveryProfilesTable(self))
+        self._register_table("carrier_services", CarrierServicesTable(self))
+        self._register_table("markets", MarketsTable(self))
+        # B2B tables (Shopify Plus only — read_companies scope)
+        self._register_table("companies", CompaniesTable(self))
+        self._register_table("company_locations", CompanyLocationsTable(self))
+        self._register_table("company_contacts", CompanyContactsTable(self))
+
+    def _persist_tokens(self):
+        """Persist current tokens to handler_storage so they survive restarts."""
+        if not self.handler_storage:
+            return
+        self.handler_storage.encrypted_json_set("shopify_tokens", {
+            "access_token": self.connection_data.get("access_token"),
+            "refresh_token": self.connection_data.get("refresh_token"),
+            "expires_at": self.connection_data.get("expires_at"),
+        })
+
+    def _load_persisted_tokens(self):
+        """Load tokens from handler_storage if available. Returns dict or None."""
+        if not self.handler_storage:
+            return None
+        try:
+            return self.handler_storage.encrypted_json_get("shopify_tokens")
+        except Exception:
+            return None
+
+    def _do_refresh_token(self) -> str:
+        """Exchange a refresh token for a new access token (Shopify token rotation)."""
+        from datetime import datetime, timezone, timedelta
+
+        shop_url = self.connection_data["shop_url"]
+        response = requests.post(
+            f"https://{shop_url}/admin/oauth/access_token",
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": self.connection_data["refresh_token"],
+                "client_id": self.connection_data["client_id"],
+                "client_secret": self.connection_data["client_secret"],
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        token_data = response.json()
+        new_access_token = token_data.get("access_token")
+        if not new_access_token:
+            raise ConnectionFailed("Token rotation did not return an access_token")
+
+        self.connection_data["access_token"] = new_access_token
+
+        # Rotate refresh token (Shopify always issues a new one-time-use token)
+        new_refresh_token = token_data.get("refresh_token")
+        if new_refresh_token:
+            self.connection_data["refresh_token"] = new_refresh_token
+
+        # Compute new expires_at from expires_in (seconds)
+        expires_in = token_data.get("expires_in")
+        if expires_in:
+            new_expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))
+            self.connection_data["expires_at"] = new_expires_at.isoformat()
+
+        # Persist to handler_storage so tokens survive restarts
+        self._persist_tokens()
+
+        return new_access_token
 
     def connect(self):
         """
@@ -87,21 +197,46 @@ class ShopifyHandler(MetaAPIHandler):
         if self.is_connected is True:
             return self.connection
 
-        shop_url = self.connection_data["shop_url"]
-        client_id = self.connection_data["client_id"]
-        client_secret = self.connection_data["client_secret"]
+        # Load persisted tokens (survives restarts when refresh has rotated them)
+        stored = self._load_persisted_tokens()
+        if stored:
+            for key in ("access_token", "refresh_token", "expires_at"):
+                if stored.get(key):
+                    self.connection_data[key] = stored[key]
 
-        response = requests.post(
-            f"https://{shop_url}/admin/oauth/access_token",
-            data={"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret},
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=10,
-        )
-        response.raise_for_status()
-        result = response.json()
-        access_token = result.get("access_token")
+        shop_url = self.connection_data["shop_url"]
+        access_token = self.connection_data.get("access_token")
+
+        # If refresh credentials are present, check expiry and rotate if needed
+        if self.connection_data.get("refresh_token") and self.connection_data.get("client_id"):
+            from datetime import datetime, timezone, timedelta
+            expires_at_str = self.connection_data.get("expires_at")
+            needs_refresh = not access_token
+            if not needs_refresh and expires_at_str:
+                try:
+                    expires_at = datetime.fromisoformat(expires_at_str)
+                    needs_refresh = expires_at < datetime.now(timezone.utc) + timedelta(minutes=5)
+                except (ValueError, TypeError):
+                    pass
+            if needs_refresh:
+                access_token = self._do_refresh_token()
+
         if not access_token:
-            raise ConnectionFailed("Unable to get an access token")
+            # existing client_credentials fallback (legacy path)
+            client_id = self.connection_data["client_id"]
+            client_secret = self.connection_data["client_secret"]
+
+            response = requests.post(
+                f"https://{shop_url}/admin/oauth/access_token",
+                data={"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            result = response.json()
+            access_token = result.get("access_token")
+            if not access_token:
+                raise ConnectionFailed("Unable to get an access token from Shopify OAuth endpoint")
 
         api_session = shopify.Session(shop_url, "2025-10", access_token)
 
@@ -124,6 +259,7 @@ class ShopifyHandler(MetaAPIHandler):
             shopify.ShopifyResource.activate_session(api_session)
             shopify.Shop.current()
             response.success = True
+            response.copy_storage = True
         except Exception as e:
             logger.error("Error connecting to Shopify!")
             response.error_message = str(e)

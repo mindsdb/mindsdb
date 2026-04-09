@@ -1186,7 +1186,6 @@ class KnowledgeBaseController:
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
-            params = params or {}
             params["preprocessing"] = preprocessing_config
 
         validate_pydantic_params(params, KnowledgeBaseInputParams, "knowledge base")

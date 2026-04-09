@@ -1,7 +1,7 @@
 # This stage's objective is to gather ONLY requirements.txt files and anything else needed to install deps.
 # This stage will be run almost every build, but it is fast and the resulting layer hash will be the same unless a deps file changes.
 # We do it this way because we can't copy all requirements files with a glob pattern in docker while maintaining the folder structure.
-FROM python:3.10 AS deps
+FROM python:3.10.20 AS deps
 WORKDIR /mindsdb
 
 # Copy everything to begin with
@@ -19,7 +19,7 @@ COPY mindsdb/__about__.py mindsdb/
 
 
 # Use the stage from above to install our deps with as much caching as possible
-FROM python:3.10 AS build
+FROM python:3.10.20 AS build
 WORKDIR /mindsdb
 
 # Configure apt to retain downloaded packages so we can store them in a cache mount
@@ -54,7 +54,7 @@ COPY --from=deps /mindsdb .
 # - and finally declare `/mindsdb` as the target dir.
 ENV UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never \
-    UV_PYTHON=python3.10 \
+    UV_PYTHON=python3.10.20 \
     UV_PROJECT_ENVIRONMENT=/mindsdb \
     VIRTUAL_ENV=/venv \
     PATH=/venv/bin:$PATH

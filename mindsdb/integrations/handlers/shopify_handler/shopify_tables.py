@@ -44,6 +44,20 @@ logger = log.getLogger(__name__)
 class ShopifyMetaAPIResource(MetaAPIResource):
     """A class to represent a Shopify Meta API resource."""
 
+    def select(self, query) -> pd.DataFrame:
+        """Override select() to implement Pattern A: when query.targets contain
+        complex expressions (CASE WHEN, Function, BinaryOperation, etc.),
+        return ALL raw columns so DuckDB's SubSelectStep can evaluate them.
+        """
+        from mindsdb_sql_parser.ast import Star, Identifier
+
+        for col in query.targets:
+            if not isinstance(col, (Star, Identifier)):
+                query.targets = [Star()]
+                break
+
+        return super().select(query)
+
     def list(
         self,
         conditions: list[FilterCondition] | None = None,

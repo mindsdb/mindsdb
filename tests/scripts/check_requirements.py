@@ -336,7 +336,7 @@ def check_relative_reqs():
                         entries[line.split("mindsdb/integrations/handlers/")[1].split("/")[0]] = line
         return entries
 
-    for handler_dir in glob.glob(str(REPO_ROOT / "mindsdb/integrations/handlers/*/")):
+    for handler_dir in glob.glob(str(REPO_ROOT) + "/mindsdb/integrations/handlers/*/"):
         handler_name = handler_dir.split("/")[-2].split("_handler")[0]
         import_pattern = re.compile(
             rf"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name}_handler)\w+_handler"

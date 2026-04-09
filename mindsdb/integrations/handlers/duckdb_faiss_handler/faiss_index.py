@@ -1,5 +1,5 @@
 import os
-from typing import Iterable, List, Callable
+from typing import Iterable, List, Callable, Optional
 import numpy as np
 import psutil
 from pathlib import Path
@@ -266,7 +266,7 @@ class FaissIndex:
         self,
         query: Iterable[float],
         limit: int = 10,
-        # allowed_ids: Optional[Sequence[int]] = None,
+        allowed_ids: Optional[Iterable[int]] = None,
     ):
         if self.index is None:
             return [], []
@@ -276,7 +276,16 @@ class FaissIndex:
         if self._normalize_vectors:
             queries = _normalize_rows(queries)
 
-        ds, ids = self.index.search(queries, limit)
+        params = None
+        if allowed_ids is not None:
+            allowed_ids_array = np.asarray(list(allowed_ids), dtype=np.int64)
+            ids_selector = faiss.IDSelectorArray(
+                len(allowed_ids_array),
+                faiss.swig_ptr(allowed_ids_array),
+            )
+            params = faiss.IVFSearchParameters(sel=ids_selector)
+
+        ds, ids = self.index.search(queries, limit, params=params)
 
         list_id = [i for i in ids[0] if i != -1]
         list_distances = [1 - d for d in ds[0][: len(list_id)]]

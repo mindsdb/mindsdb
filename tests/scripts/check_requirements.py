@@ -1,15 +1,15 @@
 import glob
-import re
-import sys
-import subprocess
-import os
 import json
+import os
+import re
+import subprocess
+import sys
 
-pattern = "\=|~|>|<| |\n|#|\["  # noqa: W605
+pattern = r"\=|~|>|<| |\n|#|\["
 
 
 def get_requirements_from_file(path, with_snyk: bool = True):
-    """Takes a requirements file path and extracts only the package names from it"""
+    """Takes a requirements file path and extracts only the package names from it."""
 
     with open(path, "r") as main_f:
         reqs = []
@@ -23,7 +23,7 @@ def get_requirements_from_file(path, with_snyk: bool = True):
 
 
 def get_requirements_with_DEP002(path):
-    """Extract package names that have 'pinned by Snyk' comment from requirements file"""
+    """Extract package names that have ignore comments from requirements file."""
     no_check_packages = []
 
     with open(path, "r") as f:
@@ -45,7 +45,6 @@ MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
 
-
 # Utilities that have their own requirements.txt files.
 # These are used only within handlers.
 UTILITIES_REQS_PATHS = [
@@ -58,12 +57,11 @@ EXTRA_REQS_PATHS = [
     "requirements/requirements-kb.txt",
 ]
 
-
 HANDLER_REQS_PATHS = list(
     set(glob.glob("**/requirements*.txt", recursive=True)) - set(glob.glob("requirements/requirements*.txt"))
 )
 
-MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.toml"]
+MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pyproject.toml"]
 
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
@@ -113,7 +111,6 @@ MAIN_RULE_IGNORES = {
         "pyopenssl",
     ],
 }
-
 
 # The following packages need exceptions.
 # Either because 1) they are optional deps of some other packages. E.g.:
@@ -277,8 +274,8 @@ def print_errors(file, errors):
         print()
 
 
-def get_ignores_str(ignores_dict: dict, dep002_ignore: list[str] = None) -> str:
-    """Get a list of rule ignores for deptry
+def get_ignores_str(ignores_dict: dict, dep002_ignore: list[str] | None = None) -> str:
+    """Get a list of rule ignores for deptry.
 
     Args:
         ignores_dict: A dictionary of rule ignores for deptry
@@ -297,22 +294,58 @@ def get_ignores_str(ignores_dict: dict, dep002_ignore: list[str] = None) -> str:
     return ",".join(rules)
 
 
-def run_deptry(reqs, rule_ignores, path, extra_args=""):
-    """Run a dependency check with deptry. Return a list of error messages"""
+def run_deptry_with_requirements(reqs, rule_ignores, path, extra_args=""):
+    """Run a dependency check with deptry using requirements files. Return a list of error messages."""
 
     errors = []
-    # Get the full path to deptry executable from the current Python environment
     deptry_path = os.path.join(os.path.dirname(sys.executable), "deptry")
     try:
         result = subprocess.run(
-            f'{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb --requirements-files "{reqs}" --per-rule-ignores "{rule_ignores}" --package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" {extra_args} {path}',
+            f'{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb '
+            f'--requirements-files "{reqs}" '
+            f'--per-rule-ignores "{rule_ignores}" '
+            f'--package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" '
+            f"{extra_args} {path}",
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
         )
         if not os.path.exists("deptry.json"):
             if result.returncode != 0:
-                # There was some issue with running deptry
+                errors.append(f"Error running deptry: {result.stderr.decode('utf-8')}")
+            else:
+                errors.append("Error running deptry: deptry.json was not generated.")
+            return errors
+
+        with open("deptry.json", "r") as f:
+            deptry_results = json.loads(f.read())
+        for r in deptry_results:
+            errors.append(
+                f"{r['location']['line']}:{r['location']['column']}: {r['error']['code']} {r['error']['message']}"
+            )
+    finally:
+        if os.path.exists("deptry.json"):
+            os.remove("deptry.json")
+    return errors
+
+
+def run_deptry_with_pyproject(rule_ignores, path, extra_args=""):
+    """Run a dependency check with deptry using pyproject.toml as the source of truth."""
+
+    errors = []
+    deptry_path = os.path.join(os.path.dirname(sys.executable), "deptry")
+    try:
+        result = subprocess.run(
+            f'{deptry_path} -o deptry.json --no-ansi --known-first-party mindsdb '
+            f'--per-rule-ignores "{rule_ignores}" '
+            f'--package-module-name-map "{get_ignores_str(PACKAGE_NAME_MAP)}" '
+            f"{extra_args} {path}",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        if not os.path.exists("deptry.json"):
+            if result.returncode != 0:
                 errors.append(f"Error running deptry: {result.stderr.decode('utf-8')}")
             else:
                 errors.append("Error running deptry: deptry.json was not generated.")
@@ -331,18 +364,13 @@ def run_deptry(reqs, rule_ignores, path, extra_args=""):
 
 
 def check_for_requirements_duplicates():
-    """Checks that handler requirements.txt and the main requirements.txt don't contain any of the same packages"""
+    """Disabled for uv lock export model.
 
-    global success
-    main_reqs = get_requirements_from_file(MAIN_REQS_PATH, with_snyk=False)
-
-    for file in HANDLER_REQS_PATHS:
-        handler_reqs = get_requirements_from_file(file, with_snyk=False)
-
-        for req in handler_reqs:
-            if req in main_reqs:
-                print(f"{req} is in {file} and also in main requirements file.")
-                success = False
+    requirements/requirements.txt is generated from uv.lock and includes
+    resolved transitive packages, so overlap with handler requirements is
+    expected and is no longer a useful signal.
+    """
+    return
 
 
 def check_relative_reqs():
@@ -352,19 +380,17 @@ def check_relative_reqs():
     If a parent handler imports another handler in code, we should define that dependency
     in the parent handler's requirements.txt like:
 
-    -R mindsdb/integrations/handlers/child_handler/requirements.txt
+    -r mindsdb/integrations/handlers/child_handler/requirements.txt
 
     This is important to ensure that "pip install mindsdb[parent_handler]" works correctly.
     This function checks that for each handler imported from another handler, there is a
     corresponding entry in a requirements.txt.
     """
 
-    # regex for finding relative imports of handlers like "from ..file_handler import FileHandler"
-    # we're going to treat these as errors (and suggest using absolute imports instead)
-    relative_import_pattern = re.compile("(?:\s|^)(?:from|import) \.\.\w+_handler")  # noqa: W605
+    relative_import_pattern = re.compile(r"(?:\s|^)(?:from|import) \.\.\w+_handler")
 
     def get_relative_requirements(files):
-        """Find entries in a requirements.txt that are including another requirements.txt"""
+        """Find entries in a requirements.txt that are including another requirements.txt."""
         entries = {}
         for file in files:
             with open(file, "r") as fh:
@@ -378,24 +404,19 @@ def check_relative_reqs():
     for handler_dir in glob.glob("mindsdb/integrations/handlers/*/"):
         handler_name = handler_dir.split("/")[-2].split("_handler")[0]
 
-        # regex for finding imports of other handlers like "from mindsdb.integrations.handlers.file_handler import FileHandler"
-        # excludes the current handler importing parts of itself
         import_pattern = re.compile(
-            f"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name}_handler)\w+_handler"
-        )  # noqa: W605
+            rf"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name}_handler)\w+_handler"
+        )
 
-        # requirements entries for this handler that point to another handler's requirements file
         required_handlers = get_relative_requirements(
             [file for file in HANDLER_REQS_PATHS if file.startswith(handler_dir)]
         )
 
         all_imported_handlers = []
 
-        # for every python file in this handler's code
         for file in glob.glob(f"{handler_dir}/**/*.py", recursive=True):
             errors = []
 
-            # find all the imports of handlers
             with open(file, "r") as f:
                 file_content = f.read()
                 relative_imported_handlers = [
@@ -408,13 +429,10 @@ def check_relative_reqs():
             }
             all_imported_handlers += imported_handlers.values()
 
-            # Report on relative imports (like "from ..file_handler import FileHandler")
             for line in relative_imported_handlers:
                 errors.append(f"{line} <- Relative import of handler. Use absolute import instead")
 
-            # Report on imports of other handlers that are missing a corresponding requirements.txt entry
             for line, imported_handler_name in imported_handlers.items():
-                # Check if the imported handler has a requirements.txt file.
                 imported_handler_req_file = f"mindsdb/integrations/handlers/{imported_handler_name}/requirements.txt"
                 if os.path.exists(imported_handler_req_file):
                     if imported_handler_name not in required_handlers.keys():
@@ -422,10 +440,8 @@ def check_relative_reqs():
                             f'{line} <- {imported_handler_name} not in handler requirements.txt. Add it like: "-r {imported_handler_req_file}"'
                         )
 
-            # Print all the errors for this .py file
             print_errors(file, errors)
 
-        # Report on requirements.txt entries that point to a handler that isn't used
         requirements_errors = [
             required_handler_name + " in requirements.txt but not used in code"
             for required_handler_name in required_handlers.keys()
@@ -433,7 +449,6 @@ def check_relative_reqs():
         ]
         print_errors(handler_dir, requirements_errors)
 
-        # Report on requirements.txt entries that point to a handler requirements file that doesn't exist
         errors = []
         for _, required_handler_line in required_handlers.items():
             if not os.path.exists(required_handler_line.split("-r ")[1]):
@@ -446,26 +461,22 @@ def check_requirements_imports():
     """
     Use deptry to find issues with dependencies.
 
-    Runs deptry on the core codebase (excluding handlers) + the main requirements.txt file.
-    Then runs it on each handler codebase and requirements.txt individually.
+    Run deptry on the core codebase using pyproject.toml as the source of truth.
+    Then run it on each handler codebase and requirements.txt individually.
     """
 
-    # Run against the main codebase
-    errors = run_deptry(
-        ",".join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS + EXTRA_REQS_PATHS),
+    errors = run_deptry_with_pyproject(
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f'--extend-exclude "{"|".join(MAIN_EXCLUDE_PATHS)}"',
     )
-    print_errors(MAIN_REQS_PATH, errors)
+    print_errors("pyproject.toml", errors)
 
-    # Run on each handler
     for file in HANDLER_REQS_PATHS:
         handler_no_check = get_requirements_with_DEP002(file)
-
         ignore_str = get_ignores_str(HANDLER_RULE_IGNORES, dep002_ignore=handler_no_check)
 
-        errors = run_deptry(
+        errors = run_deptry_with_requirements(
             f"{file},{MAIN_REQS_PATH},{TEST_REQS_PATH}",
             ignore_str,
             os.path.dirname(file),

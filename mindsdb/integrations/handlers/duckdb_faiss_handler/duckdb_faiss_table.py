@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import List
+import math
 
 import pandas as pd
 import orjson
@@ -32,6 +33,14 @@ logger = log.getLogger(__name__)
 
 
 class DuckDBFaissTable:
+    META_BATCH_SIZE = 10_000
+    VECTOR_MARGIN_K = 5
+    VECTOR_GROWTH_MULTIPLIER = 5
+    VECTOR_MAX_RATE = 0.25
+    VECTOR_MAX_LIMIT = 1_000_000
+    VECTOR_MAX_ITERATIONS = 3
+    DEFAULT_LIMIT = 100
+
     def __init__(self, table_name: str, table_dir: Path, handler):
         self.table_name = table_name
         self.handler = handler
@@ -62,6 +71,10 @@ class DuckDBFaissTable:
     def close(self) -> None:
         self.faiss_index.close()
         self.connection.close()
+
+    @staticmethod
+    def _empty_result() -> pd.DataFrame:
+        return pd.DataFrame([], columns=["id", "content", "metadata", "distance"])
 
     def _create_kw_index(self):
         with self.connection.cursor() as cur:
@@ -136,30 +149,153 @@ class DuckDBFaissTable:
             # If only content in filter: query faiss and attach to metadata
             return self._select_with_vector(vector_filter=vector_filter, limit=limit)
 
+        return self.mixed_search(vector_filter=vector_filter, meta_filters=meta_filters, limit=limit)
+
+    def mixed_search(self, vector_filter, meta_filters, limit):
         """
-        If metadata + content:
-        Query faiss, use limit = 1000
-        Query duckdb with `id in (...)` 
-        If count of results is less than input LIMIT value
-        Repeat the search with increased limit value
-        Limit value for step = 1000 * 5^i  (1000, 2000, 25000, 125000 …)
+        1. Measure selectivity of META_FILTERS:
+            Get predicted count of record after applying META_FILTERS using some of methods
+            Selectivity = count / total records
+
+        2. selectivity * total_recors > LIMIT / selectivity:
+            Use Vector-first search
+        Else:
+            Use Metadata-first search
         """
 
-        df = pd.DataFrame()
+        if limit is None:
+            limit = self.DEFAULT_LIMIT
 
-        total_size = self.get_total_size()
+        total = self.faiss_index.get_size()
+        if total == 0 or limit == 0:
+            # no reason to do vector search
+            return self._empty_result()
 
-        for i in range(10):
-            batch_size = 1000 * 5**i
+        matched_count = self.get_metadata_search_count(meta_filters)
+        selectivity = matched_count / total
 
-            # TODO implement reverse search:
-            #   if batch_size > 25% of db: search metadata first and then in faiss by list of ids
-
-            df = self._select_with_vector(vector_filter=vector_filter, meta_filters=meta_filters, limit=batch_size)
-            if batch_size >= total_size or len(df) >= limit:
-                break
+        # compare forecast count of affected records for vector and metadata search and choose what will take less
+        # do search even if selectivity is 0 because it might be approximate value in the future
+        if selectivity > 0 and selectivity * total > limit / selectivity:
+            df = self.vector_first_search(vector_filter, meta_filters, limit, selectivity)
+        else:
+            df = self.metadata_first_search(vector_filter, meta_filters, limit)
 
         return df[:limit]
+
+    def get_metadata_search_count(self, meta_filters):
+        """
+        Get count of records from duckdb with meta_filters
+        """
+
+        where_clause = self._translate_filters(meta_filters)
+        count_query = Select(
+            targets=[Function("count", args=[Star()], alias=Identifier("cnt"))],
+            from_table=Identifier("meta_data"),
+            where=where_clause,
+        )
+
+        with self.connection.cursor() as cur:
+            sql = self.handler.renderer.get_string(count_query, with_failback=True)
+            cur.execute(sql)
+            df = cur.fetchdf()
+
+        return int(df["cnt"].iloc[0])
+
+    def vector_first_search(self, vector_filter, meta_filters, limit, selectivity):
+        """
+
+        Calculate required top results from faiss: it is predicted count of records, that required to be scanned
+
+        Top_results  = LIMIT / selectivity * VECTOR_MARGIN_K
+
+        Circle:
+            Search Top_results vectors in faiss
+            Get ids
+            query duckdb with META_FILTERS and list of ids
+            If count of found records < LIMIT:
+                Increase Top_results = Top_results * VECTOR_GROWTH_MULTIPLIER to make next search iteration
+                If Top_results > total * VECTOR_MAX_RATE
+                   or Top_results > VECTOR_MAX_LIMIT
+                   or number of iteration >VECTOR_MAX_ITERATIONS:
+                     Something went wrong, maybe META_FILTERS records has greater distance than average record
+                     Break vector-first search and switch to metadata-first
+            If count of found records >= LIMIT:
+                Break and return results
+        """
+
+        total = self.faiss_index.get_size()
+
+        top_results = math.ceil(limit / selectivity * self.VECTOR_MARGIN_K)
+
+        for i in range(self.VECTOR_MAX_ITERATIONS):
+            df = self._select_with_vector(vector_filter=vector_filter, meta_filters=meta_filters, limit=top_results)
+            if len(df) >= limit:
+                # found required size of data
+                return df
+
+            top_results = top_results * self.VECTOR_GROWTH_MULTIPLIER
+
+            if top_results > total * self.VECTOR_MAX_RATE or top_results > self.VECTOR_MAX_LIMIT:
+                # give up with vector_first search
+                break
+
+        # failback to metadata-first search
+        return self.metadata_first_search(vector_filter, meta_filters, limit)
+
+    def metadata_first_search(self, vector_filter, meta_filters, limit):
+        """
+        Metadata-first search
+
+        Query list of all ids from duckdb table using META_FILTERS
+
+        Split into batches by META_BATCH.
+        Per batch:
+            Get batch of ids
+            Use ID selector to search in FAISS only by batch of ids
+            use LIMIT
+            Combine results in single list alongside with distances
+        After all batches
+            get top LIMIT vectors with min distances
+            Get their ids and find records in duckdb table for them
+        """
+
+        embedding = vector_filter.value
+        if isinstance(embedding, str):
+            embedding = orjson.loads(embedding)
+
+        where_clause = self._translate_filters(meta_filters)
+        ids_query = Select(
+            targets=[Identifier("faiss_id")],
+            from_table=Identifier("meta_data"),
+            where=where_clause,
+        )
+
+        with self.connection.cursor() as cur:
+            sql = self.handler.renderer.get_string(ids_query, with_failback=True)
+            meta_df = cur.execute(sql).fetchdf()
+
+        if meta_df.empty:
+            return self._empty_result()
+
+        faiss_ids = meta_df["faiss_id"].tolist()
+        results = []
+        for start in range(0, len(faiss_ids), self.META_BATCH_SIZE):
+            batch_ids = faiss_ids[start : start + self.META_BATCH_SIZE]
+
+            distances, faiss_ids_found = self.faiss_index.search(embedding, limit, allowed_ids=batch_ids)
+            results.extend(zip(distances, faiss_ids_found))
+
+        results.sort(key=lambda x: x[0])
+
+        results = results[:limit]
+        if len(results) == 0:
+            raise RuntimeError("Something went wrong, faiss database didn't return results")
+        distances, faiss_ids = zip(*results)
+
+        meta_df = self._select_from_metadata(faiss_ids=faiss_ids, meta_filters=meta_filters)
+        vector_df = pd.DataFrame({"faiss_id": faiss_ids, "distance": distances})
+        return vector_df.merge(meta_df, on="faiss_id").drop("faiss_id", axis=1).sort_values(by="distance")
 
     def keyword_select(
         self,
@@ -241,7 +377,7 @@ class DuckDBFaissTable:
         if isinstance(embedding, str):
             embedding = orjson.loads(embedding)
 
-        distances, faiss_ids = self.faiss_index.search(embedding, limit or 100)
+        distances, faiss_ids = self.faiss_index.search(embedding, limit or self.DEFAULT_LIMIT)
 
         # Fetch full data from DuckDB
         if len(faiss_ids) > 0:
@@ -250,7 +386,7 @@ class DuckDBFaissTable:
             vector_df = pd.DataFrame({"faiss_id": faiss_ids, "distance": distances})
             return vector_df.merge(meta_df, on="faiss_id").drop("faiss_id", axis=1).sort_values(by="distance")
 
-        return pd.DataFrame([], columns=["id", "content", "metadata", "distance"])
+        return self._empty_result()
 
     def _select_from_metadata(self, faiss_ids=None, meta_filters=None, limit=None):
         query = Select(

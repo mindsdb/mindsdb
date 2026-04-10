@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import re
+import os
 import json
+import math
 import asyncio
 import logging
-import math
-import os
 import random
-from abc import ABC
 from typing import Any, List, Optional, Tuple
 
 from openai import AsyncOpenAI, AsyncAzureOpenAI
@@ -42,7 +41,7 @@ def get_event_loop():
     return loop
 
 
-class BaseLLMReranker(BaseModel, ABC):
+class BaseLLMReranker(BaseModel):
     filtering_threshold: float = 0.0  # Default threshold for filtering
     provider: str = "openai"
     model: str = DEFAULT_RERANKING_MODEL  # Model to use for reranking

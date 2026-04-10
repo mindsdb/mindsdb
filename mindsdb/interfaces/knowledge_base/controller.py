@@ -16,16 +16,13 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import (
-    DistanceFunction,
     TableField,
     VectorStoreHandler,
 )
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get_validated_jwt
 
-from mindsdb.integrations.utilities.rag.settings import RerankerMode
-
-from mindsdb.interfaces.agents.utils.constants import DEFAULT_EMBEDDINGS_MODEL_PROVIDER, MAX_INSERT_BATCH_SIZE
+from mindsdb.interfaces.agents.utils.constants import MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
@@ -34,27 +31,19 @@ from mindsdb.interfaces.knowledge_base.executor import KnowledgeBaseQueryExecuto
 from mindsdb.interfaces.knowledge_base.default_storage_resolver import resolve_default_storage_engines
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.utils import validate_pydantic_params
-from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
-from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
+from mindsdb.utilities import log
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
-from mindsdb.utilities import log
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
+from mindsdb.integrations.utilities.rag.settings import RerankerMode, RerankerConfig
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker, ListwiseLLMReranker
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
-
-
-def _require_agent_extra(feature: str):
-    if create_chat_model is None:
-        raise ImportError(
-            f"{feature} requires the optional agent dependencies. Install them via `pip install mindsdb[kb]`."
-        )
 
 
 class KnowledgeBaseInputParams(BaseModel):
@@ -94,37 +83,10 @@ def get_model_params(model_params: dict, default_config_key: str):
     return combined_model_params
 
 
-def adapt_embedding_model_params(embedding_model_params: dict):
-    """
-    Prepare parameters for embedding model.
-    """
-    params_copy = copy.deepcopy(embedding_model_params)
-    provider = params_copy.pop("provider", None).lower()
-    api_key = get_api_key(provider, params_copy, strict=False) or params_copy.get("api_key")
-    # Underscores are replaced because the provider name ultimately gets mapped to a class name.
-    # This is mostly to support Azure OpenAI (azure_openai); the mapped class name is 'AzureOpenAIEmbeddings'.
-    params_copy["class"] = provider.replace("_", "")
-    if provider == "azure_openai":
-        # Azure OpenAI expects the api_key to be passed as 'openai_api_key'.
-        params_copy["openai_api_key"] = api_key
-        params_copy["azure_endpoint"] = params_copy.pop("base_url")
-        if "chunk_size" not in params_copy:
-            params_copy["chunk_size"] = 2048
-        if "api_version" in params_copy:
-            params_copy["openai_api_version"] = params_copy["api_version"]
-    else:
-        params_copy[f"{provider}_api_key"] = api_key
-    params_copy.pop("api_key", None)
-    params_copy["model"] = params_copy.pop("model_name", None)
-
-    return params_copy
-
-
 def get_reranking_model_from_params(reranking_model_params: dict):
     """
     Create reranking model from parameters.
     """
-    from mindsdb.integrations.utilities.rag.settings import RerankerConfig
 
     # Work on a copy; do not mutate caller's dict
     params_copy = copy.deepcopy(reranking_model_params)
@@ -674,30 +636,6 @@ class KnowledgeBaseTable:
         self.addapt_conditions_columns(conditions)
         db_handler.dispatch_delete(query, conditions)
 
-    def hybrid_search(
-        self,
-        query: str,
-        keywords: List[str] = None,
-        metadata: Dict[str, str] = None,
-        distance_function=DistanceFunction.COSINE_DISTANCE,
-    ) -> pd.DataFrame:
-        query_df = pd.DataFrame.from_records([{TableField.CONTENT.value: query}])
-        embeddings_df = self._df_to_embeddings(query_df)
-        if embeddings_df.empty:
-            return pd.DataFrame([])
-        embeddings = embeddings_df.iloc[0][TableField.EMBEDDINGS.value]
-        keywords_query = None
-        if keywords is not None:
-            keywords_query = " ".join(keywords)
-        db_handler = self.get_vector_db()
-        return db_handler.hybrid_search(
-            self._kb.vector_database_table,
-            embeddings,
-            query=keywords_query,
-            metadata=metadata,
-            distance_function=distance_function,
-        )
-
     def clear(self):
         """
         Clear data in KB table
@@ -1024,76 +962,6 @@ class KnowledgeBaseTable:
         res = self._df_to_embeddings(df)
         return res[TableField.EMBEDDINGS.value][0]
 
-    def build_rag_pipeline(self, retrieval_config: dict):
-        """
-        Builds a RAG pipeline with returned sources
-
-        Args:
-            retrieval_config: dict with retrieval config
-
-        Returns:
-            RAG: Configured RAG pipeline instance
-
-        Raises:
-            ValueError: If the configuration is invalid or required components are missing
-        """
-        # Get embedding model from knowledge base
-        from mindsdb.interfaces.knowledge_base.embedding_model_utils import construct_embedding_model_from_args
-        from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-        from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
-
-        embedding_model_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
-        if self._kb.embedding_model:
-            # Extract embedding model args from knowledge base table
-            embedding_args = self._kb.embedding_model.learn_args.get("using", {})
-            # Construct the embedding model directly
-            embeddings_model = construct_embedding_model_from_args(embedding_args, session=self.session)
-            logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
-        elif embedding_model_params:
-            embeddings_model = construct_embedding_model_from_args(
-                adapt_embedding_model_params(embedding_model_params), session=self.session
-            )
-            logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
-        else:
-            # Use default embedding model with default provider
-            # Default to OpenAI's text-embedding-3-small for OpenAI provider, otherwise let the provider choose
-            default_model_name = "text-embedding-3-small" if DEFAULT_EMBEDDINGS_MODEL_PROVIDER == "openai" else None
-            default_embedding_args = {
-                "provider": DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
-            }
-            if default_model_name:
-                default_embedding_args["model_name"] = default_model_name
-            embeddings_model = construct_embedding_model_from_args(default_embedding_args, session=self.session)
-            logger.debug(
-                f"Using default embedding model ({DEFAULT_EMBEDDINGS_MODEL_PROVIDER}) as knowledge base has no embedding model"
-            )
-
-        # Update retrieval config with knowledge base parameters
-        kb_params = {"vector_store_config": {"kb_table": self}}
-
-        # Load and validate config
-        try:
-            rag_config = load_rag_config(retrieval_config, kb_params, embeddings_model)
-
-            # Build LLM if specified
-            if "llm_model_name" in rag_config:
-                llm_args = {"model_name": rag_config.llm_model_name}
-                if not rag_config.llm_provider:
-                    llm_args["provider"] = get_llm_provider(llm_args)
-                else:
-                    llm_args["provider"] = rag_config.llm_provider
-                _require_agent_extra("Building knowledge base retrieval pipelines")
-                rag_config.llm = create_chat_model(llm_args)
-
-            # Create RAG pipeline
-            rag = RAG(rag_config)
-            logger.debug(f"RAG pipeline created with config: {rag_config}")
-            return rag
-
-        except Exception as e:
-            logger.exception("Error building RAG pipeline:")
-            raise ValueError(f"Failed to build RAG pipeline: {str(e)}") from e
-
     def _parse_metadata(self, base_metadata):
         """Helper function to robustly parse metadata string to dict"""
         if isinstance(base_metadata, dict):
@@ -1113,36 +981,6 @@ class KnowledgeBaseTable:
         from mindsdb.interfaces.knowledge_base.utils import generate_document_id
 
         return generate_document_id(content=content, provided_id=provided_id)
-
-    def _convert_metadata_value(self, value):
-        """
-        Convert metadata value to appropriate Python type.
-
-        Args:
-            value: The value to convert
-
-        Returns:
-            Converted value in appropriate Python type
-        """
-        if pd.isna(value):
-            return None
-
-        # Handle pandas/numpy types
-        if pd.api.types.is_datetime64_any_dtype(value) or isinstance(value, pd.Timestamp):
-            return str(value)
-        elif pd.api.types.is_integer_dtype(type(value)):
-            return int(value)
-        elif pd.api.types.is_float_dtype(type(value)):
-            return float(value)
-        elif pd.api.types.is_bool_dtype(type(value)):
-            return bool(value)
-
-        # Handle basic Python types
-        if isinstance(value, (int, float, bool)):
-            return value
-
-        # Convert everything else to string
-        return str(value)
 
     def create_index(self, params: dict = None):
         """
@@ -1429,21 +1267,6 @@ class KnowledgeBaseController:
             return vector_store_name
 
         self.session.integration_controller.add(vector_store_name, "duckdb_faiss", {})
-        return vector_store_name
-
-    def _create_persistent_chroma(self, kb_name, engine="chromadb"):
-        """Create default vector database for knowledge base, if not specified"""
-
-        vector_store_name = f"{kb_name}_{engine}"
-
-        vector_store_folder_name = f"{vector_store_name}"
-        connection_args = {"persist_directory": vector_store_folder_name}
-
-        # check if exists
-        if self.session.integration_controller.get(vector_store_name):
-            return vector_store_name
-
-        self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
     def _resolve_default_vector_storage(self, kb_name: str, is_sparse: bool = False, vector_size: int = None):

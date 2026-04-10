@@ -110,6 +110,7 @@ MAIN_RULE_IGNORES = {
         "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
         "urllib3",  # pinned by Snyk to avoid a vulnerability
         "faiss-cpu",
+        "pyopenssl",
     ],
 }
 

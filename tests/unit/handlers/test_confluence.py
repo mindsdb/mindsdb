@@ -6,16 +6,24 @@ import pytest
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
-from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
-from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
-from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
-    ConfluenceBlogPostsTable,
-    ConfluenceDatabasesTable,
-    ConfluencePagesTable,
-    ConfluenceSpacesTable,
-    ConfluenceWhiteboardsTable,
-    ConfluenceTasksTable,
-)
+
+try:
+    from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
+    from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
+    from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
+        ConfluenceBlogPostsTable,
+        ConfluenceDatabasesTable,
+        ConfluencePagesTable,
+        ConfluenceSpacesTable,
+        ConfluenceWhiteboardsTable,
+        ConfluenceTasksTable,
+    )
+
+    CONFLUENCE_HANDLER_AVAILABLE = True
+except ImportError:
+    pytestmark = pytest.mark.skip("Confluence handler not installed")
+    CONFLUENCE_HANDLER_AVAILABLE = False
+
 from mindsdb.integrations.libs.response import TableResponse, HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 

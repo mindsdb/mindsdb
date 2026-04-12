@@ -885,7 +885,7 @@ class IntegrationController:
 
         return info
 
-    def _fetch_community_handler(self, handler_name: str, handler_folder: str = None) -> Optional[dict]:
+    def _fetch_community_handler(self, handler_name: str, handler_folder) -> Optional[dict]:
         """
         Attempt to fetch a community handler from GitHub by its logical name.
 

@@ -2,7 +2,7 @@ import ast
 import copy
 import hashlib
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import List, Optional
 import datetime as dt
 
 import pandas as pd
@@ -629,32 +629,6 @@ class VectorStoreHandler(BaseHandler):
         data = pd.DataFrame(self.SCHEMA)
         data.columns = ["COLUMN_NAME", "DATA_TYPE"]
         return TableResponse(data=data)
-
-    def hybrid_search(
-        self,
-        table_name: str,
-        embeddings: List[float],
-        query: str = None,
-        metadata: Dict[str, str] = None,
-        distance_function=DistanceFunction.COSINE_DISTANCE,
-        **kwargs,
-    ) -> pd.DataFrame:
-        """
-        Executes a hybrid search, combining semantic search and one or both of keyword/metadata search.
-
-        For insight on the query construction, see: https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
-
-        Args:
-            table_name(str): Name of underlying table containing content, embeddings, & metadata
-            embeddings(List[float]): Embedding vector to perform semantic search against
-            query(str): User query to convert into keywords for keyword search
-            metadata(Dict[str, str]): Metadata filters to filter content rows against
-            distance_function(DistanceFunction): Distance function used to compare embeddings vectors for semantic search
-
-        Returns:
-            df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
-        """
-        raise NotImplementedError(f"Hybrid search not supported for VectorStoreHandler {self.name}")
 
     def check_existing_ids(self, table_name: str, ids: List[str]) -> List[str]:
         """

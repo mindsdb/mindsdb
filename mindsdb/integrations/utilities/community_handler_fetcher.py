@@ -108,8 +108,7 @@ def _fetch_tree_recursive(
         branch: Branch or ref name used to build raw download URLs.
         tree_sha: SHA of the Git tree to fetch.
         remote_prefix: Path within the repo to the handler directory
-            (e.g. "community_handlers/elasticsearch_handler").  Used to
-            construct raw download URLs.
+        Used to construct raw download URLs.
         dest_dir: Local directory where files will be written.
         headers: HTTP headers (auth, Accept) for GitHub API requests.
         max_depth: Maximum allowed directory nesting depth.  Entries whose

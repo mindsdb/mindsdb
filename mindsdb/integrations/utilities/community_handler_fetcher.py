@@ -56,12 +56,114 @@ def _get_repo_config() -> tuple:
     return repo, branch, path_prefix
 
 
+def _resolve_tree_sha(repo: str, branch: str, dir_path: str, headers: dict) -> Optional[str]:
+    """Return the Git tree SHA for dir_path by inspecting its parent directory listing.
+
+    Calls the Contents API on the parent of dir_path, then finds the matching
+    directory entry and returns its SHA.  Returns None if the path does not exist
+    (404) or if the directory name is not found in the parent listing.
+
+    Raises:
+        RuntimeError: On network errors or unexpected GitHub API responses.
+    """
+    parent_path, _, dir_name = dir_path.rstrip("/").rpartition("/")
+    api_url = f"{GITHUB_API_BASE}/repos/{repo}/contents/{parent_path}"
+    params = {"ref": branch}
+    try:
+        resp = requests.get(api_url, params=params, headers=headers, timeout=30)
+    except requests.RequestException as e:
+        raise RuntimeError(f"Network error resolving tree SHA for '{dir_path}': {e}") from e
+    if resp.status_code == 404:
+        return None
+    if resp.status_code != 200:
+        raise RuntimeError(
+            f"GitHub API error resolving tree SHA for '{dir_path}': HTTP {resp.status_code} — {resp.text[:300]}"
+        )
+    try:
+        entries = resp.json()
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Invalid JSON resolving tree SHA for '{dir_path}': {e}") from e
+    for entry in entries:
+        if entry.get("name") == dir_name and entry.get("type") == "dir":
+            return entry.get("sha")
+    return None
+
+
+def _fetch_tree_recursive(
+    repo: str,
+    branch: str,
+    tree_sha: str,
+    remote_prefix: str,
+    dest_dir: Path,
+    headers: dict,
+    max_depth: int = 4,
+) -> int:
+    """Fetch all files in a Git tree recursively, preserving directory structure.
+
+    Uses the Git Trees API with ?recursive=1 to obtain the full file listing in
+    a single API call, then downloads each blob from raw.githubusercontent.com.
+
+    Args:
+        repo: GitHub repository in "owner/repo" format.
+        branch: Branch or ref name used to build raw download URLs.
+        tree_sha: SHA of the Git tree to fetch.
+        remote_prefix: Path within the repo to the handler directory
+            (e.g. "community_handlers/elasticsearch_handler").  Used to
+            construct raw download URLs.
+        dest_dir: Local directory where files will be written.
+        headers: HTTP headers (auth, Accept) for GitHub API requests.
+        max_depth: Maximum allowed directory nesting depth.  Entries whose
+            relative path contains >= max_depth slashes are skipped.
+
+    Returns:
+        Number of files downloaded.
+
+    Raises:
+        RuntimeError: On network errors or unexpected API responses.
+    """
+    api_url = f"{GITHUB_API_BASE}/repos/{repo}/git/trees/{tree_sha}"
+    params = {"recursive": "1"}
+    try:
+        resp = requests.get(api_url, params=params, headers=headers, timeout=30)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        raise RuntimeError(f"Network error fetching tree '{tree_sha}': {e}") from e
+    try:
+        tree_data = resp.json()
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Invalid JSON from Git Trees API for tree '{tree_sha}': {e}") from e
+
+    if tree_data.get("truncated"):
+        logger.warning("Tree for handler '%s' was truncated; some files may be missing", remote_prefix)
+
+    file_count = 0
+    for entry in tree_data.get("tree", []):
+        if entry.get("type") != "blob":
+            continue
+        path = entry["path"]
+        if path.count("/") >= max_depth:
+            logger.debug("Skipping deeply nested path '%s' (max_depth=%d)", path, max_depth)
+            continue
+        local_path = dest_dir / path
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_url = f"https://raw.githubusercontent.com/{repo}/{branch}/{remote_prefix}/{path}"
+        try:
+            file_resp = requests.get(raw_url, headers=headers, timeout=30)
+            file_resp.raise_for_status()
+        except requests.RequestException as e:
+            raise RuntimeError(f"Failed to download '{path}' for handler '{remote_prefix}': {e}") from e
+        local_path.write_bytes(file_resp.content)
+        logger.debug("Downloaded %s (%d bytes)", path, entry.get("size", 0))
+        file_count += 1
+    return file_count
+
+
 def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
     """
     Fetch a single community handler directory from GitHub into storage_dir.
 
-    Downloads only the files for the specific requested handler using the
-    GitHub Contents API.
+    Downloads the full directory tree for the requested handler using the
+    GitHub Git Trees API, preserving subdirectory structure.
 
     Args:
         handler_dir_name: The directory name of the handler (e.g. "github_handler")
@@ -83,37 +185,17 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
             return dest_dir
 
         repo, branch, path_prefix = _get_repo_config()
-        # build the API URL to list contents of the handler directory
-        api_url = f"{GITHUB_API_BASE}/repos/{repo}/contents/{path_prefix}/{handler_dir_name}"
-        params = {"ref": branch}
         headers = _github_headers()
+        remote_prefix = f"{path_prefix}/{handler_dir_name}"
 
         logger.debug("Fetching community handler '%s' from %s@%s", handler_dir_name, repo, branch)
 
-        try:
-            resp = requests.get(api_url, params=params, headers=headers, timeout=30)
-        except requests.RequestException as e:
-            raise RuntimeError(f"Network error fetching handler '{handler_dir_name}': {e}") from e
-
-        if resp.status_code == 404:
+        tree_sha = _resolve_tree_sha(repo, branch, remote_prefix, headers)
+        if tree_sha is None:
             logger.error("Community handler '%s' not found in repo '%s'", handler_dir_name, repo)
             return None
 
-        if resp.status_code != 200:
-            raise RuntimeError(
-                f"GitHub API error for '{handler_dir_name}': HTTP {resp.status_code} — {resp.text[:300]}"
-            )
-
-        try:
-            file_entries = resp.json()
-        except json.JSONDecodeError as e:
-            raise RuntimeError(f"Invalid JSON from GitHub API for '{handler_dir_name}': {e}") from e
-
-        if not isinstance(file_entries, list):
-            logger.error("Expected a directory listing for '%s', got non-list response", handler_dir_name)
-            return None
-
-        # Use a temporary directory for downloading files before moving to the final location
+        # Use a temporary directory for downloading files before moving to the final location.
         # This prevents leaving a partially downloaded handler on disk if something goes wrong.
         # As a fail-safe measure, we remove any existing temp directory before starting, and ensure cleanup on exceptions.
         tmp_dir = storage_dir / f".tmp_{handler_dir_name}"
@@ -122,27 +204,13 @@ def fetch_handler(handler_dir_name: str, storage_dir: Path) -> Optional[Path]:
         tmp_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            for entry in file_entries:
-                if entry.get("type") != "file":
-                    continue
-                file_name = entry["name"]
-                download_url = entry.get("download_url")
-                if not download_url:
-                    continue
+            file_count = _fetch_tree_recursive(repo, branch, tree_sha, remote_prefix, tmp_dir, headers)
+            logger.debug("Fetched %d files for handler '%s'", file_count, handler_dir_name)
 
-                try:
-                    file_resp = requests.get(download_url, headers=headers, timeout=30)
-                    file_resp.raise_for_status()
-                except requests.RequestException as e:
-                    raise RuntimeError(f"Failed to download '{file_name}' for handler '{handler_dir_name}': {e}") from e
-
-                (tmp_dir / file_name).write_bytes(file_resp.content)
-
-            # Atomic rename
+            # Atomic rename.
             # If dest_dir already exists, remove it first.
             # This ensures that we don't end up with a mix of old and new files if the handler is updated.
             if dest_dir.exists():
-                # remove the old directory before renaming the new one into place
                 shutil.rmtree(dest_dir)
             tmp_dir.rename(dest_dir)
 

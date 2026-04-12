@@ -2,6 +2,8 @@ import csv
 import re
 import typing
 
+from pydantic import BaseModel, ValidationError
+
 
 def parse_csv_attributes(csv_attributes: typing.Optional[str] = "") -> typing.Dict[str, str]:
     """
@@ -32,3 +34,24 @@ def parse_csv_attributes(csv_attributes: typing.Optional[str] = "") -> typing.Di
         raise ValueError(f"Failed to parse csv_attributes='{csv_attributes}': {e}") from e
 
     return attributes
+
+
+def validate_pydantic_params(params: dict, schema: type[BaseModel], subject: str):
+    # check names and types
+    try:
+        schema.model_validate(params)
+    except ValidationError as e:
+        problems = []
+        for error in e.errors():
+            parameter = ".".join([str(i) for i in error["loc"]])
+            param_type = error["type"]
+            if param_type == "extra_forbidden":
+                msg = f"Parameter '{parameter}' is not allowed"
+            else:
+                msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
+            problems.append(msg)
+
+        msg = "\n".join(problems)
+        if len(problems) > 1:
+            msg = "\n" + msg
+        raise ValueError(f"Problem with {subject} parameters: {msg}") from e

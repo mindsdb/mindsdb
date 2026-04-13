@@ -33,9 +33,7 @@ class NotionDatabaseTable(APITable):
 
         # fetch a particular database with the given id
         # additionally filter the results
-        result = self.handler.call_notion_api(
-            method_name="databases.query", params=params, filters=filters
-        )
+        result = self.handler.call_notion_api(method_name="databases.query", params=params, filters=filters)
 
         # filter targets
         columns = []
@@ -126,9 +124,7 @@ class NotionPagesTable(APITable):
             params["query"] = "mindsdb"
 
         # fetch a particular page with the given id
-        result = self.handler.call_notion_api(
-            method_name="pages.retrieve", params=params, filters=filters
-        )
+        result = self.handler.call_notion_api(method_name="pages.retrieve", params=params, filters=filters)
 
         # filter targets
         columns = []
@@ -258,9 +254,7 @@ class NotionBlocksTable(APITable):
                 filters.append([op, arg1, arg2])
 
         # fetch a particular block with the given id
-        result = self.handler.call_notion_api(
-            method_name="blocks.retrieve", params=params, filters=filters
-        )
+        result = self.handler.call_notion_api(method_name="blocks.retrieve", params=params, filters=filters)
 
         # filter targets
         columns = []
@@ -377,9 +371,7 @@ class NotionCommentsTable(APITable):
                 filters.append([op, arg1, arg2])
 
         # list all the unresolved comments for a given block id
-        result = self.handler.call_notion_api(
-            method_name="comments.list", params=params, filters=filters
-        )
+        result = self.handler.call_notion_api(method_name="comments.list", params=params, filters=filters)
 
         # filter targets
         columns = []

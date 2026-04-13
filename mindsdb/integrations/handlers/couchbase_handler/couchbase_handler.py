@@ -61,7 +61,7 @@ class CouchbaseHandler(DatabaseHandler):
 
         conn_str = self.connection_data.get("connection_string")
         # wan_development is used to avoid latency issues while connecting to Couchbase over the internet
-        options.apply_profile('wan_development')
+        options.apply_profile("wan_development")
         # connect to the cluster
         cluster = Cluster(
             conn_str,
@@ -100,9 +100,7 @@ class CouchbaseHandler(DatabaseHandler):
             cluster = self.connect()
             result.success = cluster.connected
         except UnAmbiguousTimeoutException as e:
-            logger.error(
-                f'Error connecting to Couchbase {self.connection_data["bucket"]}, {e}!'
-            )
+            logger.error(f"Error connecting to Couchbase {self.connection_data['bucket']}, {e}!")
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -135,9 +133,7 @@ class CouchbaseHandler(DatabaseHandler):
                         for k, v in collection.items():
                             data.setdefault(k, []).append(v)
 
-            response = Response(
-                RESPONSE_TYPE.TABLE, pd.DataFrame(data) if data else RESPONSE_TYPE.OK
-            )
+            response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(data) if data else RESPONSE_TYPE.OK)
         except CouchbaseException as e:
             response = Response(
                 RESPONSE_TYPE.ERROR,

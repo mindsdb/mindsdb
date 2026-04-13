@@ -14,10 +14,10 @@ class MatrixOneHandlerTest(unittest.TestCase):
                 "user": "dump",
                 "password": "111",
                 "database": "mo_catalog",
-                "ssl": False
+                "ssl": False,
             }
         }
-        cls.handler = MatrixOneHandler('test_mysql_handler', cls.kwargs)
+        cls.handler = MatrixOneHandler("test_mysql_handler", cls.kwargs)
 
     def test_0_connect(self):
         self.handler.connect()
@@ -44,12 +44,12 @@ class MatrixOneHandlerTest(unittest.TestCase):
         assert result.type is not RESPONSE_TYPE.ERROR
 
     def test_6_get_columns(self):
-        result = self.handler.get_columns('PREM')
+        result = self.handler.get_columns("PREM")
         assert result.type is not RESPONSE_TYPE.ERROR
 
     def test_7_check_connection(self):
         self.handler.check_connection()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -65,9 +65,7 @@ class NotionHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            response.error_message = (
-                f"Error connecting to Notion api: {e}. Check api_token"
-            )
+            response.error_message = f"Error connecting to Notion api: {e}. Check api_token"
             logger.error(response.error_message)
             response.success = False
 
@@ -123,9 +121,7 @@ class NotionHandler(APIHandler):
                 data2.append(row)
         return data2
 
-    def call_notion_api(
-        self, method_name: str = None, params: dict = None, filters: list = None
-    ):
+    def call_notion_api(self, method_name: str = None, params: dict = None, filters: list = None):
         # method > table > columns
         expansions_map = {
             "database": {
@@ -202,11 +198,7 @@ class NotionHandler(APIHandler):
                 chunk = chunk[:left]
 
             data.extend(chunk)
-            if (
-                count_results is not None
-                and hasattr(resp, "meta")
-                and "next_token" in resp.meta
-            ):
+            if count_results is not None and hasattr(resp, "meta") and "next_token" in resp.meta:
                 params["next_token"] = resp.meta["next_token"]
             else:
                 break
@@ -227,9 +219,7 @@ class NotionHandler(APIHandler):
                     if col_id not in df.columns:
                         continue
 
-                    col_map = {
-                        col_ref: f"{col}_{col_ref}" for col_ref in df_ref.columns
-                    }
+                    col_map = {col_ref: f"{col}_{col_ref}" for col_ref in df_ref.columns}
                     df_ref2 = df_ref.rename(columns=col_map)
                     df_ref2 = df_ref2.drop_duplicates(col_id)
 

@@ -111,9 +111,7 @@ class WebzHandler(APIHandler):
         dotted_item = dotty(item)
         return {field.replace(".", "__"): dotted_item[field] for field in output_colums}
 
-    def call_webz_api(
-        self, method_name: str = None, params: Dict = None
-    ) -> pd.DataFrame:
+    def call_webz_api(self, method_name: str = None, params: Dict = None) -> pd.DataFrame:
         """Calls the API method with the given params.
 
         Returns results as a pandas DataFrame.
@@ -159,15 +157,9 @@ class WebzHandler(APIHandler):
                 else:
                     params["size"] = left
 
-            logger.debug(
-                f"Calling Webz API: {table.ENDPOINT} with params ({params})"
-            )
+            logger.debug(f"Calling Webz API: {table.ENDPOINT} with params ({params})")
 
-            output = (
-                client.query(table.ENDPOINT, params)
-                if len(data) == 0
-                else client.get_next()
-            )
+            output = client.query(table.ENDPOINT, params) if len(data) == 0 else client.get_next()
             for item in output.get(table_name, []):
                 data.append(self._parse_item(item, table.OUTPUT_COLUMNS))
 

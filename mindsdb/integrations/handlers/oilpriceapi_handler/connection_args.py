@@ -9,10 +9,8 @@ connection_args = OrderedDict(
         "description": "OilPriceAPI key to use for authentication.",
         "required": True,
         "label": "Api key",
-        "secret": True
+        "secret": True,
     }
 )
 
-connection_args_example = OrderedDict(
-    api_key=""
-)
+connection_args_example = OrderedDict(api_key="")

@@ -27,27 +27,33 @@ class VolumesTable(APITable):
         # Get the parameters for the request.
         params = {}
         for op, arg1, arg2 in conditions:
-            if op != '=':
+            if op != "=":
                 raise NotImplementedError
-            if arg1 == 'q' or arg1 == 'download' or arg1 == 'langRestrict' \
-                    or arg1 == 'printType'\
-                    or arg1 == 'source' or arg1 == 'partner' \
-                    or arg1 == 'showPreorders' or arg1 == 'startIndex':
+            if (
+                arg1 == "q"
+                or arg1 == "download"
+                or arg1 == "langRestrict"
+                or arg1 == "printType"
+                or arg1 == "source"
+                or arg1 == "partner"
+                or arg1 == "showPreorders"
+                or arg1 == "startIndex"
+            ):
                 params[arg1] = arg2
-            elif arg1 == 'filter':
-                if arg2 not in ['ebooks', 'free-ebooks', 'full', 'paid-ebooks', 'partial']:
+            elif arg1 == "filter":
+                if arg2 not in ["ebooks", "free-ebooks", "full", "paid-ebooks", "partial"]:
                     raise NotImplementedError
                 params[arg1] = arg2
-            elif arg1 == 'libraryRestrict':
-                if arg2 not in ['my-library', 'no-restrictions']:
+            elif arg1 == "libraryRestrict":
+                if arg2 not in ["my-library", "no-restrictions"]:
                     raise NotImplementedError
                 params[arg1] = arg2
-            elif arg1 == 'printType':
-                if arg2 not in ['all', 'books', 'magazines']:
+            elif arg1 == "printType":
+                if arg2 not in ["all", "books", "magazines"]:
                     raise NotImplementedError
                 params[arg1] = arg2
-            elif arg1 == 'projection':
-                if arg2 not in ['lite', 'full']:
+            elif arg1 == "projection":
+                if arg2 not in ["lite", "full"]:
                     raise NotImplementedError
                 params[arg1] = arg2
             else:
@@ -55,19 +61,18 @@ class VolumesTable(APITable):
 
         # Get the order by from the query.
         if query.order_by is not None:
-            if query.order_by[0].value == 'newest':
-                params['orderBy'] = 'newest'
-            elif query.order_by[0].value == 'relevance':
-                params['orderBy'] = 'relevance'
+            if query.order_by[0].value == "newest":
+                params["orderBy"] = "newest"
+            elif query.order_by[0].value == "relevance":
+                params["orderBy"] = "relevance"
             else:
                 raise NotImplementedError
 
         if query.limit is not None:
-            params['maxResults'] = query.limit.value
+            params["maxResults"] = query.limit.value
 
         # Get the volumes from the Google Books API.
-        bookshelves = self.handler.\
-            call_application_api(method_name='get_volumes', params=params)
+        bookshelves = self.handler.call_application_api(method_name="get_volumes", params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -95,15 +100,14 @@ class VolumesTable(APITable):
             list: List of column names.
         """
         return [
-            'kind',
-            'id',
-            'etag',
-            'selfLink',
-            'volumeInfo',
-            'userInfo'
-            'saleInfo',
-            'accessInfo',
-            'searchInfo',
+            "kind",
+            "id",
+            "etag",
+            "selfLink",
+            "volumeInfo",
+            "userInfosaleInfo",
+            "accessInfo",
+            "searchInfo",
         ]
 
 
@@ -128,25 +132,24 @@ class BookshelvesTable(APITable):
         # Get the parameters for the request.
         params = {}
         for op, arg1, arg2 in conditions:
-            if arg1 == 'userId' or arg1 == 'source' or arg1 == 'fields':
-                if op != '=':
+            if arg1 == "userId" or arg1 == "source" or arg1 == "fields":
+                if op != "=":
                     raise NotImplementedError
                 params[arg1] = arg2
-            elif arg1 == 'shelf':
-                if op == '=':
+            elif arg1 == "shelf":
+                if op == "=":
                     params[arg1] = arg2
-                elif op == '>':
-                    params['minShelf'] = arg2
-                elif op == '<':
-                    params['maxShelf'] = arg2
+                elif op == ">":
+                    params["minShelf"] = arg2
+                elif op == "<":
+                    params["maxShelf"] = arg2
                 else:
                     raise NotImplementedError
             else:
                 raise NotImplementedError
 
         # Get the bookshelves from the Google Books API.
-        bookshelves = self.handler.\
-            call_application_api(method_name='get_bookshelves', params=params)
+        bookshelves = self.handler.call_application_api(method_name="get_bookshelves", params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -169,14 +172,14 @@ class BookshelvesTable(APITable):
     def get_columns(self) -> list:
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            'kind',
-            'id',
-            'selfLink',
-            'title',
-            'description',
-            'access',
-            'updated',
-            'created',
-            'volumeCount',
-            'volumesLastUpdated'
+            "kind",
+            "id",
+            "selfLink",
+            "title",
+            "description",
+            "access",
+            "updated",
+            "created",
+            "volumeCount",
+            "volumesLastUpdated",
         ]

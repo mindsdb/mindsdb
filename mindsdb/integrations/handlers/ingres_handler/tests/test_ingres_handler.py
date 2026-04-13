@@ -4,18 +4,12 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class IngresHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "connection_data": {
-                "user": "admin",
-                "password": "password",
-                "server": "(local)",
-                "database": "test_db"
-            }
+            "connection_data": {"user": "admin", "password": "password", "server": "(local)", "database": "test_db"}
         }
-        cls.handler = IngresHandler('test_ingres_handler', **cls.kwargs)
+        cls.handler = IngresHandler("test_ingres_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -30,7 +24,7 @@ class IngresHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('test')
+        columns = self.handler.get_columns("test")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
     def test_4_drop_table(self):
@@ -49,5 +43,5 @@ class IngresHandlerTest(unittest.TestCase):
         assert self.handler.disconnect()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

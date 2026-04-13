@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
 
-_BASE_BINANCE_US_URL = 'https://api.binance.us'
+_BASE_BINANCE_US_URL = "https://api.binance.us"
 
 logger = log.getLogger(__name__)
 
@@ -38,17 +38,17 @@ class BinanceHandler(APIHandler):
         self.api_key = None
         self.api_secret = None
 
-        args = kwargs.get('connection_data', {})
-        if 'api_key' in args:
-            self.api_key = args['api_key']
-        if 'api_secret' in args:
-            self.api_secret = args['api_secret']
+        args = kwargs.get("connection_data", {})
+        if "api_key" in args:
+            self.api_key = args["api_key"]
+        if "api_secret" in args:
+            self.api_secret = args["api_secret"]
 
         self.client = None
         self.is_connected = False
 
         aggregated_trade_data = BinanceAggregatedTradesTable(self)
-        self._register_table('aggregated_trade_data', aggregated_trade_data)
+        self._register_table("aggregated_trade_data", aggregated_trade_data)
 
     def connect(self) -> Spot:
         """Creates a new Binance Spot API client if needed and sets it as the client to use for requests.
@@ -80,7 +80,7 @@ class BinanceHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            logger.error(f'Error connecting to Binance API: {e}!')
+            logger.error(f"Error connecting to Binance API: {e}!")
             response.error_message = e
 
         self.is_connected = response.success
@@ -94,23 +94,18 @@ class BinanceHandler(APIHandler):
         Args:
             params (Dict): Trade data params (symbol, interval, limit, start_time, end_time)
         """
-        if 'symbol' not in params:
+        if "symbol" not in params:
             raise ValueError('Missing "symbol" param to fetch trade data for.')
-        if 'interval' not in params:
+        if "interval" not in params:
             raise ValueError('Missing "interval" param (1m, 1d, etc).')
 
         client = self.connect()
-        symbol = params['symbol']
-        interval = params['interval']
-        limit = params['limit'] if 'limit' in params else BinanceAggregatedTradesTable.DEFAULT_AGGREGATE_TRADE_LIMIT
-        start_time = params['start_time'] if 'start_time' in params else None
-        end_time = params['end_time'] if 'end_time' in params else None
-        raw_klines = client.klines(
-            symbol,
-            interval,
-            limit=limit,
-            startTime=start_time,
-            endTime=end_time)
+        symbol = params["symbol"]
+        interval = params["interval"]
+        limit = params["limit"] if "limit" in params else BinanceAggregatedTradesTable.DEFAULT_AGGREGATE_TRADE_LIMIT
+        start_time = params["start_time"] if "start_time" in params else None
+        end_time = params["end_time"] if "end_time" in params else None
+        raw_klines = client.klines(symbol, interval, limit=limit, startTime=start_time, endTime=end_time)
 
         open_time_i = 0
         close_time_i = 6
@@ -120,7 +115,7 @@ class BinanceHandler(APIHandler):
             raw_klines[i][close_time_i] = int(raw_klines[i][close_time_i] / 1000)
 
         df = pd.DataFrame(raw_klines)
-        df.insert(0, 'symbol', [symbol] * len(raw_klines), True)
+        df.insert(0, "symbol", [symbol] * len(raw_klines), True)
         # Remove last unnecessary column (unused API field)
         if len(raw_klines) > 0:
             num_cols = len(df.columns)
@@ -140,6 +135,6 @@ class BinanceHandler(APIHandler):
             method_name (str): Method name to call (e.g. klines)
             params (Dict): Params to pass to the API call
         """
-        if method_name == 'klines':
+        if method_name == "klines":
             return self._get_klines(params)
-        raise NotImplementedError('Method name {} not supported by Binance API Handler'.format(method_name))
+        raise NotImplementedError("Method name {} not supported by Binance API Handler".format(method_name))

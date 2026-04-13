@@ -6,12 +6,8 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 class AirtableHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "base_id": "dqweqweqrwwqq",
-            "table_name": "iris",
-            "api_key": "knlsndlknslk"
-        }
-        cls.handler = AirtableHandler('test_airtable_handler', cls.kwargs)
+        cls.kwargs = {"base_id": "dqweqweqrwwqq", "table_name": "iris", "api_key": "knlsndlknslk"}
+        cls.handler = AirtableHandler("test_airtable_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -30,5 +26,5 @@ class AirtableHandlerTest(unittest.TestCase):
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

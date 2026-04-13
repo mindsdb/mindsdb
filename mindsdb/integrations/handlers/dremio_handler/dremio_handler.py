@@ -16,7 +16,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -27,7 +27,7 @@ class DremioHandler(DatabaseHandler):
     This handler handles connection and execution of the Dremio statements.
     """
 
-    name = 'dremio'
+    name = "dremio"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -39,7 +39,7 @@ class DremioHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'dremio'
+        self.dialect = "dremio"
 
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -61,16 +61,20 @@ class DremioHandler(DatabaseHandler):
         """
 
         headers = {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
         }
 
-        data = '{' + f'"userName": "{self.connection_data["username"]}","password": "{self.connection_data["password"]}"' + '}'
+        data = (
+            "{"
+            + f'"userName": "{self.connection_data["username"]}","password": "{self.connection_data["password"]}"'
+            + "}"
+        )
 
-        response = requests.post(self.base_url + '/apiv2/login', headers=headers, data=data)
+        response = requests.post(self.base_url + "/apiv2/login", headers=headers, data=data)
 
         return {
-            'Authorization': '_dremio' + response.json()['token'],
-            'Content-Type': 'application/json',
+            "Authorization": "_dremio" + response.json()["token"],
+            "Content-Type": "application/json",
         }
 
     def disconnect(self):
@@ -95,7 +99,7 @@ class DremioHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Dremio, {e}!')
+            logger.error(f"Error connecting to Dremio, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -114,58 +118,51 @@ class DremioHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        query = query.replace('"', '\\"').replace('\n', ' ')
+        query = query.replace('"', '\\"').replace("\n", " ")
 
         need_to_close = self.is_connected is False
 
         auth_headers = self.connect()
-        data = '{' + f'"sql": "{query}"' + '}'
+        data = "{" + f'"sql": "{query}"' + "}"
 
         try:
-            sql_result = requests.post(self.base_url + '/api/v3/sql', headers=auth_headers, data=data)
+            sql_result = requests.post(self.base_url + "/api/v3/sql", headers=auth_headers, data=data)
 
-            job_id = sql_result.json()['id']
+            job_id = sql_result.json()["id"]
 
             if sql_result.status_code == 200:
-                logger.info('Job creation successful. Job id is: ' + job_id)
+                logger.info("Job creation successful. Job id is: " + job_id)
             else:
-                logger.info('Job creation failed.')
+                logger.info("Job creation failed.")
 
-            logger.info('Waiting for the job to complete...')
+            logger.info("Waiting for the job to complete...")
 
             job_status = requests.request("GET", self.base_url + "/api/v3/job/" + job_id, headers=auth_headers).json()[
-                'jobState']
+                "jobState"
+            ]
 
-            while job_status != 'COMPLETED':
-                if job_status == 'FAILED':
-                    logger.error('Job failed!')
+            while job_status != "COMPLETED":
+                if job_status == "FAILED":
+                    logger.error("Job failed!")
                     break
 
                 time.sleep(2)
-                job_status = requests.request("GET", self.base_url + "/api/v3/job/" + job_id, headers=auth_headers).json()[
-                    'jobState']
+                job_status = requests.request(
+                    "GET", self.base_url + "/api/v3/job/" + job_id, headers=auth_headers
+                ).json()["jobState"]
 
-            job_result = json.loads(requests.request("GET", self.base_url + "/api/v3/job/" + job_id + "/results", headers=auth_headers).text)
+            job_result = json.loads(
+                requests.request("GET", self.base_url + "/api/v3/job/" + job_id + "/results", headers=auth_headers).text
+            )
 
-            if 'errorMessage' not in job_result:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        job_result['rows']
-                    )
-                )
+            if "errorMessage" not in job_result:
+                response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(job_result["rows"]))
             else:
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(job_result['errorMessage'])
-                )
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(job_result["errorMessage"]))
 
         except Exception as e:
-            logger.error(f'Error running query: {query} on Dremio!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on Dremio!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -218,5 +215,5 @@ class DremioHandler(DatabaseHandler):
         query = f"DESCRIBE {table_name}"
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={'COLUMN_NAME': 'Field', 'DATA_TYPE': 'Type'})
+        result.data_frame = df.rename(columns={"COLUMN_NAME": "Field", "DATA_TYPE": "Type"})
         return result

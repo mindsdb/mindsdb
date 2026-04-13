@@ -5,6 +5,7 @@ from .__about__ import __version__ as version
 
 try:
     from .sap_erp_handler import SAPERPHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None

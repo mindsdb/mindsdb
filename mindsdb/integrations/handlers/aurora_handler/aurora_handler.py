@@ -6,9 +6,7 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse
-)
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 
@@ -20,7 +18,7 @@ class AuroraHandler(DatabaseHandler):
     This handler handles connection and execution of the Amazon Aurora statements.
     """
 
-    name = 'aurora'
+    name = "aurora"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -32,23 +30,20 @@ class AuroraHandler(DatabaseHandler):
         """
         super().__init__(name)
 
-        self.dialect = 'aurora'
+        self.dialect = "aurora"
         self.connection_data = connection_data
         self.kwargs = kwargs
 
         database_engine = ""
-        if 'db_engine' not in self.connection_data:
+        if "db_engine" not in self.connection_data:
             database_engine = self.get_database_engine()
 
-        if self.connection_data['db_engine'] == 'mysql' or database_engine == 'aurora':
-            self.db = MySQLHandler(
-                name=name + 'mysql',
-                connection_data=self.connection_data
-            )
-        elif self.connection_data['db_engine'] == 'postgresql' or database_engine == 'aurora-postgresql':
+        if self.connection_data["db_engine"] == "mysql" or database_engine == "aurora":
+            self.db = MySQLHandler(name=name + "mysql", connection_data=self.connection_data)
+        elif self.connection_data["db_engine"] == "postgresql" or database_engine == "aurora-postgresql":
             self.db = PostgresHandler(
-                name=name + 'postgresql',
-                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
+                name=name + "postgresql",
+                connection_data={key: self.connection_data[key] for key in self.connection_data if key != "db_engine"},
             )
         else:
             raise Exception("The database engine should be either MySQL or PostgreSQL!")
@@ -56,18 +51,22 @@ class AuroraHandler(DatabaseHandler):
     def get_database_engine(self):
         try:
             session = boto3.session.Session(
-                aws_access_key_id=self.connection_data['aws_access_key_id'],
-                aws_secret_access_key=self.connection_data['aws_secret_access_key']
+                aws_access_key_id=self.connection_data["aws_access_key_id"],
+                aws_secret_access_key=self.connection_data["aws_secret_access_key"],
             )
 
-            rds = session.client('rds')
+            rds = session.client("rds")
 
             response = rds.describe_db_clusters()
 
-            return next(item for item in response if item["DBClusterIdentifier"] == self.connection_data['host'].split('.')[0])['Engine']
+            return next(
+                item for item in response if item["DBClusterIdentifier"] == self.connection_data["host"].split(".")[0]
+            )["Engine"]
         except Exception as e:
-            logger.error(f'Error connecting to Aurora, {e}!')
-            logger.error('If the database engine is not provided as a parameter, please ensure that the credentials for the AWS account are passed in instead!')
+            logger.error(f"Error connecting to Aurora, {e}!")
+            logger.error(
+                "If the database engine is not provided as a parameter, please ensure that the credentials for the AWS account are passed in instead!"
+            )
 
     def __del__(self):
         self.db.__del__()

@@ -15,10 +15,10 @@ logger = log.getLogger(__name__)
 
 
 class DatasetsTable(APITable):
-    '''
+    """
     Datasets table contains information about CKAN datasets.
     This table is used to list all datasets available in CKAN that have datastore active resources.
-    '''
+    """
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
@@ -34,9 +34,7 @@ class DatasetsTable(APITable):
         data = []
         # Get only datastore active resources
         for pkg in packages:
-            datastore_active_resources = [
-                r for r in pkg.get("resources", []) if r.get("datastore_active")
-            ]
+            datastore_active_resources = [r for r in pkg.get("resources", []) if r.get("datastore_active")]
             data.append(
                 {
                     "id": pkg.get("id"),
@@ -60,10 +58,10 @@ class DatasetsTable(APITable):
 
 
 class ResourceIDsTable(APITable):
-    '''
+    """
     ResourceIDs table contains information about CKAN resources.
     This table is used to list all resources available in CKAN that are datastore active.
-    '''
+    """
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
@@ -111,11 +109,11 @@ class ResourceIDsTable(APITable):
 
 
 class DatastoreTable(APITable):
-    '''
+    """
     Datastore table is used to query CKAN datastore resources.
     This table is used to query data from CKAN datastore resources.
     It is using the datastore_search_sql API to execute SQL queries on CKAN datastore resources.
-    '''
+    """
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
@@ -128,9 +126,7 @@ class DatastoreTable(APITable):
             df = pd.DataFrame({"message": [message]})
             return df
 
-    def execute_resource_query(
-        self, query: ast.Select, resource_id: str
-    ) -> pd.DataFrame:
+    def execute_resource_query(self, query: ast.Select, resource_id: str) -> pd.DataFrame:
         sql_query = self.ast_to_sql(query, resource_id)
         result = self.handler.call_ckan_api("datastore_search_sql", {"sql": sql_query})
 
@@ -156,16 +152,11 @@ class DatastoreTable(APITable):
         where_conditions = [
             cond
             for cond in where_conditions
-            if not (
-                isinstance(cond, ast.BinaryOperation)
-                and cond.args[0].parts[-1] == "resource_id"
-            )
+            if not (isinstance(cond, ast.BinaryOperation) and cond.args[0].parts[-1] == "resource_id")
         ]
 
         if where_conditions:
-            sql_parts.append(
-                f'WHERE {" AND ".join(self.render_where(cond) for cond in where_conditions)}'
-            )
+            sql_parts.append(f"WHERE {' AND '.join(self.render_where(cond) for cond in where_conditions)}")
 
         # Handle LIMIT
         if query.limit:
@@ -186,9 +177,7 @@ class DatastoreTable(APITable):
 
     def extract_where_conditions(self, where):
         if isinstance(where, ast.BinaryOperation) and where.op == "and":
-            return self.extract_where_conditions(
-                where.args[0]
-            ) + self.extract_where_conditions(where.args[1])
+            return self.extract_where_conditions(where.args[0]) + self.extract_where_conditions(where.args[1])
         return [where]
 
     def render_where(self, where):
@@ -203,9 +192,7 @@ class DatastoreTable(APITable):
             # Add more operators as needed
 
         elif isinstance(where, ast.Constant):
-            return (
-                f"'{where.value}'" if isinstance(where.value, str) else str(where.value)
-            )
+            return f"'{where.value}'" if isinstance(where.value, str) else str(where.value)
 
         elif isinstance(where, ast.Identifier):
             return f'"{where.parts[-1]}"'
@@ -299,9 +286,7 @@ class CkanHandler(APIHandler):
     def parse_native_query(query: str):
         parts = query.split(":")
         if len(parts) != 2:
-            raise ValueError(
-                "Invalid query format. Expected 'method_name:param1=value1,param2=value2'"
-            )
+            raise ValueError("Invalid query format. Expected 'method_name:param1=value1,param2=value2'")
         method = parts[0].strip()
         params = {}
         if parts[1].strip():

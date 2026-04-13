@@ -359,10 +359,7 @@ class MSGraphAPITeamsApplicationPermissionsClient(MSGraphAPITeamsClient):
         Returns:
             List[Dict]: The groups data.
         """
-        return self.fetch_data_json(
-            "/groups",
-            params={"$filter": "resourceProvisioningOptions/Any(x:x eq 'Team')"}
-        )
+        return self.fetch_data_json("/groups", params={"$filter": "resourceProvisioningOptions/Any(x:x eq 'Team')"})
 
     def _get_chat_by_id(self, chat_id: Text) -> Dict:
         """
@@ -386,7 +383,9 @@ class MSGraphAPITeamsApplicationPermissionsClient(MSGraphAPITeamsClient):
         Returns:
             List[Dict]: The chats data.
         """
-        raise RuntimeError("Retrieving all chats is not supported with application permissions. Either use delegated permissions or provide a chat ID.")
+        raise RuntimeError(
+            "Retrieving all chats is not supported with application permissions. Either use delegated permissions or provide a chat ID."
+        )
 
     def _get_message_in_chat_by_id(self, chat_id: Text, message_id: Text) -> Dict:
         """

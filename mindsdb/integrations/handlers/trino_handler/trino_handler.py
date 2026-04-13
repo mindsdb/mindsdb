@@ -11,7 +11,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -24,13 +24,13 @@ class TrinoHandler(DatabaseHandler):
     kerberos is not implemented yet
     """
 
-    name = 'trino'
+    name = "trino"
 
     def __init__(self, name, connection_data, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
         self.connection_data = connection_data
-        '''
+        """
         service_name = kwargs.get('service_name')
         self.config_file_name = kwargs.get('config_file_name')
         self.trino_config_provider = TrinoConfigProvider(config_file_name=self.config_file_name)
@@ -46,54 +46,56 @@ class TrinoHandler(DatabaseHandler):
                                                   principal=principal,
                                                   ca_bundle=ca_bundle,
                                                   hostname_override=hostname_override)
-        '''
+        """
         self.connection = None
         self.is_connected = False
         self.with_clause = ""
 
     def connect(self):
-        """"
+        """ "
         Handles the connection to a Trino instance.
         """
         if self.is_connected is True:
             return self.connection
 
         # option configuration
-        http_scheme = 'http'
+        http_scheme = "http"
         auth = None
         auth_config = None
         password = None
 
-        if 'auth' in self.connection_data:
-            auth = self.connection_data['auth']
-        if 'password' in self.connection_data:
-            password = self.connection_data['password']
-        if 'http_scheme' in self.connection_data:
-            http_scheme = self.connection_data['http_scheme']
-        if 'with' in self.connection_data:
-            self.with_clause = self.connection_data['with']
+        if "auth" in self.connection_data:
+            auth = self.connection_data["auth"]
+        if "password" in self.connection_data:
+            password = self.connection_data["password"]
+        if "http_scheme" in self.connection_data:
+            http_scheme = self.connection_data["http_scheme"]
+        if "with" in self.connection_data:
+            self.with_clause = self.connection_data["with"]
 
-        if password and auth == 'kerberos':
+        if password and auth == "kerberos":
             raise Exception("Kerberos authorization doesn't support password.")
         elif password:
-            auth_config = BasicAuthentication(self.connection_data['user'], password)
+            auth_config = BasicAuthentication(self.connection_data["user"], password)
 
         if auth:
             conn = connect(
-                host=self.connection_data['host'],
-                port=self.connection_data['port'],
-                user=self.connection_data['user'],
-                catalog=self.connection_data['catalog'],
-                schema=self.connection_data['schema'],
+                host=self.connection_data["host"],
+                port=self.connection_data["port"],
+                user=self.connection_data["user"],
+                catalog=self.connection_data["catalog"],
+                schema=self.connection_data["schema"],
                 http_scheme=http_scheme,
-                auth=auth_config)
+                auth=auth_config,
+            )
         else:
             conn = connect(
-                host=self.connection_data['host'],
-                port=self.connection_data['port'],
-                user=self.connection_data['user'],
-                catalog=self.connection_data['catalog'],
-                schema=self.connection_data['schema'])
+                host=self.connection_data["host"],
+                port=self.connection_data["port"],
+                user=self.connection_data["user"],
+                catalog=self.connection_data["catalog"],
+                schema=self.connection_data["schema"],
+            )
 
         self.is_connected = True
         self.connection = conn
@@ -112,7 +114,7 @@ class TrinoHandler(DatabaseHandler):
             cur.execute("SELECT 1")
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
+            logger.error(f"Error connecting to Trino {self.connection_data['schema']}, {e}!")
             response.error_message = str(e)
 
         if response.success is False and self.is_connected is True:
@@ -132,21 +134,14 @@ class TrinoHandler(DatabaseHandler):
             result = cur.execute(query)
             if result and cur.description:
                 response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cur.description]
-                    )
+                    RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cur.description])
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
             connection.commit()
         except Exception as e:
-            logger.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error connecting to Trino {self.connection_data['schema']}, {e}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
         return response
 
     def query(self, query: ASTNode) -> Response:
@@ -158,11 +153,7 @@ class TrinoHandler(DatabaseHandler):
         # another method that directly manipulate ASTNOde is prefered
         renderer = SqlalchemyRender(sqlalchemy_trino.TrinoDialect)
         query_str = renderer.get_string(query, with_failback=True)
-        modified_query_str = re.sub(
-            r"(?is)(CREATE.+TABLE.+\(.*\))",
-            f"\\1 {self.with_clause}",
-            query_str
-        )
+        modified_query_str = re.sub(r"(?is)(CREATE.+TABLE.+\(.*\))", f"\\1 {self.with_clause}", query_str)
         return self.native_query(modified_query_str)
 
     def get_tables(self) -> Response:
@@ -173,7 +164,7 @@ class TrinoHandler(DatabaseHandler):
         query = "SHOW TABLES"
         response = self.native_query(query)
         df = response.data_frame
-        response.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        response.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return response
 
     def get_columns(self, table_name: str) -> Dict:

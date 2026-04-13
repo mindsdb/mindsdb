@@ -9,12 +9,7 @@ connection_args = OrderedDict(
         "description": "weaviate url/ local endpoint",
         "required": False,
     },
-    weaviate_api_key={
-        "type": ARG_TYPE.STR,
-        "description": "weaviate API KEY",
-        "required": False,
-        "secret": True
-    },
+    weaviate_api_key={"type": ARG_TYPE.STR, "description": "weaviate API KEY", "required": False, "secret": True},
     persistence_directory={
         "type": ARG_TYPE.STR,
         "description": "persistence directory for weaviate",

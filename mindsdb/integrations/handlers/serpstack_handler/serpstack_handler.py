@@ -5,14 +5,14 @@ from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.api_handler import APIHandler
 
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response
-)
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, HandlerResponse as Response
 
 from .serpstack_tables import (
-    OrganicResultsTable, ImageResultsTable,
-    VideoResultsTable, NewsResultsTable, ShoppingResultsTable
+    OrganicResultsTable,
+    ImageResultsTable,
+    VideoResultsTable,
+    NewsResultsTable,
+    ShoppingResultsTable,
 )
 
 
@@ -26,39 +26,39 @@ class SerpstackHandler(APIHandler):
         is_connected (bool): Whether or not the API client is connected to Serpstack.
     """
 
-    name = 'serpstack'
+    name = "serpstack"
 
     def __init__(self, name: str = None, **kwargs):
         super().__init__(name)
 
-        connection_data = kwargs.get('connection_data', {})
+        connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
 
         self.access_key = None
         self.base_url = None
         self.is_connected = False
 
-        if 'access_key' in self.connection_data:
-            self.access_key = self.connection_data['access_key']
+        if "access_key" in self.connection_data:
+            self.access_key = self.connection_data["access_key"]
 
         # register tables
         organic_results = OrganicResultsTable(self)
-        self._register_table('organic_results', organic_results)
+        self._register_table("organic_results", organic_results)
 
         image_results = ImageResultsTable(self)
-        self._register_table('image_results', image_results)
+        self._register_table("image_results", image_results)
 
         video_results = VideoResultsTable(self)
-        self._register_table('video_results', video_results)
+        self._register_table("video_results", video_results)
 
         news_results = NewsResultsTable(self)
-        self._register_table('news_results', news_results)
+        self._register_table("news_results", news_results)
 
         shopping_results = ShoppingResultsTable(self)
-        self._register_table('shopping_results', shopping_results)
+        self._register_table("shopping_results", shopping_results)
 
     def connect(self):
-        """ Sets up connection and returns the base URL to be used"""
+        """Sets up connection and returns the base URL to be used"""
 
         if self.is_connected:
             return self.base_url
@@ -72,10 +72,10 @@ class SerpstackHandler(APIHandler):
             api_request = requests.get(url)
             api_response = api_request.json()
             # error 105 means that user is on a free plan
-            if api_response['error']['code'] == 105:
+            if api_response["error"]["code"] == 105:
                 self.base_url = "http://api.serpstack.com/search"
             # error 310 means that missing search query, which means that user can use https
-            elif api_response['error']['code'] == 310:
+            elif api_response["error"]["code"] == 310:
                 self.base_url = "https://api.serpstack.com/search"
             # any other error suggests issues with the account
             else:
@@ -90,7 +90,7 @@ class SerpstackHandler(APIHandler):
             return None
 
     def check_connection(self) -> StatusResponse:
-        """ Checks connection to Serpstack API"""
+        """Checks connection to Serpstack API"""
         response = StatusResponse(False)
 
         try:
@@ -98,9 +98,7 @@ class SerpstackHandler(APIHandler):
             response.success = True
             response.copy_storage = True
         except Exception as e:
-            response.error_message = (
-                f"Failed to connect to Serpstack API: {str(e)}"
-            )
+            response.error_message = f"Failed to connect to Serpstack API: {str(e)}"
             logger.error(response.error_message)
             response.success = False
 

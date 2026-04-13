@@ -14,11 +14,7 @@ from mindsdb.integrations.handlers.notion_handler.notion_table import (
 class NotionHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "connection_data": {
-                "api_token": "secret_KHTlOzUN5fIwVlb1euOpBa4lwcJA7jEALoBGDRrlATx"
-            }
-        }
+        cls.kwargs = {"connection_data": {"api_token": "secret_KHTlOzUN5fIwVlb1euOpBa4lwcJA7jEALoBGDRrlATx"}}
         cls.handler = NotionHandler("test_notion_handler", **cls.kwargs)
         cls.db_table = NotionDatabaseTable(cls.handler)
         cls.pages_table = NotionPagesTable(cls.handler)
@@ -42,17 +38,13 @@ class NotionHandlerTest(unittest.TestCase):
         self.assertFalse(res.empty)
 
     def test_select_blocks(self):
-        query = (
-            "SELECT * FROM blocks WHERE block_id = '6d1480e0bf4b46e1a71be093f105d654'"
-        )
+        query = "SELECT * FROM blocks WHERE block_id = '6d1480e0bf4b46e1a71be093f105d654'"
         ast = parse_sql(query)
         res = self.blocks_table.select(ast)
         self.assertFalse(res.empty)
 
     def test_select_comment(self):
-        query = (
-            "SELECT * FROM comments where block_id = '169fa742a8374fe9a516caecfb33432a'"
-        )
+        query = "SELECT * FROM comments where block_id = '169fa742a8374fe9a516caecfb33432a'"
         ast = parse_sql(query)
         res = self.comments_table.select(ast)
         self.assertFalse(res.empty)

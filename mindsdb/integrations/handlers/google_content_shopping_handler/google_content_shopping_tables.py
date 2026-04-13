@@ -27,30 +27,29 @@ class AccountsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         # Get the start and end times from the conditions.
         params = {}
-        accepted_params = ['view', 'label', 'name']
+        accepted_params = ["view", "label", "name"]
         for op, arg1, arg2 in conditions:
-            if arg1 == 'accountId':
-                if op == '=':
+            if arg1 == "accountId":
+                if op == "=":
                     params[arg1] = arg2
-                elif op == '>':
-                    params['startId'] = arg2
-                elif op == '<':
-                    params['endId'] = arg2
+                elif op == ">":
+                    params["startId"] = arg2
+                elif op == "<":
+                    params["endId"] = arg2
                 else:
                     raise NotImplementedError
             if arg1 in accepted_params:
-                if op != '=':
+                if op != "=":
                     raise NotImplementedError
                 params[arg1] = arg2
             else:
                 raise NotImplementedError
 
         if query.limit is not None:
-            params['maxResults'] = query.limit.value
+            params["maxResults"] = query.limit.value
 
         # Get the accounts from the API.
-        accounts = self.handler. \
-            call_application_api(method_name='get_accounts', params=params)
+        accounts = self.handler.call_application_api(method_name="get_accounts", params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -86,43 +85,43 @@ class AccountsTable(APITable):
         # Get the start and end times from the conditions.
         params = {}
         for op, arg1, arg2 in conditions:
-            if arg1 == 'accountId':
-                if op == '=':
+            if arg1 == "accountId":
+                if op == "=":
                     params[arg1] = arg2
-                elif op == '>':
-                    params['startId'] = arg2
-                elif op == '<':
-                    params['endId'] = arg2
-            elif arg1 == 'force':
-                if op != '=':
+                elif op == ">":
+                    params["startId"] = arg2
+                elif op == "<":
+                    params["endId"] = arg2
+            elif arg1 == "force":
+                if op != "=":
                     raise NotImplementedError
                 params[arg1] = arg2
             else:
                 raise NotImplementedError
 
         # Delete the events in the Google Calendar API.
-        self.handler.call_application_api(method_name='delete_accounts', params=params)
+        self.handler.call_application_api(method_name="delete_accounts", params=params)
 
     def get_columns(self) -> list:
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            'name',
-            'kind',
-            'websiteUrl',
-            'adultContent',
-            'sellerId',
-            'users',
-            'id',
-            'youtubeChannelLinks',
-            'googleMyBusinessLink',
-            'businessInformation',
-            'automaticImprovements',
-            'adsLinks',
-            'cssId',
-            'labelIds',
-            'accountManagement',
-            'automaticLabelIds',
-            'conversionSettings'
+            "name",
+            "kind",
+            "websiteUrl",
+            "adultContent",
+            "sellerId",
+            "users",
+            "id",
+            "youtubeChannelLinks",
+            "googleMyBusinessLink",
+            "businessInformation",
+            "automaticImprovements",
+            "adsLinks",
+            "cssId",
+            "labelIds",
+            "accountManagement",
+            "automaticLabelIds",
+            "conversionSettings",
         ]
 
 
@@ -146,45 +145,44 @@ class OrdersTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         # Get the start and end times from the conditions.
         params = {}
-        accepted_params = ['statuses', 'acknowledged']
+        accepted_params = ["statuses", "acknowledged"]
         for op, arg1, arg2 in conditions:
-            if arg1 == 'orderId':
-                if op == '=':
+            if arg1 == "orderId":
+                if op == "=":
                     params[arg1] = arg2
-                elif op == '>':
-                    params['startId'] = arg2
-                elif op == '<':
-                    params['endId'] = arg2
+                elif op == ">":
+                    params["startId"] = arg2
+                elif op == "<":
+                    params["endId"] = arg2
                 else:
                     raise NotImplementedError
-            if arg1 == 'placedDateStart' or arg1 == 'placedDateEnd':
-                if op != '=':
+            if arg1 == "placedDateStart" or arg1 == "placedDateEnd":
+                if op != "=":
                     raise NotImplementedError
                 params[arg1] = parse_utc_date(arg2)
             if arg1 in accepted_params:
                 params[arg1] = parse_utc_date(arg2)
-                if op != '=':
+                if op != "=":
                     raise NotImplementedError
                 params[arg1] = arg2
             else:
                 raise NotImplementedError
 
         if query.order_by is not None:
-            if query.order_by[0].value == 'placedDate':
-                if query.order_by[1].value == 'ASC':
-                    params['orderBy'] = 'placedDateAsc'
+            if query.order_by[0].value == "placedDate":
+                if query.order_by[1].value == "ASC":
+                    params["orderBy"] = "placedDateAsc"
                 else:
-                    params['orderBy'] = 'placedDateDesc'
+                    params["orderBy"] = "placedDateDesc"
                 raise NotImplementedError
             else:
                 raise NotImplementedError
 
         if query.limit is not None:
-            params['maxResults'] = query.limit.value
+            params["maxResults"] = query.limit.value
 
         # Get the orders from the API.
-        orders = self.handler. \
-            call_application_api(method_name='get_orders', params=params)
+        orders = self.handler.call_application_api(method_name="get_orders", params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -220,46 +218,46 @@ class OrdersTable(APITable):
         # Get the start and end times from the conditions.
         params = {}
         for op, arg1, arg2 in conditions:
-            if arg1 == 'orderId':
-                if op == '=':
+            if arg1 == "orderId":
+                if op == "=":
                     params[arg1] = arg2
-                elif op == '>':
-                    params['startId'] = arg2
-                elif op == '<':
-                    params['endId'] = arg2
+                elif op == ">":
+                    params["startId"] = arg2
+                elif op == "<":
+                    params["endId"] = arg2
                 else:
                     raise NotImplementedError
             else:
                 raise NotImplementedError
 
         # Delete the events in the Google Calendar API.
-        self.handler.call_application_api(method_name='delete_orders', params=params)
+        self.handler.call_application_api(method_name="delete_orders", params=params)
 
     def get_columns(self) -> list:
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            'id',
-            'merchantId',
-            'merchantOrderId',
-            'kind',
-            'lineItems',
-            'status',
-            'paymentStatus',
-            'acknowledged',
-            'placedDate',
-            'deliveryDetails',
-            'customer',
-            'shippingCost',
-            'shippingCostTax',
-            'refunds',
-            'shipments',
-            'billingAddress',
-            'promotions',
-            'taxCollector',
-            'netPriceAmount',
-            'netTaxAmount',
-            'pickupDetails',
-            'annotations'
+            "id",
+            "merchantId",
+            "merchantOrderId",
+            "kind",
+            "lineItems",
+            "status",
+            "paymentStatus",
+            "acknowledged",
+            "placedDate",
+            "deliveryDetails",
+            "customer",
+            "shippingCost",
+            "shippingCostTax",
+            "refunds",
+            "shipments",
+            "billingAddress",
+            "promotions",
+            "taxCollector",
+            "netPriceAmount",
+            "netTaxAmount",
+            "pickupDetails",
+            "annotations",
         ]
 
 
@@ -283,24 +281,23 @@ class ProductsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         params = {}
         for op, arg1, arg2 in conditions:
-            if arg1 == 'productId':
-                if op == '=':
+            if arg1 == "productId":
+                if op == "=":
                     params[arg1] = arg2
-                elif op == '>':
-                    params['startId'] = arg2
-                elif op == '<':
-                    params['endId'] = arg2
+                elif op == ">":
+                    params["startId"] = arg2
+                elif op == "<":
+                    params["endId"] = arg2
                 else:
                     raise NotImplementedError
             else:
                 raise NotImplementedError
 
         if query.limit is not None:
-            params['maxResults'] = query.limit.value
+            params["maxResults"] = query.limit.value
 
         # Get the products from the API.
-        products = self.handler. \
-            call_application_api(method_name='get_products', params=params)
+        products = self.handler.call_application_api(method_name="get_products", params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -341,26 +338,26 @@ class ProductsTable(APITable):
             else:
                 raise NotImplementedError
 
-        params['updateMask'] = ','.join(params.keys())
+        params["updateMask"] = ",".join(params.keys())
         # Parse the query to get the conditions.
         conditions = extract_comparison_conditions(query.where)
         # Get the start and end times from the conditions.
 
         for op, arg1, arg2 in conditions:
-            if arg1 == 'productId':
-                if op == '=':
+            if arg1 == "productId":
+                if op == "=":
                     params[arg1] = arg2
-                elif op == '>':
-                    params['startId'] = arg2
-                elif op == '<':
-                    params['endId'] = arg2
+                elif op == ">":
+                    params["startId"] = arg2
+                elif op == "<":
+                    params["endId"] = arg2
                 else:
                     raise NotImplementedError
             else:
                 raise NotImplementedError
 
         # Update the products in the Google Merchant Center API.
-        self.handler.call_application_api(method_name='update_products', params=params)
+        self.handler.call_application_api(method_name="update_products", params=params)
 
     def delete(self, query: ast.Delete):
         """
@@ -378,55 +375,55 @@ class ProductsTable(APITable):
         # Get the start and end times from the conditions.
         params = {}
         for op, arg1, arg2 in conditions:
-            if arg1 == 'productId':
-                if op == '=':
+            if arg1 == "productId":
+                if op == "=":
                     params[arg1] = arg2
-                elif op == '>':
-                    params['startId'] = arg2
-                elif op == '<':
-                    params['endId'] = arg2
+                elif op == ">":
+                    params["startId"] = arg2
+                elif op == "<":
+                    params["endId"] = arg2
                 else:
                     raise NotImplementedError
-            elif arg1 == 'feedId':
-                if op != '=':
+            elif arg1 == "feedId":
+                if op != "=":
                     raise NotImplementedError
                 params[arg1] = arg2
             else:
                 raise NotImplementedError
 
         # Delete the products in the Google Merchant Center API.
-        self.handler.call_application_api(method_name='delete_products', params=params)
+        self.handler.call_application_api(method_name="delete_products", params=params)
 
     def get_columns(self) -> list:
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            'id',
-            'offerId',
-            'title',
-            'description',
-            'link',
-            'imageLink',
-            'contentLanguage',
-            'targetCountry',
-            'channel',
-            'channelExclusivity',
-            'price',
-            'salePrice',
-            'salePriceEffectiveDate',
-            'gtin',
-            'mpn',
-            'brand',
-            'condition',
-            'adult',
-            'multipack',
-            'isBundle',
-            'energyEfficiencyClass',
-            'minEnergyEfficiencyClass',
-            'maxEnergyEfficiencyClass',
-            'ageGroup',
-            'color',
-            'expirationDate',
-            'disclosureDate',
-            'availability',
-            'source'
+            "id",
+            "offerId",
+            "title",
+            "description",
+            "link",
+            "imageLink",
+            "contentLanguage",
+            "targetCountry",
+            "channel",
+            "channelExclusivity",
+            "price",
+            "salePrice",
+            "salePriceEffectiveDate",
+            "gtin",
+            "mpn",
+            "brand",
+            "condition",
+            "adult",
+            "multipack",
+            "isBundle",
+            "energyEfficiencyClass",
+            "minEnergyEfficiencyClass",
+            "maxEnergyEfficiencyClass",
+            "ageGroup",
+            "color",
+            "expirationDate",
+            "disclosureDate",
+            "availability",
+            "source",
         ]

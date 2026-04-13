@@ -2,13 +2,11 @@ from typing import List
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsDelegatedPermissionsClient
-from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition,
-    FilterOperator,
-    SortColumn
+from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import (
+    MSGraphAPITeamsDelegatedPermissionsClient,
 )
+from mindsdb.integrations.libs.api_handler import APIResource
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 
 
 class TeamsTable(APIResource):
@@ -22,7 +20,7 @@ class TeamsTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'teams' resource of the Microsoft Graph API.
@@ -75,7 +73,7 @@ class ChannelsTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'channels' resource of the Microsoft Graph API.
@@ -96,9 +94,7 @@ class ChannelsTable(APIResource):
                     team_id = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'teamId'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'teamId'.")
 
                 condition.applied = True
 
@@ -110,9 +106,7 @@ class ChannelsTable(APIResource):
                     channel_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'id'.")
 
                 condition.applied = True
 
@@ -155,7 +149,7 @@ class ChannelMessagesTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'channel messages' resource of the Microsoft Graph API.
@@ -176,9 +170,7 @@ class ChannelMessagesTable(APIResource):
                     group_id = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'channelIdentity_teamId'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'channelIdentity_teamId'.")
 
                 condition.applied = True
 
@@ -187,9 +179,7 @@ class ChannelMessagesTable(APIResource):
                     channel_id = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'channelIdentity_channelId'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'channelIdentity_channelId'.")
 
                 condition.applied = True
 
@@ -201,9 +191,7 @@ class ChannelMessagesTable(APIResource):
                     message_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'id'.")
 
                 condition.applied = True
 
@@ -263,7 +251,7 @@ class ChatsTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'chats' resource of the Microsoft Graph API.
@@ -287,9 +275,7 @@ class ChatsTable(APIResource):
                     chat_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'id'.")
 
                 condition.applied = True
 
@@ -307,15 +293,7 @@ class ChatsTable(APIResource):
         Returns:
             List[Text]: A list of attributes (columns) of the 'chats' resource.
         """
-        return [
-            "id",
-            "topic",
-            "createdDateTime",
-            "lastUpdatedDateTime",
-            "chatType",
-            "webUrl",
-            "isHiddenForAllMembers"
-        ]
+        return ["id", "topic", "createdDateTime", "lastUpdatedDateTime", "chatType", "webUrl", "isHiddenForAllMembers"]
 
 
 class ChatMessagesTable(APIResource):
@@ -329,7 +307,7 @@ class ChatMessagesTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Executes a parsed SELECT SQL query on the 'chat messages' resource of the Microsoft Graph API.
@@ -350,9 +328,7 @@ class ChatMessagesTable(APIResource):
                     chat_id = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'chatId'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'chatId'.")
 
                 condition.applied = True
 
@@ -364,9 +340,7 @@ class ChatMessagesTable(APIResource):
                     message_ids = condition.value
 
                 else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'id'."
-                    )
+                    raise ValueError(f"Unsupported operator '{condition.op}' for column 'id'.")
 
                 condition.applied = True
 

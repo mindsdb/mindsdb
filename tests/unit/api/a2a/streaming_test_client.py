@@ -9,9 +9,7 @@ class StreamingTestClient:
     def __init__(self):
         self.session = requests.Session()
 
-    def get_with_timing(
-        self, url: str, **kwargs
-    ) -> Tuple[List[Dict[str, Any]], List[float]]:
+    def get_with_timing(self, url: str, **kwargs) -> Tuple[List[Dict[str, Any]], List[float]]:
         """
         Make a GET request and track when each chunk is received.
 
@@ -50,9 +48,7 @@ class StreamingTestClient:
 
         return chunks, timestamps
 
-    def post_with_timing(
-        self, url: str, **kwargs
-    ) -> Tuple[List[Dict[str, Any]], List[float]]:
+    def post_with_timing(self, url: str, **kwargs) -> Tuple[List[Dict[str, Any]], List[float]]:
         """
         Make a POST request and track when each chunk is received.
 
@@ -127,9 +123,7 @@ class StreamingTestClient:
         if not timestamps or len(timestamps) < 2:
             return {"error": "Not enough chunks to analyze"}
 
-        intervals = [
-            timestamps[i] - timestamps[i - 1] for i in range(1, len(timestamps))
-        ]
+        intervals = [timestamps[i] - timestamps[i - 1] for i in range(1, len(timestamps))]
 
         return {
             "total_chunks": len(timestamps),

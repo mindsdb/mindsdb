@@ -13,7 +13,7 @@ class DerbyHandlerTest(unittest.TestCase):
                 "database": "seconddb",
             }
         }
-        cls.handler = DerbyHandler('test_derby_handler', **cls.kwargs)
+        cls.handler = DerbyHandler("test_derby_handler", **cls.kwargs)
 
     def test_0_connect(self):
         self.handler.connect()
@@ -22,15 +22,17 @@ class DerbyHandlerTest(unittest.TestCase):
         self.handler.check_connection()
 
     def test_2_create(self):
-        res = self.handler.query('CREATE TABLE TESTTABLEX (ID INT PRIMARY KEY, NAME VARCHAR(14))')
+        res = self.handler.query("CREATE TABLE TESTTABLEX (ID INT PRIMARY KEY, NAME VARCHAR(14))")
         assert res.type is RESPONSE_TYPE.OK
 
     def test_3_insert(self):
-        res = self.handler.query("INSERT INTO TESTTABLEX VALUES (100,'ONE HUNDRED'),(200,'TWO HUNDRED'),(300,'THREE HUNDRED')")
+        res = self.handler.query(
+            "INSERT INTO TESTTABLEX VALUES (100,'ONE HUNDRED'),(200,'TWO HUNDRED'),(300,'THREE HUNDRED')"
+        )
         assert res.type is RESPONSE_TYPE.OK
 
     def test_4_select(self):
-        res = self.handler.query('SELECT * FROM TESTTABLEX')
+        res = self.handler.query("SELECT * FROM TESTTABLEX")
         assert res.type is RESPONSE_TYPE.TABLE
 
     def test_5_get_tables(self):
@@ -42,5 +44,5 @@ class DerbyHandlerTest(unittest.TestCase):
         assert res.type is RESPONSE_TYPE.TABLE
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

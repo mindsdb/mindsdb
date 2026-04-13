@@ -5,7 +5,7 @@ from mindsdb.integrations.handlers.paypal_handler.paypal_tables import (
     PaymentsTable,
     SubscriptionsTable,
     OrdersTable,
-    PayoutsTable
+    PayoutsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -25,7 +25,7 @@ class PayPalHandler(APIHandler):
     The PayPal handler implementation.
     """
 
-    name = 'paypal'
+    name = "paypal"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -71,9 +71,9 @@ class PayPalHandler(APIHandler):
 
         self.connection = paypalrestsdk.Api(
             {
-                "mode": self.connection_data['mode'],
-                "client_id": self.connection_data['client_id'],
-                "client_secret": self.connection_data['client_secret'],
+                "mode": self.connection_data["mode"],
+                "client_id": self.connection_data["client_id"],
+                "client_secret": self.connection_data["client_secret"],
             }
         )
 
@@ -95,7 +95,7 @@ class PayPalHandler(APIHandler):
             connection.get_access_token()
             response.success = True
         except Exception as e:
-            logger.error('Error connecting to PayPal!')
+            logger.error("Error connecting to PayPal!")
             response.error_message = str(e)
 
         self.is_connected = response.success

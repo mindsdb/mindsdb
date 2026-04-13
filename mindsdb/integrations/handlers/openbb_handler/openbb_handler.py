@@ -37,10 +37,10 @@ class OpenBBHandler(APIHandler):
         # Initialize OpenBB
         # pylint: disable=import-outside-toplevel
         from openbb.package.__extensions__ import Extensions
+
         self.obb = create_app(Extensions)
 
         for cmd in list(self.obb.coverage.command_model.keys()):
-
             openbb_params = self.obb.coverage.command_model[cmd]["openbb"]["QueryParams"]
             openbb_data = self.obb.coverage.command_model[cmd]["openbb"]["Data"]
 
@@ -53,22 +53,24 @@ class OpenBBHandler(APIHandler):
             table_class = create_table_class(
                 params_metadata=openbb_params,
                 response_metadata=openbb_data,
-                obb_function=reduce(getattr, cmd[1:].split('.'), self.obb),
-                func_docs=f"https://docs.openbb.co/platform/reference/{cmd[1:].replace('.', '/')}"
+                obb_function=reduce(getattr, cmd[1:].split("."), self.obb),
+                func_docs=f"https://docs.openbb.co/platform/reference/{cmd[1:].replace('.', '/')}",
             )
-            self._register_table(cmd.replace('.', '_')[1:], table_class(self))
+            self._register_table(cmd.replace(".", "_")[1:], table_class(self))
 
             # Creates the data retrieval function for each provider
             # e.g. obb.equity.price.historical_polygon, obb.equity.price.historical_intrinio
             for provider in list(self.obb.coverage.command_model[cmd].keys()):
-
                 # Skip the openbb provider since we already created it and it will look like obb.equity.price.historical
                 if provider == "openbb":
                     continue
 
                 provider_extra_params = self.obb.coverage.command_model[cmd][provider]["QueryParams"]
                 combined_params = provider_extra_params.copy()  # create a copy to avoid modifying the original
-                combined_params["fields"] = {**openbb_params["fields"], **provider_extra_params["fields"]}  # merge the fields
+                combined_params["fields"] = {
+                    **openbb_params["fields"],
+                    **provider_extra_params["fields"],
+                }  # merge the fields
 
                 provider_extra_data = self.obb.coverage.command_model[cmd][provider]["Data"]
                 combined_data = provider_extra_data.copy()  # create a copy to avoid modifying the original
@@ -77,9 +79,9 @@ class OpenBBHandler(APIHandler):
                 table_class = create_table_class(
                     params_metadata=combined_params,
                     response_metadata=combined_data,
-                    obb_function=reduce(getattr, cmd[1:].split('.'), self.obb),
+                    obb_function=reduce(getattr, cmd[1:].split("."), self.obb),
                     func_docs=f"https://docs.openbb.co/platform/reference/{cmd[1:].replace('.', '/')}",
-                    provider=provider
+                    provider=provider,
                 )
                 self._register_table(f"{cmd.replace('.', '_')[1:]}_{provider}", table_class(self))
 

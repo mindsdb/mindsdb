@@ -5,7 +5,8 @@ class CockroachHandler(PostgresHandler):
     """
     This handler handles connection and execution of the Cockroachdb statements.
     """
-    name = 'cockroachdb'
+
+    name = "cockroachdb"
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name, **kwargs)

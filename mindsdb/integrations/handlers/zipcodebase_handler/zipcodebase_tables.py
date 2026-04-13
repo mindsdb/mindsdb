@@ -30,11 +30,7 @@ class ZipCodeBaseCodeLocationTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'code_to_location',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "code_to_location", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -43,7 +39,7 @@ class ZipCodeBaseCodeLocationTable(APITable):
 
         for op, arg1, arg2 in where_conditions:
             if arg1 == "codes":
-                if op == '=':
+                if op == "=":
                     search_params["codes"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for codes column.")
@@ -67,11 +63,7 @@ class ZipCodeBaseCodeLocationTable(APITable):
         code_to_location_df = pd.json_normalize(self.clean_resp(content["results"]))
 
         select_statement_executor = SELECTQueryExecutor(
-            code_to_location_df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            code_to_location_df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         code_to_location_df = select_statement_executor.execute_query()
@@ -107,7 +99,7 @@ class ZipCodeBaseCodeLocationTable(APITable):
             "state_en",
             "state_code",
             "province",
-            "province_code"
+            "province_code",
         ]
 
 
@@ -133,11 +125,7 @@ class ZipCodeBaseCodeInRadiusTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'codes_within_radius',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "codes_within_radius", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -146,25 +134,25 @@ class ZipCodeBaseCodeInRadiusTable(APITable):
 
         for op, arg1, arg2 in where_conditions:
             if arg1 == "code":
-                if op == '=':
+                if op == "=":
                     search_params["code"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for code column.")
 
             if arg1 == "radius":
-                if op == '=':
+                if op == "=":
                     search_params["radius"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for radius column.")
 
             if arg1 == "country":
-                if op == '=':
+                if op == "=":
                     search_params["country"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for country column.")
 
             if arg1 == "unit":
-                if op == '=':
+                if op == "=":
                     search_params["unit"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for unit column.")
@@ -179,7 +167,12 @@ class ZipCodeBaseCodeInRadiusTable(APITable):
 
         code_to_location_df = pd.DataFrame(columns=self.get_columns())
 
-        response = self.handler.client.codes_within_radius(search_params.get("code"), search_params.get("radius"), search_params.get("country"), search_params.get("unit", "km"))
+        response = self.handler.client.codes_within_radius(
+            search_params.get("code"),
+            search_params.get("radius"),
+            search_params.get("country"),
+            search_params.get("unit", "km"),
+        )
 
         self.check_res(res=response)
 
@@ -189,11 +182,7 @@ class ZipCodeBaseCodeInRadiusTable(APITable):
         code_to_location_df = pd.json_normalize(content["results"])
 
         select_statement_executor = SELECTQueryExecutor(
-            code_to_location_df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            code_to_location_df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         code_to_location_df = select_statement_executor.execute_query()
@@ -212,14 +201,7 @@ class ZipCodeBaseCodeInRadiusTable(APITable):
             List of columns
         """
 
-        return [
-            "code",
-            "city",
-            "state",
-            "city_en",
-            "state_en",
-            "distance"
-        ]
+        return ["code", "city", "state", "city_en", "state_en", "distance"]
 
 
 class ZipCodeBaseCodeByCityTable(APITable):
@@ -244,11 +226,7 @@ class ZipCodeBaseCodeByCityTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'codes_by_city',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "codes_by_city", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -257,13 +235,13 @@ class ZipCodeBaseCodeByCityTable(APITable):
 
         for op, arg1, arg2 in where_conditions:
             if arg1 == "city":
-                if op == '=':
+                if op == "=":
                     search_params["city"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for city column.")
 
             if arg1 == "country":
-                if op == '=':
+                if op == "=":
                     search_params["country"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for country column.")
@@ -288,11 +266,7 @@ class ZipCodeBaseCodeByCityTable(APITable):
         codes_by_city_df = pd.json_normalize({"codes": content["results"]})
 
         select_statement_executor = SELECTQueryExecutor(
-            codes_by_city_df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            codes_by_city_df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         codes_by_city_df = select_statement_executor.execute_query()
@@ -311,9 +285,7 @@ class ZipCodeBaseCodeByCityTable(APITable):
             List of columns
         """
 
-        return [
-            "codes"
-        ]
+        return ["codes"]
 
 
 class ZipCodeBaseCodeByStateTable(APITable):
@@ -338,11 +310,7 @@ class ZipCodeBaseCodeByStateTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'codes_by_state',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "codes_by_state", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -351,13 +319,13 @@ class ZipCodeBaseCodeByStateTable(APITable):
 
         for op, arg1, arg2 in where_conditions:
             if arg1 == "state":
-                if op == '=':
+                if op == "=":
                     search_params["state"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for state column.")
 
             if arg1 == "country":
-                if op == '=':
+                if op == "=":
                     search_params["country"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for country column.")
@@ -382,11 +350,7 @@ class ZipCodeBaseCodeByStateTable(APITable):
         codes_by_state_df = pd.json_normalize({"codes": content["results"]})
 
         select_statement_executor = SELECTQueryExecutor(
-            codes_by_state_df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            codes_by_state_df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         codes_by_state_df = select_statement_executor.execute_query()
@@ -405,9 +369,7 @@ class ZipCodeBaseCodeByStateTable(APITable):
             List of columns
         """
 
-        return [
-            "codes"
-        ]
+        return ["codes"]
 
 
 class ZipCodeBaseStatesByCountryTable(APITable):
@@ -432,11 +394,7 @@ class ZipCodeBaseStatesByCountryTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'states_by_country',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "states_by_country", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -444,9 +402,8 @@ class ZipCodeBaseStatesByCountryTable(APITable):
         subset_where_conditions = []
 
         for op, arg1, arg2 in where_conditions:
-
             if arg1 == "country":
-                if op == '=':
+                if op == "=":
                     search_params["country"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for country column.")
@@ -454,7 +411,7 @@ class ZipCodeBaseStatesByCountryTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("country" in search_params)
+        filter_flag = "country" in search_params
 
         if not filter_flag:
             raise NotImplementedError("`country` column has to be present in where clause.")
@@ -471,11 +428,7 @@ class ZipCodeBaseStatesByCountryTable(APITable):
         states_by_country_df = pd.json_normalize({"states": content["results"]})
 
         select_statement_executor = SELECTQueryExecutor(
-            states_by_country_df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            states_by_country_df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         states_by_country_df = select_statement_executor.execute_query()
@@ -494,6 +447,4 @@ class ZipCodeBaseStatesByCountryTable(APITable):
             List of columns
         """
 
-        return [
-            "states"
-        ]
+        return ["states"]

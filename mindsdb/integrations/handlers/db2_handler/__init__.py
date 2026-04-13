@@ -1,8 +1,10 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .connection_args import connection_args, connection_args_example
+
 try:
     from .db2_handler import DB2Handler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None

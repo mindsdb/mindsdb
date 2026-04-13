@@ -1,5 +1,1 @@
-model_using_args = {
-    'api_key': {
-        'secret': True
-    }
-}
+model_using_args = {"api_key": {"secret": True}}

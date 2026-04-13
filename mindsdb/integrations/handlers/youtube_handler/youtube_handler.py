@@ -17,9 +17,9 @@ from googleapiclient.discovery import build
 from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleUserOAuth2Manager
 
 DEFAULT_SCOPES = [
-    'https://www.googleapis.com/auth/youtube',
-    'https://www.googleapis.com/auth/youtube.force-ssl',
-    'https://www.googleapis.com/auth/youtubepartner'
+    "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/youtubepartner",
 ]
 
 logger = log.getLogger(__name__)
@@ -43,25 +43,25 @@ class YoutubeHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        self.handler_storage = kwargs['handler_storage']
+        self.handler_storage = kwargs["handler_storage"]
 
-        self.credentials_url = self.connection_data.get('credentials_url', None)
-        self.credentials_file = self.connection_data.get('credentials_file', None)
-        if self.connection_data.get('credentials'):
-            self.credentials_file = self.connection_data.pop('credentials')
+        self.credentials_url = self.connection_data.get("credentials_url", None)
+        self.credentials_file = self.connection_data.get("credentials_file", None)
+        if self.connection_data.get("credentials"):
+            self.credentials_file = self.connection_data.pop("credentials")
         if not self.credentials_file and not self.credentials_url:
             # try to get from config
-            yt_config = Config().get('handlers', {}).get('youtube', {})
-            secret_file = yt_config.get('credentials_file')
-            secret_url = yt_config.get('credentials_url')
+            yt_config = Config().get("handlers", {}).get("youtube", {})
+            secret_file = yt_config.get("credentials_file")
+            secret_url = yt_config.get("credentials_url")
             if secret_file:
                 self.credentials_file = secret_file
             elif secret_url:
                 self.credentials_url = secret_url
 
-        self.youtube_api_token = self.connection_data.get('youtube_api_token', None)
+        self.youtube_api_token = self.connection_data.get("youtube_api_token", None)
 
-        self.scopes = self.connection_data.get('scopes', DEFAULT_SCOPES)
+        self.scopes = self.connection_data.get("scopes", DEFAULT_SCOPES)
 
         youtube_video_comments_data = YoutubeCommentsTable(self)
         self._register_table("comments", youtube_video_comments_data)
@@ -82,12 +82,16 @@ class YoutubeHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        google_oauth2_manager = GoogleUserOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_data.get('code'))
+        google_oauth2_manager = GoogleUserOAuth2Manager(
+            self.handler_storage,
+            self.scopes,
+            self.credentials_file,
+            self.credentials_url,
+            self.connection_data.get("code"),
+        )
         creds = google_oauth2_manager.get_oauth2_credentials()
 
-        youtube = build(
-            "youtube", "v3", developerKey=self.youtube_api_token, credentials=creds
-        )
+        youtube = build("youtube", "v3", developerKey=self.youtube_api_token, credentials=creds)
         self.connection = youtube
 
         return self.connection

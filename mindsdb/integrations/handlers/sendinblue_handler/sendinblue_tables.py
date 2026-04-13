@@ -45,9 +45,7 @@ class EmailCampaignsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query, 'email_campaigns', self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "email_campaigns", self.get_columns())
         (
             selected_columns,
             where_conditions,
@@ -55,9 +53,7 @@ class EmailCampaignsTable(APITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        email_campaigns_df = pd.json_normalize(
-            self.get_email_campaigns(limit=result_limit)
-        )
+        email_campaigns_df = pd.json_normalize(self.get_email_campaigns(limit=result_limit))
 
         select_statement_executor = SELECTQueryExecutor(
             email_campaigns_df, selected_columns, where_conditions, order_by_conditions
@@ -99,12 +95,10 @@ class EmailCampaignsTable(APITable):
         # this retrieves the current list of email campaigns and normalize the data into a DataFrame
         email_campaigns_df = pd.json_normalize(self.get_email_campaigns())
         # this execute the delete query  to filter out the campaigns to be deleted
-        delete_query_executor = DELETEQueryExecutor(
-            email_campaigns_df, where_conditions
-        )
+        delete_query_executor = DELETEQueryExecutor(email_campaigns_df, where_conditions)
         # this gets the updated DataFrame after executing  delete conditions
         email_campaigns_df = delete_query_executor.execute_query()
-        campaign_ids = email_campaigns_df['id'].tolist()
+        campaign_ids = email_campaigns_df["id"].tolist()
         self.delete_email_campaigns(campaign_ids)
 
     def delete_email_campaigns(self, campaign_ids: List[Text]) -> None:
@@ -114,16 +108,12 @@ class EmailCampaignsTable(APITable):
         for campaign_id in campaign_ids:
             try:
                 email_campaigns_api_instance.delete_email_campaign(campaign_id)
-                logger.info(f'Email Campaign {campaign_id} deleted')
+                logger.info(f"Email Campaign {campaign_id} deleted")
             except ApiException as e:
-                logger.error(
-                    f"Exception when calling EmailCampaignsApi->delete_email_campaign: {e}\n"
-                )
-                raise RuntimeError(
-                    f"Failed to execute the delete command for Email Campaign {campaign_id}"
-                ) from e
+                logger.error(f"Exception when calling EmailCampaignsApi->delete_email_campaign: {e}\n")
+                raise RuntimeError(f"Failed to execute the delete command for Email Campaign {campaign_id}") from e
 
-    def update(self, query: 'ast.Update') -> None:
+    def update(self, query: "ast.Update") -> None:
         """
         Updates data in Sendinblue "PUT /emailCampaigns/{campaignId}" API endpoint.
 
@@ -148,19 +138,15 @@ class EmailCampaignsTable(APITable):
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
         email_campaigns_df = pd.json_normalize(self.get_email_campaigns())
-        update_query_executor = UPDATEQueryExecutor(
-            email_campaigns_df, where_conditions
-        )
+        update_query_executor = UPDATEQueryExecutor(email_campaigns_df, where_conditions)
         # this retrieves the current list of email campaigns
         email_campaigns_df = update_query_executor.execute_query()
         # this  extracts the IDs of the campaigns that have been updated
-        campaign_ids = email_campaigns_df['id'].tolist()
+        campaign_ids = email_campaigns_df["id"].tolist()
 
         self.update_email_campaigns(campaign_ids, values_to_update)
 
-    def update_email_campaigns(
-        self, campaign_ids: List[int], values_to_update: Dict
-    ) -> None:
+    def update_email_campaigns(self, campaign_ids: List[int], values_to_update: Dict) -> None:
         # this establish a connection to Sendinblue API
 
         connection = self.handler.connect()
@@ -168,19 +154,13 @@ class EmailCampaignsTable(APITable):
 
         for campaign_id in campaign_ids:
             try:
-                email_campaigns_api_instance.update_email_campaign(
-                    campaign_id, values_to_update
-                )
-                logger.info(f'Email Campaign {campaign_id} updated')
+                email_campaigns_api_instance.update_email_campaign(campaign_id, values_to_update)
+                logger.info(f"Email Campaign {campaign_id} updated")
             except ApiException as e:
-                logger.error(
-                    f"Exception when calling EmailCampaignsApi->update_email_campaign: {e}\n"
-                )
-                raise RuntimeError(
-                    f"Failed to execute the update command for Email Campaign {campaign_id}"
-                ) from e
+                logger.error(f"Exception when calling EmailCampaignsApi->update_email_campaign: {e}\n")
+                raise RuntimeError(f"Failed to execute the update command for Email Campaign {campaign_id}") from e
 
-    def insert(self, query: 'ast.Insert') -> None:
+    def insert(self, query: "ast.Insert") -> None:
         """
         Inserts new email campaigns into Sendinblue.
 
@@ -198,15 +178,20 @@ class EmailCampaignsTable(APITable):
         """
         # this defines columns that are supported and mandatory for an INSERT operation.
         supported_columns = [
-            'name', 'subject', 'sender_name', 'sender_email',
-            'html_content', 'scheduled_at', 'recipients_lists', 'tag'
+            "name",
+            "subject",
+            "sender_name",
+            "sender_email",
+            "html_content",
+            "scheduled_at",
+            "recipients_lists",
+            "tag",
         ]
-        mandatory_columns = ['name', 'subject', 'sender_name', 'sender_email', 'html_content']
+        mandatory_columns = ["name", "subject", "sender_name", "sender_email", "html_content"]
 
         # this Parse the INSERT query to extract data.
         insert_statement_parser = INSERTQueryParser(
-            query, supported_columns=supported_columns,
-            mandatory_columns=mandatory_columns, all_mandatory=True
+            query, supported_columns=supported_columns, mandatory_columns=mandatory_columns, all_mandatory=True
         )
         email_campaigns_data = insert_statement_parser.parse_query()
 
@@ -214,18 +199,18 @@ class EmailCampaignsTable(APITable):
         for email_campaign_data in email_campaigns_data:
             # this extracts and format sender information.
             sender_info = {}
-            if 'sender_name' in email_campaign_data:
-                sender_info['name'] = email_campaign_data.pop('sender_name')
-            if 'sender_email' in email_campaign_data and email_campaign_data['sender_email'] is not None:
-                sender_info['email'] = email_campaign_data.pop('sender_email')
-            if 'sender_id' in email_campaign_data and email_campaign_data['sender_id'] is not None:
-                sender_info['id'] = email_campaign_data.pop('sender_id')
+            if "sender_name" in email_campaign_data:
+                sender_info["name"] = email_campaign_data.pop("sender_name")
+            if "sender_email" in email_campaign_data and email_campaign_data["sender_email"] is not None:
+                sender_info["email"] = email_campaign_data.pop("sender_email")
+            if "sender_id" in email_campaign_data and email_campaign_data["sender_id"] is not None:
+                sender_info["id"] = email_campaign_data.pop("sender_id")
 
             # this validates sender information.
-            if not sender_info.get('name') or (not sender_info.get('email') and not sender_info.get('id')):
+            if not sender_info.get("name") or (not sender_info.get("email") and not sender_info.get("id")):
                 raise ValueError("Sender information is incomplete or incorrectly formatted.")
 
-            email_campaign_data['sender'] = sender_info
+            email_campaign_data["sender"] = sender_info
 
             # this creates each email campaign.
             self.create_email_campaign(email_campaign_data)
@@ -260,17 +245,17 @@ class EmailCampaignsTable(APITable):
             created_campaign = email_campaigns_api_instance.create_email_campaign(email_campaign)
 
             # this checks and log the response from the API.
-            if 'id' not in created_campaign.to_dict():
-                logger.error('Email campaign creation failed')
+            if "id" not in created_campaign.to_dict():
+                logger.error("Email campaign creation failed")
             else:
-                logger.info(f'Email Campaign {created_campaign.to_dict()["id"]} created')
+                logger.info(f"Email Campaign {created_campaign.to_dict()['id']} created")
         except ApiException as e:
             # this handles API exceptions and log the detailed response.
             logger.error(f"Exception when calling EmailCampaignsApi->create_email_campaign: {e}")
-            if hasattr(e, 'body'):
+            if hasattr(e, "body"):
                 logger.error(f"Sendinblue API response body: {e.body}")
-            raise Exception(f'Failed to create Email Campaign with data: {email_campaign_data}') from e
+            raise Exception(f"Failed to create Email Campaign with data: {email_campaign_data}") from e
         except Exception as e:
             # this handles any other unexpected exceptions.
             logger.error(f"Unexpected error occurred: {e}")
-            raise Exception(f'Unexpected error during Email Campaign creation: {e}') from e
+            raise Exception(f"Unexpected error during Email Campaign creation: {e}") from e

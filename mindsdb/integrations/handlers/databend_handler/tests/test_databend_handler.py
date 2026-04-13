@@ -11,15 +11,15 @@ class DatabendHandlerTest(unittest.TestCase):
             "port": 443,
             "user": "root",
             "password": "password",
-            "database": "test_db"
+            "database": "test_db",
         }
-        cls.handler = DatabendHandler('test_databend_handler', connection_data)
+        cls.handler = DatabendHandler("test_databend_handler", connection_data)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
 
     def test_1_select_query(self):
-        query = 'SELECT * FROM covid_19_us_2022_4668 LIMIT 10'
+        query = "SELECT * FROM covid_19_us_2022_4668 LIMIT 10"
         result = self.handler.query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 
@@ -29,9 +29,9 @@ class DatabendHandlerTest(unittest.TestCase):
 
     def test_3_describe_table(self):
         described = self.handler.get_columns("covid_19_us_2022_4668")
-        print('described', described)
+        print("described", described)
         assert described.type is RESPONSE_TYPE.TABLE
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

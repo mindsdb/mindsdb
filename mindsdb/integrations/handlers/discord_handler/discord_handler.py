@@ -23,7 +23,7 @@ class DiscordHandler(APIHandler):
     The Discord handler implementation.
     """
 
-    name = 'discord'
+    name = "discord"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -41,7 +41,7 @@ class DiscordHandler(APIHandler):
         self.is_connected = False
 
         messages = MessagesTable(self)
-        self._register_table('messages', messages)
+        self._register_table("messages", messages)
 
     def connect(self):
         """
@@ -55,12 +55,12 @@ class DiscordHandler(APIHandler):
         if self.is_connected:
             return StatusResponse(True)
 
-        url = 'https://discord.com/api/v10/applications/@me'
+        url = "https://discord.com/api/v10/applications/@me"
         result = requests.get(
             url,
             headers={
-                'Authorization': f'Bot {self.connection_data["token"]}',
-                'Content-Type': 'application/json',
+                "Authorization": f"Bot {self.connection_data['token']}",
+                "Content-Type": "application/json",
             },
         )
 
@@ -83,7 +83,7 @@ class DiscordHandler(APIHandler):
             response.success = True
         except Exception as e:
             response.error_message = e
-            logger.error(f'Error connecting to Discord: {response.error_message}')
+            logger.error(f"Error connecting to Discord: {response.error_message}")
 
         self.is_connected = response.success
 
@@ -115,13 +115,9 @@ class DiscordHandler(APIHandler):
             int
         """
         # https://discord.com/developers/docs/reference#snowflakes
-        return str(
-            int(parse_utc_date(utc_date).timestamp() * 1000 - 1420070400000) << 22
-        )
+        return str(int(parse_utc_date(utc_date).timestamp() * 1000 - 1420070400000) << 22)
 
-    def call_discord_api(
-        self, operation: str, params: dict = None, filters: list = None
-    ):
+    def call_discord_api(self, operation: str, params: dict = None, filters: list = None):
         """
         Call a Discord API method.
         Args:
@@ -131,55 +127,51 @@ class DiscordHandler(APIHandler):
             pd.DataFrame
         """
 
-        if operation == 'get_messages':
-            param_strings = {'limit': params['limit']}
-            if 'after' in params:
-                param_strings['after'] = self.utc_to_snowflake(params['after'])
-            if 'before' in params:
-                param_strings['before'] = self.utc_to_snowflake(params['before'])
+        if operation == "get_messages":
+            param_strings = {"limit": params["limit"]}
+            if "after" in params:
+                param_strings["after"] = self.utc_to_snowflake(params["after"])
+            if "before" in params:
+                param_strings["before"] = self.utc_to_snowflake(params["before"])
 
-            url = (
-                f'https://discord.com/api/v10/channels/{params["channel_id"]}/messages'
-            )
+            url = f"https://discord.com/api/v10/channels/{params['channel_id']}/messages"
             result = requests.get(
                 url,
                 headers={
-                    'Authorization': f'Bot {self.connection_data["token"]}',
-                    'Content-Type': 'application/json',
+                    "Authorization": f"Bot {self.connection_data['token']}",
+                    "Content-Type": "application/json",
                 },
                 params=param_strings,
             )
 
             if result.status_code != 200:
-                raise ValueError(f'Error calling Discord API: {result.json()}')
+                raise ValueError(f"Error calling Discord API: {result.json()}")
 
             json = result.json()
             for message in json:
-                author = message.get('author')
+                author = message.get("author")
                 if author is not None:
-                    message['author_id'] = author.get('id')
-                    message['author_username'] = author.get('username')
-                    message['author_global_name'] = author.get('global_name')
+                    message["author_id"] = author.get("id")
+                    message["author_username"] = author.get("username")
+                    message["author_global_name"] = author.get("global_name")
 
             df = pd.DataFrame.from_records(json)
             return df
-        elif operation == 'send_message':
-            url = (
-                f'https://discord.com/api/v10/channels/{params["channel_id"]}/messages'
-            )
+        elif operation == "send_message":
+            url = f"https://discord.com/api/v10/channels/{params['channel_id']}/messages"
             result = requests.post(
                 url,
                 headers={
-                    'Authorization': f'Bot {self.connection_data["token"]}',
-                    'Content-Type': 'application/json',
+                    "Authorization": f"Bot {self.connection_data['token']}",
+                    "Content-Type": "application/json",
                 },
                 json={
-                    'content': params['text'],
+                    "content": params["text"],
                 },
             )
 
             if result.status_code != 200:
-                raise ValueError(f'Error calling Discord API: {result.json()}')
+                raise ValueError(f"Error calling Discord API: {result.json()}")
 
             df = pd.DataFrame.from_records([result.json()])
             return df

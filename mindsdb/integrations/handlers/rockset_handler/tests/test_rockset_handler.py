@@ -6,15 +6,8 @@ from mindsdb.integrations.handlers.rockset_handler.rockset_handler import Rockse
 class RocksetHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "connection_args": {
-                "host": '127.0.0.1',
-                "port": 3306,
-                "user": "rockset",
-                "password": "rockset"
-            }
-        }
-        cls.handler = RocksetHandler('test_rockset_handler', **cls.kwargs)
+        cls.kwargs = {"connection_args": {"host": "127.0.0.1", "port": 3306, "user": "rockset", "password": "rockset"}}
+        cls.handler = RocksetHandler("test_rockset_handler", **cls.kwargs)
 
     def test_0_connect(self):
         self.handler.check_connection()
@@ -24,10 +17,10 @@ class RocksetHandlerTest(unittest.TestCase):
         self.assertEqual(tables, [])
 
     def test_2_get_columns(self):
-        columns = self.handler.get_columns('test')
+        columns = self.handler.get_columns("test")
         self.assertEqual(columns, [])
 
     def test_3_query(self):
-        response = self.handler.query('SELECT 1')
-        self.assertEqual(response['type'], RESPONSE_TYPE.QUERY)
-        self.assertEqual(response['data'], [[1]])
+        response = self.handler.query("SELECT 1")
+        self.assertEqual(response["type"], RESPONSE_TYPE.QUERY)
+        self.assertEqual(response["data"], [[1]])

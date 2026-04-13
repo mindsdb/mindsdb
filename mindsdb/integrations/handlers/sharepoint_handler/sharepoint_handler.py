@@ -41,14 +41,9 @@ class SharepointHandler(APIHandler):
 
         if not (
             self.connection_data["clientId"]
-            and (
-                self.connection_data["tenantId"]
-                and self.connection_data["clientSecret"]
-            )
+            and (self.connection_data["tenantId"] and self.connection_data["clientSecret"])
         ):
-            raise Exception(
-                "client params and tenant id is required for Sharepoint connection!"
-            )
+            raise Exception("client params and tenant id is required for Sharepoint connection!")
 
         self.connection = None
         self.is_connected = False

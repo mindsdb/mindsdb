@@ -15,7 +15,7 @@ class EdgelessDBHandlerTest(unittest.TestCase):
                 "database": "test",
             }
         }
-        cls.handler = EdgelessDBHandler('test_edgelessdb_handler', **cls.kwargs)
+        cls.handler = EdgelessDBHandler("test_edgelessdb_handler", **cls.kwargs)
 
     def test_0_connect(self):
         assert self.handler.connect()
@@ -26,10 +26,10 @@ class EdgelessDBHandlerTest(unittest.TestCase):
 
     def test_2_create_table(self):
         res = self.handler.query(
-            '''CREATE TABLE TEST_TABLE (
+            """CREATE TABLE TEST_TABLE (
                 ID INT PRIMARY KEY,
                 NAME VARCHAR(14)
-                )'''
+                )"""
         )
         assert res.type is RESPONSE_TYPE.OK
 
@@ -44,7 +44,7 @@ class EdgelessDBHandlerTest(unittest.TestCase):
         assert res.type is RESPONSE_TYPE.OK
 
     def test_4_select(self):
-        res = self.handler.query('SELECT * FROM TEST_TABLE')
+        res = self.handler.query("SELECT * FROM TEST_TABLE")
         assert res.type is RESPONSE_TYPE.TABLE
 
     def test_5_check_connection(self):
@@ -62,5 +62,5 @@ class EdgelessDBHandlerTest(unittest.TestCase):
         assert self.handler.disconnect()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

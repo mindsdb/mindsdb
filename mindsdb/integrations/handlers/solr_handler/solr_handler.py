@@ -11,7 +11,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 
@@ -23,25 +23,25 @@ class SolrHandler(DatabaseHandler):
     This handler handles connection and execution of the Solr SQL statements.
     """
 
-    name = 'solr'
+    name = "solr"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'solr'
+        self.dialect = "solr"
 
-        if ('host' not in connection_data) or ('port' not in connection_data) or ('collection' not in connection_data):
+        if ("host" not in connection_data) or ("port" not in connection_data) or ("collection" not in connection_data):
             raise Exception("The host, port and collection parameter should be provided!")
 
-        optional_parameters = ['use_ssl', 'username', 'password']
+        optional_parameters = ["use_ssl", "username", "password"]
         for parameter in optional_parameters:
             if parameter not in connection_data:
                 connection_data[parameter] = None
 
-        if connection_data.get('use_ssl', False):
-            connection_data['use_ssl'] = True
+        if connection_data.get("use_ssl", False):
+            connection_data["use_ssl"] = True
         else:
-            connection_data['use_ssl'] = False
+            connection_data["use_ssl"] = False
 
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -63,16 +63,20 @@ class SolrHandler(DatabaseHandler):
             return self.connection
 
         config = {
-            'username': self.connection_data.get('username'),
-            'password': self.connection_data.get('password'),
-            'host': self.connection_data.get('host'),
-            'port': self.connection_data.get('port'),
-            'server_path': self.connection_data.get('server_path', 'solr'),
-            'collection': self.connection_data.get('collection'),
-            'use_ssl': self.connection_data.get('use_ssl')
+            "username": self.connection_data.get("username"),
+            "password": self.connection_data.get("password"),
+            "host": self.connection_data.get("host"),
+            "port": self.connection_data.get("port"),
+            "server_path": self.connection_data.get("server_path", "solr"),
+            "collection": self.connection_data.get("collection"),
+            "use_ssl": self.connection_data.get("use_ssl"),
         }
 
-        connection = create_engine("solr://{username}:{password}@{host}:{port}/{server_path}/{collection}/sql?use_ssl={use_ssl}".format(**config))
+        connection = create_engine(
+            "solr://{username}:{password}@{host}:{port}/{server_path}/{collection}/sql?use_ssl={use_ssl}".format(
+                **config
+            )
+        )
         self.is_connected = True
         self.connection = connection.connect()
         return self.connection
@@ -101,7 +105,7 @@ class SolrHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Solr {self.connection_data["host"]}, {e}!')
+            logger.error(f"Error connecting to Solr {self.connection_data['host']}, {e}!")
             response.error_message = str(e)
 
         if response.success is True and need_to_close:
@@ -128,22 +132,13 @@ class SolrHandler(DatabaseHandler):
             result = connection.execute(query)
             columns = list(result.keys())
             if result:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    pd.DataFrame(
-                        result,
-                        columns=columns
-                    )
-                )
+                response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(result, columns=columns))
             else:
                 response = Response(RESPONSE_TYPE.OK)
 
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["host"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.connection_data['host']}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -161,9 +156,9 @@ class SolrHandler(DatabaseHandler):
         Get a list with all of the tables in Solr
         """
         result = {}
-        result['data_frame'] = pd.DataFrame([self.connection_data.get('collection')])
+        result["data_frame"] = pd.DataFrame([self.connection_data.get("collection")])
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name) -> Response:
@@ -173,5 +168,5 @@ class SolrHandler(DatabaseHandler):
         q = f"select * from {table_name} limit 1"
         result = self.native_query(q)
         df = pd.DataFrame([[col] for col in result.data_frame.columns])
-        result.data_frame = df.rename(columns={df.columns[0]: 'column_name'})
+        result.data_frame = df.rename(columns={df.columns[0]: "column_name"})
         return result

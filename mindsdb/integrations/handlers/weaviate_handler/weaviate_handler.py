@@ -38,13 +38,8 @@ class WeaviateDBHandler(VectorStoreHandler):
             "persistence_directory": self._connection_data.get("persistence_directory"),
         }
 
-        if not (
-            self._client_config.get("weaviate_url")
-            or self._client_config.get("persistence_directory")
-        ):
-            raise Exception(
-                "Either url or persist_directory is required for weaviate connection!"
-            )
+        if not (self._client_config.get("weaviate_url") or self._client_config.get("persistence_directory")):
+            raise Exception("Either url or persist_directory is required for weaviate connection!")
 
         self._client = None
         self._embedded_options = None
@@ -54,10 +49,7 @@ class WeaviateDBHandler(VectorStoreHandler):
     def _get_client(self) -> weaviate.Client:
         if not (
             self._client_config
-            and (
-                self._client_config.get("weaviate_url")
-                or self._client_config.get("persistence_directory")
-            )
+            and (self._client_config.get("weaviate_url") or self._client_config.get("persistence_directory"))
         ):
             raise Exception("Client config is not set! or missing parameters")
 
@@ -70,9 +62,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         if self._client_config.get("weaviate_api_key"):
             return weaviate.Client(
                 url=self._client_config["weaviate_url"],
-                auth_client_secret=weaviate.AuthApiKey(
-                    api_key=self._client_config["weaviate_api_key"]
-                ),
+                auth_client_secret=weaviate.AuthApiKey(api_key=self._client_config["weaviate_api_key"]),
             )
         return weaviate.Client(url=self._client_config["weaviate_url"])
 
@@ -280,9 +270,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                 and condition.column != TableField.EMBEDDINGS.value
             ]
             metadata_conditions = [
-                condition
-                for condition in conditions
-                if condition.column.startswith(TableField.METADATA.value)
+                condition for condition in conditions if condition.column.startswith(TableField.METADATA.value)
             ]
             filters = self._translate_condition(
                 table_name,
@@ -297,8 +285,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             else [
                 condition
                 for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
-                or condition.column == TableField.EMBEDDINGS.value
+                if condition.column == TableField.SEARCH_VECTOR.value or condition.column == TableField.EMBEDDINGS.value
             ]
         )
 
@@ -308,17 +295,10 @@ class WeaviateDBHandler(VectorStoreHandler):
 
         metadata_table = table_name.capitalize() + "_metadata"
 
-        metadata_fields = " ".join(
-            [
-                prop["name"]
-                for prop in self._client.schema.get(metadata_table)["properties"]
-            ]
-        )
+        metadata_fields = " ".join([prop["name"] for prop in self._client.schema.get(metadata_table)["properties"]])
 
         # query to get all metadata fields
-        metadata_query = (
-            f"associatedMetadata {{ ... on {metadata_table} {{ {metadata_fields} }} }}"
-        )
+        metadata_query = f"associatedMetadata {{ ... on {metadata_table} {{ {metadata_fields} }} }}"
 
         if columns:
             query = self._client.query.get(
@@ -349,9 +329,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         result = result["data"]["Get"][table_name.capitalize()]
         ids = [query_obj["_additional"]["id"] for query_obj in result]
         contents = [query_obj.get("content") for query_obj in result]
-        distances = [
-            query_obj.get("_additional").get("distance") for query_obj in result
-        ]
+        distances = [query_obj.get("_additional").get("distance") for query_obj in result]
         # distances will be null for non vector/embedding query
         vectors = [query_obj.get("_additional").get("vector") for query_obj in result]
         metadatas = [query_obj.get("associatedMetadata")[0] for query_obj in result]
@@ -377,9 +355,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         result_df = pd.DataFrame(payload)
         return result_df
 
-    def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ):
+    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
         """
         Insert data into the Weaviate database.
         """
@@ -396,9 +372,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             metadata_data = record.get(TableField.METADATA.value)
             data_object = {"content": record.get(TableField.CONTENT.value)}
             data_obj_id = (
-                record[TableField.ID.value]
-                if TableField.ID.value in record.keys()
-                else generate_uuid5(data_object)
+                record[TableField.ID.value] if TableField.ID.value in record.keys() else generate_uuid5(data_object)
             )
             obj_id = self._client.data_object.create(
                 data_object=data_object,
@@ -414,9 +388,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                     to_uuid=meta_id,
                 )
 
-    def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ):
+    def update(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
         """
         Update data in the weaviate database.
         """
@@ -424,29 +396,18 @@ class WeaviateDBHandler(VectorStoreHandler):
         metadata_table_name = table_name.capitalize() + "_metadata"
         data_list = data.to_dict("records")
         for row in data_list:
-            non_metadata_keys = [
-                key
-                for key in row.keys()
-                if key and not key.startswith(TableField.METADATA.value)
-            ]
+            non_metadata_keys = [key for key in row.keys() if key and not key.startswith(TableField.METADATA.value)]
             metadata_keys = [
-                key.split(".")[1]
-                for key in row.keys()
-                if key and key.startswith(TableField.METADATA.value)
+                key.split(".")[1] for key in row.keys() if key and key.startswith(TableField.METADATA.value)
             ]
 
             id_filter = {"path": ["id"], "operator": "Equal", "valueText": row["id"]}
             metadata_id_query = f"associatedMetadata {{ ... on {metadata_table_name} {{ _additional {{ id }} }} }}"
             result = (
-                self._client.query.get(table_name, metadata_id_query)
-                .with_additional(["id"])
-                .with_where(id_filter)
-                .do()
+                self._client.query.get(table_name, metadata_id_query).with_additional(["id"]).with_where(id_filter).do()
             )
 
-            metadata_id = result["data"]["Get"][table_name][0]["associatedMetadata"][0][
-                "_additional"
-            ]["id"][0]
+            metadata_id = result["data"]["Get"][table_name][0]["associatedMetadata"][0]["_additional"]["id"][0]
             # updating table
             self._client.data_object.update(
                 uuid=row["id"],
@@ -460,9 +421,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                 data_object={key: row[key] for key in metadata_keys},
             )
 
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ):
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         table_name = table_name.capitalize()
         non_metadata_conditions = [
             condition
@@ -472,9 +431,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             and condition.column != TableField.EMBEDDINGS.value
         ]
         metadata_conditions = [
-            condition
-            for condition in conditions
-            if condition.column.startswith(TableField.METADATA.value)
+            condition for condition in conditions if condition.column.startswith(TableField.METADATA.value)
         ]
         filters = self._translate_condition(
             table_name,
@@ -486,12 +443,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         metadata_table_name = table_name.capitalize() + "_metadata"
         # query to get metadata ids
         metadata_query = f"associatedMetadata {{ ... on {metadata_table_name} {{ _additional {{ id }} }} }}"
-        result = (
-            self._client.query.get(table_name, metadata_query)
-            .with_additional(["id"])
-            .with_where(filters)
-            .do()
-        )
+        result = self._client.query.get(table_name, metadata_query).with_additional(["id"]).with_where(filters).do()
         result = result["data"]["Get"][table_name]
         metadata_table_name = table_name.capitalize() + "_metadata"
         table_ids = []
@@ -532,9 +484,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                     "properties": [
                         {"dataType": ["text"], "name": prop["name"]}
                         for prop in self.SCHEMA
-                        if prop["name"] != "id"
-                        and prop["name"] != "embeddings"
-                        and prop["name"] != "metadata"
+                        if prop["name"] != "id" and prop["name"] != "embeddings" and prop["name"] != "metadata"
                     ],
                     "vectorIndexType": "hnsw",
                 }
@@ -552,16 +502,9 @@ class WeaviateDBHandler(VectorStoreHandler):
         table_name = table_name.capitalize()
         metadata_table_name = table_name.capitalize() + "_metadata"
         table_id_query = self._client.query.get(table_name).with_additional(["id"]).do()
-        table_ids = [
-            i["_additional"]["id"] for i in table_id_query["data"]["Get"][table_name]
-        ]
-        metadata_table_id_query = (
-            self._client.query.get(metadata_table_name).with_additional(["id"]).do()
-        )
-        metadata_ids = [
-            i["_additional"]["id"]
-            for i in metadata_table_id_query["data"]["Get"][metadata_table_name]
-        ]
+        table_ids = [i["_additional"]["id"] for i in table_id_query["data"]["Get"][table_name]]
+        metadata_table_id_query = self._client.query.get(metadata_table_name).with_additional(["id"]).do()
+        metadata_ids = [i["_additional"]["id"] for i in metadata_table_id_query["data"]["Get"][metadata_table_name]]
         self._client.batch.delete_objects(
             class_name=table_name,
             where={
@@ -610,10 +553,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                 error_message=f"Table {table_name} does not exist!",
             )
         data = pd.DataFrame(
-            data=[
-                {"COLUMN_NAME": column["name"], "DATA_TYPE": column["dataType"][0]}
-                for column in table["properties"]
-            ]
+            data=[{"COLUMN_NAME": column["name"], "DATA_TYPE": column["dataType"][0]} for column in table["properties"]]
         )
         return Response(data_frame=data, resp_type=RESPONSE_TYPE.OK)
 
@@ -622,10 +562,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         metadata_table_name = table_name.capitalize() + "_metadata"
         self._client.schema.get(metadata_table_name)
         # getting existing metadata fields
-        added_prop_list = [
-            prop["name"]
-            for prop in self._client.schema.get(metadata_table_name)["properties"]
-        ]
+        added_prop_list = [prop["name"] for prop in self._client.schema.get(metadata_table_name)["properties"]]
         # as metadata columns are not fixed, at every entry, a check takes place for the columns
         for prop in data.keys():
             if prop not in added_prop_list:

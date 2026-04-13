@@ -5,7 +5,8 @@ class SupabaseHandler(PostgresHandler):
     """
     This handler handles connection and execution of the Supabase statements.
     """
-    name = 'supabase'
+
+    name = "supabase"
 
     def __init__(self, name, **kwargs):
         super().__init__(name, **kwargs)

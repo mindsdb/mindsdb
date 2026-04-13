@@ -9,7 +9,7 @@ from mindsdb.integrations.handlers.zotero_handler.zotero_tables import Annotatio
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -33,10 +33,10 @@ class ZoteroHandler(APIHandler):
             If not provided, will attempt to fetch from environment variables or configuration file.
         """
         super().__init__(name)
-        self.connection_args = self._get_connection_args(kwargs.get('connection_data', {}))
+        self.connection_args = self._get_connection_args(kwargs.get("connection_data", {}))
         self.is_connected = False
         self.api = None
-        self._register_table('annotations', AnnotationsTable(self))
+        self._register_table("annotations", AnnotationsTable(self))
 
     def _get_connection_args(self, args):
         """Fetch connection arguments from parameters, environment variables, or configuration.
@@ -51,10 +51,10 @@ class ZoteroHandler(APIHandler):
         connection_args
             Connection data list
         """
-        handler_config = Config().get('zotero_handler', {})
+        handler_config = Config().get("zotero_handler", {})
         connection_args = {}
-        for k in ['library_id', 'library_type', 'api_key']:
-            connection_args[k] = args.get(k) or os.getenv(f'ZOTERO_{k.upper()}') or handler_config.get(k)
+        for k in ["library_id", "library_type", "api_key"]:
+            connection_args[k] = args.get(k) or os.getenv(f"ZOTERO_{k.upper()}") or handler_config.get(k)
         return connection_args
 
     def connect(self) -> StatusResponse:
@@ -67,9 +67,9 @@ class ZoteroHandler(APIHandler):
         """
         if not self.is_connected:
             self.api = zotero.Zotero(
-                self.connection_args['library_id'],
-                self.connection_args['library_type'],
-                self.connection_args['api_key']
+                self.connection_args["library_id"],
+                self.connection_args["library_type"],
+                self.connection_args["api_key"],
             )
             self.is_connected = True
         return StatusResponse(True)
@@ -86,7 +86,7 @@ class ZoteroHandler(APIHandler):
             self.connect()
             return StatusResponse(True)
         except Exception as e:
-            error_message = f'Error connecting to Zotero API: {str(e)}. Check credentials.'
+            error_message = f"Error connecting to Zotero API: {str(e)}. Check credentials."
             logger.error(error_message)
             self.is_connected = False
             return StatusResponse(False, error_message=error_message)

@@ -20,14 +20,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-DEFAULT_CREATE_TABLE_PARAMS = {
-    "dimension": 8,
-    "metric": "cosine",
-    "spec": {
-        "cloud": "aws",
-        "region": "us-east-1"
-    }
-}
+DEFAULT_CREATE_TABLE_PARAMS = {"dimension": 8, "metric": "cosine", "spec": {"cloud": "aws", "region": "us-east-1"}}
 MAX_FETCH_LIMIT = 10000
 UPSERT_BATCH_SIZE = 99  # API reccomendation
 
@@ -103,9 +96,7 @@ class PineconeHandler(VectorStoreHandler):
         if conditions is None:
             return None
         metadata_conditions = [
-            condition
-            for condition in conditions
-            if condition.column.startswith(TableField.METADATA.value)
+            condition for condition in conditions if condition.column.startswith(TableField.METADATA.value)
         ]
         if len(metadata_conditions) == 0:
             return None
@@ -114,20 +105,10 @@ class PineconeHandler(VectorStoreHandler):
         pinecone_conditions = []
         for condition in metadata_conditions:
             metadata_key = condition.column.split(".")[-1]
-            pinecone_conditions.append(
-                {
-                    metadata_key: {
-                        self._get_pinecone_operator(condition.op): condition.value
-                    }
-                }
-            )
+            pinecone_conditions.append({metadata_key: {self._get_pinecone_operator(condition.op): condition.value}})
 
         # we combine all metadata conditions into a single dict
-        metadata_condition = (
-            {"$and": pinecone_conditions}
-            if len(pinecone_conditions) > 1
-            else pinecone_conditions[0]
-        )
+        metadata_condition = {"$and": pinecone_conditions} if len(pinecone_conditions) > 1 else pinecone_conditions[0]
         return metadata_condition
 
     def _matches_to_dicts(self, matches: List):
@@ -139,11 +120,11 @@ class PineconeHandler(VectorStoreHandler):
         if self.is_connected is True:
             return self.connection
 
-        if 'api_key' not in self.connection_data:
-            raise ValueError('Required parameter (api_key) must be provided.')
+        if "api_key" not in self.connection_data:
+            raise ValueError("Required parameter (api_key) must be provided.")
 
         try:
-            self.connection = Pinecone(api_key=self.connection_data['api_key'])
+            self.connection = Pinecone(api_key=self.connection_data["api_key"])
             return self.connection
         except Exception as e:
             logger.error(f"Error connecting to Pinecone client, {e}!")
@@ -182,7 +163,7 @@ class PineconeHandler(VectorStoreHandler):
         indexes = connection.list_indexes()
         df = pd.DataFrame(
             columns=["table_name"],
-            data=[index['name'] for index in indexes],
+            data=[index["name"] for index in indexes],
         )
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=df)
 
@@ -214,18 +195,17 @@ class PineconeHandler(VectorStoreHandler):
         if index is None:
             raise Exception(f"Error getting index '{table_name}', are you sure the name is correct?")
 
-        data.rename(columns={
-            TableField.ID.value: "id",
-            TableField.EMBEDDINGS.value: "values"},
-            inplace=True)
+        data.rename(columns={TableField.ID.value: "id", TableField.EMBEDDINGS.value: "values"}, inplace=True)
 
         columns = ["id", "values"]
 
         if TableField.METADATA.value in data.columns:
             data.rename(columns={TableField.METADATA.value: "metadata"}, inplace=True)
             # fill None and NaN values with empty dict
-            if data['metadata'].isnull().any():
-                data['metadata'] = data['metadata'].apply(lambda x: {} if x is None or (isinstance(x, float) and np.isnan(x)) else x)
+            if data["metadata"].isnull().any():
+                data["metadata"] = data["metadata"].apply(
+                    lambda x: {} if x is None or (isinstance(x, float) and np.isnan(x)) else x
+                )
             columns.append("metadata")
 
         data = data[columns]
@@ -233,7 +213,7 @@ class PineconeHandler(VectorStoreHandler):
         # convert the embeddings to lists if they are strings
         data["values"] = data["values"].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
 
-        for chunk in (data[pos:pos + UPSERT_BATCH_SIZE] for pos in range(0, len(data), UPSERT_BATCH_SIZE)):
+        for chunk in (data[pos : pos + UPSERT_BATCH_SIZE] for pos in range(0, len(data), UPSERT_BATCH_SIZE)):
             chunk = chunk.to_dict(orient="records")
             index.upsert(vectors=chunk)
 
@@ -250,11 +230,7 @@ class PineconeHandler(VectorStoreHandler):
     def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         """Delete records in pinecone index `table_name` based on ids or based on metadata conditions."""
         filters = self._translate_metadata_condition(conditions)
-        ids = [
-            condition.value
-            for condition in conditions
-            if condition.column == TableField.ID.value
-        ] or None
+        ids = [condition.value for condition in conditions if condition.column == TableField.ID.value] or None
         if filters is None and ids is None:
             raise Exception("Delete query must have either id condition or metadata condition!")
         index = self._get_index_handle(table_name)
@@ -280,10 +256,7 @@ class PineconeHandler(VectorStoreHandler):
         if index is None:
             raise Exception(f"Error getting index '{table_name}', are you sure the name is correct?")
 
-        query = {
-            "include_values": True,
-            "include_metadata": True
-        }
+        query = {"include_values": True, "include_metadata": True}
 
         # check for metadata filter
         metadata_filters = self._translate_metadata_condition(conditions)

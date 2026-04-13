@@ -5,7 +5,8 @@ class PlanetScaleHandler(MySQLHandler):
     """
     This handler handles the connection and execution of queries against PlanetScale.
     """
-    name = 'planet_scale'
+
+    name = "planet_scale"
 
     def __init__(self, name, **kwargs):
         super().__init__(name, **kwargs)

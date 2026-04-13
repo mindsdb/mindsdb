@@ -22,17 +22,14 @@ class InstatusHandler(APIHandler):
         self._base_url = "https://api.instatus.com"
         self._api_key = None
 
-        args = kwargs.get('connection_data', {})
-        if 'api_key' in args:
-            self._api_key = args['api_key']
+        args = kwargs.get("connection_data", {})
+        if "api_key" in args:
+            self._api_key = args["api_key"]
 
         self.connection = None
         self.is_connected = False
 
-        _tables = [
-            StatusPages,
-            Components
-        ]
+        _tables = [StatusPages, Components]
 
         for Table in _tables:
             self._register_table(Table.name, Table(self))
@@ -49,7 +46,7 @@ class InstatusHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Instatus API: {e}!')
+            logger.error(f"Error connecting to Instatus API: {e}!")
             response.error_message = e
 
         self.is_connected = response.success
@@ -92,15 +89,17 @@ class InstatusHandler(APIHandler):
         ast = parse_sql(query)
         return self.query(ast)
 
-    def call_instatus_api(self, endpoint: str, method: str = 'GET', params: dict = None, json_data: dict = {}) -> pd.DataFrame:
+    def call_instatus_api(
+        self, endpoint: str, method: str = "GET", params: dict = None, json_data: dict = {}
+    ) -> pd.DataFrame:
         if not params:
             params = {}
 
         headers = {"Authorization": f"Bearer {self._api_key}"}
         url = f"{self._base_url}{endpoint}"
 
-        if method.upper() in ('GET', 'POST', 'PUT', 'DELETE'):
-            headers['Content-Type'] = 'application/json'
+        if method.upper() in ("GET", "POST", "PUT", "DELETE"):
+            headers["Content-Type"] = "application/json"
 
             response = requests.request(method, url, headers=headers, params=params, json=json_data)
 
@@ -122,6 +121,4 @@ connection_args = OrderedDict(
     },
 )
 
-connection_args_example = OrderedDict(
-    api_key="d25509b171ad79395dc2c51b099ee6d0"
-)
+connection_args_example = OrderedDict(api_key="d25509b171ad79395dc2c51b099ee6d0")

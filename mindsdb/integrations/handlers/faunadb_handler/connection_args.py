@@ -4,12 +4,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
-    fauna_secret={
-        "type": ARG_TYPE.STR,
-        "description": "faunadb secret",
-        "required": True,
-        "secret": True
-    },
+    fauna_secret={"type": ARG_TYPE.STR, "description": "faunadb secret", "required": True, "secret": True},
     fauna_scheme={
         "type": ARG_TYPE.STR,
         "description": "faunadb scheme(http/https)",

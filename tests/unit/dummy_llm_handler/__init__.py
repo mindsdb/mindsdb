@@ -10,9 +10,9 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = ''
-name = 'dummy_llm'
+title = ""
+name = "dummy_llm"
 type = HANDLER_TYPE.ML
 permanent = False
 
-__all__ = ['Handler', 'version', 'name', 'type', 'title', 'description', 'import_error']
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]

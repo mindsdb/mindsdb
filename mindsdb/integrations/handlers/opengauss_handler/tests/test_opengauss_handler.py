@@ -11,9 +11,9 @@ class OpenGaussHandlerTest(unittest.TestCase):
             "user": "mindsdb",
             "password": "mindsdb",
             "database": "test",
-            "ssl": False
+            "ssl": False,
         }
-        cls.handler = OpenGaussHandler('test_opengauss_handler', **cls.kwargs)
+        cls.handler = OpenGaussHandler("test_opengauss_handler", **cls.kwargs)
 
     def test_0_connect(self):
         self.handler.connect()

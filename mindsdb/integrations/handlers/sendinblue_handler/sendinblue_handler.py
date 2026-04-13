@@ -17,7 +17,7 @@ class SendinblueHandler(APIHandler):
     The Sendinblue handler implementation.
     """
 
-    name = 'sendinblue'
+    name = "sendinblue"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -50,7 +50,7 @@ class SendinblueHandler(APIHandler):
             return self.connection
 
         configuration = sib_api_v3_sdk.Configuration()
-        configuration.api_key['api-key'] = self.connection_data['api_key']
+        configuration.api_key["api-key"] = self.connection_data["api_key"]
 
         self.connection = sib_api_v3_sdk.ApiClient(configuration)
 
@@ -73,7 +73,7 @@ class SendinblueHandler(APIHandler):
             api_instance.get_account()
             response.success = True
         except Exception as e:
-            logger.error('Error connecting to Sendinblue!')
+            logger.error("Error connecting to Sendinblue!")
             response.error_message = str(e)
 
         self.is_connected = response.success

@@ -320,8 +320,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         assert "embeddings" in ret.columns
         assert ret.shape[0] == 4
 
-    def test_huggingface_embedding(self):
-        ...
+    def test_huggingface_embedding(self): ...
 
     def test_missing_class_name(self):
         self.run_sql("create database proj")

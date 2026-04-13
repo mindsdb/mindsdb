@@ -14,7 +14,6 @@ except ImportError:
 
 @pytest.mark.skipif(not REQUESTS_INSTALLED, reason="requests package is not installed")
 class TestNPMHandler(BaseExecutorTest):
-
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None

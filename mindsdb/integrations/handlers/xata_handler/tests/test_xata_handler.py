@@ -17,7 +17,6 @@ except ImportError:
 
 @pytest.mark.skipif(not XATA_INSTALLED, reason="xata is not installed")
 class TestXetaHandler(BaseExecutorTest):
-
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None
@@ -26,8 +25,8 @@ class TestXetaHandler(BaseExecutorTest):
 
     def setup_method(self):
         super().setup_method()
-        self.api_key = os.environ['XATA_TESTING_API_KEY']
-        self.db_url = os.environ['XATA_TESTING_DB_URL']
+        self.api_key = os.environ["XATA_TESTING_API_KEY"]
+        self.db_url = os.environ["XATA_TESTING_DB_URL"]
         self.run_sql(f"""
             CREATE DATABASE xata_test
             WITH
@@ -46,7 +45,9 @@ class TestXetaHandler(BaseExecutorTest):
             print(f"Unable to delete {table_name}: {resp['message']}")
 
     def get_num_records(self, table_name):
-        return self._client.search_and_filter().summarize(table_name, {"columns": [], "summaries": {"total": {"count": "*"}}})["summaries"][0]["total"]
+        return self._client.search_and_filter().summarize(
+            table_name, {"columns": [], "summaries": {"total": {"count": "*"}}}
+        )["summaries"][0]["total"]
 
     @pytest.mark.xfail(reason="create table for vectordatabase is not well supported")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
@@ -269,8 +270,22 @@ class TestXetaHandler(BaseExecutorTest):
             {
                 "id": ["id1", "id2", "id3", "id4", "id5", "id6"],
                 "content": ["test content", "test paragraph", "toast types", "", "tast misspelled", "hello"],
-                "metadata": ['{"price": 10}', '{"price": 100}', '{"price": 30}', '{"test": "test1"}', '{"test": "test2"}', '{"test": "test3"}'],
-                "embeddings": [[1.0, 2.0, 3.0], [5.0, 2.0, 8.0], [3.0, 6.0, 3.0], [1.0, 2.0, 3.0], [3.0, 1.0, 8.0], [1.0, 3.0, 7.0]],
+                "metadata": [
+                    '{"price": 10}',
+                    '{"price": 100}',
+                    '{"price": 30}',
+                    '{"test": "test1"}',
+                    '{"test": "test2"}',
+                    '{"test": "test3"}',
+                ],
+                "embeddings": [
+                    [1.0, 2.0, 3.0],
+                    [5.0, 2.0, 8.0],
+                    [3.0, 6.0, 3.0],
+                    [1.0, 2.0, 3.0],
+                    [3.0, 1.0, 8.0],
+                    [1.0, 3.0, 7.0],
+                ],
             }
         )
         self.set_handler(postgres_handler_mock, "pg", tables={"testingtable": df})
@@ -335,8 +350,22 @@ class TestXetaHandler(BaseExecutorTest):
             {
                 "id": ["id1", "id2", "id3", "id4", "id5", "id6"],
                 "content": ["test content", "test paragraph", "toast types", "", "tast misspelled", "hello"],
-                "metadata": ['{"price": 10}', '{"price": 100}', '{"price": 30}', '{"test": "test1"}', '{"test": "test2"}', '{"test": "test3"}'],
-                "embeddings": [[1.0, 2.0, 3.0], [5.0, 2.0, 8.0], [3.0, 6.0, 3.0], [1.0, 2.0, 3.0], [3.0, 1.0, 8.0], [1.0, 3.0, 7.0]],
+                "metadata": [
+                    '{"price": 10}',
+                    '{"price": 100}',
+                    '{"price": 30}',
+                    '{"test": "test1"}',
+                    '{"test": "test2"}',
+                    '{"test": "test3"}',
+                ],
+                "embeddings": [
+                    [1.0, 2.0, 3.0],
+                    [5.0, 2.0, 8.0],
+                    [3.0, 6.0, 3.0],
+                    [1.0, 2.0, 3.0],
+                    [3.0, 1.0, 8.0],
+                    [1.0, 3.0, 7.0],
+                ],
             }
         )
         self.set_handler(postgres_handler_mock, "pg", tables={"testingtable": df})
@@ -384,8 +413,22 @@ class TestXetaHandler(BaseExecutorTest):
             {
                 "id": ["id1", "id2", "id3", "id4", "id5", "id6"],
                 "content": ["test content", "test paragraph", "toast types", "", "tast misspelled", "hello"],
-                "metadata": ['{"price": 10}', '{"price": 100}', '{"price": 30}', '{"test": "test1"}', '{"test": "test2"}', '{"test": "test3"}'],
-                "embeddings": [[1.0, 2.0, 3.0], [5.0, 2.0, 8.0], [3.0, 6.0, 3.0], [1.0, 2.0, 3.0], [3.0, 1.0, 8.0], [1.0, 3.0, 7.0]],
+                "metadata": [
+                    '{"price": 10}',
+                    '{"price": 100}',
+                    '{"price": 30}',
+                    '{"test": "test1"}',
+                    '{"test": "test2"}',
+                    '{"test": "test3"}',
+                ],
+                "embeddings": [
+                    [1.0, 2.0, 3.0],
+                    [5.0, 2.0, 8.0],
+                    [3.0, 6.0, 3.0],
+                    [1.0, 2.0, 3.0],
+                    [3.0, 1.0, 8.0],
+                    [1.0, 3.0, 7.0],
+                ],
             }
         )
         self.set_handler(postgres_handler_mock, "pg", tables={"testingtable": df})

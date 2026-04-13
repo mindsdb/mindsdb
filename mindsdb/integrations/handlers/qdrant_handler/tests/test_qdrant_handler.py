@@ -36,7 +36,6 @@ class TestQdrantHandler(BaseExecutorTest):
     def test_create_with_select(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-
                 "id": [1, 2],
                 "content": ["this is a test", "this is a test"],
                 "metadata": [{"test": "test"}, {"test": "test"}],

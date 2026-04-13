@@ -9,11 +9,11 @@ HANDLER_KWARGS = {
         "port": 9030,
         "user": "root",
         "password": "password",
-        "database": "mindstest"
+        "database": "mindstest",
     }
 }
 
-HANDLER_NAME = 'test_doris_handler'
+HANDLER_NAME = "test_doris_handler"
 
 
 @pytest.fixture(scope="module")
@@ -23,7 +23,6 @@ def handler(request):
 
 
 class TestMySQLHandler:
-
     def check_valid_response(self, res):
         if res.resp_type == RESPONSE_TYPE.TABLE:
             assert res.data_frame is not None, "expected to have some data, but got None"
@@ -34,8 +33,8 @@ class TestMySQLHandler:
         res = handler.get_tables()
         tables = res.data_frame
         assert tables is not None, "expected to have some tables in the db, but got None"
-        assert 'table_name' in tables, f"expected to get 'table_name' column in the response:\n{tables}"
-        return list(tables['table_name'])
+        assert "table_name" in tables, f"expected to get 'table_name' column in the response:\n{tables}"
+        return list(tables["table_name"])
 
     def test_connect(self, handler):
         handler.connect()
@@ -49,7 +48,7 @@ class TestMySQLHandler:
         dbs = handler.native_query("SHOW DATABASES;")
         dbs = dbs.data_frame
         assert dbs is not None, "expected to get some data, but got None"
-        assert 'Database' in dbs, f"expected to get 'Database' column in response:\n{dbs}"
+        assert "Database" in dbs, f"expected to get 'Database' column in response:\n{dbs}"
         dbs = list(dbs["Database"])
         expected_db = HANDLER_KWARGS["connection_data"]["database"]
         assert expected_db in dbs, f"expected to have {expected_db} db in response: {dbs}"
@@ -63,8 +62,20 @@ class TestMySQLHandler:
         describe_data = described.data_frame
         self.check_valid_response(described)
         got_columns = list(describe_data.iloc[:, 0])
-        want_columns = ["user_id", "date", "city", "age", "sex", "last_visit_date", "cost", "max_dwell_time", "min_dwell_time"]
-        assert got_columns == want_columns, f"expected to have next columns in table:\n{want_columns}\nbut got:\n{got_columns}"
+        want_columns = [
+            "user_id",
+            "date",
+            "city",
+            "age",
+            "sex",
+            "last_visit_date",
+            "cost",
+            "max_dwell_time",
+            "min_dwell_time",
+        ]
+        assert got_columns == want_columns, (
+            f"expected to have next columns in table:\n{want_columns}\nbut got:\n{got_columns}"
+        )
 
     def test_create_table(self, handler):
         new_table = "test_mdb"

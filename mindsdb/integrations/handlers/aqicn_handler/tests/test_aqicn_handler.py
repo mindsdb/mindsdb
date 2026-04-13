@@ -14,7 +14,6 @@ except ImportError:
 
 @pytest.mark.skipif(not REQUESTS_INSTALLED, reason="requests package is not installed")
 class TestAQICNHandler(BaseExecutorTest):
-
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None
@@ -28,7 +27,7 @@ class TestAQICNHandler(BaseExecutorTest):
             CREATE DATABASE mindsdb_aqicn
                 WITH ENGINE = 'aqicn',
                 PARAMETERS = {
-                "api_key": '{self.api_key}'
+            "api_key": '{self.api_key}'
                 };
         """)
 
@@ -39,12 +38,12 @@ class TestAQICNHandler(BaseExecutorTest):
         sql = 'SELECT * FROM mindsdb_aqicn.air_quality_lat_lng where lat="12.938539" AND lng="77.5901";'
         assert self.run_sql(sql).shape[0] == 1
 
-        sql = 'SELECT * FROM mindsdb_aqicn.air_quality_user_location;'
+        sql = "SELECT * FROM mindsdb_aqicn.air_quality_user_location;"
         assert self.run_sql(sql).shape[0] == 1
 
     def test_complex_select(self):
         sql = 'SELECT data.city.url, data.city.name FROM mindsdb_aqicn.air_quality_lat_lng where lat="12.938539" AND lng="77.5901";'
         assert self.run_sql(sql).shape[1] == 2
 
-        sql = 'SELECT * FROM mindsdb_aqicn.air_quality_user_location LIMIT 1;'
+        sql = "SELECT * FROM mindsdb_aqicn.air_quality_user_location LIMIT 1;"
         assert self.run_sql(sql).shape[0] == 1

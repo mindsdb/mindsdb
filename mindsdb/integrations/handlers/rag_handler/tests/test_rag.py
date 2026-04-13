@@ -154,7 +154,7 @@ class TestRAG(BaseExecutorTest):
                     "The original Lemsip product contained paracetamol as its active ingredient. "
                     "However, other products marketed under the Lemsip "
                     "brand contain other active ingredients such as ibuprofen,"
-                    "pseudoephedrine, phenylephrine, and guaifenesin."
+                    "pseudoephedrine, phenylephrine, and guaifenesin.",
                 ],
                 "url": [
                     "https://docs.mindsdb.com/sql/tutorials/recommenders/",

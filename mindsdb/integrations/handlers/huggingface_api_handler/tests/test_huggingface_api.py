@@ -18,7 +18,7 @@ class TestHuggingFaceAPI(BaseExecutorTest):
         self.run_sql("CREATE DATABASE proj")
 
         texts = ["I like you. I love you", "I don't like you. I hate you"]
-        df = pd.DataFrame(texts, columns=['texts'])
+        df = pd.DataFrame(texts, columns=["texts"])
 
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 

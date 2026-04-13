@@ -39,9 +39,7 @@ def test_vectordatabase_parsing(vector_store_handler):
     query = parse_sql(sql)
     vector_store_handler._dispatch(query)
     vector_store_handler.create_table.assert_called_once()
-    vector_store_handler.create_table.assert_called_with(
-        "test_table", if_not_exists=False
-    )
+    vector_store_handler.create_table.assert_called_with("test_table", if_not_exists=False)
 
     # drop a table
     sql = """
@@ -117,11 +115,7 @@ def test_vectordatabase_parsing(vector_store_handler):
     vector_store_handler.select.assert_called_with(
         "test_table",
         columns=["id", "content", "embeddings", "metadata"],
-        conditions=[
-            FilterCondition(
-                column="search_vector", op=FilterOperator.EQUAL, value=[1, 2, 3]
-            )
-        ],
+        conditions=[FilterCondition(column="search_vector", op=FilterOperator.EQUAL, value=[1, 2, 3])],
         limit=10,
         offset=None,
     )
@@ -191,9 +185,7 @@ def test_vectordatabase_parsing(vector_store_handler):
                 op=FilterOperator.IN,
                 value=["some_value", "some_other_value"],
             ),
-            FilterCondition(
-                column="search_vector", op=FilterOperator.EQUAL, value=[1, 2, 3]
-            ),
+            FilterCondition(column="search_vector", op=FilterOperator.EQUAL, value=[1, 2, 3]),
         ],
         limit=None,
         offset=None,

@@ -18,9 +18,9 @@ except ImportError:
 
 # NOTE: These tests might fail since pinecone is eventually consistent. Some queries return wrong result when tested
 
+
 @pytest.mark.skipif(not PINECONE_CLIENT_INSTALLED, reason="pinecone client is not installed")
 class TestPineconeHandler(BaseExecutorTest):
-
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None
@@ -30,8 +30,8 @@ class TestPineconeHandler(BaseExecutorTest):
     def setup_method(self):
         super().setup_method()
         # Replace with your pinecone key
-        self.api_key = os.environ['PINECONE_API_KEY']
-        self.environment = os.environ['PINECONE_ENV']
+        self.api_key = os.environ["PINECONE_API_KEY"]
+        self.environment = os.environ["PINECONE_ENV"]
         self.run_sql(f"""
             CREATE DATABASE pinecone_test
             WITH ENGINE = "pinecone",

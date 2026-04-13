@@ -392,9 +392,7 @@ class EventDetailsTableTest(unittest.TestCase):
         first_data = review_data.iloc[0]
 
         self.assertEqual(review_data.shape[1], 3)
-        self.assertEqual(
-            first_data["name_text"], "AI Forum: Can AI Fix Climate Change?"
-        )
+        self.assertEqual(first_data["name_text"], "AI Forum: Can AI Fix Climate Change?")
         self.assertEqual(
             first_data["description_text"],
             "The third in a series of lunchtime presentations by King's researchers at Science Gallery London",

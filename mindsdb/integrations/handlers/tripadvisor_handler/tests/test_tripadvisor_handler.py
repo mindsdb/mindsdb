@@ -201,15 +201,23 @@ class ReviewTableTest(unittest.TestCase):
         )
         tripadvisor_table = ReviewsTable(api_handler)
 
-        id_identifier = Identifier(path_str='id')
-        lang_identifier = Identifier(path_str='en')
-        location_id_identifier = Identifier(path_str='location_id')
-        published_date_identifier = Identifier(path_str='published_date')
-        rating_identifier = Identifier(path_str='rating')
-        text_review_identifier = Identifier(path_str='room_id')
-        title_identifier = Identifier(path_str='text')
+        id_identifier = Identifier(path_str="id")
+        lang_identifier = Identifier(path_str="en")
+        location_id_identifier = Identifier(path_str="location_id")
+        published_date_identifier = Identifier(path_str="published_date")
+        rating_identifier = Identifier(path_str="rating")
+        text_review_identifier = Identifier(path_str="room_id")
+        title_identifier = Identifier(path_str="text")
         select_all = ast.Select(
-            targets=[id_identifier, lang_identifier, location_id_identifier, published_date_identifier, rating_identifier, text_review_identifier, title_identifier],
+            targets=[
+                id_identifier,
+                lang_identifier,
+                location_id_identifier,
+                published_date_identifier,
+                rating_identifier,
+                text_review_identifier,
+                title_identifier,
+            ],
             from_table="reviewsTable",
             where='locationId = "99288"',
         )
@@ -255,10 +263,10 @@ class PhotosTableTest(unittest.TestCase):
         )
         tripadvisor_table = PhotosTable(api_handler)
 
-        id_identifier = Identifier(path_str='id')
-        is_blessed_identifier = Identifier(path_str='is_blessed')
-        album_identifier = Identifier(path_str='album')
-        source_identifier = Identifier(path_str='source')
+        id_identifier = Identifier(path_str="id")
+        is_blessed_identifier = Identifier(path_str="is_blessed")
+        album_identifier = Identifier(path_str="album")
+        source_identifier = Identifier(path_str="source")
         select_all = ast.Select(
             targets=[id_identifier, is_blessed_identifier, album_identifier, source_identifier],
             from_table="photosTable",
@@ -304,10 +312,10 @@ class NearbySearchTableTest(unittest.TestCase):
         )
         tripadvisor_table = NearbyLocationTable(api_handler)
 
-        location_id_identifier = Identifier(path_str='location_id')
-        name_identifier = Identifier(path_str='name')
-        distance_identifier = Identifier(path_str='distance')
-        address_obj_identifier = Identifier(path_str='address_obj')
+        location_id_identifier = Identifier(path_str="location_id")
+        name_identifier = Identifier(path_str="name")
+        distance_identifier = Identifier(path_str="distance")
+        address_obj_identifier = Identifier(path_str="address_obj")
         select_all = ast.Select(
             targets=[location_id_identifier, name_identifier, distance_identifier, address_obj_identifier],
             from_table="nearbyLocationTable",
@@ -321,4 +329,7 @@ class NearbySearchTableTest(unittest.TestCase):
         self.assertEqual(first_data["location_id"], "210108")
         self.assertEqual(first_data["name"], "American Museum of Natural History")
         self.assertEqual(first_data["distance"], "0.039615104835680856")
-        self.assertEqual(first_data["address_obj"], "{'street1': '79th Street', 'street2': 'Central Park West', 'city': 'New York City', 'state': 'New York', 'country': 'United States', 'postalcode': '10024', 'address_string': '79th Street Central Park West, New York City, NY 10024'}")
+        self.assertEqual(
+            first_data["address_obj"],
+            "{'street1': '79th Street', 'street2': 'Central Park West', 'city': 'New York City', 'state': 'New York', 'country': 'United States', 'postalcode': '10024', 'address_string': '79th Street Central Park West, New York City, NY 10024'}",
+        )

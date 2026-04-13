@@ -6,15 +6,10 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class HubSpotHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "connection_data": {
-                "access_token": os.environ.get('ACCESS_TOKEN')
-            }
-        }
-        cls.handler = HubspotHandler('test_hubspot_handler', **cls.kwargs)
+        cls.kwargs = {"connection_data": {"access_token": os.environ.get("ACCESS_TOKEN")}}
+        cls.handler = HubspotHandler("test_hubspot_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()

@@ -40,9 +40,7 @@ class TestHuggingface(BaseExecutorTest):
         # wait
         done = False
         for attempt in range(900):
-            ret = self.run_sql(
-                f"select status from mindsdb.models where name='{model_name}'"
-            )
+            ret = self.run_sql(f"select status from mindsdb.models where name='{model_name}'")
             data = ret.data.to_lists()
             if len(data) > 0:
                 if data[0][0] == "complete":
@@ -55,9 +53,7 @@ class TestHuggingface(BaseExecutorTest):
             raise RuntimeError("predictor not created")
 
         # use predictor
-        ret = self.command_executor.execute_command(
-            parse_sql(predict_sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(predict_sql))
         assert ret.error_code is None
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
@@ -90,9 +86,7 @@ class TestHuggingface(BaseExecutorTest):
             where text_spammy= 'It is the best time to launch the Robot to get more money. https:\\/\\/Gof.bode-roesch.de\\/Gof'
         """
         # use predictor
-        ret = self.command_executor.execute_command(
-            parse_sql(predict_sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(predict_sql))
         assert ret.error_code is None
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
@@ -244,9 +238,7 @@ class TestHuggingface(BaseExecutorTest):
                    where text_spammy= 'It is the best time to launch the Robot to get more money. https:\\/\\/Gof.bode-roesch.de\\/Gof'
                """
         # use predictor
-        ret = self.command_executor.execute_command(
-            parse_sql(predict_sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(predict_sql))
         assert ret.error_code is None
 
         # fine tune
@@ -260,9 +252,7 @@ class TestHuggingface(BaseExecutorTest):
         tokenizer_from = 'bert-base-uncased';
         """
 
-        ret = self.command_executor.execute_command(
-            parse_sql(fine_tune_sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(fine_tune_sql))
 
         assert ret.error_code is None
 
@@ -297,9 +287,7 @@ class TestHuggingface(BaseExecutorTest):
         FROM pg (SELECT label, hypothesis FROM df);
         """
 
-        ret = self.command_executor.execute_command(
-            parse_sql(fine_tune_sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(fine_tune_sql))
 
         assert ret.error_code is None
 
@@ -335,9 +323,7 @@ class TestHuggingface(BaseExecutorTest):
         FROM  pg (SELECT text_long, transl FROM df);
         """
 
-        ret = self.command_executor.execute_command(
-            parse_sql(fine_tune_sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(fine_tune_sql))
 
         assert ret.error_code is None
 
@@ -374,8 +360,6 @@ class TestHuggingface(BaseExecutorTest):
         );
         """
 
-        ret = self.command_executor.execute_command(
-            parse_sql(fine_tune_sql)
-        )
+        ret = self.command_executor.execute_command(parse_sql(fine_tune_sql))
 
         assert ret.error_code is None

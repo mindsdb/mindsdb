@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 from .base_ml_test import BaseMLAPITest
 
-GEMINI_API_KEY = os.environ.get('GOOGLE_GENAI_API_KEY')
+GEMINI_API_KEY = os.environ.get("GOOGLE_GENAI_API_KEY")
 
 
-@pytest.mark.skipif(GEMINI_API_KEY is None, reason='Missing API key!')
+@pytest.mark.skipif(GEMINI_API_KEY is None, reason="Missing API key!")
 class TestGeminiHandler(BaseMLAPITest):
     """Test Class for Google Gemini (Bard) API handler"""
 
@@ -76,10 +76,9 @@ class TestGeminiHandler(BaseMLAPITest):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_bulk_qa(self, mock_handler):
         """Test for bulk question/answer pairs"""
-        df = pd.DataFrame.from_dict({"question": [
-            "What is the capital of Sweden?",
-            "What is the second planet of the solar system?"
-        ]})
+        df = pd.DataFrame.from_dict(
+            {"question": ["What is the capital of Sweden?", "What is the second planet of the solar system?"]}
+        )
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(

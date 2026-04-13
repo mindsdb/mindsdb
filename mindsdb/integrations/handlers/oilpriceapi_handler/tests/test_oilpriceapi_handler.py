@@ -14,7 +14,6 @@ except ImportError:
 
 @pytest.mark.skipif(not REQUESTS_INSTALLED, reason="requests package is not installed")
 class TestOilPriceAPIHandler(BaseExecutorTest):
-
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None
@@ -28,7 +27,7 @@ class TestOilPriceAPIHandler(BaseExecutorTest):
             CREATE DATABASE mindsdb_oilpriceapi
                 WITH ENGINE = 'oilpriceapi',
                 PARAMETERS = {
-                "api_key": '{self.api_key}'
+            "api_key": '{self.api_key}'
                 };
         """)
 

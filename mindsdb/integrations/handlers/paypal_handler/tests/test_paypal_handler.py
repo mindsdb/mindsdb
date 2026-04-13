@@ -6,17 +6,16 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class PayPalHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
-                "mode": os.environ.get('MODE'),
-                "client_id": os.environ.get('CLIENT_ID'),
-                "client_secret": os.environ.get('CLIENT_SECRET'),
+                "mode": os.environ.get("MODE"),
+                "client_id": os.environ.get("CLIENT_ID"),
+                "client_secret": os.environ.get("CLIENT_SECRET"),
             }
         }
-        cls.handler = PayPalHandler('test_paypal_handler', **cls.kwargs)
+        cls.handler = PayPalHandler("test_paypal_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()

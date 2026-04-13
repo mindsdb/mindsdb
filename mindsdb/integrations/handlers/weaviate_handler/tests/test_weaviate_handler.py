@@ -160,9 +160,7 @@ class TestWeaviateHandler(BaseExecutorTest):
                 ],  # different dimensions
             }
         )
-        self.set_handler(
-            postgres_handler_mock, "weaviate", tables={"df": df, "df2": df2}
-        )
+        self.set_handler(postgres_handler_mock, "weaviate", tables={"df": df, "df2": df2})
         num_record = df.shape[0]
 
         # create a table

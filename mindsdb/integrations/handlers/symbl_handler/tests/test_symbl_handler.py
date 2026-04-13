@@ -14,7 +14,6 @@ except ImportError:
 
 @pytest.mark.skipif(not SYMBL_INSTALLED, reason="symbl package is not installed")
 class TestSymblAPIHandler(BaseExecutorTest):
-
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None
@@ -29,7 +28,7 @@ class TestSymblAPIHandler(BaseExecutorTest):
             CREATE DATABASE mindsdb_symbl
                     WITH ENGINE = 'symbl',
                     PARAMETERS = {
-                    "app_id": '{self.app_id}',
+            "app_id": '{self.app_id}',
                     "app_secret": '{self.app_secret}'
                     };
         """)

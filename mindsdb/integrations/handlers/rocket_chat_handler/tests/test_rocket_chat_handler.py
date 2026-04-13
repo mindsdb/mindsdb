@@ -47,9 +47,7 @@ class RocketChatMessagesTableTest(unittest.TestCase):
         )
         messages_table = RocketChatMessagesTable(api_handler)
 
-        select_all = ast.Select(
-            targets=[Star()], from_table="channel_messages", where='room_id = "GENERAL"'
-        )
+        select_all = ast.Select(targets=[Star()], from_table="channel_messages", where='room_id = "GENERAL"')
 
         all_messages = messages_table.select(select_all)
         first_message = all_messages.iloc[0]

@@ -6,7 +6,7 @@ from unittest.mock import patch
 from .base_ml_test import BaseMLAPITest
 
 
-@pytest.mark.skipif(os.environ.get('ANTHROPIC_API_KEY') is None, reason='Missing API key!')
+@pytest.mark.skipif(os.environ.get("ANTHROPIC_API_KEY") is None, reason="Missing API key!")
 class TestAnthropic(BaseMLAPITest):
     """Test Class for Anthropic Integration Testing"""
 
@@ -19,7 +19,7 @@ class TestAnthropic(BaseMLAPITest):
             CREATE ML_ENGINE anthropic
             FROM anthropic
             USING
-            anthropic_api_key = '{self.get_api_key('ANTHROPIC_API_KEY')}';
+            anthropic_api_key = '{self.get_api_key("ANTHROPIC_API_KEY")}';
             """
         )
 
@@ -33,7 +33,7 @@ class TestAnthropic(BaseMLAPITest):
                 engine='anthropic',
                 column='question',
                 model='this-claude-does-not-exist',
-                api_key='{self.get_api_key('ANTHROPIC_API_KEY')}';
+                api_key='{self.get_api_key("ANTHROPIC_API_KEY")}';
             """
         )
         with pytest.raises(Exception):
@@ -48,7 +48,7 @@ class TestAnthropic(BaseMLAPITest):
             USING
                 engine='anthropic',
                 column='question',
-                api_key='{self.get_api_key('ANTHROPIC_API_KEY')}',
+                api_key='{self.get_api_key("ANTHROPIC_API_KEY")}',
                 evidently_wrong_argument='wrong value';
             """
         )
@@ -64,7 +64,7 @@ class TestAnthropic(BaseMLAPITest):
             USING
                 engine='anthropic',
                 column='question',
-                api_key='{self.get_api_key('ANTHROPIC_API_KEY')}';
+                api_key='{self.get_api_key("ANTHROPIC_API_KEY")}';
             """
         )
         self.wait_predictor("proj", "test_anthropic_single_qa")
@@ -81,10 +81,9 @@ class TestAnthropic(BaseMLAPITest):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_bulk_qa(self, mock_handler):
         """Test for bulk question/answer pairs"""
-        df = pd.DataFrame.from_dict({"question": [
-            "What is the capital of Sweden?",
-            "What is the second planet of the solar system?"
-        ]})
+        df = pd.DataFrame.from_dict(
+            {"question": ["What is the capital of Sweden?", "What is the second planet of the solar system?"]}
+        )
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
@@ -94,7 +93,7 @@ class TestAnthropic(BaseMLAPITest):
            USING
                engine='anthropic',
                column='question',
-               api_key='{self.get_api_key('ANTHROPIC_API_KEY')}';
+               api_key='{self.get_api_key("ANTHROPIC_API_KEY")}';
         """
         )
         self.wait_predictor("proj", "test_anthropic_bulk_qa")

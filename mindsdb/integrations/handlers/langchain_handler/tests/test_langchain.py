@@ -21,13 +21,14 @@ def ollama_model_exists(model_name: str) -> bool:
 
 class TestLangchain(BaseExecutorTest):
     """Test Class for Langchain Integration Testing"""
+
     @pytest.fixture(autouse=True, scope="function")
     def setup_method(self):
         """Setup test environment, creating a project"""
         super().setup_method()
         self.run_sql("create database proj")
 
-    @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
+    @pytest.mark.skipif(OPENAI_API_KEY is None, reason="Missing OpenAI API key (OPENAI_API_KEY env variable)")
     def test_default_provider(self):
         self.run_sql(
             f"""
@@ -48,9 +49,9 @@ class TestLangchain(BaseExecutorTest):
             WHERE question='What is the capital of Sweden?'
         """
         )
-        assert "stockholm" in result_df['answer'].iloc[0].lower()
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
 
-    @pytest.mark.skipif(ANTHROPIC_API_KEY is None, reason='Missing Anthropic API key (ANTHROPIC_API_KEY env variable)')
+    @pytest.mark.skipif(ANTHROPIC_API_KEY is None, reason="Missing Anthropic API key (ANTHROPIC_API_KEY env variable)")
     def test_anthropic_provider(self):
         self.run_sql(
             f"""
@@ -72,9 +73,12 @@ class TestLangchain(BaseExecutorTest):
             WHERE question='What is the capital of Sweden?'
         """
         )
-        assert "stockholm" in result_df['answer'].iloc[0].lower()
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
 
-    @pytest.mark.skipif(not ollama_model_exists('mistral'), reason='Make sure the mistral model is available locally by running `ollama pull mistral`')
+    @pytest.mark.skipif(
+        not ollama_model_exists("mistral"),
+        reason="Make sure the mistral model is available locally by running `ollama pull mistral`",
+    )
     def test_ollama_provider(self):
         self.run_sql(
             """
@@ -95,10 +99,9 @@ class TestLangchain(BaseExecutorTest):
             WHERE question='What is the capital of British Columbia, Canada?'
         """
         )
-        assert "victoria" in result_df['answer'].iloc[0].lower()
+        assert "victoria" in result_df["answer"].iloc[0].lower()
 
-
-    @pytest.mark.skipif(GOOGLE_API_KEY is None, reason='Missing Google API key (GOOGLE_API_KEY env variable)')
+    @pytest.mark.skipif(GOOGLE_API_KEY is None, reason="Missing Google API key (GOOGLE_API_KEY env variable)")
     def test_google_provider(self):
         self.run_sql(
             f"""
@@ -121,7 +124,7 @@ class TestLangchain(BaseExecutorTest):
             WHERE question='What is the capital of Sweden?'
         """
         )
-        assert "stockholm" in result_df['answer'].iloc[0].lower()
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
 
     def test_describe(self):
         self.run_sql(
@@ -134,10 +137,10 @@ class TestLangchain(BaseExecutorTest):
         """
         )
         self.wait_predictor("proj", "test_describe_model")
-        result_df = self.run_sql('DESCRIBE proj.test_describe_model')
+        result_df = self.run_sql("DESCRIBE proj.test_describe_model")
         assert not result_df.empty
 
-    @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
+    @pytest.mark.skipif(OPENAI_API_KEY is None, reason="Missing OpenAI API key (OPENAI_API_KEY env variable)")
     def test_prompt_template_args(self):
         self.run_sql(
             f"""
@@ -151,7 +154,7 @@ class TestLangchain(BaseExecutorTest):
         )
         self.wait_predictor("proj", "test_prompt_template_model")
 
-        agent_name = 'professor farnsworth'
+        agent_name = "professor farnsworth"
         result_df = self.run_sql(
             f"""
             SELECT answer
@@ -159,4 +162,4 @@ class TestLangchain(BaseExecutorTest):
             WHERE question='What is your name?' AND name='{agent_name}'
         """
         )
-        assert agent_name in result_df['answer'].iloc[0].lower()
+        assert agent_name in result_df["answer"].iloc[0].lower()

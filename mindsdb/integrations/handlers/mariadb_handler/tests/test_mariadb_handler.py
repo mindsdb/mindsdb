@@ -17,7 +17,7 @@ HANDLER_KWARGS = {
         "user": "root",
         "password": "supersecret",
         "database": "test",
-        "ssl": False
+        "ssl": False,
     }
 }
 
@@ -38,7 +38,7 @@ def get_certificates(container):
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     archive_path = os.path.join(cur_dir, CERTS_ARCHIVE)
     with open(archive_path, "wb") as f:
-        bits, _ = container.get_archive('/var/lib/mysql')
+        bits, _ = container.get_archive("/var/lib/mysql")
         for chunk in bits:
             f.write(chunk)
 
@@ -85,7 +85,7 @@ def handler(request):
 
     if with_ssl:
         get_certificates(container)
-    handler = MariaDBHandler('test_mariadb_handler', **HANDLER_KWARGS)
+    handler = MariaDBHandler("test_mariadb_handler", **HANDLER_KWARGS)
     yield handler
 
     # normal teardown
@@ -113,7 +113,7 @@ class TestMariaDBHandler:
         dbs = handler.native_query("SHOW DATABASES;")
         dbs = dbs.data_frame
         assert dbs is not None, "expected to get some data, but got None"
-        assert 'Database' in dbs, f"expected to get 'Database' column in response:\n{dbs}"
+        assert "Database" in dbs, f"expected to get 'Database' column in response:\n{dbs}"
         dbs = list(dbs["Database"])
         expected_db = HANDLER_KWARGS["connection_data"]["database"]
         assert expected_db in dbs, f"expected to have {expected_db} db in response: {dbs}"
@@ -127,10 +127,19 @@ class TestMariaDBHandler:
         describe_data = described.data_frame
         self.check_valid_response(described)
         got_columns = list(describe_data.iloc[:, 0])
-        want_columns = ["number_of_rooms", "number_of_bathrooms",
-                        "sqft", "location", "days_on_market",
-                        "initial_price", "neighborhood", "rental_price"]
-        assert got_columns == want_columns, f"expected to have next columns in rentals table:\n{want_columns}\nbut got:\n{got_columns}"
+        want_columns = [
+            "number_of_rooms",
+            "number_of_bathrooms",
+            "sqft",
+            "location",
+            "days_on_market",
+            "initial_price",
+            "neighborhood",
+            "rental_price",
+        ]
+        assert got_columns == want_columns, (
+            f"expected to have next columns in rentals table:\n{want_columns}\nbut got:\n{got_columns}"
+        )
 
     def test_create_table(self, handler):
         new_table = "test_mdb"
@@ -165,5 +174,5 @@ class TestMariaDBHandler:
         res = handler.get_tables()
         tables = res.data_frame
         assert tables is not None, "expected to have some tables in the db, but got None"
-        assert 'table_name' in tables, f"expected to get 'table_name' column in the response:\n{tables}"
-        return list(tables['table_name'])
+        assert "table_name" in tables, f"expected to get 'table_name' column in the response:\n{tables}"
+        return list(tables["table_name"])

@@ -17,7 +17,6 @@ except ImportError:
 
 @pytest.mark.skipif(not MILVUS_INSTALLED, reason="pymilvus is not installed")
 class TestMilvusHandler(BaseExecutorTest):
-
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None

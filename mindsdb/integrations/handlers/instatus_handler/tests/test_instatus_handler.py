@@ -6,34 +6,35 @@ import os
 
 
 class InstatusHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        cls.handler = InstatusHandler(name='mindsdb_instatus', connection_data={'api_key': os.environ.get('INSTATUS_API_KEY')})
+        cls.handler = InstatusHandler(
+            name="mindsdb_instatus", connection_data={"api_key": os.environ.get("INSTATUS_API_KEY")}
+        )
 
     def setUp(self):
-        self.pageId = self.handler.call_instatus_api(endpoint='/v2/pages')['id'][0]
-        self.componentId = self.handler.call_instatus_api(endpoint=f'/v1/{self.pageId}/components')['id'][0]
+        self.pageId = self.handler.call_instatus_api(endpoint="/v2/pages")["id"][0]
+        self.componentId = self.handler.call_instatus_api(endpoint=f"/v1/{self.pageId}/components")["id"][0]
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
 
     def test_1_call_instatus_api(self):
-        self.assertIsInstance(self.handler.call_instatus_api(endpoint='/v2/pages'), pd.DataFrame)
+        self.assertIsInstance(self.handler.call_instatus_api(endpoint="/v2/pages"), pd.DataFrame)
 
     def test_2_get_tables(self):
         tables = self.handler.get_tables()
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        status_pages_columns = self.handler.get_columns(table_name='status_pages')
-        components_columns = self.handler.get_columns(table_name='components')
+        status_pages_columns = self.handler.get_columns(table_name="status_pages")
+        components_columns = self.handler.get_columns(table_name="components")
         assert type(status_pages_columns) is not RESPONSE_TYPE.ERROR
         assert type(components_columns) is not RESPONSE_TYPE.ERROR
 
     def test_4_select_status_pages(self):
-        query = '''SELECT *
-                    FROM mindsdb_instatus.status_pages'''
+        query = """SELECT *
+                    FROM mindsdb_instatus.status_pages"""
         self.assertTrue(self.handler.native_query(query))
 
     def test_5_select_status_pages_by_conditions(self):
@@ -43,7 +44,7 @@ class InstatusHandlerTest(unittest.TestCase):
         self.assertTrue(self.handler.native_query(query))
 
     def test_6_insert_status_pages(self):
-        query = f'''INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl) VALUES ('{os.environ.get('EMAIL_ID')}', 'mindsdb', 'somtirtha-roy', '["Website", "App", "API"]', 'https://instatus.com/sample.png')'''
+        query = f"""INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl) VALUES ('{os.environ.get("EMAIL_ID")}', 'mindsdb', 'somtirtha-roy', '["Website", "App", "API"]', 'https://instatus.com/sample.png')"""
         try:
             self.assertTrue(self.handler.native_query(query))
         except Exception as e:
@@ -97,20 +98,20 @@ class InstatusHandlerTest(unittest.TestCase):
         self.assertTrue(self.handler.native_query(query))
 
     def test_8_select_components(self):
-        query = f'''SELECT *
+        query = f"""SELECT *
                     FROM mindsdb_instatus.components
-                    WHERE page_id = '{self.pageId}';'''
+                    WHERE page_id = '{self.pageId}';"""
         self.assertTrue(self.handler.native_query(query))
 
     def test_9_select_components_by_conditions(self):
-        query = f'''SELECT *
+        query = f"""SELECT *
                     FROM mindsdb_instatus.components
                     WHERE page_id = '{self.pageId}'
-                    AND component_id = '{self.componentId}';'''
+                    AND component_id = '{self.componentId}';"""
         self.assertTrue(self.handler.native_query(query))
 
     def test_10_insert_components(self):
-        query = f'''INSERT INTO mindsdb_instatus.components (page_id, name, description, status, order, showUptime, grouped, translations_name_in_fr, translations_desc_in_fr)
+        query = f"""INSERT INTO mindsdb_instatus.components (page_id, name, description, status, order, showUptime, grouped, translations_name_in_fr, translations_desc_in_fr)
                     VALUES (
                         '{self.pageId}',
                         'Test component',
@@ -121,11 +122,11 @@ class InstatusHandlerTest(unittest.TestCase):
                         false,
                         "Composant de test",
                         "En test"
-                    );'''
+                    );"""
         self.assertTrue(self.handler.native_query(query))
 
     def test_11_update_components(self):
-        query = f'''UPDATE mindsdb_instatus.components
+        query = f"""UPDATE mindsdb_instatus.components
                     SET
                         name = 'Test component 4',
                         description = 'Test test test',
@@ -136,9 +137,9 @@ class InstatusHandlerTest(unittest.TestCase):
                         translations_name_in_fr = "Composant de test 4",
                         translations_desc_in_fr = "Test test test"
                     WHERE page_id = '{self.pageId}'
-                    AND component_id = '{self.componentId}';'''
+                    AND component_id = '{self.componentId}';"""
         self.assertTrue(self.handler.native_query(query))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

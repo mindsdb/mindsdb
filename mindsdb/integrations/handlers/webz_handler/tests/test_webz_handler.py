@@ -123,9 +123,7 @@ class WebzPostsTableTest(unittest.TestCase):
         )
         with self.assertRaises(ValueError) as context:
             posts_table.select(query)
-        self.assertEqual(
-            str(context.exception), "Order by unknown column invalid_field"
-        )
+        self.assertEqual(str(context.exception), "Order by unknown column invalid_field")
 
 
 COLUMNS_REVIEW = [
@@ -222,6 +220,4 @@ class WebzReviewsTableTest(unittest.TestCase):
         )
         with self.assertRaises(ValueError) as context:
             reviews_table.select(query)
-        self.assertEqual(
-            str(context.exception), "Order by unknown column invalid_field"
-        )
+        self.assertEqual(str(context.exception), "Order by unknown column invalid_field")

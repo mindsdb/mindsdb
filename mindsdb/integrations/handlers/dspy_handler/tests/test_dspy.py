@@ -19,15 +19,15 @@ def ollama_model_exists(model_name: str) -> bool:
 
 
 class TestDSPy(BaseExecutorTest):
-
     """Test Class for DSPy Integration Testing"""
+
     @pytest.fixture(autouse=True, scope="function")
     def setup_method(self):
         """Setup test environment, creating a project"""
         super().setup_method()
         self.run_sql("create database proj")
 
-    @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
+    @pytest.mark.skipif(OPENAI_API_KEY is None, reason="Missing OpenAI API key (OPENAI_API_KEY env variable)")
     def test_default_provider(self):
 
         self.run_sql(
@@ -61,9 +61,9 @@ class TestDSPy(BaseExecutorTest):
             WHERE question='What is the capital of Sweden?;'
         """
         )
-        assert "stockholm" in result_df['answer'].iloc[0].lower()
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
 
-    @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
+    @pytest.mark.skipif(OPENAI_API_KEY is None, reason="Missing OpenAI API key (OPENAI_API_KEY env variable)")
     def test_default_provider2(self):
 
         self.run_sql(
@@ -97,4 +97,4 @@ class TestDSPy(BaseExecutorTest):
             WHERE question='What is 3 + 4?;'
         """
         )
-        assert "7" in result_df['answer'].iloc[0].lower()
+        assert "7" in result_df["answer"].iloc[0].lower()

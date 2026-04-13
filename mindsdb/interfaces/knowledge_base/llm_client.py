@@ -69,10 +69,10 @@ class LLMClient:
 
     def __init__(self, params: dict = None, session=None):
         self._session = session
-        self.params = params.copy()
+        params = params.copy()
 
-        self.provider = self.params.pop("provider", "openai")
-        self.model_name = self.params.pop("model_name")
+        self.provider = params.pop("provider", "openai")
+        self.model_name = params.pop("model_name")
         if self.provider == "google":
             self.provider = "gemini"
 
@@ -96,20 +96,17 @@ class LLMClient:
                 kwargs["base_url"] = base_url
             self.client = OpenAI(**kwargs)
         elif self.provider == "ollama":
-            kwargs = params.copy()
-            kwargs.pop("model_name")
-            kwargs.pop("provider", None)
-            if kwargs.get("api_key") is None:
-                kwargs["api_key"] = "n/a"
-            self.client = OpenAI(**kwargs)
+            if params.get("api_key") is None:
+                params["api_key"] = "n/a"
+            self.client = OpenAI(**params)
         elif self.provider == "bedrock":
-            if "aws_region" in self.params:
-                self.params["aws_region_name"] = self.params.pop("aws_region")
-            self.client = BedrockClient(**self.params)
+            if "aws_region" in params:
+                params["aws_region_name"] = params.pop("aws_region")
+            self.client = BedrockClient(**params)
         elif self.provider == "gemini":
-            self.client = GeminiClient(**self.params)
+            self.client = GeminiClient(**params)
         elif self.provider == "snowflake":
-            self.client = SnowflakeClient(**self.params)
+            self.client = SnowflakeClient(**params)
         else:
             raise NotImplementedError(f'Provider "{self.provider}" is not supported')
 

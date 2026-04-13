@@ -1,10 +1,9 @@
 # How to run:
 #  env PYTHONPATH=./:$PYTHONPATH pytest tests/unit/ml_handlers/test_mlflow.py -ls
-
+import requests
 import time
 import pytest
 from unittest.mock import patch
-import requests
 
 from mindsdb_sql_parser import parse_sql
 

@@ -113,7 +113,7 @@ class LLMClient:
     @run_in_batches(1000)
     @retry_with_exponential_backoff
     def embeddings(self, messages: List[str]):
-        if self.provider in ("openai", "azure_openai"):
+        if self.provider in ("openai", "azure_openai", "ollama"):
             response = self.client.embeddings.create(
                 model=self.model_name,
                 input=messages,
@@ -128,7 +128,7 @@ class LLMClient:
         Call LLM completion and get response
         """
 
-        if self.provider in ("openai", "azure_openai"):
+        if self.provider in ("openai", "azure_openai", "ollama"):
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,

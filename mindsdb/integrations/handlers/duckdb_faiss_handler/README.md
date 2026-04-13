@@ -159,7 +159,8 @@ What occupies disk:
 
 ### Keyword search
 
-
+Implemented by using duckdb [fts extension](https://duckdb.org/docs/stable/core_extensions/full_text_search#match_bm25-function)
+When keyword search is used and FTS index doesn't exist—it is created. This index is removed when any record is inserted into KB (because FTS index isn't updated after inserts in DuckDB).
 
 ### Mixed search optimizations
 For queries that mix vectors and rich metadata:

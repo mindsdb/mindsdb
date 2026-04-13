@@ -19,12 +19,12 @@ from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_cap
 
 
 class HandshakeResponsePacket(Packet):
-    '''
+    """
     Implementation based on description:
     https://mariadb.com/kb/en/library/1-connecting-connecting/#initial-handshake-packet
-    '''
+    """
 
-    def setup(self, length=0, count_header=1, body=''):
+    def setup(self, length=0, count_header=1, body=""):
         length = len(body)
 
         if length == 0:
@@ -36,27 +36,27 @@ class HandshakeResponsePacket(Packet):
         self._seq = count_header
         self._body = body
 
-        self.capabilities = Datum('int<4>')
-        self.max_packet_size = Datum('int<4>')
-        self.reserved = Datum('string<23>')
-        self.username = Datum('string<NUL>')
+        self.capabilities = Datum("int<4>")
+        self.max_packet_size = Datum("int<4>")
+        self.reserved = Datum("string<23>")
+        self.username = Datum("string<NUL>")
 
-        self.enc_password = Datum('string<NUL>')
-        self.database = Datum('string<NUL>')
+        self.enc_password = Datum("string<NUL>")
+        self.database = Datum("string<NUL>")
 
-        self.charset = Datum('int<1>')
+        self.charset = Datum("int<1>")
 
-        self.client_auth_plugin = Datum('string<NUL>')
+        self.client_auth_plugin = Datum("string<NUL>")
 
         buffer = body
 
-        if len(body) == 32 and body[9:] == (b'\x00' * 23):
-            self.type = 'SSLRequest'
+        if len(body) == 32 and body[9:] == (b"\x00" * 23):
+            self.type = "SSLRequest"
             buffer = self.capabilities.setFromBuff(buffer)
             buffer = self.max_packet_size.setFromBuff(buffer)
             buffer = self.charset.setFromBuff(buffer)
         else:
-            self.type = 'HandshakeResponse'
+            self.type = "HandshakeResponse"
             buffer = self.capabilities.setFromBuff(buffer)
             capabilities = ClentCapabilities(self.capabilities.value)
             buffer = self.max_packet_size.setFromBuff(buffer)
@@ -64,18 +64,19 @@ class HandshakeResponsePacket(Packet):
             buffer = self.reserved.setFromBuff(buffer)
             buffer = self.username.setFromBuff(buffer)
 
-            if server_capabilities.has(CAPABILITIES.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA) \
-                    and capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA:
-                self.enc_password = Datum('string<lenenc>')
+            if (
+                server_capabilities.has(CAPABILITIES.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA)
+                and capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA
+            ):
+                self.enc_password = Datum("string<lenenc>")
                 buffer = self.enc_password.setFromBuff(buffer)
-            elif server_capabilities.has(CAPABILITIES.CLIENT_SECURE_CONNECTION) \
-                    and capabilities.SECURE_CONNECTION:
-                self.auth_resp_len = Datum('int<1>')
+            elif server_capabilities.has(CAPABILITIES.CLIENT_SECURE_CONNECTION) and capabilities.SECURE_CONNECTION:
+                self.auth_resp_len = Datum("int<1>")
                 buffer = self.auth_resp_len.setFromBuff(buffer)
-                self.enc_password = Datum(f'string<{self.auth_resp_len.value}>')
+                self.enc_password = Datum(f"string<{self.auth_resp_len.value}>")
                 buffer = self.enc_password.setFromBuff(buffer)
             else:
-                pass_byte = Datum('int<1>')
+                pass_byte = Datum("int<1>")
                 buffer = pass_byte.setFromBuff(buffer)
 
             if capabilities.CONNECT_WITH_DB:
@@ -88,9 +89,11 @@ class HandshakeResponsePacket(Packet):
         self.session.username = self.username.value
 
     def __str__(self):
-        return str({
-            'header': {'length': self.length, 'seq': self.seq},
-            'username': self.username.value,
-            'password': self.enc_password.value,
-            'database': self.database.value
-        })
+        return str(
+            {
+                "header": {"length": self.length, "seq": self.seq},
+                "username": self.username.value,
+                "password": self.enc_password.value,
+                "database": self.database.value,
+            }
+        )

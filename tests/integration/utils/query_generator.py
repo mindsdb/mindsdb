@@ -13,7 +13,9 @@ class QueryGenerator:
         :param parameters: A dictionary of parameters for the engine.
         :return: The generated SQL query as a string.
         """
-        parameter_str = ",\n  ".join([f'"{key}": "{value}"' if type(value) == str else f'"{key}": {value}' for key, value in parameters.items()])
+        parameter_str = ",\n  ".join(
+            [f'"{key}": "{value}"' if type(value) == str else f'"{key}": {value}' for key, value in parameters.items()]
+        )
         query = f"""CREATE DATABASE {database_name}
                     WITH ENGINE = '{engine}',
                         PARAMETERS = {{

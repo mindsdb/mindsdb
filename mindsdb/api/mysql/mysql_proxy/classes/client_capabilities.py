@@ -1,7 +1,7 @@
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CAPABILITIES
 
 
-class ClentCapabilities():
+class ClentCapabilities:
     _capabilities = 0
 
     def __init__(self, capabilities):

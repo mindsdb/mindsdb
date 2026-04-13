@@ -17,7 +17,11 @@ SENTRY_IO_TRACE_SAMPLE_RATE = float(os.environ.get("SENTRY_IO_TRACE_SAMPLE_RATE"
 SENTRY_IO_PROFILING_SAMPLE_RATE = float(os.environ.get("SENTRY_IO_PROFILING_SAMPLE_RATE", "1.0"))
 # By default we have sentry.io enabled on all envs, except for local which is disabled by default
 #   If you want to enable sentry.io on local for some reason (eg: profiling) please set SENTRY_IO_FORCE_RUN to true
-SENTRY_IO_DISABLED = True if (os.environ.get("SENTRY_IO_DISABLED", "false").lower() == "true" or SENTRY_IO_ENVIRONMENT == "local") else False
+SENTRY_IO_DISABLED = (
+    True
+    if (os.environ.get("SENTRY_IO_DISABLED", "false").lower() == "true" or SENTRY_IO_ENVIRONMENT == "local")
+    else False
+)
 SENTRY_IO_FORCE_RUN = True if os.environ.get("SENTRY_IO_FORCE_RUN", "false").lower() == "true" else False
 
 

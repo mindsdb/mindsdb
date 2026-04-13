@@ -16,7 +16,6 @@ from .base import BaseStepCall
 
 
 class DeleteStepCall(BaseStepCall):
-
     bind = DeleteStep
 
     def call(self, step):
@@ -24,7 +23,7 @@ class DeleteStepCall(BaseStepCall):
             integration_name = step.table.parts[0]
             table_name_parts = step.table.parts[1:]
         else:
-            integration_name = self.context['database']
+            integration_name = self.context["database"]
             table_name_parts = step.table.parts
 
         dn = self.session.datahub.get(integration_name)

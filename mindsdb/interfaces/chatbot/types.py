@@ -31,7 +31,6 @@ class ChatBotMessage:
 
 
 class Function:
-
     def __init__(self, name, description, callback):
         self.name = name
         self.description = description

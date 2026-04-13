@@ -5,6 +5,7 @@ Revises: 6cb02dfd7f61
 Create Date: 2023-09-20 13:48:39.422306
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -41,9 +42,7 @@ def upgrade():
             name="fk_knowledge_base_vector_database_id",
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "name", "project_id", name="unique_knowledge_base_name_project_id"
-        ),
+        sa.UniqueConstraint("name", "project_id", name="unique_knowledge_base_name_project_id"),
     )
     # ### end Alembic commands ###
 

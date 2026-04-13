@@ -7,7 +7,7 @@ def parse_local_date(date_str: str) -> dt.datetime:
     """Parses common date string formats to local datetime objects."""
     if isinstance(date_str, dt.datetime):
         return date_str
-    date_formats = ['%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
+    date_formats = ["%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
 
     date = None
     for date_format in date_formats:
@@ -61,19 +61,19 @@ def interval_str_to_duration_ms(interval_str: str) -> int:
       - days (e.g. 5d)
       - weeks (e.g. 1w)
     """
-    duration_match = re.search(r'^\d+', interval_str)
-    time_unit_match = re.search('[smhdw]', interval_str)
+    duration_match = re.search(r"^\d+", interval_str)
+    time_unit_match = re.search("[smhdw]", interval_str)
     if not duration_match or not time_unit_match:
-        raise ValueError('Invalid interval {}'.format(interval_str))
+        raise ValueError("Invalid interval {}".format(interval_str))
     duration = int(duration_match.group())
     time_unit = time_unit_match.group()
-    if time_unit == 's':
+    if time_unit == "s":
         return duration * 1000
-    if time_unit == 'm':
+    if time_unit == "m":
         return duration * 1000 * 60
-    if time_unit == 'h':
+    if time_unit == "h":
         return duration * 1000 * 60 * 60
-    if time_unit == 'd':
+    if time_unit == "d":
         return duration * 1000 * 60 * 60 * 24
-    if time_unit == 'w':
+    if time_unit == "w":
         return duration * 1000 * 60 * 60 * 24 * 7

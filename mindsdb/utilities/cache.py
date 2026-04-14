@@ -92,9 +92,12 @@ def str_checksum(obj: str):
 class BaseCache(ABC):
     def __init__(self, max_size=None, serializer=None):
         self.config = Config()
+
         if max_size is None:
             max_size = self.config["cache"].get("max_size", _CACHE_MAX_SIZE)
+
         self.max_size = max_size
+
         if serializer is None:
             serializer_module = self.config["cache"].get("serializer")
             if serializer_module == "pickle":

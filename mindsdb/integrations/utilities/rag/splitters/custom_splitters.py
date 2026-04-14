@@ -44,7 +44,7 @@ class RecursiveCharacterTextSplitter:
         Split text into chunks
 
         Args:
-            text: Text to split
+            text (str): Text to split
 
         Returns:
             List of text chunks

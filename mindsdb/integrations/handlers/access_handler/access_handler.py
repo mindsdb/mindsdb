@@ -45,6 +45,7 @@ class AccessHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = "access"
+
         self.connection_data = connection_data
 
         self.kwargs = kwargs

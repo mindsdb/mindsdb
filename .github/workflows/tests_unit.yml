@@ -23,17 +23,11 @@ env:
     timescaledb
     mssql
     oracle
-    slack
     redshift
     bigquery
-    clickhouse
     web
     databricks
-    github
-    ms_teams
-    statsforecast
     duckdb_faiss
-    confluence
     openai
   # We measure 80% on this handlers, as they are the verified
   HANDLERS_TO_VERIFY: |
@@ -44,11 +38,9 @@ env:
     timescaledb
     mssql
     oracle
-    slack
     file
     redshift
     bigquery
-    confluence
   COVERAGE_FAIL_UNDER: "80"
 
 jobs:

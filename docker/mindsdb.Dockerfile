@@ -1,7 +1,7 @@
 # This stage's objective is to gather ONLY requirements.txt files and anything else needed to install deps.
 # This stage will be run almost every build, but it is fast and the resulting layer hash will be the same unless a deps file changes.
 # We do it this way because we can't copy all requirements files with a glob pattern in docker while maintaining the folder structure.
-FROM python:3.10.20-trixie AS deps
+FROM python:3.10.20 AS deps
 WORKDIR /mindsdb
 
 # Copy everything to begin with
@@ -19,7 +19,7 @@ COPY mindsdb/__about__.py mindsdb/
 
 
 # Use the stage from above to install our deps with as much caching as possible
-FROM python:3.10.20-trixie AS build
+FROM python:3.10.20 AS build
 WORKDIR /mindsdb
 
 # Configure apt to retain downloaded packages so we can store them in a cache mount
@@ -69,6 +69,13 @@ RUN --mount=type=cache,target=/root/.cache \
 
 
 FROM build AS extras
+
+# Apply latest security patches so the final image picks up fixes
+# even when the build stage layers are cached
+RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    apt-get update -qy && apt-get upgrade -qy
+
 ARG EXTRAS
 # Install extras on top of the bare mindsdb
 # The torch index is provided for "-cpu" images which install the cpu-only version of torch

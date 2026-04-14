@@ -14,7 +14,7 @@ The A2A API runs as part of the MindsDB HTTP API, allowing you to:
 ## Prerequisites
 
 - MindsDB running
-- Python 3.10.20-trixie or higher
+- Python 3.10.20 or higher
 
 ## Running A2A API
 

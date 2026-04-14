@@ -1,17 +1,7 @@
-"""
-Tests for the /api/handlers/ HTTP endpoints focused on the icon and listing
-paths when community handler stubs have path=None or metadata=None.
-"""
-
 import tempfile
 from http import HTTPStatus
 from pathlib import Path
 from unittest.mock import patch
-
-
-# ---------------------------------------------------------------------------
-# Icon endpoint tests
-# ---------------------------------------------------------------------------
 
 
 def test_icon_builtin_handler(client):
@@ -36,7 +26,10 @@ def test_icon_builtin_handler(client):
         ):
             response = client.get("/api/handlers/mysql/icon", follow_redirects=True)
 
-    assert response.status_code == HTTPStatus.OK
+        status_code = response.status_code
+        response.close()
+
+    assert status_code == HTTPStatus.OK
 
 
 def test_icon_community_stub_no_path(client):
@@ -77,11 +70,6 @@ def test_icon_unknown_handler(client):
         response = client.get("/api/handlers/does_not_exist/icon", follow_redirects=True)
 
     assert response.status_code == HTTPStatus.NOT_FOUND
-
-
-# ---------------------------------------------------------------------------
-# Listing endpoint tests
-# ---------------------------------------------------------------------------
 
 
 def test_handlers_list_skips_none_meta(client):

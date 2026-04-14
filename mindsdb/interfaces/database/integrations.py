@@ -1010,6 +1010,9 @@ class IntegrationController:
         # Stub from the index: path=None means the handler hasn't been
         # fetched yet — download it on demand from the community repo.
         if handler_meta.get("support_level") == "community" and handler_meta["path"] is None:
+            # Derive folder from stub metadata if not explicitly provided.
+            if handler_folder is None:
+                handler_folder = handler_meta.get("import", {}).get("folder")
             handler_meta = self._fetch_community_handler(handler_name, handler_folder)
         if handler_meta is None:
             return None

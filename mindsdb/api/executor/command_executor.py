@@ -248,8 +248,9 @@ class ExecuteCommands:
         if database_name is None:
             database_name = self.session.database
 
-        if ctx.params:
-            apply_parameters(statement, ctx.params)
+        params = getattr(ctx, "params", None)
+        if params:
+            apply_parameters(statement, params)
 
         statement_type = type(statement)
         if statement_type is CreateDatabase:

@@ -26,7 +26,8 @@ class VariablesController:
             self._data = self._storage.get(self._store_key)
             if self._data is None:
                 self._data = {}
-        return {**self._data, **ctx.params}
+        context_params = getattr(ctx, "params", {})
+        return {**self._data, **context_params}
 
     def get_value(self, name: str):
         data = self._get_data()

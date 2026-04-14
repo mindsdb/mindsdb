@@ -13,6 +13,7 @@ from starlette.responses import JSONResponse
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -89,6 +90,10 @@ def query(query: str, context: dict | None = None) -> dict[str, Any]:
     Returns:
         Dict containing the query results or error information
     """
+    logger.debug(f"Received MCP query tool call: query={query!r}, context={context!r}")
+    # MCP requests are not processed by the HTTP middleware, so initialize
+    # the execution context explicitly for each tool call.
+    ctx.set_default()
 
     if context is None:
         context = {}
@@ -134,32 +139,30 @@ def list_databases() -> list[str]:
        list[str]: list of databases
     """
 
+    # MCP requests are not processed by the HTTP middleware, so initialize
+    # the execution context explicitly for each tool call.
+    ctx.set_default()
     mysql_proxy = FakeMysqlProxy()
 
     try:
         result = mysql_proxy.process_query(LISTING_QUERY)
+
         if result.type == SQL_RESPONSE_TYPE.ERROR:
-            return {
-                "type": "error",
-                "error_code": result.error_code,
-                "error_message": result.error_message,
-            }
+            error_message = result.error_message or "Unknown error while retrieving list of databases"
+            raise RuntimeError(error_message)
 
-        elif result.type == SQL_RESPONSE_TYPE.OK:
-            return {"type": "ok"}
+        if result.type == SQL_RESPONSE_TYPE.OK:
+            return []
 
-        elif result.type == SQL_RESPONSE_TYPE.TABLE:
+        if result.type == SQL_RESPONSE_TYPE.TABLE:
             data = result.result_set.to_lists(json_types=True)
-            data = [val[0] for val in data]
-            return data
+            return [row[0] for row in data if len(row) > 0]
+
+        raise RuntimeError(f"Unexpected response type while retrieving databases: {result.type}")
 
     except Exception as e:
         logger.exception("Error while retrieving list of databases")
-        return {
-            "type": "error",
-            "error_code": 0,
-            "error_message": str(e),
-        }
+        raise RuntimeError(str(e)) from e
 
 
 def _get_status(request: Request) -> JSONResponse:

@@ -1013,6 +1013,12 @@ class IntegrationController:
             # Derive folder from stub metadata if not explicitly provided.
             if handler_folder is None:
                 handler_folder = handler_meta.get("import", {}).get("folder")
+            if handler_folder is None:
+                logger.warning(
+                    "Community handler '%s' has no folder in metadata, skipping fetch",
+                    handler_name,
+                )
+                return None
             handler_meta = self._fetch_community_handler(handler_name, handler_folder)
         if handler_meta is None:
             return None

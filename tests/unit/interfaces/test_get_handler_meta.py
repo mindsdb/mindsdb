@@ -137,19 +137,18 @@ class TestGetHandlerMetaCommunityFolderFallback(unittest.TestCase):
     def test_community_stub_missing_folder_returns_none_gracefully(self):
         """
         If the stub's "import.folder" is also None (malformed index entry),
-        _fetch_community_handler is called with None and must return None
-        gracefully — no unhandled exception.
+        the guard in get_handler_meta() must return None immediately — before
+        _fetch_community_handler is ever called — to avoid a TypeError from
+        fetch_handler(None, storage_dir).
         """
         stub = _community_stub("broken")
         stub["import"]["folder"] = None  # simulate malformed entry
         self.ctrl.handlers_import_status["broken"] = stub
 
-        # _fetch_community_handler should propagate None folder and return None
-        # (the real implementation catches RuntimeError from fetch_handler).
-        with patch.object(self.ctrl, "_fetch_community_handler", return_value=None) as mock_fetch:
+        with patch.object(self.ctrl, "_fetch_community_handler") as mock_fetch:
             result = self.ctrl.get_handler_meta("broken")  # no handler_folder
 
-        mock_fetch.assert_called_once_with("broken", None)
+        mock_fetch.assert_not_called()  # guard exits before reaching _fetch_community_handler
         self.assertIsNone(result)
 
     def test_unknown_handler_returns_none(self):

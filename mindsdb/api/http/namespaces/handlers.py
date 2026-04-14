@@ -54,6 +54,8 @@ class HandlersList(Resource):
             handlers = ca.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
+            if handler_meta is None:
+                continue
             # remove non-integration handlers
             if handler_type not in ["utilities", "dummy_data"]:
                 row = {"name": handler_type}
@@ -72,7 +74,14 @@ class HandlerIcon(Resource):
             handler_meta = ca.integration_controller.get_handlers_metadata().get(handler_name)
             if handler_meta is None:
                 return http_error(HTTPStatus.NOT_FOUND, "Icon not found", f"Icon for {handler_name} not found")
-            icon_name = handler_meta["icon"]["name"]
+            icon = handler_meta.get("icon")
+            if icon is None or handler_meta.get("path") is None:
+                return http_error(
+                    HTTPStatus.NOT_FOUND,
+                    "Icon not found",
+                    f"Icon for '{handler_name}' not found",
+                )
+            icon_name = icon["name"]
             # Use the stored handler path directly so community handlers
             # (stored outside the mindsdb package) are also served correctly.
             icon_path = handler_meta["path"] / icon_name

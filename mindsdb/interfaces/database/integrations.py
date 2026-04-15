@@ -989,7 +989,11 @@ class IntegrationController:
     def get_handlers_import_status(self):
         result = {}
         for handler_name in list(self.handlers_import_status.keys()):
-            handler_folder = self.handlers_import_status[handler_name].get("import", {}).get("folder")
+            handler_meta = self.handlers_import_status[handler_name]
+            if handler_meta.get("support_level") == "community" and handler_meta.get("path") is None:
+                result[handler_name] = handler_meta
+                continue
+            handler_folder = handler_meta.get("import", {}).get("folder")
             handler_meta = self.get_handler_meta(handler_name, handler_folder)
             result[handler_name] = handler_meta
 

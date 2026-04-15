@@ -157,5 +157,79 @@ class TestGetHandlerMetaCommunityFolderFallback(unittest.TestCase):
         self.assertIsNone(result)
 
 
+class TestGetHandlersImportStatus(unittest.TestCase):
+    """get_handlers_import_status() must not fetch/import community stubs."""
+
+    def setUp(self):
+        self.ctrl = _make_controller()
+
+    def test_community_stub_not_fetched_during_listing(self):
+        """
+        Community stubs (support_level="community", path=None) must not trigger
+        _fetch_community_handler() or import_handler() during listing.
+        """
+        stub = _community_stub("github", folder="github_handler")
+        self.ctrl.handlers_import_status["github"] = stub
+
+        with (
+            patch.object(self.ctrl, "_fetch_community_handler") as mock_fetch,
+            patch.object(self.ctrl, "import_handler") as mock_import,
+        ):
+            self.ctrl.get_handlers_import_status()
+
+        mock_fetch.assert_not_called()
+        mock_import.assert_not_called()
+
+    def test_community_stub_metadata_returned_in_listing(self):
+        """
+        Stub metadata must be present in the result so the UI can render the
+        handler entry without a fetch having occurred.
+        """
+        stub = _community_stub("github", folder="github_handler")
+        self.ctrl.handlers_import_status["github"] = stub
+
+        with (
+            patch.object(self.ctrl, "_fetch_community_handler"),
+            patch.object(self.ctrl, "import_handler"),
+        ):
+            result = self.ctrl.get_handlers_import_status()
+
+        self.assertIn("github", result)
+        meta = result["github"]
+        self.assertEqual(meta["name"], "github")
+        self.assertEqual(meta["support_level"], "community")
+        self.assertIsNone(meta["path"])
+        self.assertIsNotNone(meta["import"])
+
+    def test_non_community_handler_uses_get_handler_meta(self):
+        """
+        Built-in handlers (path != None) must still go through get_handler_meta()
+        so that lazy import is triggered if needed.
+        """
+        stub = _builtin_stub("mysql", Path("/opt/mindsdb/handlers/mysql_handler"))
+        self.ctrl.handlers_import_status["mysql"] = stub
+
+        with patch.object(self.ctrl, "get_handler_meta", return_value=stub) as mock_meta:
+            self.ctrl.get_handlers_import_status()
+
+        mock_meta.assert_called_once_with("mysql", stub["import"]["folder"])
+
+    def test_fetched_community_handler_uses_get_handler_meta(self):
+        """
+        A community handler that has already been fetched (path != None) must
+        also go through get_handler_meta() — the early-return guard only applies
+        when path is None.
+        """
+        stub = _community_stub("github", folder="github_handler")
+        stub["path"] = Path("/tmp/community_handlers/github_handler")
+        stub["import"]["success"] = True
+        self.ctrl.handlers_import_status["github"] = stub
+
+        with patch.object(self.ctrl, "get_handler_meta", return_value=stub) as mock_meta:
+            self.ctrl.get_handlers_import_status()
+
+        mock_meta.assert_called_once_with("github", "github_handler")
+
+
 if __name__ == "__main__":
     unittest.main()

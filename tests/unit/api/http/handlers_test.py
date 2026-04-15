@@ -72,6 +72,53 @@ def test_icon_unknown_handler(client):
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
+def test_handler_info_returns_404_when_not_found(client):
+    """
+    GET /handlers/<name> must return HTTP 404 when get_handler_meta() returns
+    None (unknown handler or failed fetch) instead of crashing with TypeError.
+    """
+    with patch.object(
+        client.application.integration_controller,
+        "get_handler_meta",
+        return_value=None,
+    ):
+        response = client.get("/api/handlers/nonexistent", follow_redirects=True)
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_handler_info_returns_200_without_icon_key(client):
+    """
+    GET /handlers/<name> must not raise KeyError when the handler metadata has
+    no 'icon' key (community stub or handler without an icon).
+    """
+    meta = {
+        "path": None,
+        "import": {"success": None, "error_message": None, "folder": "github_handler"},
+        "name": "github",
+        "title": "GitHub",
+        "description": "GitHub handler",
+        "permanent": False,
+        "connection_args": None,
+        "class_type": None,
+        "type": "data",
+        "support_level": "community",
+    }
+
+    with patch.object(
+        client.application.integration_controller,
+        "get_handler_meta",
+        return_value=meta,
+    ):
+        response = client.get("/api/handlers/github", follow_redirects=True)
+
+    assert response.status_code == HTTPStatus.OK
+    body = response.get_json()
+    assert body["name"] == "github"
+    assert "path" not in body
+    assert "icon" not in body
+
+
 def test_handlers_list_skips_none_meta(client):
     """
     The listing endpoint must not crash when get_handlers_import_status()

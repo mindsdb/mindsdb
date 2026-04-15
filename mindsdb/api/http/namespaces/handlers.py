@@ -101,10 +101,12 @@ class HandlerInfo(Resource):
     @api_endpoint_metrics("GET", "/handlers/handler")
     def get(self, handler_name):
         handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+        if handler_meta is None:
+            return http_error(HTTPStatus.NOT_FOUND, "Handler not found", f"Handler '{handler_name}' not found")
         row = {"name": handler_name}
         row.update(handler_meta)
-        del row["path"]
-        del row["icon"]
+        row.pop("path", None)
+        row.pop("icon", None)
         return row
 
 

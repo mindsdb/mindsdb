@@ -70,7 +70,7 @@ jobs:
       
       - name: Install MDB dev requirements
         run: |
-          uv syhc --only-dev
+          uv sync --only-dev
 
       # Run pre-commit on all changed files
       # See .pre-commit-config.yaml for the list of checks

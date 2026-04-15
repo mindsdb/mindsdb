@@ -908,6 +908,8 @@ uvicorn==0.41.0
     #   fastmcp
     #   mcp
     #   mindsdb
+validators==0.20.0
+    # via mindsdb-sdk
 walrus==0.9.3
     # via mindsdb
 wcwidth==0.6.0

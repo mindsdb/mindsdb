@@ -104,10 +104,13 @@ MAIN_RULE_IGNORES = {
         "langchain-experimental",
         "lxml",
         "openpyxl",
+        "xlrd",
         "onnxruntime",
         "litellm",
         "numba",  # required in a few files for the hierarchicalforecast. Otherwise, uv may install an old version.
         "urllib3",  # pinned by Snyk to avoid a vulnerability
+        "faiss-cpu",
+        "pyopenssl",
     ],
 }
 
@@ -135,13 +138,15 @@ LINDORM_DEP002_IGNORE_HANDLER_DEPS = ["protobuf"]
 
 HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS = ["torch"]
 
-RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers", "faiss-cpu"]
+RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers"]
 
 SOLR_DEP002_IGNORE_HANDLER_DEPS = ["sqlalchemy-solr"]
 
 OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
+
+FRESHDESK_EP002_IGNORE_HANDLER_DEPS = ["python-freshdesk"]
 
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
@@ -158,6 +163,7 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + SOLR_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
+        + FRESHDESK_EP002_IGNORE_HANDLER_DEPS
     )
 )
 
@@ -175,6 +181,7 @@ HANDLER_RULE_IGNORES = {
         "IfxPyDbi",
         "ingres_sa_dialect",
         "pyodbc",
+        "freshdesk",
     ],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": DEP003_IGNORE_HANDLER_DEPS,
 }
@@ -195,6 +202,7 @@ PACKAGE_NAME_MAP = {
     "google-analytics-admin": ["google"],
     "google-auth": ["google"],
     "google-cloud-storage": ["google"],
+    "google-genai": ["google"],
     "google-auth-oauthlib": ["google_auth_oauthlib"],
     "google-api-python-client": ["googleapiclient"],
     "ibm-cos-sdk": ["ibm_boto3", "ibm_botocore"],
@@ -252,6 +260,8 @@ PACKAGE_NAME_MAP = {
     "python-dotenv": ["dotenv"],
     "pyjwt": ["jwt"],
     "sklearn": ["scikit-learn"],
+    "types-aioboto3": ["aioboto3"],
+    "ag2": ["autogen"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

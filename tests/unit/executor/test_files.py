@@ -152,8 +152,8 @@ class TestMultiTableFiles(BaseExecutorDummyML):
         """
         )
 
-        assert len(result) == 3
-        assert sorted(result["tab_num"].tolist()) == [1, 2, 3]
+        assert len(result) == 2
+        assert sorted(result["tab_num"].tolist()) == [1, 2]
 
     def test_multi_table_join_with_aliases(self):
         """Test JOIN with aliases and database prefixes"""

@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 from mindsdb.utilities import log
 
 if TYPE_CHECKING:
-    from langfuse.callback import CallbackHandler
-    from langfuse.client import StatefulSpanClient
+    from langfuse._client.span import LangfuseSpan
+    from langfuse.langchain import CallbackHandler
 
 logger = log.getLogger(__name__)
 
@@ -111,6 +111,7 @@ class LangfuseClientWrapper:
             public_key=public_key,
             secret_key=secret_key,
             host=host,
+            environment=environment,
             release=release,
             debug=debug,
             timeout=timeout,
@@ -145,13 +146,14 @@ class LangfuseClientWrapper:
         self.set_tags(tags)
 
         try:
-            self.trace = self.client.trace(
-                name=name, input=input, metadata=self.metadata, tags=self.tags, user_id=user_id, session_id=session_id
-            )
+            # SDK v3+: root observation is a span; trace attributes are set via update_trace.
+            self.trace = self.client.start_span(name=name, input=input, metadata=self.metadata)
+            self.trace.update_trace(tags=self.tags, user_id=user_id, session_id=session_id)
         except Exception:
-            logger.exception(f"Something went wrong while processing Langfuse trace {self.trace.id}:")
+            logger.exception("Something went wrong while creating Langfuse trace")
+            return
 
-        logger.info(f"Langfuse trace configured with ID: {self.trace.id}")
+        logger.info(f"Langfuse trace configured with ID: {self.trace.trace_id}")
 
     def get_trace_id(self) -> typing.Optional[str]:
         """
@@ -166,9 +168,9 @@ class LangfuseClientWrapper:
             logger.debug("Langfuse trace is not setup.")
             return ""
 
-        return self.trace.id
+        return self.trace.trace_id
 
-    def start_span(self, name: str, input: typing.Optional[typing.Any] = None) -> typing.Optional["StatefulSpanClient"]:
+    def start_span(self, name: str, input: typing.Optional[typing.Any] = None) -> typing.Optional["LangfuseSpan"]:
         """
         Create span. If Langfuse is disabled, nothing will be done.
 
@@ -181,9 +183,9 @@ class LangfuseClientWrapper:
             logger.debug("Langfuse is disabled.")
             return None
 
-        return self.trace.span(name=name, input=input)
+        return self.trace.start_span(name=name, input=input)
 
-    def end_span_stream(self, span: typing.Optional["StatefulSpanClient"] = None) -> None:
+    def end_span_stream(self, span: typing.Optional["LangfuseSpan"] = None) -> None:
         """
         End span. If Langfuse is disabled, nothing will happen.
         Args:
@@ -195,10 +197,10 @@ class LangfuseClientWrapper:
             return
 
         span.end()
-        self.trace.update()
+        self.client.flush()
 
     def end_span(
-        self, span: typing.Optional["StatefulSpanClient"] = None, output: typing.Optional[typing.Any] = None
+        self, span: typing.Optional["LangfuseSpan"] = None, output: typing.Optional[typing.Any] = None
     ) -> None:
         """
         End trace. If Langfuse is disabled, nothing will be done.
@@ -216,8 +218,10 @@ class LangfuseClientWrapper:
             logger.debug("Langfuse span is not created.")
             return
 
-        span.end(output=output)
-        self.trace.update(output=output)
+        if output is not None:
+            span.update(output=output)
+        span.end()
+        self.trace.update_trace(output=output)
 
         metadata = self.metadata or {}
 
@@ -225,9 +229,9 @@ class LangfuseClientWrapper:
             # Ensure all batched traces are sent before fetching.
             self.client.flush()
             metadata["tool_usage"] = self._get_tool_usage()
-            self.trace.update(metadata=metadata)
+            self.trace.update_trace(metadata=metadata)
         except Exception:
-            logger.exception(f"Something went wrong while processing Langfuse trace {self.trace.id}:")
+            logger.exception(f"Something went wrong while processing Langfuse trace {self.trace.trace_id}:")
 
     def get_langchain_handler(self) -> typing.Optional["CallbackHandler"]:
         """
@@ -238,7 +242,13 @@ class LangfuseClientWrapper:
             logger.debug("Langfuse is disabled.")
             return None
 
-        return self.trace.get_langchain_handler()
+        try:
+            from langfuse.langchain import CallbackHandler
+        except ImportError:
+            logger.debug("langfuse.langchain CallbackHandler is not available (install langchain extra if needed).")
+            return None
+
+        return CallbackHandler(public_key=self.public_key)
 
     def set_metadata(self, custom_metadata: dict = None) -> None:
         """
@@ -267,8 +277,8 @@ class LangfuseClientWrapper:
         tool_usage = {}
 
         try:
-            fetched_trace = self.client.get_trace(self.trace.id)
-            steps = [s.name for s in fetched_trace.observations]
+            fetched_trace = self.client.api.trace.get(self.trace.trace_id)
+            steps = [s.name for s in fetched_trace.observations if s.name]
             for step in steps:
                 if "AgentAction" in step:
                     tool_name = step.split("-")[1]
@@ -276,8 +286,8 @@ class LangfuseClientWrapper:
                         tool_usage[tool_name] = 0
                     tool_usage[tool_name] += 1
         except TraceNotFoundError:
-            logger.warning(f"Langfuse trace {self.trace.id} not found")
+            logger.warning(f"Langfuse trace {self.trace.trace_id} not found")
         except Exception:
-            logger.exception(f"Something went wrong while processing Langfuse trace {self.trace.id}:")
+            logger.exception(f"Something went wrong while processing Langfuse trace {self.trace.trace_id}:")
 
         return tool_usage

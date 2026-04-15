@@ -45,7 +45,15 @@ Authors can opt for adding private methods, new files and folders, or any combin
 
     Under the `mindsdb.integrations.libs.utils` library, contributors can find various methods that may be useful while implementing new handlers.
 
-    Also, there are wrapper classes for the `DatabaseHandler` instances called [HandlerResponse](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/response.py#L7) and [HandlerStatusResponse](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/response.py#L32). You should use them to ensure proper output formatting.
+    For response formatting, use the following classes from `mindsdb.integrations.libs.response`:
+    - [TableResponse](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/response.py) - for queries returning data (SELECT, SHOW, etc.)
+    - [OkResponse](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/response.py) - for successful operations without data (CREATE, DROP, INSERT, etc.)
+    - [ErrorResponse](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/response.py) - for error cases
+    - [HandlerStatusResponse](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/response.py) - for connection status checks
+
+    <Warning>
+    The legacy `HandlerResponse` class is deprecated. Use `TableResponse`, `OkResponse`, or `ErrorResponse` instead.
+    </Warning>
 </Tip>
 
 ### Implementation
@@ -124,13 +132,13 @@ Here is a step-by-step guide:
     The `native_query()` method runs commands of the native database language.
 
     ```py
-    def native_query(self, query: Any) -> HandlerResponse:
+    def native_query(self, query: Any) -> TableResponse | OkResponse | ErrorResponse:
         """Receive raw query and act upon it somehow.
         Args:
             query (Any): query in native format (str for sql databases,
                 etc)
         Returns:
-            HandlerResponse
+            TableResponse | OkResponse | ErrorResponse
         """
     ```
 
@@ -139,13 +147,13 @@ Here is a step-by-step guide:
     The query method runs parsed SQL commands.
 
     ```py
-    def query(self, query: ASTNode) -> HandlerResponse:
+    def query(self, query: ASTNode) -> TableResponse | OkResponse | ErrorResponse:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
             query (ASTNode): sql query represented as AST. May be any kind
                 of query: SELECT, INSERT, DELETE, etc
         Returns:
-            HandlerResponse
+            TableResponse | OkResponse | ErrorResponse
         """
     ```
 
@@ -154,11 +162,11 @@ Here is a step-by-step guide:
     The `get_tables()` method lists all the available tables.
 
     ```py
-    def get_tables(self) -> HandlerResponse:
+    def get_tables(self) -> TableResponse | ErrorResponse:
         """ Return list of entities
         Return a list of entities that will be accessible as tables.
         Returns:
-            HandlerResponse: should have the same columns as information_schema.tables
+            TableResponse | ErrorResponse: should have the same columns as information_schema.tables
                 (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
                 Column 'TABLE_NAME' is mandatory, other is optional.
         """
@@ -169,18 +177,124 @@ Here is a step-by-step guide:
     The `get_columns()` method lists all columns of a specified table.
 
     ```py
-    def get_columns(self, table_name: str) -> HandlerResponse:
+    def get_columns(self, table_name: str) -> TableResponse | ErrorResponse:
         """ Returns a list of entity columns
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
         Returns:
-            HandlerResponse: should have the same columns as information_schema.columns
+            TableResponse | ErrorResponse: data should have the same columns as information_schema.columns
                 (https://dev.mysql.com/doc/refman/8.0/en/information-schema-columns-table.html)
                 Column 'COLUMN_NAME' is mandatory, other is optional. Highly
                 recommended to define also 'DATA_TYPE': it should be one of
                 python data types (by default it is str).
         """
     ```
+
+### Response Classes
+
+The data-returning methods (`native_query()`, `query()`, `get_tables()`, `get_columns()`) should return one of the following response classes from `mindsdb.integrations.libs.response`:
+
+| Response Class | Use Case | Key Attributes |
+|---------------|----------|----------------|
+| `TableResponse` | Queries that return data (SELECT, SHOW, etc.) | `data`, `data_generator`, `columns`, `affected_rows` |
+| `OkResponse` | Successful operations without data (CREATE, DROP, INSERT, UPDATE, DELETE) | `affected_rows` |
+| `ErrorResponse` | Error cases | `error_code`, `error_message`, `is_expected_error` |
+
+#### TableResponse
+
+`TableResponse` is used when returning data from queries. It supports two modes of data delivery:
+
+1. **Immediate data**: Pass all data at once via the `data` parameter (pandas DataFrame)
+2. **Streaming data**: Pass a generator via the `data_generator` parameter for lazy loading
+
+```py
+from mindsdb.integrations.libs.response import TableResponse, OkResponse, ErrorResponse
+
+# Immediate data response
+def native_query(self, query: str) -> TableResponse:
+    result = self.execute_query(query)
+    df = pd.DataFrame(result)
+    return TableResponse(data=df)
+
+# Streaming data response (for large datasets)
+def native_query(self, query: str) -> TableResponse:
+    def data_generator():
+        cursor = self.connection.cursor()
+        cursor.execute(query)
+        while batch := cursor.fetchmany(size=1000):
+            yield pd.DataFrame(batch)
+
+    return TableResponse(data_generator=data_generator())
+```
+
+#### OkResponse
+
+`OkResponse` is used for operations that don't return data:
+
+```py
+def native_query(self, query: str) -> OkResponse:
+    cursor = self.connection.cursor()
+    cursor.execute(query)
+    self.connection.commit()
+    return OkResponse(affected_rows=cursor.rowcount)
+```
+
+#### ErrorResponse
+
+`ErrorResponse` is used to report errors:
+
+```py
+def native_query(self, query: str) -> ErrorResponse:
+    try:
+        # ... execute query
+    except DatabaseError as e:
+        return ErrorResponse(
+            error_code=e.code,
+            error_message=str(e),
+            is_expected_error=True  # Set to True for user errors (syntax, permissions, etc.)
+        )
+```
+
+### Streaming Support
+
+For handlers that deal with large datasets, implementing streaming support is recommended. This allows data to be returned in chunks rather than loading everything into memory at once.
+
+To enable streaming:
+
+1. Set the `stream_response` class attribute to `True`:
+
+    ```py
+    class MyDatabaseHandler(DatabaseHandler):
+        name = "mydatabase"
+        stream_response = True  # Indicates that handler can return data as a generator
+    ```
+
+2. Implement `native_query()` to return a `TableResponse` with a `data_generator`:
+
+    ```py
+    def native_query(self, query: str, stream: bool = True) -> TableResponse | OkResponse | ErrorResponse:
+        if stream:
+            return self._execute_streaming(query)
+        else:
+            return self._execute_immediate(query)
+    
+    def _execute_streaming(self, query: str) -> TableResponse:
+        """Execute query and return results as a stream."""
+        cursor = self.connection.cursor(name="server_side_cursor")
+        cursor.execute(query)
+        
+        columns = [Column(name=col.name, type=col.type) for col in cursor.description]
+        
+        def generate_data():
+            while batch := cursor.fetchmany(size=1000):
+                yield pd.DataFrame(batch, columns=[c.name for c in columns])
+        
+        return TableResponse(columns=columns, data_generator=generate_data())
+    ```
+
+<Tip>
+For a complete example of streaming implementation, see the [PostgreSQL handler](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/postgres_handler/postgres_handler.py).
+</Tip>
 
 ### Exporting the `connection_args` Dictionary
 

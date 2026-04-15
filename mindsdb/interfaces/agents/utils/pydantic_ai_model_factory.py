@@ -52,7 +52,7 @@ def get_llm_provider(args: Dict) -> str:
         return "writer"
 
     # For vLLM, require explicit provider specification
-    raise ValueError("Invalid model name. Please define a supported llm provider")
+    raise ValueError(f"Invalid model name: {model_name}. Please define a supported llm provider")
 
 
 def get_embedding_model_provider(args: Dict) -> str:

@@ -899,6 +899,40 @@ class TestSelect(BaseExecutorDummyML):
         assert len(ret) == 1
         assert ret["result"][0] == 1
 
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_cte_join(self, data_handler):
+        self.set_handler(data_handler, name="pg", tables={"stores": get_stores_df()})
+        self.save_file("regions", get_regions_df())
+
+        ret = self.run_sql("""
+            WITH regions AS (
+                SELECT DISTINCT id, name FROM files.regions
+            ),
+            stores AS (
+                SELECT * FROM pg.stores 
+                LIMIT 10 
+            )
+            SELECT format, region_id FROM pg.stores s 
+            JOIN regions r on r.id = s.region_id
+            WHERE s.format IN (SELECT format FROM stores WHERE format='a')
+            LIMIT 100;
+        """)
+        assert len(ret) > 1
+        assert ret["format"][0] == "a"
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_view_duplicated_cols(self, data_handler):
+        self.set_handler(data_handler, name="pg", tables={"stores": get_stores_df(), "regions": get_regions_df()})
+
+        with pytest.raises(Exception):
+            # `id` exists in both tables, should raise an exception
+            self.run_sql("""
+                create view v1 (
+                   select * from pg.stores s
+                   join pg.regions r on r.id = s.region_id
+                )
+            """)
+
 
 class TestSet(BaseExecutorTest):
     @pytest.mark.parametrize("var", ["var", "@@var", "@@session.var", "session var"])

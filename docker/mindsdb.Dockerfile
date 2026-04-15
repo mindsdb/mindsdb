@@ -69,6 +69,13 @@ RUN --mount=type=cache,target=/root/.cache \
 
 
 FROM build AS extras
+
+# Apply latest security patches so the final image picks up fixes
+# even when the build stage layers are cached
+RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    apt-get update -qy && apt-get upgrade -qy
+
 ARG EXTRAS
 # Install extras on top of the bare mindsdb
 # The torch index is provided for "-cpu" images which install the cpu-only version of torch

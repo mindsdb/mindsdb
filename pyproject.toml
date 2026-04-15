@@ -288,9 +288,16 @@ DEP003 = [
 ]
 
 [tool.deptry.package_module_name_map]
+# Import names that differ from PyPI distribution names (deptry uses this to match imports ↔ deps).
+"pyjwt" = ["jwt"]
+"pymupdf" = ["fitz"]
+"python-multipart" = ["multipart"]
+"python-dateutil" = ["dateutil"]
 "google-auth" = ["google"]
 "google-genai" = ["google"]
 "google-cloud-bigquery" = ["google"]
+"opentelemetry-api" = ["opentelemetry"]
+"opentelemetry-sdk" = ["opentelemetry"]
 "opentelemetry-distro" = ["opentelemetry"]
 "opentelemetry-exporter-otlp" = ["opentelemetry"]
 "opentelemetry-instrumentation-flask" = ["opentelemetry"]

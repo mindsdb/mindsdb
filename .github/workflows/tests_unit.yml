@@ -78,6 +78,7 @@ jobs:
       
       - name: Install MDB dev requirements
         run: |
+          git checkout -- pyproject.toml
           uv pip install -r requirements/requirements-dev.txt
 
       # Run pre-commit on all changed files

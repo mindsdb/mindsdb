@@ -190,7 +190,7 @@ if [[ "$RUN_CHECKS" == "true" ]]; then
 
     # Check requirements files
     echo "Checking requirements files..."
-    if uv run tests/scripts/check_pyproject_dependencies.py; then
+    if uv run --group dev tests/scripts/check_pyproject_dependencies.py; then
         print_success "Requirements files are valid"
     else
         print_error "Requirements files have issues"

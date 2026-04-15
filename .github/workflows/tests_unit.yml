@@ -64,7 +64,7 @@ jobs:
       # We should be using loggers instead
       - name: Check for print statements
         run: |
-          uv run tests/scripts/check_print_statements.py
+          uv run --no-project tests/scripts/check_print_statements.py
       
       - name: Install MDB dev requirements
         run: |
@@ -80,7 +80,7 @@ jobs:
       # to make sure they're in order
       - name: Check requirements files
         run: |
-          uv run tests/scripts/check_pyproject_dependencies.py
+          uv run --no-sync tests/scripts/check_pyproject_dependencies.py
   # Creates a matrix of environments to test against using matrix_includes.json
   matrix_prep:
     name: Prepare matrix

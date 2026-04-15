@@ -21,7 +21,7 @@ single handler directory.
 
 Run::
 
-    uv run --extra dev python tests/scripts/check_pyproject_dependencies.py
+    uv run --group dev python tests/scripts/check_pyproject_dependencies.py
 """
 
 from __future__ import annotations
@@ -113,14 +113,22 @@ def _run_deptry(
     output_file = REPO_ROOT / "deptry.json"
     cmd = [sys.executable, "-m", "deptry", "--no-ansi", "-o", str(output_file), *args]
     try:
-        subprocess.run(
+        proc = subprocess.run(
             cmd,
             cwd=str(cwd),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
+            capture_output=True,
+            text=True,
         )
         if not output_file.exists():
-            errors.append("deptry did not write JSON output (see stderr if any).")
+            detail = (proc.stderr or proc.stdout or "").strip()
+            msg = "deptry did not write JSON output."
+            if proc.returncode != 0:
+                msg += f" exit_code={proc.returncode}."
+            if detail:
+                msg += f" Output:\n{detail}"
+            else:
+                msg += " (no stderr/stdout; is `deptry` installed? e.g. `uv sync --group dev`.)"
+            errors.append(msg)
             return errors
         with open(output_file) as f:
             data = json.load(f)

@@ -185,9 +185,26 @@ duckdb_faiss = [
     "faiss-cpu >= 1.13.0",
 ]
 
-#  Dev packages
-# Generates: requirements/requirements-dev.txt
-# Regenerate: uv export --format requirements-txt --extra dev --no-hashes > requirements/requirements-dev.txt
+#  uv configuration
+[tool.uv]
+# Strict environment sync (CI/production — installs exactly what's in uv.lock):
+#   uv sync --locked --extra agents --extra kb
+#
+# Additive install (dev — adds an extra WITHOUT removing packages from other extras):
+#   uv pip install -e ".[agents]"
+#   uv pip install -e ".[kb]"
+#
+# Use `uv lock --check` in CI to verify uv.lock matches pyproject.toml.
+#
+# To regenerate a requirements file after changing extras:
+#   uv export --format requirements-txt --extra <name> --no-hashes > requirements/requirements-<name>.txt
+#
+# Dev / test dependency groups (PEP 735) — regenerate pinned exports:
+#   uv export --format requirements-txt --no-hashes --group dev > requirements/requirements-dev.txt
+#   uv export --format requirements-txt --no-hashes --group test > requirements/requirements-test.txt
+
+#  PEP 735 — local dev/test toolchains (not published as package extras; use `uv sync --group dev --group test`).
+[dependency-groups]
 dev = [
     "pre-commit >= 2.16.0",
     "watchfiles ~= 0.19",
@@ -198,10 +215,6 @@ dev = [
     "importlib-metadata ~= 7.2",
     "ruff ~= 0.11",
 ]
-
-#  Tests
-# Generates: requirements/requirements-test.txt
-# Regenerate: uv export --format requirements-txt --extra test --no-hashes > requirements/requirements-test.txt
 test = [
     "scipy ~= 1.15.3",
     "docker >= 5.0.3",
@@ -225,25 +238,10 @@ test = [
     "mindsdb-sdk >= 3.5.0",
 ]
 
-#  uv configuration
-[tool.uv]
-# Strict environment sync (CI/production — installs exactly what's in uv.lock):
-#   uv sync --locked --extra agents --extra kb
-#
-# Additive install (dev — adds an extra WITHOUT removing packages from other extras):
-#   uv pip install -e ".[agents]"
-#   uv pip install -e ".[kb]"
-#
-# Use `uv lock --check` in CI to verify uv.lock matches pyproject.toml.
-#
-# To regenerate a requirements file after changing extras:
-#   uv export --format requirements-txt --extra <name> --no-hashes > requirements/requirements-<name>.txt
-
 #  Deptry
 [tool.deptry]
 known_first_party = ["mindsdb"]
 ignore_notebooks = true
-optional_dependencies_dev_groups = ["dev", "test"]
 extend_exclude = [
     "\\.venv",
     "build",

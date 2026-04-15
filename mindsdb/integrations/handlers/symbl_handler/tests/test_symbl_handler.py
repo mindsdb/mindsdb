@@ -27,14 +27,12 @@ class TestSymblAPIHandler(BaseExecutorTest):
         self.run_sql(f"""
             CREATE DATABASE mindsdb_symbl
                     WITH ENGINE = 'symbl',
-                    PARAMETERS = {
-            "app_id": '{self.app_id}',
+                    PARAMETERS = {"app_id": '{self.app_id}',
                     "app_secret": '{self.app_secret}'
                     };
         """)
 
     def test_basic_select_from(self):
-
         conversation_id = "5682305049034752"
 
         sql = f'SELECT * FROM mindsdb_symbl.get_messages where conversation_id="{conversation_id}"'
@@ -54,8 +52,3 @@ class TestSymblAPIHandler(BaseExecutorTest):
 
         sql = f'SELECT * FROM mindsdb_symbl.get_follow_ups where conversation_id="{conversation_id}"'
         self.run_sql(sql)
-
-
-# ci fix
-# trigger ci format
-# trigger ci format

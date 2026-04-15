@@ -10,7 +10,6 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
 def ollama_model_exists(model_name: str) -> bool:
-
     try:
         ollama.show(model_name)
         return True
@@ -29,7 +28,6 @@ class TestDSPy(BaseExecutorTest):
 
     @pytest.mark.skipif(OPENAI_API_KEY is None, reason="Missing OpenAI API key (OPENAI_API_KEY env variable)")
     def test_default_provider(self):
-
         self.run_sql(
             f"""
             CREATE ML_ENGINE dspy_engine
@@ -65,7 +63,6 @@ class TestDSPy(BaseExecutorTest):
 
     @pytest.mark.skipif(OPENAI_API_KEY is None, reason="Missing OpenAI API key (OPENAI_API_KEY env variable)")
     def test_default_provider2(self):
-
         self.run_sql(
             f"""
             CREATE ML_ENGINE dspy_engine
@@ -98,8 +95,3 @@ class TestDSPy(BaseExecutorTest):
         """
         )
         assert "7" in result_df["answer"].iloc[0].lower()
-
-
-# ci fix
-# trigger ci format
-# trigger ci format

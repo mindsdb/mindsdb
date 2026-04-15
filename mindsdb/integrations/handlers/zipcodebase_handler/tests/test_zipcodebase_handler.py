@@ -26,8 +26,7 @@ class TestZipCodeBaseHandler(BaseExecutorTest):
         self.run_sql(f"""
             CREATE DATABASE mindsdb_zipcodebase
                 WITH ENGINE = 'zipcodebase',
-                PARAMETERS = {
-            "api_key": '{self.api_key}'
+                PARAMETERS = {"api_key": '{self.api_key}'
                 };
         """)
 
@@ -44,8 +43,3 @@ class TestZipCodeBaseHandler(BaseExecutorTest):
 
         sql = "SELECT * FROM mindsdb_zipcodebase.code_to_location where codes='10005'; LIMIT 1;"
         assert self.run_sql(sql).shape[0] == 1
-
-
-# ci fix
-# trigger ci format
-# trigger ci format

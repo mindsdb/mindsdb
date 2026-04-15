@@ -26,8 +26,7 @@ class TestAQICNHandler(BaseExecutorTest):
         self.run_sql(f"""
             CREATE DATABASE mindsdb_aqicn
                 WITH ENGINE = 'aqicn',
-                PARAMETERS = {
-            "api_key": '{self.api_key}'
+                PARAMETERS = {"api_key": '{self.api_key}'
                 };
         """)
 
@@ -47,8 +46,3 @@ class TestAQICNHandler(BaseExecutorTest):
 
         sql = "SELECT * FROM mindsdb_aqicn.air_quality_user_location LIMIT 1;"
         assert self.run_sql(sql).shape[0] == 1
-
-
-# ci fix
-# trigger ci format
-# trigger ci format

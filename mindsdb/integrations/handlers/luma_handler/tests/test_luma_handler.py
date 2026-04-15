@@ -26,8 +26,7 @@ class TestLumaHandler(BaseExecutorTest):
         self.run_sql(f"""
             CREATE DATABASE mindsdb_luma
                 WITH ENGINE = 'luma',
-                PARAMETERS = {
-            "api_key": '{self.api_key}'
+                PARAMETERS = {"api_key": '{self.api_key}'
                 };
         """)
 
@@ -37,8 +36,3 @@ class TestLumaHandler(BaseExecutorTest):
 
         sql = 'SELECT * FROM mindsdb_luma.events where event_id = "evt-HQ36IFDwncocuGy";'
         assert self.run_sql(sql).shape[0] == 1
-
-
-# ci fix
-# trigger ci format
-# trigger ci format

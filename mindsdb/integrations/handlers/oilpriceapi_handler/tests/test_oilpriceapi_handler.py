@@ -26,8 +26,7 @@ class TestOilPriceAPIHandler(BaseExecutorTest):
         self.run_sql(f"""
             CREATE DATABASE mindsdb_oilpriceapi
                 WITH ENGINE = 'oilpriceapi',
-                PARAMETERS = {
-            "api_key": '{self.api_key}'
+                PARAMETERS = {"api_key": '{self.api_key}'
                 };
         """)
 
@@ -44,8 +43,3 @@ class TestOilPriceAPIHandler(BaseExecutorTest):
 
         sql = "SELECT * FROM npm_test.past_day_price LIMIT 1;"
         assert self.run_sql(sql).shape[0] == 1
-
-
-# ci fix
-# trigger ci format
-# trigger ci format

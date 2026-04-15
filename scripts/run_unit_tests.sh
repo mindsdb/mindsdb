@@ -26,7 +26,7 @@ RUN_TESTS=true
 RUN_SLOW=true
 PYTHON_VERSION="${PYTHON_VERSION:-3.11}"
 
-# Handlers to install (from the workflow)
+# Handlers to install (keep in sync with .github/workflows/tests_unit.yml)
 HANDLERS_TO_INSTALL=(
     postgres
     mysql
@@ -44,29 +44,27 @@ HANDLERS_TO_INSTALL=(
     github
     ms_teams
     statsforecast
-    chromadb
+    duckdb_faiss
     confluence
-    elasticsearch
-    agents
-    kb
+    openai
 )
 
 print_header() {
-    echo -e "\n${BLUE}============================================${NC}"
-    echo -e "${BLUE}  $1${NC}"
-    echo -e "${BLUE}============================================${NC}\n"
+    printf "\n%b============================================%b\n" "$BLUE" "$NC"
+    printf "%b  %s%b\n" "$BLUE" "$1" "$NC"
+    printf "%b============================================%b\n\n" "$BLUE" "$NC"
 }
 
 print_success() {
-    echo -e "${GREEN}✓ $1${NC}"
+    printf "%b✓ %s%b\n" "$GREEN" "$1" "$NC"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠ $1${NC}"
+    printf "%b⚠ %s%b\n" "$YELLOW" "$1" "$NC"
 }
 
 print_error() {
-    echo -e "${RED}✗ $1${NC}"
+    printf "%b✗ %s%b\n" "$RED" "$1" "$NC"
 }
 
 show_help() {
@@ -119,7 +117,7 @@ done
 
 # Change to repo root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR/.."
 
 print_header "MindsDB Unit Test Runner"
 

@@ -181,6 +181,10 @@ mysql = [
     "mysql-connector-python >= 9.1.0",
 ]
 
+duckdb_faiss = [
+    "faiss-cpu >= 1.13.0",
+]
+
 #  Dev packages
 # Generates: requirements/requirements-dev.txt
 # Regenerate: uv export --format requirements-txt --extra dev --no-hashes > requirements/requirements-dev.txt

@@ -190,7 +190,7 @@ if [[ "$RUN_CHECKS" == "true" ]]; then
 
     # Check requirements files
     echo "Checking requirements files..."
-    if uv run --group dev tests/scripts/check_pyproject_dependencies.py; then
+    if uv run --only-dev tests/scripts/check_pyproject_dependencies.py; then
         print_success "Requirements files are valid"
     else
         print_error "Requirements files have issues"
@@ -211,6 +211,8 @@ for handler in "${HANDLERS_TO_INSTALL[@]}"; do
     done
 
     echo "Installing mindsdb with handlers: ${HANDLERS_TO_INSTALL[*]}"
+    # Match CI: locked dev + test groups, then pip install for the package and handlers.
+    uv sync --only-group dev --only-group test
     uv pip install ".[agents,kb]" \
         -r requirements/requirements-test.txt \
         "${HANDLER_EXTRAS[@]}"

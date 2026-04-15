@@ -66,11 +66,9 @@ jobs:
         run: |
           uv run --no-project tests/scripts/check_print_statements.py
       
-      # Match local dev setup: install PEP 735 [dependency-groups] dev + test (deptry, pytest, etc.).
-      # --only-dev alone can differ from `uv sync --group dev --group test` depending on uv/project layout.
       - name: Install MDB dev requirements
         run: |
-          uv sync --group dev --group test
+          uv sync --only-dev
 
       # Run pre-commit on all changed files
       # See .pre-commit-config.yaml for the list of checks
@@ -143,6 +141,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Locked dev + test PEP 735 groups (pytest, coverage, …) without [project.dependencies];
+          # the following `uv pip install` adds the package, extras, and handlers.
+          uv sync --only-group dev --only-group test
           INSTALL_HANDLERS=()
           while IFS= read -r handler; do
             handler=${handler//$'\r'/}

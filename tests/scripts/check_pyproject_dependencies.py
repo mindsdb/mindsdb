@@ -19,9 +19,9 @@ with DEP002 extended by the set of declared package names for that scan (main +
 core extras + handler extra) so unused-dependency noise is suppressed inside a
 single handler directory.
 
-Run::
+Run:
 
-    uv run --group dev python tests/scripts/check_pyproject_dependencies.py
+    uv run --only-dev python tests/scripts/check_pyproject_dependencies.py
 """
 
 from __future__ import annotations
@@ -127,7 +127,7 @@ def _run_deptry(
             if detail:
                 msg += f" Output:\n{detail}"
             else:
-                msg += " (no stderr/stdout; is `deptry` installed? e.g. `uv sync --group dev`.)"
+                msg += " (no stderr/stdout; is `deptry` installed? e.g. `uv sync --only-dev`.)"
             errors.append(msg)
             return errors
         with open(output_file) as f:

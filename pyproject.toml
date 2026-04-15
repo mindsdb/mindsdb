@@ -204,7 +204,7 @@ duckdb_faiss = [
 #   uv export --format requirements-txt --no-hashes --group dev > requirements/requirements-dev.txt
 #   uv export --format requirements-txt --no-hashes --group test > requirements/requirements-test.txt
 
-#  PEP 735 — local dev/test toolchains (not published as package extras; use `uv sync --group dev --group test`).
+#  PEP 735 — dev/test toolchains (not extras). `uv sync --group dev` still installs [project.dependencies].
 [dependency-groups]
 dev = [
     "pre-commit >= 2.16.0",
@@ -284,7 +284,6 @@ DEP002 = [
 DEP003 = [
     "typing_extensions",
     "charset_normalizer",
-    "botocore",
 ]
 
 [tool.deptry.package_module_name_map]

@@ -65,7 +65,7 @@ jobs:
         python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
     - name: Install dependencies
       run: |
-        uv pip install -r requirements/requirements-test.txt
+        uv sync --group test
     - name: Run Integration Tests on Deploy
       run: |
           make integration_tests_slow

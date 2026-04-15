@@ -11,6 +11,8 @@ aiohttp==3.13.4
     # via xai-sdk
 aiosignal==1.4.0
     # via aiohttp
+aiobotocore==3.4.0
+    # via mindsdb
 aipdf==0.0.7.0
     # via mindsdb
 alembic==1.18.4
@@ -196,7 +198,7 @@ google-auth==2.48.0
     # via
     #   google-genai
     #   pydantic-ai-slim
-google-genai==1.66.0
+google-genai==1.70.0
     # via pydantic-ai-slim
 googleapis-common-protos==1.72.0
     # via
@@ -325,7 +327,7 @@ mcp==1.26.0
     #   pydantic-ai-slim
 mdurl==0.1.2
     # via markdown-it-py
-mind-castle==0.4.9
+mind-castle==0.5.0
     # via mindsdb
 mindsdb-sql-parser==0.13.8
     # via mindsdb
@@ -472,9 +474,9 @@ pydantic==2.12.5
     #   pydantic-graph
     #   pydantic-settings
     #   xai-sdk
-pydantic-ai==1.66.0
+pydantic-ai==1.77.0
     # via mindsdb
-pydantic-ai-slim==1.66.0
+pydantic-ai-slim==1.77.0
     # via
     #   pydantic-ai
     #   pydantic-evals
@@ -751,13 +753,3 @@ yarl==1.23.0
     # via aiohttp
 zipp==3.23.0
     # via importlib-metadata
-
-mind-castle==0.5.0
-pydantic-ai==1.77.0 # Required for Pydantic AI agents
-
-bs4 # for rag HTMLDocumentLoader
-urllib3>=2.6.3 # not directly required, pinned by Snyk to avoid a vulnerability
-
-# kb providers
-aiobotocore==3.4.0
-google-genai==1.70.0

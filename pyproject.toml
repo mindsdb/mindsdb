@@ -189,7 +189,7 @@ dev = [
     "watchfiles ~= 0.19",
     "setuptools ~= 78.1",
     "wheel",
-    "deptry ~= 0.20",
+    "deptry ~= 0.25.1",
     "twine",
     "importlib-metadata ~= 7.2",
     "ruff ~= 0.11",
@@ -263,6 +263,8 @@ DEP001 = [
     "pyodbc",
     "sklearn",
     "hierarchicalforecast",
+    "google_auth_oauthlib",
+    "msal",
 ]
 DEP002 = [
     "psycopg2-binary",
@@ -278,6 +280,16 @@ DEP002 = [
     "urllib3",
     "faiss-cpu",
     "pyopenssl",
+    "sly",
+    "html2text",
+    "pgvector",
+    "snowflake-connector-python",
+    "oracledb",
+    "databricks-sql-connector",
+    "simple-salesforce",
+    "hubspot-api-client",
+    "mariadb",
+    "mysql-connector-python",
 ]
 DEP003 = [
     "torch",
@@ -285,6 +297,10 @@ DEP003 = [
     "langfuse",
     "dataprep_ml",
     "hierarchicalforecast",
+    "typing_extensions",
+    "werkzeug",
+    "charset_normalizer",
+    "botocore",
 ]
 
 [tool.deptry.package_module_name_map]
@@ -362,6 +378,9 @@ DEP003 = [
 "sklearn" = ["scikit-learn"]
 "types-aioboto3" = ["aioboto3"]
 "ag2" = ["autogen"]
+"sqlalchemy-bigquery" = ["sqlalchemy_bigquery"]
+"requests-oauthlib" = ["requests_oauthlib"]
+"salesforce_api" = ["salesforce_api"]
 
 #  Ruff
 [tool.ruff]

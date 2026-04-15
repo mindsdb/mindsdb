@@ -131,7 +131,7 @@ cyclopts==4.7.0
     # via fastmcp
 dateparser==1.2.0
     # via mindsdb
-deptry==0.20.0
+deptry==0.25.1
     # via mindsdb
 dill==0.3.6
     # via mindsdb

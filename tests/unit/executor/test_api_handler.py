@@ -25,6 +25,11 @@ except ImportError:
 
 
 class TestApiHandler(BaseExecutorDummyML):
+    def setup_method(self):
+        super().setup_method()
+        self.setup_community_handler("github")
+        self.setup_community_handler("email")
+
     @patch("github.Github")
     def test_github(self, Github):
         """
@@ -114,7 +119,7 @@ class TestApiHandler(BaseExecutorDummyML):
         assert args[0] == "feature"
         assert kwargs["body"] == "do better"
 
-    @patch("mindsdb.integrations.handlers.email_handler.email_handler.EmailClient")
+    @patch("mindsdb_community_handlers.email_handler.email_handler.EmailClient")
     def test_email(self, EmailClient):
         """
         Test for APITable

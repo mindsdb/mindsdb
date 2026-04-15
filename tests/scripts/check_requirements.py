@@ -17,8 +17,12 @@ import json
 import re
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib  # backport; present in requirements-dev.txt
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HANDLERS_DIR = REPO_ROOT / "mindsdb" / "integrations" / "handlers"
@@ -314,7 +318,18 @@ def check_cross_handler_imports(handler_names: list[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _ensure_pyproject() -> None:
+    """Restore pyproject.toml from git if a previous CI step deleted it."""
+    if not PYPROJECT_PATH.exists():
+        subprocess.run(
+            ["git", "checkout", "--", str(PYPROJECT_PATH.name)],
+            cwd=str(REPO_ROOT),
+            check=True,
+        )
+
+
 def main() -> None:
+    _ensure_pyproject()
     pyproject = load_pyproject()
     handler_names = get_supported_handlers(pyproject)
 

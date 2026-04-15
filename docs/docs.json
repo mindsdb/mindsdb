@@ -1086,14 +1086,6 @@
       "destination": "/integrations/ai-engines/mlflow"
     },
     {
-      "source": "/nixtla/statsforecast",
-      "destination": "/integrations/ai-engines/statsforecast"
-    },
-    {
-      "source": "/nixtla/house-sales-statsforecast",
-      "destination": "/sql/tutorials/house-sales-statsforecast"
-    },
-    {
       "source": "/connect/mindsdb_editor",
       "destination": "/mindsdb_sql/connect/mindsdb_editor"
     },
@@ -1376,10 +1368,6 @@
     {
       "source": "/sql/tutorials/house-sales-forecasting",
       "destination": "/use-cases/predictive_analytics/house-sales-forecasting"
-    },
-    {
-      "source": "/sql/tutorials/expenditures-statsforecast",
-      "destination": "/use-cases/predictive_analytics/expenditures-statsforecast"
     },
     {
       "source": "/sql/tutorials/eeg-forecasting",

@@ -72,12 +72,7 @@ jobs:
       # We should be using loggers instead
       - name: Check for print statements
         run: |
-          # The pyproject file confuses uv: https://github.com/astral-sh/uv/issues/6838
-          cp pyproject.toml /tmp/pyproject.toml.bak
-          rm pyproject.toml
-          uv run tests/scripts/check_print_statements.py; result=$?
-          mv /tmp/pyproject.toml.bak pyproject.toml
-          exit $result
+          uv run tests/scripts/check_print_requirements.py
       
       - name: Install MDB dev requirements
         run: |

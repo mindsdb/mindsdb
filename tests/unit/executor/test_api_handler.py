@@ -5,6 +5,7 @@ import datetime as dt
 from unittest.mock import patch
 from dataclasses import dataclass
 
+import pytest
 import pandas as pd
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
@@ -13,7 +14,10 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 # import modules virtually if it is not installed
 try:
     import github  # noqa
+
+    _has_github = True
 except ImportError:
+    _has_github = False
     module = types.ModuleType("")
     exec("Github=None", module.__dict__)
     sys.modules["github"] = module
@@ -25,6 +29,7 @@ except ImportError:
 
 
 class TestApiHandler(BaseExecutorDummyML):
+    @pytest.mark.skipif(not _has_github, reason="PyGithub is not installed")
     @patch("github.Github")
     def test_github(self, Github):
         """

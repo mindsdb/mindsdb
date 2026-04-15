@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -87,6 +88,7 @@ class TestLowercase(BaseExecutorDummyML):
 
                 self.run_sql(f"DROP DATABASE {another_name}")
 
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Multiprocessing segfaults on macOS")
     def test_ml_engine_name_lowercase(self):
         # mixed case
         self.run_sql("CREATE ML_ENGINE `MyMlEngine` FROM dummy_ml")
@@ -110,6 +112,7 @@ class TestLowercase(BaseExecutorDummyML):
 
             self.run_sql(f"DROP ML_ENGINE {another_name}")
 
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Multiprocessing segfaults on macOS")
     def test_model_name_lowercase(self):
         self.run_sql("CREATE ML_ENGINE myengine FROM dummy_ml")
         df = pd.DataFrame(

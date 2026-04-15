@@ -50,3 +50,5 @@ class TestAQICNHandler(BaseExecutorTest):
 
 
 # ci fix
+# trigger ci format
+# trigger ci format

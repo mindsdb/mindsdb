@@ -32,7 +32,7 @@
 
 ---
 
-MindsDB produces the following open source products:
+MindsDB develops the following products:
 
 * [ANTON](https://github.com/mindsdb/anton) - A personal AI agent that helps you get work done. Tell it what you need in plain language and it takes it from there - sending emails, calling APIs, connecting to data sources, building dashboards, and delivering results. No setup, no plugins, no fuss.
 

@@ -224,8 +224,7 @@ test = [
     "walrus ~= 0.9",
     "pymongo ~= 4.8",
     "appdirs >= 1.0.0",
-    # mindsdb-sdk removed: depends on PyPI mindsdb which pins pandas==2.2.x,
-    # conflicting with pandas>=2.3 required by pydantic-ai>=1.66
+    "mindsdb-sdk >= 3.5.0",
 ]
 
 #  uv configuration

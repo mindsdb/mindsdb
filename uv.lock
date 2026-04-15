@@ -1111,6 +1111,15 @@ wheels = [
 ]
 
 [[package]]
+name = "decorator"
+version = "5.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/fa/6d96a0978d19e17b68d634497769987b16c8f4cd0a7a05048bec693caa6b/decorator-5.2.1.tar.gz", hash = "sha256:65f266143752f734b0a7cc83c46f4618af75b8c5911b00ccb61d0ac9b6da0360", size = 56711, upload-time = "2025-02-24T04:41:34.073Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4e/8c/f3147f5c4b73e7550fe5f9352eaa956ae838d5c51eb58e7a25b9f3e2643b/decorator-5.2.1-py3-none-any.whl", hash = "sha256:d316bb415a2d9e2d2b3abcc4084c6502fc09240e292cd76a76afc106a1c8e04a", size = 9190, upload-time = "2025-02-24T04:41:32.565Z" },
+]
+
+[[package]]
 name = "deptry"
 version = "0.25.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3255,6 +3264,7 @@ test = [
     { name = "filelock" },
     { name = "langchain-google-genai" },
     { name = "locust" },
+    { name = "mindsdb-sdk" },
     { name = "mysql-connector-python" },
     { name = "ollama" },
     { name = "openai" },
@@ -3316,6 +3326,7 @@ requires-dist = [
     { name = "mcp", marker = "extra == 'agents'", specifier = ">=1.25.0" },
     { name = "mind-castle", specifier = ">=0.4.9" },
     { name = "mindsdb-evaluator", marker = "extra == 'agents'", specifier = "==0.0.21" },
+    { name = "mindsdb-sdk", marker = "extra == 'test'", specifier = ">=3.5.0" },
     { name = "mindsdb-sql-parser", specifier = "~=0.13.8" },
     { name = "mysql-connector-python", marker = "extra == 'mysql'", specifier = ">=9.1.0" },
     { name = "mysql-connector-python", marker = "extra == 'test'", specifier = "~=9.1" },
@@ -3400,6 +3411,23 @@ sdist = { url = "https://files.pythonhosted.org/packages/a3/1d/71ee17e8350e42789
 wheels = [
     { url = "https://files.pythonhosted.org/packages/18/ef/6de92339a5999b8ab23eb1ef69a42a4f2cae747350fd70bbcab95d9f5c02/mindsdb_evaluator-0.0.21-py3-none-any.whl", hash = "sha256:fba1c40e07a1fedf6021c9fd9d7f6f79ef15e44a6390b72ab0bdaa70912fb36e", size = 21254, upload-time = "2025-12-01T14:07:47.169Z" },
 ]
+
+[[package]]
+name = "mindsdb-sdk"
+version = "3.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docstring-parser" },
+    { name = "mindsdb-sql-parser" },
+    { name = "openai" },
+    { name = "pandas" },
+    { name = "requests" },
+    { name = "sseclient-py" },
+    { name = "tenacity" },
+    { name = "urllib3" },
+    { name = "validators" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/52/e041a9ec716dcfa080c32b2e5f2828abfad298f1c623763397118b445742/mindsdb_sdk-3.5.0.tar.gz", hash = "sha256:7f7f25111fac1713ac7131e9a41bfde1789e0841fcf7178f9675bcb31e4d640e", size = 36556, upload-time = "2026-04-10T10:34:46.883Z" }
 
 [[package]]
 name = "mindsdb-sql-parser"
@@ -6135,6 +6163,14 @@ wheels = [
 ]
 
 [[package]]
+name = "sseclient-py"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4d/2e/59920f7d66b7f9932a3d83dd0ec53fab001be1e058bf582606fe414a5198/sseclient_py-1.9.0-py3-none-any.whl", hash = "sha256:340062b1587fc2880892811e2ab5b176d98ef3eee98b3672ff3a3ba1e8ed0f6f", size = 8351, upload-time = "2026-01-02T23:39:30.995Z" },
+]
+
+[[package]]
 name = "standard-aifc"
 version = "3.13.0"
 source = { registry = "https://pypi.org/simple" }
@@ -6621,6 +6657,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/32/ce/eeb58ae4ac36fe09e
 wheels = [
     { url = "https://files.pythonhosted.org/packages/83/e4/d04a086285c20886c0daad0e026f250869201013d18f81d9ff5eada73a88/uvicorn-0.41.0-py3-none-any.whl", hash = "sha256:29e35b1d2c36a04b9e180d4007ede3bcb32a85fbdfd6c6aeb3f26839de088187", size = 68783, upload-time = "2026-02-16T23:07:22.357Z" },
 ]
+
+[[package]]
+name = "validators"
+version = "0.20.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "decorator" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/95/14/ed0af6865d378cfc3c504aed0d278a890cbefb2f1934bf2dbe92ecf9d6b1/validators-0.20.0.tar.gz", hash = "sha256:24148ce4e64100a2d5e267233e23e7afeb55316b47d30faae7eb6e7292bc226a", size = 30665, upload-time = "2022-06-05T17:12:13.176Z" }
 
 [[package]]
 name = "virtualenv"

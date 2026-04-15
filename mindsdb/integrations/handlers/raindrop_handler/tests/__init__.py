@@ -1,1 +1,0 @@
-# Raindrop.io handler tests

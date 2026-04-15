@@ -56,7 +56,9 @@ def collect_metrics(func):
 
             num_rows = getattr(result, "affected_rows", None)
             if num_rows is None:
-                num_rows = -1
+                num_rows = getattr(result, "rows_fetched", -1)
+                if num_rows is None:
+                    num_rows = -1
             response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
                 handler_class_name, result.type
             )

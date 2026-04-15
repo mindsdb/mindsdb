@@ -54,4 +54,6 @@ class TestSymblAPIHandler(BaseExecutorTest):
 
         sql = f'SELECT * FROM mindsdb_symbl.get_follow_ups where conversation_id="{conversation_id}"'
         self.run_sql(sql)
+
+
 # ci fix

@@ -44,4 +44,6 @@ class TestZipCodeBaseHandler(BaseExecutorTest):
 
         sql = "SELECT * FROM mindsdb_zipcodebase.code_to_location where codes='10005'; LIMIT 1;"
         assert self.run_sql(sql).shape[0] == 1
+
+
 # ci fix

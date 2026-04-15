@@ -37,4 +37,6 @@ class TestLumaHandler(BaseExecutorTest):
 
         sql = 'SELECT * FROM mindsdb_luma.events where event_id = "evt-HQ36IFDwncocuGy";'
         assert self.run_sql(sql).shape[0] == 1
+
+
 # ci fix

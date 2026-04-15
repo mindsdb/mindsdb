@@ -2688,15 +2688,6 @@ wheels = [
 ]
 
 [[package]]
-name = "lark"
-version = "1.3.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/da/34/28fff3ab31ccff1fd4f6c7c7b0ceb2b6968d8ea4950663eadcb5720591a0/lark-1.3.1.tar.gz", hash = "sha256:b426a7a6d6d53189d318f2b6236ab5d6429eaf09259f1ca33eb716eed10d2905", size = 382732 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/3d/14ce75ef66813643812f3093ab17e46d3a206942ce7376d31ec2d36229e7/lark-1.3.1-py3-none-any.whl", hash = "sha256:c629b661023a014c37da873b4ff58a817398d12635d3bbb2c5a03be7fe5d1e12", size = 113151 },
-]
-
-[[package]]
 name = "litellm"
 version = "1.82.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2975,25 +2966,6 @@ wheels = [
 ]
 
 [[package]]
-name = "mariadb"
-version = "1.1.14"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "packaging" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/ba/cedef19833be88e07bfff11964441cda8a998f1628dd3b2fa3e7751d36e0/mariadb-1.1.14.tar.gz", hash = "sha256:e6d702a53eccf20922e47f2f45cfb5c7a0c2c6c0a46e4ee2d8a80d0ff4a52f34", size = 111715 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/bf/5e1a3a5be297c3a679e08f5359165491508fbfb64faf854dc1d626cea9c0/mariadb-1.1.14-cp310-cp310-win32.whl", hash = "sha256:4c7f33578da163a1b79929aae241f5f981d7b9d5a94d89e589aad7ec58e313ea", size = 185064 },
-    { url = "https://files.pythonhosted.org/packages/31/30/3a61991c13cb8257f5db64aca12bafaa3d811d407e1fae019139fd17c99b/mariadb-1.1.14-cp310-cp310-win_amd64.whl", hash = "sha256:3f6fdc4ded5e0500a6a29bf0c8bf1be94189dcef5a8d5e0e154a4b3456f86bcc", size = 202020 },
-    { url = "https://files.pythonhosted.org/packages/56/aa/a7b3c66b2792e8319ec9157d63851ff2e0b26496a05044e22b50a012a05e/mariadb-1.1.14-cp311-cp311-win32.whl", hash = "sha256:932a95016b7e9b8d78893aa5ee608e74199e3c6dd607dbe5e4da2010a4f67b88", size = 185061 },
-    { url = "https://files.pythonhosted.org/packages/54/04/ea2374867756b4082764484bc8b82e1798d94f171bcc914e08c60d640f8f/mariadb-1.1.14-cp311-cp311-win_amd64.whl", hash = "sha256:55ddbe5272c292cbcb2968d87681b5d2b327e65646a015e324b8eeb804d14531", size = 202016 },
-    { url = "https://files.pythonhosted.org/packages/00/04/659a8d30513700b5921ec96bddc07f550016c045fcbeb199d8cd18476ecc/mariadb-1.1.14-cp312-cp312-win32.whl", hash = "sha256:98d552a8bb599eceaa88f65002ad00bd88aeed160592c273a7e5c1d79ab733dd", size = 185266 },
-    { url = "https://files.pythonhosted.org/packages/e4/a9/8f210291bc5fc044e20497454f40d35b3bab326e2cab6fccdc38121cb2c1/mariadb-1.1.14-cp312-cp312-win_amd64.whl", hash = "sha256:685a1ad2a24fd0aae1c4416fe0ac794adc84ab9209c8d0c57078f770d39731db", size = 202112 },
-    { url = "https://files.pythonhosted.org/packages/f3/42/51130048bcce038bb859978250515f1aad90e9c4d273630a704e0a8b1ae1/mariadb-1.1.14-cp313-cp313-win32.whl", hash = "sha256:3d2c795cde606f4e12c0d73282b062433f414cae035675b0d81f2d65c9b79ac5", size = 185221 },
-    { url = "https://files.pythonhosted.org/packages/af/23/e952a7e442913abd8079cd27b80b69474895c93b3727fad41c7642a80c62/mariadb-1.1.14-cp313-cp313-win_amd64.whl", hash = "sha256:7fd603c5cf23c47ef0d28fdc2b4b79919ee7f75d00ed070d3cd1054dcf816aeb", size = 202121 },
-]
-
-[[package]]
 name = "markdown-it-py"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3145,6 +3117,7 @@ dependencies = [
     { name = "appdirs" },
     { name = "boto3" },
     { name = "bs4" },
+    { name = "charset-normalizer" },
     { name = "cryptography" },
     { name = "dateparser" },
     { name = "dill" },
@@ -3154,8 +3127,6 @@ dependencies = [
     { name = "flask" },
     { name = "flask-compress" },
     { name = "flask-restx" },
-    { name = "html2text" },
-    { name = "lark" },
     { name = "mind-castle" },
     { name = "mindsdb-sql-parser" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -3167,7 +3138,6 @@ dependencies = [
     { name = "prometheus-client" },
     { name = "psutil" },
     { name = "psycopg", extra = ["binary"] },
-    { name = "psycopg2-binary" },
     { name = "pyaml" },
     { name = "pyarrow" },
     { name = "pydantic" },
@@ -3180,11 +3150,10 @@ dependencies = [
     { name = "redis" },
     { name = "requests" },
     { name = "sentry-sdk", extra = ["flask"] },
-    { name = "sly" },
     { name = "sqlalchemy" },
     { name = "sse-starlette" },
     { name = "starlette" },
-    { name = "urllib3" },
+    { name = "typing-extensions" },
     { name = "uvicorn" },
     { name = "walrus" },
     { name = "werkzeug" },
@@ -3199,7 +3168,6 @@ agents = [
     { name = "mcp" },
     { name = "mindsdb-evaluator" },
     { name = "openai" },
-    { name = "transformers" },
 ]
 bigquery = [
     { name = "google-cloud-bigquery" },
@@ -3213,18 +3181,16 @@ duckdb-faiss = [
 hubspot = [
     { name = "hubspot-api-client" },
 ]
+huggingface = [
+    { name = "transformers" },
+]
 kb = [
     { name = "google-auth" },
     { name = "google-genai" },
     { name = "litellm" },
-    { name = "lxml" },
-    { name = "pgvector" },
 ]
 langfuse = [
     { name = "langfuse" },
-]
-mariadb = [
-    { name = "mariadb" },
 ]
 mysql = [
     { name = "mysql-connector-python" },
@@ -3240,11 +3206,18 @@ opentelemetry = [
 oracle = [
     { name = "oracledb" },
 ]
+pgvector = [
+    { name = "pgvector" },
+    { name = "psycopg2-binary" },
+]
 salesforce = [
     { name = "simple-salesforce" },
 ]
 snowflake = [
     { name = "snowflake-connector-python" },
+]
+web = [
+    { name = "html2text" },
 ]
 
 [package.dev-dependencies]
@@ -3289,6 +3262,7 @@ requires-dist = [
     { name = "appdirs", specifier = ">=1.0.0" },
     { name = "boto3", specifier = ">=1.34.131" },
     { name = "bs4" },
+    { name = "charset-normalizer", specifier = ">=3.4" },
     { name = "cryptography", specifier = ">=42.0.0" },
     { name = "databricks-sql-connector", marker = "extra == 'databricks'", specifier = ">=3.0.0" },
     { name = "dateparser", specifier = "~=1.2" },
@@ -3303,16 +3277,13 @@ requires-dist = [
     { name = "google-auth", marker = "extra == 'kb'", specifier = ">=2.0.0" },
     { name = "google-cloud-bigquery", marker = "extra == 'bigquery'", specifier = ">=3.0.0" },
     { name = "google-genai", marker = "extra == 'kb'", specifier = ">=1.0.0" },
-    { name = "html2text", specifier = ">=2025.4.15" },
+    { name = "html2text", marker = "extra == 'web'", specifier = ">=2025.4.15" },
     { name = "httpx", marker = "extra == 'agents'", specifier = "~=0.28" },
     { name = "hubspot-api-client", marker = "extra == 'hubspot'", specifier = ">=8.0.0" },
     { name = "jwcrypto", marker = "extra == 'agents'", specifier = "~=1.5" },
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = "~=3.14" },
-    { name = "lark" },
     { name = "litellm", marker = "extra == 'agents'", specifier = "~=1.80" },
     { name = "litellm", marker = "extra == 'kb'", specifier = "~=1.80" },
-    { name = "lxml", marker = "extra == 'kb'", specifier = "~=5.3" },
-    { name = "mariadb", marker = "extra == 'mariadb'", specifier = ">=1.1.10" },
     { name = "mcp", marker = "extra == 'agents'", specifier = ">=1.25.0" },
     { name = "mind-castle", specifier = ">=0.4.9" },
     { name = "mindsdb-evaluator", marker = "extra == 'agents'", specifier = "==0.0.21" },
@@ -3331,11 +3302,11 @@ requires-dist = [
     { name = "orjson", specifier = "~=3.11" },
     { name = "packaging" },
     { name = "pandas", specifier = ">=2.2.3,<3.0.0" },
-    { name = "pgvector", marker = "extra == 'kb'", specifier = "~=0.3" },
+    { name = "pgvector", marker = "extra == 'pgvector'", specifier = "~=0.3" },
     { name = "prometheus-client", specifier = "~=0.20" },
     { name = "psutil", specifier = "~=7.0" },
     { name = "psycopg", extras = ["binary"] },
-    { name = "psycopg2-binary" },
+    { name = "psycopg2-binary", marker = "extra == 'pgvector'", specifier = ">=2.9.0" },
     { name = "pyaml", specifier = "~=23.12" },
     { name = "pyarrow", specifier = "<=19.0.0" },
     { name = "pydantic", specifier = "~=2.12" },
@@ -3349,19 +3320,18 @@ requires-dist = [
     { name = "requests", specifier = "~=2.32" },
     { name = "sentry-sdk", extras = ["flask"], specifier = "~=2.14" },
     { name = "simple-salesforce", marker = "extra == 'salesforce'", specifier = ">=1.12.5" },
-    { name = "sly", specifier = "~=0.4.0" },
     { name = "snowflake-connector-python", marker = "extra == 'snowflake'", specifier = ">=3.10.0" },
     { name = "sqlalchemy", specifier = ">=2.0.0,<3.0.0" },
     { name = "sse-starlette", specifier = "~=2.3" },
     { name = "starlette", specifier = ">=0.49.1" },
-    { name = "transformers", marker = "extra == 'agents'", specifier = ">=4.42.4" },
-    { name = "urllib3", specifier = ">=2.6.3" },
+    { name = "transformers", marker = "extra == 'huggingface'", specifier = ">=4.42.4" },
+    { name = "typing-extensions", specifier = ">=4.12" },
     { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
     { name = "walrus", specifier = "~=0.9" },
     { name = "werkzeug", specifier = "==3.1.6" },
     { name = "xlrd", specifier = ">=2.0.2" },
 ]
-provides-extras = ["agents", "kb", "opentelemetry", "langfuse", "postgres", "snowflake", "oracle", "bigquery", "databricks", "timescaledb", "salesforce", "hubspot", "netsuite", "mariadb", "mysql", "duckdb-faiss"]
+provides-extras = ["agents", "kb", "opentelemetry", "langfuse", "postgres", "snowflake", "oracle", "bigquery", "databricks", "timescaledb", "salesforce", "hubspot", "netsuite", "mysql", "pgvector", "duckdb-faiss", "huggingface", "web"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -6023,12 +5993,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050 },
 ]
-
-[[package]]
-name = "sly"
-version = "0.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7b/16/62a654feb0eaf64669b04c99ec6335a3937c1991620c716dcdd9a0f9d095/sly-0.4.tar.gz", hash = "sha256:e5f2266a231322cc17519fbc3a3ba1c6335fed5a9a55abe0e598a35aea0ac32a", size = 60565 }
 
 [[package]]
 name = "sniffio"

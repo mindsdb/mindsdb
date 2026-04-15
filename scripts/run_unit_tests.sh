@@ -213,7 +213,7 @@ for handler in "${HANDLERS_TO_INSTALL[@]}"; do
     echo "Installing mindsdb with handlers: ${HANDLERS_TO_INSTALL[*]}"
     # Match CI: locked dev + test groups, then pip install for the package and handlers.
     uv sync --only-group dev --only-group test
-    uv pip install ".[agents,kb]" \
+    uv pip install ".[agents,kb,pgvector,huggingface,web]" \
         -r requirements/requirements-test.txt \
         "${HANDLER_EXTRAS[@]}"
 

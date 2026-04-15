@@ -40,12 +40,10 @@ dependencies = [
     "dateparser ~= 1.2",
     "pytz",
     "python-dateutil",
-    "lark",
     # --- Database ---
     "sqlalchemy >= 2.0.0, < 3.0.0",
     "alembic >= 1.3.3",
     "psycopg[binary]",
-    "psycopg2-binary",
     "redis >= 5.0.0, < 6.0.0",
     "walrus ~= 0.9",
     "duckdb == 1.3.0; sys_platform == 'win32'",
@@ -55,19 +53,19 @@ dependencies = [
     "appdirs >= 1.0.0",
     # --- HTTP / API ---
     "requests ~= 2.32",
-    "urllib3 >= 2.6.3",
     # --- Auth / security ---
     "cryptography >= 42.0.0",
     "pyjwt ~= 2.10",
     # --- Validation / serialization ---
     "pydantic ~= 2.12",
+    "typing-extensions >= 4.12",
     "orjson ~= 3.11",
     # --- MindsDB core ---
     "mindsdb-sql-parser ~= 0.13.8",
     "mind-castle >= 0.4.9",
     "psutil ~= 7.0",
-    "sly ~= 0.4.0",
     # --- File handling ---
+    "charset-normalizer >= 3.4",
     "pymupdf ~= 1.25",
     "filetype",
     "openpyxl",
@@ -78,7 +76,6 @@ dependencies = [
     "sentry-sdk[flask] ~= 2.14",
     # --- Misc ---
     "pyaml ~= 23.12",
-    "html2text>=2025.4.15",
     "xlrd>=2.0.2",
     "pydantic-ai >= 1.66.0, < 2.0.0",
 ]
@@ -90,9 +87,6 @@ dependencies = [
 # Regenerate: uv export --format requirements-txt --extra agents --no-hashes > requirements/requirements-agents.txt
 agents = [
     "openai >= 2.9.0, < 3.0.0",
-
-    # When using agents, some LLMs may require the 'transformers' library (like Ollama):
-    "transformers >= 4.42.4",
 
     # Required for KB
     "mindsdb-evaluator == 0.0.21",
@@ -109,8 +103,6 @@ agents = [
 # Generates: requirements/requirements-kb.txt
 # Regenerate: uv export --format requirements-txt --extra kb --no-hashes > requirements/requirements-kb.txt
 kb = [
-    "lxml ~= 5.3", # Do we need this? It is a dependency of aipdf
-    "pgvector ~= 0.3",
     "litellm ~= 1.80",
     "google-auth >= 2.0.0",
     "google-genai >= 1.0.0",
@@ -174,16 +166,25 @@ netsuite = [
     # Uses requests from core dependencies — no additional deps required
 ]
 
-mariadb = [
-    "mariadb >= 1.1.10",
-]
-
 mysql = [
     "mysql-connector-python >= 9.1.0",
 ]
 
+pgvector = [
+    "pgvector ~= 0.3",
+    "psycopg2-binary >= 2.9.0",
+]
+
 duckdb_faiss = [
     "faiss-cpu >= 1.13.0",
+]
+
+huggingface = [
+    "transformers >= 4.42.4",
+]
+
+web = [
+    "html2text>=2025.4.15",
 ]
 
 #  uv configuration
@@ -251,39 +252,23 @@ extend_exclude = [
 ]
 
 [tool.deptry.per_rule_ignores]
+# Imported in code but not listed as direct deps: optional stacks, auth backends, or transitive imports.
 DEP001 = [
-    "torch",
-    "dataprep_ml",
-    "sklearn",
-    "hierarchicalforecast",
-    "google_auth_oauthlib",
-    "msal",
-    "aiobotocore",
+    "torch",  # optional: torch.multiprocessing when PyTorch is installed; else stdlib multiprocessing
+    "dataprep_ml",  # optional: HTTP dataset analysis (dataprep_ml.insights); not required for core server
+    "sklearn",  # optional: scikit-learn metrics for Nixtla/time-series accuracy helpers (r2_score, etc.)
+    "hierarchicalforecast",  # optional: hierarchical TS reconciliation; guarded by try/except in time_series_utils
+    "google_auth_oauthlib",  # optional: Google OAuth web flow (google_user_oauth_utilities)
+    "msal",  # optional: Microsoft / MS Graph token flows (ms_graph_api_auth_utilities)
+    "aiobotocore",  # optional: async AWS client for Bedrock KB rerank (bedrock provider)
+    "botocore",  # S3 paths only: ClientError from botocore.exceptions; pulled in transitively via boto3
 ]
+# DEP002 = declared in pyproject but “unused” in the analyzed tree. Handler-only deps need this because
+# core deptry excludes mindsdb/integrations/handlers/. Import↔PyPI name mismatches use package_module_name_map instead.
 DEP002 = [
-    "psycopg2-binary",
-    "lark",
-    "transformers",
-    "lxml",
     "openpyxl",
     "xlrd",
     "litellm",
-    "urllib3",
-    "faiss-cpu",
-    "sly",
-    "html2text",
-    "pgvector",
-    "snowflake-connector-python",
-    "oracledb",
-    "databricks-sql-connector",
-    "simple-salesforce",
-    "hubspot-api-client",
-    "mariadb",
-    "mysql-connector-python",
-]
-DEP003 = [
-    "typing_extensions",
-    "charset_normalizer",
 ]
 
 [tool.deptry.package_module_name_map]

@@ -52,7 +52,7 @@ for handler in "${INSTALL_HANDLERS[@]}"; do
   HANDLER_EXTRAS+=(".[${handler}]")
 done
 
-uv pip install ".[agents,kb]" \
+uv pip install ".[agents,kb,pgvector,huggingface,web]" \
   -r requirements/requirements-test.txt \
   "${HANDLER_EXTRAS[@]}"
 

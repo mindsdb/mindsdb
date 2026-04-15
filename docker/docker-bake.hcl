@@ -105,23 +105,23 @@ target "images" {
     item = [
       {
         name = "bare"
-        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce,duckdb_faiss,pgvector]"
+        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce,duckdb_faiss,pgvector,huggingface,web]"
         target = ""
       },
       {
         name = "devel"
-        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce,duckdb_faiss,pgvector]"  # Required for running integration tests
+        extras = ".[agents,kb,mysql,postgresql,snowflake,bigquery,mssql,mssql-odbc,salesforce,duckdb_faiss,pgvector,huggingface,web]"  # Required for running integration tests
         target = "dev"
       },
       {
         # If you make any changes here, make them to cloud-cpu as well
         name = "cloud"
-        extras = ".[mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,netsuite,shopify,agents,kb,pgvector] darts datasetsforecast transformers"
+        extras = ".[mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,netsuite,shopify,agents,kb,pgvector,huggingface,web] darts datasetsforecast"
         target = ""
       },
       {
         name = "cloud-cpu"
-        extras = ".[mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,netsuite,shopify,agents,kb,pgvector] darts datasetsforecast transformers"
+        extras = ".[mysql,statsforecast-extra,neuralforecast-extra,timegpt,mssql,mssql-odbc,gmail,snowflake,clickhouse,bigquery,elasticsearch,s3,databricks,oracle,opentelemetry,langfuse,jira,salesforce,gong,hubspot,netsuite,shopify,agents,kb,pgvector,huggingface,web] darts datasetsforecast"
         target = ""
       },
     ]

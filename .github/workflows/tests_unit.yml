@@ -154,7 +154,7 @@ jobs:
           for handler in "${INSTALL_HANDLERS[@]}"; do
             HANDLER_EXTRAS+=(".[${handler}]")
           done
-          uv pip install ".[agents,kb]" \
+          uv pip install ".[agents,kb,pgvector,huggingface,web]" \
             -r requirements/requirements-test.txt \
             "${HANDLER_EXTRAS[@]}"
           git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests

@@ -11,8 +11,6 @@ aiohttp==3.13.4
     # via xai-sdk
 aiosignal==1.4.0
     # via aiohttp
-aiobotocore==3.4.0
-    # via mindsdb
 aipdf==0.0.7.0
     # via mindsdb
 alembic==1.18.4

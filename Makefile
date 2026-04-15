@@ -25,11 +25,11 @@ format:
 run_mindsdb:
 	python -m mindsdb
 
-check_requirements:
-	uv run --extra dev tests/scripts/check_requirements.py
+check_dependencies:
+	uv run --extra dev tests/scripts/check_pyproject_dependencies.py
 
 check:
-	uv run --extra dev tests/scripts/check_requirements.py
+	uv run --extra dev tests/scripts/check_pyproject_dependencies.py
 	uv run tests/scripts/check_print_statements.py
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)

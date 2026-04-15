@@ -70,8 +70,7 @@ jobs:
       
       - name: Install MDB dev requirements
         run: |
-          git checkout -- pyproject.toml
-          uv pip install -r requirements/requirements-dev.txt
+          uv syhc --only-dev
 
       # Run pre-commit on all changed files
       # See .pre-commit-config.yaml for the list of checks
@@ -83,7 +82,7 @@ jobs:
       # to make sure they're in order
       - name: Check requirements files
         run: |
-          uv run tests/scripts/check_requirements.py
+          uv run tests/scripts/check_pyproject_dependencies.py
   # Creates a matrix of environments to test against using matrix_includes.json
   matrix_prep:
     name: Prepare matrix

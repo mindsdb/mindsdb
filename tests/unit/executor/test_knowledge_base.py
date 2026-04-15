@@ -325,13 +325,8 @@ class TestKBNOAutoBatch(BaseTestKB):
             def __init__(self, content):
                 self.message = _Msg(content)
 
-        class _Resp:
-            def __init__(self, content):
-                self.choices = [_Choice(content)]
-
         async def _fake_call_llm(messages):
-            content = '{"ranking": [{"doc_index": 2, "score": 0.9}, {"doc_index": 1, "score": 0.6}, {"doc_index": 3, "score": 0.1}]}'
-            return _Resp(content)
+            return '{"ranking": [{"doc_index": 2, "score": 0.9}, {"doc_index": 1, "score": 0.6}, {"doc_index": 3, "score": 0.1}]}'
 
         # Bind the async method to this reranker instance
         reranker._call_llm = _fake_call_llm  # type: ignore
@@ -356,16 +351,11 @@ class TestKBNOAutoBatch(BaseTestKB):
             def __init__(self, content):
                 self.message = _Msg(content)
 
-        class _Resp:
-            def __init__(self, content):
-                self.choices = [_Choice(content)]
-
         async def _fake_call_llm(messages):
             # Returns code-fenced JSON, includes only two entries, one without score
-            content = """```json
+            return """```json
             {"ranking": [1, {"doc_index": 3, "score": 0.8}]}
             ```"""
-            return _Resp(content)
 
         reranker._call_llm = _fake_call_llm  # type: ignore
 
@@ -389,14 +379,9 @@ class TestKBNOAutoBatch(BaseTestKB):
             def __init__(self, content):
                 self.message = _Msg(content)
 
-        class _Resp:
-            def __init__(self, content):
-                self.choices = [_Choice(content)]
-
         async def _fake_call_llm(messages):
             # Invalid JSON forces fallback
-            content = "not-json"
-            return _Resp(content)
+            return "not-json"
 
         reranker._call_llm = _fake_call_llm  # type: ignore
 
@@ -1351,6 +1336,47 @@ class TestKBNOAutoBatch(BaseTestKB):
         )
         ret = self.run_sql("select * from kb_ral where content='white'")
         assert "white" in ret["chunk_content"].iloc[0]
+
+    def test_providers(self):
+        with patch("mindsdb.interfaces.knowledge_base.llm_client.BedrockClient.embeddings") as embed:
+            with patch(
+                "mindsdb.integrations.utilities.rag.rerankers.base_reranker.AsyncBedrockClient.acompletion"
+            ) as rerank:
+                embed.return_value = [[1, 1, 1]]
+                rerank.return_value = "100"
+                self._create_kb(
+                    "kb_test",
+                    embedding_model={
+                        "provider": "bedrock",
+                        "model_name": "amazon.titan",
+                        "aws_access_key_id": "-",
+                        "aws_region_name": "us-east-2",
+                        "aws_secret_access_key": "-",
+                    },
+                    reranking_model={
+                        "provider": "bedrock",
+                        "model_name": "llama3",
+                        "aws_access_key_id": "-",
+                        "aws_region_name": "us-east-2",
+                        "aws_secret_access_key": "-",
+                    },
+                )
+                assert embed.call_args_list[0][0][0] == "amazon.titan"
+                assert rerank.call_args_list[0][1]["model_name"] == "llama3"
+
+        with patch("mindsdb.interfaces.knowledge_base.llm_client.SnowflakeClient.embeddings") as embed:
+            embed.return_value = [[1, 1, 1]]
+            self._create_kb(
+                "kb_test",
+                embedding_model={"provider": "snowflake", "model_name": "arctic", "account_id": "ABC", "api_key": "-"},
+            )
+            assert embed.call_args_list[0][0][0] == "arctic"
+        with patch("mindsdb.interfaces.knowledge_base.llm_client.GeminiClient.embeddings") as embed:
+            embed.return_value = [[1, 1, 1]]
+            self._create_kb(
+                "kb_test", embedding_model={"provider": "gemini", "model_name": "gemini-embedding", "api_key": "-"}
+            )
+            assert embed.call_args_list[0][0][0] == "gemini-embedding"
 
 
 class TestKBAutoBatch(BaseTestKB):

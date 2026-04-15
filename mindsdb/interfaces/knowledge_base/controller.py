@@ -1319,9 +1319,9 @@ class KnowledgeBaseController:
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
             )
 
-        llm_client = LLMClient(params, session=self.session)
-
         try:
+            llm_client = LLMClient(params, session=self.session)
+
             resp = llm_client.embeddings(["test"])
             return {"dimension": len(resp[0])}
         except Exception as e:

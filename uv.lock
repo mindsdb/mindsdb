@@ -3187,6 +3187,7 @@ dependencies = [
     { name = "urllib3" },
     { name = "uvicorn" },
     { name = "walrus" },
+    { name = "werkzeug" },
     { name = "xlrd" },
 ]
 
@@ -3357,6 +3358,7 @@ requires-dist = [
     { name = "urllib3", specifier = ">=2.6.3" },
     { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
     { name = "walrus", specifier = "~=0.9" },
+    { name = "werkzeug", specifier = "==3.1.6" },
     { name = "xlrd", specifier = ">=2.0.2" },
 ]
 provides-extras = ["agents", "kb", "opentelemetry", "langfuse", "postgres", "snowflake", "oracle", "bigquery", "databricks", "timescaledb", "salesforce", "hubspot", "netsuite", "mariadb", "mysql", "duckdb-faiss"]

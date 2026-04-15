@@ -28,9 +28,7 @@ class FaissParams(BaseModel):
     metric: str | None = "cosine"
     use_gpu: bool | None = False
     nlist: int | None = 1024
-    nprobe: int | None = 32
-    hnsw_m: int | None = 32
-    hnsw_ef_search: int | None = 64
+    nprobe: int | None = None
 
 
 def merge_ondisk(trained_index: faiss.Index, shard_fnames: List[str], ivfdata_fname: str, shift_ids=False) -> None:
@@ -161,6 +159,8 @@ class FaissIndex:
                 self.index_type = "ivf_file"
             else:
                 self.index_type = "ivf"
+            if self.config.nprobe is not None:
+                self.index.nprobe = self.config.nprobe
 
     def close(self):
         if self.index_fd is not None:

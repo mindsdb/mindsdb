@@ -751,3 +751,13 @@ yarl==1.23.0
     # via aiohttp
 zipp==3.23.0
     # via importlib-metadata
+
+mind-castle==0.5.0
+pydantic-ai==1.77.0 # Required for Pydantic AI agents
+
+bs4 # for rag HTMLDocumentLoader
+urllib3>=2.6.3 # not directly required, pinned by Snyk to avoid a vulnerability
+
+# kb providers
+aiobotocore==3.4.0
+google-genai==1.70.0

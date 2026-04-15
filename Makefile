@@ -25,9 +25,12 @@ format:
 run_mindsdb:
 	python -m mindsdb
 
+check_requirements:
+	uv run --extra dev tests/scripts/check_requirements.py
+
 check:
-	python tests/scripts/check_requirements.py
-	python tests/scripts/check_print_statements.py
+	uv run --extra dev tests/scripts/check_requirements.py
+	uv run tests/scripts/check_print_statements.py
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)
 
@@ -87,4 +90,4 @@ unit_tests_debug:
 	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/
 	pytest $(PYTEST_ARGS_DEBUG) --ignore=tests/unit/executor tests/unit/
 
-.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug datasource_integration_tests datasource_integration_tests_debug unit_tests unit_tests_slow unit_tests_debug
+.PHONY: install_mindsdb install_handler precommit format run_mindsdb check_requirements check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug datasource_integration_tests datasource_integration_tests_debug unit_tests unit_tests_slow unit_tests_debug

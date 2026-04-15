@@ -47,3 +47,4 @@ class TestAQICNHandler(BaseExecutorTest):
 
         sql = "SELECT * FROM mindsdb_aqicn.air_quality_user_location LIMIT 1;"
         assert self.run_sql(sql).shape[0] == 1
+# ci fix

@@ -44,3 +44,4 @@ class TestOilPriceAPIHandler(BaseExecutorTest):
 
         sql = "SELECT * FROM npm_test.past_day_price LIMIT 1;"
         assert self.run_sql(sql).shape[0] == 1
+# ci fix

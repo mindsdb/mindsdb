@@ -34,6 +34,16 @@ connection_args = OrderedDict(
         "label": "Auth Method",
         "required": False,
     },
+    is_selfHosted={
+        "type": ARG_TYPE.BOOL,
+        "description": (
+            "Set to True for Confluence Server / Data Center (on-premises), or False (default) for Confluence Cloud. "
+            "When True, the handler uses the Confluence Server REST API v1. "
+            "Note: 'whiteboards', 'databases', and 'tasks' tables are Cloud-only and will raise an error when self-hosted mode is enabled."
+        ),
+        "label": "Is Self Hosted",
+        "required": False,
+    },
 )
 
 connection_args_example = OrderedDict(

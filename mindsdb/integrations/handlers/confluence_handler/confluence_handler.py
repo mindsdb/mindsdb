@@ -69,6 +69,12 @@ class ConfluenceHandler(APIHandler):
         token = self.connection_data.get("token")
         auth_method = self.connection_data.get("auth_method")
 
+        is_selfHosted = self.connection_data.get("is_selfHosted")
+        if is_selfHosted is None and "is_cloud" in self.connection_data:
+            is_selfHosted = not self.connection_data.get("is_cloud", True)
+        if is_selfHosted is None:
+            is_selfHosted = False
+
         if not api_base:
             raise ValueError("Required parameter 'api_base' must be provided and should not be empty.")
 
@@ -80,6 +86,7 @@ class ConfluenceHandler(APIHandler):
                 url=api_base,
                 token=token,
                 auth_method="bearer",
+                is_selfHosted=is_selfHosted,
             )
         else:
             if not username or not password:
@@ -91,6 +98,7 @@ class ConfluenceHandler(APIHandler):
                 url=api_base,
                 username=username,
                 password=password,
+                is_selfHosted=is_selfHosted,
             )
 
         self.is_connected = True

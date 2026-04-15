@@ -93,6 +93,30 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
             json=None,
         )
 
+    def test_check_connection_self_hosted_uses_server_api(self):
+        """
+        Test that the legacy self-hosted flag routes requests to the Confluence Server API.
+        """
+        self.handler.connection_data["is_selfHosted"] = True
+
+        mock_request = MagicMock()
+        mock_request.return_value = MagicMock(
+            status_code=200,
+            raise_for_status=lambda: None,
+            json=lambda: dict(results=[], _links=dict(next=None)),
+        )
+        self.mock_connect.return_value = MagicMock(request=mock_request)
+
+        response = self.handler.check_connection()
+
+        self.assertTrue(response.success)
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/rest/api/space",
+            params={"expand": "description.view,homepage", "limit": 1},
+            json=None,
+        )
+
     def test_get_tables(self):
         """
         Test that the `get_tables` method returns a TableResponse with a list of table names.

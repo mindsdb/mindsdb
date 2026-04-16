@@ -76,7 +76,7 @@ boto3==1.42.60
     #   mind-castle
     #   mindsdb
     #   pydantic-ai-slim
-botocore==1.42.60
+botocore==1.42.84
     # via
     #   boto3
     #   s3transfer
@@ -206,11 +206,11 @@ fsspec==2026.2.0
     # via huggingface-hub
 genai-prices==0.0.55
     # via pydantic-ai-slim
-google-auth==2.48.0
+google-auth==2.49.2
     # via
     #   google-genai
     #   pydantic-ai-slim
-google-genai==1.66.0
+google-genai==1.73.1
     # via pydantic-ai-slim
 googleapis-common-protos==1.72.0
     # via
@@ -472,9 +472,7 @@ pyaml==23.12.0
 pyarrow==19.0.0
     # via mindsdb
 pyasn1==0.6.2
-    # via
-    #   pyasn1-modules
-    #   rsa
+    # via pyasn1-modules
 pyasn1-modules==0.4.2
     # via google-auth
 pycparser==3.0 ; implementation_name != 'PyPy'
@@ -627,8 +625,6 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-rsa==4.9.1
-    # via google-auth
 ruff==0.11.11
 s3transfer==0.16.0
     # via boto3
@@ -641,6 +637,8 @@ shellingham==1.5.4
     # via typer
 six==1.17.0
     # via python-dateutil
+sly==0.4
+    # via mindsdb
 sniffio==1.3.1
     # via
     #   anthropic

@@ -1185,6 +1185,43 @@ class TestMSSQLHandlerODBC(unittest.TestCase):
             if "pyodbc" in sys.modules:
                 del sys.modules["pyodbc"]
 
+    def test_check_connection_resets_is_connected_on_failure(self):
+        """Test that check_connection resets is_connected when an already-connected handler fails."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+        mock_cursor.execute.side_effect = OperationalError("connection lost")
+
+        mock_conn.cursor.return_value = mock_cursor
+        self.handler.connection = mock_conn
+        self.handler.is_connected = True
+
+        response = self.handler.check_connection()
+
+        self.assertFalse(response.success)
+        self.assertFalse(self.handler.is_connected)
+
+    def test_query_method_with_schema_adds_prefix(self):
+        """Test that query() prepends the schema to unqualified table identifiers."""
+        from mindsdb_sql_parser import parse_sql as sql_parse
+
+        handler_with_schema = SqlServerHandler(
+            "mssql",
+            connection_data=OrderedDict(
+                **self.dummy_connection_data,
+                schema="dbo",
+            ),
+        )
+        handler_with_schema.native_query = MagicMock(return_value=OkResponse())
+
+        ast = sql_parse("SELECT id FROM orders")
+        handler_with_schema.query(ast)
+
+        handler_with_schema.native_query.assert_called_once()
+        rendered_sql = handler_with_schema.native_query.call_args[0][0]
+        self.assertIn("dbo", rendered_sql)
+
 
 if __name__ == "__main__":
     unittest.main()

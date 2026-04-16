@@ -270,7 +270,8 @@ DEP001 = [
 DEP002 = [
     "openpyxl",
     "xlrd",
-    "psycopg2-binary"
+    "psycopg2-binary",
+    "sly",  # we need to check this with mindsdb_sql_parser 
 ]
 
 [tool.deptry.package_module_name_map]

@@ -7,7 +7,7 @@ ag-ui-protocol==0.1.13
     # via pydantic-ai-slim
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via xai-sdk
 aiosignal==1.4.0
     # via aiohttp
@@ -121,7 +121,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   tqdm
 croniter==6.0.0
     # via pydocket
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   authlib
     #   aws-encryption-sdk
@@ -248,7 +248,7 @@ httpx==0.28.1
     #   pydantic-graph
 httpx-sse==0.4.3
     # via mcp
-huggingface-hub==1.9.2
+huggingface-hub==1.9.1
     # via
     #   pydantic-ai-slim
     #   tokenizers
@@ -471,7 +471,7 @@ pyaml==23.12.0
     # via mindsdb
 pyarrow==19.0.0
     # via mindsdb
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via pyasn1-modules
 pyasn1-modules==0.4.2
     # via google-auth
@@ -515,11 +515,11 @@ pydantic-settings==2.13.1
     # via mcp
 pydocket==0.18.0
     # via fastmcp
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   readme-renderer
     #   rich
-pyjwt==2.10.1
+pyjwt==2.12.1
     # via
     #   mcp
     #   mindsdb
@@ -730,6 +730,7 @@ typing-extensions==4.15.0
     #   pydantic
     #   pydantic-core
     #   pydocket
+    #   pyjwt
     #   referencing
     #   sqlalchemy
     #   starlette

@@ -258,7 +258,7 @@ httpx==0.28.1
     #   pydantic-graph
 httpx-sse==0.4.3
     # via mcp
-huggingface-hub==1.11.0
+huggingface-hub==1.9.2
     # via
     #   pydantic-ai-slim
     #   tokenizers

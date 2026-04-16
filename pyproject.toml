@@ -182,7 +182,7 @@ duckdb_faiss = [
 
 huggingface = [
     "transformers >= 4.42.4",
-    "huggingface-hub >= 1.9.1",
+    "huggingface-hub ~= 1.9.1",
 ]
 
 web = [

@@ -2180,7 +2180,7 @@ wheels = [
 
 [[package]]
 name = "huggingface-hub"
-version = "1.11.0"
+version = "1.9.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
@@ -2193,9 +2193,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dc/89/e7aa12d8a6b9259bed10671abb25ae6fa437c0f88a86ecbf59617bae7759/huggingface_hub-1.11.0.tar.gz", hash = "sha256:15fb3713c7f9cdff7b808a94fd91664f661ab142796bb48c9cd9493e8d166278", size = 761749, upload-time = "2026-04-16T13:07:39.73Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/65/fb800d327bf25bf31b798dd08935d326d064ecb9b359059fecd91b3a98e8/huggingface_hub-1.9.2.tar.gz", hash = "sha256:8d09d080a186bd950a361bfc04b862dfb04d6a2b41d48e9ba1b37507cfd3f1e1", size = 750284, upload-time = "2026-04-08T08:43:11.127Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/02/4f3f8997d1ea7fe0146b343e5e14bd065fa87af790d07e5576d31b31cc18/huggingface_hub-1.11.0-py3-none-any.whl", hash = "sha256:42a6de0afbfeb5e022222d36398f029679db4eb4778801aafda32257ae9131ab", size = 645499, upload-time = "2026-04-16T13:07:37.716Z" },
+    { url = "https://files.pythonhosted.org/packages/57/d4/e33bf0b362810a9b96c5923e38908950d58ecb512db42e3730320c7f4a3a/huggingface_hub-1.9.2-py3-none-any.whl", hash = "sha256:e1e62ce237d4fbeca9f970aeb15176fbd503e04c25577bfd22f44aa7aa2b5243", size = 637349, upload-time = "2026-04-08T08:43:09.114Z" },
 ]
 
 [[package]]
@@ -3234,7 +3234,7 @@ requires-dist = [
     { name = "html2text", marker = "extra == 'web'", specifier = ">=2025.4.15" },
     { name = "httpx", marker = "extra == 'agents'", specifier = "~=0.28" },
     { name = "hubspot-api-client", marker = "extra == 'hubspot'", specifier = ">=8.0.0" },
-    { name = "huggingface-hub", marker = "extra == 'huggingface'", specifier = ">=1.9.1" },
+    { name = "huggingface-hub", marker = "extra == 'huggingface'", specifier = "~=1.9.1" },
     { name = "jwcrypto", marker = "extra == 'agents'", specifier = "~=1.5" },
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = "~=3.14" },
     { name = "mcp", marker = "extra == 'agents'", specifier = ">=1.25.0" },

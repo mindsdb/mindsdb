@@ -1,8 +1,11 @@
 import os
-import psycopg2
 import pytest
 
-from mindsdb.integrations.handlers.pgvector_handler.pgvector_handler import PgVectorHandler
+try:
+    import psycopg2
+    from mindsdb.integrations.handlers.pgvector_handler.pgvector_handler import PgVectorHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("pgvector handler dependencies not installed")
 
 
 TEST_DB_NAME = os.environ.get("MDB_TEST_PGVECTOR_DATABASE", "pgvector_handler_test_db")

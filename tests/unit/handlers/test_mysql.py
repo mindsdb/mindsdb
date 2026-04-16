@@ -5,13 +5,18 @@ from decimal import Decimal
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
-import mysql.connector
+import pytest
 import pandas as pd
 from pandas import DataFrame
 from pandas.api import types as pd_types
 
+try:
+    import mysql.connector
+    from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("MySQL handler dependencies not installed")
+
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.libs.response import (
     OkResponse,
     TableResponse,

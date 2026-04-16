@@ -62,6 +62,7 @@ dependencies = [
     "orjson ~= 3.11",
     # --- MindsDB core ---
     "mindsdb-sql-parser ~= 0.13.8",
+    "sly == 0.5",  # undeclared dep of mindsdb-sql-parser 0.13.8; remove once upstream fixes metadata
     "mind-castle >= 0.4.9",
     "psutil ~= 7.0",
     # --- File handling ---
@@ -82,15 +83,15 @@ dependencies = [
 
 [project.optional-dependencies]
 
+# ── System extras ─────────────────────────────────────────────────────────────
+# Regenerate all requirements files: python scripts/generate_requirements.py
+#
 # Agent stack
-# Generates: requirements/requirements-agents.txt
-# Regenerate: uv export --format requirements-txt --extra agents --no-hashes > requirements/requirements-agents.txt
 agents = [
     "openai >= 2.9.0, < 3.0.0",
 
     # Required for KB
     "mindsdb-evaluator == 0.0.21",
-    "litellm ~= 1.80",
     "mcp >= 1.25.0",
 
     # A2A requirements
@@ -99,18 +100,13 @@ agents = [
    
 ]
 
-#  Knowledge Base
-# Generates: requirements/requirements-kb.txt
-# Regenerate: uv export --format requirements-txt --extra kb --no-hashes > requirements/requirements-kb.txt
+# Knowledge Base
 kb = [
-    "litellm ~= 1.80",
     "google-auth >= 2.0.0",
     "google-genai >= 1.0.0",
 ]
 
 # Opentelemetry
-# Generates: requirements/requirements-opentelemetry.txt
-# Regenerate: uv export --format requirements-txt --extra opentelemetry --no-hashes > requirements/requirements-opentelemetry.txt
 opentelemetry = [
     "opentelemetry-api >= 1.27",
     "opentelemetry-sdk >= 1.27",
@@ -124,13 +120,14 @@ langfuse = [
     "langfuse ~= 3.14",
 ]
 
-#  Supported handlers
-# Each generates: mindsdb/integrations/handlers/<n>_handler/requirements.txt
+# ── Handler extras ─────────────────────────────────────────────────────────────
+# Source of truth for both:
+#   pip install '.[handler_name]'
+#   mindsdb/integrations/handlers/<name>_handler/requirements.txt
+#
 # Adding a new handler:
-#   1. Complete the manual promotion checklist in handler_tiers.toml
-#   2. Add the extra below
-#   3. Add handler name to handler_tiers.toml [tiers.supported]
-#   4. Run: uv export --format requirements-txt --extra <n> --no-hashes > mindsdb/integrations/handlers/<n>_handler/requirements.txt
+#   1. Add the extra below (empty list [] if the handler has no deps beyond core)
+#   2. Run: python scripts/generate_requirements.py
 
 postgres = [
 ]
@@ -155,7 +152,7 @@ timescaledb = [
 ]
 
 salesforce = [
-    "simple-salesforce >= 1.12.5",
+    "salesforce-api == 0.1.45",
 ]
 
 hubspot = [
@@ -198,12 +195,8 @@ web = [
 #
 # Use `uv lock --check` in CI to verify uv.lock matches pyproject.toml.
 #
-# To regenerate a requirements file after changing extras:
-#   uv export --format requirements-txt --extra <name> --no-hashes > requirements/requirements-<name>.txt
-#
-# Dev / test dependency groups (PEP 735) — regenerate pinned exports:
-#   uv export --format requirements-txt --no-hashes --group dev > requirements/requirements-dev.txt
-#   uv export --format requirements-txt --no-hashes --group test > requirements/requirements-test.txt
+# To regenerate requirements files after changing extras or dependency-groups:
+#   python scripts/generate_requirements.py
 
 #  PEP 735 — dev/test toolchains (not extras). `uv sync --group dev` still installs [project.dependencies].
 [dependency-groups]
@@ -240,6 +233,9 @@ test = [
     "mindsdb-sdk >= 3.5.0",
 ]
 
+[tool.pytest.ini_options]
+norecursedirs = ["tests/unused", ".venv", ".mindsdb", "build", "dist"]
+
 #  Deptry
 [tool.deptry]
 known_first_party = ["mindsdb"]
@@ -268,7 +264,6 @@ DEP001 = [
 DEP002 = [
     "openpyxl",
     "xlrd",
-    "litellm",
 ]
 
 [tool.deptry.package_module_name_map]

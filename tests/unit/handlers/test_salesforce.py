@@ -679,6 +679,55 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
         self.assertEqual(columns[0]["column_name"], "Id")
         self.assertEqual(columns[0]["data_type"], "string")
 
+    def test_get_columns_returns_field_names(self):
+        """Test that get_columns returns the list of field names from resource metadata."""
+        metadata = {"fields": [{"name": "Id"}, {"name": "Name"}, {"name": "Email"}]}
+        self.resource._get_resource_metadata = MagicMock(return_value=metadata)
+
+        columns = self.resource.get_columns()
+
+        self.assertEqual(columns, ["Id", "Name", "Email"])
+
+    def test_meta_get_primary_keys_returns_id(self):
+        """Test that meta_get_primary_keys always returns Id as the primary key."""
+        result = self.resource.meta_get_primary_keys(self.table_name)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["column_name"], "Id")
+        self.assertEqual(result[0]["table_name"], self.table_name)
+
+    def test_meta_get_foreign_keys_returns_child_relationships(self):
+        """Test that meta_get_foreign_keys returns FK metadata for known child tables."""
+        metadata = {
+            "fields": [],
+            "childRelationships": [
+                {"childSObject": "contact", "field": "AccountId"},
+                {"childSObject": "unknown_table", "field": "OwnerId"},
+            ],
+        }
+        self.resource._get_resource_metadata = MagicMock(return_value=metadata)
+
+        result = self.resource.meta_get_foreign_keys(self.table_name, all_tables=["contact"])
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["child_table_name"], "contact")
+        self.assertEqual(result[0]["child_column_name"], "AccountId")
+        self.assertEqual(result[0]["parent_table_name"], self.table_name)
+
+    def test_meta_get_foreign_keys_empty_when_no_known_children(self):
+        """Test that meta_get_foreign_keys returns empty list when no children match known tables."""
+        metadata = {
+            "fields": [],
+            "childRelationships": [
+                {"childSObject": "unknown_table", "field": "OwnerId"},
+            ],
+        }
+        self.resource._get_resource_metadata = MagicMock(return_value=metadata)
+
+        result = self.resource.meta_get_foreign_keys(self.table_name, all_tables=["contact"])
+
+        self.assertEqual(result, [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,4 @@
-datasets==2.20.0
+datasets>=2.20.0
 evaluate==0.4.3
 nltk==3.9.4
 huggingface-hub==1.11.0

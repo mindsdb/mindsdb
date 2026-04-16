@@ -34,9 +34,11 @@ def download_gui(destignation, version):
         logger.exception("Error during downloading files from s3:")
         return False
 
+from mindsdb.utilities.fs import safe_extract_zip
     static_folder = destignation
     static_folder.mkdir(mode=0o777, exist_ok=True, parents=True)
-    ZipFile(dist_zip_path).extractall(static_folder)
+    with ZipFile(dist_zip_path) as f:
+        safe_extract_zip(f, static_folder)
 
     if static_folder.joinpath("dist").is_dir():
         shutil.move(str(destignation.joinpath("dist").joinpath("index.html")), static_folder)

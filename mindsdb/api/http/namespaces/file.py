@@ -19,7 +19,7 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.utilities.security import is_private_url, clear_filename, validate_urls
-from mindsdb.utilities.fs import safe_extract
+from mindsdb.utilities.fs import safe_extract_tar
 from mindsdb.integrations.utilities.files.file_reader import FileProcessingError
 
 logger = log.getLogger(__name__)
@@ -238,10 +238,11 @@ class File(Resource):
         if lp.endswith((".zip", ".tar.gz")):
             if lp.endswith(".zip"):
                 with zipfile.ZipFile(file_path) as f:
-                    f.extractall(temp_dir_path)
+                    from mindsdb.utilities.fs import safe_extract_zip
+                    safe_extract_zip(f, temp_dir_path)
             elif lp.endswith(".tar.gz"):
                 with tarfile.open(file_path) as f:
-                    safe_extract(f, temp_dir_path)
+                    safe_extract_tar(f, temp_dir_path)
             os.remove(file_path)
             files = os.listdir(temp_dir_path)
             if len(files) != 1:

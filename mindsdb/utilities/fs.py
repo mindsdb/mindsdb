@@ -223,7 +223,15 @@ def __is_within_directory(directory, target):
     return prefix == abs_directory
 
 
-def safe_extract(tarfile, path=".", members=None, *, numeric_owner=False):
+def safe_extract_zip(zip_file, path="."):
+    for member in zip_file.infolist():
+        member_path = os.path.join(path, member.filename)
+        if not __is_within_directory(path, member_path):
+            raise Exception(f"Attempted Path Traversal in Zip File: {member.filename}")
+    zip_file.extractall(path)
+
+
+def safe_extract_tar(tarfile, path=".", members=None, *, numeric_owner=False):
     # for py >= 3.12
     if hasattr(tarfile, "data_filter"):
         tarfile.extractall(path, members=members, numeric_owner=numeric_owner, filter="data")

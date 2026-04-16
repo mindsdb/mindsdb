@@ -459,6 +459,8 @@ psycopg==3.3.3
     # via mindsdb
 psycopg-binary==3.3.3 ; implementation_name != 'pypy'
     # via psycopg
+psycopg2-binary==2.9.11
+    # via mindsdb
 py-key-value-aio==0.3.0
     # via
     #   fastmcp

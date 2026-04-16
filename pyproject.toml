@@ -44,6 +44,7 @@ dependencies = [
     "sqlalchemy >= 2.0.0, < 3.0.0",
     "alembic >= 1.3.3",
     "psycopg[binary]",
+    "psycopg2-binary >= 2.9.9",
     "redis >= 5.0.0, < 6.0.0",
     "walrus ~= 0.9",
     "duckdb == 1.3.0; sys_platform == 'win32'",

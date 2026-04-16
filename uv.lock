@@ -3103,6 +3103,7 @@ dependencies = [
     { name = "redis" },
     { name = "requests" },
     { name = "sentry-sdk", extra = ["flask"] },
+    { name = "sly" },
     { name = "sqlalchemy" },
     { name = "sse-starlette" },
     { name = "starlette" },
@@ -3272,6 +3273,7 @@ requires-dist = [
     { name = "requests", specifier = "~=2.32" },
     { name = "sentry-sdk", extras = ["flask"], specifier = "~=2.14" },
     { name = "simple-salesforce", marker = "extra == 'salesforce'", specifier = ">=1.12.5" },
+    { name = "sly", specifier = "~=0.4.0" },
     { name = "snowflake-connector-python", marker = "extra == 'snowflake'", specifier = ">=3.10.0" },
     { name = "sqlalchemy", specifier = ">=2.0.0,<3.0.0" },
     { name = "sse-starlette", specifier = "~=2.3" },
@@ -5933,6 +5935,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
+
+[[package]]
+name = "sly"
+version = "0.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/16/62a654feb0eaf64669b04c99ec6335a3937c1991620c716dcdd9a0f9d095/sly-0.4.tar.gz", hash = "sha256:e5f2266a231322cc17519fbc3a3ba1c6335fed5a9a55abe0e598a35aea0ac32a", size = 60565, upload-time = "2020-03-12T13:38:28.373Z" }
 
 [[package]]
 name = "sniffio"

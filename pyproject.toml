@@ -91,7 +91,6 @@ agents = [
 
     # Required for KB
     "mindsdb-evaluator == 0.0.21",
-    "litellm ~= 1.80",
     "mcp >= 1.25.0",
 
     # A2A requirements
@@ -104,9 +103,9 @@ agents = [
 # Generates: requirements/requirements-kb.txt
 # Regenerate: uv export --format requirements-txt --extra kb --no-hashes > requirements/requirements-kb.txt
 kb = [
-    "litellm ~= 1.80",
     "google-auth >= 2.0.0",
-    "google-genai >= 1.0.0",
+    "aiobotocore>=3.4.0",
+    "google-genai>=1.70.0",
 ]
 
 # Opentelemetry

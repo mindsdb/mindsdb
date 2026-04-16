@@ -1,1 +1,1 @@
-databricks-sql-connector==4.2.3
+databricks-sql-connector==4.2.5

@@ -2,10 +2,15 @@ import unittest
 from unittest.mock import patch, MagicMock
 from collections import OrderedDict
 
-from mysql.connector import Error as MySQLError
+import pytest
+
+try:
+    from mysql.connector import Error as MySQLError
+    from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("MariaDB handler dependencies not installed")
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
-from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
 from mindsdb.integrations.libs.response import TableResponse
 
 

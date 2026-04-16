@@ -20,67 +20,80 @@ dynamic = ["readme", "license", "authors", "classifiers", "version"]
 # To export:        uv export --format requirements-txt --no-hashes > requirements.txt
 
 dependencies = [
-    # --- Packaging ---
     "packaging",
-    # --- Web framework ---
+
+    # Web / API
+    "flask == 3.1.3",
     "werkzeug == 3.1.6",
-    "flask ~= 3.1",
     "flask-restx >= 1.3.0, < 2.0.0",
+    "python-multipart == 0.0.22",
     "uvicorn >= 0.30.0, < 1.0.0",
     "flask-compress >= 1.0.0",
     "a2wsgi ~= 1.10.10",
     "starlette >= 0.49.1",
-    "sse-starlette ~= 2.3",
-    "python-multipart >= 0.0.22",
-    # --- Data processing ---
-    "pandas >= 2.2.3, < 3.0.0",
+    "sse-starlette == 2.3.3",
+
+    # Data processing
+    "pandas == 2.3.1",
     "numpy ~= 2.0",
-    "pyarrow <= 19.0.0",
-    "dill ~= 0.3",
-    "dateparser ~= 1.2",
+    "dateparser == 1.2.0",
+    "dill == 0.3.6",
     "pytz",
     "python-dateutil",
-    # --- Database ---
+    "pyarrow <= 19.0.0",
+    "lark",
+
+    # Database
     "sqlalchemy >= 2.0.0, < 3.0.0",
     "alembic >= 1.3.3",
     "psycopg[binary]",
     "psycopg2-binary >= 2.9.9",
-    "redis >= 5.0.0, < 6.0.0",
-    "walrus ~= 0.9",
+    "redis == 6.4.0",
+    "walrus == 0.9.3",
     "duckdb == 1.3.0; sys_platform == 'win32'",
     "duckdb ~= 1.3.2; sys_platform != 'win32'",
-    # --- Cloud / storage ---
+
+    # Cloud / storage
     "boto3 >= 1.34.131",
+    "botocore",
     "appdirs >= 1.0.0",
-    # --- HTTP / API ---
-    "requests ~= 2.32",
-    # --- Auth / security ---
-    "cryptography >= 42.0.0",
-    "pyjwt ~= 2.10",
-    # --- Validation / serialization ---
-    "pydantic ~= 2.12",
+    "aiobotocore == 3.4.0",
+
+    # HTTP / auth / security
+    "requests == 2.33.0",
+    "urllib3 >= 2.6.3",
+    "cryptography >= 46.0.5",
+    "pyjwt == 2.12.0",
+
+    # Validation / serialization
+    "pydantic == 2.12.5",
+    "pydantic_core >= 2.33.2",
     "typing-extensions >= 4.12",
-    "orjson ~= 3.11",
-    # --- MindsDB core ---
+    "orjson == 3.11.6",
+
+    # MindsDB core
     "mindsdb-sql-parser ~= 0.13.8",
-    "mind-castle >= 0.4.9",
-    "psutil ~= 7.0",
-    # --- File handling ---
-    "charset-normalizer >= 3.4",
-    "pymupdf ~= 1.25",
-    "filetype",
-    "openpyxl",
-    "aipdf ~= 0.0.7",
-    "bs4",
-    # --- Observability ---
-    "prometheus-client ~= 0.20",
-    "sentry-sdk[flask] ~= 2.14",
-    # --- Misc ---
-    "pyaml ~= 23.12",
-    "xlrd>=2.0.2",
-    "pydantic-ai >= 1.66.0, < 2.0.0",
-    # mindsdb_sql_parser
     "sly ~= 0.4.0",
+    "mind-castle == 0.5.0",
+    "psutil ~= 7.0",
+    "pydantic-ai == 1.77.0",
+
+    # File handling
+    "pymupdf == 1.27.2",
+    "filetype",
+    "charset-normalizer",
+    "openpyxl",
+    "xlrd >= 2.0.1",
+    "aipdf == 0.0.7.2",
+    "bs4",
+
+    # Observability
+    "prometheus-client ~= 0.21",
+    "sentry-sdk[flask] == 2.14.0",
+
+    # Misc
+    "pyaml == 23.12.0",
+    "google-genai == 1.70.0",
 ]
 
 [project.optional-dependencies]
@@ -90,15 +103,10 @@ dependencies = [
 # Regenerate: uv export --format requirements-txt --extra agents --no-hashes > requirements/requirements-agents.txt
 agents = [
     "openai >= 2.9.0, < 3.0.0",
-
-    # Required for KB
     "mindsdb-evaluator == 0.0.21",
     "mcp >= 1.25.0",
-
-    # A2A requirements
     "httpx ~= 0.28",
     "jwcrypto ~= 1.5",
-   
 ]
 
 #  Knowledge Base
@@ -106,8 +114,6 @@ agents = [
 # Regenerate: uv export --format requirements-txt --extra kb --no-hashes > requirements/requirements-kb.txt
 kb = [
     "google-auth >= 2.0.0",
-    "aiobotocore>=3.4.0",
-    "google-genai>=1.70.0",
 ]
 
 # Opentelemetry
@@ -182,7 +188,6 @@ duckdb_faiss = [
 
 huggingface = [
     "transformers >= 4.42.4",
-    "huggingface-hub == 1.9.1",
 ]
 
 web = [
@@ -272,6 +277,9 @@ DEP002 = [
     "xlrd",
     "psycopg2-binary",
     "sly",  # we need to check this with mindsdb_sql_parser 
+    "lark",
+    "urllib3",
+    "pydantic_core",
 ]
 
 [tool.deptry.package_module_name_map]

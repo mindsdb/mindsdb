@@ -174,7 +174,6 @@ mysql = [
 
 pgvector = [
     "pgvector ~= 0.3",
-    "psycopg2-binary >= 2.9.0",
 ]
 
 duckdb_faiss = [

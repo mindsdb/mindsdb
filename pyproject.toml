@@ -186,9 +186,9 @@ duckdb_faiss = [
     "faiss-cpu >= 1.13.0",
 ]
 
-huggingface = [
-    "transformers >= 4.42.4",
-]
+# huggingface = [
+#     "transformers >= 4.42.4",
+# ]
 
 web = [
     "html2text>=2025.4.15",

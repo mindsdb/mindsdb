@@ -384,6 +384,83 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
             mock_pool.release_unused.assert_called_once()
 
+    def test_native_query_fetch_pandas_batches_value_error(self):
+        """Test that ValueError from fetch_pandas_batches falls through to DML fallback."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock(spec=snowflake.connector.cursor.DictCursor)
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetch_pandas_batches.side_effect = ValueError("duplicate column names")
+        mock_cursor.fetchall.return_value = [{"number of rows inserted": 2}]
+        mock_cursor.description = None
+        mock_cursor.rowcount = 2
+
+        data = self.handler.native_query("INSERT INTO test VALUES (1, 1)")
+
+        self.assertIsInstance(data, OkResponse)
+        self.assertEqual(data.affected_rows, 2)
+
+    def test_native_query_empty_first_batch(self):
+        """Test that an empty result set (no batches) returns TableResponse with None data."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock(spec=snowflake.connector.cursor.DictCursor)
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetch_pandas_batches.return_value = iter([])
+        mock_cursor.description = [
+            ColumnDescription(name="ID", type_code=snowflake.connector.constants.FIELD_NAME_TO_ID["FIXED"]),
+        ]
+        mock_cursor.rowcount = 0
+
+        data = self.handler.native_query("SELECT ID FROM table WHERE 1 = 0")
+
+        self.assertIsInstance(data, TableResponse)
+        self.assertIsNone(data.data_frame)
+
+    def test_native_query_delete_dml(self):
+        """Test DELETE statement returns OkResponse with affected row count."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock(spec=snowflake.connector.cursor.DictCursor)
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetch_pandas_batches.side_effect = snowflake.connector.errors.NotSupportedError()
+        mock_cursor.fetchall.return_value = [{"number of rows deleted": 3}]
+        mock_cursor.description = None
+        mock_cursor.rowcount = 3
+
+        data = self.handler.native_query("DELETE FROM test WHERE id = 1")
+
+        self.assertIsInstance(data, OkResponse)
+        self.assertEqual(data.affected_rows, 3)
+
+    def test_native_query_update_dml(self):
+        """Test UPDATE statement returns OkResponse with affected row count."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock(spec=snowflake.connector.cursor.DictCursor)
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetch_pandas_batches.side_effect = snowflake.connector.errors.NotSupportedError()
+        mock_cursor.fetchall.return_value = [{"number of rows updated": 2, "number of multi-joined rows updated": 0}]
+        mock_cursor.description = None
+        mock_cursor.rowcount = 2
+
+        data = self.handler.native_query("UPDATE test SET col = 1")
+
+        self.assertIsInstance(data, OkResponse)
+        self.assertEqual(data.affected_rows, 2)
+
     def test_key_pair_authentication_success(self):
         """
         Tests successful connection using key pair authentication

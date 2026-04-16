@@ -3,7 +3,7 @@ import pytest
 import pandas as pd
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
-from google.api_core.exceptions import BadRequest
+from google.api_core.exceptions import BadRequest, NotFound
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -235,6 +235,122 @@ class TestBigQueryHandler(unittest.TestCase):
         self.handler.meta_get_foreign_keys(table_names=["orders"])
         query = self.handler.native_query.call_args[0][0]
         self.assertIn("AND tc.table_name IN ('orders')", query)
+
+    def test_connect_uses_billing_project(self):
+        """Test that billing_project overrides project_id when passed to Client."""
+        handler = BigQueryHandler(
+            "bigquery",
+            connection_data=OrderedDict(
+                project_id="tough-future-332513",
+                dataset="example_ds",
+                service_account_keys="example_keys",
+                billing_project="billing-project-123",
+            ),
+        )
+        self.mock_connect.return_value = MagicMock()
+        handler.connect()
+        self.mock_connect.assert_called_once_with(
+            project="billing-project-123",
+            credentials=self.mock_get_oauth2_credentials.return_value,
+        )
+
+    def test_check_connection_dataset_not_found(self):
+        """Test that NotFound from get_dataset returns a failed StatusResponse."""
+        mock_conn = MagicMock()
+        mock_conn.get_dataset.side_effect = NotFound("dataset not found")
+        self.mock_connect.return_value = mock_conn
+
+        response = self.handler.check_connection()
+
+        self.assertFalse(response.success)
+        self.assertIn("not found", str(response.error_message))
+
+    def test_check_connection_resets_is_connected_on_failure(self):
+        """Test that is_connected is reset to False when a connected handler fails check."""
+        mock_conn = MagicMock()
+        mock_conn.query.side_effect = BadRequest("query failed")
+        self.handler.connection = mock_conn
+        self.handler.is_connected = True
+
+        response = self.handler.check_connection()
+
+        self.assertFalse(response.success)
+        self.assertFalse(self.handler.is_connected)
+
+    def test_disconnect(self):
+        """Test that disconnect closes the connection and sets is_connected to False."""
+        self.mock_connect.return_value = MagicMock()
+        self.handler.connect()
+        self.assertTrue(self.handler.is_connected)
+        conn = self.handler.connection
+
+        self.handler.disconnect()
+
+        self.assertFalse(self.handler.is_connected)
+        conn.close.assert_called_once()
+
+    def test_query(self):
+        """Test that query renders AST to SQL and delegates to native_query."""
+        from mindsdb_sql_parser import parse_sql
+
+        self.handler.native_query = MagicMock()
+        ast = parse_sql("SELECT 1")
+        self.handler.query(ast)
+
+        self.handler.native_query.assert_called_once()
+        call_arg = self.handler.native_query.call_args[0][0]
+        self.assertIsInstance(call_arg, str)
+        self.assertTrue(len(call_arg) > 0)
+
+    def test_meta_get_column_statistics_skips_minmax_for_unsupported_types(self):
+        """Test that ARRAY/JSON columns use NULL placeholders instead of MIN/MAX."""
+        columns = ["arr_col", "json_col", "int_col"]
+        column_types_result = pd.DataFrame(
+            {
+                "column_name": columns,
+                "data_type": ["ARRAY<INT64>", "JSON", "INT64"],
+            }
+        )
+        stats_result = pd.DataFrame(
+            {
+                "table_name": ["table"] * 3,
+                "column_name": columns,
+                "null_percentage": [0.0] * 3,
+                "minimum_value": [None, None, "1"],
+                "maximum_value": [None, None, "10"],
+                "distinct_values_count": [None, None, 5],
+            }
+        )
+        self.handler.native_query = MagicMock(
+            side_effect=[
+                TableResponse(data=column_types_result),
+                TableResponse(data=stats_result),
+            ]
+        )
+
+        response = self.handler.meta_get_column_statistics_for_table("table", columns)
+
+        self.assertEqual(response.resp_type, RESPONSE_TYPE.TABLE)
+        stats_query = self.handler.native_query.call_args_list[1][0][0]
+        self.assertIn("CAST(NULL AS STRING)", stats_query)
+
+    def test_get_tables_uses_dataset_project(self):
+        """Test that dataset_project overrides project_id in SQL when provided."""
+        handler = BigQueryHandler(
+            "bigquery",
+            connection_data=OrderedDict(
+                project_id="tough-future-332513",
+                dataset="example_ds",
+                service_account_keys="example_keys",
+                dataset_project="other-project",
+            ),
+        )
+        handler.native_query = MagicMock()
+        handler.get_tables()
+
+        query = handler.native_query.call_args[0][0]
+        self.assertIn("other-project", query)
+        self.assertNotIn("tough-future-332513", query)
 
 
 if __name__ == "__main__":

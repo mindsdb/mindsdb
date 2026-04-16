@@ -269,7 +269,7 @@ DEP001 = [
 DEP002 = [
     "openpyxl",
     "xlrd",
-    "litellm",
+    "psycopg2-binary"
 ]
 
 [tool.deptry.package_module_name_map]

@@ -35,19 +35,10 @@ class AsyncBedrockClient:
         aws_region_name: Optional[str] = None,
         aws_session_token: Optional[str] = None,
     ):
-        try:
-            from aiobotocore.session import get_session
-        except ImportError as exc:
-            raise ImportError(
-                "aiobotocore is required for the Bedrock reranker client. Install it with `pip install aiobotocore`."
-            ) from exc
-
         self.aws_access_key_id = aws_access_key_id
         self.aws_secret_access_key = aws_secret_access_key
         self.aws_session_token = aws_session_token
         self.region_name = aws_region_name
-
-        self._session = get_session()
 
     async def acompletion(
         self,
@@ -58,6 +49,13 @@ class AsyncBedrockClient:
         top_p: Optional[float] = None,
     ) -> str:
         """Generate a chat completion asynchronously via Bedrock."""
+        try:
+            from aiobotocore.session import get_session
+        except ImportError as exc:
+            raise ImportError(
+                "aiobotocore is required for the Bedrock reranker client. Install it with `pip install aiobotocore`."
+            ) from exc
+
         inference_config = {}
         if temperature is not None:
             inference_config["temperature"] = temperature
@@ -77,7 +75,7 @@ class AsyncBedrockClient:
             "aws_session_token": self.aws_session_token,
         }
 
-        async with self._session.create_client(**client_kwargs) as client:
+        async with get_session().create_client(**client_kwargs) as client:
             response = await client.converse(
                 modelId=model_name, messages=conversation, inferenceConfig=inference_config
             )

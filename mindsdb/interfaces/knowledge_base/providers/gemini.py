@@ -5,14 +5,29 @@ class GeminiClient:
     """Wrapper around google-genai SDK"""
 
     def __init__(self, api_key: str):
-        try:
-            from google import genai
-            from google.genai import types
-        except ImportError as exc:
-            raise ImportError("google.genai is required. Install it with `pip install google-genai`.") from exc
+        self._api_key = api_key
+        self._client = None
+        self._types = None
 
-        self.client = genai.Client(api_key=api_key)
-        self.types = types
+    @property
+    def client(self):
+        if self._client is None:
+            try:
+                from google import genai
+            except ImportError as exc:
+                raise ImportError("google.genai is required. Install it with `pip install google-genai`.") from exc
+            self._client = genai.Client(api_key=self._api_key)
+        return self._client
+
+    @property
+    def types(self):
+        if self._types is None:
+            try:
+                from google.genai import types
+            except ImportError as exc:
+                raise ImportError("google.genai is required. Install it with `pip install google-genai`.") from exc
+            self._types = types
+        return self._types
 
     def embeddings(self, model_name: str, messages: List[str]) -> List[List[float]]:
         """Generate embedding vectors for each text in `messages`."""

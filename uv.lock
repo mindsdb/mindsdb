@@ -3161,7 +3161,6 @@ oracle = [
 ]
 pgvector = [
     { name = "pgvector" },
-    { name = "psycopg2-binary" },
 ]
 salesforce = [
     { name = "simple-salesforce" },
@@ -3259,7 +3258,6 @@ requires-dist = [
     { name = "psutil", specifier = "~=7.0" },
     { name = "psycopg", extras = ["binary"] },
     { name = "psycopg2-binary", specifier = ">=2.9.9" },
-    { name = "psycopg2-binary", marker = "extra == 'pgvector'", specifier = ">=2.9.0" },
     { name = "pyaml", specifier = "~=23.12" },
     { name = "pyarrow", specifier = "<=19.0.0" },
     { name = "pydantic", specifier = "~=2.12" },

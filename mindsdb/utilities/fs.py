@@ -288,19 +288,31 @@ def delete_pid_file():
 
 
 def __is_within_directory(directory, target):
-    abs_directory = os.path.abspath(directory)
-    abs_target = os.path.abspath(target)
+    abs_directory = os.path.realpath(directory)
+    abs_target = os.path.realpath(target)
     try:
-        rel_path = os.path.relpath(abs_target, abs_directory)
+        return os.path.commonpath([abs_directory, abs_target]) == abs_directory
     except ValueError:
         # can be raised on windows
         return False
-    return not rel_path.startswith("..") and not os.path.isabs(rel_path)
+
+
+def __get_tar_members(archivefile, members):
+    if members is None:
+        return archivefile.getmembers()
+
+    resolved_members = []
+    for member in members:
+        if isinstance(member, tarfile.TarInfo):
+            resolved_members.append(member)
+        else:
+            resolved_members.append(archivefile.getmember(member))
+    return resolved_members
 
 
 def safe_extract(archivefile, path=".", members=None, *, numeric_owner=False):
     """
-    Safely extract a tarfile, preventing path traversal attacks.
+    Safely extract an archivefile, preventing path traversal attacks.
     """
     if isinstance(archivefile, zipfile.ZipFile):
         for member in archivefile.namelist():
@@ -317,10 +329,17 @@ def safe_extract(archivefile, path=".", members=None, *, numeric_owner=False):
             return
 
         # for py < 3.12
-        for member in archivefile.getmembers():
+        for member in __get_tar_members(archivefile, members):
+            if member.issym() or member.islnk():
+                raise Exception(f"Security Alert: Link entries are not allowed in tar file: {member.name}")
+
+            if not (member.isfile() or member.isdir()):
+                raise Exception(f"Security Alert: Unsupported tar member type detected for member: {member.name}")
+
             member_path = os.path.join(path, member.name)
             if not __is_within_directory(path, member_path):
                 raise Exception(
                     f"Security Alert: Attempted path traversal in tar file detected for member: {member.name}"
                 )
-        archivefile.extractall(path, members=members, numeric_owner=numeric_owner)
+
+            archivefile.extract(member, path=path, numeric_owner=numeric_owner)

@@ -18,6 +18,8 @@
   </a>
 
   <p align="center">
+	<a href="https://github.com/mindsdb/anton">AI-coworker</a>
+    ·
     <a href="https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Website</a>
     ·
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
@@ -30,8 +32,20 @@
 
 ---
 
-MindsDB is a popular open-source query engine for AI analytics, powering AI agents that need to answer questions directly from databases, data warehouses, and applications, with no ETL required.
+MindsDB develops the following products:
 
+* [ANTON](https://github.com/mindsdb/anton) - A personal AI agent that helps you get work done. Tell it what you need in plain language and it takes it from there - sending emails, calling APIs, connecting to data sources, building dashboards, and delivering results. No setup, no plugins, no fuss.
+
+* [Query Engine](https://docs.mindsdb.com) - The product you are looking at, is a popular query engine for semantic-search.
+
+
+## What you can build with MindsDB Products
+
+| CONVERSATIONAL ANALYTICS AGENTS | SEMANTIC SEARCH AGENTS |
+| --- | --- |
+| Get precise, data-driven answers using natural language. <br /><br /> Unify and query data across sources (MySQL, Salesforce, Shopify, etc.), without ETL. <br /><br /> <a href="https://github.com/mindsdb/anton">Try Anton</a> | Ground LLM responses in your most relevant internal knowledge. <br /><br /> Search across unstructured sources like documents, support tickets, Google Drive, and more. <br /><br /> <a href="https://www.youtube.com/watch?v=HN4fHtS4mvo">Watch video</a> |
+
+## How MindsDB - Query Engine works
 <div align="center">
   <a href="https://www.youtube.com/watch?v=HN4fHtS4mvo" title="Watch demo">
     <img
@@ -43,15 +57,7 @@ MindsDB is a popular open-source query engine for AI analytics, powering AI agen
   </a>
 </div>
 
-## What you can build with MindsDB Query Engine
-
-| CONVERSATIONAL ANALYTICS AGENTS | SEMANTIC SEARCH AGENTS |
-| --- | --- |
-| Get precise, data-driven answers using natural language. <br /><br /> Unify and query data across sources (MySQL, Salesforce, Shopify, etc.), without ETL. <br /><br /> <a href="https://www.youtube.com/watch?v=QIdPpzcaxXg">Watch video</a> | Ground LLM responses in your most relevant internal knowledge. <br /><br /> Search across unstructured sources like documents, support tickets, Google Drive, and more. <br /><br /> <a href="https://www.youtube.com/watch?v=HN4fHtS4mvo">Watch video</a> |
-
-## How MindsDB works
-
-MindsDB follows a simple workflow: **Connect → Unify → Respond**. At the center is an SQL-compatible data language with additional constructs for searching unstructured data, managing workflows (jobs/triggers), and building agents.
+MindsDB - Query Engine follows a simple workflow: **Connect → Unify → Respond**. At the center is an SQL-compatible data language with additional constructs for searching unstructured data, managing workflows (jobs/triggers), and building agents.
 
 <table style="width:100%; border-collapse:collapse; border:none;">
   <tr>

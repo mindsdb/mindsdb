@@ -320,5 +320,7 @@ def safe_extract(archivefile, path=".", members=None, *, numeric_owner=False):
         for member in archivefile.getmembers():
             member_path = os.path.join(path, member.name)
             if not __is_within_directory(path, member_path):
-                raise Exception(f"Security Alert: Attempted path traversal in tar file detected for member: {member.name}")
+                raise Exception(
+                    f"Security Alert: Attempted path traversal in tar file detected for member: {member.name}"
+                )
         archivefile.extractall(path, members=members, numeric_owner=numeric_owner)

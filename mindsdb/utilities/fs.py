@@ -330,16 +330,16 @@ def safe_extract(archivefile, path=".", members=None, *, numeric_owner=False):
 
         # for py < 3.12
         for member in __get_tar_members(archivefile, members):
-            member_path = os.path.join(path, member.name)
-            if not __is_within_directory(path, member_path):
-                raise Exception(
-                    f"Security Alert: Attempted path traversal in tar file detected for member: {member.name}"
-                )
-
             if member.issym() or member.islnk():
                 raise Exception(f"Security Alert: Link entries are not allowed in tar file: {member.name}")
 
             if not (member.isfile() or member.isdir()):
                 raise Exception(f"Security Alert: Unsupported tar member type detected for member: {member.name}")
+
+            member_path = os.path.join(path, member.name)
+            if not __is_within_directory(path, member_path):
+                raise Exception(
+                    f"Security Alert: Attempted path traversal in tar file detected for member: {member.name}"
+                )
 
             archivefile.extract(member, path=path, numeric_owner=numeric_owner)

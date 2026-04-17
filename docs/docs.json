@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "willow",
+  "theme": "almond",
   "name": "MindsDB",
   "colors": {
     "primary": "#3f8394",
@@ -13,6 +13,11 @@
         {
           "tab": "Documentation",
           "groups": [
+          {
+           "group": "Home",
+           "hidden": true,
+           "pages": ["homepage"]
+          },
             {
               "group": "Get Started",
               "pages": [
@@ -726,7 +731,8 @@
   },
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "dark": "/logo/dark.svg",
+    "href": "/homepage"
   },
   "api": {
     "mdx": {
@@ -1080,14 +1086,6 @@
       "destination": "/integrations/ai-engines/mlflow"
     },
     {
-      "source": "/nixtla/statsforecast",
-      "destination": "/integrations/ai-engines/statsforecast"
-    },
-    {
-      "source": "/nixtla/house-sales-statsforecast",
-      "destination": "/sql/tutorials/house-sales-statsforecast"
-    },
-    {
       "source": "/connect/mindsdb_editor",
       "destination": "/mindsdb_sql/connect/mindsdb_editor"
     },
@@ -1372,10 +1370,6 @@
       "destination": "/use-cases/predictive_analytics/house-sales-forecasting"
     },
     {
-      "source": "/sql/tutorials/expenditures-statsforecast",
-      "destination": "/use-cases/predictive_analytics/expenditures-statsforecast"
-    },
-    {
       "source": "/sql/tutorials/eeg-forecasting",
       "destination": "/use-cases/predictive_analytics/eeg-forecasting"
     },
@@ -1462,6 +1456,14 @@
     {
       "source": "/mcp/cursor_usage",
       "destination": "/model-context-protocol/cursor_usage"
+    },
+    {
+      "source": "/use-cases/overview",
+      "destination": "/homepage"
+    },
+    {
+      "source": "/",
+      "destination": "/homepage"
     }
   ]
 }

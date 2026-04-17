@@ -1,4 +1,0 @@
-botframework-connector
-botbuilder-schema
-msal
--r mindsdb/integrations/utilities/handlers/auth_utilities/microsoft/requirements.txt

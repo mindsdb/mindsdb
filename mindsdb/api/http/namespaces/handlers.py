@@ -1,6 +1,6 @@
 import os
 import tempfile
-import importlib
+import importlib.util as iutil
 import multipart
 from pathlib import Path
 from http import HTTPStatus
@@ -31,7 +31,7 @@ def _resolve_handler_readme_path(handler_folder: str) -> Path:
     if handler_folder_name != handler_folder or ".." in handler_folder:
         raise ValueError(f"Handler folder '{handler_folder}' is invalid.")
 
-    mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent
+    mindsdb_path = Path(iutil.find_spec("mindsdb").origin).parent
     base_handlers_path = mindsdb_path.joinpath("integrations/handlers").resolve()
     readme_path = base_handlers_path.joinpath(handler_folder_name).joinpath("README.md").resolve()
 
@@ -54,6 +54,8 @@ class HandlersList(Resource):
             handlers = ca.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
+            if handler_meta is None:
+                continue
             # remove non-integration handlers
             if handler_type not in ["utilities", "dummy_data"]:
                 row = {"name": handler_type}
@@ -72,12 +74,19 @@ class HandlerIcon(Resource):
             handler_meta = ca.integration_controller.get_handlers_metadata().get(handler_name)
             if handler_meta is None:
                 return http_error(HTTPStatus.NOT_FOUND, "Icon not found", f"Icon for {handler_name} not found")
-            icon_name = handler_meta["icon"]["name"]
-            handler_folder = handler_meta["import"]["folder"]
-            mindsdb_path = Path(importlib.util.find_spec("mindsdb").origin).parent
-            icon_path = mindsdb_path.joinpath("integrations/handlers").joinpath(handler_folder).joinpath(icon_name)
-            if icon_path.is_absolute() is False:
-                icon_path = Path(os.getcwd()).joinpath(icon_path)
+            icon = handler_meta.get("icon")
+            if icon is None or handler_meta.get("path") is None:
+                return http_error(
+                    HTTPStatus.NOT_FOUND,
+                    "Icon not found",
+                    f"Icon for '{handler_name}' not found",
+                )
+            icon_name = icon["name"]
+            # Use the stored handler path directly so community handlers
+            # (stored outside the mindsdb package) are also served correctly.
+            icon_path = handler_meta["path"] / icon_name
+            if not icon_path.is_absolute():
+                icon_path = Path(os.getcwd()) / icon_path
         except Exception:
             error_message = f"Icon for '{handler_name}' not found"
             logger.warning(error_message)
@@ -92,10 +101,12 @@ class HandlerInfo(Resource):
     @api_endpoint_metrics("GET", "/handlers/handler")
     def get(self, handler_name):
         handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+        if handler_meta is None:
+            return http_error(HTTPStatus.NOT_FOUND, "Handler not found", f"Handler '{handler_name}' not found")
         row = {"name": handler_name}
         row.update(handler_meta)
-        del row["path"]
-        del row["icon"]
+        row.pop("path", None)
+        row.pop("icon", None)
         return row
 
 
@@ -127,12 +138,18 @@ class HandlerReadme(Resource):
             logger.warning(error_message)
             return make_response(error_message=error_message)
 
-        try:
-            readme_path = _resolve_handler_readme_path(handler_folder)
-        except ValueError as exc:
-            error_message = str(exc)
-            logger.warning(error_message)
-            return make_response(error_message=error_message)
+        # Community handlers have their path set after fetching; use it directly.
+        # Built-in handlers resolve through the package tree.
+        handler_path = handler_meta.get("path")
+        if handler_path is not None:
+            readme_path = Path(handler_path) / "README.md"
+        else:
+            try:
+                readme_path = _resolve_handler_readme_path(handler_folder)
+            except ValueError as exc:
+                error_message = str(exc)
+                logger.warning(error_message)
+                return make_response(error_message=error_message)
 
         try:
             with open(readme_path, "r", encoding="utf-8") as readme_file:

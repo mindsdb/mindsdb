@@ -39,3 +39,23 @@ class TestConfig:
                 error_message = str(exc_info.value)
                 assert "Invalid MINDSDB_DB_CON value" in error_message
                 assert invalid_db_con in error_message
+
+    def test_knowledge_bases_storage_env_does_not_override_storage_config(self):
+        Config._Config__instance = None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_file = Path(tmpdir) / "config.json"
+            config_file.write_text(json.dumps({}))
+
+            with patch.dict(
+                os.environ,
+                {
+                    "MINDSDB_CONFIG_PATH": str(config_file),
+                    "MINDSDB_STORAGE_DIR": tmpdir,
+                    "KNOWLEDGE_BASES_STORAGE": "faiss, pgvector",
+                },
+                clear=False,
+            ):
+                cfg = Config()
+
+                assert cfg["knowledge_bases"]["storage"] is None

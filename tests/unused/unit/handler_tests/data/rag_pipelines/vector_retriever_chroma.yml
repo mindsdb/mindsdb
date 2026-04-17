@@ -1,3 +1,0 @@
-retriever_type: vector_store
-vector_store_config:
-  vector_store_type: chroma

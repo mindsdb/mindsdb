@@ -1,4 +1,4 @@
-PYTEST_ARGS = -v -rs --disable-warnings -n auto --dist loadfile
+PYTEST_ARGS = -v -xrs --disable-warnings -n 1 --dist loadfile
 PYTEST_ARGS_DEBUG = --runslow -vs -rs
 DSI_PYTEST_ARGS = --run-dsi-tests
 DSI_REPORT_ARGS = --json-report --json-report-file=reports/report.json
@@ -86,5 +86,9 @@ unit_tests_slow:
 unit_tests_debug:
 	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/
 	pytest $(PYTEST_ARGS_DEBUG) --ignore=tests/unit/executor tests/unit/
+
+.PHONY: tests-artifacts
+tests-artifacts:
+	./scripts/test-artifacts.sh
 
 .PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug datasource_integration_tests datasource_integration_tests_debug unit_tests unit_tests_slow unit_tests_debug

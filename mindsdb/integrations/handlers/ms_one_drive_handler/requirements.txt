@@ -1,2 +1,0 @@
-msal
--r mindsdb/integrations/utilities/handlers/auth_utilities/microsoft/requirements.txt

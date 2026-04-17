@@ -4,9 +4,14 @@ import json
 import logging
 import threading
 from typing import Any
+import warnings
 from logging.config import dictConfig
 
 from mindsdb.utilities.config import config as app_config
+
+# Suppress Pydantic warnings for third-party libraries
+# TODO: Work on a better solution to this
+warnings.filterwarnings("ignore", message="Field.*has conflict with protected namespace.*", category=UserWarning)
 
 
 logging_initialized = False
@@ -205,6 +210,7 @@ def get_handlers_config(process_name: str) -> dict:
             "class": "mindsdb.utilities.log.StreamSanitizingHandler",
             "formatter": console_handler_config.get("formatter", "default"),
             "level": console_handler_config_level,
+            "stream": console_handler_config.get("stream", "ext://sys.stderr"),
         }
 
     file_handler_config = app_config["logging"]["handlers"]["file"]

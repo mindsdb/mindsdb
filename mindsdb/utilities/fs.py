@@ -290,11 +290,18 @@ def delete_pid_file():
 def __is_within_directory(directory, target):
     abs_directory = os.path.abspath(directory)
     abs_target = os.path.abspath(target)
-    prefix = os.path.commonprefix([abs_directory, abs_target])
-    return prefix == abs_directory
+    try:
+        rel_path = os.path.relpath(abs_target, abs_directory)
+    except ValueError:
+        # can be raised on windows
+        return False
+    return not rel_path.startswith("..") and not os.path.isabs(rel_path)
 
 
 def safe_extract(archivefile, path=".", members=None, *, numeric_owner=False):
+    """
+    Safely extract a tarfile, preventing path traversal attacks.
+    """
     if isinstance(archivefile, zipfile.ZipFile):
         for member in archivefile.namelist():
             member_path = os.path.join(path, member)
@@ -313,5 +320,5 @@ def safe_extract(archivefile, path=".", members=None, *, numeric_owner=False):
         for member in archivefile.getmembers():
             member_path = os.path.join(path, member.name)
             if not __is_within_directory(path, member_path):
-                raise Exception("Attempted Path Traversal in Tar File")
+                raise Exception(f"Security Alert: Attempted path traversal in tar file detected for member: {member.name}")
         archivefile.extractall(path, members=members, numeric_owner=numeric_owner)

@@ -10,6 +10,7 @@ reduce the amount of data retrieved from the API. DuckDB re-applies the full ori
 WHERE clause on top of the DataFrame, so correctness is guaranteed regardless.
 """
 
+import json
 from datetime import date, timedelta
 
 import pandas as pd
@@ -558,6 +559,464 @@ class SearchTermsTable(APITable):
                 'conversions': m.conversions,
                 'date': row.segments.date,
                 'status': _enum_name(stv.status),
+            })
+
+        df = pd.DataFrame(rows, columns=self.get_columns()) if rows else pd.DataFrame(columns=self.get_columns())
+        return df[_pattern_a_columns(query, self.get_columns())]
+
+
+# ---------------------------------------------------------------------------
+# LanguagesTable (API-backed lookup)
+# ---------------------------------------------------------------------------
+
+LANGUAGES_COLUMNS = ['id', 'name', 'code', 'targetable']
+
+_LANGUAGES_GAQL = """
+    SELECT
+        language_constant.id,
+        language_constant.name,
+        language_constant.code,
+        language_constant.targetable
+    FROM language_constant
+"""
+
+
+class LanguagesTable(APITable):
+    """Lookup table for Google Ads language criterion IDs.
+
+    Queries the language_constant resource via the Google Ads API.
+    DuckDB handles all WHERE / LIKE filtering via SubSelectStep.
+
+    Example:
+        SELECT * FROM google_ads.languages WHERE name LIKE '%Portuguese%';
+    """
+
+    def get_columns(self):
+        return list(LANGUAGES_COLUMNS)
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        self.handler.connect()
+
+        gaql = _LANGUAGES_GAQL.strip()
+        logger.debug(f"LanguagesTable GAQL: {gaql}")
+
+        ga_service = self.handler.client.get_service("GoogleAdsService")
+        response = ga_service.search(customer_id=self.handler.customer_id, query=gaql)
+
+        rows = []
+        for row in response:
+            lc = row.language_constant
+            rows.append({
+                'id': str(lc.id),
+                'name': lc.name,
+                'code': lc.code,
+                'targetable': lc.targetable,
+            })
+
+        df = pd.DataFrame(rows, columns=self.get_columns()) if rows else pd.DataFrame(columns=self.get_columns())
+        return df[_pattern_a_columns(query, self.get_columns())]
+
+
+# ---------------------------------------------------------------------------
+# GeoTargetsTable (API-backed lookup)
+# ---------------------------------------------------------------------------
+
+GEOTARGETS_COLUMNS = [
+    'id', 'name', 'canonical_name', 'country_code', 'target_type', 'status',
+]
+
+_GEOTARGETS_GAQL = """
+    SELECT
+        geo_target_constant.id,
+        geo_target_constant.name,
+        geo_target_constant.canonical_name,
+        geo_target_constant.country_code,
+        geo_target_constant.target_type,
+        geo_target_constant.status
+    FROM geo_target_constant
+"""
+
+
+class GeoTargetsTable(APITable):
+    """Lookup table for Google Ads geo target criterion IDs.
+
+    Queries the geo_target_constant resource via the Google Ads API.
+    DuckDB handles all WHERE / LIKE filtering via SubSelectStep.
+
+    Example:
+        SELECT * FROM google_ads.geo_targets WHERE name LIKE '%Brazil%';
+    """
+
+    def get_columns(self):
+        return list(GEOTARGETS_COLUMNS)
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        self.handler.connect()
+
+        gaql = _GEOTARGETS_GAQL.strip()
+        logger.debug(f"GeoTargetsTable GAQL: {gaql}")
+
+        ga_service = self.handler.client.get_service("GoogleAdsService")
+        response = ga_service.search(customer_id=self.handler.customer_id, query=gaql)
+
+        rows = []
+        for row in response:
+            gt = row.geo_target_constant
+            rows.append({
+                'id': str(gt.id),
+                'name': gt.name,
+                'canonical_name': gt.canonical_name,
+                'country_code': gt.country_code,
+                'target_type': gt.target_type,
+                'status': _enum_name(gt.status),
+            })
+
+        df = pd.DataFrame(rows, columns=self.get_columns()) if rows else pd.DataFrame(columns=self.get_columns())
+        return df[_pattern_a_columns(query, self.get_columns())]
+
+
+# ---------------------------------------------------------------------------
+# Keyword Planner helpers
+# ---------------------------------------------------------------------------
+
+_KP_PARAM_NAMES = {
+    'keywords', 'url', 'language', 'geo_target', 'network',
+    'include_adult_keywords', 'page_size',
+    'match_type', 'max_cpc_bid_micros', 'start_date', 'end_date',
+}
+
+
+def _extract_keyword_planner_params(where):
+    """Extract keyword planner parameters from WHERE clause.
+
+    Returns a dict with any recognised params and a list of remaining conditions.
+    """
+    conditions = extract_comparison_conditions(where) if where else []
+    params = {}
+    other = []
+    for cond in conditions:
+        if not isinstance(cond, list):
+            continue
+        op, col, val = cond
+        if op == '=' and col in _KP_PARAM_NAMES:
+            params[col] = val
+        else:
+            other.append(cond)
+    return params, other
+
+
+# ---------------------------------------------------------------------------
+# KeywordIdeasTable
+# ---------------------------------------------------------------------------
+
+KEYWORD_IDEAS_COLUMNS = [
+    'keyword', 'avg_monthly_searches', 'competition', 'competition_index',
+    'low_top_of_page_bid_micros', 'high_top_of_page_bid_micros',
+]
+
+
+class KeywordIdeasTable(APITable):
+    """Generate keyword ideas using Google Ads Keyword Planner.
+
+    Required WHERE (at least one):
+        keywords = 'seo tools, keyword research'   — comma-separated seed keywords
+        url = 'https://example.com'                 — URL seed
+
+    Optional WHERE:
+        language = '1000'          (default: 1000 = English)
+        geo_target = '2840'        (default: 2840 = United States)
+        network = 'GOOGLE_SEARCH'  (default: GOOGLE_SEARCH)
+        include_adult_keywords = 'true'  (default: false)
+        page_size = '100'          (default: API default)
+
+    Example:
+        SELECT * FROM google_ads.keyword_ideas
+        WHERE keywords = 'digital marketing, seo'
+          AND language = '1000'
+          AND geo_target = '2840';
+    """
+
+    def get_columns(self):
+        return list(KEYWORD_IDEAS_COLUMNS)
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        self.handler.connect()
+        params, _ = _extract_keyword_planner_params(query.where)
+
+        seed_keywords = params.get('keywords')
+        seed_url = params.get('url')
+        if not seed_keywords and not seed_url:
+            raise ValueError(
+                "keyword_ideas requires at least 'keywords' or 'url' in the WHERE clause. "
+                "Example: WHERE keywords = 'seo tools, keyword research'"
+            )
+
+        language = params.get('language', '1000')
+        geo_target = params.get('geo_target', '2840')
+        network = params.get('network', 'GOOGLE_SEARCH')
+        include_adult = str(params.get('include_adult_keywords', 'false')).lower() == 'true'
+        page_size = int(params['page_size']) if params.get('page_size') else None
+
+        client = self.handler.client
+        kp_service = client.get_service("KeywordPlanIdeaService")
+
+        request = client.get_type("GenerateKeywordIdeasRequest")
+        request.customer_id = self.handler.customer_id
+        request.language = f"languageConstants/{language}"
+        request.geo_target_constants.append(f"geoTargetConstants/{geo_target}")
+        request.include_adult_keywords = include_adult
+
+        # Map network string to enum
+        network_enum = client.enums.KeywordPlanNetworkEnum.KeywordPlanNetwork
+        request.keyword_plan_network = getattr(network_enum, network, network_enum.GOOGLE_SEARCH)
+
+        if page_size:
+            request.page_size = page_size
+
+        # Set the appropriate seed based on provided params
+        kw_list = [k.strip() for k in seed_keywords.split(',')] if seed_keywords else []
+        if kw_list and seed_url:
+            request.keyword_and_url_seed.url = seed_url
+            request.keyword_and_url_seed.keywords.extend(kw_list)
+        elif seed_url:
+            request.url_seed.url = seed_url
+        else:
+            request.keyword_seed.keywords.extend(kw_list)
+
+        logger.debug(f"KeywordIdeasTable: language={language}, geo={geo_target}, "
+                      f"network={network}, keywords={kw_list}, url={seed_url}")
+
+        response = kp_service.generate_keyword_ideas(request=request)
+
+        rows = []
+        for result in response:
+            m = result.keyword_idea_metrics
+            rows.append({
+                'keyword': result.text,
+                'avg_monthly_searches': m.avg_monthly_searches,
+                'competition': _enum_name(m.competition),
+                'competition_index': m.competition_index,
+                'low_top_of_page_bid_micros': m.low_top_of_page_bid_micros,
+                'high_top_of_page_bid_micros': m.high_top_of_page_bid_micros,
+            })
+
+        df = pd.DataFrame(rows, columns=self.get_columns()) if rows else pd.DataFrame(columns=self.get_columns())
+        return df[_pattern_a_columns(query, self.get_columns())]
+
+
+# ---------------------------------------------------------------------------
+# KeywordHistoricalMetricsTable
+# ---------------------------------------------------------------------------
+
+KEYWORD_HISTORICAL_METRICS_COLUMNS = [
+    'keyword', 'avg_monthly_searches', 'competition', 'competition_index',
+    'low_top_of_page_bid_micros', 'high_top_of_page_bid_micros', 'close_variants',
+]
+
+
+class KeywordHistoricalMetricsTable(APITable):
+    """Get historical metrics for specific keywords using Google Ads Keyword Planner.
+
+    Required WHERE:
+        keywords = 'seo tools, keyword research'  — comma-separated keywords
+
+    Optional WHERE:
+        language = '1000'          (default: 1000 = English)
+        geo_target = '2840'        (default: 2840 = United States)
+        network = 'GOOGLE_SEARCH'  (default: GOOGLE_SEARCH)
+
+    Example:
+        SELECT * FROM google_ads.keyword_historical_metrics
+        WHERE keywords = 'seo tools, keyword research, digital marketing';
+    """
+
+    def get_columns(self):
+        return list(KEYWORD_HISTORICAL_METRICS_COLUMNS)
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        self.handler.connect()
+        params, _ = _extract_keyword_planner_params(query.where)
+
+        seed_keywords = params.get('keywords')
+        if not seed_keywords:
+            raise ValueError(
+                "keyword_historical_metrics requires 'keywords' in the WHERE clause. "
+                "Example: WHERE keywords = 'seo tools, keyword research'"
+            )
+
+        language = params.get('language', '1000')
+        geo_target = params.get('geo_target', '2840')
+        network = params.get('network', 'GOOGLE_SEARCH')
+
+        kw_list = [k.strip() for k in seed_keywords.split(',')]
+
+        client = self.handler.client
+        kp_service = client.get_service("KeywordPlanIdeaService")
+
+        request = client.get_type("GenerateKeywordHistoricalMetricsRequest")
+        request.customer_id = self.handler.customer_id
+        request.keywords.extend(kw_list)
+        request.language = f"languageConstants/{language}"
+        request.geo_target_constants.append(f"geoTargetConstants/{geo_target}")
+
+        network_enum = client.enums.KeywordPlanNetworkEnum.KeywordPlanNetwork
+        request.keyword_plan_network = getattr(network_enum, network, network_enum.GOOGLE_SEARCH)
+
+        logger.debug(f"KeywordHistoricalMetricsTable: language={language}, geo={geo_target}, "
+                      f"network={network}, keywords={kw_list}")
+
+        response = kp_service.generate_keyword_historical_metrics(request=request)
+
+        rows = []
+        for result in response.results:
+            m = result.keyword_metrics
+            rows.append({
+                'keyword': result.text,
+                'avg_monthly_searches': m.avg_monthly_searches if m else None,
+                'competition': _enum_name(m.competition) if m else None,
+                'competition_index': m.competition_index if m else None,
+                'low_top_of_page_bid_micros': m.low_top_of_page_bid_micros if m else None,
+                'high_top_of_page_bid_micros': m.high_top_of_page_bid_micros if m else None,
+                'close_variants': json.dumps(list(result.close_variants)) if result.close_variants else '[]',
+            })
+
+        df = pd.DataFrame(rows, columns=self.get_columns()) if rows else pd.DataFrame(columns=self.get_columns())
+        return df[_pattern_a_columns(query, self.get_columns())]
+
+
+# ---------------------------------------------------------------------------
+# KeywordForecastMetricsTable
+# ---------------------------------------------------------------------------
+
+KEYWORD_FORECAST_METRICS_COLUMNS = [
+    'keyword', 'match_type', 'impressions', 'clicks',
+    'cost_micros', 'average_cpc_micros', 'ctr',
+]
+
+
+class KeywordForecastMetricsTable(APITable):
+    """Generate forecast metrics for keywords using Google Ads Keyword Planner.
+
+    Builds a temporary campaign structure and returns estimated performance.
+
+    Required WHERE:
+        keywords = 'seo tools, keyword research'  — comma-separated keywords
+        max_cpc_bid_micros = '2500000'             — max CPC bid in micros (e.g. 2500000 = $2.50)
+
+    Optional WHERE:
+        match_type = 'BROAD'           (default: BROAD; also PHRASE or EXACT)
+        language = '1000'              (default: 1000 = English)
+        geo_target = '2840'            (default: 2840 = United States)
+        network = 'GOOGLE_SEARCH'      (default: GOOGLE_SEARCH)
+        start_date = 'YYYY-MM-DD'      (default: today)
+        end_date = 'YYYY-MM-DD'        (default: 30 days from today)
+
+    Example:
+        SELECT * FROM google_ads.keyword_forecast_metrics
+        WHERE keywords = 'seo tools, keyword research'
+          AND max_cpc_bid_micros = '2500000'
+          AND match_type = 'EXACT'
+          AND language = '1000'
+          AND geo_target = '2840';
+    """
+
+    def get_columns(self):
+        return list(KEYWORD_FORECAST_METRICS_COLUMNS)
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        self.handler.connect()
+        params, _ = _extract_keyword_planner_params(query.where)
+
+        seed_keywords = params.get('keywords')
+        max_cpc = params.get('max_cpc_bid_micros')
+        if not seed_keywords:
+            raise ValueError(
+                "keyword_forecast_metrics requires 'keywords' in the WHERE clause. "
+                "Example: WHERE keywords = 'seo tools, keyword research'"
+            )
+        if not max_cpc:
+            raise ValueError(
+                "keyword_forecast_metrics requires 'max_cpc_bid_micros' in the WHERE clause. "
+                "Example: WHERE max_cpc_bid_micros = '2500000'"
+            )
+
+        max_cpc_value = int(max_cpc)
+        match_type_str = params.get('match_type', 'BROAD').upper()
+        language = params.get('language', '1000')
+        geo_target = params.get('geo_target', '2840')
+        network = params.get('network', 'GOOGLE_SEARCH')
+        start = params.get('start_date', date.today().isoformat())
+        end = params.get('end_date', (date.today() + timedelta(days=30)).isoformat())
+
+        kw_list = [k.strip() for k in seed_keywords.split(',')]
+
+        client = self.handler.client
+        kp_service = client.get_service("KeywordPlanIdeaService")
+
+        # Build the match type enum
+        match_type_enum = client.enums.KeywordMatchTypeEnum.KeywordMatchType
+        match_type = getattr(match_type_enum, match_type_str, match_type_enum.BROAD)
+
+        # Build biddable keywords
+        biddable_keywords = []
+        for kw_text in kw_list:
+            bk = client.get_type("BiddableKeyword")
+            bk.max_cpc_bid_micros = max_cpc_value
+            bk.keyword.text = kw_text
+            bk.keyword.match_type = match_type
+            biddable_keywords.append(bk)
+
+        # Build forecast ad group
+        ad_group = client.get_type("ForecastAdGroup")
+        ad_group.biddable_keywords.extend(biddable_keywords)
+
+        # Build campaign to forecast
+        campaign = client.get_type("CampaignToForecast")
+        campaign.language_constants.append(f"languageConstants/{language}")
+
+        geo_modifier = client.get_type("CriterionBidModifier")
+        geo_modifier.geo_target_constant = f"geoTargetConstants/{geo_target}"
+        campaign.geo_modifiers.append(geo_modifier)
+
+        network_enum = client.enums.KeywordPlanNetworkEnum.KeywordPlanNetwork
+        campaign.keyword_plan_network = getattr(network_enum, network, network_enum.GOOGLE_SEARCH)
+
+        bidding = client.get_type("CampaignToForecast.CampaignBiddingStrategy")
+        manual_cpc = client.get_type("ManualCpcBiddingStrategy")
+        manual_cpc.max_cpc_bid_micros = max_cpc_value
+        bidding.manual_cpc_bidding_strategy = manual_cpc
+        campaign.bidding_strategy = bidding
+
+        campaign.ad_groups.append(ad_group)
+
+        # Build the request
+        request = client.get_type("GenerateKeywordForecastMetricsRequest")
+        request.customer_id = self.handler.customer_id
+        request.campaign = campaign
+
+        forecast_period = client.get_type("DateRange")
+        forecast_period.start_date = start
+        forecast_period.end_date = end
+        request.forecast_period = forecast_period
+
+        logger.debug(f"KeywordForecastMetricsTable: language={language}, geo={geo_target}, "
+                      f"network={network}, keywords={kw_list}, max_cpc={max_cpc_value}, "
+                      f"match_type={match_type_str}, period={start}..{end}")
+
+        response = kp_service.generate_keyword_forecast_metrics(request=request)
+
+        rows = []
+        for i, kw_forecast in enumerate(response.keyword_forecasts):
+            m = kw_forecast.keyword_forecast
+            kw_text = kw_list[i] if i < len(kw_list) else None
+            rows.append({
+                'keyword': kw_text,
+                'match_type': match_type_str,
+                'impressions': m.impressions if m else None,
+                'clicks': m.clicks if m else None,
+                'cost_micros': m.cost_micros if m else None,
+                'average_cpc_micros': m.average_cpc_micros if m else None,
+                'ctr': m.ctr if m else None,
             })
 
         df = pd.DataFrame(rows, columns=self.get_columns()) if rows else pd.DataFrame(columns=self.get_columns())

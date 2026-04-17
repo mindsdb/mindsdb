@@ -36,12 +36,17 @@ class GoogleAdsHandler(APIHandler):
         credentials_file / credentials_json        — Service account
 
     Tables:
-        campaigns            Entity: campaigns in the account
-        ad_groups            Entity: ad groups within campaigns
-        ads                  Entity: ads within ad groups
-        keywords             Entity: keywords within ad groups
-        campaign_performance Report: daily metrics per campaign (requires start_date, end_date)
-        search_terms         Report: search term performance (requires start_date, end_date)
+        campaigns                    Entity: campaigns in the account
+        ad_groups                    Entity: ad groups within campaigns
+        ads                          Entity: ads within ad groups
+        keywords                     Entity: keywords within ad groups
+        campaign_performance         Report: daily metrics per campaign (requires start_date, end_date)
+        search_terms                 Report: search term performance (requires start_date, end_date)
+        languages                    Lookup: language criterion IDs (from language_constant API)
+        geo_targets                  Lookup: geo target criterion IDs (from geo_target_constant API)
+        keyword_ideas                Keyword Planner: generate keyword ideas (requires keywords or url)
+        keyword_historical_metrics   Keyword Planner: historical metrics for keywords (requires keywords)
+        keyword_forecast_metrics     Keyword Planner: forecast metrics (requires keywords + max_cpc_bid_micros)
     """
 
     name = 'google_ads'
@@ -88,6 +93,11 @@ class GoogleAdsHandler(APIHandler):
             KeywordsTable,
             CampaignPerformanceTable,
             SearchTermsTable,
+            LanguagesTable,
+            GeoTargetsTable,
+            KeywordIdeasTable,
+            KeywordHistoricalMetricsTable,
+            KeywordForecastMetricsTable,
         )
 
         self._register_table('campaigns', CampaignsTable(self))
@@ -96,6 +106,11 @@ class GoogleAdsHandler(APIHandler):
         self._register_table('keywords', KeywordsTable(self))
         self._register_table('campaign_performance', CampaignPerformanceTable(self))
         self._register_table('search_terms', SearchTermsTable(self))
+        self._register_table('languages', LanguagesTable(self))
+        self._register_table('geo_targets', GeoTargetsTable(self))
+        self._register_table('keyword_ideas', KeywordIdeasTable(self))
+        self._register_table('keyword_historical_metrics', KeywordHistoricalMetricsTable(self))
+        self._register_table('keyword_forecast_metrics', KeywordForecastMetricsTable(self))
 
     def _store_credentials(self, credentials_data: dict) -> None:
         if not hasattr(self, 'handler_storage') or not self.handler_storage:

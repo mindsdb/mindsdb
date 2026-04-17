@@ -566,25 +566,16 @@ class SearchTermsTable(APITable):
 
 
 # ---------------------------------------------------------------------------
-# LanguagesTable (API-backed lookup)
+# LanguagesTable (cached lookup)
 # ---------------------------------------------------------------------------
 
 LANGUAGES_COLUMNS = ['id', 'name', 'code', 'targetable']
-
-_LANGUAGES_GAQL = """
-    SELECT
-        language_constant.id,
-        language_constant.name,
-        language_constant.code,
-        language_constant.targetable
-    FROM language_constant
-"""
 
 
 class LanguagesTable(APITable):
     """Lookup table for Google Ads language criterion IDs.
 
-    Queries the language_constant resource via the Google Ads API.
+    Data is cached on the handler (24h TTL) to avoid repeated API calls.
     DuckDB handles all WHERE / LIKE filtering via SubSelectStep.
 
     Example:
@@ -595,52 +586,23 @@ class LanguagesTable(APITable):
         return list(LANGUAGES_COLUMNS)
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        self.handler.connect()
-
-        gaql = _LANGUAGES_GAQL.strip()
-        logger.debug(f"LanguagesTable GAQL: {gaql}")
-
-        ga_service = self.handler.client.get_service("GoogleAdsService")
-        response = ga_service.search(customer_id=self.handler.customer_id, query=gaql)
-
-        rows = []
-        for row in response:
-            lc = row.language_constant
-            rows.append({
-                'id': str(lc.id),
-                'name': lc.name,
-                'code': lc.code,
-                'targetable': lc.targetable,
-            })
-
-        df = pd.DataFrame(rows, columns=self.get_columns()) if rows else pd.DataFrame(columns=self.get_columns())
+        df = self.handler.get_languages_cache()
         return df[_pattern_a_columns(query, self.get_columns())]
 
 
 # ---------------------------------------------------------------------------
-# GeoTargetsTable (API-backed lookup)
+# GeoTargetsTable (cached lookup)
 # ---------------------------------------------------------------------------
 
 GEOTARGETS_COLUMNS = [
     'id', 'name', 'canonical_name', 'country_code', 'target_type', 'status',
 ]
 
-_GEOTARGETS_GAQL = """
-    SELECT
-        geo_target_constant.id,
-        geo_target_constant.name,
-        geo_target_constant.canonical_name,
-        geo_target_constant.country_code,
-        geo_target_constant.target_type,
-        geo_target_constant.status
-    FROM geo_target_constant
-"""
-
 
 class GeoTargetsTable(APITable):
     """Lookup table for Google Ads geo target criterion IDs.
 
-    Queries the geo_target_constant resource via the Google Ads API.
+    Data is cached on the handler (24h TTL) to avoid repeated API calls.
     DuckDB handles all WHERE / LIKE filtering via SubSelectStep.
 
     Example:
@@ -651,27 +613,7 @@ class GeoTargetsTable(APITable):
         return list(GEOTARGETS_COLUMNS)
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        self.handler.connect()
-
-        gaql = _GEOTARGETS_GAQL.strip()
-        logger.debug(f"GeoTargetsTable GAQL: {gaql}")
-
-        ga_service = self.handler.client.get_service("GoogleAdsService")
-        response = ga_service.search(customer_id=self.handler.customer_id, query=gaql)
-
-        rows = []
-        for row in response:
-            gt = row.geo_target_constant
-            rows.append({
-                'id': str(gt.id),
-                'name': gt.name,
-                'canonical_name': gt.canonical_name,
-                'country_code': gt.country_code,
-                'target_type': gt.target_type,
-                'status': _enum_name(gt.status),
-            })
-
-        df = pd.DataFrame(rows, columns=self.get_columns()) if rows else pd.DataFrame(columns=self.get_columns())
+        df = self.handler.get_geo_targets_cache()
         return df[_pattern_a_columns(query, self.get_columns())]
 
 

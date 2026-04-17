@@ -84,6 +84,13 @@ class GoogleAdsHandler(APIHandler):
         self.client = None
         self.is_connected = False
 
+        # Lookup caches (shared across tables, lazy-loaded with 24h TTL)
+        self._languages_cache = None
+        self._languages_cache_timestamp = None
+        self._geo_targets_cache = None
+        self._geo_targets_cache_timestamp = None
+        self._lookup_cache_ttl = 86400  # 24 hours — these rarely change
+
         # Import here so the handler can be loaded even if google-ads isn't installed yet
         # (import_error in __init__.py will catch it at registration time)
         from mindsdb.integrations.handlers.google_ads_handler.google_ads_tables import (
@@ -269,6 +276,112 @@ class GoogleAdsHandler(APIHandler):
             self.is_connected = False
 
         return response
+
+    # ------------------------------------------------------------------
+    # Lookup caches (languages / geo targets)
+    # ------------------------------------------------------------------
+
+    def get_languages_cache(self):
+        """Return cached languages DataFrame, refreshing if stale (24h TTL)."""
+        import time
+
+        current_time = time.time()
+        if (self._languages_cache is not None
+                and self._languages_cache_timestamp is not None
+                and current_time - self._languages_cache_timestamp < self._lookup_cache_ttl):
+            return self._languages_cache
+
+        try:
+            self.connect()
+            ga_service = self.client.get_service("GoogleAdsService")
+            response = ga_service.search(
+                customer_id=self.customer_id,
+                query=(
+                    "SELECT language_constant.id, language_constant.name, "
+                    "language_constant.code, language_constant.targetable "
+                    "FROM language_constant"
+                ),
+            )
+            import pandas as pd
+            rows = []
+            for row in response:
+                lc = row.language_constant
+                rows.append({
+                    'id': str(lc.id),
+                    'name': lc.name,
+                    'code': lc.code,
+                    'targetable': lc.targetable,
+                })
+            self._languages_cache = pd.DataFrame(
+                rows, columns=['id', 'name', 'code', 'targetable']
+            ) if rows else pd.DataFrame(columns=['id', 'name', 'code', 'targetable'])
+            self._languages_cache_timestamp = current_time
+            logger.info(f"Languages cache refreshed: {len(rows)} entries")
+        except Exception as e:
+            logger.warning(f"Failed to refresh languages cache: {e}")
+            if self._languages_cache is None:
+                import pandas as pd
+                self._languages_cache = pd.DataFrame(
+                    columns=['id', 'name', 'code', 'targetable']
+                )
+
+        return self._languages_cache
+
+    def get_geo_targets_cache(self):
+        """Return cached geo targets DataFrame, refreshing if stale (24h TTL)."""
+        import time
+
+        current_time = time.time()
+        if (self._geo_targets_cache is not None
+                and self._geo_targets_cache_timestamp is not None
+                and current_time - self._geo_targets_cache_timestamp < self._lookup_cache_ttl):
+            return self._geo_targets_cache
+
+        try:
+            self.connect()
+            from mindsdb.integrations.handlers.google_ads_handler.google_ads_tables import _enum_name
+            ga_service = self.client.get_service("GoogleAdsService")
+            response = ga_service.search(
+                customer_id=self.customer_id,
+                query=(
+                    "SELECT geo_target_constant.id, geo_target_constant.name, "
+                    "geo_target_constant.canonical_name, geo_target_constant.country_code, "
+                    "geo_target_constant.target_type, geo_target_constant.status "
+                    "FROM geo_target_constant"
+                ),
+            )
+            import pandas as pd
+            cols = ['id', 'name', 'canonical_name', 'country_code', 'target_type', 'status']
+            rows = []
+            for row in response:
+                gt = row.geo_target_constant
+                rows.append({
+                    'id': str(gt.id),
+                    'name': gt.name,
+                    'canonical_name': gt.canonical_name,
+                    'country_code': gt.country_code,
+                    'target_type': gt.target_type,
+                    'status': _enum_name(gt.status),
+                })
+            self._geo_targets_cache = pd.DataFrame(rows, columns=cols) if rows else pd.DataFrame(columns=cols)
+            self._geo_targets_cache_timestamp = current_time
+            logger.info(f"Geo targets cache refreshed: {len(rows)} entries")
+        except Exception as e:
+            logger.warning(f"Failed to refresh geo targets cache: {e}")
+            if self._geo_targets_cache is None:
+                import pandas as pd
+                cols = ['id', 'name', 'canonical_name', 'country_code', 'target_type', 'status']
+                self._geo_targets_cache = pd.DataFrame(columns=cols)
+
+        return self._geo_targets_cache
+
+    def invalidate_lookup_caches(self):
+        """Force refresh on next access."""
+        self._languages_cache = None
+        self._languages_cache_timestamp = None
+        self._geo_targets_cache = None
+        self._geo_targets_cache_timestamp = None
+        logger.info("Lookup caches invalidated")
 
     def native_query(self, query_string: str = None) -> Response:
         ast = parse_sql(query_string)

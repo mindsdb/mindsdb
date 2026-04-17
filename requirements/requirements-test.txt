@@ -21,3 +21,4 @@ walrus==0.9.3
 pymongo == 4.8.0
 pytest-json-report==1.5.0
 appdirs >= 1.0.0
+pgvector==0.3.6 # Required for knowledge bases tests

@@ -1,4 +1,5 @@
-from typing import Optional, List, Dict, Any
+from collections import Counter
+from typing import Optional, List, Dict, Any, Tuple
 import pandas as pd
 from pandas.api import types as pd_types
 from hubspot import HubSpot
@@ -13,6 +14,7 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
     EmailsTable,
     MeetingsTable,
     NotesTable,
+    LeadsTable,
     OwnersTable,
     DealStagesTable,
     to_hubspot_property,
@@ -22,7 +24,11 @@ from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
 from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_tables import (
     ASSOCIATION_TABLE_CLASSES,
 )
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_association_utils import (
+    PRIMARY_ASSOCIATIONS_CONFIG,
+)
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, extract_comparison_conditions
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -32,8 +38,30 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Select, Identifier, BinaryOperation, Star
+from mindsdb_sql_parser.ast import Join as SQLJoin
+
+
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_oauth import HubSpotOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 logger = log.getLogger(__name__)
+
+# Maps (from_table, to_table) → (association_table_name, from_id_col, to_id_col)
+# Used to suggest the correct association-table pattern when users write direct FK joins.
+_DIRECT_JOIN_ASSOC_MAP = {
+    ("companies", "contacts"): ("company_contacts", "company_id", "contact_id"),
+    ("companies", "deals"): ("company_deals", "company_id", "deal_id"),
+    ("companies", "tickets"): ("company_tickets", "company_id", "ticket_id"),
+    ("contacts", "companies"): ("contact_companies", "contact_id", "company_id"),
+    ("contacts", "deals"): ("contact_deals", "contact_id", "deal_id"),
+    ("contacts", "tickets"): ("contact_tickets", "contact_id", "ticket_id"),
+    ("deals", "companies"): ("deal_companies", "deal_id", "company_id"),
+    ("deals", "contacts"): ("deal_contacts", "deal_id", "contact_id"),
+    ("tickets", "companies"): ("ticket_companies", "ticket_id", "company_id"),
+    ("tickets", "contacts"): ("ticket_contacts", "ticket_id", "contact_id"),
+    ("tickets", "deals"): ("ticket_deals", "ticket_id", "deal_id"),
+}
 
 
 def _extract_hubspot_error_message(error: Exception) -> str:
@@ -117,6 +145,7 @@ class HubspotHandler(MetaAPIHandler):
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
         self.kwargs = kwargs
+        self.handler_storage = kwargs.get("handler_storage")
 
         self.connection: Optional[HubSpot] = None
         self.is_connected: bool = False
@@ -135,6 +164,7 @@ class HubspotHandler(MetaAPIHandler):
         self._register_table("emails", EmailsTable(self))
         self._register_table("meetings", MeetingsTable(self))
         self._register_table("notes", NotesTable(self))
+        self._register_table("leads", LeadsTable(self))
         self._register_table("owners", OwnersTable(self))
         self._register_table("deal_stages", DealStagesTable(self))
 
@@ -147,39 +177,55 @@ class HubspotHandler(MetaAPIHandler):
             return self.connection
 
         try:
-            if "access_token" in self.connection_data:
-                access_token = self.connection_data["access_token"]
-                if not access_token or not isinstance(access_token, str):
+            access_token = self.connection_data.get("access_token")
+            client_id = self.connection_data.get("client_id")
+            client_secret = self.connection_data.get("client_secret")
+
+            if access_token is not None:
+                if not isinstance(access_token, str) or not access_token.strip():
                     raise ValueError("Invalid access_token provided")
 
                 logger.info("Connecting to HubSpot using access token")
                 self.connection = HubSpot(access_token=access_token)
 
-            elif "client_id" in self.connection_data and "client_secret" in self.connection_data:
-                client_id = self.connection_data["client_id"]
-                client_secret = self.connection_data["client_secret"]
-
-                if not client_id or not client_secret:
+            elif client_id is not None or client_secret is not None:
+                if not client_id or not client_secret or not str(client_id).strip() or not str(client_secret).strip():
                     raise ValueError("Invalid OAuth credentials provided")
-
                 logger.info("Connecting to HubSpot using OAuth credentials")
-                self.connection = HubSpot(client_id=client_id, client_secret=client_secret)
+                oauth_manager = HubSpotOAuth2Manager(
+                    handler_storage=self.handler_storage,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    scopes=self.connection_data.get("scope"),
+                    optional_scopes=self.connection_data.get("optional_scope"),
+                    redirect_uri=self.connection_data.get("redirect_uri"),
+                    code=self.connection_data.get("code"),
+                    datasource_name=self.name,
+                )
+                logger.info("Attempting to obtain access token via OAuth flow")
+                logger.debug(oauth_manager)
+                self.connection = HubSpot(access_token=oauth_manager.get_access_token())
+
             else:
                 raise ValueError(
                     "Authentication credentials missing. Provide either 'access_token' "
-                    "or both 'client_id' and 'client_secret' for OAuth authentication."
+                    "or OAuth credentials: 'client_id' and 'client_secret'."
                 )
 
             self.is_connected = True
             logger.info("Successfully connected to HubSpot API")
             return self.connection
 
-        except ValueError:
-            logger.error("Failed to connect to HubSpot API")
+        except AuthException:
+            self.connection = None
+            self.is_connected = False
+            logger.info("HubSpot OAuth authorization required")
             raise
         except Exception as e:
-            logger.error("Failed to connect to HubSpot API")
-            raise ValueError(f"Connection to HubSpot failed: {str(e)}")
+            self.connection = None
+            self.is_connected = False
+            logger.error("Failed to connect to HubSpot API: %s", e)
+            raise ValueError(f"Connection to HubSpot failed: {e}") from e
 
     def disconnect(self) -> None:
         """Close connection and cleanup resources."""
@@ -190,6 +236,19 @@ class HubspotHandler(MetaAPIHandler):
     def check_connection(self) -> StatusResponse:
         """Checks whether the API client is connected to Hubspot."""
         response = StatusResponse(False)
+
+        # Defer OAuth code-for-token exchange: CREATE DATABASE runs check_connection
+        # with ephemeral handler_storage, so tokens written here would be discarded;
+        # later requests then fail with BAD_AUTH_CODE. Exchange only when a request
+        if self.connection_data.get("code") and not self.is_connected:
+            from mindsdb.integrations.handlers.hubspot_handler.hubspot_oauth import _STORAGE_KEY
+
+            if not self.handler_storage.encrypted_json_get(_STORAGE_KEY):
+                logger.info(
+                    "Deferring HubSpot check_connection because OAuth code exchange must happen in a persistent context."
+                )
+                response.success = True
+                return response
 
         try:
             self.connect()
@@ -213,6 +272,10 @@ class HubspotHandler(MetaAPIHandler):
                         response.error_message = error_msg
                         response.success = False
 
+        except AuthException as error:
+            response.error_message = str(error)
+            response.redirect_url = error.auth_url
+            return response
         except Exception as e:
             error_msg = _extract_hubspot_error_message(e)
             logger.error(f"HubSpot connection check failed: {error_msg}")
@@ -224,15 +287,29 @@ class HubspotHandler(MetaAPIHandler):
 
     def native_query(self, query: Optional[str] = None) -> Response:
         """Receive and process a raw query."""
+        logger.debug(f"[HubSpotHandler] native_query() called — query: {query}")
         if not query:
             return Response(RESPONSE_TYPE.ERROR, error_message="Query cannot be None or empty")
 
         try:
             ast = parse_sql(query)
+        except Exception as e:
+            logger.error(f"Failed to execute native query: {str(e)}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}")
+
+        try:
+            if isinstance(ast, Select) and isinstance(ast.from_table, SQLJoin):
+                logger.debug("[HubSpotHandler] native_query() — routing to _execute_join_query")
+                return self._execute_join_query(ast)
+            logger.debug("[HubSpotHandler] native_query() — routing to query()")
             return self.query(ast)
         except Exception as e:
             logger.error(f"Failed to execute native query: {str(e)}")
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Query execution failed: {str(e)}")
+
+    CORE_TABLES = frozenset(
+        {"companies", "contacts", "deals", "tickets", "tasks", "calls", "emails", "meetings", "notes"}
+    )
 
     def get_tables(self) -> Response:
         """Return list of tables available in the HubSpot integration."""
@@ -437,8 +514,6 @@ class HubspotHandler(MetaAPIHandler):
                             most_common_frequencies = None
                             non_null_values = [v for v in column_values if v is not None]
                             if non_null_values:
-                                from collections import Counter
-
                                 value_counts = Counter(non_null_values)
                                 top_5 = value_counts.most_common(5)
                                 if top_5:
@@ -601,13 +676,14 @@ class HubspotHandler(MetaAPIHandler):
             "ticket_deals": "HubSpot ticket to deal associations",
             "owners": "HubSpot owners with names and emails",
             "deal_stages": "HubSpot deal pipeline stages with labels",
+            "leads": "HubSpot leads data including lead status, source and other lead properties",
         }
         return descriptions.get(table_name, f"HubSpot {table_name} data")
 
     def _estimate_table_rows(self, table_name: str) -> Optional[int]:
         """Get actual count of rows in a table using HubSpot Search API."""
         try:
-            if table_name in ["companies", "contacts", "deals", "tickets"]:
+            if table_name in ["companies", "contacts", "deals", "tickets", "leads"]:
                 result = getattr(self.connection.crm, table_name).search_api.do_search(
                     public_object_search_request={"limit": 1}
                 )
@@ -715,3 +791,516 @@ class HubspotHandler(MetaAPIHandler):
             return "VARCHAR"
         else:
             return "VARCHAR"
+
+    def _rewrite_where_for_table(self, where_node: Any, table_alias: str, is_main_table: bool = False) -> Any:
+        """Extract WHERE conditions for a specific table alias, stripping the alias prefix.
+
+        Returns a new WHERE AST node with aliases stripped, or None if no conditions
+        reference the given alias.
+        """
+        if where_node is None:
+            return None
+
+        if isinstance(where_node, BinaryOperation):
+            if where_node.op.lower() == "and":
+                left_cond = self._rewrite_where_for_table(where_node.args[0], table_alias, is_main_table)
+                right_cond = self._rewrite_where_for_table(where_node.args[1], table_alias, is_main_table)
+                if left_cond is not None and right_cond is not None:
+                    return BinaryOperation("and", args=[left_cond, right_cond])
+                return left_cond if left_cond is not None else right_cond
+            else:
+                # Leaf comparison — check if it belongs to this table
+                left_arg = where_node.args[0] if where_node.args else None
+                if isinstance(left_arg, Identifier):
+                    ident_parts = left_arg.parts
+                    if len(ident_parts) >= 2:
+                        ref_alias = ident_parts[0].lower()
+                        col_name = ident_parts[-1]
+                        if ref_alias == table_alias.lower():
+                            stripped_args = [Identifier(col_name)] + list(where_node.args[1:])
+                            return BinaryOperation(where_node.op, args=stripped_args)
+                        return None
+                    elif len(ident_parts) == 1 and is_main_table:
+                        # Unqualified condition belongs to the primary (FROM) table
+                        return where_node
+        return None
+
+    def _format_select_targets(self, targets) -> str:
+        """Render SELECT target list back to a SQL string fragment."""
+        if not targets:
+            return "*"
+        parts = []
+        for t in targets:
+            if isinstance(t, Star):
+                parts.append("*")
+            elif isinstance(t, Identifier):
+                parts.append(".".join(str(p) for p in t.parts))
+        return ", ".join(parts) if parts else "*"
+
+    def _suggest_association_query(
+        self, ast: Select, left_name: str, left_alias: str, right_name: str, right_alias: str
+    ) -> Response:
+        """Return a helpful error directing the user to use association tables.
+
+        Analyses the WHERE clause to determine which table is being filtered so the
+        suggestion puts the filtered table first (making the join efficient).
+        """
+        where_on_right = self._rewrite_where_for_table(ast.where, right_alias) is not None
+        where_on_left = self._rewrite_where_for_table(ast.where, left_alias, is_main_table=True) is not None
+
+        # Put the filtered table first so the suggestion is efficient
+        if where_on_right and not where_on_left:
+            from_name, from_alias = right_name, right_alias
+            to_name, to_alias = left_name, left_alias
+        else:
+            from_name, from_alias = left_name, left_alias
+            to_name, to_alias = right_name, right_alias
+
+        assoc_info = _DIRECT_JOIN_ASSOC_MAP.get((from_name, to_name))
+        if assoc_info is None:
+            # Try reverse direction
+            assoc_info = _DIRECT_JOIN_ASSOC_MAP.get((to_name, from_name))
+
+        if assoc_info is None:
+            error_msg = (
+                f"Direct JOINs between '{left_name}' and '{right_name}' are not supported. "
+                "Please use HubSpot association tables to join these objects."
+            )
+            return Response(RESPONSE_TYPE.ERROR, error_message=error_msg)  # type: ignore[arg-type]
+
+        assoc_table, from_id_col, to_id_col = assoc_info
+        # 2-char alias, e.g. "cc" for company_contacts
+        assoc_alias = assoc_table[:2]
+
+        col_str = self._format_select_targets(ast.targets)
+        where_clause = f"\nWHERE {ast.where}" if ast.where else ""
+        limit_clause = f"\nLIMIT {ast.limit.value}" if ast.limit else ""
+
+        suggested = (
+            f"SELECT {col_str}\n"
+            f"FROM `my_hubspot`.{from_name} {from_alias}\n"
+            f"JOIN `my_hubspot`.{assoc_table} {assoc_alias} "
+            f"ON {assoc_alias}.{from_id_col} = {from_alias}.id\n"
+            f"JOIN `my_hubspot`.{to_name} {to_alias} "
+            f"ON {to_alias}.id = {assoc_alias}.{to_id_col}"
+            f"{where_clause}"
+            f"{limit_clause}"
+        )
+
+        error_msg = (
+            f"Direct JOINs between HubSpot objects using foreign key columns (e.g. primary_company_id) "
+            f"are not supported. The HubSpot API represents relationships through association tables.\n\n"
+            f"Please rewrite your query using the '{assoc_table}' association table:\n\n"
+            f"{suggested}"
+        )
+        return Response(RESPONSE_TYPE.ERROR, error_message=error_msg)
+
+    def _flatten_join_tree(self, from_node) -> List[Tuple[str, str, Any]]:
+        """Flatten nested Join AST nodes into an ordered list of (table_name, alias, on_condition)."""
+
+        entries: List[Tuple[str, str, Any]] = []
+
+        def _get_alias(ident: Identifier) -> str:
+            alias = getattr(ident, "alias", None)
+            if alias is None:
+                return ident.parts[-1].lower()
+            if isinstance(alias, str):
+                return alias.lower()
+            return alias.parts[-1].lower()
+
+        def _walk(node, join_condition=None):
+            if isinstance(node, SQLJoin):
+                _walk(node.left, None)
+                right_table = node.right.parts[-1].lower()
+                right_table_alias = _get_alias(node.right)
+                entries.append((right_table, right_table_alias, node.condition))
+            elif isinstance(node, Identifier):
+                entries.append((node.parts[-1].lower(), _get_alias(node), join_condition))
+
+        _walk(from_node)
+        return entries
+
+    def _parse_on_condition(self, on_node) -> Optional[Tuple[Optional[str], str, Optional[str], str]]:
+        """Parse an ON equality into (left_alias, left_col, right_alias, right_col), or None if invalid."""
+        if not isinstance(on_node, BinaryOperation) or on_node.op != "=":
+            return None
+        left_ident, right_ident = on_node.args
+        if not (isinstance(left_ident, Identifier) and isinstance(right_ident, Identifier)):
+            return None
+
+        def _split(ident):
+            parts = ident.parts
+            return (parts[0].lower(), parts[-1].lower()) if len(parts) >= 2 else (None, parts[0].lower())
+
+        left_alias, left_col = _split(left_ident)
+        right_alias, right_col = _split(right_ident)
+        return left_alias, left_col, right_alias, right_col
+
+    def _execute_join_query(self, ast: Select) -> Response:
+        """Execute a JOIN query using the HubSpot associations API."""
+        logger.debug("[HubSpotHandler] _execute_join_query() called")
+
+        join_entries = self._flatten_join_tree(ast.from_table)
+        if len(join_entries) < 2 or len(join_entries) > 3:
+            return Response(
+                RESPONSE_TYPE.ERROR, error_message="Only 2- and 3-table joins via association tables are supported."
+            )
+
+        alias_map: Dict[str, str] = {alias: name for name, alias, _ in join_entries}
+        primary_alias = join_entries[0][1]
+
+        if len(join_entries) == 2:
+            (left_table, left_alias, _), (right_table, right_alias, right_on) = join_entries
+
+            # Reject direct core-to-core joins without an association table
+            if left_table in self.CORE_TABLES and right_table in self.CORE_TABLES:
+                return self._suggest_association_query(ast, left_table, left_alias, right_table, right_alias)
+
+            on_parsed = self._parse_on_condition(right_on)
+            if not on_parsed:
+                return Response(RESPONSE_TYPE.ERROR, error_message="Unsupported JOIN condition.")
+
+            on_left_alias, on_left_col, on_right_alias, on_right_col = on_parsed
+            if left_table in self._association_tables:
+                assoc_name, assoc_alias, assoc_join_col = (
+                    left_table,
+                    left_alias,
+                    on_left_col if on_left_alias == left_alias else on_right_col,
+                )
+                core_name, core_alias, core_join_col = (
+                    right_table,
+                    right_alias,
+                    on_right_col if on_left_alias == left_alias else on_left_col,
+                )
+            else:
+                assoc_name, assoc_alias, assoc_join_col = (
+                    right_table,
+                    right_alias,
+                    on_right_col if on_right_alias == right_alias else on_left_col,
+                )
+                core_name, core_alias, core_join_col = (
+                    left_table,
+                    left_alias,
+                    on_left_col if on_right_alias == right_alias else on_right_col,
+                )
+
+            if assoc_name not in self._tables or core_name not in self._tables:
+                return Response(RESPONSE_TYPE.ERROR, error_message="Unknown table in JOIN.")
+
+            row_limit = ast.limit.value if ast.limit else None
+            core_filter = self._rewrite_where_for_table(
+                ast.where, core_alias, is_main_table=(core_alias == primary_alias)
+            )
+            assoc_filter = self._rewrite_where_for_table(
+                ast.where, assoc_alias, is_main_table=(assoc_alias == primary_alias)
+            )
+
+            # Fetch the filtered core table rows
+            core_rows = self._tables[core_name].select(
+                Select(targets=[Star()], from_table=Identifier(core_name), where=core_filter)
+            )
+            if core_rows.empty or core_join_col not in core_rows.columns:
+                return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+            core_id_list = core_rows[core_join_col].dropna().astype(str).tolist()
+            if not core_id_list:
+                return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+            # Fetch association rows filtered by the core IDs
+            assoc_filters: List[FilterCondition] = [FilterCondition(assoc_join_col, FilterOperator.IN, core_id_list)]
+            if assoc_filter is not None:
+                try:
+                    for filter_cond in extract_comparison_conditions(assoc_filter):
+                        assoc_filters.append(
+                            FilterCondition(filter_cond[1], FilterOperator(filter_cond[0].upper()), filter_cond[2])
+                        )
+                except Exception:
+                    pass
+
+            assoc_rows = self._tables[assoc_name].list(conditions=assoc_filters, limit=row_limit)
+            if assoc_rows.empty:
+                return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+            joined_df = assoc_rows.merge(
+                core_rows, left_on=assoc_join_col, right_on=core_join_col, how="inner", suffixes=("", f"_{core_alias}")
+            )
+            output_df = self._resolve_select_targets(ast.targets, joined_df, alias_map, join_entries)
+            if row_limit:
+                output_df = output_df.head(row_limit)
+            return Response(RESPONSE_TYPE.TABLE, data_frame=output_df)
+
+        (left_table, left_alias, _), (assoc_table, assoc_alias, left_on), (right_table, right_alias, right_on) = (
+            join_entries
+        )
+
+        if assoc_table not in self._association_tables:
+            if left_table in self.CORE_TABLES and assoc_table in self.CORE_TABLES:
+                return self._suggest_association_query(ast, left_table, left_alias, assoc_table, assoc_alias)
+            return Response(RESPONSE_TYPE.ERROR, error_message="Only CORE JOIN ASSOC JOIN CORE pattern is supported.")
+
+        left_on_parsed = self._parse_on_condition(left_on)
+        right_on_parsed = self._parse_on_condition(right_on)
+        if not left_on_parsed or not right_on_parsed:
+            return Response(RESPONSE_TYPE.ERROR, error_message="Unsupported JOIN condition — expected simple equality.")
+
+        lop_left_alias, lop_left_col, _, lop_right_col = left_on_parsed
+        # left association column is the one that references the core table
+        left_assoc_col = lop_left_col if lop_left_alias == assoc_alias else lop_right_col
+        # left id column is the one that references the left core table
+        left_id_col = lop_left_col if lop_left_alias == left_alias else lop_right_col
+
+        rop_left_alias, rop_left_col, _, rop_right_col = right_on_parsed
+        # right association column is the one that references the core table
+        right_assoc_col = rop_left_col if rop_left_alias == assoc_alias else rop_right_col
+        # right id column is the one that references the right core table
+        right_id_col = rop_right_col if rop_left_alias == assoc_alias else rop_left_col
+
+        if left_table not in self._tables or assoc_table not in self._tables or right_table not in self._tables:
+            return Response(RESPONSE_TYPE.ERROR, error_message="Unknown table in JOIN.")
+
+        row_limit = ast.limit.value if ast.limit else None
+        left_filter = self._rewrite_where_for_table(ast.where, left_alias, is_main_table=(left_alias == primary_alias))
+        assoc_filter = self._rewrite_where_for_table(
+            ast.where, assoc_alias, is_main_table=(assoc_alias == primary_alias)
+        )
+        right_filter = self._rewrite_where_for_table(
+            ast.where, right_alias, is_main_table=(right_alias == primary_alias)
+        )
+
+        left_rows = self._tables[left_table].select(
+            Select(targets=[Star()], from_table=Identifier(left_table), where=left_filter)
+        )
+        if left_rows.empty or left_id_col not in left_rows.columns:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+        left_id_list = left_rows[left_id_col].dropna().astype(str).tolist()
+        if not left_id_list:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+        # Fetch association rows filtered by left-side IDs
+        assoc_filters: List[FilterCondition] = [FilterCondition(left_assoc_col, FilterOperator.IN, left_id_list)]
+        if assoc_filter is not None:
+            try:
+                for filter_cond in extract_comparison_conditions(assoc_filter):
+                    assoc_filters.append(
+                        FilterCondition(filter_cond[1], FilterOperator(filter_cond[0].upper()), filter_cond[2])
+                    )
+            except Exception:
+                pass
+
+        assoc_rows = self._tables[assoc_table].list(conditions=assoc_filters)
+        if assoc_rows.empty or right_assoc_col not in assoc_rows.columns:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+        right_id_list = assoc_rows[right_assoc_col].dropna().astype(str).tolist()
+        if not right_id_list:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+        right_filters: List[FilterCondition] = [FilterCondition(right_id_col, FilterOperator.IN, right_id_list)]
+        if right_filter is not None:
+            try:
+                for filter_cond in extract_comparison_conditions(right_filter):
+                    right_filters.append(
+                        FilterCondition(filter_cond[1], FilterOperator(filter_cond[0].upper()), filter_cond[2])
+                    )
+            except Exception:
+                pass
+
+        right_rows = self._tables[right_table].list(conditions=right_filters)
+        if right_rows.empty:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame())
+
+        joined_df = assoc_rows.merge(
+            left_rows, left_on=left_assoc_col, right_on=left_id_col, how="inner", suffixes=("", f"_{left_alias}")
+        )
+        joined_df = joined_df.merge(
+            right_rows, left_on=right_assoc_col, right_on=right_id_col, how="inner", suffixes=("", f"_{right_alias}")
+        )
+
+        output_df = self._resolve_select_targets(ast.targets, joined_df, alias_map, join_entries)
+        if row_limit:
+            output_df = output_df.head(row_limit)
+        return Response(RESPONSE_TYPE.TABLE, data_frame=output_df)
+
+    def _resolve_select_targets(
+        self,
+        targets,
+        df: pd.DataFrame,
+        alias_map: Dict[str, str],
+        join_entries: List[Tuple[str, str, Any]],
+    ) -> pd.DataFrame:
+        """Resolve SELECT target list against a merged DataFrame.
+
+        Handles qualified names (alias.col), unqualified names, and Star.
+        Returns a DataFrame with only the requested columns (renamed to alias.col if needed).
+        """
+        if not targets:
+            return df
+
+        selected_cols: List[str] = []
+        renames: Dict[str, str] = {}
+        is_select_all = any(isinstance(target, Star) for target in targets)
+        if is_select_all:
+            return df
+
+        for target in targets:
+            if isinstance(target, Identifier):
+                output_alias = getattr(target, "alias", None)
+                ident_parts = target.parts
+                if len(ident_parts) >= 2:
+                    table_alias, col_name = ident_parts[0].lower(), ident_parts[-1]
+                    if col_name in df.columns:
+                        selected_cols.append(col_name)
+                        if output_alias:
+                            renames[col_name] = output_alias
+                    else:
+                        # Column may have been suffixed during merge (e.g. "id_co")
+                        suffixed_col = f"{col_name}_{table_alias}"
+                        if suffixed_col in df.columns:
+                            selected_cols.append(suffixed_col)
+                            renames[suffixed_col] = output_alias or col_name
+                else:
+                    col_name = ident_parts[0]
+                    if col_name in df.columns:
+                        selected_cols.append(col_name)
+                        if output_alias:
+                            renames[col_name] = output_alias
+
+        valid_cols = list(dict.fromkeys(c for c in selected_cols if c in df.columns))
+        if valid_cols:
+            df = df[valid_cols]
+        if renames:
+            df = df.rename(columns=renames)
+        return df.reset_index(drop=True)
+
+    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        """Return primary key metadata for the data catalog.
+
+        Every object table has ``id`` as its PK.
+        Association tables have a composite PK on both ID columns.
+        """
+        try:
+            self.connect()
+        except Exception as e:
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve primary keys: {e}")
+
+        all_tables = list(self._tables.keys())
+        if table_names:
+            all_tables = [t for t in all_tables if t in table_names]
+
+        rows: List[Dict[str, Any]] = []
+
+        for table_name in all_tables:
+            if table_name in self._association_tables:
+                id_cols = [c for c in self._tables[table_name].get_columns() if c.endswith("_id")]
+                for pos, col in enumerate(id_cols, start=1):
+                    rows.append(
+                        {
+                            "TABLE_NAME": table_name,
+                            "COLUMN_NAME": col,
+                            "ORDINAL_POSITION": pos,
+                            "CONSTRAINT_NAME": f"pk_{table_name}",
+                        }
+                    )
+            elif table_name == "deal_stages":
+                for pos, col in enumerate(["pipeline_id", "stage_id"], start=1):
+                    rows.append(
+                        {
+                            "TABLE_NAME": table_name,
+                            "COLUMN_NAME": col,
+                            "ORDINAL_POSITION": pos,
+                            "CONSTRAINT_NAME": f"pk_{table_name}",
+                        }
+                    )
+            else:
+                rows.append(
+                    {
+                        "TABLE_NAME": table_name,
+                        "COLUMN_NAME": "id",
+                        "ORDINAL_POSITION": 1,
+                        "CONSTRAINT_NAME": f"pk_{table_name}",
+                    }
+                )
+
+        df = (
+            pd.DataFrame(rows)
+            if rows
+            else pd.DataFrame(columns=["TABLE_NAME", "COLUMN_NAME", "ORDINAL_POSITION", "CONSTRAINT_NAME"])
+        )
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        """Return foreign key metadata for the data catalog.
+
+        Exposes two sets of relationships so the agent can generate correct JOINs:
+
+        1. Association table FKs — e.g. company_contacts.company_id → companies.id
+        2. Object-table primary_*_id FKs — e.g. contacts.primary_company_id → companies.id
+        """
+        try:
+            self.connect()
+        except Exception as e:
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Failed to retrieve foreign keys: {e}")
+
+        _ASSOC_TARGET_TO_TABLE = {
+            "companies": "companies",
+            "contacts": "contacts",
+            "deals": "deals",
+            "tickets": "tickets",
+        }
+
+        all_tables = set(self._tables.keys())
+        if table_names:
+            all_tables = set(table_names).intersection(all_tables)
+
+        rows: List[Dict[str, Any]] = []
+
+        # 1. Association table FKs — aggregated from each table's meta_get_foreign_keys()
+        for table_name in sorted(all_tables):
+            if table_name not in self._association_tables:
+                continue
+            table_obj = self._tables[table_name]
+            if hasattr(table_obj, "meta_get_foreign_keys"):
+                for fk in table_obj.meta_get_foreign_keys(table_name):
+                    col = fk.get("COLUMN_NAME")
+                    rows.append(
+                        {
+                            "CHILD_TABLE_NAME": fk.get("TABLE_NAME", table_name),
+                            "CHILD_COLUMN_NAME": col,
+                            "PARENT_TABLE_NAME": fk.get("REFERENCED_TABLE_NAME"),
+                            "PARENT_COLUMN_NAME": fk.get("REFERENCED_COLUMN_NAME", "id"),
+                            "CONSTRAINT_NAME": f"fk_{table_name}_{col}",
+                        }
+                    )
+
+        for table_name in sorted(all_tables):
+            if table_name in self._association_tables or table_name in self._non_object_tables:
+                continue
+            for target_type, column_name in PRIMARY_ASSOCIATIONS_CONFIG.get(table_name, []):
+                parent_table = _ASSOC_TARGET_TO_TABLE.get(target_type)
+                if parent_table is None:
+                    continue
+                rows.append(
+                    {
+                        "CHILD_TABLE_NAME": table_name,
+                        "CHILD_COLUMN_NAME": column_name,
+                        "PARENT_TABLE_NAME": parent_table,
+                        "PARENT_COLUMN_NAME": "id",
+                        "CONSTRAINT_NAME": f"fk_{table_name}_{column_name}",
+                    }
+                )
+
+        df = (
+            pd.DataFrame(rows)
+            if rows
+            else pd.DataFrame(
+                columns=[
+                    "CHILD_TABLE_NAME",
+                    "CHILD_COLUMN_NAME",
+                    "PARENT_TABLE_NAME",
+                    "PARENT_COLUMN_NAME",
+                    "CONSTRAINT_NAME",
+                ]
+            )
+        )
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)

@@ -1,2 +1,1 @@
-faiss-cpu>=1.7.4
-portalocker
+faiss-cpu==1.13.2

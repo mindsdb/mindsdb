@@ -77,6 +77,18 @@ jobs:
           platforms: linux/amd64
           push-cache: false
 
+  scan-keycloak:
+    runs-on: mdb-dev
+    needs: [ build ]
+    name: Scan cloud-cpu image
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mindsdb/github-actions/snyk-docker-scan@main
+        with:
+          image: 168681354662.dkr.ecr.us-east-1.amazonaws.com/mindsdb:${{ github.event.pull_request.head.sha }}-cloud-cpu
+          snyk-token: ${{ secrets.SNYK_TOKEN }}
+          dockerfile: docker/mindsdb.Dockerfile
+
   # Push cache layers to docker registry
   # This is separate to the build step so we can do other stuff in parallel
   build-cache:

@@ -15,16 +15,8 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
     ConfluenceWhiteboardsTable,
     ConfluenceTasksTable,
 )
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE,
-)
-from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition,
-    FilterOperator,
-    SortColumn,
-)
+from mindsdb.integrations.libs.response import TableResponse, HandlerStatusResponse as StatusResponse, RESPONSE_TYPE
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 
 
 class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
@@ -101,23 +93,47 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
             json=None,
         )
 
+    def test_check_connection_self_hosted_uses_server_api(self):
+        """
+        Test that the legacy self-hosted flag routes requests to the Confluence Server API.
+        """
+        self.handler.connection_data["is_selfHosted"] = True
+
+        mock_request = MagicMock()
+        mock_request.return_value = MagicMock(
+            status_code=200,
+            raise_for_status=lambda: None,
+            json=lambda: dict(results=[], _links=dict(next=None)),
+        )
+        self.mock_connect.return_value = MagicMock(request=mock_request)
+
+        response = self.handler.check_connection()
+
+        self.assertTrue(response.success)
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/rest/api/space",
+            params={"expand": "description.view,homepage", "limit": 1},
+            json=None,
+        )
+
     def test_get_tables(self):
         """
-        Test that the `get_tables` method returns a list of table names.
+        Test that the `get_tables` method returns a TableResponse with a list of table names.
         """
         response = self.handler.get_tables()
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertEqual(response.data_frame.columns.tolist(), ["table_name", "table_type"])
 
     def test_get_columns(self):
         """
-        Test that the `get_columns` method returns a list of columns for a table.
+        Test that the `get_columns` method returns a TableResponse with a list of columns for a table.
         """
         response = self.handler.get_columns("spaces")
 
-        self.assertIsInstance(response, Response)
+        self.assertIsInstance(response, TableResponse)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertEqual(response.data_frame.columns.tolist(), ["Field", "Type"])
 

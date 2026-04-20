@@ -35,18 +35,12 @@ HANDLERS_TO_INSTALL=(
     timescaledb
     mssql
     oracle
-    slack
     redshift
     bigquery
-    clickhouse
     web
     databricks
-    github
-    ms_teams
     statsforecast
     chromadb
-    confluence
-    elasticsearch
     agents
     kb
 )

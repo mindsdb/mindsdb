@@ -132,9 +132,17 @@ def build_oauth_components() -> tuple[IntrospectionTokenVerifier, AuthSettings] 
     if not oauth_cfg.get("enabled", False):
         return None, None
 
-    host = config["api"]["http"]["host"]
-    port = config["api"]["http"]["port"]
-    mcp_endpoint_url = f"http://{host}:{port}/mcp/streamable"
+    public_url = oauth_cfg.get("public_url", "").rstrip("/")
+    if public_url:
+        mcp_endpoint_url = f"{public_url}/mcp/streamable"
+    else:
+        host = config["api"]["http"]["host"]
+        port = config["api"]["http"]["port"]
+        # Bind-all addresses (0.0.0.0 / ::) are not valid client-facing destinations.
+        # Replace with loopback so the advertised resource_metadata URL is reachable.
+        if host in ("0.0.0.0", "", "::"):
+            host = "127.0.0.1"
+        mcp_endpoint_url = f"http://{host}:{port}/mcp/streamable"
 
     issuer_url = oauth_cfg.get("issuer_url", "").rstrip("/") + "/"
     client_id = oauth_cfg.get("client_id", "")

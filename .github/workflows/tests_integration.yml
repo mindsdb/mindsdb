@@ -33,9 +33,6 @@ on:
         required: false
         type: string
         default: "mdb-dev"
-    secrets:
-      OPENAI_API_KEY:
-        required: true
 
 defaults:
   run:

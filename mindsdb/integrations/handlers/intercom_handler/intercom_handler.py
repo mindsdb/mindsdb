@@ -1,5 +1,7 @@
 from mindsdb.integrations.handlers.intercom_handler.intercom_tables import Articles
 from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.bearer_passthrough import BearerPassthroughMixin
+from mindsdb.integrations.libs.passthrough_types import PassthroughRequest
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb_sql_parser import parse_sql
 import requests
@@ -12,7 +14,11 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class IntercomHandler(APIHandler):
+class IntercomHandler(APIHandler, BearerPassthroughMixin):
+    _bearer_token_arg = "access_token"
+    _base_url_default = "https://api.intercom.io"
+    _test_request = PassthroughRequest(method="GET", path="/me")
+
     def __init__(self, name: str, **kwargs) -> None:
         """initializer method
 
@@ -23,10 +29,10 @@ class IntercomHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-        self._baseUrl = 'https://api.intercom.io'
-        args = kwargs.get('connection_data', {})
-        if 'access_token' in args:
-            access_token = args['access_token']
+        args = kwargs.get('connection_data', {}) or {}
+        self.connection_data = args
+        self._baseUrl = args.get('base_url') or 'https://api.intercom.io'
+        access_token = args.get('access_token')
         self._headers = {
             "Accept": "application/json",
             "Authorization": f"Bearer {access_token}"

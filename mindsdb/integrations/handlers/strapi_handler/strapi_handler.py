@@ -1,5 +1,7 @@
 from mindsdb.integrations.handlers.strapi_handler.strapi_tables import StrapiTable
 from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.bearer_passthrough import BearerPassthroughMixin
+from mindsdb.integrations.libs.passthrough_types import PassthroughRequest
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities import log
@@ -11,7 +13,10 @@ import pandas as pd
 logger = log.getLogger(__name__)
 
 
-class StrapiHandler(APIHandler):
+class StrapiHandler(APIHandler, BearerPassthroughMixin):
+    _bearer_token_arg = "api_token"
+    _test_request = PassthroughRequest(method="GET", path="/api/users/me")
+
     def __init__(self, name: str, **kwargs) -> None:
         """initializer method
 
@@ -22,7 +27,8 @@ class StrapiHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-        args = kwargs.get('connection_data', {})
+        args = kwargs.get('connection_data', {}) or {}
+        self.connection_data = args
         if 'host' in args and 'port' in args:
             self._base_url = f"http://{args['host']}:{args['port']}"
         if 'api_token' in args:
@@ -32,6 +38,14 @@ class StrapiHandler(APIHandler):
         # Registers tables for each collections in strapi
         for pluralApiId in self._plural_api_ids:
             self._register_table(table_name=pluralApiId, table_class=StrapiTable(handler=self, name=pluralApiId))
+
+    def _build_base_url(self) -> str | None:
+        data = self._get_connection_data()
+        host = data.get("host")
+        port = data.get("port")
+        if host and port:
+            return f"http://{host}:{port}"
+        return super()._build_base_url()
 
     def check_connection(self) -> StatusResponse:
         """checking the connection

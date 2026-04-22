@@ -9,6 +9,8 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.bearer_passthrough import BearerPassthroughMixin
+from mindsdb.integrations.libs.passthrough_types import PassthroughRequest
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -18,12 +20,16 @@ from mindsdb.integrations.libs.response import (
 logger = log.getLogger(__name__)
 
 
-class AirtableHandler(DatabaseHandler):
+class AirtableHandler(DatabaseHandler, BearerPassthroughMixin):
     """
     This handler handles connection and execution of the Airtable statements.
     """
 
     name = 'airtable'
+
+    _bearer_token_arg = "api_key"
+    _base_url_default = "https://api.airtable.com/v0"
+    _test_request = PassthroughRequest(method="GET", path="/meta/whoami")
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -36,7 +42,7 @@ class AirtableHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = 'airtable'
-        self.connection_data = connection_data
+        self.connection_data = connection_data or {}
         self.kwargs = kwargs
 
         self.connection = None

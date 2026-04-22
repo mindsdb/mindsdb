@@ -1,5 +1,7 @@
 from mindsdb.integrations.handlers.instatus_handler.instatus_tables import StatusPages, Components
 from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.bearer_passthrough import BearerPassthroughMixin
+from mindsdb.integrations.libs.passthrough_types import PassthroughRequest
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
@@ -11,7 +13,11 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 logger = log.getLogger(__name__)
 
 
-class InstatusHandler(APIHandler):
+class InstatusHandler(APIHandler, BearerPassthroughMixin):
+    _bearer_token_arg = "api_key"
+    _base_url_default = "https://api.instatus.com"
+    _test_request = PassthroughRequest(method="GET", path="/v1/user")
+
     def __init__(self, name: str, **kwargs) -> None:
         """initializer method
 
@@ -19,12 +25,10 @@ class InstatusHandler(APIHandler):
             name (str): handler name
         """
         super().__init__(name)
-        self._base_url = "https://api.instatus.com"
-        self._api_key = None
-
-        args = kwargs.get('connection_data', {})
-        if 'api_key' in args:
-            self._api_key = args['api_key']
+        args = kwargs.get('connection_data', {}) or {}
+        self.connection_data = args
+        self._base_url = args.get('base_url') or "https://api.instatus.com"
+        self._api_key = args.get('api_key')
 
         self.connection = None
         self.is_connected = False

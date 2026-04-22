@@ -56,17 +56,22 @@ from mindsdb.integrations.handlers.sap_erp_handler.sap_erp_tables import (
 )
 
 from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.bearer_passthrough import BearerPassthroughMixin
+from mindsdb.integrations.libs.passthrough_types import PassthroughRequest
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
 
-class SAPERPHandler(APIHandler):
+class SAPERPHandler(APIHandler, BearerPassthroughMixin):
+    _bearer_token_arg = "api_key"
+    _test_request = PassthroughRequest(method="GET", path="/")
 
     def __init__(self, name: str, **kwargs) -> None:
         super().__init__(name)
         self.connection = None
         self.is_connected = False
-        self.api_key = kwargs.get("connection_data", {}).get("api_key", "")
-        self.base_url = kwargs.get("connection_data", {}).get("base_url", "")
+        self.connection_data = kwargs.get("connection_data", {}) or {}
+        self.api_key = self.connection_data.get("api_key", "")
+        self.base_url = self.connection_data.get("base_url", "")
         _tables = [
             AddressEmailAddressTable,
             AddressFaxNumberTable,

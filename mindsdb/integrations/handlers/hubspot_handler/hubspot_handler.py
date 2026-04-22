@@ -203,7 +203,6 @@ class HubspotHandler(MetaAPIHandler):
                     datasource_name=self.name,
                 )
                 logger.info("Attempting to obtain access token via OAuth flow")
-                logger.debug(oauth_manager)
                 self.connection = HubSpot(access_token=oauth_manager.get_access_token())
 
             else:

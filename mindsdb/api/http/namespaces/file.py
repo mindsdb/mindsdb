@@ -219,7 +219,12 @@ class File(Resource):
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:
                     return http_error(400, "Error getting file", f"Got status code: {r.status_code}")
-                file_path = os.path.join(temp_dir_path, data["file"])
+
+                temp_dir_real = os.path.realpath(temp_dir_path)
+                file_path = os.path.realpath(os.path.join(temp_dir_real, data["file"]))
+                if os.path.commonpath([file_path, temp_dir_real]) != temp_dir_real:
+                    return http_error(400, "Invalid file path", f"Wrong file name: {data['file']}")
+
                 with open(file_path, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)

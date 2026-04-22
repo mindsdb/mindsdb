@@ -239,6 +239,12 @@ class File(Resource):
         original_file_name = clear_filename(data.get("original_file_name"))
 
         file_path = os.path.join(temp_dir_path, data["file"])
+        temp_dir_real = os.path.realpath(temp_dir_path)
+        file_path_real = os.path.realpath(file_path)
+        if os.path.commonpath([file_path_real, temp_dir_real]) != temp_dir_real:
+            shutil.rmtree(temp_dir_path, ignore_errors=True)
+            return http_error(400, "Invalid file path", f"Wrong file name: {data['file']}")
+        file_path = file_path_real
         lp = file_path.lower()
         if lp.endswith((".zip", ".tar.gz")):
             try:

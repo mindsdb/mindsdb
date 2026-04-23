@@ -113,7 +113,14 @@ class BaseLLMReranker(BaseModel):
                 if not openai_api_key:
                     raise ValueError(f"OpenAI API key not found in environment variable {api_key_var}")
 
-                base_url = self.base_url or DEFAULT_LLM_ENDPOINT
+                # For Ollama, the default endpoint is the local Ollama server, not OpenAI.
+                # Fall back to provider-specific defaults so that users who omit base_url
+                # get a working configuration out of the box. Fixes gh-11952.
+                if self.provider == 'ollama':
+                    default_base_url = 'http://localhost:11434/v1'
+                else:
+                    default_base_url = DEFAULT_LLM_ENDPOINT
+                base_url = self.base_url or default_base_url
                 self.client = AsyncOpenAI(
                     api_key=openai_api_key, base_url=base_url, timeout=self.request_timeout, max_retries=2
                 )

@@ -404,7 +404,7 @@ class DatabricksHandler(MetaDatabaseHandler):
             try:
                 cursor.execute(query)
                 result = cursor.fetchall()
-                if result:
+                if cursor.description:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description]),
@@ -465,6 +465,8 @@ class DatabricksHandler(MetaDatabaseHandler):
                 {all_filter}
         """
         result = self.native_query(query)
+        if result.resp_type != RESPONSE_TYPE.TABLE or result.data_frame is None:
+            return result
         df = result.data_frame
         result.data_frame = df.rename(columns={col: col.upper() for col in df.columns})
         return result

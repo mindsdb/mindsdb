@@ -20,6 +20,7 @@ def get_file():
     )
 
 
+@pytest.mark.skipif(os.environ.get("MINDSDB_COMMUNITY_HANDLERS") != "true", reason="BYOM is not enabled")
 def test_disabled_byom(client):
     """Test disabled byom"""
     config._config["byom"]["enabled"] = False
@@ -35,6 +36,7 @@ def test_disabled_byom(client):
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
+@pytest.mark.skipif(os.environ.get("MINDSDB_COMMUNITY_HANDLERS") != "true", reason="BYOM is not enabled")
 def test_path_traversal(client):
     """Test uploading a file"""
     config._config["byom"]["enabled"] = True
@@ -53,6 +55,7 @@ def test_path_traversal(client):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(os.environ.get("MINDSDB_COMMUNITY_HANDLERS") != "true", reason="BYOM is not enabled")
 def test_conflict(client):
     """Test that it is not possible to create two engins with the same name"""
     config._config["byom"]["enabled"] = True

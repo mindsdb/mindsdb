@@ -7,7 +7,7 @@ In particular, three big components are included:
       normally associated with a DB handler (e.g. `native_query`, `get_tables`), as well as other ML-specific behaviors,
       like `learn()` or `predict()`. Note that while these still have to be implemented at the engine level, the burden
       on that class is lesser given that it only needs to return a pandas DataFrame. It's this class that will take said
-      output and format it into the HandlerResponse instance that MindsDB core expects.
+      output and format it into the DataHandlerResponse instance that MindsDB core expects.
 
     - `learn_process` method: handles async dispatch of the `learn` method in an engine, as well as registering all
       models inside of the internal MindsDB registry.

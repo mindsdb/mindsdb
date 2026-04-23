@@ -1,13 +1,21 @@
 import unittest
+
+import pytest
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_render import MongodbRender
-from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_parser import MongodbParser
+try:
+    from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_render import MongodbRender
+    from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_parser import MongodbParser
+
+    MONGODB_HANDLER_AVAILABLE = True
+except ImportError:
+    MONGODB_HANDLER_AVAILABLE = False
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
 
 
+@pytest.mark.skipif(not MONGODB_HANDLER_AVAILABLE, reason="mongodb_handler not installed (community handler)")
 class TestMongoDBConverters(unittest.TestCase):
     def test_ast_to_mongo(self):
         sql = """
@@ -105,6 +113,7 @@ class TestMongoDBConverters(unittest.TestCase):
         assert MongodbParser().from_string(mql).to_string() == expected_mql
 
 
+@pytest.mark.skipif(not MONGODB_HANDLER_AVAILABLE, reason="mongodb_handler not installed (community handler)")
 class TestMongoDBHandler(unittest.TestCase):
     def test_mongo_handler(self):
         # TODO how to test mongo handler

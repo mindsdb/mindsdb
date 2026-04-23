@@ -281,11 +281,11 @@ class MindsDBQuery:
 
         query_traversal(ast_query, _check_f)
 
-    def get_usable_table_names(self):
+    def get_usable_table_names(self, lazy=True):
         if not self.tables:
             # no tables allowed
             return []
-        if not self.tables.has_wildcard:
+        if not self.tables.has_wildcard and lazy:
             return self.tables.items
 
         result_tables = []
@@ -330,16 +330,19 @@ class MindsDBQuery:
 
         return result_tables
 
-    def get_usable_knowledge_base_names(self):
+    def get_usable_knowledge_base_names(self, lazy=True):
         if not self.knowledge_bases:
             # no tables allowed
             return []
-        if not self.knowledge_bases.has_wildcard:
+        if not self.knowledge_bases.has_wildcard and lazy:
             return self.knowledge_bases.items
 
         try:
             # Query to get all knowledge bases
-            ast_query = Show(category="Knowledge Bases")
+            ast_query = Select(
+                targets=[Identifier("PROJECT"), Identifier("NAME")],
+                from_table=Identifier(parts=["information_schema", "knowledge_bases"]),
+            )
             result = self.command_executor.execute_command(ast_query)
 
             kb_names = []

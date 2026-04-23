@@ -458,7 +458,10 @@ def filter_dataframe(df: pd.DataFrame, conditions: list, raw_conditions=None, or
                 else:
                     item = ast.BinaryOperation(op=op, args=[arg1_identifier, ast.Constant(arg2)])
             else:
-                item = ast.BinaryOperation(op=op, args=[arg1_identifier, ast.Constant(arg2)])
+                if isinstance(arg2, ASTNode):
+                    item = ast.BinaryOperation(op=op, args=[arg1_identifier, arg2])
+                else:
+                    item = ast.BinaryOperation(op=op, args=[arg1_identifier, ast.Constant(arg2)])
 
         if where_query is None:
             where_query = item

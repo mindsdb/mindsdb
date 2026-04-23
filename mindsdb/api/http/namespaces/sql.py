@@ -88,6 +88,7 @@ class Query(Resource):
                     handler = mysql_proxy.session.integration_controller.get_data_handler(db)
                     raw_result = handler.native_query(query)
                 except Exception as e:
+                    error_type = "unexpected"
                     result = SQLAnswer(
                         resp_type=SQL_RESPONSE_TYPE.ERROR,
                         error_code=0,
@@ -96,6 +97,7 @@ class Query(Resource):
                 else:
                     if raw_result.type == SQL_RESPONSE_TYPE.ERROR:
                         # raw_result will be ErrorResponse.
+                        error_type = "expected"
                         result = SQLAnswer(
                             resp_type=SQL_RESPONSE_TYPE.ERROR,
                             error_code=0,

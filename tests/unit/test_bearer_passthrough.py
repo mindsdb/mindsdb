@@ -89,9 +89,9 @@ class BearerPassthroughHeaderFilteringTests(unittest.TestCase):
     @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
     def test_caller_cannot_override_authorization(self, mock_request):
         mock_request.return_value = _mock_response()
-        self.handler.api_passthrough(PassthroughRequest(
-            "GET", "/x", headers={"Authorization": "Bearer hijack", "Cookie": "s=1"}
-        ))
+        self.handler.api_passthrough(
+            PassthroughRequest("GET", "/x", headers={"Authorization": "Bearer hijack", "Cookie": "s=1"})
+        )
         outgoing = mock_request.call_args.kwargs["headers"]
         self.assertEqual(outgoing["Authorization"], "Bearer secret-token-abcdef1234567890")
         self.assertNotIn("Cookie", outgoing)
@@ -99,9 +99,7 @@ class BearerPassthroughHeaderFilteringTests(unittest.TestCase):
     @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
     def test_proxy_headers_stripped(self, mock_request):
         mock_request.return_value = _mock_response()
-        self.handler.api_passthrough(PassthroughRequest(
-            "GET", "/x", headers={"Proxy-Authorization": "hijack"}
-        ))
+        self.handler.api_passthrough(PassthroughRequest("GET", "/x", headers={"Proxy-Authorization": "hijack"}))
         outgoing = mock_request.call_args.kwargs["headers"]
         self.assertNotIn("Proxy-Authorization", outgoing)
 
@@ -118,21 +116,25 @@ class BearerPassthroughHeaderFilteringTests(unittest.TestCase):
 
 class BearerPassthroughHostAllowlistTests(unittest.TestCase):
     def test_rejects_host_outside_allowlist(self):
-        handler = _FakeHandler({
-            "api_key": "t",
-            "base_url": "https://api.example.com",
-            "allowed_hosts": ["api.example.com"],
-        })
+        handler = _FakeHandler(
+            {
+                "api_key": "t",
+                "base_url": "https://api.example.com",
+                "allowed_hosts": ["api.example.com"],
+            }
+        )
         # Direct host check using a bad URL
         with self.assertRaises(HostNotAllowedError):
             handler._check_host_allowed("evil.com")
 
     def test_wildcard_allows_any_host(self):
-        handler = _FakeHandler({
-            "api_key": "t",
-            "base_url": "https://api.example.com",
-            "allowed_hosts": ["*"],
-        })
+        handler = _FakeHandler(
+            {
+                "api_key": "t",
+                "base_url": "https://api.example.com",
+                "allowed_hosts": ["*"],
+            }
+        )
         handler._check_host_allowed("evil.com")  # must not raise
 
     def test_private_ip_rejected_by_default(self):
@@ -141,11 +143,13 @@ class BearerPassthroughHostAllowlistTests(unittest.TestCase):
             handler._check_host_allowed("10.0.0.1")
 
     def test_private_ip_allowed_when_explicitly_listed(self):
-        handler = _FakeHandler({
-            "api_key": "t",
-            "base_url": "http://10.0.0.1",
-            "allowed_hosts": ["10.0.0.1"],
-        })
+        handler = _FakeHandler(
+            {
+                "api_key": "t",
+                "base_url": "http://10.0.0.1",
+                "allowed_hosts": ["10.0.0.1"],
+            }
+        )
         # Explicitly allowlisted private IP should still be rejected — the
         # mixin treats explicit private-IP allowlisting as a foot-gun that
         # requires the "*" escape hatch. Document this behavior.
@@ -153,11 +157,13 @@ class BearerPassthroughHostAllowlistTests(unittest.TestCase):
             handler._check_host_allowed("10.0.0.1")
 
     def test_loopback_rejected_with_wildcard_when_asterisk_not_used(self):
-        handler = _FakeHandler({
-            "api_key": "t",
-            "base_url": "http://127.0.0.1",
-            "allowed_hosts": ["127.0.0.1"],
-        })
+        handler = _FakeHandler(
+            {
+                "api_key": "t",
+                "base_url": "http://127.0.0.1",
+                "allowed_hosts": ["127.0.0.1"],
+            }
+        )
         with self.assertRaises(HostNotAllowedError):
             handler._check_host_allowed("127.0.0.1")
 
@@ -191,13 +197,20 @@ class BearerPassthroughSecretScrubTests(unittest.TestCase):
     @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
     def test_token_scrubbed_from_json_body(self, mock_request):
         token = "secret-token-abcdef1234567890"
-        body = ('{"error":"Invalid token ' + token + '"}').encode("utf-8")
+        # Non-UTF-8 byte (0xFF) positioned adjacent to the token. Spec §7.6
+        # mandates byte-level scrubbing: if the scrub ran after a
+        # errors="replace" decode, U+FFFD insertions would risk fragmenting
+        # a token mid-match. Byte-level scrub avoids that entirely.
+        body = b'{"error":"Invalid token ' + token.encode("utf-8") + b' \xff trailing"}'
         handler = _FakeHandler({"api_key": token})
-        mock_request.return_value = _mock_response(body=body)
+        # Use plain-text content-type so the non-UTF-8 body survives without
+        # a json.loads detour; the scrub is still invoked.
+        mock_request.return_value = _mock_response(body=body, content_type="text/plain")
 
         resp = handler.api_passthrough(PassthroughRequest("GET", "/x"))
+        # Token must not survive anywhere in the body.
         self.assertNotIn(token, str(resp.body))
-        self.assertIn(REDACTED_SENTINEL, resp.body["error"])
+        self.assertIn(REDACTED_SENTINEL, str(resp.body))
 
     @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
     def test_token_scrubbed_from_headers(self, mock_request):
@@ -214,13 +227,13 @@ class BearerPassthroughSecretScrubTests(unittest.TestCase):
     def test_long_default_header_values_scrubbed(self, mock_request):
         token = "secret-token-abcdef1234567890"
         long_secret = "x" * 32
-        handler = _FakeHandler({
-            "api_key": token,
-            "default_headers": {"X-Api-Secondary": long_secret},
-        })
-        mock_request.return_value = _mock_response(
-            body=('{"echoed":"' + long_secret + '"}').encode("utf-8")
+        handler = _FakeHandler(
+            {
+                "api_key": token,
+                "default_headers": {"X-Api-Secondary": long_secret},
+            }
         )
+        mock_request.return_value = _mock_response(body=('{"echoed":"' + long_secret + '"}').encode("utf-8"))
         resp = handler.api_passthrough(PassthroughRequest("GET", "/x"))
         self.assertEqual(resp.body["echoed"], REDACTED_SENTINEL)
 
@@ -251,6 +264,36 @@ class BearerPassthroughTestEndpointTests(unittest.TestCase):
         result = handler.test_passthrough()
         self.assertFalse(result["ok"])
         self.assertEqual(result["error_code"], "not_implemented")
+
+
+class BearerPassthroughAllowedMethodsTests(unittest.TestCase):
+    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    def test_rejects_method_not_in_allowed_methods(self, mock_request):
+        handler = _FakeHandler(
+            {
+                "api_key": "t",
+                "allowed_methods": ["GET"],
+            }
+        )
+        mock_request.return_value = _mock_response()
+
+        with self.assertRaises(PassthroughValidationError) as cm:
+            handler.api_passthrough(PassthroughRequest("POST", "/x"))
+
+        self.assertEqual(cm.exception.error_code, "method_not_allowed")
+        self.assertEqual(cm.exception.http_status, 405)
+        mock_request.assert_not_called()
+
+    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    def test_all_methods_allowed_when_config_absent(self, mock_request):
+        handler = _FakeHandler({"api_key": "t"})
+        mock_request.return_value = _mock_response()
+
+        for method in ("GET", "POST", "PUT", "PATCH", "DELETE"):
+            mock_request.reset_mock()
+            mock_request.return_value = _mock_response()
+            handler.api_passthrough(PassthroughRequest(method, "/x"))
+            self.assertEqual(mock_request.call_args[0][0], method)
 
 
 if __name__ == "__main__":

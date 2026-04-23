@@ -196,6 +196,19 @@ class BearerPassthroughMixin:
                 text = text.replace(s, REDACTED_SENTINEL)
         return text
 
+    def _scrub_bytes(self, data: bytes, secrets: list[str]) -> bytes:
+        """Byte-level secret scrub (spec §7.6).
+
+        Replacing on raw bytes before decoding prevents U+FFFD substitutions
+        from `errors="replace"` from fragmenting a secret and letting part of
+        it survive the scrub.
+        """
+        sentinel = REDACTED_SENTINEL.encode("utf-8")
+        for s in secrets:
+            if s:
+                data = data.replace(s.encode("utf-8"), sentinel)
+        return data
+
     def _filter_response_headers(self, headers: dict[str, str], secrets: list[str]) -> dict[str, str]:
         filtered: dict[str, str] = {}
         for name, value in headers.items():
@@ -229,19 +242,34 @@ class BearerPassthroughMixin:
         if method not in ALLOWED_METHODS:
             raise PassthroughValidationError(f"method '{req.method}' is not allowed")
 
+        connection_data = self._get_connection_data()
+        allowed_methods_cfg = connection_data.get("allowed_methods")
+        if allowed_methods_cfg is not None:
+            if not isinstance(allowed_methods_cfg, list):
+                raise PassthroughConfigError("'allowed_methods' must be a list of HTTP method names")
+            allowed_upper = {str(m).upper() for m in allowed_methods_cfg}
+            if method not in allowed_upper:
+                raise PassthroughValidationError(
+                    f"method '{method}' is not permitted by this datasource",
+                    error_code="method_not_allowed",
+                    http_status=405,
+                )
+
+        request_bytes = 0
         if req.body is not None:
             # requests will serialize dict bodies to JSON; we cap on the
             # serialized length. For raw strings / bytes we cap directly.
             import json as _json
 
             if isinstance(req.body, (dict, list)):
-                body_bytes = _json.dumps(req.body).encode("utf-8")
+                body_bytes_for_size = _json.dumps(req.body).encode("utf-8")
             elif isinstance(req.body, (bytes, bytearray)):
-                body_bytes = bytes(req.body)
+                body_bytes_for_size = bytes(req.body)
             else:
-                body_bytes = str(req.body).encode("utf-8")
-            if len(body_bytes) > PASSTHROUGH_MAX_REQUEST_BYTES:
+                body_bytes_for_size = str(req.body).encode("utf-8")
+            if len(body_bytes_for_size) > PASSTHROUGH_MAX_REQUEST_BYTES:
                 raise PassthroughValidationError(f"request body exceeded {PASSTHROUGH_MAX_REQUEST_BYTES} bytes")
+            request_bytes = len(body_bytes_for_size)
 
         url, hostname = self._resolve_url(req.path)
         self._check_host_allowed(hostname)
@@ -260,18 +288,14 @@ class BearerPassthroughMixin:
             else:
                 request_kwargs["data"] = req.body
 
-        logger.debug(
-            "passthrough %s %s (host=%s datasource=%s)",
-            method,
-            req.path,
-            hostname,
-            getattr(self, "name", "?"),
-        )
-
+        datasource_name = getattr(self, "name", None) or "?"
+        start = time.monotonic()
         response = requests.request(method, url, **request_kwargs)
         body_bytes = self._read_capped_body(response)
+        duration_ms = int((time.monotonic() - start) * 1000)
 
         secrets = self._secrets_for_scrub()
+        body_bytes = self._scrub_bytes(body_bytes, secrets)
         content_type = response.headers.get("Content-Type", "") or ""
         out_headers = self._filter_response_headers(dict(response.headers), secrets)
 
@@ -279,14 +303,23 @@ class BearerPassthroughMixin:
         if "application/json" in content_type.lower():
             try:
                 text = body_bytes.decode("utf-8", errors="replace")
-                text = self._scrub(text, secrets)
                 import json as _json
 
                 body = _json.loads(text) if text else None
             except ValueError:
-                body = self._scrub(body_bytes.decode("utf-8", errors="replace"), secrets)
+                body = body_bytes.decode("utf-8", errors="replace")
         else:
-            body = self._scrub(body_bytes.decode("utf-8", errors="replace"), secrets)
+            body = body_bytes.decode("utf-8", errors="replace")
+
+        self._log_passthrough_call(
+            method=method,
+            path=req.path,
+            datasource_name=datasource_name,
+            upstream_status_code=response.status_code,
+            request_bytes=request_bytes,
+            response_bytes=len(body_bytes),
+            duration_ms=duration_ms,
+        )
 
         return PassthroughResponse(
             status_code=response.status_code,
@@ -294,6 +327,47 @@ class BearerPassthroughMixin:
             body=body,
             content_type=content_type.split(";", 1)[0].strip() or None,
         )
+
+    def _log_passthrough_call(
+        self,
+        *,
+        method: str,
+        path: str,
+        datasource_name: str,
+        upstream_status_code: int,
+        request_bytes: int,
+        response_bytes: int,
+        duration_ms: int,
+    ) -> None:
+        """Emit one audit line per passthrough call (spec §7.8).
+
+        Never logs headers or bodies. user_id / org_id are pulled from the
+        MindsDB request context when available; in test/dev invocations
+        where the context is not populated, they are omitted.
+        """
+        fields: dict[str, Any] = {
+            "method": method,
+            "path": path,
+            "datasource_name": datasource_name,
+            "upstream_status_code": upstream_status_code,
+            "request_bytes": request_bytes,
+            "response_bytes": response_bytes,
+            "duration_ms": duration_ms,
+        }
+        # TODO: org_id lives in Minds; when the passthrough is called via the
+        # Minds gateway the org scope should be propagated and logged here.
+        try:
+            from mindsdb.utilities.context import context as _ctx
+
+            user_id = getattr(_ctx, "user_id", None)
+            company_id = getattr(_ctx, "company_id", None)
+            if user_id is not None:
+                fields["user_id"] = user_id
+            if company_id is not None:
+                fields["company_id"] = company_id
+        except Exception:
+            pass
+        logger.debug("passthrough %s", fields)
 
     def test_passthrough(self) -> dict[str, Any]:
         """Run the handler's canonical sanity-check call (see §6.1a).

@@ -276,8 +276,15 @@ class PassthroughMixin:
         allowed_methods_cfg = connection_data.get("allowed_methods")
         if allowed_methods_cfg is not None:
             if not isinstance(allowed_methods_cfg, list):
-                raise PassthroughConfigError("'allowed_methods' must be a list of HTTP method names")
-            allowed_upper = {str(m).upper() for m in allowed_methods_cfg}
+                raise PassthroughConfigError("'allowed_methods' must be a list of HTTP method strings")
+            if not all(isinstance(m, str) for m in allowed_methods_cfg):
+                raise PassthroughConfigError("'allowed_methods' must be a list of HTTP method strings")
+            allowed_upper = {m.upper() for m in allowed_methods_cfg}
+            unknown = sorted(allowed_upper - ALLOWED_METHODS)
+            if unknown:
+                raise PassthroughConfigError(
+                    f"'allowed_methods' contains unsupported verbs: {unknown}. Allowed: {sorted(ALLOWED_METHODS)}"
+                )
             if method not in allowed_upper:
                 raise PassthroughValidationError(
                     f"method '{method}' is not permitted by this datasource",
@@ -397,6 +404,9 @@ class PassthroughMixin:
                 fields["company_id"] = company_id
         except Exception:
             pass
+        # DEBUG level per team decision: per-request audit logging at
+        # info level happens in Minds at the HTTP layer. This log is
+        # intended for mindsdb-side troubleshooting only.
         logger.debug("passthrough %s", fields)
 
     def test_passthrough(self) -> dict[str, Any]:

@@ -237,6 +237,26 @@ class PassthroughSecretScrubTests(unittest.TestCase):
         resp = handler.api_passthrough(PassthroughRequest("GET", "/x"))
         self.assertEqual(resp.body["echoed"], REDACTED_SENTINEL)
 
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
+    def test_token_scrubbed_in_nested_json_without_corrupting_structure(self, mock_request):
+        token = "secret-token-abcdef1234567890"
+        handler = _FakeHandler({"api_key": token})
+        body = ('{"data": {"nested": {"token": "' + token + '"}}}').encode("utf-8")
+        mock_request.return_value = _mock_response(body=body)
+
+        resp = handler.api_passthrough(PassthroughRequest("GET", "/x"))
+
+        # Structure preserved: dict-of-dict-of-dict with the expected keys.
+        self.assertIsInstance(resp.body, dict)
+        self.assertIsInstance(resp.body["data"], dict)
+        self.assertIsInstance(resp.body["data"]["nested"], dict)
+        self.assertEqual(set(resp.body.keys()), {"data"})
+        self.assertEqual(set(resp.body["data"].keys()), {"nested"})
+        self.assertEqual(set(resp.body["data"]["nested"].keys()), {"token"})
+        # Value redacted at the leaf; token does not survive anywhere.
+        self.assertEqual(resp.body["data"]["nested"]["token"], REDACTED_SENTINEL)
+        self.assertNotIn(token, str(resp.body))
+
 
 class PassthroughTestEndpointTests(unittest.TestCase):
     @patch("mindsdb.integrations.libs.passthrough.requests.request")
@@ -294,6 +314,41 @@ class PassthroughAllowedMethodsTests(unittest.TestCase):
             mock_request.return_value = _mock_response()
             handler.api_passthrough(PassthroughRequest(method, "/x"))
             self.assertEqual(mock_request.call_args[0][0], method)
+
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
+    def test_string_allowed_methods_raises_config_error(self, mock_request):
+        handler = _FakeHandler({"api_key": "t", "allowed_methods": "GET"})
+
+        with self.assertRaises(PassthroughConfigError):
+            handler.api_passthrough(PassthroughRequest("GET", "/x"))
+
+        mock_request.assert_not_called()
+
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
+    def test_lowercase_allowed_methods_normalized(self, mock_request):
+        handler = _FakeHandler({"api_key": "t", "allowed_methods": ["get"]})
+        mock_request.return_value = _mock_response()
+
+        # GET passes after uppercase normalization.
+        handler.api_passthrough(PassthroughRequest("GET", "/x"))
+        self.assertEqual(mock_request.call_args[0][0], "GET")
+
+        mock_request.reset_mock()
+        # POST is rejected with method_not_allowed.
+        with self.assertRaises(PassthroughValidationError) as cm:
+            handler.api_passthrough(PassthroughRequest("POST", "/x"))
+        self.assertEqual(cm.exception.error_code, "method_not_allowed")
+        self.assertEqual(cm.exception.http_status, 405)
+        mock_request.assert_not_called()
+
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
+    def test_unknown_verb_in_allowed_methods_raises_config_error(self, mock_request):
+        handler = _FakeHandler({"api_key": "t", "allowed_methods": ["GET", "TRACE"]})
+
+        with self.assertRaises(PassthroughConfigError) as cm:
+            handler.api_passthrough(PassthroughRequest("GET", "/x"))
+        self.assertIn("TRACE", str(cm.exception))
+        mock_request.assert_not_called()
 
 
 class PassthroughAuthHeaderOverrideTests(unittest.TestCase):

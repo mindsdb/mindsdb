@@ -2,7 +2,7 @@
 Request/response dataclasses and error types for the REST passthrough path.
 
 These are the payloads exchanged between the HTTP layer and
-`BearerPassthroughMixin`. They are intentionally framework-agnostic so the
+`PassthroughMixin`. They are intentionally framework-agnostic so the
 mixin can be unit-tested without Flask.
 """
 
@@ -14,7 +14,8 @@ ALLOWED_METHODS = frozenset({"GET", "POST", "PUT", "PATCH", "DELETE"})
 
 # Hop-by-hop and auth-related headers that must never come from the caller.
 FORBIDDEN_REQUEST_HEADERS = frozenset(
-    h.lower() for h in (
+    h.lower()
+    for h in (
         "authorization",
         "host",
         "cookie",
@@ -25,7 +26,8 @@ FORBIDDEN_REQUEST_HEADERS = frozenset(
 
 # Hop-by-hop response headers stripped before returning to the caller.
 HOP_BY_HOP_RESPONSE_HEADERS = frozenset(
-    h.lower() for h in (
+    h.lower()
+    for h in (
         "connection",
         "keep-alive",
         "proxy-authenticate",

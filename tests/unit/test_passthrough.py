@@ -1,10 +1,10 @@
-"""Unit tests for BearerPassthroughMixin."""
+"""Unit tests for PassthroughMixin."""
 
 import unittest
 from unittest.mock import MagicMock, patch
 
-from mindsdb.integrations.libs.bearer_passthrough import (
-    BearerPassthroughMixin,
+from mindsdb.integrations.libs.passthrough import (
+    PassthroughMixin,
     REDACTED_SENTINEL,
 )
 from mindsdb.integrations.libs.passthrough_types import (
@@ -15,7 +15,7 @@ from mindsdb.integrations.libs.passthrough_types import (
 )
 
 
-class _FakeHandler(BearerPassthroughMixin):
+class _FakeHandler(PassthroughMixin):
     """Minimal handler stub for exercising the mixin."""
 
     _bearer_token_arg = "api_key"
@@ -37,11 +37,11 @@ def _mock_response(status_code=200, body=b'{"ok":true}', headers=None, content_t
     return resp
 
 
-class BearerPassthroughHappyPathTests(unittest.TestCase):
+class PassthroughHappyPathTests(unittest.TestCase):
     def setUp(self):
         self.handler = _FakeHandler({"api_key": "secret-token-abcdef1234567890"})
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_injects_bearer_and_uses_default_base_url(self, mock_request):
         mock_request.return_value = _mock_response()
         resp = self.handler.api_passthrough(PassthroughRequest("GET", "/me"))
@@ -55,26 +55,26 @@ class BearerPassthroughHappyPathTests(unittest.TestCase):
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer secret-token-abcdef1234567890")
         self.assertEqual(kwargs["headers"]["X-Minds-Passthrough"], "1")
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_user_base_url_overrides_default(self, mock_request):
         self.handler.connection_data["base_url"] = "https://api.eu.example.com"
         mock_request.return_value = _mock_response()
         self.handler.api_passthrough(PassthroughRequest("GET", "/me"))
         self.assertEqual(mock_request.call_args[0][1], "https://api.eu.example.com/me")
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_query_params_forwarded(self, mock_request):
         mock_request.return_value = _mock_response()
         self.handler.api_passthrough(PassthroughRequest("GET", "/x", query={"a": "1"}))
         self.assertEqual(mock_request.call_args.kwargs["params"], {"a": "1"})
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_json_body_forwarded(self, mock_request):
         mock_request.return_value = _mock_response()
         self.handler.api_passthrough(PassthroughRequest("POST", "/x", body={"name": "foo"}))
         self.assertEqual(mock_request.call_args.kwargs["json"], {"name": "foo"})
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_default_headers_merged(self, mock_request):
         self.handler.connection_data["default_headers"] = {"Accept": "application/json"}
         mock_request.return_value = _mock_response()
@@ -82,11 +82,11 @@ class BearerPassthroughHappyPathTests(unittest.TestCase):
         self.assertEqual(mock_request.call_args.kwargs["headers"]["Accept"], "application/json")
 
 
-class BearerPassthroughHeaderFilteringTests(unittest.TestCase):
+class PassthroughHeaderFilteringTests(unittest.TestCase):
     def setUp(self):
         self.handler = _FakeHandler({"api_key": "secret-token-abcdef1234567890"})
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_caller_cannot_override_authorization(self, mock_request):
         mock_request.return_value = _mock_response()
         self.handler.api_passthrough(
@@ -96,14 +96,14 @@ class BearerPassthroughHeaderFilteringTests(unittest.TestCase):
         self.assertEqual(outgoing["Authorization"], "Bearer secret-token-abcdef1234567890")
         self.assertNotIn("Cookie", outgoing)
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_proxy_headers_stripped(self, mock_request):
         mock_request.return_value = _mock_response()
         self.handler.api_passthrough(PassthroughRequest("GET", "/x", headers={"Proxy-Authorization": "hijack"}))
         outgoing = mock_request.call_args.kwargs["headers"]
         self.assertNotIn("Proxy-Authorization", outgoing)
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_hop_by_hop_response_headers_stripped(self, mock_request):
         mock_request.return_value = _mock_response(
             headers={"Connection": "close", "X-Safe": "1", "Transfer-Encoding": "chunked"}
@@ -114,7 +114,7 @@ class BearerPassthroughHeaderFilteringTests(unittest.TestCase):
         self.assertEqual(resp.headers.get("X-Safe"), "1")
 
 
-class BearerPassthroughHostAllowlistTests(unittest.TestCase):
+class PassthroughHostAllowlistTests(unittest.TestCase):
     def test_rejects_host_outside_allowlist(self):
         handler = _FakeHandler(
             {
@@ -168,7 +168,7 @@ class BearerPassthroughHostAllowlistTests(unittest.TestCase):
             handler._check_host_allowed("127.0.0.1")
 
 
-class BearerPassthroughValidationTests(unittest.TestCase):
+class PassthroughValidationTests(unittest.TestCase):
     def test_missing_bearer_raises(self):
         handler = _FakeHandler({})  # no api_key
         with self.assertRaises(PassthroughConfigError):
@@ -193,8 +193,8 @@ class BearerPassthroughValidationTests(unittest.TestCase):
             handler.api_passthrough(PassthroughRequest("TRACE", "/me"))
 
 
-class BearerPassthroughSecretScrubTests(unittest.TestCase):
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+class PassthroughSecretScrubTests(unittest.TestCase):
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_token_scrubbed_from_json_body(self, mock_request):
         token = "secret-token-abcdef1234567890"
         # Non-UTF-8 byte (0xFF) positioned adjacent to the token. Spec §7.6
@@ -212,7 +212,7 @@ class BearerPassthroughSecretScrubTests(unittest.TestCase):
         self.assertNotIn(token, str(resp.body))
         self.assertIn(REDACTED_SENTINEL, str(resp.body))
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_token_scrubbed_from_headers(self, mock_request):
         token = "secret-token-abcdef1234567890"
         handler = _FakeHandler({"api_key": token})
@@ -223,7 +223,7 @@ class BearerPassthroughSecretScrubTests(unittest.TestCase):
         self.assertIn(REDACTED_SENTINEL, resp.headers["X-Debug-Auth"])
         self.assertNotIn(token, resp.headers["X-Debug-Auth"])
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_long_default_header_values_scrubbed(self, mock_request):
         token = "secret-token-abcdef1234567890"
         long_secret = "x" * 32
@@ -238,8 +238,8 @@ class BearerPassthroughSecretScrubTests(unittest.TestCase):
         self.assertEqual(resp.body["echoed"], REDACTED_SENTINEL)
 
 
-class BearerPassthroughTestEndpointTests(unittest.TestCase):
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+class PassthroughTestEndpointTests(unittest.TestCase):
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_returns_ok_on_200(self, mock_request):
         handler = _FakeHandler({"api_key": "t"})
         mock_request.return_value = _mock_response(status_code=200)
@@ -248,7 +248,7 @@ class BearerPassthroughTestEndpointTests(unittest.TestCase):
         self.assertEqual(result["status_code"], 200)
         self.assertEqual(result["host"], "api.example.com")
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_returns_auth_failed_on_401(self, mock_request):
         handler = _FakeHandler({"api_key": "t"})
         mock_request.return_value = _mock_response(status_code=401)
@@ -266,8 +266,8 @@ class BearerPassthroughTestEndpointTests(unittest.TestCase):
         self.assertEqual(result["error_code"], "not_implemented")
 
 
-class BearerPassthroughAllowedMethodsTests(unittest.TestCase):
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+class PassthroughAllowedMethodsTests(unittest.TestCase):
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_rejects_method_not_in_allowed_methods(self, mock_request):
         handler = _FakeHandler(
             {
@@ -284,7 +284,7 @@ class BearerPassthroughAllowedMethodsTests(unittest.TestCase):
         self.assertEqual(cm.exception.http_status, 405)
         mock_request.assert_not_called()
 
-    @patch("mindsdb.integrations.libs.bearer_passthrough.requests.request")
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
     def test_all_methods_allowed_when_config_absent(self, mock_request):
         handler = _FakeHandler({"api_key": "t"})
         mock_request.return_value = _mock_response()
@@ -294,6 +294,51 @@ class BearerPassthroughAllowedMethodsTests(unittest.TestCase):
             mock_request.return_value = _mock_response()
             handler.api_passthrough(PassthroughRequest(method, "/x"))
             self.assertEqual(mock_request.call_args[0][0], method)
+
+
+class PassthroughAuthHeaderOverrideTests(unittest.TestCase):
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
+    def test_custom_auth_header_name_and_format(self, mock_request):
+        class ShopifyLikeHandler(_FakeHandler):
+            _auth_header_name = "X-Shopify-Access-Token"
+            _auth_header_format = "{token}"
+
+        handler = ShopifyLikeHandler({"api_key": "shpat_abc123"})
+        mock_request.return_value = _mock_response()
+
+        handler.api_passthrough(PassthroughRequest("GET", "/x"))
+
+        outgoing = mock_request.call_args.kwargs["headers"]
+        # Custom header present, with raw token (no "Bearer " prefix).
+        self.assertEqual(outgoing["X-Shopify-Access-Token"], "shpat_abc123")
+        # Default Authorization header must NOT be added when the handler
+        # overrides the auth header name.
+        self.assertNotIn("Authorization", outgoing)
+
+
+class PassthroughProtocolTests(unittest.TestCase):
+    def test_non_mixin_class_satisfies_protocol(self):
+        from mindsdb.integrations.libs.passthrough import PassthroughProtocol
+        from mindsdb.integrations.libs.passthrough_types import PassthroughResponse
+
+        class ManualHandler:
+            def api_passthrough(self, req: PassthroughRequest) -> PassthroughResponse:
+                return PassthroughResponse(status_code=200, headers={}, body=None, content_type=None)
+
+            def test_passthrough(self) -> dict:
+                return {"ok": True}
+
+        self.assertIsInstance(ManualHandler(), PassthroughProtocol)
+
+    def test_class_missing_methods_fails_protocol(self):
+        from mindsdb.integrations.libs.passthrough import PassthroughProtocol
+
+        class Incomplete:
+            def api_passthrough(self, req): ...
+
+            # missing test_passthrough
+
+        self.assertNotIsInstance(Incomplete(), PassthroughProtocol)
 
 
 if __name__ == "__main__":

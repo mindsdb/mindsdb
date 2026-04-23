@@ -1,24 +1,32 @@
 """
-BearerPassthroughMixin — generic HTTP passthrough for bearer-authenticated
-REST APIs.
+PassthroughMixin — generic HTTP passthrough for authenticated REST APIs.
 
 A handler opts in by declaring three class attributes:
 
-    class MyHandler(APIHandler, BearerPassthroughMixin):
+    class MyHandler(APIHandler, PassthroughMixin):
         _bearer_token_arg = "api_key"                 # key in connection_data
         _base_url_default = "https://api.example.com" # fallback if user omits
         _test_request = PassthroughRequest("GET", "/me")
 
+The mixin defaults to ``Authorization: Bearer <token>``. Handlers using a
+different auth scheme (e.g. Shopify's ``X-Shopify-Access-Token``) override
+``_auth_header_name`` and ``_auth_header_format`` — see CHANGE 3.
+
 The mixin reads ``self.connection_data`` (a dict populated from
-integration setup) to pull the bearer token, resolve the base URL, and
-enforce the host allowlist. Handlers that need custom URL composition
-(e.g. ``http://{host}:{port}``) override ``_build_base_url``.
+integration setup) to pull the token, resolve the base URL, and enforce
+the host allowlist. Handlers that need custom URL composition (e.g.
+``http://{host}:{port}``) override ``_build_base_url``.
+
+``PassthroughProtocol`` is a structural type describing the two public
+methods (``api_passthrough`` and ``test_passthrough``). The HTTP layer
+checks against the protocol rather than the mixin class, so a handler
+can satisfy the contract without inheriting the default implementation.
 """
 
 import ipaddress
 import os
 import time
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 from urllib.parse import urlparse
 
 import requests
@@ -67,7 +75,21 @@ def _host_matches(host: str, allowlist: list[str]) -> bool:
     return any(host == entry.lower() for entry in allowlist)
 
 
-class BearerPassthroughMixin:
+@runtime_checkable
+class PassthroughProtocol(Protocol):
+    """Structural contract for handlers that expose HTTP passthrough.
+
+    The HTTP namespace checks against this Protocol rather than the
+    `PassthroughMixin` class, which lets future handlers satisfy the
+    contract without inheriting the default implementation.
+    """
+
+    def api_passthrough(self, req: PassthroughRequest) -> PassthroughResponse: ...
+
+    def test_passthrough(self) -> dict[str, Any]: ...
+
+
+class PassthroughMixin:
     # Required overrides
     _bearer_token_arg: str = ""
 
@@ -76,6 +98,14 @@ class BearerPassthroughMixin:
     _base_url_default: str | None = None
     _allowed_hosts_arg: str = "allowed_hosts"
     _default_headers_arg: str = "default_headers"
+
+    # Auth header. Defaults to bearer-compatible; handlers using a custom
+    # scheme (e.g. Shopify's `X-Shopify-Access-Token: <token>`) override
+    # both attrs. The value from `_get_bearer_token()` is formatted into
+    # `{token}` — the method name is retained for backwards compat but
+    # now represents "the auth secret" regardless of scheme.
+    _auth_header_name: str = "Authorization"
+    _auth_header_format: str = "Bearer {token}"
 
     # Canonical sanity-check request for `test_passthrough()`. Handlers MUST
     # set this if they want the /passthrough/test endpoint to do anything
@@ -170,7 +200,7 @@ class BearerPassthroughMixin:
             if name.lower().startswith("proxy-"):
                 continue
             out[name] = value
-        out["Authorization"] = f"Bearer {bearer}"
+        out[self._auth_header_name] = self._auth_header_format.format(token=bearer)
         out[self._upstream_marker_header] = "1"
         return out
 

@@ -1,20 +1,20 @@
 """HTTP-layer tests for the /api/integrations/<name>/passthrough routes.
 
 Exercises the Flask blueprint in isolation: the session's integration
-controller is mocked to return handlers with (or without) the
-BearerPassthroughMixin, so these tests do not touch real handlers and
-do not make network calls.
+controller is mocked to return handlers that satisfy
+PassthroughProtocol, so these tests do not touch real handlers and do
+not make network calls.
 """
 
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
-from mindsdb.integrations.libs.bearer_passthrough import BearerPassthroughMixin
+from mindsdb.integrations.libs.passthrough import PassthroughMixin
 from mindsdb.integrations.libs.passthrough_types import PassthroughResponse
 
 
-class _StubPassthroughHandler(BearerPassthroughMixin):
-    """Handler double: the HTTP layer checks isinstance(..., mixin), then
+class _StubPassthroughHandler(PassthroughMixin):
+    """Handler double: the HTTP layer checks the PassthroughProtocol, then
     calls `api_passthrough`. We bypass all mixin internals by overriding
     `api_passthrough` directly so the endpoint test does not depend on
     connection_data, base_url resolution, or the requests library."""
@@ -72,8 +72,8 @@ def test_passthrough_happy_path_returns_200_and_serialized_body(client):
 
 
 def test_passthrough_returns_501_when_handler_does_not_support_mixin(client):
-    # A bare object is not a BearerPassthroughMixin, so the endpoint should
-    # surface passthrough_not_supported (501) instead of a 500.
+    # A bare object does not satisfy PassthroughProtocol, so the endpoint
+    # should surface passthrough_not_supported (501) instead of a 500.
     with _patch_handler(object()):
         response = client.post(
             "/api/integrations/mysql/passthrough",
@@ -102,33 +102,69 @@ def test_passthrough_returns_400_on_invalid_method(client):
     assert handler.calls == []
 
 
-def test_capabilities_returns_list_of_bearer_engines(client):
-    # Build two fake handler modules: one opts in, one does not.
-    class _OptedIn(BearerPassthroughMixin):
-        pass
+def _patch_handler_modules(modules: dict):
+    return patch(
+        "mindsdb.api.http.namespaces.integrations.integration_controller.handler_modules",
+        modules,
+        create=True,
+    )
+
+
+def test_capabilities_returns_handlers_dict_and_legacy_list(client):
+    # Two opted-in handlers covering both auth modes, one non-opt-in, and
+    # one broken module that lacks a Handler attribute.
+    class _BearerHandler(PassthroughMixin):
+        _auth_header_format = "Bearer {token}"
+
+    class _CustomHeaderHandler(PassthroughMixin):
+        _auth_header_name = "X-Shopify-Access-Token"
+        _auth_header_format = "{token}"
 
     class _NotOptedIn:
         pass
 
-    opted_in_mod = MagicMock()
-    opted_in_mod.Handler = _OptedIn
+    bearer_mod = MagicMock()
+    bearer_mod.Handler = _BearerHandler
+    custom_mod = MagicMock()
+    custom_mod.Handler = _CustomHeaderHandler
     plain_mod = MagicMock()
     plain_mod.Handler = _NotOptedIn
-    no_handler_mod = MagicMock(spec=[])  # lacks a Handler attribute entirely
+    no_handler_mod = MagicMock(spec=[])
 
     fake_modules = {
-        "strapi": opted_in_mod,
+        "hubspot": bearer_mod,
+        "shopify": custom_mod,
         "mysql": plain_mod,
         "broken": no_handler_mod,
     }
 
-    with patch(
-        "mindsdb.api.http.namespaces.integrations.integration_controller.handler_modules",
-        fake_modules,
-        create=True,
-    ):
+    with _patch_handler_modules(fake_modules):
         response = client.get("/api/integrations/capabilities")
 
     assert response.status_code == HTTPStatus.OK
     payload = response.get_json()
-    assert payload == {"bearer_passthrough": ["strapi"]}
+
+    # New structured shape: every opted-in handler appears with auth_modes
+    # and operations metadata.
+    assert payload["handlers"] == {
+        "hubspot": {"auth_modes": ["bearer"], "operations": ["passthrough"]},
+        "shopify": {"auth_modes": ["custom"], "operations": ["passthrough"]},
+    }
+
+    # Legacy flat list: only bearer-auth handlers (Minds migration compat).
+    assert payload["bearer_passthrough"] == ["hubspot"]
+
+
+def test_capabilities_empty_when_no_handlers_opted_in(client):
+    class _NotOptedIn:
+        pass
+
+    plain_mod = MagicMock()
+    plain_mod.Handler = _NotOptedIn
+
+    with _patch_handler_modules({"mysql": plain_mod}):
+        response = client.get("/api/integrations/capabilities")
+
+    assert response.status_code == HTTPStatus.OK
+    payload = response.get_json()
+    assert payload == {"handlers": {}, "bearer_passthrough": []}

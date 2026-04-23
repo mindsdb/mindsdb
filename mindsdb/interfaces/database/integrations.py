@@ -563,8 +563,7 @@ class IntegrationController:
             handler_meta = self._get_handler_meta(handler_name)
         except Exception as e:
             handler_meta = self.handlers_import_status[handler_name]
-            handler_meta["import"]["success"] = False
-            handler_meta["import"]["error_message"] = str(e)
+            self._update_import_metadata(handler_meta, e)
 
         self.handlers_import_status[handler_name] = handler_meta
 
@@ -577,6 +576,37 @@ class IntegrationController:
                 dependencies = [x for x in dependencies if len(x) > 0]
         return dependencies
 
+    @staticmethod
+    def _classify_import_failure(import_error, dependencies):
+        if import_error is None:
+            return {
+                "can_install_dependencies": False,
+                "failure_type": None,
+            }
+
+        has_dependencies = len(dependencies or []) > 0
+        is_dependency_error = isinstance(import_error, (ImportError, ModuleNotFoundError))
+
+        if is_dependency_error and has_dependencies:
+            return {
+                "can_install_dependencies": True,
+                "failure_type": "missing_dependencies",
+            }
+
+        return {
+            "can_install_dependencies": False,
+            "failure_type": "handler_error" if has_dependencies else "import_error",
+        }
+
+    def _update_import_metadata(self, handler_meta, import_error=None):
+        import_meta = handler_meta["import"]
+        import_meta["success"] = import_error is None
+        import_meta["error_message"] = None if import_error is None else str(import_error)
+
+        failure_info = self._classify_import_failure(import_error, import_meta.get("dependencies", []))
+        import_meta["can_install_dependencies"] = failure_info["can_install_dependencies"]
+        import_meta["failure_type"] = failure_info["failure_type"]
+
     def _get_handler_meta(self, handler_name):
         module = self.handler_modules[handler_name]
 
@@ -585,12 +615,9 @@ class IntegrationController:
 
         import_error = getattr(module, "import_error", None)
         handler_meta = self.handlers_import_status[handler_name]
-        handler_meta["import"]["success"] = import_error is None
+        self._update_import_metadata(handler_meta, import_error)
         handler_meta["version"] = module.version
         handler_meta["thread_safe"] = getattr(module, "cache_thread_safe", False)
-
-        if import_error is not None:
-            handler_meta["import"]["error_message"] = str(import_error)
 
         handler_type = getattr(module, "type", None)
         handler_class = None

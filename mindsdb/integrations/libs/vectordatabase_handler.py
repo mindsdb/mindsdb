@@ -2,7 +2,7 @@ import ast
 import copy
 import hashlib
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import List, Optional
 import datetime as dt
 
 import pandas as pd
@@ -22,11 +22,10 @@ from mindsdb_sql_parser.ast import (
 )
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
-from mindsdb.utilities import log
+from mindsdb.integrations.libs.response import DataHandlerResponse, OkResponse, TableResponse
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
-
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.utilities import log
 from .base import BaseHandler
 
 LOG = log.getLogger(__name__)
@@ -521,7 +520,7 @@ class VectorStoreHandler(BaseHandler):
                 handler_engine = self.__class__.name
                 raise VectorHandlerException(f"Error in {handler_engine} database: {e}")
 
-    def _dispatch(self, query: ASTNode) -> HandlerResponse:
+    def _dispatch(self, query: ASTNode) -> DataHandlerResponse:
         """
         Parse and Dispatch query to the appropriate method.
         """
@@ -536,14 +535,14 @@ class VectorStoreHandler(BaseHandler):
         if type(query) in dispatch_router:
             resp = dispatch_router[type(query)](query)
             if resp is not None:
-                return HandlerResponse(resp_type=RESPONSE_TYPE.TABLE, data_frame=resp)
+                return TableResponse(data=resp)
             else:
-                return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
+                return OkResponse()
 
         else:
             raise NotImplementedError(f"Query type {type(query)} not implemented.")
 
-    def query(self, query: ASTNode) -> HandlerResponse:
+    def query(self, query: ASTNode) -> DataHandlerResponse:
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
 
@@ -552,11 +551,11 @@ class VectorStoreHandler(BaseHandler):
                 of query: SELECT, INSERT, DELETE, etc
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         return self._dispatch(query)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True) -> DataHandlerResponse:
         """Create table
 
         Args:
@@ -564,11 +563,11 @@ class VectorStoreHandler(BaseHandler):
             if_not_exists (bool): if True, do nothing if table exists
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+    def drop_table(self, table_name: str, if_exists=True) -> DataHandlerResponse:
         """Drop table
 
         Args:
@@ -576,11 +575,11 @@ class VectorStoreHandler(BaseHandler):
             if_exists (bool): if True, do nothing if table does not exist
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def insert(self, table_name: str, data: pd.DataFrame) -> HandlerResponse:
+    def insert(self, table_name: str, data: pd.DataFrame) -> DataHandlerResponse:
         """Insert data into table
 
         Args:
@@ -589,11 +588,11 @@ class VectorStoreHandler(BaseHandler):
             columns (List[str]): columns to insert
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> HandlerResponse:
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> DataHandlerResponse:
         """Delete data from table
 
         Args:
@@ -601,7 +600,7 @@ class VectorStoreHandler(BaseHandler):
             conditions (List[FilterCondition]): conditions to delete
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
@@ -612,7 +611,7 @@ class VectorStoreHandler(BaseHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> pd.DataFrame:
+    ) -> DataHandlerResponse:
         """Select data from table
 
         Args:
@@ -621,44 +620,15 @@ class VectorStoreHandler(BaseHandler):
             conditions (List[FilterCondition]): conditions to select
 
         Returns:
-            HandlerResponse
+            DataHandlerResponse
         """
         raise NotImplementedError()
 
-    def get_columns(self, table_name: str) -> HandlerResponse:
+    def get_columns(self, table_name: str) -> TableResponse:
         # return a fixed set of columns
         data = pd.DataFrame(self.SCHEMA)
         data.columns = ["COLUMN_NAME", "DATA_TYPE"]
-        return HandlerResponse(
-            resp_type=RESPONSE_TYPE.TABLE,
-            data_frame=data,
-        )
-
-    def hybrid_search(
-        self,
-        table_name: str,
-        embeddings: List[float],
-        query: str = None,
-        metadata: Dict[str, str] = None,
-        distance_function=DistanceFunction.COSINE_DISTANCE,
-        **kwargs,
-    ) -> pd.DataFrame:
-        """
-        Executes a hybrid search, combining semantic search and one or both of keyword/metadata search.
-
-        For insight on the query construction, see: https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
-
-        Args:
-            table_name(str): Name of underlying table containing content, embeddings, & metadata
-            embeddings(List[float]): Embedding vector to perform semantic search against
-            query(str): User query to convert into keywords for keyword search
-            metadata(Dict[str, str]): Metadata filters to filter content rows against
-            distance_function(DistanceFunction): Distance function used to compare embeddings vectors for semantic search
-
-        Returns:
-            df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
-        """
-        raise NotImplementedError(f"Hybrid search not supported for VectorStoreHandler {self.name}")
+        return TableResponse(data=data)
 
     def check_existing_ids(self, table_name: str, ids: List[str]) -> List[str]:
         """

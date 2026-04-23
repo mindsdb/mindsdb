@@ -1,4 +1,4 @@
-from mindsdb.integrations.libs.const import HANDLER_TYPE
+from mindsdb.integrations.libs.const import HANDLER_SUPPORT_LEVEL, HANDLER_TYPE
 
 from .__about__ import __description__ as description
 from .__about__ import __version__ as version
@@ -16,6 +16,7 @@ title = "DuckDB Faiss"
 name = "duckdb_faiss"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.svg"
+support_level = HANDLER_SUPPORT_LEVEL.MINDSDB
 
 __all__ = [
     "Handler",
@@ -24,6 +25,7 @@ __all__ = [
     "type",
     "title",
     "description",
+    "support_level",
     "connection_args",
     "connection_args_example",
     "import_error",

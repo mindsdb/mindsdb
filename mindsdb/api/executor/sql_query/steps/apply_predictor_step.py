@@ -19,7 +19,8 @@ from mindsdb.api.executor.planner.steps import (
     ApplyPredictorStep,
 )
 
-from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
+from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.utilities.types.column import Column
 from mindsdb.utilities.cache import get_cache, dataframe_checksum
 
 from .base import BaseStepCall

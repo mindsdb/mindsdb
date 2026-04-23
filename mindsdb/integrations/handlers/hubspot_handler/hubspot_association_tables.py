@@ -12,14 +12,14 @@ from __future__ import annotations
 from typing import Any
 import pandas as pd
 
-from mindsdb.integrations.libs.api_handler import APIResource
+from mindsdb.integrations.libs.api_handler import MetaAPIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
 
-class HubSpotAssociationTable(APIResource):
+class HubSpotAssociationTable(MetaAPIResource):
     """
     Base class for HubSpot association tables.
 
@@ -37,12 +37,6 @@ class HubSpotAssociationTable(APIResource):
         """Return column names for the association table."""
         return [self.FROM_ID_COLUMN, self.TO_ID_COLUMN, "association_type", "association_label"]
 
-    def select(self, query) -> pd.DataFrame:
-        """Execute SELECT query on association table."""
-        result_limit = query.limit.value if query.limit else None
-
-        return self.list(limit=result_limit)
-
     def list(
         self,
         conditions: list[FilterCondition] | None = None,
@@ -51,18 +45,113 @@ class HubSpotAssociationTable(APIResource):
         targets: list[str] | None = None,
         **kwargs,
     ) -> pd.DataFrame:
-        """Fetch associations between objects."""
-        associations = self._fetch_associations(limit=limit)
+        """Fetch associations between objects.
+
+        When a condition on FROM_ID_COLUMN is present (eq or IN), the HubSpot
+        batch associations API is used so the query is O(filtered IDs) rather
+        than O(all objects).  This makes JOIN queries like
+            FROM companies co
+            JOIN company_contacts cc ON cc.company_id = co.id
+            JOIN contacts c ON c.id = cc.contact_id
+        efficient.
+        """
+        from_id_values = self._extract_from_id_conditions(conditions)
+
+        if from_id_values:
+            associations = self._fetch_associations_by_ids(from_id_values, limit=limit)
+        else:
+            associations = self._fetch_associations(limit=limit)
 
         if not associations:
             return pd.DataFrame(columns=self.get_columns())
 
         df = pd.DataFrame(associations)
 
-        if conditions:
-            df = self._apply_conditions(df, conditions)
+        # Apply any remaining (non-FROM_ID_COLUMN) conditions
+        remaining = [
+            c for c in (conditions or []) if (c.column if hasattr(c, "column") else c[1]) != self.FROM_ID_COLUMN
+        ]
+        if remaining:
+            df = self._apply_conditions(df, remaining)
 
         return df
+
+    def _extract_from_id_conditions(self, conditions: list[FilterCondition] | None) -> list[str] | None:
+        """Return FROM_ID_COLUMN values from eq/IN conditions and mark them applied."""
+        if not conditions:
+            return None
+        for cond in conditions:
+            column = cond.column if hasattr(cond, "column") else cond[1]
+            if column != self.FROM_ID_COLUMN:
+                continue
+            op = str(cond.op.value if hasattr(cond, "op") and hasattr(cond.op, "value") else cond[0]).lower()
+            value = cond.value if hasattr(cond, "value") else cond[2]
+            if op in ("=", "==", "eq") and value is not None:
+                if hasattr(cond, "applied"):
+                    cond.applied = True
+                return [str(value)]
+            if op == "in":
+                vals = list(value) if isinstance(value, (list, tuple, set)) else [value]
+                valid = [str(v) for v in vals if v is not None]
+                if valid:
+                    if hasattr(cond, "applied"):
+                        cond.applied = True
+                    return valid
+        return None
+
+    def _fetch_associations_by_ids(self, from_ids: list[str], limit: int | None = None) -> list[dict[str, Any]]:
+        """Use HubSpot batch associations API for specific from-object IDs."""
+        from hubspot.crm.associations.models import (
+            BatchInputPublicObjectId,
+            PublicObjectId,
+        )
+
+        hubspot = self.handler.connect()
+        BATCH = 100
+        results: list[dict[str, Any]] = []
+
+        for i in range(0, len(from_ids), BATCH):
+            chunk = from_ids[i : i + BATCH]
+            try:
+                resp = hubspot.crm.associations.batch_api.read(
+                    self.FROM_OBJECT_TYPE,
+                    self.TO_OBJECT_TYPE,
+                    BatchInputPublicObjectId(inputs=[PublicObjectId(id=fid) for fid in chunk]),
+                )
+                for multi in resp.results or []:
+                    from_id = str(
+                        (multi._from or {}).get("id", "")
+                        if isinstance(multi._from, dict)
+                        else getattr(multi._from, "id", "")
+                    )
+                    for assoc in multi.to or []:
+                        to_id = str(assoc.get("id", "") if isinstance(assoc, dict) else getattr(assoc, "id", ""))
+                        if not to_id:
+                            continue
+                        results.append(
+                            {
+                                self.FROM_ID_COLUMN: from_id,
+                                self.TO_ID_COLUMN: to_id,
+                                "association_type": None,
+                                "association_label": None,
+                            }
+                        )
+                        if limit and len(results) >= limit:
+                            logger.info(
+                                f"Retrieved {len(results)} {self.FROM_OBJECT_TYPE}"
+                                f"->{self.TO_OBJECT_TYPE} associations via batch API"
+                            )
+                            return results
+            except Exception as e:
+                logger.warning(
+                    f"Failed to batch fetch {self.FROM_OBJECT_TYPE}->{self.TO_OBJECT_TYPE} "
+                    f"associations for chunk {chunk}: {e}"
+                )
+
+        logger.info(
+            f"Retrieved {len(results)} {self.FROM_OBJECT_TYPE}->{self.TO_OBJECT_TYPE} associations via batch API"
+        )
+        return results
 
     def _fetch_associations(self, limit: int | None = None) -> list[dict[str, Any]]:
         """
@@ -262,6 +351,22 @@ class CompanyContactsTable(HubSpotAssociationTable):
             },
         ]
 
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "company_contacts",
+                "COLUMN_NAME": "company_id",
+                "REFERENCED_TABLE_NAME": "companies",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "company_contacts",
+                "COLUMN_NAME": "contact_id",
+                "REFERENCED_TABLE_NAME": "contacts",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+        ]
+
 
 class CompanyDealsTable(HubSpotAssociationTable):
     """Association table for company-deal relationships."""
@@ -304,6 +409,22 @@ class CompanyDealsTable(HubSpotAssociationTable):
                 "COLUMN_NAME": "association_label",
                 "DATA_TYPE": "VARCHAR",
                 "COLUMN_DESCRIPTION": "Association label",
+            },
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "company_deals",
+                "COLUMN_NAME": "company_id",
+                "REFERENCED_TABLE_NAME": "companies",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "company_deals",
+                "COLUMN_NAME": "deal_id",
+                "REFERENCED_TABLE_NAME": "deals",
+                "REFERENCED_COLUMN_NAME": "id",
             },
         ]
 
@@ -352,6 +473,22 @@ class CompanyTicketsTable(HubSpotAssociationTable):
             },
         ]
 
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "company_tickets",
+                "COLUMN_NAME": "company_id",
+                "REFERENCED_TABLE_NAME": "companies",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "company_tickets",
+                "COLUMN_NAME": "ticket_id",
+                "REFERENCED_TABLE_NAME": "tickets",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+        ]
+
 
 class ContactCompaniesTable(HubSpotAssociationTable):
     """Association table for contact-company relationships."""
@@ -394,6 +531,22 @@ class ContactCompaniesTable(HubSpotAssociationTable):
                 "COLUMN_NAME": "association_label",
                 "DATA_TYPE": "VARCHAR",
                 "COLUMN_DESCRIPTION": "Association label",
+            },
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "contact_companies",
+                "COLUMN_NAME": "contact_id",
+                "REFERENCED_TABLE_NAME": "contacts",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "contact_companies",
+                "COLUMN_NAME": "company_id",
+                "REFERENCED_TABLE_NAME": "companies",
+                "REFERENCED_COLUMN_NAME": "id",
             },
         ]
 
@@ -442,6 +595,22 @@ class ContactDealsTable(HubSpotAssociationTable):
             },
         ]
 
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "contact_deals",
+                "COLUMN_NAME": "contact_id",
+                "REFERENCED_TABLE_NAME": "contacts",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "contact_deals",
+                "COLUMN_NAME": "deal_id",
+                "REFERENCED_TABLE_NAME": "deals",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+        ]
+
 
 class ContactTicketsTable(HubSpotAssociationTable):
     """Association table for contact-ticket relationships."""
@@ -484,6 +653,22 @@ class ContactTicketsTable(HubSpotAssociationTable):
                 "COLUMN_NAME": "association_label",
                 "DATA_TYPE": "VARCHAR",
                 "COLUMN_DESCRIPTION": "Association label",
+            },
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "contact_tickets",
+                "COLUMN_NAME": "contact_id",
+                "REFERENCED_TABLE_NAME": "contacts",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "contact_tickets",
+                "COLUMN_NAME": "ticket_id",
+                "REFERENCED_TABLE_NAME": "tickets",
+                "REFERENCED_COLUMN_NAME": "id",
             },
         ]
 
@@ -532,6 +717,22 @@ class DealCompaniesTable(HubSpotAssociationTable):
             },
         ]
 
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "deal_companies",
+                "COLUMN_NAME": "deal_id",
+                "REFERENCED_TABLE_NAME": "deals",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "deal_companies",
+                "COLUMN_NAME": "company_id",
+                "REFERENCED_TABLE_NAME": "companies",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+        ]
+
 
 class DealContactsTable(HubSpotAssociationTable):
     """Association table for deal-contact relationships."""
@@ -574,6 +775,22 @@ class DealContactsTable(HubSpotAssociationTable):
                 "COLUMN_NAME": "association_label",
                 "DATA_TYPE": "VARCHAR",
                 "COLUMN_DESCRIPTION": "Association label",
+            },
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "deal_contacts",
+                "COLUMN_NAME": "deal_id",
+                "REFERENCED_TABLE_NAME": "deals",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "deal_contacts",
+                "COLUMN_NAME": "contact_id",
+                "REFERENCED_TABLE_NAME": "contacts",
+                "REFERENCED_COLUMN_NAME": "id",
             },
         ]
 
@@ -622,6 +839,22 @@ class TicketCompaniesTable(HubSpotAssociationTable):
             },
         ]
 
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "ticket_companies",
+                "COLUMN_NAME": "ticket_id",
+                "REFERENCED_TABLE_NAME": "tickets",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "ticket_companies",
+                "COLUMN_NAME": "company_id",
+                "REFERENCED_TABLE_NAME": "companies",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+        ]
+
 
 class TicketContactsTable(HubSpotAssociationTable):
     """Association table for ticket-contact relationships."""
@@ -667,6 +900,22 @@ class TicketContactsTable(HubSpotAssociationTable):
             },
         ]
 
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "ticket_contacts",
+                "COLUMN_NAME": "ticket_id",
+                "REFERENCED_TABLE_NAME": "tickets",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "ticket_contacts",
+                "COLUMN_NAME": "contact_id",
+                "REFERENCED_TABLE_NAME": "contacts",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+        ]
+
 
 class TicketDealsTable(HubSpotAssociationTable):
     """Association table for ticket-deal relationships."""
@@ -709,6 +958,22 @@ class TicketDealsTable(HubSpotAssociationTable):
                 "COLUMN_NAME": "association_label",
                 "DATA_TYPE": "VARCHAR",
                 "COLUMN_DESCRIPTION": "Association label",
+            },
+        ]
+
+    def meta_get_foreign_keys(self, table_name: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "TABLE_NAME": "ticket_deals",
+                "COLUMN_NAME": "ticket_id",
+                "REFERENCED_TABLE_NAME": "tickets",
+                "REFERENCED_COLUMN_NAME": "id",
+            },
+            {
+                "TABLE_NAME": "ticket_deals",
+                "COLUMN_NAME": "deal_id",
+                "REFERENCED_TABLE_NAME": "deals",
+                "REFERENCED_COLUMN_NAME": "id",
             },
         ]
 

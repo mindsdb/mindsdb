@@ -13,6 +13,49 @@ from appdirs import user_data_dir
 # NOTE do not `import from mindsdb` here
 
 
+def get_bool_env_var(env_name: str) -> bool:
+    """Read an environment variable and return its value as a boolean.
+
+    Args:
+        env_name (str): name of the environment variable to read.
+
+    Returns:
+        bool: True or False, or None if the variable is not set or empty.
+
+    Raises:
+        ValueError: if the value is set but does not match any known boolean representation.
+    """
+    value = os.environ.get(env_name)
+    if value is None or value == "":
+        return None
+    match value.lower():
+        case "1" | "true" | "on" | "yes" | "y":
+            value = True
+        case "0" | "false" | "off" | "no" | "n":
+            value = False
+        case _:
+            raise ValueError(f"Expected a boolean value for the environment variable '{env_name}', but got '{value}'")
+    return value
+
+
+def get_list_env_var(env_name: str) -> list[str]:
+    """Read an environment variable and return its value as a list of strings.
+
+    The value is expected to be a comma-separated string. Whitespace around
+    each item is stripped, and empty items are ignored.
+
+    Args:
+        env_name (str): name of the environment variable to read.
+
+    Returns:
+        list[str]: list of non-empty strings, or None if the variable is not set or empty.
+    """
+    value = os.environ.get(env_name)
+    if value is None or value.strip() == "":
+        return None
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
         target_dict[key] = source_dict[key]
@@ -155,6 +198,7 @@ class Config:
                 "http_permanent_session_lifetime": datetime.timedelta(days=31),
                 "username": "mindsdb",
                 "password": "",
+                "token": None,  # MINDSDB_AUTH_TOKEN
             },
             "logging": {
                 "handlers": {
@@ -199,6 +243,27 @@ class Config:
                     "host": "0.0.0.0",  # API server binds to all interfaces by default
                     "port": "8000",
                 },
+                "mcp": {
+                    "cors": {
+                        "enabled": True,
+                        "allow_origins": [],
+                        "allow_origin_regex": r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+                        "allow_headers": ["*"],
+                    },
+                    "rate_limit": {
+                        "enabled": False,
+                        "requests_per_minute": 60,
+                    },
+                    "oauth": {
+                        "enabled": False,  # MINDSDB_MCP_OAUTH_ENABLED
+                        "issuer_url": "",  # MINDSDB_MCP_OAUTH_ISSUER_URL
+                        "client_id": "",  # MINDSDB_MCP_OAUTH_CLIENT_ID
+                        "client_secret": "",  # MINDSDB_MCP_OAUTH_CLIENT_SECRET
+                        "scope": "mcp:tools",  # MINDSDB_MCP_OAUTH_SCOPE
+                        "public_url": "",  # MINDSDB_MCP_OAUTH_PUBLIC_URL
+                    },
+                    "dns_rebinding_protection": False,  # MINDSDB_MCP_DNS_REBINDING_PROTECTION
+                },
             },
             "cache": {"type": "local"},
             "ml_task_queue": {"type": "local"},
@@ -215,6 +280,9 @@ class Config:
             "data_catalog": {
                 "enabled": False,
             },
+            "data_stream": {
+                "fetch_size": 10000,
+            },
             "byom": {
                 "enabled": False,
             },
@@ -223,6 +291,7 @@ class Config:
             "knowledge_bases": {
                 "disable_autobatch": False,
                 "disable_pgvector_autobatch": True,
+                "storage": None,
             },
         }
         # endregion
@@ -246,13 +315,17 @@ class Config:
         """Collect config values from env vars to self._env_config"""
         self._env_config = {
             "logging": {"handlers": {"console": {}, "file": {}}},
-            "api": {"http": {}},
+            "api": {
+                "http": {},
+                "mcp": {"cors": {}, "rate_limit": {}, "oauth": {}},
+            },
             "auth": {},
             "paths": {},
             "permanent_storage": {},
             "ml_task_queue": {},
             "gui": {},
             "byom": {},
+            "knowledge_bases": {},
         }
 
         # region storage root path
@@ -311,6 +384,10 @@ class Config:
             self._env_config["auth"]["http_auth_type"] = http_auth_type
         elif http_auth_type != "":
             raise ValueError(f"Wrong value of env var MINDSDB_HTTP_AUTH_TYPE={http_auth_type}")
+
+        mindsdb_auth_token = os.environ.get("MINDSDB_AUTH_TOKEN", "")
+        if mindsdb_auth_token != "":
+            self._env_config["auth"]["token"] = mindsdb_auth_token
 
         # region logging
         if os.environ.get("MINDSDB_LOG_LEVEL", "") != "":
@@ -398,20 +475,16 @@ class Config:
             if "default_reranking_model" not in self._env_config:
                 self._env_config["default_reranking_model"] = {}
             self._env_config["default_reranking_model"].update(reranker_config)
-        if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
+        if get_bool_env_var("MINDSDB_DATA_CATALOG_ENABLED") is True:
             self._env_config["data_catalog"] = {"enabled": True}
 
-        if os.environ.get("MINDSDB_NO_STUDIO", "").lower() in ("1", "true"):
+        if get_bool_env_var("MINDSDB_NO_STUDIO") is True:
             self._env_config["gui"]["open_on_start"] = False
             self._env_config["gui"]["autoupdate"] = False
 
-        mindsdb_gui_autoupdate = os.environ.get("MINDSDB_GUI_AUTOUPDATE", "").lower()
-        if mindsdb_gui_autoupdate in ("0", "false"):
-            self._env_config["gui"]["autoupdate"] = False
-        elif mindsdb_gui_autoupdate in ("1", "true"):
-            self._env_config["gui"]["autoupdate"] = True
-        elif mindsdb_gui_autoupdate != "":
-            raise ValueError(f"Wrong value of env var MINDSDB_GUI_AUTOUPDATE={mindsdb_gui_autoupdate}")
+        mindsdb_gui_autoupdate = get_bool_env_var("MINDSDB_GUI_AUTOUPDATE")
+        if mindsdb_gui_autoupdate is not None:
+            self._env_config["gui"]["autoupdate"] = mindsdb_gui_autoupdate
 
         if os.environ.get("MINDSDB_PID_FILE_CONTENT", "") != "":
             try:
@@ -426,6 +499,51 @@ class Config:
             self._env_config["byom"]["enabled"] = True
         elif mindsdb_byom_enabled != "":
             raise ValueError(f"Wrong value of env var MINDSDB_BYOM_ENABLED={mindsdb_byom_enabled}")
+
+        # region MCP config
+        mindsdb_mcp_enabled = get_bool_env_var("MINDSDB_MCP_CORS_ENABLED")
+        if mindsdb_mcp_enabled is not None:
+            self._env_config["api"]["mcp"]["cors"]["enabled"] = mindsdb_mcp_enabled
+        mindsdb_mcp_allow_origins = get_list_env_var("MINDSDB_MCP_ALLOW_ORIGINS")
+        if isinstance(mindsdb_mcp_allow_origins, list):
+            self._env_config["api"]["mcp"]["cors"]["allow_origins"] = mindsdb_mcp_allow_origins
+        mindsdb_mcp_allow_headers = get_list_env_var("MINDSDB_MCP_ALLOW_HEADERS")
+        if isinstance(mindsdb_mcp_allow_headers, list):
+            self._env_config["api"]["mcp"]["cors"]["allow_headers"] = mindsdb_mcp_allow_headers
+        mindsdb_mcp_allow_origin_regex = os.environ.get("MINDSDB_MCP_ALLOW_ORIGIN_REGEXP", "")
+        if mindsdb_mcp_allow_origin_regex != "":
+            self._env_config["api"]["mcp"]["cors"]["allow_origin_regex"] = mindsdb_mcp_allow_origin_regex
+        mindsdb_mcp_rate_limit_enabled = get_bool_env_var("MINDSDB_MCP_RATE_LIMIT_ENABLED")
+        if mindsdb_mcp_rate_limit_enabled is not None:
+            self._env_config["api"]["mcp"]["rate_limit"]["enabled"] = mindsdb_mcp_rate_limit_enabled
+        mindsdb_mcp_rate_limit_rpm = os.environ.get("MINDSDB_MCP_RATE_LIMIT_RPM", "")
+        if mindsdb_mcp_rate_limit_rpm != "":
+            self._env_config["api"]["mcp"]["rate_limit"]["requests_per_minute"] = int(mindsdb_mcp_rate_limit_rpm)
+
+        mindsdb_mcp_oauth_enabled = get_bool_env_var("MINDSDB_MCP_OAUTH_ENABLED")
+        if mindsdb_mcp_oauth_enabled is not None:
+            self._env_config["api"]["mcp"]["oauth"]["enabled"] = mindsdb_mcp_oauth_enabled
+        mindsdb_mcp_oauth_issuer_url = os.environ.get("MINDSDB_MCP_OAUTH_ISSUER_URL", "")
+        if mindsdb_mcp_oauth_issuer_url != "":
+            self._env_config["api"]["mcp"]["oauth"]["issuer_url"] = mindsdb_mcp_oauth_issuer_url
+        mindsdb_mcp_oauth_client_id = os.environ.get("MINDSDB_MCP_OAUTH_CLIENT_ID", "")
+        if mindsdb_mcp_oauth_client_id != "":
+            self._env_config["api"]["mcp"]["oauth"]["client_id"] = mindsdb_mcp_oauth_client_id
+        mindsdb_mcp_oauth_client_secret = os.environ.get("MINDSDB_MCP_OAUTH_CLIENT_SECRET", "")
+        if mindsdb_mcp_oauth_client_secret != "":
+            self._env_config["api"]["mcp"]["oauth"]["client_secret"] = mindsdb_mcp_oauth_client_secret
+        mindsdb_mcp_oauth_scope = os.environ.get("MINDSDB_MCP_OAUTH_SCOPE", "")
+        if mindsdb_mcp_oauth_scope != "":
+            self._env_config["api"]["mcp"]["oauth"]["scope"] = mindsdb_mcp_oauth_scope
+        mindsdb_mcp_oauth_public_url = os.environ.get("MINDSDB_MCP_OAUTH_PUBLIC_URL", "")
+        if mindsdb_mcp_oauth_public_url != "":
+            self._env_config["api"]["mcp"]["oauth"]["public_url"] = mindsdb_mcp_oauth_public_url
+        mindsdb_mcp_dns_rebinding_protection = get_bool_env_var("MINDSDB_MCP_DNS_REBINDING_PROTECTION")
+        if mindsdb_mcp_dns_rebinding_protection is not None:
+            self._env_config["api"]["mcp"]["dns_rebinding_protection"] = mindsdb_mcp_dns_rebinding_protection
+        # endregion
+
+        # Keep env-based KB defaults out of config.auto.json overrides.
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
@@ -589,6 +707,7 @@ class Config:
                 agent=None,
                 project=None,
                 update_gui=False,
+                mcp_stdio=False,
             )
             return
 
@@ -615,7 +734,7 @@ class Config:
 
         parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
         parser.add_argument("--update-gui", action="store_true", default=False, help="Update GUI and exit")
-        parser.add_argument("--load-tokenizer", action="store_true", default=False, help="Preload tokenizer and exit")
+        parser.add_argument("--mcp-stdio", action="store_true", default=False, help="Run MCP with STDIO transport")
 
         self._cmd_args = parser.parse_args()
 

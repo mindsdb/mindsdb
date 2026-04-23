@@ -219,7 +219,12 @@ class File(Resource):
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:
                     return http_error(400, "Error getting file", f"Got status code: {r.status_code}")
-                file_path = os.path.join(temp_dir_path, data["file"])
+
+                temp_dir_real = os.path.realpath(temp_dir_path)
+                file_path = os.path.realpath(os.path.join(temp_dir_real, data["file"]))
+                if os.path.commonpath([file_path, temp_dir_real]) != temp_dir_real:
+                    return http_error(400, "Invalid file path", f"Wrong file name: {data['file']}")
+
                 with open(file_path, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)
@@ -234,23 +239,33 @@ class File(Resource):
         original_file_name = clear_filename(data.get("original_file_name"))
 
         file_path = os.path.join(temp_dir_path, data["file"])
+        temp_dir_real = os.path.realpath(temp_dir_path)
+        file_path_real = os.path.realpath(file_path)
+        if os.path.commonpath([file_path_real, temp_dir_real]) != temp_dir_real:
+            shutil.rmtree(temp_dir_path, ignore_errors=True)
+            return http_error(400, "Invalid file path", f"Wrong file name: {data['file']}")
+        file_path = file_path_real
         lp = file_path.lower()
         if lp.endswith((".zip", ".tar.gz")):
-            if lp.endswith(".zip"):
-                with zipfile.ZipFile(file_path) as f:
-                    f.extractall(temp_dir_path)
-            elif lp.endswith(".tar.gz"):
-                with tarfile.open(file_path) as f:
-                    safe_extract(f, temp_dir_path)
+            try:
+                if lp.endswith(".zip"):
+                    with zipfile.ZipFile(file_path) as f:
+                        safe_extract(f, temp_dir_path)
+                elif lp.endswith(".tar.gz"):
+                    with tarfile.open(file_path) as f:
+                        safe_extract(f, temp_dir_path)
+            except Exception as e:
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
+                return http_error(500, "Error", str(e))
             os.remove(file_path)
             files = os.listdir(temp_dir_path)
             if len(files) != 1:
-                os.rmdir(temp_dir_path)
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
                 return http_error(400, "Wrong content.", "Archive must contain only one data file.")
             file_path = os.path.join(temp_dir_path, files[0])
             mindsdb_file_name = files[0]
             if not os.path.isfile(file_path):
-                os.rmdir(temp_dir_path)
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
                 return http_error(400, "Wrong content.", "Archive must contain data file in root.")
 
         try:

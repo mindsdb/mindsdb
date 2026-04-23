@@ -1,3 +1,0 @@
-pyphoenix
-phoenixdb
-protobuf==4.25.8

@@ -1,4 +1,3 @@
-import os
 import copy
 from typing import Dict, List, Optional, Any, Text, Tuple, Union
 import json
@@ -6,7 +5,7 @@ import decimal
 
 import pandas as pd
 import numpy as np
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
@@ -17,43 +16,34 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import (
-    DistanceFunction,
     TableField,
     VectorStoreHandler,
 )
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.handlers.auth_utilities.snowflake import get_validated_jwt
 
-from mindsdb.integrations.utilities.rag.settings import RerankerMode
-
-from mindsdb.interfaces.agents.utils.constants import DEFAULT_EMBEDDINGS_MODEL_PROVIDER, MAX_INSERT_BATCH_SIZE
+from mindsdb.interfaces.agents.utils.constants import MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.knowledge_base.executor import KnowledgeBaseQueryExecutor
+from mindsdb.interfaces.knowledge_base.default_storage_resolver import resolve_default_storage_engines
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
-from mindsdb.interfaces.agents.utils.pydantic_ai_model_factory import get_llm_provider
-from mindsdb.interfaces.knowledge_base.llm_wrapper import create_chat_model
+from mindsdb.utilities.utils import validate_pydantic_params
+from mindsdb.utilities import log
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
-from mindsdb.utilities import log
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
+from mindsdb.integrations.utilities.rag.settings import RerankerMode, RerankerConfig
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker, ListwiseLLMReranker
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
-
-
-def _require_agent_extra(feature: str):
-    if create_chat_model is None:
-        raise ImportError(
-            f"{feature} requires the optional agent dependencies. Install them via `pip install mindsdb[kb]`."
-        )
 
 
 class KnowledgeBaseInputParams(BaseModel):
@@ -93,37 +83,10 @@ def get_model_params(model_params: dict, default_config_key: str):
     return combined_model_params
 
 
-def adapt_embedding_model_params(embedding_model_params: dict):
-    """
-    Prepare parameters for embedding model.
-    """
-    params_copy = copy.deepcopy(embedding_model_params)
-    provider = params_copy.pop("provider", None).lower()
-    api_key = get_api_key(provider, params_copy, strict=False) or params_copy.get("api_key")
-    # Underscores are replaced because the provider name ultimately gets mapped to a class name.
-    # This is mostly to support Azure OpenAI (azure_openai); the mapped class name is 'AzureOpenAIEmbeddings'.
-    params_copy["class"] = provider.replace("_", "")
-    if provider == "azure_openai":
-        # Azure OpenAI expects the api_key to be passed as 'openai_api_key'.
-        params_copy["openai_api_key"] = api_key
-        params_copy["azure_endpoint"] = params_copy.pop("base_url")
-        if "chunk_size" not in params_copy:
-            params_copy["chunk_size"] = 2048
-        if "api_version" in params_copy:
-            params_copy["openai_api_version"] = params_copy["api_version"]
-    else:
-        params_copy[f"{provider}_api_key"] = api_key
-    params_copy.pop("api_key", None)
-    params_copy["model"] = params_copy.pop("model_name", None)
-
-    return params_copy
-
-
 def get_reranking_model_from_params(reranking_model_params: dict):
     """
     Create reranking model from parameters.
     """
-    from mindsdb.integrations.utilities.rag.settings import RerankerConfig
 
     # Work on a copy; do not mutate caller's dict
     params_copy = copy.deepcopy(reranking_model_params)
@@ -179,7 +142,7 @@ def rotate_provider_api_key(params):
     :param params: input params, can be modified by this function
     :return: a new api key if it is refreshed
     """
-    provider = params.get("provider").lower()
+    provider = params.get("provider", "").lower()
 
     if provider == "snowflake":
         if "snowflake_account_id" in params:
@@ -673,30 +636,6 @@ class KnowledgeBaseTable:
         self.addapt_conditions_columns(conditions)
         db_handler.dispatch_delete(query, conditions)
 
-    def hybrid_search(
-        self,
-        query: str,
-        keywords: List[str] = None,
-        metadata: Dict[str, str] = None,
-        distance_function=DistanceFunction.COSINE_DISTANCE,
-    ) -> pd.DataFrame:
-        query_df = pd.DataFrame.from_records([{TableField.CONTENT.value: query}])
-        embeddings_df = self._df_to_embeddings(query_df)
-        if embeddings_df.empty:
-            return pd.DataFrame([])
-        embeddings = embeddings_df.iloc[0][TableField.EMBEDDINGS.value]
-        keywords_query = None
-        if keywords is not None:
-            keywords_query = " ".join(keywords)
-        db_handler = self.get_vector_db()
-        return db_handler.hybrid_search(
-            self._kb.vector_database_table,
-            embeddings,
-            query=keywords_query,
-            metadata=metadata,
-            distance_function=distance_function,
-        )
-
     def clear(self):
         """
         Clear data in KB table
@@ -1023,91 +962,6 @@ class KnowledgeBaseTable:
         res = self._df_to_embeddings(df)
         return res[TableField.EMBEDDINGS.value][0]
 
-    @staticmethod
-    def call_litellm_embedding(session, model_params, messages):
-        args = copy.deepcopy(model_params)
-
-        if "model_name" not in args:
-            raise ValueError("'model_name' must be provided for embedding model")
-
-        llm_model = args.pop("model_name")
-        engine = args.pop("provider")
-
-        module = session.integration_controller.get_handler_module("litellm")
-        if module is None or module.Handler is None:
-            raise ValueError(f'Unable to use "{engine}" provider. Litellm handler is not installed')
-        return module.Handler.embeddings(engine, llm_model, messages, args)
-
-    def build_rag_pipeline(self, retrieval_config: dict):
-        """
-        Builds a RAG pipeline with returned sources
-
-        Args:
-            retrieval_config: dict with retrieval config
-
-        Returns:
-            RAG: Configured RAG pipeline instance
-
-        Raises:
-            ValueError: If the configuration is invalid or required components are missing
-        """
-        # Get embedding model from knowledge base
-        from mindsdb.interfaces.knowledge_base.embedding_model_utils import construct_embedding_model_from_args
-        from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-        from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
-
-        embedding_model_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
-        if self._kb.embedding_model:
-            # Extract embedding model args from knowledge base table
-            embedding_args = self._kb.embedding_model.learn_args.get("using", {})
-            # Construct the embedding model directly
-            embeddings_model = construct_embedding_model_from_args(embedding_args, session=self.session)
-            logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
-        elif embedding_model_params:
-            embeddings_model = construct_embedding_model_from_args(
-                adapt_embedding_model_params(embedding_model_params), session=self.session
-            )
-            logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
-        else:
-            # Use default embedding model with default provider
-            # Default to OpenAI's text-embedding-3-small for OpenAI provider, otherwise let the provider choose
-            default_model_name = "text-embedding-3-small" if DEFAULT_EMBEDDINGS_MODEL_PROVIDER == "openai" else None
-            default_embedding_args = {
-                "provider": DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
-            }
-            if default_model_name:
-                default_embedding_args["model_name"] = default_model_name
-            embeddings_model = construct_embedding_model_from_args(default_embedding_args, session=self.session)
-            logger.debug(
-                f"Using default embedding model ({DEFAULT_EMBEDDINGS_MODEL_PROVIDER}) as knowledge base has no embedding model"
-            )
-
-        # Update retrieval config with knowledge base parameters
-        kb_params = {"vector_store_config": {"kb_table": self}}
-
-        # Load and validate config
-        try:
-            rag_config = load_rag_config(retrieval_config, kb_params, embeddings_model)
-
-            # Build LLM if specified
-            if "llm_model_name" in rag_config:
-                llm_args = {"model_name": rag_config.llm_model_name}
-                if not rag_config.llm_provider:
-                    llm_args["provider"] = get_llm_provider(llm_args)
-                else:
-                    llm_args["provider"] = rag_config.llm_provider
-                _require_agent_extra("Building knowledge base retrieval pipelines")
-                rag_config.llm = create_chat_model(llm_args)
-
-            # Create RAG pipeline
-            rag = RAG(rag_config)
-            logger.debug(f"RAG pipeline created with config: {rag_config}")
-            return rag
-
-        except Exception as e:
-            logger.exception("Error building RAG pipeline:")
-            raise ValueError(f"Failed to build RAG pipeline: {str(e)}") from e
-
     def _parse_metadata(self, base_metadata):
         """Helper function to robustly parse metadata string to dict"""
         if isinstance(base_metadata, dict):
@@ -1127,36 +981,6 @@ class KnowledgeBaseTable:
         from mindsdb.interfaces.knowledge_base.utils import generate_document_id
 
         return generate_document_id(content=content, provided_id=provided_id)
-
-    def _convert_metadata_value(self, value):
-        """
-        Convert metadata value to appropriate Python type.
-
-        Args:
-            value: The value to convert
-
-        Returns:
-            Converted value in appropriate Python type
-        """
-        if pd.isna(value):
-            return None
-
-        # Handle pandas/numpy types
-        if pd.api.types.is_datetime64_any_dtype(value) or isinstance(value, pd.Timestamp):
-            return str(value)
-        elif pd.api.types.is_integer_dtype(type(value)):
-            return int(value)
-        elif pd.api.types.is_float_dtype(type(value)):
-            return float(value)
-        elif pd.api.types.is_bool_dtype(type(value)):
-            return bool(value)
-
-        # Handle basic Python types
-        if isinstance(value, (int, float, bool)):
-            return value
-
-        # Convert everything else to string
-        return str(value)
 
     def create_index(self, params: dict = None):
         """
@@ -1179,26 +1003,6 @@ class KnowledgeBaseController:
     def __init__(self, session) -> None:
         self.session = session
 
-    def _check_kb_input_params(self, params):
-        # check names and types KB params
-        try:
-            KnowledgeBaseInputParams.model_validate(params)
-        except ValidationError as e:
-            problems = []
-            for error in e.errors():
-                parameter = ".".join([str(i) for i in error["loc"]])
-                param_type = error["type"]
-                if param_type == "extra_forbidden":
-                    msg = f"Parameter '{parameter}' is not allowed"
-                else:
-                    msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
-                problems.append(msg)
-
-            msg = "\n".join(problems)
-            if len(problems) > 1:
-                msg = "\n" + msg
-            raise ValueError(f"Problem with knowledge base parameters: {msg}") from e
-
     def add(
         self,
         name: str,
@@ -1220,10 +1024,9 @@ class KnowledgeBaseController:
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
-            params = params or {}
             params["preprocessing"] = preprocessing_config
 
-        self._check_kb_input_params(params)
+        validate_pydantic_params(params, KnowledgeBaseInputParams, "knowledge base")
 
         # Check if vector_size is provided when using sparse vectors
         is_sparse = params.get("is_sparse")
@@ -1243,6 +1046,9 @@ class KnowledgeBaseController:
             raise EntityExistsError("Knowledge base already exists", name)
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
+        if not bool(embedding_params):
+            raise ValueError("No embedding model parameters provided")
+
         params["embedding_model"] = embedding_params
         rotate_provider_api_key(embedding_params)
 
@@ -1270,24 +1076,12 @@ class KnowledgeBaseController:
 
         # search for the vector database table
         if storage is None:
-            cloud_pg_vector = os.environ.get("KB_PGVECTOR_URL")
-            if cloud_pg_vector:
-                vector_table_name = name
-                # Add sparse vector support for pgvector
-                vector_db_params = {}
-                # Check both explicit parameter and model configuration
-                if is_sparse:
-                    vector_db_params["is_sparse"] = True
-                    if vector_size is not None:
-                        vector_db_params["vector_size"] = vector_size
-                vector_db_name = self._create_persistent_pgvector(vector_db_params)
-                params["default_vector_storage"] = vector_db_name
-            else:
-                raise ValueError(
-                    "Vector table is not defined. Set it by `storage=vector_db.vector_table`. "
-                    "One of the options is to use pgvector: "
-                    "https://docs.mindsdb.com/integrations/vector-db-integrations/pgvector"
-                )
+            vector_db_name, vector_table_name = self._resolve_default_vector_storage(
+                kb_name=name,
+                is_sparse=is_sparse,
+                vector_size=vector_size,
+            )
+            params["default_vector_storage"] = vector_db_name
         elif len(storage.parts) != 2:
             raise ValueError("Storage param has to be vector db with table")
         else:
@@ -1376,7 +1170,7 @@ class KnowledgeBaseController:
             params = params or {}
             params["preprocessing"] = preprocessing_config
 
-        self._check_kb_input_params(params)
+        validate_pydantic_params(params, KnowledgeBaseInputParams, "knowledge base")
 
         # get project id
         project = self.session.database_controller.get_project(project_name)
@@ -1465,20 +1259,43 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, "pgvector", params or {})
         return vector_store_name
 
-    def _create_persistent_chroma(self, kb_name, engine="chromadb"):
-        """Create default vector database for knowledge base, if not specified"""
-
-        vector_store_name = f"{kb_name}_{engine}"
-
-        vector_store_folder_name = f"{vector_store_name}"
-        connection_args = {"persist_directory": vector_store_folder_name}
+    def _create_persistent_faiss(self, kb_name: str):
+        vector_store_name = f"store_{kb_name}"
 
         # check if exists
         if self.session.integration_controller.get(vector_store_name):
             return vector_store_name
 
-        self.session.integration_controller.add(vector_store_name, engine, connection_args)
+        self.session.integration_controller.add(vector_store_name, "duckdb_faiss", {})
         return vector_store_name
+
+    def _resolve_default_vector_storage(self, kb_name: str, is_sparse: bool = False, vector_size: int = None):
+        resolved_storage = resolve_default_storage_engines(config)
+        default_engine = resolved_storage["default_storage"]
+
+        if default_engine is None:
+            raise ValueError(
+                "Vector table is not defined. Set it by `storage=vector_db.vector_table` or configure "
+                "`knowledge_bases.storage` as one of: pgvector, faiss."
+            )
+
+        if default_engine == "pgvector":
+            vector_db_params = {}
+            if is_sparse:
+                vector_db_params["is_sparse"] = True
+                if vector_size is not None:
+                    vector_db_params["vector_size"] = vector_size
+            vector_db_name = self._create_persistent_pgvector(vector_db_params)
+            return vector_db_name, kb_name
+
+        if default_engine in ("duckdb_faiss", "faiss"):
+            vector_db_name = self._create_persistent_faiss(kb_name)
+            return vector_db_name, kb_name
+
+        raise ValueError(
+            f"Automatic default storage creation is not supported for engine '{default_engine}'. "
+            "Set `storage=vector_db.vector_table` explicitly."
+        )
 
     def _check_embedding_model(self, project_name, params: dict = None, kb_name="") -> dict:
         """check embedding model for knowledge base, return embedding model info"""
@@ -1502,15 +1319,15 @@ class KnowledgeBaseController:
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
             )
 
-        llm_client = LLMClient(params, session=self.session)
-
         try:
+            llm_client = LLMClient(params, session=self.session)
+
             resp = llm_client.embeddings(["test"])
             return {"dimension": len(resp[0])}
         except Exception as e:
             raise RuntimeError(f"Problem with embedding model config: {e}") from e
 
-    def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
+    def delete(self, name: str, project_name: str, if_exists: bool = False) -> None:
         """
         Delete a knowledge base from the database
         """
@@ -1629,3 +1446,26 @@ class KnowledgeBaseController:
         scores = EvaluateBase.run(self.session, kb_table, params)
 
         return scores
+
+    def release_lock(self, knowledge_base: Identifier, project_name):
+        # works only for FAISS dbs.
+        # if FAISS vector db is used in KB: remove this db from handlers cache.
+        #   it will clear internal cache of tables in faiss handler and release locks for faiss files
+        #   return unloaded database name
+
+        if len(knowledge_base.parts) > 1:
+            project_name, kb_name = knowledge_base.parts[-2:]
+        else:
+            kb_name = knowledge_base.parts[-1]
+
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb = self.get(kb_name, project_id)
+        if kb is None or kb.vector_database_id is None:
+            return
+        database = db.Integration.query.get(kb.vector_database_id)
+        if database is None:
+            return
+
+        if database.engine == "duckdb_faiss":
+            self.session.integration_controller.handlers_cache.delete(database.name)
+            return database.name

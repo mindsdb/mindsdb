@@ -114,9 +114,7 @@ class BearerPassthroughMixin:
             raise PassthroughConfigError("handler did not declare _bearer_token_arg")
         token = self._get_connection_data().get(self._bearer_token_arg)
         if not token:
-            raise PassthroughConfigError(
-                f"bearer token ('{self._bearer_token_arg}') is missing from connection_data"
-            )
+            raise PassthroughConfigError(f"bearer token ('{self._bearer_token_arg}') is missing from connection_data")
         return str(token)
 
     def _resolve_url(self, path: str) -> tuple[str, str]:
@@ -151,18 +149,15 @@ class BearerPassthroughMixin:
         if allowlist == ["*"]:
             return
         if not _host_matches(hostname, allowlist):
-            raise HostNotAllowedError(
-                f"host '{hostname}' is not in the datasource allowlist"
-            )
+            raise HostNotAllowedError(f"host '{hostname}' is not in the datasource allowlist")
         if _is_private_host(hostname):
             raise HostNotAllowedError(
                 f"host '{hostname}' resolves to a private/loopback address; "
-                "add it explicitly to allowed_hosts if this is intentional"
+                "set allowed_hosts=['*'] to bypass this check (explicit "
+                "listing is ignored for private IPs)"
             )
 
-    def _build_outgoing_headers(
-        self, caller_headers: dict[str, str], bearer: str
-    ) -> dict[str, str]:
+    def _build_outgoing_headers(self, caller_headers: dict[str, str], bearer: str) -> dict[str, str]:
         """Merge caller headers (filtered) + default_headers + Authorization."""
         out: dict[str, str] = {}
         data = self._get_connection_data()
@@ -219,9 +214,7 @@ class BearerPassthroughMixin:
                     continue
                 total += len(chunk)
                 if total > PASSTHROUGH_MAX_RESPONSE_BYTES:
-                    raise PassthroughValidationError(
-                        f"response body exceeded {PASSTHROUGH_MAX_RESPONSE_BYTES} bytes"
-                    )
+                    raise PassthroughValidationError(f"response body exceeded {PASSTHROUGH_MAX_RESPONSE_BYTES} bytes")
                 chunks.append(chunk)
         finally:
             response.close()
@@ -240,6 +233,7 @@ class BearerPassthroughMixin:
             # requests will serialize dict bodies to JSON; we cap on the
             # serialized length. For raw strings / bytes we cap directly.
             import json as _json
+
             if isinstance(req.body, (dict, list)):
                 body_bytes = _json.dumps(req.body).encode("utf-8")
             elif isinstance(req.body, (bytes, bytearray)):
@@ -247,9 +241,7 @@ class BearerPassthroughMixin:
             else:
                 body_bytes = str(req.body).encode("utf-8")
             if len(body_bytes) > PASSTHROUGH_MAX_REQUEST_BYTES:
-                raise PassthroughValidationError(
-                    f"request body exceeded {PASSTHROUGH_MAX_REQUEST_BYTES} bytes"
-                )
+                raise PassthroughValidationError(f"request body exceeded {PASSTHROUGH_MAX_REQUEST_BYTES} bytes")
 
         url, hostname = self._resolve_url(req.path)
         self._check_host_allowed(hostname)
@@ -270,7 +262,10 @@ class BearerPassthroughMixin:
 
         logger.debug(
             "passthrough %s %s (host=%s datasource=%s)",
-            method, req.path, hostname, getattr(self, "name", "?"),
+            method,
+            req.path,
+            hostname,
+            getattr(self, "name", "?"),
         )
 
         response = requests.request(method, url, **request_kwargs)
@@ -286,6 +281,7 @@ class BearerPassthroughMixin:
                 text = body_bytes.decode("utf-8", errors="replace")
                 text = self._scrub(text, secrets)
                 import json as _json
+
                 body = _json.loads(text) if text else None
             except ValueError:
                 body = self._scrub(body_bytes.decode("utf-8", errors="replace"), secrets)

@@ -52,7 +52,9 @@ class ShopifyHandler(MetaAPIHandler, PassthroughMixin):
     _auth_header_format = "{token}"
     _auth_mode = "custom"
     _base_url_default = None
-    _test_request = PassthroughRequest(method="GET", path="/admin/api/2024-01/shop.json")
+    # Version-less path — Shopify redirects this to the current stable
+    # Admin API version, so the probe survives quarterly API releases.
+    _test_request = PassthroughRequest(method="GET", path="/admin/shop.json")
 
     def _build_base_url(self) -> str | None:
         data = self._get_connection_data()

@@ -1196,5 +1196,34 @@ class TestHubspotHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertIn("not supported", response.error_message)
 
 
+class TestHubspotPassthrough(unittest.TestCase):
+    """Exercise the PassthroughMixin retrofit (PAT path)."""
+
+    def _mock_response(self):
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.headers = {"Content-Type": "application/json"}
+        resp.iter_content = MagicMock(return_value=iter([b'{"results":[]}']))
+        resp.close = MagicMock()
+        return resp
+
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
+    def test_passthrough_uses_bearer_and_hubspot_base_url(self, mock_request):
+        mock_request.return_value = self._mock_response()
+        handler = HubspotHandler(
+            "hubspot",
+            connection_data={"access_token": "pat-abc123xyz"},
+        )
+        from mindsdb.integrations.libs.passthrough_types import PassthroughRequest
+
+        resp = handler.api_passthrough(PassthroughRequest("GET", "/crm/v3/owners"))
+
+        self.assertEqual(resp.status_code, 200)
+        args, kwargs = mock_request.call_args
+        self.assertEqual(args[0], "GET")
+        self.assertEqual(args[1], "https://api.hubapi.com/crm/v3/owners")
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer pat-abc123xyz")
+
+
 if __name__ == "__main__":
     unittest.main()

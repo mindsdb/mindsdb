@@ -680,5 +680,41 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
         self.assertEqual(columns[0]["data_type"], "string")
 
 
+class TestSalesforcePassthrough(unittest.TestCase):
+    """Exercise the PassthroughMixin retrofit (per-instance base URL)."""
+
+    def _mock_response(self):
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.headers = {"Content-Type": "application/json"}
+        resp.iter_content = MagicMock(return_value=iter([b'{"sobjects":[]}']))
+        resp.close = MagicMock()
+        return resp
+
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
+    def test_passthrough_uses_bearer_and_instance_url(self, mock_request):
+        mock_request.return_value = self._mock_response()
+        handler = SalesforceHandler(
+            "salesforce",
+            connection_data={
+                "username": "u",
+                "password": "p",
+                "client_id": "cid",
+                "client_secret": "csec",
+                "access_token": "sf_access_tok",
+                "instance_url": "https://my-org.my.salesforce.com",
+            },
+        )
+        from mindsdb.integrations.libs.passthrough_types import PassthroughRequest
+
+        resp = handler.api_passthrough(PassthroughRequest("GET", "/services/data/v60.0/"))
+
+        self.assertEqual(resp.status_code, 200)
+        args, kwargs = mock_request.call_args
+        self.assertEqual(args[0], "GET")
+        self.assertEqual(args[1], "https://my-org.my.salesforce.com/services/data/v60.0/")
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer sf_access_tok")
+
+
 if __name__ == "__main__":
     unittest.main()

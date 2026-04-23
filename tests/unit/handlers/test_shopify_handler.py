@@ -817,5 +817,41 @@ class TestShopifyHandlerTableMetadata(BaseShopifyHandlerTest):
         self.assertEqual(len(result), 300)
 
 
+class TestShopifyPassthrough(unittest.TestCase):
+    """Exercise the PassthroughMixin retrofit (X-Shopify-Access-Token auth)."""
+
+    def _mock_response(self):
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.headers = {"Content-Type": "application/json"}
+        resp.iter_content = MagicMock(return_value=iter([b'{"shop":{"id":1}}']))
+        resp.close = MagicMock()
+        return resp
+
+    @patch("mindsdb.integrations.libs.passthrough.requests.request")
+    def test_passthrough_uses_shopify_header_and_per_shop_base_url(self, mock_request):
+        mock_request.return_value = self._mock_response()
+        handler = ShopifyHandler(
+            "shopify",
+            connection_data={
+                "shop_url": "test-shop.myshopify.com",
+                "client_id": "cid",
+                "client_secret": "csec",
+                "access_token": "shpat_tokenvalue",
+            },
+        )
+        from mindsdb.integrations.libs.passthrough_types import PassthroughRequest
+
+        resp = handler.api_passthrough(PassthroughRequest("GET", "/admin/api/2024-01/shop.json"))
+
+        self.assertEqual(resp.status_code, 200)
+        args, kwargs = mock_request.call_args
+        self.assertEqual(args[0], "GET")
+        self.assertEqual(args[1], "https://test-shop.myshopify.com/admin/api/2024-01/shop.json")
+        # Custom Shopify auth header; no bearer Authorization.
+        self.assertEqual(kwargs["headers"]["X-Shopify-Access-Token"], "shpat_tokenvalue")
+        self.assertNotIn("Authorization", kwargs["headers"])
+
+
 if __name__ == "__main__":
     unittest.main()

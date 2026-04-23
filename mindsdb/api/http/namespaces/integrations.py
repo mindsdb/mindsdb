@@ -132,18 +132,6 @@ class PassthroughTest(Resource):
         return result, 200
 
 
-def _auth_modes_for_handler(handler_cls) -> list[str]:
-    """v1 heuristic: infer auth mode from the handler's _auth_header_format.
-
-    Future auth-aware mixins will set this explicitly on the handler; until
-    then, a bearer-compatible default is the common case.
-    """
-    fmt = getattr(handler_cls, "_auth_header_format", "") or ""
-    if fmt.startswith("Bearer "):
-        return ["bearer"]
-    return ["custom"]
-
-
 @ns_conf.route("/capabilities")
 class Capabilities(Resource):
     """Return structured passthrough capabilities per handler.
@@ -164,12 +152,15 @@ class Capabilities(Resource):
                 if not _handler_supports_passthrough(module):
                     continue
                 handler_cls = getattr(module, "Handler", None)
-                auth_modes = _auth_modes_for_handler(handler_cls)
+                # Read the declarative auth mode off the handler class. Default
+                # to "bearer" so protocol-only handlers that don't inherit the
+                # mixin still land in a sensible bucket.
+                auth_mode = getattr(handler_cls, "_auth_mode", "bearer")
                 handlers[engine] = {
-                    "auth_modes": auth_modes,
+                    "auth_modes": [auth_mode],
                     "operations": ["passthrough"],
                 }
-                if "bearer" in auth_modes:
+                if auth_mode == "bearer":
                     bearer_engines.append(engine)
             except Exception:
                 # A broken handler module should not break the capabilities endpoint.

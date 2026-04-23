@@ -107,6 +107,16 @@ class PassthroughMixin:
     _auth_header_name: str = "Authorization"
     _auth_header_format: str = "Bearer {token}"
 
+    # Declarative auth mode surfaced to /capabilities. One handler instance
+    # has exactly one auth mode, so this is a single string; the API
+    # response still wraps it in a list because a future contract may
+    # surface handlers supporting multiple configurations. Known values:
+    # "bearer", "custom", "oauth_refresh". Handlers that use a non-bearer
+    # header scheme or a refresh-aware mixin should set this explicitly —
+    # don't infer it from _auth_header_format, since OAuth-refresh also
+    # uses "Bearer {token}" but is a distinct mode.
+    _auth_mode: str = "bearer"
+
     # Canonical sanity-check request for `test_passthrough()`. Handlers MUST
     # set this if they want the /passthrough/test endpoint to do anything
     # useful. `None` means "test endpoint returns 'not implemented'".

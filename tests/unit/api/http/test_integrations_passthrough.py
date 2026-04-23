@@ -112,13 +112,16 @@ def _patch_handler_modules(modules: dict):
 
 def test_capabilities_returns_handlers_dict_and_legacy_list(client):
     # Two opted-in handlers covering both auth modes, one non-opt-in, and
-    # one broken module that lacks a Handler attribute.
+    # one broken module that lacks a Handler attribute. auth_modes is
+    # surfaced from the handler's declarative `_auth_mode` class attr —
+    # not inferred from header format.
     class _BearerHandler(PassthroughMixin):
-        _auth_header_format = "Bearer {token}"
+        pass  # inherits _auth_mode = "bearer"
 
     class _CustomHeaderHandler(PassthroughMixin):
         _auth_header_name = "X-Shopify-Access-Token"
         _auth_header_format = "{token}"
+        _auth_mode = "custom"
 
     class _NotOptedIn:
         pass
@@ -153,6 +156,31 @@ def test_capabilities_returns_handlers_dict_and_legacy_list(client):
 
     # Legacy flat list: only bearer-auth handlers (Minds migration compat).
     assert payload["bearer_passthrough"] == ["hubspot"]
+
+
+def test_capabilities_auth_mode_is_declarative_not_format_derived(client):
+    # Handler keeps the default "Bearer {token}" header format but flags
+    # itself as oauth_refresh. The old format-matching heuristic would
+    # have bucketed this as "bearer"; the new declarative path returns
+    # the explicit mode and correctly omits it from the legacy list.
+    class _OAuthRefreshHandler(PassthroughMixin):
+        _auth_mode = "oauth_refresh"
+        # _auth_header_format intentionally left as the default.
+
+    oauth_mod = MagicMock()
+    oauth_mod.Handler = _OAuthRefreshHandler
+
+    with _patch_handler_modules({"hubspot_oauth": oauth_mod}):
+        response = client.get("/api/integrations/capabilities")
+
+    assert response.status_code == HTTPStatus.OK
+    payload = response.get_json()
+    assert payload["handlers"] == {
+        "hubspot_oauth": {"auth_modes": ["oauth_refresh"], "operations": ["passthrough"]},
+    }
+    # oauth_refresh is NOT surfaced in the legacy bearer-only list even
+    # though the underlying header format is still "Bearer {token}".
+    assert payload["bearer_passthrough"] == []
 
 
 def test_capabilities_empty_when_no_handlers_opted_in(client):

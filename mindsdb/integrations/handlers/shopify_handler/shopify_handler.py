@@ -50,6 +50,7 @@ class ShopifyHandler(MetaAPIHandler, PassthroughMixin):
     _bearer_token_arg = "access_token"
     _auth_header_name = "X-Shopify-Access-Token"
     _auth_header_format = "{token}"
+    _auth_mode = "custom"
     _base_url_default = None
     _test_request = PassthroughRequest(method="GET", path="/admin/api/2024-01/shop.json")
 

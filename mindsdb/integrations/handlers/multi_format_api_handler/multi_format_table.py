@@ -49,8 +49,11 @@ class MultiFormatAPITable(APIResource):
             pandas DataFrame with parsed data
         """
         # Extract URL from conditions
+        import json
         url = None
         headers = {}
+        method = None
+        body = {}
         timeout = self.handler.connection_args.get('timeout', 30)
         max_content_size_mb = self.handler.connection_args.get('max_content_size', 100)
 
@@ -62,29 +65,43 @@ class MultiFormatAPITable(APIResource):
                     url = condition.value
                     condition.applied = True
                 elif column == 'headers':
-                    # Allow custom headers as JSON string
-                    import json
                     try:
                         headers = json.loads(condition.value)
-                    except:
+                    except Exception:
                         logger.warning(f"Invalid headers JSON: {condition.value}")
+                    condition.applied = True
+                elif column == 'method':
+                    method = condition.value.upper()
+                    condition.applied = True
+                elif column == 'body':
+                    try:
+                        body = json.loads(condition.value) if isinstance(condition.value, str) else condition.value
+                    except Exception:
+                        logger.warning(f"Invalid body JSON: {condition.value}")
                     condition.applied = True
                 elif column == 'timeout':
                     try:
                         timeout = int(condition.value)
-                    except:
+                    except Exception:
                         logger.warning(f"Invalid timeout value: {condition.value}")
                     condition.applied = True
                 elif column == 'max_content_size':
                     try:
                         max_content_size_mb = float(condition.value)
-                    except:
+                    except Exception:
                         logger.warning(f"Invalid max_content_size value: {condition.value}")
                     condition.applied = True
 
         # Use connection-level URL if query-level not provided
         if not url:
             url = self.handler.connection_args.get('url')
+
+        # Fall back to connection-level method and body
+        if not method:
+            method = self.handler.connection_args.get('method', 'GET').upper()
+        connection_body = self.handler.connection_args.get('body', {})
+        if connection_body:
+            body = {**connection_body, **body}  # query-level keys override connection-level
 
         if not url:
             raise ValueError(
@@ -109,25 +126,29 @@ class MultiFormatAPITable(APIResource):
             if 'User-Agent' not in headers:
                 headers['User-Agent'] = 'MindsDB Multi-Format API Handler/1.0'
 
-            # Stage 1: HEAD request to check Content-Length (fail fast)
-            try:
-                head_response = requests.head(url, headers=headers, timeout=min(10, timeout), allow_redirects=True)
-                content_length = head_response.headers.get('Content-Length')
+            if method == 'POST':
+                # POST requests: skip HEAD (many POST endpoints reject it), go straight to POST
+                response = requests.post(url, headers=headers, json=body or None, timeout=timeout, stream=True)
+            else:
+                # Stage 1: HEAD request to check Content-Length (fail fast)
+                try:
+                    head_response = requests.head(url, headers=headers, timeout=min(10, timeout), allow_redirects=True)
+                    content_length = head_response.headers.get('Content-Length')
 
-                if content_length:
-                    content_length = int(content_length)
-                    if content_length > max_content_size_bytes:
-                        raise ValueError(
-                            f"Content size ({content_length / 1024 / 1024:.2f} MB) exceeds maximum allowed "
-                            f"size ({max_content_size_mb} MB). Increase max_content_size parameter if needed."
-                        )
-                    logger.info(f"Content-Length: {content_length / 1024 / 1024:.2f} MB")
-            except requests.exceptions.RequestException as e:
-                # HEAD request failed, proceed with GET but monitor size
-                logger.warning(f"HEAD request failed: {e}. Proceeding with GET request.")
+                    if content_length:
+                        content_length = int(content_length)
+                        if content_length > max_content_size_bytes:
+                            raise ValueError(
+                                f"Content size ({content_length / 1024 / 1024:.2f} MB) exceeds maximum allowed "
+                                f"size ({max_content_size_mb} MB). Increase max_content_size parameter if needed."
+                            )
+                        logger.info(f"Content-Length: {content_length / 1024 / 1024:.2f} MB")
+                except requests.exceptions.RequestException as e:
+                    logger.warning(f"HEAD request failed: {e}. Proceeding with GET request.")
 
-            # Stage 2: GET request with streaming and size monitoring
-            response = requests.get(url, headers=headers, timeout=timeout, stream=True)
+                # Stage 2: GET request with streaming and size monitoring
+                response = requests.get(url, headers=headers, timeout=timeout, stream=True)
+
             response.raise_for_status()
 
             # Download in chunks and monitor size

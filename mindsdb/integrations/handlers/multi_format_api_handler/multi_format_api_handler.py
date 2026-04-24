@@ -61,6 +61,10 @@ class MultiFormatAPIHandler(APIHandler):
             if headers and not isinstance(headers, dict):
                 raise ValueError("Headers must be a dictionary")
 
+            method = self.connection_args.get('method', 'GET').upper()
+            if method not in ('GET', 'POST'):
+                raise ValueError(f"Invalid method '{method}'. Must be GET or POST.")
+
             self.is_connected = True
             return StatusResponse(success=True)
 

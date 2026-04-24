@@ -15,6 +15,18 @@ connection_args = OrderedDict(
         'required': False,
         'label': 'Default Headers',
     },
+    method={
+        'type': ARG_TYPE.STR,
+        'description': 'HTTP method to use: GET or POST. Default is GET.',
+        'required': False,
+        'label': 'HTTP Method',
+    },
+    body={
+        'type': ARG_TYPE.DICT,
+        'description': 'Default request body sent with POST requests as JSON.',
+        'required': False,
+        'label': 'Default Request Body',
+    },
     timeout={
         'type': ARG_TYPE.INT,
         'description': 'Default request timeout in seconds. Default is 30 seconds.',
@@ -36,6 +48,8 @@ connection_args_example = OrderedDict(
         'Authorization': 'Bearer YOUR_TOKEN_HERE',
         'X-API-Key': 'your-api-key',
     },
+    method='POST',
+    body={'query': 'search term', 'variables': {}},
     timeout=60,
     max_content_size=50,  # 50 MB limit
 )

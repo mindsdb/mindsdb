@@ -2,6 +2,7 @@ import os
 import time
 import asyncio
 from typing import List
+from urllib.parse import urlparse
 
 from openai import OpenAI, AzureOpenAI
 
@@ -98,6 +99,13 @@ class LLMClient:
         elif self.provider == "ollama":
             if params.get("api_key") is None:
                 params["api_key"] = "n/a"
+            # Ollama's OpenAI-compatible API is served under the `/v1` path. The OpenAI SDK
+            # appends route paths (e.g. `/embeddings`) directly to `base_url`, so a value
+            # like `http://localhost:11434` resolves to `http://localhost:11434/embeddings`
+            # which Ollama does not serve and returns 404. Provide a sensible default and
+            # transparently append `/v1` when the user-supplied URL is missing it.
+            # Fixes gh-11910.
+            params["base_url"] = self._normalize_ollama_base_url(params.get("base_url"))
             self.client = OpenAI(**params)
         elif self.provider == "bedrock":
             if "aws_region" in params:
@@ -109,6 +117,24 @@ class LLMClient:
             self.client = SnowflakeClient(**params)
         else:
             raise NotImplementedError(f'Provider "{self.provider}" is not supported')
+
+    @staticmethod
+    def _normalize_ollama_base_url(base_url: str | None) -> str:
+        """Return an Ollama base_url that points at the OpenAI-compatible `/v1` endpoint.
+
+        - When ``base_url`` is missing, default to ``http://localhost:11434/v1``.
+        - When the user-supplied URL has no ``v1`` path segment, append one.
+        - Otherwise return the URL unchanged so explicit user configuration wins.
+        """
+        default_base_url = "http://localhost:11434/v1"
+        if not base_url:
+            return default_base_url
+
+        normalized = base_url.rstrip("/")
+        path_segments = [seg for seg in urlparse(normalized).path.split("/") if seg]
+        if "v1" in path_segments:
+            return normalized
+        return f"{normalized}/v1"
 
     @run_in_batches(1000)
     @retry_with_exponential_backoff

@@ -78,3 +78,26 @@ class TestGetUsableTableNames:
     def test_no_tables_returns_empty(self):
         query = _make_query([])
         assert query.get_usable_table_names(lazy=False) == []
+
+    def test_mixed_wildcard_and_specific_table(self):
+        """Wildcard databases should expand fully, while specific entries
+        should still be filtered down to the exact table that matches."""
+        query = _make_query(["db1.users", "db2.*"])
+
+        handlers = {
+            "db1": _make_handler(["users", "orders", "invoices"]),
+            "db2": _make_handler(["a", "b"]),
+        }
+        query.command_executor.session.integration_controller.get_data_handler.side_effect = lambda name: handlers[name]
+
+        result = query.get_usable_table_names(lazy=False)
+
+        names = {tuple(ident.parts) for ident in result}
+        assert names == {
+            ("db1", "users"),
+            ("db2", "a"),
+            ("db2", "b"),
+        }
+        # Tables present in db1 but not listed in `data.tables` must NOT leak through.
+        assert ("db1", "orders") not in names
+        assert ("db1", "invoices") not in names

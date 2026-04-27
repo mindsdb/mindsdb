@@ -32,7 +32,6 @@ def _resolve_handler_readme_path(handler_folder: str) -> Path:
         raise ValueError(f"Handler folder '{handler_folder}' is invalid.")
 
     mindsdb_path = Path(iutil.find_spec("mindsdb").origin).parent
-    mindsdb_path = Path(iutil.find_spec("mindsdb").origin).parent
     base_handlers_path = mindsdb_path.joinpath("integrations/handlers").resolve()
     readme_path = base_handlers_path.joinpath(handler_folder_name).joinpath("README.md").resolve()
 
@@ -55,8 +54,6 @@ class HandlersList(Resource):
             handlers = ca.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
-            if handler_meta is None:
-                continue
             if handler_meta is None:
                 continue
             # remove non-integration handlers
@@ -106,12 +103,8 @@ class HandlerInfo(Resource):
         handler_meta = ca.integration_controller.get_handler_meta(handler_name)
         if handler_meta is None:
             return http_error(HTTPStatus.NOT_FOUND, "Handler not found", f"Handler '{handler_name}' not found")
-        if handler_meta is None:
-            return http_error(HTTPStatus.NOT_FOUND, "Handler not found", f"Handler '{handler_name}' not found")
         row = {"name": handler_name}
         row.update(handler_meta)
-        row.pop("path", None)
-        row.pop("icon", None)
         row.pop("path", None)
         row.pop("icon", None)
         return row

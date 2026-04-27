@@ -23,22 +23,22 @@ class RestApiHandler(APIHandler, PassthroughMixin):
 
     name = "rest_api"
 
-    bearer_token_arg = "bearer_token"
-    base_url_default = None  # user must supply base_url, its added here for validation
-    test_request = None  # built dynamically from connection_data
-
     def __init__(self, name: str, **kwargs: Any) -> None:
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data") or {}
         self.kwargs = kwargs
         self.is_connected = False
 
+        # PassthroughMixin reads these instance attributes at runtime.
+        self._bearer_token_arg = "bearer_token"
+        self._base_url_default = None  # user must supply base_url
+
         # Build the test request from connection_data. Default to GET /
         # unless the user provided a custom test_path.
         test_path = self.connection_data.get("test_path", "/")
         if not test_path.startswith("/"):
             test_path = f"/{test_path}"
-        self.test_request = PassthroughRequest(method="GET", path=test_path)
+        self._test_request = PassthroughRequest(method="GET", path=test_path)
 
     def connect(self) -> None:
         """No persistent connection needed — passthrough is stateless.
@@ -56,7 +56,7 @@ class RestApiHandler(APIHandler, PassthroughMixin):
             if not base_url:
                 response.error_message = "base_url is required"
                 return response
-            token = self.connection_data.get(self.bearer_token_arg)
+            token = self.connection_data.get(self._bearer_token_arg)
             if not token:
                 response.error_message = "bearer_token is required"
                 return response

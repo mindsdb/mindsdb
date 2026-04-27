@@ -22,11 +22,6 @@ CLIENT_ID = "client-id-abc"
 CLIENT_SECRET = "client-secret-xyz"
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
 class FakeResponse:
     """Minimal stand-in for requests.Response used by token-request tests."""
 
@@ -105,11 +100,6 @@ def _bypass_dns(monkeypatch):
     monkeypatch.setattr(cc_module.socket, "getaddrinfo", fake_getaddrinfo)
 
 
-# ---------------------------------------------------------------------------
-# Construction validation
-# ---------------------------------------------------------------------------
-
-
 class TestConstructionValidation:
     def test_unsupported_auth_method_raises(self, monkeypatch):
         _bypass_dns(monkeypatch)
@@ -182,11 +172,6 @@ class TestConstructionValidation:
                 client_secret=CLIENT_SECRET,
             )
         assert not any(r.levelno == logging.WARNING for r in caplog.records)
-
-
-# ---------------------------------------------------------------------------
-# Request shape
-# ---------------------------------------------------------------------------
 
 
 class TestRequestShape:
@@ -398,11 +383,6 @@ class TestResponseHandling:
             assert any("expires_in" in r.message for r in caplog.records)
 
 
-# ---------------------------------------------------------------------------
-# Caching
-# ---------------------------------------------------------------------------
-
-
 class TestCaching:
     def _provider(self, monkeypatch, **kwargs):
         _bypass_dns(monkeypatch)
@@ -475,11 +455,6 @@ class TestCaching:
         assert calls["n"] == 2
 
 
-# ---------------------------------------------------------------------------
-# Concurrency — double-checked locking
-# ---------------------------------------------------------------------------
-
-
 class TestConcurrency:
     def test_concurrent_get_token_makes_single_http_call(self, monkeypatch):
         """Two threads call get_token() with empty cache simultaneously.
@@ -543,11 +518,6 @@ class TestConcurrency:
             "Double-checked locking failed: both threads issued an HTTP call. "
             "The second read inside the lock is missing or broken."
         )
-
-
-# ---------------------------------------------------------------------------
-# Storage
-# ---------------------------------------------------------------------------
 
 
 class TestStorage:
@@ -647,11 +617,6 @@ class TestStorage:
         assert "https://api.example.com" not in as_text
 
 
-# ---------------------------------------------------------------------------
-# current_secrets
-# ---------------------------------------------------------------------------
-
-
 class TestCurrentSecrets:
     def _provider(self, monkeypatch):
         _bypass_dns(monkeypatch)
@@ -685,11 +650,6 @@ class TestCurrentSecrets:
         provider.get_token()
         provider.invalidate()
         assert provider.current_secrets() == []
-
-
-# ---------------------------------------------------------------------------
-# Error sanitization
-# ---------------------------------------------------------------------------
 
 
 class TestErrorSanitization:
@@ -751,7 +711,7 @@ class TestErrorSanitization:
         assert "invalid_client" in msg
         assert "Client authentication failed" in msg
         assert CLIENT_SECRET not in msg
-        assert CLIENT_ID in msg or "client_id" in msg  # client_id is not a secret
+        assert CLIENT_ID in msg or "client_id" in msg
 
     def test_redirect_response_treated_as_error(self, monkeypatch):
         provider = self._provider(monkeypatch)

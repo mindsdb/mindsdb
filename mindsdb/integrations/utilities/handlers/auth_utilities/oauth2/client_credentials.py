@@ -58,12 +58,7 @@ def _ip_in_forbidden_range(ip: ipaddress._BaseAddress) -> Optional[str]:
 
 
 def _validate_token_url(token_url: str) -> None:
-    """Raise ValueError if token_url violates SSRF safety rules.
-
-    Rejects: non-http(s) schemes, localhost/aliases, IP literals or DNS-resolved
-    hosts in private/loopback/link-local/multicast/reserved ranges. Logs a
-    WARNING when scheme is http (allowed for staging/internal setups).
-    """
+    """Raise ValueError if token_url violates SSRF safety rules."""
     if not isinstance(token_url, str) or not token_url:
         raise ValueError("token_url must be a non-empty string")
 
@@ -153,8 +148,6 @@ class OAuth2ClientCredentialsProvider:
         self._memory_cache: Optional[dict] = None
         self._missing_expires_in_logged = False
 
-    # ------------------------------------------------------------------ public
-
     def get_token(self) -> str:
         """Return a valid access token, refreshing if needed."""
         cached = self._read_cache()
@@ -200,8 +193,6 @@ class OAuth2ClientCredentialsProvider:
                 return [token]
         return []
 
-    # -------------------------------------------------------- request handling
-
     def _request_token(self) -> dict:
         body: dict = {"grant_type": "client_credentials"}
 
@@ -226,7 +217,7 @@ class OAuth2ClientCredentialsProvider:
         if self.token_auth_method == "client_secret_post":
             body["client_id"] = self.client_id
             body["client_secret"] = self.client_secret
-        else:  # client_secret_basic
+        else:
             credentials = f"{self.client_id}:{self.client_secret}".encode("utf-8")
             headers["Authorization"] = "Basic " + base64.b64encode(credentials).decode("ascii")
 
@@ -351,8 +342,6 @@ class OAuth2ClientCredentialsProvider:
             ) from self._sanitize_exception(exc)
         return b"".join(chunks)
 
-    # ----------------------------------------------------------------- caching
-
     def _read_cache(self) -> Optional[dict]:
         if self.handler_storage is not None:
             try:
@@ -391,8 +380,6 @@ class OAuth2ClientCredentialsProvider:
         if not isinstance(expires_at, (int, float)):
             return True
         return time.time() >= expires_at
-
-    # ------------------------------------------------------------- diagnostics
 
     def _safe_host(self) -> str:
         try:

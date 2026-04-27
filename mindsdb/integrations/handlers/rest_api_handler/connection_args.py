@@ -18,13 +18,13 @@ connection_args = OrderedDict(
     },
     default_headers={
         "type": ARG_TYPE.DICT,
-        "description": "Static headers added to every request (e.g. {\"Accept\": \"application/json\"})",
+        "description": 'Static headers added to every request (e.g. {"Accept": "application/json"})',
         "required": False,
         "label": "Default Headers",
     },
     allowed_hosts={
         "type": ARG_TYPE.LIST,
-        "description": "Allowed hostnames for passthrough requests. Defaults to the base_url host. Use [\"*\"] to disable containment.",
+        "description": 'Allowed hostnames for passthrough requests. Defaults to the base_url host. Use ["*"] to disable containment.',
         "required": False,
         "label": "Allowed Hosts",
     },

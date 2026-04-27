@@ -37,19 +37,23 @@ class TestRestApiHandlerInit:
         assert handler._test_request.path == "/"
 
     def test_custom_test_path(self):
-        handler = _make_handler({
-            "base_url": "https://api.example.com",
-            "bearer_token": "tok",
-            "test_path": "/health",
-        })
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "test_path": "/health",
+            }
+        )
         assert handler._test_request.path == "/health"
 
     def test_custom_test_path_without_slash(self):
-        handler = _make_handler({
-            "base_url": "https://api.example.com",
-            "bearer_token": "tok",
-            "test_path": "status",
-        })
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "test_path": "status",
+            }
+        )
         assert handler._test_request.path == "/status"
 
 
@@ -123,11 +127,13 @@ class TestPassthroughIntegration:
         mock_resp.close = MagicMock()
         mock_request.return_value = mock_resp
 
-        handler = _make_handler({
-            "base_url": "https://api.example.com",
-            "bearer_token": "tok",
-            "default_headers": {"Accept": "application/json", "X-Team": "data"},
-        })
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "default_headers": {"Accept": "application/json", "X-Team": "data"},
+            }
+        )
         handler.api_passthrough(PassthroughRequest(method="GET", path="/"))
 
         headers = mock_request.call_args.kwargs["headers"]

@@ -36,6 +36,29 @@ def _handler_supports_passthrough(handler_module) -> bool:
         return False
 
 
+def _resolve_auth_modes(handler_cls) -> list[str]:
+    """Resolve a handler's advertised auth modes for /capabilities.
+
+    Order of preference:
+        1. `_auth_modes` (list[str]) if defined and non-empty — handlers
+           that support more than one mode (e.g. rest_api: bearer + OAuth
+           client credentials).
+        2. `_auth_mode` (str) if defined — single-mode handlers; preserves
+           the legacy declaration.
+        3. ["bearer"] default — protocol-only handlers that don't declare
+           anything still land in the right bucket.
+    """
+    if handler_cls is None:
+        return ["bearer"]
+    modes = getattr(handler_cls, "_auth_modes", None)
+    if isinstance(modes, (list, tuple)) and modes:
+        return [str(m) for m in modes]
+    mode = getattr(handler_cls, "_auth_mode", None)
+    if isinstance(mode, str) and mode:
+        return [mode]
+    return ["bearer"]
+
+
 def _get_passthrough_handler(name: str):
     """Look up the datasource's handler and verify it satisfies the contract."""
     proxy = FakeMysqlProxy()
@@ -152,15 +175,15 @@ class Capabilities(Resource):
                 if not _handler_supports_passthrough(module):
                     continue
                 handler_cls = getattr(module, "Handler", None)
-                # Read the declarative auth mode off the handler class. Default
-                # to "bearer" so protocol-only handlers that don't inherit the
-                # mixin still land in a sensible bucket.
-                auth_mode = getattr(handler_cls, "_auth_mode", "bearer")
+                # Resolve the handler's advertised auth modes — supports
+                # both the new list-shaped `_auth_modes` and the legacy
+                # single-mode `_auth_mode` declaration.
+                auth_modes = _resolve_auth_modes(handler_cls)
                 handlers[engine] = {
-                    "auth_modes": [auth_mode],
+                    "auth_modes": auth_modes,
                     "operations": ["passthrough"],
                 }
-                if auth_mode == "bearer":
+                if "bearer" in auth_modes:
                     bearer_engines.append(engine)
             except Exception:
                 # A broken handler module should not break the capabilities endpoint.

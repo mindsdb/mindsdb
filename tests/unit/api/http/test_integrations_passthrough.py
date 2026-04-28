@@ -196,3 +196,209 @@ def test_capabilities_empty_when_no_handlers_opted_in(client):
     assert response.status_code == HTTPStatus.OK
     payload = response.get_json()
     assert payload == {"handlers": {}, "bearer_passthrough": []}
+
+
+# ---------------------------------------------------------------------------
+# Multi-mode (`_auth_modes`) capability resolution
+# ---------------------------------------------------------------------------
+
+
+def test_capabilities_handler_with_only_auth_mode_string_unchanged(client):
+    # A handler that declares only the legacy `_auth_mode = "bearer"`
+    # continues to surface as auth_modes: ["bearer"]. This pins the
+    # backward-compat path of the new resolver.
+    class _LegacyBearerHandler(PassthroughMixin):
+        pass  # _auth_mode defaults to "bearer" via the mixin
+
+    mod = MagicMock()
+    mod.Handler = _LegacyBearerHandler
+
+    with _patch_handler_modules({"legacy": mod}):
+        response = client.get("/api/integrations/capabilities")
+
+    assert response.status_code == HTTPStatus.OK
+    payload = response.get_json()
+    assert payload["handlers"] == {
+        "legacy": {"auth_modes": ["bearer"], "operations": ["passthrough"]},
+    }
+    assert payload["bearer_passthrough"] == ["legacy"]
+
+
+def test_capabilities_handler_with_auth_modes_list_returns_all_modes(client):
+    # The rest_api shape: a single handler advertising both bearer and
+    # oauth_client_credentials. The endpoint must return both modes
+    # verbatim and include the handler in `bearer_passthrough` because
+    # "bearer" is among them.
+    class _MultiAuthHandler(PassthroughMixin):
+        _auth_modes = ["bearer", "oauth_client_credentials"]
+
+    mod = MagicMock()
+    mod.Handler = _MultiAuthHandler
+
+    with _patch_handler_modules({"rest_api": mod}):
+        response = client.get("/api/integrations/capabilities")
+
+    assert response.status_code == HTTPStatus.OK
+    payload = response.get_json()
+    assert payload["handlers"] == {
+        "rest_api": {
+            "auth_modes": ["bearer", "oauth_client_credentials"],
+            "operations": ["passthrough"],
+        },
+    }
+    assert payload["bearer_passthrough"] == ["rest_api"]
+
+
+def test_capabilities_auth_modes_takes_precedence_over_auth_mode(client):
+    # When both fields are declared (as on RestApiHandler — _auth_modes for
+    # the new shape, _auth_mode kept as a fallback), the list wins. This is
+    # the contract the resolver promises.
+    class _DualDeclaredHandler(PassthroughMixin):
+        _auth_modes = ["bearer", "oauth_client_credentials"]
+        _auth_mode = "bearer"
+
+    mod = MagicMock()
+    mod.Handler = _DualDeclaredHandler
+
+    with _patch_handler_modules({"rest_api": mod}):
+        response = client.get("/api/integrations/capabilities")
+
+    payload = response.get_json()
+    assert payload["handlers"]["rest_api"]["auth_modes"] == [
+        "bearer",
+        "oauth_client_credentials",
+    ]
+
+
+def test_capabilities_bearer_passthrough_membership_per_auth_modes(client):
+    # `bearer_passthrough` is populated based on whether "bearer" appears
+    # in the resolved auth_modes, not on the legacy `_auth_mode` field.
+    class _BearerOnly(PassthroughMixin):
+        _auth_modes = ["bearer"]
+
+    class _OAuthOnly(PassthroughMixin):
+        _auth_modes = ["oauth_client_credentials"]
+
+    class _Multi(PassthroughMixin):
+        _auth_modes = ["bearer", "oauth_client_credentials"]
+
+    bearer_mod = MagicMock()
+    bearer_mod.Handler = _BearerOnly
+    oauth_mod = MagicMock()
+    oauth_mod.Handler = _OAuthOnly
+    multi_mod = MagicMock()
+    multi_mod.Handler = _Multi
+
+    with _patch_handler_modules({"a_bearer": bearer_mod, "b_oauth": oauth_mod, "c_multi": multi_mod}):
+        response = client.get("/api/integrations/capabilities")
+
+    payload = response.get_json()
+    assert payload["bearer_passthrough"] == ["a_bearer", "c_multi"]
+    assert "b_oauth" not in payload["bearer_passthrough"]
+
+
+def test_capabilities_handler_with_empty_auth_modes_falls_back_to_auth_mode(client):
+    # An empty list is treated as "not declared" and the resolver falls
+    # back to `_auth_mode`, which itself falls back to "bearer".
+    class _EmptyListHandler(PassthroughMixin):
+        _auth_modes = []
+        _auth_mode = "custom"
+
+    mod = MagicMock()
+    mod.Handler = _EmptyListHandler
+
+    with _patch_handler_modules({"odd": mod}):
+        response = client.get("/api/integrations/capabilities")
+
+    payload = response.get_json()
+    assert payload["handlers"]["odd"]["auth_modes"] == ["custom"]
+
+
+def test_capabilities_endpoint_stable_when_handler_module_is_broken(client):
+    # If reading attrs off one module raises, the endpoint must still
+    # return 200 with the other handlers intact.
+    class _Healthy(PassthroughMixin):
+        _auth_modes = ["bearer"]
+
+    healthy_mod = MagicMock()
+    healthy_mod.Handler = _Healthy
+
+    # An "evil" module whose Handler attribute access raises. Use a
+    # PropertyMock-style trick: set Handler to a property that raises.
+    class _ExplodingModule:
+        @property
+        def Handler(self):  # noqa: N802 — matches handler-module API
+            raise RuntimeError("module import side-effect blew up")
+
+    broken_mod = _ExplodingModule()
+
+    with _patch_handler_modules({"healthy": healthy_mod, "broken": broken_mod}):
+        response = client.get("/api/integrations/capabilities")
+
+    assert response.status_code == HTTPStatus.OK
+    payload = response.get_json()
+    # Healthy handler still surfaces; broken one is silently skipped.
+    assert payload["handlers"] == {
+        "healthy": {"auth_modes": ["bearer"], "operations": ["passthrough"]},
+    }
+    assert payload["bearer_passthrough"] == ["healthy"]
+
+
+# ---------------------------------------------------------------------------
+# Direct unit tests for the resolver helper
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_auth_modes_prefers_list_over_string():
+    from mindsdb.api.http.namespaces.integrations import _resolve_auth_modes
+
+    class H:
+        _auth_modes = ["bearer", "oauth_client_credentials"]
+        _auth_mode = "bearer"
+
+    assert _resolve_auth_modes(H) == ["bearer", "oauth_client_credentials"]
+
+
+def test_resolve_auth_modes_falls_back_to_auth_mode_string():
+    from mindsdb.api.http.namespaces.integrations import _resolve_auth_modes
+
+    class H:
+        _auth_mode = "custom"
+
+    assert _resolve_auth_modes(H) == ["custom"]
+
+
+def test_resolve_auth_modes_defaults_to_bearer_when_nothing_declared():
+    from mindsdb.api.http.namespaces.integrations import _resolve_auth_modes
+
+    class H:
+        pass
+
+    assert _resolve_auth_modes(H) == ["bearer"]
+
+
+def test_resolve_auth_modes_handles_none_handler_class():
+    from mindsdb.api.http.namespaces.integrations import _resolve_auth_modes
+
+    assert _resolve_auth_modes(None) == ["bearer"]
+
+
+def test_resolve_auth_modes_normalizes_tuple_to_list_of_strings():
+    from mindsdb.api.http.namespaces.integrations import _resolve_auth_modes
+
+    class H:
+        _auth_modes = ("bearer", "oauth_client_credentials")
+
+    result = _resolve_auth_modes(H)
+    assert result == ["bearer", "oauth_client_credentials"]
+    assert isinstance(result, list)
+
+
+def test_resolve_auth_modes_skips_empty_list_and_falls_through():
+    from mindsdb.api.http.namespaces.integrations import _resolve_auth_modes
+
+    class H:
+        _auth_modes = []
+        _auth_mode = "custom"
+
+    assert _resolve_auth_modes(H) == ["custom"]

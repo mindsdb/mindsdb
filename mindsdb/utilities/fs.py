@@ -112,17 +112,13 @@ def clean_unlinked_process_marks() -> list[int]:
             if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
                 raise psutil.NoSuchProcess(process_id)
 
+            threads = process.threads()
             try:
-                threads = process.threads()
-                if not any(t.id == thread_id for t in threads):
-                    logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
-                    deleted_pids.append(process_id)
-                    file.unlink(missing_ok=True)
-            except psutil.AccessDenied:
-                # On some OSs (like macOS) we might not have access to thread info
-                # for processes owned by the same user if they are in a different security context.
-                # Since we know the process is alive (status() worked), we skip the mark deletion.
-                continue
+                next(t for t in threads if t.id == thread_id)
+            except StopIteration:
+                logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
+                deleted_pids.append(process_id)
+                file.unlink(missing_ok=True)
 
         except psutil.AccessDenied:
             logger.warning(f"access to {process_id} denied")

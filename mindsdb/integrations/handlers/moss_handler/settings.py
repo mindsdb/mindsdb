@@ -1,17 +1,16 @@
 import difflib
 from typing import Any
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 class MossHandlerConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     vector_store: str
     project_id: str
     project_key: str
     alpha: float = 0.8
-
-    class Config:
-        extra = "forbid"
 
     @model_validator(mode="before")
     @classmethod

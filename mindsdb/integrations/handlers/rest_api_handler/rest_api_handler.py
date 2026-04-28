@@ -1,12 +1,18 @@
-from typing import Any
+from typing import Any, Optional
 
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.passthrough import PassthroughMixin
-from mindsdb.integrations.libs.passthrough_types import PassthroughRequest
+from mindsdb.integrations.libs.passthrough_types import (
+    PassthroughConfigError,
+    PassthroughRequest,
+)
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
+)
+from mindsdb.integrations.utilities.handlers.auth_utilities.oauth2 import (
+    OAuth2ClientCredentialsProvider,
 )
 from mindsdb.utilities import log
 
@@ -48,6 +54,7 @@ class RestApiHandler(APIHandler, PassthroughMixin):
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data") or {}
         self.kwargs = kwargs
+        self.handler_storage = kwargs.get("handler_storage")
         self.is_connected = False
 
         # PassthroughMixin reads these instance attributes at runtime.
@@ -60,6 +67,56 @@ class RestApiHandler(APIHandler, PassthroughMixin):
         if not test_path.startswith("/"):
             test_path = f"/{test_path}"
         self._test_request = PassthroughRequest(method="GET", path=test_path)
+
+        # Lazy: instantiated on first token fetch when auth_type is OAuth.
+        # Bearer-mode handlers never construct a provider.
+        self._oauth_provider: Optional[OAuth2ClientCredentialsProvider] = None
+
+    def _oauth_storage_key(self) -> str:
+        """Storage key for the OAuth token cache.
+
+        Namespaced by handler name so two datasources with different client_ids
+        on the same MindsDB instance never share a cached token.
+        """
+        return f"oauth_client_credentials_tokens:{self.name}"
+
+    def _maybe_init_oauth_provider(self) -> None:
+        """Idempotent. Builds the OAuth provider only in oauth_client_credentials mode.
+
+        Bearer-mode handlers never reach this path, so the provider is never
+        constructed for them — that's the contract enforced by the
+        bearer_mode_does_not_instantiate_oauth_provider test.
+        """
+        if self._oauth_provider is not None:
+            return
+        if self._get_auth_type() != AUTH_TYPE_OAUTH_CLIENT_CREDENTIALS:
+            return
+        self._oauth_provider = OAuth2ClientCredentialsProvider(
+            self.connection_data,
+            handler_storage=self.handler_storage,
+            storage_key=self._oauth_storage_key(),
+        )
+
+    def _get_bearer_token(self) -> str:
+        """Token resolution dispatcher used by PassthroughMixin.
+
+        - bearer mode: keep the mixin's default (read from connection_data).
+        - oauth_client_credentials: resolve via the OAuth provider, which
+          handles token fetch, caching, and refresh.
+
+        Caller-supplied Authorization headers are filtered out by
+        PassthroughMixin._build_outgoing_headers (Authorization is in
+        FORBIDDEN_REQUEST_HEADERS) before this method's return value is
+        written into the outgoing headers, so the generated auth always wins.
+        """
+        auth_type = self._get_auth_type()
+        if auth_type == AUTH_TYPE_BEARER:
+            return super()._get_bearer_token()
+        if auth_type == AUTH_TYPE_OAUTH_CLIENT_CREDENTIALS:
+            self._maybe_init_oauth_provider()
+            assert self._oauth_provider is not None  # _maybe_init guarantees this
+            return self._oauth_provider.get_access_token()
+        raise PassthroughConfigError(f"Unsupported auth_type '{auth_type}'")
 
     def _get_auth_type(self) -> str:
         """Return the configured auth_type, defaulting to 'bearer'.

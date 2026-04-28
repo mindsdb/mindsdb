@@ -538,3 +538,241 @@ class TestUnsupportedAuthType:
         response = handler.check_connection()
         assert response.success is False
         assert "auth_type" in response.error_message
+
+
+# ---------------------------------------------------------------------------
+# OAuth client credentials integration
+# ---------------------------------------------------------------------------
+
+
+def _stub_oauth_dns(monkeypatch):
+    """Stub socket.getaddrinfo so the provider's SSRF check passes for hostnames."""
+    from mindsdb.integrations.utilities.handlers.auth_utilities.oauth2 import (
+        client_credentials as cc_module,
+    )
+
+    def fake_getaddrinfo(host, *args, **kwargs):
+        return [(2, 1, 6, "", ("1.2.3.4", 0))]
+
+    monkeypatch.setattr(cc_module.socket, "getaddrinfo", fake_getaddrinfo)
+
+
+def _stub_token_endpoint(monkeypatch, access_token="OAUTH-AT", expires_in=3600):
+    """Patch the token POST to return a synthetic access token."""
+    from mindsdb.integrations.utilities.handlers.auth_utilities.oauth2 import (
+        client_credentials as cc_module,
+    )
+
+    calls = {"n": 0}
+
+    def fake_post(url, data=None, headers=None, **_):
+        calls["n"] += 1
+
+        class _Resp:
+            status_code = 200
+            is_redirect = False
+            headers = {}
+
+            def iter_content(self, chunk_size=4096):
+                import json as _json
+
+                payload = _json.dumps({"access_token": access_token, "expires_in": expires_in}).encode("utf-8")
+                yield payload
+
+            def close(self):
+                pass
+
+        return _Resp()
+
+    monkeypatch.setattr(cc_module.requests, "post", fake_post)
+    return calls
+
+
+def _stub_upstream(monkeypatch):
+    """Patch the upstream request so we can inspect the outgoing call."""
+    captured = {}
+
+    def fake_request(method, url, **kwargs):
+        captured["method"] = method
+        captured["url"] = url
+        captured["headers"] = kwargs.get("headers", {})
+
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.headers = {}
+        resp.iter_content.return_value = [b""]
+        resp.close = MagicMock()
+        return resp
+
+    from mindsdb.integrations.libs import passthrough as pt_module
+
+    monkeypatch.setattr(pt_module.requests, "request", fake_request)
+    return captured
+
+
+class TestOAuthIntegration:
+    OAUTH_CONFIG = {
+        "base_url": "https://api.example.com",
+        "auth_type": "oauth_client_credentials",
+        "token_url": "https://auth.example.com/token",
+        "client_id": "cid",
+        "client_secret": "csec",
+    }
+
+    def test_oauth_mode_fetches_token_via_provider(self, monkeypatch):
+        _stub_oauth_dns(monkeypatch)
+        token_calls = _stub_token_endpoint(monkeypatch)
+        captured = _stub_upstream(monkeypatch)
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/v1/users"))
+
+        assert token_calls["n"] == 1
+        assert handler._oauth_provider is not None
+        assert captured["headers"]["Authorization"] == "Bearer OAUTH-AT"
+
+    def test_oauth_token_cached_across_calls(self, monkeypatch):
+        # Two passthrough calls, one token fetch — proves we go through the
+        # provider's cache rather than the static-token path.
+        _stub_oauth_dns(monkeypatch)
+        token_calls = _stub_token_endpoint(monkeypatch)
+        _stub_upstream(monkeypatch)
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/v1/users"))
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/v1/orgs"))
+
+        assert token_calls["n"] == 1
+
+    def test_oauth_caller_authorization_cannot_override_generated_auth(self, monkeypatch):
+        _stub_oauth_dns(monkeypatch)
+        _stub_token_endpoint(monkeypatch)
+        captured = _stub_upstream(monkeypatch)
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+        handler.api_passthrough(
+            PassthroughRequest(
+                method="GET",
+                path="/v1/users",
+                headers={"Authorization": "Bearer attacker-token"},
+            )
+        )
+
+        assert captured["headers"]["Authorization"] == "Bearer OAUTH-AT"
+        assert "attacker-token" not in captured["headers"]["Authorization"]
+
+    def test_oauth_caller_authorization_lowercase_also_rejected(self, monkeypatch):
+        # FORBIDDEN_REQUEST_HEADERS check is case-insensitive; verify a
+        # lowercase header from the caller still loses to the generated auth.
+        _stub_oauth_dns(monkeypatch)
+        _stub_token_endpoint(monkeypatch)
+        captured = _stub_upstream(monkeypatch)
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+        handler.api_passthrough(
+            PassthroughRequest(
+                method="GET",
+                path="/foo",
+                headers={"authorization": "Bearer attacker-token"},
+            )
+        )
+
+        # The mixin always writes the canonical-cased "Authorization" header.
+        assert captured["headers"]["Authorization"] == "Bearer OAUTH-AT"
+        # The caller-supplied lowercase variant should not have leaked through.
+        # If anything's in headers under "authorization" lowercase, it must
+        # not be the attacker token.
+        if "authorization" in captured["headers"]:
+            assert "attacker-token" not in captured["headers"]["authorization"]
+
+    def test_oauth_passthrough_works_without_caller_auth_headers(self, monkeypatch):
+        # Anton-style call: no headers at all on the PassthroughRequest.
+        _stub_oauth_dns(monkeypatch)
+        _stub_token_endpoint(monkeypatch)
+        captured = _stub_upstream(monkeypatch)
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/v1/users"))
+
+        assert captured["headers"]["Authorization"] == "Bearer OAUTH-AT"
+
+    def test_bearer_mode_does_not_instantiate_oauth_provider(self, monkeypatch):
+        _stub_upstream(monkeypatch)
+
+        handler = _make_handler()  # bearer mode (default)
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        assert handler._oauth_provider is None
+
+    def test_implicit_bearer_mode_still_injects_static_token(self, monkeypatch):
+        # Config without auth_type → defaults to bearer → static token used.
+        captured = _stub_upstream(monkeypatch)
+
+        handler = _make_handler({"base_url": "https://api.example.com", "bearer_token": "static-tok"})
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        assert captured["headers"]["Authorization"] == "Bearer static-tok"
+        assert handler._oauth_provider is None
+
+    def test_explicit_bearer_mode_still_injects_static_token(self, monkeypatch):
+        captured = _stub_upstream(monkeypatch)
+
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "auth_type": "bearer",
+                "bearer_token": "static-tok",
+            }
+        )
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        assert captured["headers"]["Authorization"] == "Bearer static-tok"
+        assert handler._oauth_provider is None
+
+    def test_bearer_caller_authorization_cannot_override_generated_auth(self, monkeypatch):
+        captured = _stub_upstream(monkeypatch)
+
+        handler = _make_handler({"base_url": "https://api.example.com", "bearer_token": "static-tok"})
+        handler.api_passthrough(
+            PassthroughRequest(
+                method="GET",
+                path="/foo",
+                headers={"Authorization": "Bearer attacker-token"},
+            )
+        )
+
+        assert captured["headers"]["Authorization"] == "Bearer static-tok"
+        assert "attacker-token" not in captured["headers"]["Authorization"]
+
+    def test_oauth_storage_key_includes_handler_name(self, monkeypatch):
+        # Two providers built for two different handler names must use
+        # distinct storage keys, so token caches don't collide on a shared
+        # handler_storage instance.
+        _stub_oauth_dns(monkeypatch)
+        _stub_token_endpoint(monkeypatch)
+        _stub_upstream(monkeypatch)
+
+        h1 = RestApiHandler("ds_one", connection_data=dict(self.OAUTH_CONFIG))
+        h2 = RestApiHandler("ds_two", connection_data=dict(self.OAUTH_CONFIG))
+        h1.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+        h2.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        assert h1._oauth_provider.storage_key != h2._oauth_provider.storage_key
+        assert "ds_one" in h1._oauth_provider.storage_key
+        assert "ds_two" in h2._oauth_provider.storage_key
+
+    def test_oauth_provider_receives_handler_storage(self, monkeypatch):
+        _stub_oauth_dns(monkeypatch)
+        _stub_token_endpoint(monkeypatch)
+        _stub_upstream(monkeypatch)
+
+        sentinel_storage = MagicMock()
+        sentinel_storage.encrypted_json_get.return_value = None
+        handler = RestApiHandler(
+            "test_rest",
+            connection_data=dict(self.OAUTH_CONFIG),
+            handler_storage=sentinel_storage,
+        )
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        assert handler._oauth_provider.handler_storage is sentinel_storage

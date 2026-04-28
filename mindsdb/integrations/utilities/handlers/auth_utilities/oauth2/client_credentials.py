@@ -29,6 +29,7 @@ from urllib.parse import urlparse
 
 import requests
 
+from mindsdb.integrations.libs.passthrough import _host_matches, _is_private_host
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -68,24 +69,36 @@ def _is_localhost_name(host: str) -> bool:
     return False
 
 
-def _ip_in_forbidden_range(ip: ipaddress._BaseAddress) -> Optional[str]:
-    if ip.is_loopback:
-        return "loopback"
-    if ip.is_link_local:
-        return "link-local"
-    if ip.is_private:
-        return "private"
-    if ip.is_multicast:
-        return "multicast"
-    if ip.is_reserved:
-        return "reserved"
-    if ip.is_unspecified:
-        return "unspecified"
-    return None
+def _is_forbidden_ip_string(addr: str) -> bool:
+    """True if `addr` is an IP literal in a forbidden range.
+
+    Wraps the passthrough mixin's `_is_private_host` (which covers loopback,
+    private, link-local, multicast, reserved) and adds the unspecified range
+    (0.0.0.0, ::) — the unspecified address is meaningless as an outbound
+    target and a common SSRF foothold.
+    """
+    if _is_private_host(addr):
+        return True
+    try:
+        return ipaddress.ip_address(addr).is_unspecified
+    except ValueError:
+        return False
 
 
-def _validate_token_url(token_url: str) -> None:
-    """Raise ValueError if token_url violates SSRF safety rules."""
+def _validate_token_url(token_url: str, allowed_hosts: Optional[list] = None) -> None:
+    """Raise ValueError if token_url violates SSRF or allowlist rules.
+
+    `allowed_hosts` mirrors the passthrough handler's `connection_data["allowed_hosts"]`
+    semantics:
+        - missing / None / empty list → no host allowlist applied (SSRF still runs)
+        - ["*"] → host allowlist skipped, but baseline SSRF protections still apply
+        - other list → token_url host must match one of the entries (case-insensitive)
+
+    Baseline SSRF protections always run, regardless of `allowed_hosts`. A
+    wildcard cannot enable loopback/private/link-local destinations, because
+    even an operator-curated wildcard is not a license to call internal
+    infrastructure with the datasource's stored client_secret.
+    """
     if not isinstance(token_url, str) or not token_url:
         raise ValueError("token_url must be a non-empty string")
 
@@ -98,19 +111,30 @@ def _validate_token_url(token_url: str) -> None:
     if not host:
         raise ValueError("token_url must include a host component")
 
+    # Host allowlist check — independent of and prior to baseline SSRF.
+    # A non-wildcard list confines the token endpoint to the operator's
+    # pre-approved hosts. ["*"] disables only this check.
+    if isinstance(allowed_hosts, list) and allowed_hosts and allowed_hosts != ["*"]:
+        normalized = [str(h) for h in allowed_hosts]
+        if not _host_matches(host, normalized):
+            raise ValueError(f"token_url host '{host}' is not in the datasource allowed_hosts allowlist")
+
+    # Baseline SSRF — runs unconditionally, including under ["*"].
     if _is_localhost_name(host):
         raise ValueError(f"token_url host '{host}' is a localhost alias and is not permitted")
 
-    try:
-        ip = ipaddress.ip_address(host)
-    except ValueError:
-        ip = None
+    if _is_forbidden_ip_string(host):
+        raise ValueError(f"token_url host '{host}' is in a forbidden IP range")
 
-    if ip is not None:
-        reason = _ip_in_forbidden_range(ip)
-        if reason is not None:
-            raise ValueError(f"token_url host '{host}' resolves to a forbidden range ({reason})")
-    else:
+    # If host is a name (not an IP literal), resolve and re-check each address
+    # to defeat names that point at internal IPs.
+    is_ip_literal = True
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        is_ip_literal = False
+
+    if not is_ip_literal:
         try:
             addrinfo = socket.getaddrinfo(host, None)
         except socket.gaierror as exc:
@@ -121,13 +145,8 @@ def _validate_token_url(token_url: str) -> None:
             # Strip IPv6 zone identifier if present
             if "%" in addr:
                 addr = addr.split("%", 1)[0]
-            try:
-                resolved_ip = ipaddress.ip_address(addr)
-            except ValueError:
-                continue
-            reason = _ip_in_forbidden_range(resolved_ip)
-            if reason is not None:
-                raise ValueError(f"token_url host '{host}' resolves to a forbidden range ({reason})")
+            if _is_forbidden_ip_string(addr):
+                raise ValueError(f"token_url host '{host}' resolves to a forbidden IP range")
 
     if scheme == "http":
         logger.warning(
@@ -172,7 +191,11 @@ class OAuth2ClientCredentialsProvider:
         if not client_secret:
             raise ValueError("connection_data['client_secret'] is required")
 
-        _validate_token_url(token_url)
+        # token_url is validated against the same `allowed_hosts` list the
+        # passthrough mixin uses for upstream API calls. Operators who restrict
+        # passthrough to specific hosts must also list the IdP's token host,
+        # since a different host is permitted but must still be allowlisted.
+        _validate_token_url(token_url, allowed_hosts=connection_data.get("allowed_hosts"))
 
         self.token_url = token_url
         self.client_id = client_id

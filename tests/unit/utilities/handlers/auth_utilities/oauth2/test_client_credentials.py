@@ -184,6 +184,136 @@ class TestConstructionValidation:
         assert not any(r.levelno == logging.WARNING for r in caplog.records)
 
 
+class TestTokenUrlAllowedHosts:
+    """allowed_hosts gating for token_url, mirroring the passthrough mixin.
+
+    Operator semantics:
+    - missing/empty → no host allowlist applied (SSRF still runs)
+    - ["*"] → host allowlist skipped, baseline SSRF still runs
+    - other list → token host must match one entry (case-insensitive)
+    """
+
+    def test_no_allowed_hosts_does_not_restrict_token_host(self, monkeypatch):
+        _bypass_dns(monkeypatch)
+        # No allowed_hosts configured — provider constructs successfully even
+        # though the token host differs from any base_url the caller might use.
+        OAuth2ClientCredentialsProvider(_conn(token_url="https://idp.example.com/oauth"))
+
+    def test_distinct_api_and_token_hosts_both_in_allowlist(self, monkeypatch):
+        _bypass_dns(monkeypatch)
+        # token_url host differs from a notional base_url host; both listed.
+        OAuth2ClientCredentialsProvider(
+            _conn(
+                token_url="https://idp.example.com/oauth/token",
+                allowed_hosts=["api.example.com", "idp.example.com"],
+            )
+        )
+
+    def test_token_host_not_in_allowlist_rejected(self, monkeypatch):
+        _bypass_dns(monkeypatch)
+        with pytest.raises(ValueError) as excinfo:
+            OAuth2ClientCredentialsProvider(
+                _conn(
+                    token_url="https://idp.example.com/oauth/token",
+                    allowed_hosts=["api.example.com"],  # IdP host omitted
+                )
+            )
+        msg = str(excinfo.value)
+        assert "idp.example.com" in msg
+        assert "allowed_hosts" in msg or "allowlist" in msg
+
+    def test_allowlist_match_is_case_insensitive(self, monkeypatch):
+        _bypass_dns(monkeypatch)
+        OAuth2ClientCredentialsProvider(
+            _conn(
+                token_url="https://IdP.Example.Com/oauth/token",
+                allowed_hosts=["idp.example.com"],
+            )
+        )
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://localhost/oauth/token",
+            "http://127.0.0.1/oauth/token",
+            "http://10.0.0.1/oauth/token",
+            "http://169.254.169.254/oauth/token",
+            "http://[::1]/oauth/token",
+        ],
+    )
+    def test_wildcard_does_not_bypass_ssrf(self, url):
+        # Operator wrote allowed_hosts=["*"] (skip allowlist), but the token
+        # endpoint must still pass baseline SSRF checks. A bypass here would
+        # let a misconfigured datasource POST the client_secret to internal
+        # infrastructure (cloud metadata, in-cluster services, etc.).
+        with pytest.raises(ValueError):
+            OAuth2ClientCredentialsProvider(_conn(token_url=url, allowed_hosts=["*"]))
+
+    def test_wildcard_skips_allowlist_for_public_token_host(self, monkeypatch):
+        _bypass_dns(monkeypatch)
+        # ["*"] disables only the allowlist — a public host still passes SSRF
+        # and constructs successfully without being explicitly listed.
+        OAuth2ClientCredentialsProvider(_conn(token_url="https://idp.example.com/oauth/token", allowed_hosts=["*"]))
+
+    def test_empty_allowed_hosts_list_treated_as_unset(self, monkeypatch):
+        _bypass_dns(monkeypatch)
+        # An empty list is interpreted as "no allowlist configured" rather
+        # than "no host is allowed", to match passthrough's _allowed_hosts
+        # which falls back to [default_host] when allowed is empty.
+        OAuth2ClientCredentialsProvider(_conn(token_url="https://idp.example.com/oauth/token", allowed_hosts=[]))
+
+
+class TestTokenEndpointTransportSafety:
+    """Pin the transport-layer guarantees: redirects, timeouts, response cap."""
+
+    def _provider(self, monkeypatch, **overrides):
+        _bypass_dns(monkeypatch)
+        return OAuth2ClientCredentialsProvider(_conn(**overrides))
+
+    def test_allow_redirects_disabled_on_token_post(self, monkeypatch):
+        provider = self._provider(monkeypatch)
+        captured = {}
+
+        def fake_post(url, data=None, headers=None, allow_redirects=None, **_):
+            captured["allow_redirects"] = allow_redirects
+            return FakeResponse(json_body={"access_token": "AT", "expires_in": 3600})
+
+        monkeypatch.setattr(cc_module.requests, "post", fake_post)
+        provider.get_access_token()
+        assert captured["allow_redirects"] is False
+
+    def test_connect_and_read_timeouts_match_constants(self, monkeypatch):
+        provider = self._provider(monkeypatch)
+        captured = {}
+
+        def fake_post(url, data=None, headers=None, timeout=None, **_):
+            captured["timeout"] = timeout
+            return FakeResponse(json_body={"access_token": "AT", "expires_in": 3600})
+
+        monkeypatch.setattr(cc_module.requests, "post", fake_post)
+        provider.get_access_token()
+        assert captured["timeout"] == (
+            cc_module.CONNECT_TIMEOUT_SECONDS,
+            cc_module.READ_TIMEOUT_SECONDS,
+        )
+        # Pin the actual values so a future bump is a deliberate decision.
+        assert cc_module.CONNECT_TIMEOUT_SECONDS == 10
+        assert cc_module.READ_TIMEOUT_SECONDS == 30
+
+    def test_response_body_over_64kb_rejected(self, monkeypatch):
+        provider = self._provider(monkeypatch)
+        oversize = b"x" * (cc_module.MAX_RESPONSE_BYTES + 1)
+        monkeypatch.setattr(
+            cc_module.requests,
+            "post",
+            lambda *a, **kw: FakeResponse(status_code=200, raw_body=oversize),
+        )
+        with pytest.raises(RuntimeError) as excinfo:
+            provider.get_access_token()
+        assert "exceeded" in str(excinfo.value).lower()
+        assert cc_module.MAX_RESPONSE_BYTES == 64 * 1024
+
+
 class TestRequestShape:
     def _provider(self, monkeypatch, **overrides):
         _bypass_dns(monkeypatch)

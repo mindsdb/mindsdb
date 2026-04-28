@@ -51,6 +51,13 @@ class RestApiHandler(APIHandler, PassthroughMixin):
 
     name = "rest_api"
 
+    # Advertised to /capabilities. Both modes are supported by the same
+    # handler instance — the runtime mode is selected per-datasource via
+    # connection_data["auth_type"]. _auth_mode is kept as a fallback for
+    # any caller that still reads the single-mode field.
+    _auth_modes = ["bearer", "oauth_client_credentials"]
+    _auth_mode = "bearer"
+
     def __init__(self, name: str, **kwargs: Any) -> None:
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data") or {}

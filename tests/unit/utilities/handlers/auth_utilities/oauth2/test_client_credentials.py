@@ -22,6 +22,17 @@ CLIENT_ID = "client-id-abc"
 CLIENT_SECRET = "client-secret-xyz"
 
 
+def _conn(**overrides):
+    """Build a connection_data dict with valid defaults."""
+    data = {
+        "token_url": VALID_TOKEN_URL,
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+    }
+    data.update(overrides)
+    return data
+
+
 class FakeResponse:
     """Minimal stand-in for requests.Response used by token-request tests."""
 
@@ -104,33 +115,44 @@ class TestConstructionValidation:
     def test_unsupported_auth_method_raises(self, monkeypatch):
         _bypass_dns(monkeypatch)
         with pytest.raises(ValueError) as excinfo:
-            OAuth2ClientCredentialsProvider(
-                token_url=VALID_TOKEN_URL,
-                client_id=CLIENT_ID,
-                client_secret=CLIENT_SECRET,
-                token_auth_method="client_secret_jwt",
-            )
+            OAuth2ClientCredentialsProvider(_conn(token_auth_method="client_secret_jwt"))
         msg = str(excinfo.value)
         assert "client_secret_post" in msg
         assert "client_secret_basic" in msg
 
     def test_client_secret_post_accepted(self, monkeypatch):
         _bypass_dns(monkeypatch)
-        OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            token_auth_method="client_secret_post",
-        )
+        OAuth2ClientCredentialsProvider(_conn(token_auth_method="client_secret_post"))
 
     def test_client_secret_basic_accepted(self, monkeypatch):
         _bypass_dns(monkeypatch)
-        OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            token_auth_method="client_secret_basic",
-        )
+        OAuth2ClientCredentialsProvider(_conn(token_auth_method="client_secret_basic"))
+
+    def test_default_token_auth_method_is_client_secret_post(self, monkeypatch):
+        _bypass_dns(monkeypatch)
+        provider = OAuth2ClientCredentialsProvider(_conn())
+        assert provider.token_auth_method == "client_secret_post"
+
+    def test_missing_token_url_raises(self):
+        with pytest.raises(ValueError) as excinfo:
+            OAuth2ClientCredentialsProvider({"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET})
+        assert "token_url" in str(excinfo.value)
+
+    def test_missing_client_id_raises(self, monkeypatch):
+        _bypass_dns(monkeypatch)
+        with pytest.raises(ValueError) as excinfo:
+            OAuth2ClientCredentialsProvider({"token_url": VALID_TOKEN_URL, "client_secret": CLIENT_SECRET})
+        assert "client_id" in str(excinfo.value)
+
+    def test_missing_client_secret_raises(self, monkeypatch):
+        _bypass_dns(monkeypatch)
+        with pytest.raises(ValueError) as excinfo:
+            OAuth2ClientCredentialsProvider({"token_url": VALID_TOKEN_URL, "client_id": CLIENT_ID})
+        assert "client_secret" in str(excinfo.value)
+
+    def test_non_dict_connection_data_raises(self):
+        with pytest.raises(TypeError):
+            OAuth2ClientCredentialsProvider("not-a-dict")
 
     @pytest.mark.parametrize(
         "url",
@@ -147,42 +169,25 @@ class TestConstructionValidation:
     )
     def test_ssrf_rules_reject_url(self, url):
         with pytest.raises(ValueError):
-            OAuth2ClientCredentialsProvider(
-                token_url=url,
-                client_id=CLIENT_ID,
-                client_secret=CLIENT_SECRET,
-            )
+            OAuth2ClientCredentialsProvider(_conn(token_url=url))
 
     def test_http_url_accepted_with_warning(self, monkeypatch, caplog):
         _bypass_dns(monkeypatch)
         with caplog.at_level(logging.WARNING, logger=cc_module.logger.name):
-            OAuth2ClientCredentialsProvider(
-                token_url="http://example.com/oauth",
-                client_id=CLIENT_ID,
-                client_secret=CLIENT_SECRET,
-            )
+            OAuth2ClientCredentialsProvider(_conn(token_url="http://example.com/oauth"))
         assert any("http://" in r.message or "unencrypted" in r.message for r in caplog.records)
 
     def test_https_url_accepted_no_warning(self, monkeypatch, caplog):
         _bypass_dns(monkeypatch)
         with caplog.at_level(logging.WARNING, logger=cc_module.logger.name):
-            OAuth2ClientCredentialsProvider(
-                token_url="https://example.com/oauth",
-                client_id=CLIENT_ID,
-                client_secret=CLIENT_SECRET,
-            )
+            OAuth2ClientCredentialsProvider(_conn(token_url="https://example.com/oauth"))
         assert not any(r.levelno == logging.WARNING for r in caplog.records)
 
 
 class TestRequestShape:
-    def _provider(self, monkeypatch, **kwargs):
+    def _provider(self, monkeypatch, **overrides):
         _bypass_dns(monkeypatch)
-        return OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            **kwargs,
-        )
+        return OAuth2ClientCredentialsProvider(_conn(**overrides))
 
     def test_client_secret_post_places_credentials_in_body(self, monkeypatch):
         provider = self._provider(monkeypatch, token_auth_method="client_secret_post")
@@ -195,7 +200,7 @@ class TestRequestShape:
             return FakeResponse(json_body={"access_token": "T", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        provider.get_token()
+        provider.get_access_token()
 
         assert captured["data"]["client_id"] == CLIENT_ID
         assert captured["data"]["client_secret"] == CLIENT_SECRET
@@ -211,7 +216,7 @@ class TestRequestShape:
             return FakeResponse(json_body={"access_token": "T", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        provider.get_token()
+        provider.get_access_token()
 
         expected = "Basic " + base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode("utf-8")).decode("ascii")
         assert captured["headers"]["Authorization"] == expected
@@ -227,7 +232,7 @@ class TestRequestShape:
             return FakeResponse(json_body={"access_token": "T", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        provider.get_token()
+        provider.get_access_token()
         assert captured["data"]["grant_type"] == "client_credentials"
 
     def test_scope_string_included(self, monkeypatch):
@@ -239,7 +244,7 @@ class TestRequestShape:
             return FakeResponse(json_body={"access_token": "T", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        provider.get_token()
+        provider.get_access_token()
         assert captured["data"]["scope"] == "read:foo write:bar"
 
     def test_scope_list_joined_with_space(self, monkeypatch):
@@ -251,7 +256,7 @@ class TestRequestShape:
             return FakeResponse(json_body={"access_token": "T", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        provider.get_token()
+        provider.get_access_token()
         assert captured["data"]["scope"] == "read:foo write:bar"
 
     def test_audience_included_when_configured(self, monkeypatch):
@@ -263,7 +268,7 @@ class TestRequestShape:
             return FakeResponse(json_body={"access_token": "T", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        provider.get_token()
+        provider.get_access_token()
         assert captured["data"]["audience"] == "https://api.example.com"
 
     def test_audience_omitted_when_none(self, monkeypatch):
@@ -275,7 +280,7 @@ class TestRequestShape:
             return FakeResponse(json_body={"access_token": "T", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        provider.get_token()
+        provider.get_access_token()
         assert "audience" not in captured["data"]
 
     def test_redirects_disabled_and_timeouts_set(self, monkeypatch):
@@ -288,7 +293,7 @@ class TestRequestShape:
             return FakeResponse(json_body={"access_token": "T", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        provider.get_token()
+        provider.get_access_token()
         assert captured["allow_redirects"] is False
         assert captured["timeout"] == (10, 30)
 
@@ -299,14 +304,9 @@ class TestRequestShape:
 
 
 class TestResponseHandling:
-    def _provider(self, monkeypatch, **kwargs):
+    def _provider(self, monkeypatch, **overrides):
         _bypass_dns(monkeypatch)
-        return OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            **kwargs,
-        )
+        return OAuth2ClientCredentialsProvider(_conn(**overrides))
 
     def test_success_caches_with_correct_expires_at(self, monkeypatch):
         provider = self._provider(monkeypatch)
@@ -316,7 +316,7 @@ class TestResponseHandling:
             lambda *a, **kw: FakeResponse(json_body={"access_token": "AT", "expires_in": 3600}),
         )
         before = time.time()
-        token = provider.get_token()
+        token = provider.get_access_token()
         after = time.time()
         assert token == "AT"
         cached = provider._read_cache()
@@ -331,7 +331,7 @@ class TestResponseHandling:
             lambda *a, **kw: FakeResponse(json_body={"expires_in": 3600}),
         )
         with pytest.raises(RuntimeError) as excinfo:
-            provider.get_token()
+            provider.get_access_token()
         # Safe message: no client_secret leak
         assert CLIENT_SECRET not in str(excinfo.value)
 
@@ -345,7 +345,7 @@ class TestResponseHandling:
                 json_body={"access_token": "AT", "token_type": token_type, "expires_in": 3600}
             ),
         )
-        assert provider.get_token() == "AT"
+        assert provider.get_access_token() == "AT"
 
     @pytest.mark.parametrize("token_type", ["MAC", "DPoP", "Token"])
     def test_unsupported_token_type_fails(self, monkeypatch, token_type):
@@ -358,7 +358,7 @@ class TestResponseHandling:
             ),
         )
         with pytest.raises(RuntimeError):
-            provider.get_token()
+            provider.get_access_token()
 
     @pytest.mark.parametrize("expires_in", [None, 0, -100, "abc"])
     def test_invalid_expires_in_defaults_to_300(self, monkeypatch, caplog, expires_in):
@@ -373,7 +373,7 @@ class TestResponseHandling:
         )
         before = time.time()
         with caplog.at_level(logging.INFO, logger=cc_module.logger.name):
-            provider.get_token()
+            provider.get_access_token()
         after = time.time()
         cached = provider._read_cache()
         # expires_at = now + 300 - 60 = now + 240
@@ -384,14 +384,9 @@ class TestResponseHandling:
 
 
 class TestCaching:
-    def _provider(self, monkeypatch, **kwargs):
+    def _provider(self, monkeypatch, **overrides):
         _bypass_dns(monkeypatch)
-        return OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            **kwargs,
-        )
+        return OAuth2ClientCredentialsProvider(_conn(**overrides))
 
     def test_cached_token_reused(self, monkeypatch):
         provider = self._provider(monkeypatch)
@@ -402,9 +397,9 @@ class TestCaching:
             return FakeResponse(json_body={"access_token": "AT", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        provider.get_token()
-        provider.get_token()
-        provider.get_token()
+        provider.get_access_token()
+        provider.get_access_token()
+        provider.get_access_token()
         assert calls["n"] == 1
 
     def test_token_within_skew_triggers_refresh(self, monkeypatch):
@@ -422,7 +417,7 @@ class TestCaching:
             return FakeResponse(json_body={"access_token": "NEW", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        assert provider.get_token() == "NEW"
+        assert provider.get_access_token() == "NEW"
         assert calls["n"] == 1
 
     def test_expired_token_triggers_refresh(self, monkeypatch):
@@ -437,9 +432,9 @@ class TestCaching:
             "post",
             lambda *a, **kw: FakeResponse(json_body={"access_token": "NEW", "expires_in": 3600}),
         )
-        assert provider.get_token() == "NEW"
+        assert provider.get_access_token() == "NEW"
 
-    def test_invalidate_clears_cache_and_refetches(self, monkeypatch):
+    def test_clear_cached_token_clears_cache_and_refetches(self, monkeypatch):
         provider = self._provider(monkeypatch)
         calls = {"n": 0}
         tokens = iter(["FIRST", "SECOND"])
@@ -449,15 +444,15 @@ class TestCaching:
             return FakeResponse(json_body={"access_token": next(tokens), "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        assert provider.get_token() == "FIRST"
-        provider.invalidate()
-        assert provider.get_token() == "SECOND"
+        assert provider.get_access_token() == "FIRST"
+        provider.clear_cached_token()
+        assert provider.get_access_token() == "SECOND"
         assert calls["n"] == 2
 
 
 class TestConcurrency:
     def test_concurrent_get_token_makes_single_http_call(self, monkeypatch):
-        """Two threads call get_token() with empty cache simultaneously.
+        """Two threads call get_access_token() with empty cache simultaneously.
 
         Forces the double-checked-lock scenario: both threads must complete
         their FIRST cache read (and observe empty) before either acquires the
@@ -466,11 +461,7 @@ class TestConcurrency:
         would issue the HTTP request — exactly the bug the lock prevents.
         """
         _bypass_dns(monkeypatch)
-        provider = OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-        )
+        provider = OAuth2ClientCredentialsProvider(_conn())
 
         call_count = {"n": 0}
         sync_counter = {"value": 0}
@@ -503,7 +494,7 @@ class TestConcurrency:
         results = {}
 
         def worker(idx):
-            results[idx] = provider.get_token()
+            results[idx] = provider.get_access_token()
 
         t1 = threading.Thread(target=worker, args=(1,))
         t2 = threading.Thread(target=worker, args=(2,))
@@ -533,31 +524,23 @@ class TestStorage:
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
 
         p1 = OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
+            _conn(),
             handler_storage=storage,
             storage_key="oauth_test",
         )
-        assert p1.get_token() == "PERSIST"
+        assert p1.get_access_token() == "PERSIST"
 
         p2 = OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
+            _conn(),
             handler_storage=storage,
             storage_key="oauth_test",
         )
-        assert p2.get_token() == "PERSIST"
+        assert p2.get_access_token() == "PERSIST"
         assert calls["n"] == 1
 
     def test_in_memory_cache_when_storage_none(self, monkeypatch):
         _bypass_dns(monkeypatch)
-        provider = OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-        )
+        provider = OAuth2ClientCredentialsProvider(_conn())
         calls = {"n": 0}
 
         def fake_post(*a, **kw):
@@ -565,17 +548,15 @@ class TestStorage:
             return FakeResponse(json_body={"access_token": "MEM", "expires_in": 3600})
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
-        assert provider.get_token() == "MEM"
-        assert provider.get_token() == "MEM"
+        assert provider.get_access_token() == "MEM"
+        assert provider.get_access_token() == "MEM"
         assert calls["n"] == 1
 
     def test_storage_set_failure_falls_back_to_memory(self, monkeypatch, caplog):
         _bypass_dns(monkeypatch)
         storage = FailingStorage()
         provider = OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
+            _conn(),
             handler_storage=storage,
         )
 
@@ -584,9 +565,9 @@ class TestStorage:
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
         with caplog.at_level(logging.DEBUG, logger=cc_module.logger.name):
-            assert provider.get_token() == "FB"
-        # Subsequent get_token uses in-memory fallback
-        assert provider.get_token() == "FB"
+            assert provider.get_access_token() == "FB"
+        # Subsequent get_access_token uses in-memory fallback
+        assert provider.get_access_token() == "FB"
         assert provider._memory_cache is not None
         assert any("in-memory" in r.message or "fallback" in r.message.lower() for r in caplog.records)
 
@@ -594,11 +575,7 @@ class TestStorage:
         _bypass_dns(monkeypatch)
         storage = FakeStorage()
         provider = OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            scope="read:foo",
-            audience="https://api.example.com",
+            _conn(scope="read:foo", audience="https://api.example.com"),
             handler_storage=storage,
             storage_key="oauth_test",
         )
@@ -607,7 +584,7 @@ class TestStorage:
             "post",
             lambda *a, **kw: FakeResponse(json_body={"access_token": "AT", "expires_in": 3600}),
         )
-        provider.get_token()
+        provider.get_access_token()
         cached = storage._data["oauth_test"]
         as_text = repr(cached)
         assert CLIENT_SECRET not in as_text
@@ -620,11 +597,7 @@ class TestStorage:
 class TestCurrentSecrets:
     def _provider(self, monkeypatch):
         _bypass_dns(monkeypatch)
-        return OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-        )
+        return OAuth2ClientCredentialsProvider(_conn())
 
     def test_no_cached_token_returns_empty(self, monkeypatch):
         provider = self._provider(monkeypatch)
@@ -637,29 +610,25 @@ class TestCurrentSecrets:
             "post",
             lambda *a, **kw: FakeResponse(json_body={"access_token": "S3CR3T", "expires_in": 3600}),
         )
-        provider.get_token()
+        provider.get_access_token()
         assert provider.current_secrets() == ["S3CR3T"]
 
-    def test_after_invalidate_returns_empty(self, monkeypatch):
+    def test_after_clear_cached_token_returns_empty(self, monkeypatch):
         provider = self._provider(monkeypatch)
         monkeypatch.setattr(
             cc_module.requests,
             "post",
             lambda *a, **kw: FakeResponse(json_body={"access_token": "S3CR3T", "expires_in": 3600}),
         )
-        provider.get_token()
-        provider.invalidate()
+        provider.get_access_token()
+        provider.clear_cached_token()
         assert provider.current_secrets() == []
 
 
 class TestErrorSanitization:
     def _provider(self, monkeypatch):
         _bypass_dns(monkeypatch)
-        return OAuth2ClientCredentialsProvider(
-            token_url=VALID_TOKEN_URL,
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-        )
+        return OAuth2ClientCredentialsProvider(_conn())
 
     def test_failure_message_does_not_leak_client_secret(self, monkeypatch):
         provider = self._provider(monkeypatch)
@@ -669,7 +638,7 @@ class TestErrorSanitization:
             lambda *a, **kw: FakeResponse(status_code=500, json_body={"error": "boom"}),
         )
         with pytest.raises(RuntimeError) as excinfo:
-            provider.get_token()
+            provider.get_access_token()
         assert CLIENT_SECRET not in str(excinfo.value)
 
     def test_failure_message_does_not_leak_access_token(self, monkeypatch):
@@ -680,7 +649,7 @@ class TestErrorSanitization:
             "post",
             lambda *a, **kw: FakeResponse(json_body={"access_token": "very-secret-token", "expires_in": 1}),
         )
-        provider.get_token()
+        provider.get_access_token()
         # Now force expiry and make next call fail
         provider._memory_cache["expires_at"] = time.time() - 1
         monkeypatch.setattr(
@@ -689,7 +658,7 @@ class TestErrorSanitization:
             lambda *a, **kw: FakeResponse(status_code=401, json_body={"error": "invalid_grant"}),
         )
         with pytest.raises(RuntimeError) as excinfo:
-            provider.get_token()
+            provider.get_access_token()
         assert "very-secret-token" not in str(excinfo.value)
 
     def test_401_includes_provider_error_fields(self, monkeypatch):
@@ -706,7 +675,7 @@ class TestErrorSanitization:
             ),
         )
         with pytest.raises(RuntimeError) as excinfo:
-            provider.get_token()
+            provider.get_access_token()
         msg = str(excinfo.value)
         assert "invalid_client" in msg
         assert "Client authentication failed" in msg
@@ -721,19 +690,19 @@ class TestErrorSanitization:
             lambda *a, **kw: FakeResponse(status_code=302, is_redirect=True),
         )
         with pytest.raises(RuntimeError) as excinfo:
-            provider.get_token()
+            provider.get_access_token()
         assert "redirect" in str(excinfo.value).lower()
 
     def test_response_size_cap_aborts(self, monkeypatch):
         provider = self._provider(monkeypatch)
-        oversize = b"x" * (cc_module._MAX_RESPONSE_BYTES + 100)
+        oversize = b"x" * (cc_module.MAX_RESPONSE_BYTES + 100)
         monkeypatch.setattr(
             cc_module.requests,
             "post",
             lambda *a, **kw: FakeResponse(status_code=200, raw_body=oversize),
         )
         with pytest.raises(RuntimeError) as excinfo:
-            provider.get_token()
+            provider.get_access_token()
         assert "exceeded" in str(excinfo.value).lower()
 
     def test_transport_error_message_redacts_secret(self, monkeypatch):
@@ -744,7 +713,7 @@ class TestErrorSanitization:
 
         monkeypatch.setattr(cc_module.requests, "post", fake_post)
         with pytest.raises(RuntimeError) as excinfo:
-            provider.get_token()
+            provider.get_access_token()
         chained = excinfo.value.__cause__
         assert CLIENT_SECRET not in str(excinfo.value)
         assert CLIENT_SECRET not in str(chained)

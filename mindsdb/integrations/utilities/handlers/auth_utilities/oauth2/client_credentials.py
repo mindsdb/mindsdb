@@ -3,6 +3,18 @@
 A reusable, thread-safe utility that fetches and caches OAuth2 access tokens
 using the RFC 6749 client credentials grant. Suitable for server-to-server
 flows with no end-user redirect.
+
+Public surface:
+    OAuth2ClientCredentialsProvider(connection_data, handler_storage=None,
+                                    storage_key=None)
+        .get_access_token() -> str
+        .clear_cached_token() -> None
+        .current_secrets() -> list[str]
+
+The constructor takes the handler's stored connection_data dict as a single
+argument so consumers (e.g. the rest_api handler) can pass `self.connection_data`
+verbatim. Auth resolution stays inside the provider — callers never see
+client_secret values, and cached state never contains credentials or config.
 """
 
 from __future__ import annotations
@@ -12,7 +24,7 @@ import ipaddress
 import socket
 import threading
 import time
-from typing import Any, Optional, Union
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 import requests
@@ -22,12 +34,27 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-_ALLOWED_AUTH_METHODS = ("client_secret_post", "client_secret_basic")
-_CONNECT_TIMEOUT_SECONDS = 10
-_READ_TIMEOUT_SECONDS = 30
-_DEFAULT_EXPIRES_IN_SECONDS = 300
-_SKEW_SECONDS = 60
-_MAX_RESPONSE_BYTES = 64 * 1024
+# Public constants — exposed so callers (and tests) can reference them
+# without reaching for underscore-prefixed names.
+ALLOWED_AUTH_METHODS = ("client_secret_post", "client_secret_basic")
+DEFAULT_TOKEN_AUTH_METHOD = "client_secret_post"
+DEFAULT_STORAGE_KEY = "oauth_client_credentials_tokens"
+
+CONNECT_TIMEOUT_SECONDS = 10
+READ_TIMEOUT_SECONDS = 30
+DEFAULT_EXPIRES_IN_SECONDS = 300
+EXPIRY_SKEW_SECONDS = 60
+MAX_RESPONSE_BYTES = 64 * 1024
+
+
+# Backward-compatible private aliases. Removing these would break any external
+# code that imported the underscore names; safe to keep as thin pointers.
+_ALLOWED_AUTH_METHODS = ALLOWED_AUTH_METHODS
+_CONNECT_TIMEOUT_SECONDS = CONNECT_TIMEOUT_SECONDS
+_READ_TIMEOUT_SECONDS = READ_TIMEOUT_SECONDS
+_DEFAULT_EXPIRES_IN_SECONDS = DEFAULT_EXPIRES_IN_SECONDS
+_SKEW_SECONDS = EXPIRY_SKEW_SECONDS
+_MAX_RESPONSE_BYTES = MAX_RESPONSE_BYTES
 
 
 def _is_localhost_name(host: str) -> bool:
@@ -112,26 +139,38 @@ def _validate_token_url(token_url: str) -> None:
 class OAuth2ClientCredentialsProvider:
     """Fetches and caches OAuth2 access tokens using the client credentials grant.
 
-    Thread-safe: concurrent callers of get_token() during refresh trigger
+    Thread-safe: concurrent callers of get_access_token() during refresh trigger
     exactly one HTTP request to the token endpoint via double-checked locking.
     """
 
     def __init__(
         self,
-        token_url: str,
-        client_id: str,
-        client_secret: str,
-        scope: Union[str, list, None] = None,
-        audience: Optional[str] = None,
-        token_auth_method: str = "client_secret_post",
+        connection_data: dict,
         handler_storage: Any = None,
-        storage_key: str = "oauth_client_credentials_tokens",
+        storage_key: Optional[str] = None,
     ) -> None:
-        if token_auth_method not in _ALLOWED_AUTH_METHODS:
+        if not isinstance(connection_data, dict):
+            raise TypeError("connection_data must be a dict")
+
+        token_url = connection_data.get("token_url")
+        client_id = connection_data.get("client_id")
+        client_secret = connection_data.get("client_secret")
+        scope = connection_data.get("scope")
+        audience = connection_data.get("audience")
+        token_auth_method = connection_data.get("token_auth_method") or DEFAULT_TOKEN_AUTH_METHOD
+
+        if token_auth_method not in ALLOWED_AUTH_METHODS:
             raise ValueError(
                 f"token_auth_method '{token_auth_method}' is not supported; "
-                f"allowed values are: {', '.join(_ALLOWED_AUTH_METHODS)}"
+                f"allowed values are: {', '.join(ALLOWED_AUTH_METHODS)}"
             )
+
+        if not token_url:
+            raise ValueError("connection_data['token_url'] is required")
+        if not client_id:
+            raise ValueError("connection_data['client_id'] is required")
+        if not client_secret:
+            raise ValueError("connection_data['client_secret'] is required")
 
         _validate_token_url(token_url)
 
@@ -142,13 +181,13 @@ class OAuth2ClientCredentialsProvider:
         self.audience = audience
         self.token_auth_method = token_auth_method
         self.handler_storage = handler_storage
-        self.storage_key = storage_key
+        self.storage_key = storage_key or DEFAULT_STORAGE_KEY
 
         self._lock = threading.Lock()
         self._memory_cache: Optional[dict] = None
         self._missing_expires_in_logged = False
 
-    def get_token(self) -> str:
+    def get_access_token(self) -> str:
         """Return a valid access token, refreshing if needed."""
         cached = self._read_cache()
         if cached and not self._is_expired(cached):
@@ -166,7 +205,7 @@ class OAuth2ClientCredentialsProvider:
             self._write_cache(new_token)
             return new_token["access_token"]
 
-    def invalidate(self) -> None:
+    def clear_cached_token(self) -> None:
         """Clear the cached token from both in-memory and persistent storage."""
         with self._lock:
             self._memory_cache = None
@@ -226,7 +265,7 @@ class OAuth2ClientCredentialsProvider:
                 self.token_url,
                 data=body,
                 headers=headers,
-                timeout=(_CONNECT_TIMEOUT_SECONDS, _READ_TIMEOUT_SECONDS),
+                timeout=(CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS),
                 allow_redirects=False,
                 stream=True,
             )
@@ -307,13 +346,13 @@ class OAuth2ClientCredentialsProvider:
             if not self._missing_expires_in_logged:
                 logger.info(
                     "OAuth2 token response omitted or returned invalid 'expires_in'; defaulting to %ss. host=%s",
-                    _DEFAULT_EXPIRES_IN_SECONDS,
+                    DEFAULT_EXPIRES_IN_SECONDS,
                     self._safe_host(),
                 )
                 self._missing_expires_in_logged = True
-            expires_in = _DEFAULT_EXPIRES_IN_SECONDS
+            expires_in = DEFAULT_EXPIRES_IN_SECONDS
 
-        expires_at = time.time() + expires_in - _SKEW_SECONDS
+        expires_at = time.time() + expires_in - EXPIRY_SKEW_SECONDS
 
         return {
             "access_token": access_token,
@@ -322,7 +361,7 @@ class OAuth2ClientCredentialsProvider:
         }
 
     def _read_capped(self, response: requests.Response) -> bytes:
-        """Read response body up to _MAX_RESPONSE_BYTES; abort if exceeded."""
+        """Read response body up to MAX_RESPONSE_BYTES; abort if exceeded."""
         chunks: list = []
         total = 0
         try:
@@ -330,9 +369,9 @@ class OAuth2ClientCredentialsProvider:
                 if not chunk:
                     continue
                 total += len(chunk)
-                if total > _MAX_RESPONSE_BYTES:
+                if total > MAX_RESPONSE_BYTES:
                     raise RuntimeError(
-                        f"OAuth2 token response exceeded {_MAX_RESPONSE_BYTES} bytes; aborting. "
+                        f"OAuth2 token response exceeded {MAX_RESPONSE_BYTES} bytes; aborting. "
                         f"host={self._safe_host()} client_id={self.client_id}"
                     )
                 chunks.append(chunk)

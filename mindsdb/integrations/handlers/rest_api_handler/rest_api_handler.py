@@ -5,6 +5,7 @@ from mindsdb.integrations.libs.passthrough import PassthroughMixin
 from mindsdb.integrations.libs.passthrough_types import (
     PassthroughConfigError,
     PassthroughRequest,
+    PassthroughResponse,
 )
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -225,7 +226,18 @@ class RestApiHandler(APIHandler, PassthroughMixin):
         self.is_connected = True
 
     def check_connection(self) -> StatusResponse:
-        """Validate that base_url and the configured auth strategy are valid."""
+        """Validate that base_url and the configured auth strategy are valid.
+
+        Bearer mode: schema-only validation (backward-compatible).
+
+        OAuth mode: schema validation, then construct the provider (which
+        runs the SSRF check on token_url), fetch a token to confirm the IdP
+        accepts the credentials, then call test_passthrough() to confirm the
+        upstream accepts the token. Errors are reported as plain strings —
+        the underlying layers (provider error sanitization, test_passthrough's
+        structured result) already redact secrets, so we forward their
+        messages without re-formatting.
+        """
         response = StatusResponse(False)
         try:
             base_url = self._build_base_url()
@@ -233,10 +245,48 @@ class RestApiHandler(APIHandler, PassthroughMixin):
                 response.error_message = "base_url is required"
                 return response
             self._validate_auth_config()
+
+            if self._get_auth_type() == AUTH_TYPE_OAUTH_CLIENT_CREDENTIALS:
+                # Surface IdP / SSRF / token-shape problems at connect time.
+                self._maybe_init_oauth_provider()
+                assert self._oauth_provider is not None
+                self._oauth_provider.get_access_token()
+
+                # _test_request is always set in __init__ (defaults to GET /),
+                # so the upstream sanity check always runs in OAuth mode. Its
+                # return is a structured dict with a safe `message` field.
+                test_result = self.test_passthrough()
+                if not test_result.get("ok"):
+                    response.error_message = (
+                        test_result.get("message") or test_result.get("error_code") or "upstream test request failed"
+                    )
+                    return response
+
             response.success = True
             self.is_connected = True
         except Exception as e:
             response.error_message = str(e)
+        return response
+
+    def api_passthrough(self, req: PassthroughRequest) -> PassthroughResponse:
+        """Forward to PassthroughMixin, with a single 401 retry in OAuth mode.
+
+        On the first 401 from the upstream, assume the cached access token
+        was rejected (revoked, rotated by the IdP, or invalidated mid-flight),
+        clear the token cache, and replay the request once. The replay goes
+        through the full mixin path again — same SSRF / allowed_hosts checks,
+        same Authorization-header override protection, same response scrub —
+        so a second 401 is returned to the caller as-is rather than triggering
+        another retry. Bearer mode is untouched.
+        """
+        response = super().api_passthrough(req)
+        if (
+            response.status_code == 401
+            and self._get_auth_type() == AUTH_TYPE_OAUTH_CLIENT_CREDENTIALS
+            and self._oauth_provider is not None
+        ):
+            self._oauth_provider.clear_cached_token()
+            response = super().api_passthrough(req)
         return response
 
     def native_query(self, query: str) -> Response:

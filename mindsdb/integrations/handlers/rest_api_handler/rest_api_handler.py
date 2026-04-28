@@ -13,6 +13,27 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
+AUTH_TYPE_BEARER = "bearer"
+AUTH_TYPE_OAUTH_CLIENT_CREDENTIALS = "oauth_client_credentials"
+SUPPORTED_AUTH_TYPES = (AUTH_TYPE_BEARER, AUTH_TYPE_OAUTH_CLIENT_CREDENTIALS)
+
+DEFAULT_AUTH_TYPE = AUTH_TYPE_BEARER
+DEFAULT_TOKEN_AUTH_METHOD = "client_secret_post"
+SUPPORTED_TOKEN_AUTH_METHODS = ("client_secret_post", "client_secret_basic")
+
+# Fields that only make sense in OAuth mode. Bearer-mode configs that
+# populate any of these are rejected so misconfigured datasources fail
+# loudly at sync time rather than silently ignoring the OAuth values.
+OAUTH_ONLY_FIELDS = (
+    "token_url",
+    "client_id",
+    "client_secret",
+    "scope",
+    "audience",
+    "token_auth_method",
+)
+
+
 class RestApiHandler(APIHandler, PassthroughMixin):
     """Generic REST API handler — passthrough only, no SQL tables.
 
@@ -40,6 +61,58 @@ class RestApiHandler(APIHandler, PassthroughMixin):
             test_path = f"/{test_path}"
         self._test_request = PassthroughRequest(method="GET", path=test_path)
 
+    def _get_auth_type(self) -> str:
+        """Return the configured auth_type, defaulting to 'bearer'.
+
+        Empty strings are treated as "not set" so a UI that submits empty
+        form fields still defaults correctly.
+        """
+        value = self.connection_data.get("auth_type")
+        if value is None or value == "":
+            return DEFAULT_AUTH_TYPE
+        return str(value)
+
+    def _validate_auth_config(self) -> None:
+        """Validate stored auth-related connection args.
+
+        Runs against the *stored* datasource config (synced from Minds), not
+        runtime passthrough requests. Raises ValueError on misconfiguration.
+        """
+        auth_type = self._get_auth_type()
+        if auth_type not in SUPPORTED_AUTH_TYPES:
+            raise ValueError(
+                f"Unsupported auth_type '{auth_type}'. Supported values: {', '.join(SUPPORTED_AUTH_TYPES)}"
+            )
+
+        if auth_type == AUTH_TYPE_BEARER:
+            self._validate_bearer_config()
+        else:
+            self._validate_oauth_client_credentials_config()
+
+    def _validate_bearer_config(self) -> None:
+        if not self.connection_data.get("bearer_token"):
+            raise ValueError("bearer_token is required when auth_type is 'bearer'")
+
+        present_oauth_fields = [field for field in OAUTH_ONLY_FIELDS if self.connection_data.get(field)]
+        if present_oauth_fields:
+            raise ValueError(
+                f"OAuth-only fields are not permitted when auth_type is 'bearer': {', '.join(present_oauth_fields)}"
+            )
+
+    def _validate_oauth_client_credentials_config(self) -> None:
+        if self.connection_data.get("bearer_token"):
+            raise ValueError("bearer_token is not permitted when auth_type is 'oauth_client_credentials'")
+
+        for required in ("token_url", "client_id", "client_secret"):
+            if not self.connection_data.get(required):
+                raise ValueError(f"{required} is required when auth_type is 'oauth_client_credentials'")
+
+        method = self.connection_data.get("token_auth_method") or DEFAULT_TOKEN_AUTH_METHOD
+        if method not in SUPPORTED_TOKEN_AUTH_METHODS:
+            raise ValueError(
+                f"Unsupported token_auth_method '{method}'. Supported values: {', '.join(SUPPORTED_TOKEN_AUTH_METHODS)}"
+            )
+
     def connect(self) -> None:
         """No persistent connection needed — passthrough is stateless.
 
@@ -49,17 +122,14 @@ class RestApiHandler(APIHandler, PassthroughMixin):
         self.is_connected = True
 
     def check_connection(self) -> StatusResponse:
-        """Validate that base_url and bearer_token are present."""
+        """Validate that base_url and the configured auth strategy are valid."""
         response = StatusResponse(False)
         try:
             base_url = self._build_base_url()
             if not base_url:
                 response.error_message = "base_url is required"
                 return response
-            token = self.connection_data.get(self._bearer_token_arg)
-            if not token:
-                response.error_message = "bearer_token is required"
-                return response
+            self._validate_auth_config()
             response.success = True
             self.is_connected = True
         except Exception as e:

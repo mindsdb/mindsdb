@@ -261,3 +261,280 @@ class TestBackwardCompatibleBearerInit:
         )
         response = handler.check_connection()
         assert response.success is True
+
+
+class TestAuthTypeResolution:
+    def test_default_auth_type_is_bearer(self):
+        handler = _make_handler()
+        assert handler._get_auth_type() == "bearer"
+
+    def test_empty_auth_type_treated_as_default(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "auth_type": "",
+            }
+        )
+        assert handler._get_auth_type() == "bearer"
+
+    def test_explicit_auth_type_returned(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "auth_type": "oauth_client_credentials",
+                "token_url": "https://auth.example.com/token",
+                "client_id": "cid",
+                "client_secret": "csecret",
+            }
+        )
+        assert handler._get_auth_type() == "oauth_client_credentials"
+
+
+class TestBearerAuthValidation:
+    def test_implicit_bearer_with_token_passes(self):
+        handler = _make_handler({"base_url": "https://api.example.com", "bearer_token": "tok"})
+        handler._validate_auth_config()  # should not raise
+
+    def test_explicit_bearer_with_token_passes(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "auth_type": "bearer",
+            }
+        )
+        handler._validate_auth_config()
+
+    def test_missing_bearer_token_fails(self):
+        handler = _make_handler({"base_url": "https://api.example.com", "auth_type": "bearer"})
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "bearer_token" in str(e)
+        else:
+            raise AssertionError("expected ValueError for missing bearer_token")
+
+    def test_check_connection_missing_bearer_token_message(self):
+        handler = _make_handler({"base_url": "https://api.example.com", "auth_type": "bearer"})
+        response = handler.check_connection()
+        assert response.success is False
+        assert "bearer_token" in response.error_message
+
+    def test_bearer_rejects_token_url(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "token_url": "https://auth.example.com/token",
+            }
+        )
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "token_url" in str(e)
+        else:
+            raise AssertionError("expected ValueError for token_url in bearer mode")
+
+    def test_bearer_rejects_client_id(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "client_id": "cid",
+            }
+        )
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "client_id" in str(e)
+        else:
+            raise AssertionError("expected ValueError for client_id in bearer mode")
+
+    def test_bearer_rejects_client_secret(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "client_secret": "secret",
+            }
+        )
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "client_secret" in str(e)
+        else:
+            raise AssertionError("expected ValueError for client_secret in bearer mode")
+
+    def test_bearer_rejects_scope(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "scope": "read:all",
+            }
+        )
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "scope" in str(e)
+        else:
+            raise AssertionError("expected ValueError for scope in bearer mode")
+
+    def test_bearer_rejects_audience(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "audience": "https://api.example.com",
+            }
+        )
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "audience" in str(e)
+        else:
+            raise AssertionError("expected ValueError for audience in bearer mode")
+
+    def test_bearer_rejects_token_auth_method(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "token_auth_method": "client_secret_post",
+            }
+        )
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "token_auth_method" in str(e)
+        else:
+            raise AssertionError("expected ValueError for token_auth_method in bearer mode")
+
+    def test_bearer_ignores_empty_oauth_fields(self):
+        # UIs may submit empty strings for unfilled fields; treat as absent.
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok",
+                "token_url": "",
+                "client_id": "",
+                "client_secret": "",
+            }
+        )
+        handler._validate_auth_config()
+
+
+class TestOAuthClientCredentialsValidation:
+    BASE = {
+        "base_url": "https://api.example.com",
+        "auth_type": "oauth_client_credentials",
+        "token_url": "https://auth.example.com/token",
+        "client_id": "cid",
+        "client_secret": "csecret",
+    }
+
+    def test_minimal_valid_config_passes(self):
+        handler = _make_handler(dict(self.BASE))
+        handler._validate_auth_config()
+
+    def test_missing_token_url_fails(self):
+        data = dict(self.BASE)
+        del data["token_url"]
+        handler = _make_handler(data)
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "token_url" in str(e)
+        else:
+            raise AssertionError("expected ValueError for missing token_url")
+
+    def test_missing_client_id_fails(self):
+        data = dict(self.BASE)
+        del data["client_id"]
+        handler = _make_handler(data)
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "client_id" in str(e)
+        else:
+            raise AssertionError("expected ValueError for missing client_id")
+
+    def test_missing_client_secret_fails(self):
+        data = dict(self.BASE)
+        del data["client_secret"]
+        handler = _make_handler(data)
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "client_secret" in str(e)
+        else:
+            raise AssertionError("expected ValueError for missing client_secret")
+
+    def test_oauth_rejects_bearer_token(self):
+        data = dict(self.BASE)
+        data["bearer_token"] = "tok"
+        handler = _make_handler(data)
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "bearer_token" in str(e)
+        else:
+            raise AssertionError("expected ValueError for bearer_token in OAuth mode")
+
+    def test_oauth_default_token_auth_method_passes(self):
+        # token_auth_method omitted → defaults to client_secret_post.
+        handler = _make_handler(dict(self.BASE))
+        handler._validate_auth_config()
+
+    def test_oauth_explicit_client_secret_basic_passes(self):
+        data = dict(self.BASE)
+        data["token_auth_method"] = "client_secret_basic"
+        handler = _make_handler(data)
+        handler._validate_auth_config()
+
+    def test_oauth_unsupported_token_auth_method_fails(self):
+        data = dict(self.BASE)
+        data["token_auth_method"] = "private_key_jwt"
+        handler = _make_handler(data)
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "token_auth_method" in str(e)
+            assert "private_key_jwt" in str(e)
+        else:
+            raise AssertionError("expected ValueError for unsupported token_auth_method")
+
+    def test_oauth_check_connection_succeeds(self):
+        handler = _make_handler(dict(self.BASE))
+        response = handler.check_connection()
+        assert response.success is True
+
+
+class TestUnsupportedAuthType:
+    def test_unsupported_auth_type_fails(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "auth_type": "api_key",
+                "bearer_token": "tok",
+            }
+        )
+        try:
+            handler._validate_auth_config()
+        except ValueError as e:
+            assert "auth_type" in str(e)
+            assert "api_key" in str(e)
+        else:
+            raise AssertionError("expected ValueError for unsupported auth_type")
+
+    def test_unsupported_auth_type_via_check_connection(self):
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "auth_type": "saml",
+            }
+        )
+        response = handler.check_connection()
+        assert response.success is False
+        assert "auth_type" in response.error_message

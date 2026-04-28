@@ -1,40 +1,21 @@
+"""Aggregator for the rest_api handler's connection arguments.
+
+REST/passthrough fields and authentication fields are defined in separate
+modules (rest_connection_args, oauth_connection_args). This module merges
+them into the single `connection_args` mapping that MindsDB expects each
+handler package to export.
+"""
+
 from collections import OrderedDict
 
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from .rest_connection_args import rest_connection_args
+from .oauth_connection_args import oauth_connection_args
 
-connection_args = OrderedDict(
-    base_url={
-        "type": ARG_TYPE.STR,
-        "description": "Base URL of the REST API (e.g. https://api.example.com)",
-        "required": True,
-        "label": "Base URL",
-    },
-    bearer_token={
-        "type": ARG_TYPE.PWD,
-        "description": "Bearer token injected as Authorization: Bearer <token>",
-        "required": True,
-        "label": "Bearer Token",
-        "secret": True,
-    },
-    default_headers={
-        "type": ARG_TYPE.DICT,
-        "description": 'Static headers added to every request (e.g. {"Accept": "application/json"})',
-        "required": False,
-        "label": "Default Headers",
-    },
-    allowed_hosts={
-        "type": ARG_TYPE.LIST,
-        "description": 'Allowed hostnames for passthrough requests. Defaults to the base_url host. Use ["*"] to disable containment.',
-        "required": False,
-        "label": "Allowed Hosts",
-    },
-    test_path={
-        "type": ARG_TYPE.STR,
-        "description": "Path used by the /passthrough/test endpoint. Defaults to /",
-        "required": False,
-        "label": "Test Path",
-    },
-)
+
+connection_args = OrderedDict()
+connection_args.update(rest_connection_args)
+connection_args.update(oauth_connection_args)
+
 
 connection_args_example = OrderedDict(
     base_url="https://api.example.com",

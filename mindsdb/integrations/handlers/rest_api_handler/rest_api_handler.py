@@ -118,6 +118,52 @@ class RestApiHandler(APIHandler, PassthroughMixin):
             return self._oauth_provider.get_access_token()
         raise PassthroughConfigError(f"Unsupported auth_type '{auth_type}'")
 
+    def _secrets_for_scrub(self) -> list[str]:
+        """Per-request list of values to redact from the upstream response.
+
+        Differs from PassthroughMixin's default in two ways:
+        1. In OAuth mode it uses the provider's `current_secrets()` (which
+           returns the *currently cached* access token, or `[]` when uncached)
+           instead of `_get_bearer_token()` — the latter would force a token
+           fetch purely to populate the scrub list, which is wasteful and
+           could fail (e.g. IdP unreachable) in a code path that's only
+           supposed to redact strings from the response body.
+        2. The list is deduplicated and stripped of empties before return so
+           the underlying string-replace loop never does redundant work.
+
+        The default-headers heuristic (treat values >= 16 chars as potential
+        secrets) is preserved verbatim so handlers that move from bearer to
+        OAuth without changing default_headers see the same scrubbing.
+        """
+        secrets: list[str] = []
+        auth_type = self._get_auth_type()
+
+        if auth_type == AUTH_TYPE_BEARER:
+            token = self.connection_data.get("bearer_token")
+            if token:
+                secrets.append(str(token))
+        elif auth_type == AUTH_TYPE_OAUTH_CLIENT_CREDENTIALS:
+            # Only the currently-cached access token, never client_secret.
+            # current_secrets() returns [] before the first successful token
+            # fetch, so calling _secrets_for_scrub early is safe.
+            if self._oauth_provider is not None:
+                secrets.extend(self._oauth_provider.current_secrets())
+
+        defaults = self.connection_data.get("default_headers") or {}
+        if isinstance(defaults, dict):
+            for value in defaults.values():
+                s = str(value)
+                if len(s) >= 16:
+                    secrets.append(s)
+
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for s in secrets:
+            if s and s not in seen:
+                seen.add(s)
+                deduped.append(s)
+        return deduped
+
     def _get_auth_type(self) -> str:
         """Return the configured auth_type, defaulting to 'bearer'.
 

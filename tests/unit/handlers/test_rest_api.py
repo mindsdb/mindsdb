@@ -776,3 +776,231 @@ class TestOAuthIntegration:
         handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
 
         assert handler._oauth_provider.handler_storage is sentinel_storage
+
+
+# ---------------------------------------------------------------------------
+# Response scrubbing
+# ---------------------------------------------------------------------------
+
+
+REDACTED = "[REDACTED_API_KEY]"
+
+
+def _stub_upstream_with_body(monkeypatch, body_bytes, content_type="text/plain"):
+    """Patch the upstream so its response body contains caller-controlled bytes.
+
+    Returns the captured-headers dict (populated on each call) so tests can
+    confirm what was sent in addition to what came back.
+    """
+    captured = {}
+
+    def fake_request(method, url, **kwargs):
+        captured["headers"] = kwargs.get("headers", {})
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.headers = {"Content-Type": content_type}
+        # `body_bytes` may be a callable so each request can return different
+        # bytes (e.g., echoing whatever token was sent).
+        payload = body_bytes(captured) if callable(body_bytes) else body_bytes
+        resp.iter_content.return_value = [payload]
+        resp.close = MagicMock()
+        return resp
+
+    from mindsdb.integrations.libs import passthrough as pt_module
+
+    monkeypatch.setattr(pt_module.requests, "request", fake_request)
+    return captured
+
+
+class TestResponseScrubbing:
+    """Tokens — static or rotating — must never reach the runtime caller."""
+
+    OAUTH_CONFIG = {
+        "base_url": "https://api.example.com",
+        "auth_type": "oauth_client_credentials",
+        "token_url": "https://auth.example.com/token",
+        "client_id": "cid",
+        "client_secret": "csec",
+    }
+
+    def test_static_bearer_scrubbed_when_upstream_echoes_it(self, monkeypatch):
+        _stub_upstream_with_body(monkeypatch, b"upstream said: test-token-123 hi")
+
+        handler = _make_handler()
+        result = handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        assert "test-token-123" not in str(result.body)
+        assert REDACTED in str(result.body)
+
+    def test_oauth_token_scrubbed_when_upstream_echoes_it(self, monkeypatch):
+        _stub_oauth_dns(monkeypatch)
+        _stub_token_endpoint(monkeypatch, access_token="OAUTH-AT")
+        _stub_upstream_with_body(monkeypatch, b"hi OAUTH-AT here is your data")
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+        result = handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        assert "OAUTH-AT" not in str(result.body)
+        assert REDACTED in str(result.body)
+
+    def test_runtime_caller_never_receives_oauth_access_token(self, monkeypatch):
+        # Belt-and-suspenders for the spec's "runtime caller never receives
+        # OAuth access token if upstream echoes it" — exercises the full
+        # api_passthrough path including JSON decoding.
+        _stub_oauth_dns(monkeypatch)
+        _stub_token_endpoint(monkeypatch, access_token="SECRET-AT-9000")
+        _stub_upstream_with_body(
+            monkeypatch,
+            b'{"echoed_token": "SECRET-AT-9000", "ok": true}',
+            content_type="application/json",
+        )
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+        result = handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        # Body parsed as JSON; serialize it back to verify scrub holds across
+        # the JSON round-trip.
+        import json as _json
+
+        rendered = _json.dumps(result.body)
+        assert "SECRET-AT-9000" not in rendered
+        assert REDACTED in rendered
+
+    def test_rotated_oauth_token_scrubbed(self, monkeypatch):
+        # Force the provider to issue a different token after invalidation
+        # (the manual rotation path). The scrub list should track the
+        # currently-cached token, not stale ones.
+        _stub_oauth_dns(monkeypatch)
+
+        from mindsdb.integrations.utilities.handlers.auth_utilities.oauth2 import (
+            client_credentials as cc_module,
+        )
+
+        token_iter = iter(["TOKEN-A", "TOKEN-B"])
+
+        def fake_post(*a, **kw):
+            class _R:
+                status_code = 200
+                is_redirect = False
+                headers = {}
+
+                def iter_content(self, chunk_size=4096):
+                    import json as _j
+
+                    yield _j.dumps({"access_token": next(token_iter), "expires_in": 3600}).encode()
+
+                def close(self):
+                    pass
+
+            return _R()
+
+        monkeypatch.setattr(cc_module.requests, "post", fake_post)
+
+        # Upstream echoes whichever token was sent.
+        def body_for(captured):
+            sent = captured["headers"]["Authorization"].replace("Bearer ", "")
+            return f"echo {sent}".encode()
+
+        _stub_upstream_with_body(monkeypatch, body_for)
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+
+        # First call — uses TOKEN-A.
+        r1 = handler.api_passthrough(PassthroughRequest(method="GET", path="/a"))
+        assert "TOKEN-A" not in str(r1.body)
+        assert REDACTED in str(r1.body)
+
+        # Rotate.
+        handler._oauth_provider.clear_cached_token()
+
+        # Second call — uses TOKEN-B; scrub list reflects the new token.
+        r2 = handler.api_passthrough(PassthroughRequest(method="GET", path="/b"))
+        assert "TOKEN-B" not in str(r2.body)
+        assert REDACTED in str(r2.body)
+
+    def test_empty_secrets_dropped_from_scrub_list(self):
+        # bearer_token is the empty string (e.g. UI submitted blank); the
+        # scrub list must not contain "" because str.replace("", X) inserts
+        # the sentinel between every character of the response body.
+        handler = _make_handler({"base_url": "https://api.example.com", "bearer_token": ""})
+        secrets = handler._secrets_for_scrub()
+        assert "" not in secrets
+
+    def test_duplicate_secrets_deduplicated(self):
+        # bearer_token equals a default_headers value — both would otherwise
+        # be appended to the scrub list. The override dedupes.
+        long_value = "shared-long-value-1234567890"  # ≥ 16 chars
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": long_value,
+                "default_headers": {"X-Token": long_value},
+            }
+        )
+        secrets = handler._secrets_for_scrub()
+        assert secrets.count(long_value) == 1
+
+    def test_oauth_current_secrets_does_not_trigger_token_fetch(self, monkeypatch):
+        # _secrets_for_scrub must not POST to the IdP just to populate its
+        # list. current_secrets() returns [] when uncached.
+        _stub_oauth_dns(monkeypatch)
+        token_calls = _stub_token_endpoint(monkeypatch)
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+        handler._maybe_init_oauth_provider()
+
+        secrets = handler._secrets_for_scrub()
+
+        assert token_calls["n"] == 0
+        assert secrets == []
+
+    def test_bearer_mode_scrub_list_unchanged_with_default_headers(self):
+        # Pre-existing bearer behavior: the bearer token plus any
+        # default_headers values >= 16 chars. Order doesn't matter for
+        # correctness, but membership does.
+        long_value = "x" * 32
+        short_value = "shortie"
+        handler = _make_handler(
+            {
+                "base_url": "https://api.example.com",
+                "bearer_token": "tok-12345",
+                "default_headers": {"X-Long": long_value, "X-Short": short_value},
+            }
+        )
+        secrets = handler._secrets_for_scrub()
+        assert "tok-12345" in secrets
+        assert long_value in secrets
+        assert short_value not in secrets  # too short to be treated as secret
+
+    def test_oauth_mode_does_not_include_static_bearer_token(self, monkeypatch):
+        # In OAuth mode, even if a stale bearer_token field somehow survived
+        # in connection_data (it shouldn't — _validate_auth_config rejects
+        # it), the scrub override skips reading it. Belt-and-suspenders to
+        # ensure the static field doesn't sneak into the scrub list.
+        _stub_oauth_dns(monkeypatch)
+        _stub_token_endpoint(monkeypatch, access_token="LIVE-AT")
+        _stub_upstream(monkeypatch)
+
+        cfg = dict(self.OAUTH_CONFIG)
+        # Bypass validation to construct the test scenario.
+        handler = RestApiHandler("test_rest", connection_data=cfg)
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        secrets = handler._secrets_for_scrub()
+        assert "LIVE-AT" in secrets
+        assert handler.connection_data.get("bearer_token") in (None, "")
+
+    def test_oauth_mode_scrub_does_not_leak_client_secret(self, monkeypatch):
+        # client_secret must never appear in the scrub list (it shouldn't be
+        # in responses either, but if it ever were, we don't want a redaction
+        # path that accidentally implies it's tracked as a "current secret").
+        _stub_oauth_dns(monkeypatch)
+        _stub_token_endpoint(monkeypatch, access_token="LIVE-AT")
+        _stub_upstream(monkeypatch)
+
+        handler = _make_handler(dict(self.OAUTH_CONFIG))
+        handler.api_passthrough(PassthroughRequest(method="GET", path="/foo"))
+
+        secrets = handler._secrets_for_scrub()
+        assert "csec" not in secrets
+        assert "cid" not in secrets

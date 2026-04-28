@@ -344,7 +344,7 @@ class OAuth2ClientCredentialsProvider:
 
         if expires_in <= 0:
             if not self._missing_expires_in_logged:
-                logger.info(
+                logger.warning(
                     "OAuth2 token response omitted or returned invalid 'expires_in'; defaulting to %ss. host=%s",
                     DEFAULT_EXPIRES_IN_SECONDS,
                     self._safe_host(),

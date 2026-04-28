@@ -347,6 +347,17 @@ class TestResponseHandling:
         )
         assert provider.get_access_token() == "AT"
 
+    def test_missing_token_type_defaults_to_bearer(self, monkeypatch):
+        # No token_type field at all in the response — provider must accept it
+        # and treat it as Bearer per RFC 6749 §5.1.
+        provider = self._provider(monkeypatch)
+        monkeypatch.setattr(
+            cc_module.requests,
+            "post",
+            lambda *a, **kw: FakeResponse(json_body={"access_token": "AT", "expires_in": 3600}),
+        )
+        assert provider.get_access_token() == "AT"
+
     @pytest.mark.parametrize("token_type", ["MAC", "DPoP", "Token"])
     def test_unsupported_token_type_fails(self, monkeypatch, token_type):
         provider = self._provider(monkeypatch)
@@ -372,15 +383,16 @@ class TestResponseHandling:
             lambda *a, **kw: FakeResponse(json_body=body),
         )
         before = time.time()
-        with caplog.at_level(logging.INFO, logger=cc_module.logger.name):
+        with caplog.at_level(logging.WARNING, logger=cc_module.logger.name):
             provider.get_access_token()
         after = time.time()
         cached = provider._read_cache()
         # expires_at = now + 300 - 60 = now + 240
         assert before + 240 - 1 <= cached["expires_at"] <= after + 240 + 1
         if expires_in is None:
-            # INFO log emitted at least once when explicitly missing
-            assert any("expires_in" in r.message for r in caplog.records)
+            # WARNING log emitted at least once when explicitly missing
+            warnings = [r for r in caplog.records if r.levelno == logging.WARNING and "expires_in" in r.message]
+            assert warnings, "expected a WARNING log mentioning expires_in"
 
 
 class TestCaching:
@@ -623,6 +635,34 @@ class TestCurrentSecrets:
         provider.get_access_token()
         provider.clear_cached_token()
         assert provider.current_secrets() == []
+
+    def test_current_secrets_never_returns_client_secret(self, monkeypatch):
+        # Across uncached, cached, and post-clear states, the client_secret
+        # must never appear in current_secrets() — that list feeds the
+        # response-scrub layer and exposing the static credential there
+        # would risk redacting upstream payloads that legitimately contain
+        # the same string, but more importantly it would imply the secret
+        # is in some live cache, which it must not be.
+        provider = self._provider(monkeypatch)
+
+        # Uncached
+        assert CLIENT_SECRET not in provider.current_secrets()
+
+        monkeypatch.setattr(
+            cc_module.requests,
+            "post",
+            lambda *a, **kw: FakeResponse(json_body={"access_token": "AT", "expires_in": 3600}),
+        )
+        provider.get_access_token()
+
+        # Cached — only the access_token should show up
+        secrets = provider.current_secrets()
+        assert secrets == ["AT"]
+        assert CLIENT_SECRET not in secrets
+        assert CLIENT_ID not in secrets
+
+        provider.clear_cached_token()
+        assert CLIENT_SECRET not in provider.current_secrets()
 
 
 class TestErrorSanitization:

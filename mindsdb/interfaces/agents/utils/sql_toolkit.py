@@ -318,7 +318,6 @@ class MindsDBQuery:
                 if self._cache:
                     self._cache.set(cache_key, list_tables)
 
-            result_tables = []
             for row in list_tables:
                 if row.get("schema") is not None:
                     parts = [db_name, row["schema"], row["name"]]

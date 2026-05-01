@@ -1094,6 +1094,17 @@ class KnowledgeBaseController:
             raise ValueError(
                 f"Unable to find database named {vector_db_name}, please make sure {vector_db_name} is defined"
             )
+        # The storage backend for a knowledge base must be a vector database. If the user
+        # points `storage` at a non-vector integration (e.g. `files`, a SQL database, etc.)
+        # we previously crashed deep inside `create_table` with an opaque AttributeError.
+        # Detect that case here and raise a clear, actionable message. Fixes gh-11910.
+        if not isinstance(vector_store_handler, VectorStoreHandler):
+            handler_type = type(vector_store_handler).__name__
+            raise ValueError(
+                f"Storage '{vector_db_name}' is not a vector database "
+                f"(handler type: {handler_type}). Knowledge base storage must be a "
+                f"vector database integration such as pgvector, chromadb, or faiss."
+            )
         # create table in vectordb before creating KB
         if "default_vector_storage" in params:
             # if vector db is a default - drop previous table, if exists

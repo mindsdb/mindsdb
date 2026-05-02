@@ -71,8 +71,13 @@ class LLMClient:
         self._session = session
         params = params.copy()
 
+        # Normalise 'model' -> 'model_name' in case the config uses 'model' as the key.
+        model_name = params.pop("model_name", None) or params.pop("model", None)
+        if model_name is None:
+            raise ValueError("model_name is required. Please set it in config.")
+        self.model_name = model_name
+
         self.provider = params.pop("provider", "openai")
-        self.model_name = params.pop("model_name")
         if self.provider == "google":
             self.provider = "gemini"
 

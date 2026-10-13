@@ -6,7 +6,7 @@ RUN npm ci --ignore-scripts
 COPY frontend/ ./
 RUN npm run build:web
 
-FROM nginx:alpine AS runtime
+FROM nginx:alpine-slim AS runtime
 
 LABEL org.opencontainers.image.title="cowork-web"
 LABEL org.opencontainers.image.source="https://github.com/mindsdb/minds-platform"

@@ -2,11 +2,11 @@
 
 <div align="center">
 
-# MindsHub Cowork
+<a href="https://mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme">
+  <img src="assets/mindshub-banner.svg" alt="MindsHub — The best intelligence should be open." width="100%" />
+</a>
 
-**The unified workspace where open-source agents get work done for you.**
-
-_Delegate anything. It comes back done._
+**MindsHub is an agent workspace for completing knowledge work and developing software, with open-source agent harnesses and a choice of models.**
 
 [![Release](https://img.shields.io/github/v/release/mindsdb/minds?logo=github&label=release)](https://github.com/mindsdb/minds/releases)
 [![Stars](https://img.shields.io/github/stars/mindsdb/minds?logo=github)](https://github.com/mindsdb/minds/stargazers)
@@ -19,15 +19,21 @@ _Delegate anything. It comes back done._
 [Pricing](https://mindshub.ai/pricing?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme) ·
 [Discord](https://mindshub.ai/discord)
 
+<p align="center">
+  <sub>Read this in: <a href="README.zh.md">中文</a> · <a href="README.es.md">Español</a> · <a href="README.pt.md">Português</a> · <a href="README.hi.md">हिन्दी</a></sub>
+</p>
+
 </div>
 
 <p align="center">
-  <img alt="MindsHub Cowork — the unified workspace" width="100%" src="https://github.com/user-attachments/assets/769e6463-0a9d-45ae-83d1-ef9e234775d3" />
+  <img width="640" height="480" alt="MindsHub agent workspace" src="https://github.com/user-attachments/assets/048761b8-aa77-4506-9c4d-32e2fdecbb60" />
 </p>
 
-**MindsHub Cowork** is the unified workspace where you delegate entire tasks — research, analysis, reporting, scheduled operations — and collect finished, shareable results. Connect your data, route each step to the right model, run open-source agents, and turn their output into artifacts you can publish. It's open source and runs anywhere — your machine, your VPC, or the hosted app.
+MindsHub gives you the freedom to choose among models and providers instead of being locked into one ecosystem. Use its agent workspace for research, analysis, content creation, and software development. It is open source and can run on your machine, in your VPC, or through the hosted app.
 
 This repository is the **platform superproject**: it pulls together the desktop/web app, the agent backend, and the data engine so you can build and run the whole stack from source.
+
+For building intelligence into agents and products through one API, see **[MindsHub Inference](https://mindshub.ai/unified-inference)**. It provides a choice of models and providers with one set of controls and one bill.
 
 ## Get started
 
@@ -36,7 +42,7 @@ Pick whichever fits:
 - **Web — nothing to install.** Open **[console.mindshub.ai](https://console.mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme)** and sign in.
 - **macOS.** [Download the desktop app](https://downloads.mindshub.ai/mindshub-cowork/mac/mindshub-cowork-latest.pkg) (`.pkg`).
 - **Windows.** [Download the desktop app](https://downloads.mindshub.ai/mindshub-cowork/windows/mindshub-cowork-latest.exe) (`.exe`).
-- **Run it open source.** [Build from source](#build-from-source) — see below.
+- **Linux.** [Build from source](#build-from-source).
 
 Free to start. Pro adds all frontier models and private artifacts — see [pricing](https://mindshub.ai/pricing?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme).
 
@@ -112,7 +118,7 @@ Submodules are configured with `ignore = all`, so your branch work never shows u
 
 ## Deploy anywhere
 
-Cowork is built for flexible deployment — **cloud, VPC, on-prem, air-gapped, and hybrid** infrastructure — so you keep full control over your infrastructure, models, permissions, and data.
+MindsHub is built for flexible deployment — **cloud, VPC, on-prem, air-gapped, and hybrid** infrastructure — so you keep full control over your infrastructure, models, permissions, and data.
 
 ## Help & support
 
@@ -123,7 +129,7 @@ Cowork is built for flexible deployment — **cloud, VPC, on-prem, air-gapped, a
 
 ## 🤝 Contribute
 
-Cowork is open source and contributions are welcome — code, integrations, docs, bug reports, and feature ideas. Read the [docs](https://docs.mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme) to get set up, browse [open issues](https://github.com/mindsdb/minds/issues), and say hi on [Discord](https://mindshub.ai/discord).
+MindsHub is open source and contributions are welcome — code, integrations, docs, bug reports, and feature ideas. Read the [docs](https://docs.mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme) to get set up, browse [open issues](https://github.com/mindsdb/minds/issues), and say hi on [Discord](https://mindshub.ai/discord).
 
 ## 🔒 Security
 

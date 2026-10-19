@@ -1,0 +1,52 @@
+name: Sync main to staging
+
+# run-tree-ok: a release-train hook, not a stage of this repo's push:main pipeline.
+# Folding it in as a `workflow_call` job would make the sync conditional on that
+# pipeline running AND succeeding, which is the exact failure it exists to prevent:
+# a hotfix whose deploy fails still has to reach staging, or the next release PR is
+# diffed against a main that staging does not contain. It also keeps the App-token
+# push out of the deploy pipeline's permission envelope.
+
+# Keeps `staging` from falling behind `main`.
+#
+# The release path is already covered: merging the weekly release PR fires
+# `Staging Unfreeze`, which unfreezes and syncs main back. Nothing covered a
+# commit that reached main any other way — a hotfix PR, a revert, a direct merge.
+# `staging-unfreeze.yml` only triggers on a merged PR whose head branch is
+# `staging`, so those commits fired nothing at all and sat on main until the next
+# weekly release, leaving the next release PR to be diffed against a main that
+# staging did not contain.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Shared with staging-unfreeze.yml on purpose. Merging the release PR fires both
+# this workflow (push to main) and the unfreeze (pull_request closed), and both
+# push `staging` as the release-train App. One group serialises them; whichever
+# runs second finds staging already current and no-ops.
+concurrency:
+  group: sync-main-to-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    # No notify job here. The reusable ends with one, so a sync that fails and is
+    # then re-run successfully reports both the failure and the recovery.
+    permissions:
+      contents: read
+      # Turns the "recovered" message on, and it is the ONLY thing that does. The
+      # reusable declares no `permissions:` block of its own, so its job inherits
+      # exactly what is granted here; a block there would cap the token instead and
+      # the lookup would be refused however much this granted. The default workflow
+      # token carries contents + packages read only, and without the grant the
+      # lookup is refused, logs why, and stays quiet — a missing recovery message
+      # rather than a broken run.
+      actions: read
+    uses: mindsdb/github-actions/.github/workflows/sync-main-to-staging.yml@main
+    secrets: inherit

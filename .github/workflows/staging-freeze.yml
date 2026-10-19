@@ -1,0 +1,29 @@
+name: Staging Freeze
+on:
+  schedule:
+    # Friday 13:47 UTC — off the top of the hour (GitHub's documented high-load
+    # slot) and off a DST-sensitive "6am PST" wording.
+    - cron: '47 13 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freeze:
+    # No notify job here any more. The reusable ends with one, which covers both
+    # a failed freeze and the re-run that fixes it. A wrapper-owned `if: failure()`
+    # job could only ever report the first half, so a freeze that was repaired
+    # left the channel holding a red alert.
+    permissions:
+      contents: read
+      # Turns the "recovered" message on, and it is the ONLY thing that does. The
+      # reusable declares no `permissions:` block of its own, so its job inherits
+      # exactly what is granted here; a block there would cap the token instead and
+      # the lookup would be refused however much this granted. The default workflow
+      # token carries contents + packages read only, and without the grant the
+      # lookup is refused, logs why, and stays quiet — a missing recovery message
+      # rather than a broken run.
+      actions: read
+    uses: mindsdb/github-actions/.github/workflows/release-freeze.yml@main
+    secrets: inherit

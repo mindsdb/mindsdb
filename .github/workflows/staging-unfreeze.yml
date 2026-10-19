@@ -1,0 +1,38 @@
+name: Staging Unfreeze
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Shared with sync-main-to-staging.yml on purpose. Merging the release PR fires
+# both this workflow and that one (push to main), and both push `staging` as the
+# release-train App. One group serialises them; whichever runs second finds
+# staging already current and no-ops.
+concurrency:
+  group: sync-main-to-staging
+  cancel-in-progress: false
+
+jobs:
+  unfreeze:
+    # No notify job here any more; the reusable ends with one. See staging-freeze.yml.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'staging' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    permissions:
+      contents: read
+      # Turns the "recovered" message on, and it is the ONLY thing that does. The
+      # reusable declares no `permissions:` block of its own, so its job inherits
+      # exactly what is granted here; a block there would cap the token instead and
+      # the lookup would be refused however much this granted. The default workflow
+      # token carries contents + packages read only, and without the grant the
+      # lookup is refused, logs why, and stays quiet — a missing recovery message
+      # rather than a broken run.
+      actions: read
+    uses: mindsdb/github-actions/.github/workflows/release-unfreeze.yml@main
+    secrets: inherit

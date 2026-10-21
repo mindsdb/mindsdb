@@ -141,3 +141,10 @@ Found a security vulnerability? Please **don't** open a public issue. Report it 
 This repository is released under the [MIT License](LICENSE). Bundled components are governed by their own licenses — see each submodule's repository for details.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Diagnostics
+
+See [structured logging](docs/structured-logging.md) for defaults, troubleshooting
+overrides, retained evidence streams and rollout requirements.
+Build with `make docker-build` to derive package versions from the pinned source.
+The same guide includes the disposable API/web container smoke test.

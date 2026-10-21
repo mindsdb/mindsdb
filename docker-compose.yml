@@ -3,8 +3,14 @@ services:
     build:
       context: .
       dockerfile: docker/api.Dockerfile
+      args:
+        ANTON_VERSION: ${ANTON_VERSION:-}
+        COWORK_SERVER_VERSION: ${COWORK_SERVER_VERSION:-}
     environment:
       COWORK_SERVER_HOST: "0.0.0.0"
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
+      LOG_FORMAT: json
+      ACCESS_LOG_MODE: ${ACCESS_LOG_MODE:-errors}
       COWORK_SERVER_PORT: "26866"
       DATABASE_URI: "sqlite:////home/cowork/.cowork/cowork.db"
       # ANTON_ANTHROPIC_API_KEY: "sk-ant-..."
@@ -24,7 +30,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c",
-             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:26866/health',timeout=3).status==200 else 1)"]
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:26866/api/v1/health/',timeout=3).status==200 else 1)"]
       interval: 30s
       timeout: 5s
       start_period: 20s
@@ -34,6 +40,9 @@ services:
     build:
       context: .
       dockerfile: docker/web.Dockerfile
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
+      ACCESS_LOG_MODE: ${ACCESS_LOG_MODE:-errors}
     # ENG-457: share api's network namespace so nginx's proxy to cowork-server
     # is a genuine loopback hop (127.0.0.1), not a separate-container bridge
     # hop. cowork-server's `_require_local` guard on /settings/reveal-key and

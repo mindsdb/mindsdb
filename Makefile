@@ -79,7 +79,10 @@ dist-win: $(_NPM_STAMP)  ## package the Windows desktop app
 	npm --prefix $(FRONTEND) run dist:win
 
 docker-build:  ## build the docker images
-	docker compose build
+	@set -e; \
+	anton_version=$$(cd $(AGENT) && uvx --with hatch-vcs hatchling version); \
+	server_version=$$(cd $(API) && uvx --with hatch-vcs hatchling version); \
+	ANTON_VERSION="$$anton_version" COWORK_SERVER_VERSION="$$server_version" docker compose build
 
 docker-up:  ## start the docker stack
 	docker compose up

@@ -2,21 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Minds Cowork — Docs</title>
+<title>MindsHub Cowork — Docs</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta name="description" content="Documentation for Minds Cowork — an open-source AI platform for knowledge workers. Automate recurring tasks, create apps and artifacts, and deploy anywhere." />
-<meta name="keywords" content="Minds Cowork, AI platform, AI automation, knowledge workers, open source AI, workflow automation, documentation" />
+<meta name="description" content="Documentation for MindsHub Cowork — an open-source AI platform for knowledge workers. Automate recurring tasks, create apps and artifacts, and deploy anywhere." />
+<meta name="keywords" content="MindsHub Cowork, AI platform, AI automation, knowledge workers, open source AI, workflow automation, documentation" />
 <meta name="robots" content="index, follow" />
-<meta name="author" content="Minds Platform" />
-<meta property="og:title" content="Minds Cowork — Docs" />
-<meta property="og:description" content="Documentation for Minds Cowork — an open-source AI platform for knowledge workers. Automate recurring tasks, create apps and artifacts, and deploy anywhere." />
+<meta name="author" content="MindsHub" />
+<meta property="og:title" content="MindsHub Cowork — Docs" />
+<meta property="og:description" content="Documentation for MindsHub Cowork — an open-source AI platform for knowledge workers. Automate recurring tasks, create apps and artifacts, and deploy anywhere." />
 <meta property="og:type" content="website" />
-<meta property="og:site_name" content="Minds Cowork" />
+<meta property="og:site_name" content="MindsHub Cowork" />
 <meta property="og:image" content="favicon.png" />
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:site" content="@MindsDB" />
-<meta name="twitter:title" content="Minds Cowork — Docs" />
-<meta name="twitter:description" content="Documentation for Minds Cowork — an open-source AI platform for knowledge workers. Automate recurring tasks, create apps and artifacts, and deploy anywhere." />
+<meta name="twitter:title" content="MindsHub Cowork — Docs" />
+<meta name="twitter:description" content="Documentation for MindsHub Cowork — an open-source AI platform for knowledge workers. Automate recurring tasks, create apps and artifacts, and deploy anywhere." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -99,7 +99,11 @@
   nav[data-open] .hamburger span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
   nav[data-open] .hamburger span:nth-child(2) { opacity: 0; width: 0; }
   nav[data-open] .hamburger span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
-  @media (max-width: 640px) {
+  /* Raised from 640px. The row needs 719px once the back control is in it:
+     79 back + 117 brand + 411 links + 64 gaps + 48 padding. Below that and
+     above the old breakpoint the brand and every link wrapped inside a bar
+     still pinned at 52px, which no horizontal-overflow check can see. */
+  @media (max-width: 760px) {
     .hamburger { display: flex; }
     .nav-links {
       display: none;
@@ -127,6 +131,29 @@
   }
   .nav-links a:hover { color: var(--ink); opacity: 1; }
   .nav-links a.active { color: var(--accent); }
+
+  /* ── Hosted API banner ── */
+  .api-banner {
+    background: var(--accent-bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .api-banner-inner {
+    max-width: 1100px; margin: 0 auto;
+    padding: 10px 24px;
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    font-size: 13px; line-height: 1.55; color: var(--ink-3);
+  }
+  .api-banner-tag {
+    font-family: var(--font-mono);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(34,211,238,0.30);
+    border-radius: 100px; padding: 2px 9px;
+    white-space: nowrap;
+  }
+  .api-banner-text { flex: 1; min-width: 240px; }
+  .api-banner-text a { font-weight: 500; }
 
   /* ── Hero ── */
   .hero-wrap {
@@ -289,22 +316,41 @@
     font-size: 11px; color: var(--ink-4);
     letter-spacing: 0.06em;
   }
-</style>
+    /* The back control. Mono and uppercase so it sits with the brand beside it,
+       but dimmer and tighter-tracked so it does not read as part of it. */
+    .nav-up {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-4);
+      white-space: nowrap;
+      transition: color 120ms;
+    }
+    .nav-up:hover { color: var(--accent); opacity: 1; }
+  </style>
 </head>
 <body>
 
 <nav>
   <div class="nav-inner">
+    <!-- Back to the chooser page at the root of the hostname. First in the
+         row, before the brand, which is where a back control is looked for.
+         Deliberately outside .nav-links: that collapses into the mobile
+         menu, and the only way out of this documentation set should not be
+         hidden behind a hamburger. -->
+    <a href="/" class="nav-up">&larr; All docs</a>
     <div class="brand">
       <div class="brand-dot"></div>
-      Minds Cowork
+      MindsHub Cowork
     </div>
     <div class="nav-links">
       <a href="index.html" class="active">Docs</a>
       <a href="setup.html">Setup</a>
       <a href="use-cases.html">Use Cases</a>
       <a href="api.html">API</a>
-      <a href="https://github.com/mindsdb/minds-platform">GitHub ↗</a>
+      <a href="https://docs.mindshub.ai/inference/">Hosted API</a>
+      <a href="https://github.com/mindsdb/mindshub">GitHub ↗</a>
     </div>
     <button class="hamburger" aria-label="Toggle menu">
       <span></span><span></span><span></span>
@@ -312,9 +358,20 @@
   </div>
 </nav>
 
+<div class="api-banner">
+  <div class="api-banner-inner">
+    <span class="api-banner-tag">Hosted API</span>
+    <span class="api-banner-text">
+      These pages document MindsHub Cowork, the app and local server you run yourself.
+      For the hosted MindsHub API at api.mindshub.ai, with API keys, see the
+      <a href="https://docs.mindshub.ai/inference/" target="_blank" rel="noopener">hosted MindsHub API docs ↗</a>.
+    </span>
+  </div>
+</div>
+
 <div class="hero-wrap">
   <div class="eyebrow">Documentation</div>
-  <h1>Build and automate<br>with <span>Minds Cowork</span></h1>
+  <h1>Build and automate<br>with <span>MindsHub Cowork</span></h1>
   <p class="lede">
     A general-purpose AI platform for knowledge workers. Automate recurring tasks,
     create artifacts, and deploy anywhere — on your terms.
@@ -379,7 +436,7 @@
 </div>
 
 <footer>
-  Minds Platform · Open Source · <a href="https://github.com/mindsdb/minds-platform">github.com/mindsdb/minds-platform</a>
+  MindsHub · Open Source · <a href="https://github.com/mindsdb/mindshub">github.com/mindsdb/mindshub</a>
 </footer>
 
 <script>
@@ -395,3 +452,5 @@
 </script>
 </body>
 </html>
+
+
